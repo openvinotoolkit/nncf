@@ -17,12 +17,12 @@ import openvino.runtime as ov
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 
 from tests.openvino.native.models import LinearModel
@@ -125,7 +125,7 @@ def test_fq_insertion_pre_layer(target_layers, ref_fq_names):
 
     min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
     max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
-    quantizer_parameters = OVQuantizerLayerParameters(min_values, max_values, min_values, max_values, levels=256)
+    quantizer_parameters = FakeQuantizeParameters(min_values, max_values, min_values, max_values, levels=256)
 
     transformed_model = create_transformed_model(model, target_layers, TargetType.PRE_LAYER_OPERATION,
             OVQuantizerInsertionCommand, quantizer_parameters=quantizer_parameters)
@@ -142,7 +142,7 @@ def test_fq_insertion_post_layer(target_layers, ref_fq_names):
 
     min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
     max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
-    quantizer_parameters = OVQuantizerLayerParameters(min_values, max_values, min_values, max_values, levels=256)
+    quantizer_parameters = FakeQuantizeParameters(min_values, max_values, min_values, max_values, levels=256)
     transformed_model = create_transformed_model(model, target_layers, TargetType.POST_LAYER_OPERATION,
             OVQuantizerInsertionCommand, quantizer_parameters=quantizer_parameters)
     fq_nodes = get_fq_nodes(transformed_model)
@@ -158,7 +158,7 @@ def test_fq_insertion_weights(target_layers, ref_fq_names):
 
     min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
     max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
-    quantizer_parameters = OVQuantizerLayerParameters(min_values, max_values, min_values, max_values, levels=256)
+    quantizer_parameters = FakeQuantizeParameters(min_values, max_values, min_values, max_values, levels=256)
     transformed_model = create_transformed_model(model, target_layers, TargetType.OPERATION_WITH_WEIGHTS,
             OVQuantizerInsertionCommand, port_id=1, quantizer_parameters=quantizer_parameters)
     fq_nodes = get_fq_nodes(transformed_model)

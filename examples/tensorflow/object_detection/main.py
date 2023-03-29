@@ -15,40 +15,40 @@ import os
 import sys
 from pathlib import Path
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
-from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
-from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
-from nncf.tensorflow import create_compressed_model
-from nncf.tensorflow.helpers.model_manager import TFModelManager
-from nncf.tensorflow.initialization import register_default_init_args
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.config.utils import is_accuracy_aware_training
-from nncf.config.structures import ModelEvaluationArgs
-from nncf.tensorflow.utils.state import TFCompressionState
-from nncf.tensorflow.utils.state import TFCompressionStateLoader
-
+from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
+from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
+from examples.tensorflow.common.export import export_model
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.optimizer import build_optimizer
-from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
-from examples.tensorflow.common.utils import print_args
-from examples.tensorflow.common.utils import serialize_config
-from examples.tensorflow.common.utils import serialize_cli_args
-from examples.tensorflow.common.utils import create_code_snapshot
-from examples.tensorflow.common.utils import configure_paths
-from examples.tensorflow.common.utils import get_saving_parameters
-from examples.tensorflow.common.utils import write_metrics
-from examples.tensorflow.object_detection.models.model_selector import get_predefined_config
-from examples.tensorflow.object_detection.models.model_selector import get_model_builder
 from examples.tensorflow.common.utils import close_strategy_threadpool
+from examples.tensorflow.common.utils import configure_paths
+from examples.tensorflow.common.utils import create_code_snapshot
+from examples.tensorflow.common.utils import get_saving_parameters
+from examples.tensorflow.common.utils import print_args
+from examples.tensorflow.common.utils import serialize_cli_args
+from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import set_seed
+from examples.tensorflow.common.utils import write_metrics
+from examples.tensorflow.object_detection.models.model_selector import get_model_builder
+from examples.tensorflow.object_detection.models.model_selector import get_predefined_config
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.utils import is_accuracy_aware_training
+from nncf.tensorflow import create_compressed_model
+from nncf.tensorflow.helpers.model_manager import TFModelManager
+from nncf.tensorflow.initialization import register_default_init_args
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
 
 def get_argument_parser():
@@ -389,8 +389,8 @@ def run(config):
 
     if 'export' in config.mode:
         save_path, save_format = get_saving_parameters(config)
-        compression_ctrl.export_model(save_path, save_format)
-        logger.info("Saved to {}".format(save_path))
+        export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+        logger.info('Saved to {}'.format(save_path))
 
     close_strategy_threadpool(strategy)
 
@@ -411,8 +411,8 @@ def export(config):
         load_checkpoint(checkpoint, config.ckpt_path)
 
     save_path, save_format = get_saving_parameters(config)
-    compression_ctrl.export_model(save_path, save_format)
-    logger.info("Saved to {}".format(save_path))
+    export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+    logger.info('Saved to {}'.format(save_path))
 
 
 def main(argv):

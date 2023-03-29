@@ -10,34 +10,33 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 import sys
 
 import tensorflow as tf
 
+from examples.common.sample_config import SampleConfig
 from examples.common.sample_config import create_sample_config
+from examples.tensorflow.common.argparser import get_common_argument_parser
+from examples.tensorflow.common.distributed import get_distribution_strategy
 from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
+from examples.tensorflow.common.export import export_model
+from examples.tensorflow.common.logger import logger
+from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
+from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+from examples.tensorflow.common.utils import SummaryWriter
+from examples.tensorflow.common.utils import Timer
 from examples.tensorflow.common.utils import close_strategy_threadpool
+from examples.tensorflow.common.utils import configure_paths
+from examples.tensorflow.common.utils import get_saving_parameters
+from examples.tensorflow.common.utils import print_args
+from examples.tensorflow.common.utils import write_metrics
+from examples.tensorflow.segmentation.models.model_selector import get_model_builder
+from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow import register_default_init_args
 from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
-
-from examples.tensorflow.common.argparser import get_common_argument_parser
-from examples.tensorflow.common.distributed import get_distribution_strategy
-from examples.tensorflow.common.logger import logger
-from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
-from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
-from examples.common.sample_config import SampleConfig
-from examples.tensorflow.common.utils import configure_paths
-from examples.tensorflow.common.utils import get_saving_parameters
-from examples.tensorflow.common.utils import print_args
-from examples.tensorflow.common.utils import SummaryWriter
-from examples.tensorflow.common.utils import write_metrics
-from examples.tensorflow.common.utils import Timer
-from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
-from examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
 
 def get_argument_parser():
@@ -245,8 +244,8 @@ def run_evaluation(config, eval_timeout=None):
 
         if 'export' in config.mode:
             save_path, save_format = get_saving_parameters(config)
-            compression_ctrl.export_model(save_path, save_format)
-            logger.info("Saved to {}".format(save_path))
+            export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+            logger.info('Saved to {}'.format(save_path))
 
     elif 'train' in config.mode:
         validation_summary_writer = SummaryWriter(config.log_dir, 'validation')
@@ -286,8 +285,8 @@ def export(config):
     compression_ctrl, _, _ = restore_compressed_model(config, strategy, model_builder, config.ckpt_path)
 
     save_path, save_format = get_saving_parameters(config)
-    compression_ctrl.export_model(save_path, save_format)
-    logger.info("Saved to {}".format(save_path))
+    export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+    logger.info('Saved to {}'.format(save_path))
 
 
 def main(argv):

@@ -85,7 +85,7 @@ def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict:
     ignored = {}
     if ignored_scope.names is not None:
         ignored['scope'] = ignored_scope.names
-    if ignored_scope.patterns is not None:
+    if ignored_scope.patterns:
         raise RuntimeError('Quantization algorithm from the OpenVINO backend '
                            'does not support regular expressions in the ignored '
                            'scopes yet')

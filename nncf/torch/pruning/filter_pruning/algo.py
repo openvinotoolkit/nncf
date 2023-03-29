@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import copy
 import json
 from math import isclose
 from pathlib import Path
@@ -45,6 +44,7 @@ from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.os import safe_open
 from nncf.config.extractors import extract_bn_adaptation_init_params
@@ -139,7 +139,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_quota = 0.9
         self.normalize_weights = True
 
-        self._graph = self._model.get_original_graph()
+        self._graph = self._model.nncf.get_original_graph()
         self._weights_flops_calc = WeightsFlopsCalculator(conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                                           linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
@@ -161,7 +161,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.full_filters_num = self._weights_flops_calc.count_filters_num(self._graph, modules_out_channels)
         self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
-        self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
+        self._prunable_layers_num = len(self._model.nncf.get_graph().get_nodes_by_types(self._prunable_types))
         self._min_possible_flops, self._min_possible_params =\
             self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
@@ -572,7 +572,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _propagate_masks(self):
         nncf_logger.debug("Propagating pruning masks")
         # 1. Propagate masks for all modules
-        graph = self.model.get_original_graph()
+        graph = self.model.nncf.get_original_graph()
 
         init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
         MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES, PTNNCFPruningTensorProcessor).mask_propagation()
@@ -658,21 +658,11 @@ class FilterPruningController(BasePruningAlgoController):
                                                                                                    'filter_pruning'))
         self._bn_adaptation.run(self.model)
 
-    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
-        """
-        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
+    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+        if do_copy:
+            model = copy_model(model)
 
-        :param make_model_copy: `True` means that a copy of the model will be modified.
-            `False` means that the original model in the controller will be changed and
-            no further compression actions will be available. Defaults to True.
-
-        :return NNCFNetwork: Converted model.
-        """
-        model = self.model
-        if make_model_copy:
-            model = copy.deepcopy(self.model)
-
-        graph = model.get_original_graph()
+        graph = model.nncf.get_original_graph()
         ModelPruner(model, graph, PT_PRUNING_OPERATOR_METATYPES, PrunType.FILL_ZEROS).prune_model()
 
         return model

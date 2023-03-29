@@ -50,6 +50,33 @@ def create_l2_norm_operations():
     return pattern
 
 
+@PT_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
+def create_matmul_softmax_matmul():
+    pattern = GraphPattern()
+    softmax_1 = pattern.add_node(label='SOFTMAX', type='softmax')
+    mat_mul_1_1 = pattern.add_node(label='MATMUL_1', type=['linear', 'addmm', 'matmul', 'bmm', 'mm'])
+    mat_mul_2_1 = pattern.add_node(label='MATMUL_2', type=['linear', 'addmm', 'matmul', 'bmm', 'mm'])
+
+    any_1 = pattern.add_node(label='ANY', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+
+    pattern.add_edge(mat_mul_1_1, softmax_1)
+    pattern.add_edge(softmax_1, mat_mul_2_1)
+    pattern.add_edge(any_1, mat_mul_2_1)
+
+    softmax_2 = pattern.add_node(label='SOFTMAX', type='softmax')
+    add_2 = pattern.add_node(label='ADD', type=["add", "__add__", "__iadd__", "__radd__"])
+    mat_mul_1_2 = pattern.add_node(label='MATMUL_1', type=['linear', 'addmm', 'matmul', 'bmm', 'mm'])
+    mat_mul_2_2 = pattern.add_node(label='MATMUL_2', type=['linear', 'addmm', 'matmul', 'bmm', 'mm'])
+
+    any_2 = pattern.add_node(label='ANY', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+
+    pattern.add_edge(mat_mul_1_2, add_2)
+    pattern.add_edge(add_2, softmax_2)
+    pattern.add_edge(softmax_2, mat_mul_2_2)
+    pattern.add_edge(any_2, mat_mul_2_2)
+
+    return pattern
+
 # COMBINATIONS
 
 

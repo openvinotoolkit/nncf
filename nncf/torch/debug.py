@@ -62,12 +62,12 @@ class DebugInterface:
 
 
 def debuggable_forward(forward_func):
-    def decorated(self, *args, **kwargs):
-        if self.debug_interface is not None:
-            self.debug_interface.pre_forward_actions(module=self)
+    def decorated(self: 'NNCFNetwork', *args, **kwargs):
+        if hasattr(self, 'nncf') and self.nncf.debug_interface is not None:
+            self.nncf.debug_interface.pre_forward_actions(module=self)
         retval = forward_func(self, *args, **kwargs)
-        if self.debug_interface is not None:
-            self.debug_interface.post_forward_actions(module=self)
+        if hasattr(self, 'nncf') and self.nncf.debug_interface is not None:
+            self.nncf.debug_interface.post_forward_actions(module=self)
         return retval
 
     return decorated

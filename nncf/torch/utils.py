@@ -50,7 +50,9 @@ def get_all_modules(model, prefix=None):
 
 
 def get_all_modules_by_type(model, module_types=None, current_scope=None,
-                            ignored_scopes=None, target_scopes=None) -> Dict['Scope', Module]:
+                            ignored_scopes=None, target_scopes=None, memo = None) -> Dict['Scope', Module]:
+    if memo is None:
+        memo = set()
     if isinstance(module_types, str):
         module_types = [module_types]
     found = OrderedDict()
@@ -60,6 +62,9 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
         current_scope = Scope()
         current_scope.push(ScopeElement(model.__class__.__name__))
     for name, module in model.named_children():
+        if id(module) in memo:
+            continue
+        memo.add(id(module))
         child_scope_element = ScopeElement(module.__class__.__name__, name)
         child_scope = current_scope.copy()
         child_scope.push(child_scope_element)
@@ -73,7 +78,8 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
             sub_found = get_all_modules_by_type(module, module_types,
                                                 current_scope=child_scope,
                                                 ignored_scopes=ignored_scopes,
-                                                target_scopes=target_scopes)
+                                                target_scopes=target_scopes,
+                                                memo=memo)
             if sub_found:
                 found.update(sub_found)
     return found

@@ -19,7 +19,7 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
@@ -194,7 +194,7 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def convert_params_to_fp16(fq_params: OVQuantizerLayerParameters) -> \
+    def convert_params_to_fp16(fq_params: FakeQuantizeParameters) -> \
                                Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Converts FakeQuantize parameters to FP16 precision.

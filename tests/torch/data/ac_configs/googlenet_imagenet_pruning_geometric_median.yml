@@ -1,5 +1,5 @@
 models:
-  - name: googlenet_imagenet_filter_pruning_geomedian
+  - name: googlenet_imagenet_pruning_geometric_median
 
     # list of launchers
     launchers:

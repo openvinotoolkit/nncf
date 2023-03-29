@@ -223,6 +223,7 @@ LIST_LOAD_STATE_DESCS = [
 def test_can_load_handler_state(desc: ElasticityDesc):
     original_model = desc.model_cls()
     move_model_to_cuda_if_available(original_model)
+    original_model.eval()
     model = deepcopy(original_model)
     device = next(iter(model.parameters())).device
     dummy_input = torch.ones(model.INPUT_SIZE).to(device)

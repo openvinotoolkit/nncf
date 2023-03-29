@@ -56,7 +56,7 @@ class BasePrecisionInitializer:
             get_weight_quantizers_in_execution_order_per_id()
 
         self._all_quantizers_per_scope = get_all_modules_by_type(
-            self._model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
+            self._model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
             quantization_types)
         self._all_quantizers_per_scope.update(
             self._quantizers_handler.get_all_weight_quantizers_in_execution_order_per_scope())
@@ -103,14 +103,14 @@ class WeightQuantizersHandler:
         self._weight_quantizers_in_execution_order = OrderedDict()  # type: Dict[WeightQuantizerId, BaseQuantizer]
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
-        weight_module_dict = model.get_nncf_wrapped_model()
+        weight_module_dict = model
         quantizers_in_execution_order_per_scope = get_all_modules_by_type(weight_module_dict,
                                                                           quantization_types)
 
         for scope, quantizer in quantizers_in_execution_order_per_scope.items():
             if self.is_wq_scope(scope):
                 affected_module_scope = self.get_owning_module_scope_from_wq_scope(scope)
-                affected_module_node = model.get_original_graph().get_op_nodes_in_scope(affected_module_scope)[0]
+                affected_module_node = model.nncf.get_original_graph().get_op_nodes_in_scope(affected_module_scope)[0]
                 if affected_module_node.node_name in self._wq_affected_module_node_name_vs_qid_dict:
                     qid = self._wq_affected_module_node_name_vs_qid_dict[affected_module_node.node_name]
                     if len(constraints.get_all_unique_bitwidths(qid)) != 1:

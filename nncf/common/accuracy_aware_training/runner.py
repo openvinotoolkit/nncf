@@ -52,10 +52,6 @@ class TrainingRunner(ABC):
     via wrapping user-supplied functions such as `train_epoch_fn` and `validate_fn`.
     """
 
-    uncompressed_model_accuracy: float
-    maximal_total_epochs: int
-    minimal_tolerable_accuracy: float
-
     @abstractmethod
     def train_epoch(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         """
@@ -111,15 +107,6 @@ class TrainingRunner(ABC):
     def reset_training(self) -> None:
         """
         Initialize all-training related parameters (e.g. epoch count, optimizer, learning rate scheduler).
-        """
-
-    @abstractmethod
-    def retrieve_uncompressed_model_accuracy(self, model: TModel) -> None:
-        """
-        :param model: The model object to retrieve the original accuracy value from.
-
-        Retrive the original uncompressed model accuracy from the model instance and
-        set the obtained value to the `uncompressed_model_accuracy` attribute of the TrainingRunner.
         """
 
     @abstractmethod
@@ -188,8 +175,11 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     initialized with the default parameters unless specified in the config.
     """
 
-    def __init__(self, accuracy_aware_training_params: Dict[str, object], verbose=True,
-                 dump_checkpoints=True, lr_updates_needed=True):
+    def __init__(self, accuracy_aware_training_params: Dict[str, object],
+                 uncompressed_model_accuracy: float,
+                 verbose: bool = True,
+                 dump_checkpoints: bool = True, lr_updates_needed: bool = True):
+        self.uncompressed_model_accuracy = uncompressed_model_accuracy
         self.maximal_relative_accuracy_drop = accuracy_aware_training_params.get(
             'maximal_relative_accuracy_degradation', 1.0)
         self.maximal_absolute_accuracy_drop = accuracy_aware_training_params.get(
@@ -374,10 +364,15 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
     initialized with the default parameters unless specified in the config.
     """
 
-    def __init__(self, accuracy_aware_training_params: Dict[str, object], verbose=True,
-                 dump_checkpoints=True, lr_updates_needed=True,
-                 minimal_compression_rate=0.0, maximal_compression_rate=0.95):
-        super().__init__(accuracy_aware_training_params, verbose, dump_checkpoints, lr_updates_needed)
+    def __init__(self, accuracy_aware_training_params: Dict[str, object],
+                 uncompressed_model_accuracy: float,
+                 verbose: bool = True,
+                 dump_checkpoints: bool = True,
+                 lr_updates_needed: bool = True,
+                 minimal_compression_rate: float = 0.0,
+                 maximal_compression_rate: float = 0.95):
+        super().__init__(accuracy_aware_training_params, uncompressed_model_accuracy,
+                         verbose, dump_checkpoints, lr_updates_needed)
 
         self.compression_rate_step = accuracy_aware_training_params.get('initial_compression_rate_step',
                                                                         AA_INITIAL_COMPRESSION_RATE_STEP)
@@ -453,7 +448,8 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self._compressed_training_history.append((compression_rate, accuracy_budget))
 
         if IMG_PACKAGES_AVAILABLE:
-            plt.figure()
+            plt.ioff()
+            fig = plt.figure()
             plt.plot(self.compressed_training_history.keys(),
                      self.compressed_training_history.values())
             buf = io.BytesIO()
@@ -462,6 +458,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
             image = PIL.Image.open(buf)
             self.add_tensorboard_image('compression/accuracy_aware/acc_budget_vs_comp_rate', image,
                                        len(self.compressed_training_history))
+            plt.close(fig)
 
     @property
     def compressed_training_history(self):

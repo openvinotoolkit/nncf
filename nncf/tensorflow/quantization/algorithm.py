@@ -51,6 +51,7 @@ from nncf.common.scopes import check_scopes_in_graph
 from nncf.common.scopes import should_consider_scope
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.backend import copy_model
 from nncf.config.extractors import extract_range_init_params
 from nncf.config.schemata.defaults import QUANTIZATION_OVERFLOW_FIX
 from nncf.config.schemata.defaults import QUANTIZE_INPUTS
@@ -698,7 +699,9 @@ class QuantizationController(BaseCompressionAlgorithmController):
     def loss(self) -> CompressionLoss:
         return self._loss
 
-    def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
+    def strip_model(self, model: tf.keras.Model, do_copy: bool = False) -> tf.keras.Model:
+        if do_copy:
+            model = copy_model(model)
         apply_overflow_fix(model, self._op_names)
         return model
 

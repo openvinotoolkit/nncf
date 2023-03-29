@@ -1,0 +1,18 @@
+strict digraph  {
+"0 Input" [id=0, type=Parameter];
+"1 MatMul_1" [id=1, type=MatMul];
+"2 Squeeze_1" [id=2, type=Squeeze];
+"3 Softmax_1" [id=3, type=Softmax];
+"4 MatMul_2" [id=4, type=MatMul];
+"5 Result" [id=5, type=Result];
+"6 Constant_178" [id=6, type=Constant];
+"7 Constant_180" [id=7, type=Constant];
+"0 Input" -> "1 MatMul_1"  [label="[1, 1, 1]", style=solid];
+"0 Input" -> "2 Squeeze_1"  [label="[1, 1, 1]", style=solid];
+"1 MatMul_1" -> "3 Softmax_1"  [label="[1, 1, 1]", style=solid];
+"2 Squeeze_1" -> "4 MatMul_2"  [label="[1, 1]", style=solid];
+"3 Softmax_1" -> "4 MatMul_2"  [label="[1, 1, 1]", style=solid];
+"4 MatMul_2" -> "5 Result"  [label="[1, 1, 1]", style=solid];
+"6 Constant_178" -> "2 Squeeze_1"  [label="[]", style=dashed];
+"7 Constant_180" -> "1 MatMul_1"  [label="[1, 1]", style=solid];
+}

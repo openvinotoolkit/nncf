@@ -22,11 +22,13 @@ from tensorflow.keras import models
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
+from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
 from nncf.tensorflow.graph.converter import BaseFunctionalSequentialConverter
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS
+from nncf.tensorflow.graph.metatypes.common import DIMENSION_PERMUTATION_METATYPES
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.quantization.test_algorithm_quantization import get_basic_quantization_config
@@ -158,3 +160,22 @@ def test_split_attribute_saved_during_graph_building():
             assert node.layer_attributes is not None
             assert node.layer_attributes.chunks == ref_split_nodes[node.node_name]['chunks']
             assert node.layer_attributes.axis == ref_split_nodes[node.node_name]['axis']
+
+
+def get_model_with_transpose_and_permute(batch_size=None):
+    inputs = layers.Input((10, 10, 10, 10), batch_size=batch_size)
+    x = tf.transpose(inputs, perm=[0, 3, 2, 1, 4])
+    y = tf.keras.layers.Permute([3, 2, 1, 4])(x)
+    return models.Model(inputs, y)
+
+
+def test_permute_attribute_saved_during_graph_building():
+    model = get_model_with_transpose_and_permute()
+    graph = convert_keras_model_to_nncf_graph(model)
+
+    ref_split_nodes = {'tf.compat.v1.transpose': PermuteLayerAttributes([0, 3, 2, 1, 4]),
+                       'permute': PermuteLayerAttributes([0, 3, 2, 1, 4]),}
+    for node in graph.get_all_nodes():
+        if node.metatype in DIMENSION_PERMUTATION_METATYPES:
+            assert node.node_name in ref_split_nodes
+            assert node.layer_attributes  == ref_split_nodes[node.node_name]

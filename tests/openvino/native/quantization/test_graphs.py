@@ -15,13 +15,13 @@ import pytest
 import openvino.runtime as ov
 
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.parameters import ModelType
 
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.models import SYNTHETIC_MODELS
-from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv5DModel
@@ -32,39 +32,38 @@ QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graph
 
 @pytest.mark.parametrize('model_creator_func', SYNTHETIC_MODELS.values())
 def test_syntetic_models_fq_placement(model_creator_func):
-    if model_creator_func == WeightsModel:
-        pytest.skip('OpenVINO backend does not support MatMul op without weights.')
     model = model_creator_func()
-    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
+    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
     compare_nncf_graphs(quantized_model, path_ref_graph)
-
 
 
 @pytest.mark.parametrize('model_creator_func', [DepthwiseConv3DModel, DepthwiseConv4DModel, DepthwiseConv5DModel])
 def test_depthwise_models_fq_placement(model_creator_func):
     model = model_creator_func()
-    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
+    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-OMZ_MODELS = [
-    'mobilenet-v2-pytorch',
-    'mobilenet-v3-small-1.0-224-tf',
-    'resnet-18-pytorch',
-    'yolo-v4-tiny-tf',
-]
+OMZ_MODELS_QUANTIZE_PARAMS = {
+    'swin-tiny-patch4-window7-224': {'preset': QuantizationPreset.PERFORMANCE, 'model_type': ModelType.TRANSFORMER},
+    'mobilenet-v2-pytorch': {'preset': QuantizationPreset.PERFORMANCE},
+    'mobilenet-v3-small-1.0-224-tf': {'preset': QuantizationPreset.PERFORMANCE},
+    'resnet-18-pytorch': {'preset': QuantizationPreset.PERFORMANCE},
+    'yolo-v4-tiny-tf': {'preset': QuantizationPreset.PERFORMANCE},
+}
 
 
-@pytest.mark.parametrize('model_name', OMZ_MODELS)
-def test_omz_models_fq_placement(model_name, tmp_path):
+@pytest.mark.parametrize('model_name_params', OMZ_MODELS_QUANTIZE_PARAMS.items())
+def test_omz_models_fq_placement(model_name_params, tmp_path):
+    model_name, q_params = model_name_params
     _ = download_model(model_name, tmp_path)
     model_path = convert_model(model_name, tmp_path)
     model = ov.Core().read_model(model_path)
-    quantized_model = quantize_model(model, QuantizationPreset.PERFORMANCE)
+    quantized_model = quantize_model(model, q_params)
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f'{model_name}.dot'
     compare_nncf_graphs(quantized_model, path_ref_graph)

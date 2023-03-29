@@ -86,6 +86,7 @@ def create_bnas_model_and_ctrl_by_test_desc(desc: MultiElasticityTestDesc):
 
     nncf_config = NNCFConfig.from_dict(config)
     model = desc.model_creator()
+    model.eval()
     move_model_to_cuda_if_available(model)
     model, training_ctrl = create_bootstrap_training_model_and_ctrl(model, nncf_config)
     return model, training_ctrl

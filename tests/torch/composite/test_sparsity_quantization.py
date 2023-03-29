@@ -48,7 +48,8 @@ def test_can_quantize_inputs_for_sparsity_plus_quantization():
     assert isinstance(nncf_module.pre_ops['1'].op, SymmetricQuantizer)
 
     input_quantizer = get_all_modules(
-        sparse_quantized_model)[f'NNCFNetwork/ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]']
+        sparse_quantized_model)[f'BasicConvTestModel/' \
+                                f'NNCFNetworkInterface[_nncf]/ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]']
 
     assert len(input_quantizer) == 1
     assert isinstance(list(input_quantizer.values())[0], SymmetricQuantizer)

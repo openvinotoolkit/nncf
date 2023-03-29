@@ -274,10 +274,6 @@ strict digraph  {
 "216 SSD_VGG/SSDDetectionOutput[detection_head]/cat_1" [id=216, label="cat_#216", style=filled, type=cat];
 "217 SSD_VGG/SSDDetectionOutput[detection_head]/view_14" [id=217, label="view_#217", style=filled, type=view];
 "218 SSD_VGG/SSDDetectionOutput[detection_head]/softmax_0" [id=218, label="softmax_#218", style=filled, type=softmax];
-"219 SSD_VGG/SSDDetectionOutput[detection_head]/view_15" [id=219, label="view_#219", style=filled, type=view];
-"220 SSD_VGG/SSDDetectionOutput[detection_head]/view_16" [id=220, label="view_#220", style=filled, type=view];
-"221 /nncf_model_output_0" [id=221, label="nncf_model_output_#221", style=filled, type=nncf_model_output];
-"222 /nncf_model_output_1" [id=222, label="nncf_model_output_#222", style=filled, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "1 AsymmetricQuantizer/asymmetric_quantize_0";
 "1 AsymmetricQuantizer/asymmetric_quantize_0" -> "2 SSD_VGG/__getitem___0";
 "1 AsymmetricQuantizer/asymmetric_quantize_0" -> "6 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d_0";
@@ -556,7 +552,6 @@ strict digraph  {
 "205 SSD_VGG/SSDDetectionOutput[detection_head]/view_4" -> "208 SSD_VGG/SSDDetectionOutput[detection_head]/cat_0";
 "206 SSD_VGG/SSDDetectionOutput[detection_head]/view_5" -> "208 SSD_VGG/SSDDetectionOutput[detection_head]/cat_0";
 "207 SSD_VGG/SSDDetectionOutput[detection_head]/view_6" -> "208 SSD_VGG/SSDDetectionOutput[detection_head]/cat_0";
-"208 SSD_VGG/SSDDetectionOutput[detection_head]/cat_0" -> "219 SSD_VGG/SSDDetectionOutput[detection_head]/view_15";
 "209 SSD_VGG/SSDDetectionOutput[detection_head]/view_7" -> "216 SSD_VGG/SSDDetectionOutput[detection_head]/cat_1";
 "210 SSD_VGG/SSDDetectionOutput[detection_head]/view_8" -> "216 SSD_VGG/SSDDetectionOutput[detection_head]/cat_1";
 "211 SSD_VGG/SSDDetectionOutput[detection_head]/view_9" -> "216 SSD_VGG/SSDDetectionOutput[detection_head]/cat_1";
@@ -565,8 +560,5 @@ strict digraph  {
 "214 SSD_VGG/SSDDetectionOutput[detection_head]/view_12" -> "216 SSD_VGG/SSDDetectionOutput[detection_head]/cat_1";
 "215 SSD_VGG/SSDDetectionOutput[detection_head]/view_13" -> "216 SSD_VGG/SSDDetectionOutput[detection_head]/cat_1";
 "216 SSD_VGG/SSDDetectionOutput[detection_head]/cat_1" -> "217 SSD_VGG/SSDDetectionOutput[detection_head]/view_14";
-"216 SSD_VGG/SSDDetectionOutput[detection_head]/cat_1" -> "220 SSD_VGG/SSDDetectionOutput[detection_head]/view_16";
 "217 SSD_VGG/SSDDetectionOutput[detection_head]/view_14" -> "218 SSD_VGG/SSDDetectionOutput[detection_head]/softmax_0";
-"219 SSD_VGG/SSDDetectionOutput[detection_head]/view_15" -> "221 /nncf_model_output_0";
-"220 SSD_VGG/SSDDetectionOutput[detection_head]/view_16" -> "222 /nncf_model_output_1";
 }

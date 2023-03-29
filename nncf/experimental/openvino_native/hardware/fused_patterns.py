@@ -288,6 +288,44 @@ def create_fc_bn_hswish():
     pattern.add_edge(add_node, squeeze_node)
     return pattern
 
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
+def create_matmul_softmax_matmul():
+    pattern = GraphPattern()
+    softmax_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SOFTMAX',
+                                    GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
+    mat_mul_1_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_1',
+                                      GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+    mat_mul_2_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_2',
+                                      GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+
+    any_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ANY',
+                                GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+
+    pattern.add_edge(mat_mul_1_1, softmax_1)
+    pattern.add_edge(softmax_1, mat_mul_2_1)
+    pattern.add_edge(any_1, mat_mul_2_1)
+
+    softmax_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SOFTMAX',
+                                    GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
+    add_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
+                                GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    mat_mul_1_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_1',
+                                      GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+    mat_mul_2_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_2',
+                                      GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+
+    any_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ANY',
+                                GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+
+    pattern.add_edge(mat_mul_1_2, add_2)
+    pattern.add_edge(add_2, softmax_2)
+    pattern.add_edge(softmax_2, mat_mul_2_2)
+    pattern.add_edge(any_2, mat_mul_2_2)
+
+    return pattern
+
+
 # ACTIVATIONS
 
 
@@ -388,8 +426,8 @@ def create_input_shift_scale():
     pattern = GraphPattern()
     model_input = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                       GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                   GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, SUBTRACT',
+                                   GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVSubtractMetatype]})
     multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
                                         GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype})
 
@@ -628,6 +666,30 @@ def create_linear_arithmetic_activations():
     linear.join_patterns(activations)
     return linear
 
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SQUEEZE_ACTIVATIONS)
+def create_linear_squeeze_activation():
+    linear = linear_operations()
+    squeeze = squeeze_operation()
+    activations = atomic_activations_operations()
+
+    linear.join_patterns(squeeze)
+    linear.join_patterns(activations)
+    return linear
+
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.MVN_SCALE_SHIFT_ACTIVATIONS)
+def create_mvn_scale_shift_activations():
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MVN',
+                        GraphPattern.METATYPE_ATTR: om.OVMVNMetatype})
+    scale_shift = create_scale_shift()
+    activations = atomic_activations_operations()
+
+    pattern.join_patterns(scale_shift)
+    pattern.join_patterns(activations)
+    return pattern
+
 # DEVICE PATTERNS
 
 
@@ -750,6 +812,13 @@ def atomic_activations_operations():
 def arithmetic_operations():
     pattern = GraphPattern()
     pattern.add_node(**ARITHMETIC_OPERATIONS)
+    return pattern
+
+
+def squeeze_operation():
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SQUEEZE',
+                        GraphPattern.METATYPE_ATTR: om.OVSqueezeMetatype})
     return pattern
 
 

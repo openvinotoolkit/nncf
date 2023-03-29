@@ -45,7 +45,7 @@ class FilterReorderingAlgorithm(MaskPropagationAlgorithm):
         with torch.no_grad():
             for node in self._graph.topological_sort():
                 node_cls = self.get_meta_operation_by_type_name(node.node_type)
-                node_module = self._model.get_containing_module(node.node_name)
+                node_module = self._model.nncf.get_containing_module(node.node_name)
                 if node_module not in pruned_node_modules:
                     node_cls.input_reorder(self._model, node, self._graph)
                     node_cls.output_reorder(self._model, node, self._graph)

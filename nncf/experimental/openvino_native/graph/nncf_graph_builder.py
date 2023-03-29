@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Optional, Type
+from typing import Dict, List, Type
 import openvino.runtime as ov
 
 from nncf.common.graph import BaseLayerAttributes
@@ -23,9 +23,10 @@ from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
 
 
 class GraphConverter:
@@ -71,6 +72,10 @@ class GraphConverter:
         """
         if metatype in [OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype]:
             return inputs[:2]
+        if metatype == OVGRUSequenceMetatype:
+            return inputs[:5]
+        if metatype == OVLSTMSequenceMetatype:
+            return inputs[:6]
         return inputs
 
     @staticmethod
@@ -164,7 +169,7 @@ class GraphConverter:
                 GraphConverter._add_nncf_node(node, nncf_graph)
             # Set const port id
             elif metatype in METATYPES_WITH_CONST_PORT_ID:
-                nncf_node = nncf_graph.get_node_by_name(node_name)
+                const_attrs = {}
                 for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
                     inp_name = inp.get_source_output().get_node().get_friendly_name()
                     if inp_name in visited:
@@ -172,16 +177,18 @@ class GraphConverter:
 
                     const_port_id = inp.get_index()
                     const_node = get_operation_const_op(node, const_port_id)
-                    nncf_node = nncf_graph.get_node_by_name(node_name)
-                    nncf_node.layer_attributes =\
-                        OVConstantLayerAttributes(const_port_id=const_port_id,
-                                                  const_shape=tuple(const_node.get_output_shape(0)))
-                    nncf_node.layer_name = const_node.get_friendly_name()
-                    break
+                    ov_dtype = const_node.get_element_type().get_type_name()
+                    if GraphConverter.convert_to_nncf_dtype(ov_dtype) == Dtype.INTEGER:
+                        continue
 
-                if nncf_node.layer_attributes is None and metatype in GENERAL_WEIGHT_LAYER_METATYPES:
-                    raise NotImplementedError(f'Node {node_name} of {node.get_type_name()} type'
-                                               ' is not supported without constant weights!')
+                    const_attrs[const_port_id] = {
+                        'name': const_node.get_friendly_name(),
+                        'shape': tuple(const_node.get_output_shape(0))
+                    }
+
+                if const_attrs:
+                    nncf_node = nncf_graph.get_node_by_name(node_name)
+                    nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs)
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
@@ -189,17 +196,22 @@ class GraphConverter:
 
 class OVConstantLayerAttributes(BaseLayerAttributes):
     """
-    This class stores const port index of layers for the algorithms.
+    This class stores mapping weights port indices to constant name and shape.
     """
 
-    def __init__(self, const_port_id: Optional[int] = None,
-                 const_shape: Optional[List[int]] = None):
+    def __init__(self, const_attrs: Dict[int, Dict]):
         """
-        :param const_port_id: Index of const port. Should be None if layer without constant inputs.
-        :param const_shape: Constant shape. Should be None if layer without constant inputs.
+        :param const_attrs: Map of weights port ID to corresponding const attributes.
         """
-        self.const_port_id = const_port_id
-        self.const_shape = const_shape
+        self.const_attrs = const_attrs
+
+    def get_const_port_ids(self) -> List[int]:
+        """
+        Returns indices of input ports corresponding to the constant nodes.
+
+        :returns: List of input port indices with constants.
+        """
+        return list(self.const_attrs.keys())
 
 
 def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:

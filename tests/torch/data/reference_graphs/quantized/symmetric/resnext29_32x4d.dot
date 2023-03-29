@@ -5,7 +5,7 @@ strict digraph  {
 "3 ResNeXt/NNCFConv2d[conv1]/conv2d_0" [id=3, type=conv2d];
 "4 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0" [id=4, type=batch_norm];
 "5 ResNeXt/relu_0" [id=5, type=relu];
-"6 ResNeXt/SymmetricQuantizer/symmetric_quantize_0" [id=6, type=symmetric_quantize];
+"6 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/relu_0|OUTPUT]/symmetric_quantize_0" [id=6, type=symmetric_quantize];
 "7 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=7, type=symmetric_quantize];
 "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0" [id=8, type=conv2d];
 "9 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" [id=9, type=batch_norm];
@@ -172,7 +172,7 @@ strict digraph  {
 "170 ResNeXt/Sequential[layer3]/Block[2]/relu_2" [id=170, type=relu];
 "171 ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer/symmetric_quantize_2" [id=171, type=symmetric_quantize];
 "172 ResNeXt/avg_pool2d_0" [id=172, type=avg_pool2d];
-"173 ResNeXt/SymmetricQuantizer/symmetric_quantize_1" [id=173, type=symmetric_quantize];
+"173 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [id=173, type=symmetric_quantize];
 "174 ResNeXt/view_0" [id=174, type=view];
 "175 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=175, type=symmetric_quantize];
 "176 ResNeXt/NNCFLinear[linear]/linear_0" [id=176, type=linear];
@@ -182,9 +182,9 @@ strict digraph  {
 "2 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "3 ResNeXt/NNCFConv2d[conv1]/conv2d_0";
 "3 ResNeXt/NNCFConv2d[conv1]/conv2d_0" -> "4 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "4 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "5 ResNeXt/relu_0";
-"5 ResNeXt/relu_0" -> "6 ResNeXt/SymmetricQuantizer/symmetric_quantize_0";
-"6 ResNeXt/SymmetricQuantizer/symmetric_quantize_0" -> "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
-"6 ResNeXt/SymmetricQuantizer/symmetric_quantize_0" -> "22 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
+"5 ResNeXt/relu_0" -> "6 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/relu_0|OUTPUT]/symmetric_quantize_0";
+"6 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/relu_0|OUTPUT]/symmetric_quantize_0" -> "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
+"6 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/relu_0|OUTPUT]/symmetric_quantize_0" -> "22 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "7 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
 "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0" -> "9 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "9 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "10 ResNeXt/Sequential[layer1]/Block[0]/relu_0";
@@ -358,8 +358,8 @@ strict digraph  {
 "169 ResNeXt/Sequential[layer3]/Block[2]/__iadd___0" -> "170 ResNeXt/Sequential[layer3]/Block[2]/relu_2";
 "170 ResNeXt/Sequential[layer3]/Block[2]/relu_2" -> "171 ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer/symmetric_quantize_2";
 "171 ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer/symmetric_quantize_2" -> "172 ResNeXt/avg_pool2d_0";
-"172 ResNeXt/avg_pool2d_0" -> "173 ResNeXt/SymmetricQuantizer/symmetric_quantize_1";
-"173 ResNeXt/SymmetricQuantizer/symmetric_quantize_1" -> "174 ResNeXt/view_0";
+"172 ResNeXt/avg_pool2d_0" -> "173 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/avg_pool2d_0|OUTPUT]/symmetric_quantize_0";
+"173 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" -> "174 ResNeXt/view_0";
 "174 ResNeXt/view_0" -> "176 ResNeXt/NNCFLinear[linear]/linear_0";
 "175 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "176 ResNeXt/NNCFLinear[linear]/linear_0";
 "176 ResNeXt/NNCFLinear[linear]/linear_0" -> "177 /nncf_model_output_0";

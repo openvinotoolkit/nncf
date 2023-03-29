@@ -14,7 +14,7 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Installation
 
-At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).
 
 To work with the sample you should install the corresponding Python package dependencies:
 
@@ -66,18 +66,18 @@ The [COCO2017](https://cocodataset.org/) dataset in TFRecords format should be s
 
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/object_detection` folder.
-- Download the pre-trained weights in H5 format and provide the path to them using `--weights` flag. The link to the 
-archive with pre-trained weights can be found in the `TensorFlow checkpoint` column of the [results](#results) table. 
-Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the 
+- Download the pre-trained weights in H5 format and provide the path to them using `--weights` flag. The link to the
+archive with pre-trained weights can be found in the `TensorFlow checkpoint` column of the [results](#results) table.
+Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the
 FP32 model, without applying any compression algorithms.
-- (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command: 
+- (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command:
   ```bash
   python main.py \
   --mode=test \
   --config=configs/quantization/retinanet_coco_int8.json \
   --weights=<path_to_H5_file_with_pretrained_weights>
   --data=<path_to_dataset> \
-  --disable-compression 
+  --disable-compression
   ```
 - Run the following command to start compression with fine-tuning on all available GPUs on the machine:
     ```bash
@@ -177,4 +177,3 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |RetinaNet|None|COCO 2017|33.43|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz)|
 |RetinaNet|Filter pruning, 40%|COCO 2017|32.72 (0.71)|[retinanet_coco_pruning_geometric_median.json](configs/pruning/retinanet_coco_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median.tar.gz)|
 |RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%|COCO 2017|32.67 (0.76)|[retinanet_coco_pruning_geometric_median_int8.json](configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median_int8.tar.gz)|
-

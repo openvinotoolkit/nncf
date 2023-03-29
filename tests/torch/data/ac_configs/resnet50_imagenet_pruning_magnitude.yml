@@ -1,5 +1,5 @@
 models:
-  - name: resnet50_imagenet_filter_pruning_magnitude
+  - name: resnet50_imagenet_pruning_magnitude
     launchers:
       - framework: dlsdk
         device: CPU

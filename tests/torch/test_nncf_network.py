@@ -10,9 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import inspect
 import itertools
-from functools import partial
 import os
+from abc import ABCMeta
+from abc import abstractmethod
 from collections import Counter
 from copy import deepcopy
 from pathlib import Path
@@ -25,6 +27,7 @@ import torch
 from torch import nn
 from torch.nn.utils import weight_norm
 
+from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
@@ -37,6 +40,7 @@ from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
+from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
@@ -80,6 +84,13 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_models.synthetic import ManyNonEvalModules
 
+#pylint:disable=too-many-lines
+
+@pytest.fixture()
+def _nncf_caplog(caplog):
+    nncf_logger.propagate = True
+    yield caplog
+    nncf_logger.propagate = False
 
 def test_disable_shape_matching():
     class MatMulModel(nn.Module):
@@ -99,13 +110,13 @@ def test_disable_shape_matching():
     qnet_no_shape = NNCFNetwork(deepcopy(model), input_infos=[ModelInputInfo(input_shape_1), ],
                                 scopes_without_shape_matching=['MatMulModel'])  # type: NNCFNetwork
 
-    context = qnet_no_shape.get_tracing_context()
+    context = qnet_no_shape.nncf.get_tracing_context()
     context.enable_trace_dynamic_graph()
     _ = qnet_no_shape(torch.zeros(*input_shape_1))
-    graph_1 = deepcopy(qnet_no_shape.get_dynamic_graph())
+    graph_1 = deepcopy(qnet_no_shape.nncf.get_dynamic_graph())
 
     _ = qnet_no_shape(torch.zeros(*input_shape_2))
-    graph_2 = deepcopy(qnet_no_shape.get_dynamic_graph())
+    graph_2 = deepcopy(qnet_no_shape.nncf.get_dynamic_graph())
 
     assert graph_1 == graph_2
 
@@ -113,14 +124,14 @@ def test_disable_shape_matching():
     assert len(nodes_1) == 5  # 1 input node + 1 chunk + 1 transpose + 1 matmul + 1 output node
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
-    context = qnet.get_tracing_context()
+    context = qnet.nncf.get_tracing_context()
     context.enable_trace_dynamic_graph()
     _ = qnet(torch.zeros(*input_shape_1))
     _ = qnet(torch.zeros(*input_shape_2))
     # The second forward run should have led to an increase in registered node counts
     # since disable_shape_matching was False and the network was run with a different
     # shape of input tensor
-    assert qnet.get_dynamic_graph().get_nodes_count() > graph_1.get_nodes_count()
+    assert qnet.nncf.get_dynamic_graph().get_nodes_count() > graph_1.get_nodes_count()
 
 
 def test_check_correct_modules_replacement():
@@ -129,7 +140,7 @@ def test_check_correct_modules_replacement():
 
     _, detected_nncf_modules = check_correct_nncf_modules_replacement(model, nncf_model)
     replaced_modules_reported_by_nncf_network = \
-        {scope: module for module, scope in nncf_model.get_nncf_modules().items()}
+        {scope: module for module, scope in nncf_model.nncf.get_nncf_modules().items()}
     assert set(detected_nncf_modules) == set(replaced_modules_reported_by_nncf_network)
 
 
@@ -213,7 +224,7 @@ def test_custom_module_registering():
             assert attr in module_attrs
 
     # Check user ops metatypes
-    graph = nncf_model.get_original_graph()
+    graph = nncf_model.nncf.get_original_graph()
     nodes_dict = {
         'TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/rand_like_0': UnknownMetatype,
         'TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/conv2d_0': PTConv2dMetatype,
@@ -233,7 +244,7 @@ def test_custom_module_registering():
 def test_get_weighted_original_graph_nodes():
     model = TwoConvTestModelWithUserModule()
     nncf_model = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
-    weighted_nodes = nncf_model.get_weighted_original_graph_nodes()
+    weighted_nodes = nncf_model.nncf.get_weighted_original_graph_nodes()
     ref_node_names = [
         "TwoConvTestModelWithUserModule/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
         "TwoConvTestModelWithUserModule/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
@@ -242,7 +253,7 @@ def test_get_weighted_original_graph_nodes():
         # and is within a registered user module
         "TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/conv2d_0"
     ]
-    ref_weighted_nodes = [nncf_model.get_original_graph().get_node_by_name(name) for name in ref_node_names]
+    ref_weighted_nodes = [nncf_model.nncf.get_original_graph().get_node_by_name(name) for name in ref_node_names]
     assert set(weighted_nodes) == set(ref_weighted_nodes)
 
 
@@ -250,10 +261,10 @@ def test_get_weighted_original_graph_nodes():
 def test_get_op_nodes_in_scope():
     model = TwoConvTestModel()
     nncf_model = NNCFNetwork(deepcopy(model), input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
-    nncf_graph = nncf_model.get_original_graph()
+    nncf_graph = nncf_model.nncf.get_original_graph()
 
     # Valid scopes should be successfully found
-    valid_nncf_modules = nncf_model.get_nncf_modules()
+    valid_nncf_modules = nncf_model.nncf.get_nncf_modules()
     nodes_list = list(nncf_graph.get_all_node_ids())
     for module_scope in valid_nncf_modules.values():
         matching_nncf_nodes = nncf_graph.get_op_nodes_in_scope(module_scope)
@@ -266,7 +277,7 @@ def test_get_op_nodes_in_scope():
     fake_nncf_model = NNCFNetwork(deepcopy(fake_model), input_infos=[ModelInputInfo([1, 1, 4, 4])])
 
     # Not valid scopes shouldn't be found
-    fake_nncf_modules = fake_nncf_model.get_nncf_modules()
+    fake_nncf_modules = fake_nncf_model.nncf.get_nncf_modules()
     for module_scope in fake_nncf_modules.values():
         matching_nncf_nodes = nncf_graph.get_op_nodes_in_scope(module_scope)
         assert not matching_nncf_nodes
@@ -360,22 +371,22 @@ class TestInsertionCommands:
         else:
             hook = BaseOp(lambda x: x)
 
-        self.compressed_model.insert_at_point(insertion_point, [hook])
+        self.compressed_model.nncf.insert_at_point(insertion_point, [hook])
 
         # pylint:disable=protected-access
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
-            ctx = self.compressed_model.get_tracing_context()
+            ctx = self.compressed_model.nncf.get_tracing_context()
             pre_hook_id = PreHookId(insertion_point.op_address, input_port_id=insertion_point.input_port_id)
             assert ctx._pre_hooks[pre_hook_id][0] is hook
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
-            ctx = self.compressed_model.get_tracing_context()
+            ctx = self.compressed_model.nncf.get_tracing_context()
             assert ctx._post_hooks[insertion_point.op_address][0] is hook
         if insertion_point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
-            module = self.compressed_model.get_module_by_scope(insertion_point.module_scope)
+            module = self.compressed_model.nncf.get_module_by_scope(insertion_point.module_scope)
             assert module.pre_ops["0"] is hook
 
         if insertion_point.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
-            module = self.compressed_model.get_module_by_scope(insertion_point.module_scope)
+            module = self.compressed_model.nncf.get_module_by_scope(insertion_point.module_scope)
             assert module.post_ops["0"] is hook
 
     priority_types = ["same", "different"]
@@ -439,22 +450,22 @@ class TestInsertionCommands:
 
         # pylint:disable=protected-access
         if insertion_type == TargetType.OPERATOR_PRE_HOOK:
-            ctx = self.compressed_model.get_tracing_context()
+            ctx = self.compressed_model.nncf.get_tracing_context()
             pre_hook_id = PreHookId(OperationAddress.from_str(point.target_node_name),
                                     input_port_id=point.input_port_id)
             self.check_order(ctx._pre_hooks[pre_hook_id], hook_list, order)
         if insertion_type == TargetType.OPERATOR_POST_HOOK:
-            ctx = self.compressed_model.get_tracing_context()
+            ctx = self.compressed_model.nncf.get_tracing_context()
             self.check_order(ctx._post_hooks[OperationAddress.from_str(point.target_node_name)],
                              hook_list, order)
 
         if insertion_type == TargetType.OPERATION_WITH_WEIGHTS:
-            module = self.compressed_model.get_containing_module(point.target_node_name)
+            module = self.compressed_model.nncf.get_containing_module(point.target_node_name)
             # Works because Pytorch ModuleDict is ordered
             self.check_order([x.operand for x in module.pre_ops.values()], hook_list, order)
 
         if insertion_type == TargetType.POST_LAYER_OPERATION:
-            module = self.compressed_model.get_containing_module(point.target_node_name)
+            module = self.compressed_model.nncf.get_containing_module(point.target_node_name)
             # Works because Pytorch ModuleDict is ordered
             self.check_order(list(module.post_ops.values()), hook_list, order)
 
@@ -622,7 +633,7 @@ class TestInsertionPointGraph:
 
         model = ModelForMetatypeTesting()
         nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 3, 300, 300])])
-        nncf_graph = nncf_network.get_original_graph()
+        nncf_graph = nncf_network.nncf.get_original_graph()
 
         for nncf_node in nncf_graph.get_all_nodes():  # type: NNCFNode
             assert nncf_node.node_name in ref_scope_vs_metatype_dict
@@ -682,21 +693,23 @@ def test_get_clean_shallow_copy():
     config = get_basic_sparsity_plus_quantization_config()
     register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    external_quantizers = getattr(sparse_quantized_model, EXTERNAL_QUANTIZERS_STORAGE_NAME)
+    external_quantizers = getattr(sparse_quantized_model.nncf, EXTERNAL_QUANTIZERS_STORAGE_NAME)
     assert external_quantizers
-    old_nncf_modules = sparse_quantized_model.get_nncf_modules()
+    old_nncf_modules = sparse_quantized_model.nncf.get_nncf_modules()
     old_nncf_module_pre_ops = [module.pre_ops for module in old_nncf_modules]
     assert any(old_nncf_module_pre_ops)
-    assert sparse_quantized_model.get_graph().get_nodes_count() != \
-           sparse_quantized_model.get_original_graph().get_nodes_count()
+    assert sparse_quantized_model.nncf.get_graph().get_nodes_count() != \
+           sparse_quantized_model.nncf.get_original_graph().get_nodes_count()
 
-    clean_copy = sparse_quantized_model.get_clean_shallow_copy()
-    assert clean_copy is not sparse_quantized_model
-    assert clean_copy.get_nncf_wrapped_model() is sparse_quantized_model.get_nncf_wrapped_model()
-    new_nncf_modules = clean_copy.get_nncf_modules()
+    old_interface = sparse_quantized_model.nncf
+    clean_copy = sparse_quantized_model.nncf.get_clean_shallow_copy()
+    assert clean_copy is sparse_quantized_model
+    new_interface = clean_copy.nncf
+    assert old_interface is not new_interface
+    new_nncf_modules = clean_copy.nncf.get_nncf_modules()
     new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
     assert not any(new_nncf_module_pre_ops)
-    assert clean_copy.get_graph().get_nodes_count() == clean_copy.get_original_graph().get_nodes_count()
+    assert clean_copy.nncf.get_graph().get_nodes_count() == clean_copy.nncf.get_original_graph().get_nodes_count()
 
 
 class TwoConvTestModelWithUniqueFunction(TwoConvTestModel):
@@ -714,28 +727,75 @@ class TwoConvTestModelWithUniqueFunction(TwoConvTestModel):
 
 
 def test_get_attr():
-    is_called_mock_forward = False
-
-    def mock_forward(*args, **kwargs):
-        nonlocal is_called_mock_forward
-        is_called_mock_forward = True
-
     model = TwoConvTestModelWithUniqueFunction()
-    config = get_basic_sparsity_plus_quantization_config()
-    register_bn_adaptation_init_args(config)
-    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 1, 4, 4])])
 
-    sparse_quantized_model.non_unique_attr = 'NNCFNetwork_non_unique_attr'
-    sparse_quantized_model.forward = mock_forward
-    sparse_quantized_model.forward()
-    assert is_called_mock_forward
+    assert hasattr(nncf_network, 'unique_attr')
+    assert hasattr(nncf_network, 'non_unique_attr')
+    assert inspect.ismethod(nncf_network.train_step)
+    assert inspect.isfunction(nncf_network.static_func)
 
-    assert hasattr(sparse_quantized_model, 'unique_attr')
-    assert hasattr(sparse_quantized_model, 'non_unique_attr')
-    assert sparse_quantized_model.non_unique_attr == 'NNCFNetwork_non_unique_attr'
-    assert isinstance(sparse_quantized_model.train_step, partial)
-    assert isinstance(sparse_quantized_model.train_step.args[0], NNCFNetwork)
-    assert not isinstance(sparse_quantized_model.static_func, partial)
+
+class ModelWithAttr(torch.nn.Module):
+    CLASS_ATTR = 0
+
+    def __init__(self):
+        super().__init__()
+        self.instance_attr = 0
+        self._input_infos = 0  # deliberately set to coincide with an attr in NNCFNetwork
+
+    def forward(self, x):
+        return x
+
+    def other_forward(self, x):
+        return x * 2
+
+
+def test_setting_attrs():
+    model = ModelWithAttr()
+    assert model.CLASS_ATTR == 0
+    assert model.instance_attr == 0
+    #pylint:disable=protected-access
+    assert model._input_infos == 0
+    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
+    #pylint:disable=protected-access
+    assert nncf_network._input_infos == 0
+
+    nncf_network.instance_attr = 1
+    assert nncf_network.instance_attr == 1
+
+    nncf_network.non_original_model_attr = 1
+    assert nncf_network.non_original_model_attr == 1
+    assert hasattr(nncf_network, "non_original_model_attr")
+    assert nncf_network.non_original_model_attr == 1
+
+
+def mock_forward(*args, **kwargs):
+    mock_forward.called = True
+
+def mock_forward_with_self(self, *args, **kwargs):
+    mock_forward_with_self.called = True
+
+def mock_forward_with_matching_signature(self, x):
+    mock_forward_with_matching_signature.called = True
+
+
+@pytest.mark.parametrize("new_forward", [mock_forward, mock_forward_with_self,
+                                         mock_forward_with_matching_signature])
+def test_replacing_forward_with_free_functions(new_forward, _nncf_caplog):
+    model = ModelWithAttr()
+    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
+
+    nncf_network.forward = new_forward
+    assert "set_original_unbound_forward" in _nncf_caplog.text
+
+
+def test_replacing_forward_with_another_own_method(_nncf_caplog):
+    model = ModelWithAttr()
+    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
+
+    nncf_network.forward = nncf_network.other_forward
+    assert "set_original_unbound_forward" in _nncf_caplog.text
 
 
 def test_temporary_clean_view():
@@ -744,21 +804,21 @@ def test_temporary_clean_view():
     register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     old_sd = sparse_quantized_model.state_dict()
-    old_graph = deepcopy(sparse_quantized_model.get_graph())
-    with sparse_quantized_model.temporary_clean_view() as intermediate_model:
+    old_graph = deepcopy(sparse_quantized_model.nncf.get_graph())
+    with sparse_quantized_model.nncf.temporary_clean_view() as intermediate_model:
         clean_sd = intermediate_model.state_dict()
         assert len(clean_sd) < len(old_sd)
-        new_nncf_modules = intermediate_model.get_nncf_modules()
+        new_nncf_modules = intermediate_model.nncf.get_nncf_modules()
         new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
         assert not any(new_nncf_module_pre_ops)
-        assert intermediate_model.get_graph().get_nodes_count() == \
-               intermediate_model.get_original_graph().get_nodes_count()
+        assert intermediate_model.nncf.get_graph().get_nodes_count() == \
+               intermediate_model.nncf.get_original_graph().get_nodes_count()
     sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
     for key in old_sd.keys():
         assert key in sd_after_tmp_clean_view # pylint: disable=E1135
         assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key])) # pylint: disable=E1136
-    sparse_quantized_model.rebuild_graph()
-    graph_after_tmp_clean_view = sparse_quantized_model.get_graph()
+    sparse_quantized_model.nncf.rebuild_graph()
+    graph_after_tmp_clean_view = sparse_quantized_model.nncf.get_graph()
     assert graph_after_tmp_clean_view == old_graph
 
 
@@ -782,7 +842,7 @@ def test_multiple_forward():
     config = get_basic_sparsity_plus_quantization_config()
     register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    graph = sparse_quantized_model.get_original_graph()
+    graph = sparse_quantized_model.nncf.get_original_graph()
     for node in list(graph.get_all_nodes())[1:-2]:
         assert node.layer_attributes is not None
 
@@ -803,6 +863,7 @@ def test_insertion_point_target_point_translation():
     target_type = TargetType.POST_LAYER_OPERATION
     assert PTInsertionPoint(target_type, op_address).insertion_type == PTInsertionType.NNCF_MODULE_POST_OP
 
+
 class IndirectModuleCaller(nn.Module):
     def __init__(self, module_for_indirection: torch.nn.Module):
         super().__init__()
@@ -815,6 +876,7 @@ class IndirectModuleCaller(nn.Module):
         out = self.conv_immediate(enc_features)
 
         return out
+
 
 class Backbone(nn.Module):
     def __init__(self, in_channels=3):
@@ -861,3 +923,101 @@ def test_wrapping_of_indirect_module_operations():
     assert model.testBranch.module_for_indirection.conv_indirect is model.backbone.conv_indirect
     assert model.testBranch.module_for_indirection.features[0] is model.testBranch.module_for_indirection.conv_indirect
     assert isinstance(model.testBranch.conv_immediate, NNCFConv2d)
+
+
+def test_can_work_with_sequential_models():
+    sequential = torch.nn.Sequential(torch.nn.Conv2d(1, 1, 1), torch.nn.Conv2d(1, 1, 1))
+    model = NNCFNetwork(sequential, [
+        ModelInputInfo([1, 1, 32, 32])
+    ])
+    assert model.nncf not in model  # Sequential, even wrapped, should only iterate over its real modules
+    model(torch.ones([1, 1, 1, 1]))
+    _ = model.nncf.get_clean_shallow_copy()
+
+
+class SimplestModel(torch.nn.Module):
+    INPUT_SIZE = [1, 1, 32, 32]
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(1, 1, 1)
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+@pytest.fixture(name='simple_net')
+def simple_net_():
+    model = NNCFNetwork(SimplestModel(), [
+        ModelInputInfo(SimplestModel.INPUT_SIZE)
+    ])
+    return model
+
+
+def test_works_when_wrapped_with_dataparallel(simple_net):
+    if not torch.cuda.is_available():
+        pytest.xfail("The executing host must have > 1 CUDA GPU in order for this test to be relevant.")
+    simple_net.cuda()
+    dp_model = torch.nn.DataParallel(simple_net)
+    dp_model(torch.zeros([10, *simple_net.INPUT_SIZE[1:]], device='cuda'))
+
+
+def test_works_with_old_wrapping_and_deprecation_warning(simple_net):
+    with pytest.warns(NNCFDeprecationWarning):
+        simple_net.get_graph()
+
+
+def test_class_has_same_name_and_module_as_original(simple_net):
+    assert simple_net.__class__.__name__ == SimplestModel.__name__
+    assert simple_net.__class__.__module__ == SimplestModel.__module__
+
+
+def test_class_hashes_as_original(simple_net):
+    assert hash(simple_net.__class__) == hash(SimplestModel)
+
+
+def test_class_compares_as_original(simple_net):
+    assert simple_net.__class__ == SimplestModel
+    assert SimplestModel == simple_net.__class__
+    assert simple_net.__class__ == simple_net.__class__
+    assert not simple_net.__class__ != simple_net.__class__
+    assert simple_net.__class__ != ModelWithAttr
+    assert ModelWithAttr != simple_net.__class__
+
+class MultiInputModel(torch.nn.Module):
+    def forward(self, x, y):
+        return x, y
+
+def test_forward_signature_is_same_as_for_original_model(simple_net):
+    original_obj = SimplestModel()
+    original_signature_inst = inspect.signature(original_obj.forward)
+    net_signature_inst = inspect.signature(simple_net.forward)
+    assert original_signature_inst == net_signature_inst
+
+    original_signature_cls = inspect.signature(SimplestModel.forward)
+    net_signature_cls = inspect.signature(simple_net.__class__.forward)
+    assert original_signature_cls == net_signature_cls
+
+    # Verify that if we create 2 NNCFNetworks, then each will have its own signature
+    another_original_obj = MultiInputModel()
+    another_nncf_net = NNCFNetwork(MultiInputModel(), input_infos=[ModelInputInfo([1, 1, 1, 1]),
+                                                                   ModelInputInfo([1, 1, 1, 1])])
+    assert inspect.signature(another_nncf_net.forward) == inspect.signature(another_original_obj.forward)
+    assert inspect.signature(simple_net.forward) == inspect.signature(original_obj.forward)
+
+class MetaModel(torch.nn.Module, metaclass=ABCMeta):
+    @abstractmethod
+    def method(self):
+        pass
+
+class ConcreteMetaModel(MetaModel):
+    def method(self):
+        pass
+
+    def forward(self, x):
+        return x
+
+
+def test_can_wrap_models_with_metaclass():
+    _ = NNCFNetwork(ConcreteMetaModel(), [
+        ModelInputInfo([1, 1, 1, 1])
+    ])

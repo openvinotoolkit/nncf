@@ -98,7 +98,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         return layout
 
     def _prune_weights(self, target_model: NNCFNetwork):
-        target_model_graph = target_model.get_original_graph()
+        target_model_graph = target_model.nncf.get_original_graph()
         groups_of_nodes_to_prune = self.pruning_node_selector.create_pruning_groups(target_model_graph)
 
         device = get_model_device(target_model)
@@ -109,7 +109,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
             group_minfos = []
             for node in group.elements:
                 node_name = node.node_name
-                module = target_model.get_containing_module(node_name)
+                module = target_model.nncf.get_containing_module(node_name)
                 module_scope = target_model_graph.get_scope_by_node_name(node_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_module(module)
@@ -153,7 +153,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 continue
 
             node_name = node.node_name
-            module = target_model.get_containing_module(node_name)
+            module = target_model.nncf.get_containing_module(node_name)
 
             pruning_block = self.create_weight_pruning_operation(module, node_name)
             # Hook for weights and bias

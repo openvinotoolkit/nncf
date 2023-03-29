@@ -7,7 +7,7 @@ strict digraph  {
 "5 ResNet/NNCFConv2d[conv1]/conv2d_0" [id=5, type=conv2d];
 "6 ResNet/NNCFBatchNorm2d[bn1]/batch_norm_0" [id=6, type=batch_norm];
 "7 ResNet/relu_0" [id=7, type=relu];
-"8 ResNet/SymmetricQuantizer/symmetric_quantize_0" [id=8, type=symmetric_quantize];
+"8 ResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNet/relu_0|OUTPUT]/symmetric_quantize_0" [id=8, type=symmetric_quantize];
 "9 ResNet/MaxPool2d[maxpool]/max_pool2d_0" [id=9, type=max_pool2d];
 "10 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=10, type=calc_rb_binary_mask];
 "11 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=11, type=apply_binary_mask];
@@ -170,8 +170,8 @@ strict digraph  {
 "4 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "5 ResNet/NNCFConv2d[conv1]/conv2d_0";
 "5 ResNet/NNCFConv2d[conv1]/conv2d_0" -> "6 ResNet/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "6 ResNet/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "7 ResNet/relu_0";
-"7 ResNet/relu_0" -> "8 ResNet/SymmetricQuantizer/symmetric_quantize_0";
-"8 ResNet/SymmetricQuantizer/symmetric_quantize_0" -> "9 ResNet/MaxPool2d[maxpool]/max_pool2d_0";
+"7 ResNet/relu_0" -> "8 ResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNet/relu_0|OUTPUT]/symmetric_quantize_0";
+"8 ResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNet/relu_0|OUTPUT]/symmetric_quantize_0" -> "9 ResNet/MaxPool2d[maxpool]/max_pool2d_0";
 "9 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "13 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0";
 "9 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "23 ResNet/Sequential[layer1]/BasicBlock[0]/__iadd___0";
 "10 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "11 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";

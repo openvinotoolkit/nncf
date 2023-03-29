@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import copy
 from typing import TypeVar
 
 import torch.nn
@@ -133,29 +132,3 @@ class PTCompositeCompressionAlgorithmController(
                 sum_compression_rate += sum_compression_rate
                 not_none_compression_rate_cnt += 1
         return sum_compression_rate / max(not_none_compression_rate_cnt, 1)
-
-    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
-        """
-        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
-
-        :param make_model_copy: `True` means that a copy of the model will be modified.
-            `False` means that the original model in the controller will be changed and
-            no further compression actions will be available. Defaults to True.
-
-        :return NNCFNetwork: Converted model.
-        """
-        model = self.model
-        if make_model_copy:
-            model = copy.deepcopy(self.model)
-
-        for ctrl in self.child_ctrls:
-            if make_model_copy:
-                # pylint: disable=protected-access
-                saved_model = ctrl.model
-                ctrl._model = model
-                model = ctrl.prepare_for_inference(make_model_copy=False)
-                ctrl._model = saved_model
-            else:
-                model = ctrl.prepare_for_inference(make_model_copy=False)
-
-        return model

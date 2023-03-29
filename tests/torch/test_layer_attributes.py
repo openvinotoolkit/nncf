@@ -272,7 +272,7 @@ def test_can_set_valid_layer_attributes(desc: LayerAttributesTestDesc):
     nncf_network = NNCFNetwork(single_layer_model, desc.model_input_info_list)
 
     nncf_network.eval()
-    graph = nncf_network.get_graph()
+    graph = nncf_network.nncf.get_graph()
     ref_values = [
         RefNodeDesc(PTInputNoopMetatype),
         RefNodeDesc(desc.metatype_cls, desc.layer_attributes, desc.layer_attributes_comparator),

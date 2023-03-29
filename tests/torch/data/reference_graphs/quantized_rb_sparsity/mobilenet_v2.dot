@@ -369,7 +369,7 @@ strict digraph  {
 "367 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" [id=367, type=hardtanh];
 "368 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize_0" [id=368, type=symmetric_quantize];
 "369 MobileNetV2/adaptive_avg_pool2d_0" [id=369, type=adaptive_avg_pool2d];
-"370 MobileNetV2/SymmetricQuantizer/symmetric_quantize_0" [id=370, type=symmetric_quantize];
+"370 MobileNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[MobileNetV2/adaptive_avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [id=370, type=symmetric_quantize];
 "371 MobileNetV2/reshape_0" [id=371, type=reshape];
 "372 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" [id=372, type=dropout];
 "373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=373, type=calc_rb_binary_mask];
@@ -756,8 +756,8 @@ strict digraph  {
 "366 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFBatchNorm2d[1]/batch_norm_0" -> "367 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0";
 "367 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" -> "368 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize_0";
 "368 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize_0" -> "369 MobileNetV2/adaptive_avg_pool2d_0";
-"369 MobileNetV2/adaptive_avg_pool2d_0" -> "370 MobileNetV2/SymmetricQuantizer/symmetric_quantize_0";
-"370 MobileNetV2/SymmetricQuantizer/symmetric_quantize_0" -> "371 MobileNetV2/reshape_0";
+"369 MobileNetV2/adaptive_avg_pool2d_0" -> "370 MobileNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[MobileNetV2/adaptive_avg_pool2d_0|OUTPUT]/symmetric_quantize_0";
+"370 MobileNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[MobileNetV2/adaptive_avg_pool2d_0|OUTPUT]/symmetric_quantize_0" -> "371 MobileNetV2/reshape_0";
 "371 MobileNetV2/reshape_0" -> "372 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0";
 "372 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" -> "376 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0";
 "373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";

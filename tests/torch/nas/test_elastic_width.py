@@ -77,7 +77,7 @@ def test_elastic_width_with_maximum_value():
     x = torch.ones(supernet.INPUT_SIZE).to(device)
     actual_output = supernet(x)
 
-    shallow_copy = supernet.get_clean_shallow_copy()
+    shallow_copy = supernet.nncf.get_clean_shallow_copy()
     ref_output = shallow_copy(x)
 
     assert torch.equal(actual_output, ref_output)
@@ -113,7 +113,9 @@ def test_width_activation(basic_model):
         }
     })
     ref_model = copy.deepcopy(basic_model)
+    ref_model.eval()
     model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
+    model.eval()
 
     device = next(model.parameters()).device
     dummy_input = torch.Tensor([1]).reshape(basic_model.INPUT_SIZE).to(device)
@@ -129,13 +131,14 @@ def test_width_reorg(basic_model):
     config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
     config['bootstrapNAS'] = {}
     model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
+    model.eval()
     device = next(model.parameters()).device
     dummy_input = torch.Tensor([1]).reshape(basic_model.INPUT_SIZE).to(device)
     before_reorg = model(dummy_input)
     ctrl.multi_elasticity_handler.width_handler.reorganize_weights()
     after_reorg = model(dummy_input)
 
-    model.get_nncf_wrapped_model().check_reorg()
+    model.check_reorg()
     compare_tensors_ignoring_the_order(after_reorg, before_reorg)
 
 
@@ -149,6 +152,7 @@ def test_weight_reorg(nas_model_name, _seed):
         pytest.skip('Skip test for Inception-V3 because of invalid padding update in elastic kernel (60990)')
 
     compressed_model, training_ctrl, dummy_forward = create_bootstrap_nas_training_algo(nas_model_name)
+    compressed_model.eval()
     before_reorg = dummy_forward(compressed_model)
     width_handler = training_ctrl.multi_elasticity_handler.width_handler
     width_handler.reorganize_weights()
@@ -196,6 +200,6 @@ def test_multi_forward_nodes():
     multi_elasticity_handler = ctrl.multi_elasticity_handler
     # multi_elasticity_handler.enable_all()
     # multi_elasticity_handler.activate_supernet()
-    width_graph = SubnetGraph(model.get_graph(), multi_elasticity_handler).get()
+    width_graph = SubnetGraph(model.nncf.get_graph(), multi_elasticity_handler).get()
     path_to_dot = get_full_path_to_the_graph('multi_forward_node.dot', 'nas')
     compare_nx_graph_with_reference(width_graph, path_to_dot)

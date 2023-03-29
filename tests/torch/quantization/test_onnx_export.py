@@ -10,30 +10,31 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from itertools import product
-from typing import Tuple, Dict, List
+from typing import Dict
+from typing import List
+from typing import Tuple
 
+import numpy as np
 import onnx
 import pytest
 import torch
 from torch import nn
-import numpy as np
 
 from nncf import NNCFConfig
-from nncf.torch.quantization.layers import PTQuantizerSpec
-from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
-from nncf.torch.quantization.layers import QuantizationMode
+from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QuantizerExportMode
-from tests.torch.helpers import get_nodes_by_type
+from nncf.torch.quantization.layers import SymmetricQuantizer
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_all_inputs_for_graph_node
+from tests.torch.helpers import get_nodes_by_type
+from tests.torch.helpers import load_exported_onnx_version
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
-from tests.torch.helpers import TwoConvTestModel
-from tests.torch.helpers import load_exported_onnx_version
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
 
 
 def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
@@ -104,21 +105,17 @@ def test_onnx_export_to_quantize_dequantize(tmp_path):
 INPUT_TENSOR_SHAPE = (2, 64, 15, 10)
 PER_CHANNEL_AQ_SCALE_SHAPE = (1, INPUT_TENSOR_SHAPE[1], 1, 1)
 
-
-@pytest.mark.parametrize('per_channel, qmode, export_mode',
-                         product(
-                             [True, False],
-                             [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC],
-                             [QuantizerExportMode.FAKE_QUANTIZE, QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS]
-                         ))
-def test_onnx_export_to_quantize_dequantize_per_channel(per_channel: bool,
-                                                        qmode: QuantizationMode,
+@pytest.mark.parametrize(
+    "export_mode", (QuantizerExportMode.FAKE_QUANTIZE, QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS)
+)
+def test_onnx_export_to_quantize_dequantize_per_channel(is_per_channel: bool,
+                                                        quantization_mode: QuantizationMode,
                                                         export_mode: QuantizerExportMode):
-    scale_shape = PER_CHANNEL_AQ_SCALE_SHAPE if per_channel else (1,)
+    scale_shape = PER_CHANNEL_AQ_SCALE_SHAPE if is_per_channel else (1,)
     qspec = PTQuantizerSpec(
         scale_shape=scale_shape,
         num_bits=8,
-        mode=qmode,
+        mode=quantization_mode,
         signedness_to_force=None,
         logarithm_scale=False,
         narrow_range=False,
@@ -126,9 +123,9 @@ def test_onnx_export_to_quantize_dequantize_per_channel(per_channel: bool,
         is_quantized_on_export=False
     )
 
-    q_cls = QUANTIZATION_MODULES.get(qmode)
+    q_cls = QUANTIZATION_MODULES.get(quantization_mode)
     quantizer = q_cls(qspec)
-    if qmode is QuantizationMode.SYMMETRIC:
+    if quantization_mode is QuantizationMode.SYMMETRIC:
         quantizer.scale = torch.nn.Parameter(torch.rand_like(quantizer.scale))
     else:
         quantizer.input_low = torch.nn.Parameter(torch.rand_like(quantizer.input_low))
@@ -304,17 +301,19 @@ def generate_middle_quants(size: List[int], input_low: np.ndarray, quant_len: np
     return torch.from_numpy(ref_weights.astype(np.single))
 
 
-@pytest.mark.parametrize("half_range, quantization_mode, parameters_to_set",
-                         [(True, "symmetric", {"scale": 1.}),
-                          (True, "asymmetric", {"input_low": -1., "input_range": 3.}),
-                          (False, "symmetric", {"scale": 1.}),
-                          (False, "asymmetric", {"input_low": -1., "input_range": 3.})])
-def test_export_quantized_weights_with_middle_quants(tmp_path, half_range, quantization_mode, parameters_to_set):
+@pytest.mark.parametrize(
+    "quantization_mode, parameters_to_set",
+    [
+        ("symmetric", {"scale": 1.0}),
+        ("asymmetric", {"input_low": -1.0, "input_range": 3.0})
+    ]
+)
+def test_export_quantized_weights_with_middle_quants(tmp_path, is_half_range, quantization_mode, parameters_to_set):
     model = TwoConvTestModel()
     sample_size = [1, 1, 20, 20]
     config = get_config_for_export_mode(False)
     config["compression"]["weights"] = {"mode": quantization_mode}
-    if not half_range:
+    if not is_half_range:
         config["compression"]["overflow_fix"] = 'disable'
     config["input_info"]["sample_size"] = sample_size
 

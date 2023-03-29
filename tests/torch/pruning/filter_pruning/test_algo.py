@@ -305,7 +305,7 @@ def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning
 
     def check_model_weights(model_state_dict, ref_state_dict):
         for key in ref_state_dict.keys():
-            assert torch.allclose(model_state_dict['nncf_module.' + key], ref_state_dict[key])
+            assert torch.allclose(model_state_dict[key], ref_state_dict[key])
 
     config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
     config['compression']['algorithm'] = 'filter_pruning'
@@ -405,7 +405,7 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
         [0] * 8 + [1] * 8 + [0] * 8 + [1] * 8,
         [1] * 8 + [0] * 16 + [1] * 8 + [0] * 8 + [1] * 8
     ]
-    graph = pruned_model.get_original_graph()
+    graph = pruned_model.nncf.get_original_graph()
     for i, node in enumerate(graph.get_nodes_by_types(['cat'])):
         assert np.allclose(node.data['output_mask'].tensor.numpy(), ref_concat_masks[i])
 
@@ -451,7 +451,7 @@ def test_collect_output_shapes(model, ref_output_shapes):
     model = model()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     # pylint:disable=protected-access
-    graph = compression_ctrl._model.get_original_graph()
+    graph = compression_ctrl._model.nncf.get_original_graph()
     output_shapes = collect_output_shapes(graph)
     assert output_shapes == ref_output_shapes
 
@@ -734,7 +734,7 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
     for node_name in num_of_sparse_by_node:
         assert num_of_sparse_by_node[node_name] == refs['num_of_sparse_by_node'][node_name]
 
-    graph = pruning_algo._model.get_original_graph()
+    graph = pruning_algo._model.nncf.get_original_graph()
     pruning_groups = pruning_algo.pruned_module_groups_info
 
     shape_pruning_processor = ShapePruningProcessor(
@@ -822,7 +822,7 @@ def test_func_calculation_flops_for_conv(model):
     model = model()
     pruned_model, compression_controller = create_compressed_model_and_algo_for_test(model, config)
 
-    graph = pruned_model.get_original_graph()
+    graph = pruned_model.nncf.get_original_graph()
 
     # pylint:disable=protected-access
     for node_name, ref_shape in compression_controller._output_shapes.items():
@@ -840,7 +840,7 @@ def test_disconnected_graph():
     config['compression']['params']['prune_first_conv'] = True
     model = DisconectedGraphModel()
     pruned_model, compression_controller = create_compressed_model_and_algo_for_test(model, config)
-    graph = pruned_model.get_original_graph()
+    graph = pruned_model.nncf.get_original_graph()
 
     nodes_output_mask_map = {
         'DisconectedGraphModel/NNCFConv2d[conv1]/conv2d_0': ((8, 8), None),

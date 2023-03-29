@@ -228,8 +228,8 @@ class NormalizedKeys:
     @staticmethod
     def _key_clipper(key: str) -> str:
         new_key = key
-        from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME #pylint: disable=cyclic-import
-        clip_patterns = [MODEL_WRAPPED_BY_NNCF_ATTR_NAME + '.', 'module.', '|OUTPUT', '|INPUT']
+        from nncf.torch.nncf_network import LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME #pylint: disable=cyclic-import
+        clip_patterns = [LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME + '.', 'module.', '|OUTPUT', '|INPUT', '_nncf.']
         for pattern in clip_patterns:
             new_key = new_key.replace(pattern, '')
         return new_key
@@ -262,28 +262,28 @@ class NormalizedKeys:
             Returns original key if there's no ';' and operation doesn't start with EXTERNAL_QUANTIZERS_STORAGE_NAME
         """
         result = [new_key]
-        from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME #pylint: disable=cyclic-import
-        if ';' in new_key and new_key.startswith(EXTERNAL_QUANTIZERS_STORAGE_NAME):
+        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX #pylint: disable=cyclic-import
+        if ';' in new_key and new_key.startswith(CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX):
             group_of_keys = new_key.split(';')
             last_key = group_of_keys[-1]
             common_op = last_key.split('.')[-1]
             result = [
                 group_of_keys[0] + '.' + common_op,
-                EXTERNAL_QUANTIZERS_STORAGE_NAME + '.' + last_key
+                CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.' + last_key
             ]
             for key in group_of_keys[1:-1]:
-                result.append(EXTERNAL_QUANTIZERS_STORAGE_NAME + '.' + key + '.' + common_op)
+                result.append(CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.' + key + '.' + common_op)
         return result
 
     @staticmethod
     def _replace_legacy_act_quantizer_storage_name(checkpoint_key: str) -> Tuple[str, bool]:
         did_replace = False
         splits = checkpoint_key.split('.')
-        from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME #pylint: disable=cyclic-import
-        from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME #pylint: disable=cyclic-import
-        if splits[0] == LEGACY_ACT_STORAGE_NAME:
+        from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX #pylint: disable=cyclic-import
+        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX #pylint: disable=cyclic-import
+        if splits[0] == LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX:
             did_replace = True
-            splits[0] = EXTERNAL_QUANTIZERS_STORAGE_NAME
+            splits[0] = CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
         reconstructed_key = '.'.join(splits)
         return reconstructed_key, did_replace
 
@@ -337,12 +337,14 @@ class KeyMatcher:
                                 'names. The newly exported checkpoints will be adjusted to the new format.')
 
         if normalized_keys_to_load.has_legacy_storage_keys:
-            warning_deprecated('Legacy NNCF-enabled .pth checkpoint has been loaded! '
-                               'The "activation_quantizers" storage key is replaced with '
-                               '"external_quantizers" in newer versions of NNCF, and support '
-                               'for the legacy storage key will be dropped in a future release. '
-                               'This checkpoint will be loaded; update your checkpoint file by saving this model\'s'
-                               'checkpoint file again.')
+            from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+            from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+            warning_deprecated(f'Legacy NNCF-enabled .pth checkpoint has been loaded! '
+                               f'The {LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX} storage key is replaced with '
+                               f'{CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX} in newer versions of NNCF, and support '
+                               f'for the legacy storage key will be dropped in a future release. '
+                               f'This checkpoint will be loaded; update your checkpoint file by saving this model\'s'
+                               f'checkpoint file again.')
 
         if normalized_model_keys.is_unified_group_detected and not normalized_keys_to_load.is_unified_group_detected:
             nncf_logger.warning(
@@ -358,12 +360,15 @@ class KeyMatcher:
             nncf_logger.warning(
                 f"Following parameters were skipped from matching checkpoint's keys:\n{ignored_keys_str}")
 
+        loaded_prefixless_keys = False
         for normalized_key_to_load in normalized_keys_to_load:
             key_to_load = normalized_keys_to_load.get_orig_key(normalized_key_to_load)
             normalized_key_to_load = cross_match_key_map.get(normalized_key_to_load,
                                                              normalized_key_to_load)
             if normalized_key_to_load in normalized_model_keys:
                 model_key = normalized_model_keys.get_orig_key(normalized_key_to_load)
+                if '_nncf.' + key_to_load == model_key:
+                    loaded_prefixless_keys = True
                 value_to_load = self.state_dict_to_load[key_to_load]
                 size_of_value_to_load = value_to_load.size()
                 size_of_model_value = self.model_state_dict[model_key].size()
@@ -378,6 +383,12 @@ class KeyMatcher:
             else:
                 self._processed_keys.add_key(key_to_load, ProcessedKeyStatus.UNEXPECTED)
         self._processed_keys.add_skipped_and_missing_keys(self.model_state_dict)
+        if loaded_prefixless_keys:
+            warning_deprecated('Legacy NNCF-enabled .pth checkpoint has been loaded! '
+                               'Some storage keys in the loaded checkpoint should now have a "_nncf." prefix,'
+                               'support for the legacy storage key will be dropped in a future release. '
+                               'This checkpoint will be loaded; update your checkpoint file by saving this model\'s'
+                               'checkpoint file again.')
         return self._new_dict
 
     @staticmethod
