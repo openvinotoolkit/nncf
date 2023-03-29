@@ -218,13 +218,6 @@ class Timer:
         self.average_time = 0.
 
 
-def close_strategy_threadpool(strategy):
-    """Due to https://github.com/tensorflow/tensorflow/issues/50487"""
-    # pylint: disable=protected-access
-    if isinstance(strategy, MirroredStrategy):
-        atexit.register(strategy._extended._collective_ops._pool.close)
-
-
 def set_seed(config):
     if config.seed is not None:
         os.environ['TF_DETERMINISTIC_OPS'] = '1'

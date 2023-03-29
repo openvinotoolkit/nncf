@@ -20,7 +20,6 @@ import tensorflow as tf
 
 from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
-from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.initialization import register_default_init_args
@@ -304,8 +303,6 @@ def run_train(config):
     logger.info('Compression statistics')
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())
-
-    close_strategy_threadpool(strategy)
 
 
 def main(argv):

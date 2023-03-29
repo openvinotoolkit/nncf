@@ -25,7 +25,6 @@ from examples.tensorflow.common.object_detection.checkpoint_utils import get_var
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
-from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
@@ -274,8 +273,6 @@ def run_evaluation(config, eval_timeout=None):
 
     if config.metrics_dump is not None:
         write_metrics(metric_result['AP'], config.metrics_dump)
-
-    close_strategy_threadpool(strategy)
 
 
 def export(config):
