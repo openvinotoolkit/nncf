@@ -69,7 +69,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [OVShapeOfMetatype]
 
     @property
-    def read_value_metatypes(self) -> List[OperatorMetatype]:
+    def similar_input_metatypes(self) -> List[OperatorMetatype]:
         return [OVReadValueMetatype]
 
     @property
