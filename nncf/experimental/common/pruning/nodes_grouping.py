@@ -387,6 +387,7 @@ def get_pruning_groups(graph: NNCFGraph,
     Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks and
     provide some output masks.
     :param prune_operations_types: types of operations with prunable parameters.
+    :param dump_dir: path to the directory for dumping debug files.
     :return: list of groups with parameters of pruning.
     """
     # 1. Initialize masks for producing nodes

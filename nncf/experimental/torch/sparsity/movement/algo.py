@@ -129,8 +129,7 @@ def is_supported_model_family(model: NNCFNetwork) -> None:
     if len(model_pymodules) >= 3 and model_pymodules[:2] == ['transformers', 'models']:
         # the case of input model defined by HuggingFace's transformers
         model_family = model_pymodules[2]
-        if model_family in MODEL_FAMILIES:
-            is_supported = True
+        is_supported = model_family in MODEL_FAMILIES
     return is_supported
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_movement_sparsity')
