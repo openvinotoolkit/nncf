@@ -59,8 +59,7 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool,
     def transform_fn(i):
         output = {}
         for key in keys:
-            input_dtype = onnx_graph.get_edge_dtype(key)
-            input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
+            input_np_dtype = onnx_graph.get_edge_dtype(key)
             shape = onnx_graph.get_edge_shape(key)
             tensor = np.random.random(shape).astype(input_np_dtype)
             if has_batch_dim:
