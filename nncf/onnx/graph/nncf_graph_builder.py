@@ -13,6 +13,7 @@
 from typing import List, Tuple, Optional
 
 from collections import Counter
+import numpy as np
 import onnx
 from onnx import ModelProto  # pylint:disable=no-name-in-module
 
@@ -75,8 +76,8 @@ class GraphConverter:
 
             input_node_node_id = input_node.node_id
             input_shape = onnx_graph.get_edge_shape(input_name)
-            onnx_dtype = onnx_graph.get_edge_dtype_name(input_name)
-            nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+            np_dtype = onnx_graph.get_edge_dtype(input_name)
+            nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
             output_port_id = 0
             for node in to_nodes:
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
@@ -109,8 +110,8 @@ class GraphConverter:
 
             output_node_node_id = output_node.node_id
             output_shape = onnx_graph.get_edge_shape(output_name)
-            onnx_dtype = onnx_graph.get_edge_dtype_name(output_name)
-            nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+            np_dtype = onnx_graph.get_edge_dtype(output_name)
+            nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
             input_port_id = 0
             for node in from_nodes:
                 from_node_id = nncf_graph.get_node_by_name(node.name).node_id
@@ -126,16 +127,17 @@ class GraphConverter:
                 input_port_id += 1
 
     @staticmethod
-    def convert_onnx_dtype_to_nncf_dtype(onnx_dtype: str) -> Dtype:
+    def convert_np_dtype_to_nncf_dtype(np_dtype: np.dtype) -> Dtype:
         """
-        Converts the primitive types from the ONNX domain to the NNCF domain.
-        :param onnx_dtype: ONNX primitive typename.
-        :return: NNCF primitive type.
+        Converts the data type from the numpy domain to the NNCF domain.
+        
+        :param np_dtype: Numpy data type.
+        :return: NNCF data type.
         """
         conversion_map = {
-            "FLOAT": "float"
+            np.float32: "float"
         }
-        return Dtype(conversion_map.get(onnx_dtype, 'int'))
+        return Dtype(conversion_map.get(np_dtype, 'int'))
 
     @staticmethod
     def create_nncf_graph(onnx_model: ModelProto) -> NNCFGraph:
@@ -177,14 +179,14 @@ class GraphConverter:
 
                 output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
                 try:
-                    onnx_dtype = onnx_graph.get_edge_dtype_name(output_edge)
+                    np_dtype = onnx_graph.get_edge_dtype(output_edge)
                 except RuntimeError:
                     # If the edge was not added during inference of ONNX model,
                     # we do not add it to NNCFGraph.
                     # Particularly, BatchNorm exported in Training mode has unused outputs edges:
                     # mean, var, saved_mean, saved_var.
                     continue
-                nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+                nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
 
                 input_nodes = onnx_graph.get_nodes_by_input(output_edge)
                 if not input_nodes:
