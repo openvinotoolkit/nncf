@@ -134,10 +134,9 @@ class GraphConverter:
         :param np_dtype: Numpy data type.
         :return: NNCF data type.
         """
-        conversion_map = {
-            np.float32: "float"
-        }
-        return Dtype(conversion_map.get(np_dtype, 'int'))
+        if np_dtype == np.float32 or np_dtype == np.int32:
+            return Dtype.FLOAT
+        return Dtype.INTEGER
 
     @staticmethod
     def create_nncf_graph(onnx_model: ModelProto) -> NNCFGraph:
@@ -175,19 +174,17 @@ class GraphConverter:
         for output_node in onnx_graph.get_all_nodes():
             output_edges = onnx_graph.get_node_edge_names(output_node.name)['output']
             for output_edge in output_edges:
-                tensor_shape = onnx_graph.get_edge_shape(output_edge)
-
-                output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
                 try:
+                    tensor_shape = onnx_graph.get_edge_shape(output_edge)
                     np_dtype = onnx_graph.get_edge_dtype(output_edge)
-                except RuntimeError:
+                except KeyError:
                     # If the edge was not added during inference of ONNX model,
                     # we do not add it to NNCFGraph.
                     # Particularly, BatchNorm exported in Training mode has unused outputs edges:
                     # mean, var, saved_mean, saved_var.
                     continue
                 nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
-
+                output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
                 input_nodes = onnx_graph.get_nodes_by_input(output_edge)
                 if not input_nodes:
                     # if this node is output

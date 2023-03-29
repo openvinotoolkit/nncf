@@ -33,9 +33,8 @@ class ONNXGraph:
         self._node_name_to_node = None  # type: Dict[str, onnx.NodeProto]
         self._activations_tensor_name_to_value_info = None  # type: Dict[str, onnx.ValueInfoProto]
 
-    def _update_activation_tensors(self, do_shape_inference: bool = False) -> None:
-        if do_shape_inference:
-            self.onnx_model = onnx.shape_inference.infer_shapes(self.onnx_model)
+    def _update_activation_tensors(self) -> None:
+        self.onnx_model = onnx.shape_inference.infer_shapes(self.onnx_model)
         self._activations_tensor_name_to_value_info = {tensor.name: tensor for tensor in
                                                        self.onnx_model.graph.value_info}
         model_inputs_name_to_value_info = {tensor.name: tensor for tensor in self.onnx_model.graph.input}
