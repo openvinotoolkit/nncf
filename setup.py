@@ -123,7 +123,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
 
 
 TF_EXTRAS = [
-        "tensorflow~=2.8.4",
+        "tensorflow~=2.11.1",
     ]
 
 TORCH_EXTRAS = [
