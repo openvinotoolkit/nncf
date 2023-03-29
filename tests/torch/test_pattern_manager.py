@@ -68,6 +68,7 @@ IGNORED_PATTERN_REASONS = {
     PatternNames.LINEAR_ACTIVATION_ELEMENTWISE: 'Not relevant for Torch.',
     PatternNames.LINEAR_BIASED_ACTIVATION_ELEMENTWISE: 'Not relevant for Torch.',
     PatternNames.MVN_SCALE_SHIFT_ACTIVATIONS: 'Not relevant for Torch.',
+    PatternNames.LINEAR_SQUEEZE_ACTIVATIONS: 'Not relevant for Torch.'
 }
 
 

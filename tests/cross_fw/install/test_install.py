@@ -17,6 +17,7 @@ from typing import List
 from pathlib import Path
 import shutil
 import os
+import sys
 
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
@@ -27,8 +28,13 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
     if install_type.lower() not in ['cpu', 'gpu']:
         raise RuntimeError("Unknown installation mode - must be either 'cpu' or 'gpu'")
 
-    python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
-    pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
+    if "linux" in sys.platform:
+        python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
+        pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
+
+    if "win32" in sys.platform:
+        python_executable_with_venv = f' {venv_path}\\Scripts\\activate && python'
+        pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
 
 
     if package_type in ['build_s', 'build_w']:
@@ -120,8 +126,14 @@ class TestInstall:
         if backend == 'torch' and 'pypi' in package_type:
             pytest.xfail('Disabled until NNCF with torch version supporting CUDA 11.6 backend is exposed in a release')
         venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs={backend})
-        pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
-        backend_name = 'tensorflow' if backend == 'tf' else backend            
+
+        if "linux" in sys.platform:
+            pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
+
+        if "win32" in sys.platform:
+            pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
+
+        backend_name = 'tensorflow' if backend == 'tf' else backend
         subprocess.check_call(
             f'{pip_with_venv} install -r {PROJECT_ROOT}/tests/{backend_name}/requirements.txt',
             shell=True)

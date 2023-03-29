@@ -256,7 +256,8 @@ class MinMaxQuantization(Algorithm):
         ignored_scopes = self._parameters.ignored_scopes
 
         ignored_names = get_ignored_node_names_from_ignored_scope(ignored_scopes, nncf_graph)
-        model_type_ignore_scope = self._backend_entity.get_model_type_ignore_scope(model_type)
+        model_type_ignore_scope = self._backend_entity.get_model_type_ignore_scope(model_type,
+                                                                                   self._parameters.target_device)
         ignored_names = set(ignored_names + get_ignored_node_names_from_ignored_scope(model_type_ignore_scope,
                                                                                       nncf_graph, strict=False))
 

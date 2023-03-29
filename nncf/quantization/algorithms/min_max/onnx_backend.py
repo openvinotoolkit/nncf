@@ -15,6 +15,7 @@ from typing import Dict, List, Tuple, Optional
 import numpy as np
 
 from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -38,6 +39,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
@@ -175,11 +177,13 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [node.metatype.weight_definitions.weight_port_id]
 
     @staticmethod
-    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
+    def get_model_type_ignore_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [ONNXAddLayerMetatype, ONNXPowMetatype, ONNXSqueezeMetatype,
                                 ONNXSubMetatype, ONNXReduceMeanMetatype]
+            if device != TargetDevice.CPU_SPR:
+                metatypes_to_add.append(ONNXMulLayerMetatype)
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
             return IgnoredScope(types=types)

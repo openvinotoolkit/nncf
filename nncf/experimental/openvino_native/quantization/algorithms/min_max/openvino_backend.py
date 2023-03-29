@@ -14,6 +14,7 @@
 from typing import Dict, List, Optional, Tuple
 
 from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -38,6 +39,7 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSquaredDifferenceMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMVNMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
@@ -159,12 +161,14 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod
-    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
+    def get_model_type_ignore_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [OVAddMetatype, OVPowerMetatype, OVSqueezeMetatype,
                                 OVSubtractMetatype, OVReduceMeanMetatype,
                                 OVSquaredDifferenceMetatype, OVMVNMetatype]
+            if device != TargetDevice.CPU_SPR:
+                metatypes_to_add.append(OVMultiplyMetatype)
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
             return IgnoredScope(types=types)

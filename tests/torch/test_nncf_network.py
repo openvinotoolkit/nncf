@@ -21,9 +21,9 @@ from pathlib import Path
 from typing import List
 
 import networkx as nx
-import torch.nn.functional as F
 import pytest
 import torch
+import torch.nn.functional as F
 from torch import nn
 from torch.nn.utils import weight_norm
 
@@ -32,13 +32,13 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.common.graph.patterns.manager import PatternsManager
+from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
-from nncf.common.graph.patterns.manager import PatternsManager
-from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
 from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.common.utils.backend import BackendType
@@ -46,36 +46,35 @@ from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.torch import register_module
-from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
-from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCFConv2d
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.module_operations import BaseOp
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
-from nncf.torch.nncf_network import PTModelTransformer
-
-from tests.shared.paths import TEST_ROOT
 from tests.common.quantization.mock_graphs import get_ip_graph_for_test
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_broken_output_edge_pattern
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_mergeable_pattern
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_no_mergeable_pattern
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 from tests.common.quantization.mock_graphs import get_two_branch_mock_model_graph
+from tests.shared.paths import TEST_ROOT
 from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
@@ -563,10 +562,18 @@ class TestInsertionPointGraph:
                 assert pre_hook_ip.target_node_name == nncf_node.node_name
 
     def test_operator_metatype_marking(self):
-        from nncf.torch.graph.operator_metatypes import (PTBatchNormMetatype, PTModuleBatchNormMetatype,
-            PTRELUMetatype, PTMaxPool2dMetatype, PTTransposeMetatype,
-            PTConvTranspose2dMetatype, PTModuleConvTranspose2dMetatype, PTDepthwiseConv2dSubtype,
-            PTAddMetatype, PTAvgPool2dMetatype, PTLinearMetatype, PTModuleLinearMetatype)
+        from nncf.torch.graph.operator_metatypes import PTAddMetatype
+        from nncf.torch.graph.operator_metatypes import PTAvgPool2dMetatype
+        from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
+        from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
+        from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+        from nncf.torch.graph.operator_metatypes import PTLinearMetatype
+        from nncf.torch.graph.operator_metatypes import PTMaxPool2dMetatype
+        from nncf.torch.graph.operator_metatypes import PTModuleBatchNormMetatype
+        from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose2dMetatype
+        from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
+        from nncf.torch.graph.operator_metatypes import PTRELUMetatype
+        from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
         ref_scope_vs_metatype_dict = {
             "/" + MODEL_INPUT_OP_NAME + "_0": PTInputNoopMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0":

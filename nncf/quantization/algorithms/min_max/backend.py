@@ -16,6 +16,7 @@ from abc import abstractmethod
 from typing import Dict, TypeVar, List, Optional
 
 from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -170,11 +171,12 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
+    def get_model_type_ignore_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         """
-        Returns ignores scope based on a model type parameter.
+        Returns ignores scope based on a model type and device parameters.
 
         :param model_type: Model type parameter.
+        :param device: Target device.
         :return: Instance of ignored scope.
         """
 

@@ -345,6 +345,7 @@ class PatternNames(Enum):
     LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_batch_norm_scale_shift_activations')
     LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_scale_shift_activations')
     LINEAR_CONST_MULTIPLY = PatternDesc('linear_const_multiply')
+    LINEAR_SQUEEZE_ACTIVATIONS = PatternDesc('linear_squeeze_activations')
     SCALE_SHIFT_ACTIVATIONS = PatternDesc('scale_shift_activations')
     MVN_SCALE_SHIFT_ACTIVATIONS = PatternDesc('mvn_scale_shift_activations')
 

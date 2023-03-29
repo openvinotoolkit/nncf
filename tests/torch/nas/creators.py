@@ -19,8 +19,6 @@ from typing import Optional
 from typing import Tuple
 
 import torch
-from tests.torch.test_models import mobilenet_v2
-from tests.torch.test_models import mobilenet_v3_small
 
 from examples.torch.common.models import efficient_net
 from nncf import NNCFConfig
@@ -36,8 +34,8 @@ from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_creation import create_nncf_network
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.nncf_network import PTModelTransformer
 from tests.torch import test_models
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import get_empty_config
@@ -47,6 +45,8 @@ from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import TwoConvModel
 from tests.torch.nas.models.tcn import TCN
 from tests.torch.nas.models.vgg_k7 import VGG11_K7
+from tests.torch.test_models import mobilenet_v2
+from tests.torch.test_models import mobilenet_v3_small
 
 
 # TODO(nlyalyus) reduce number of creators and descriptors. create wrapper of TrainingAlgorithm  (ticket 81015)
