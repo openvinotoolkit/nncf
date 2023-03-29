@@ -444,10 +444,10 @@
         "levels": 256
     },
     "weights_symmetric_sign_False_per_ch_False_hf_range_True": {
-        "input_low": -0.9867394831962883,
-        "input_high": 0.9867394831962883,
-        "output_low": -0.9867394831962883,
-        "output_high": 0.9867394831962883,
+        "input_low": -0.9906090497970581,
+        "input_high": 0.9906090497970581,
+        "output_low": -0.9906090497970581,
+        "output_high": 0.9906090497970581,
         "levels": 255
     },
     "weights_symmetric_sign_False_per_ch_True_hf_range_False": {
