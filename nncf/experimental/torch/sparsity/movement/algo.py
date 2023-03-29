@@ -125,12 +125,13 @@ def is_supported_model_family(model: NNCFNetwork) -> None:
     :param model: The compressed model wrapped by NNCF.
     """
     model_pymodules = inspect.getmodule(model).__name__.split('.')
+    is_supported = False
     if len(model_pymodules) >= 3 and model_pymodules[:2] == ['transformers', 'models']:
         # the case of input model defined by HuggingFace's transformers
         model_family = model_pymodules[2]
         if model_family in MODEL_FAMILIES:
-            return True
-    return False
+            is_supported = True
+    return is_supported
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_movement_sparsity')
 class MovementSparsityController(BaseSparsityAlgoController):

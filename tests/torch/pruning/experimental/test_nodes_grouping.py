@@ -338,7 +338,7 @@ TEST_DESCS = [
 @pytest.mark.parametrize(
     "desc", TEST_DESCS, ids=[m.model_desc.model_name for m in TEST_DESCS]
 )
-def test_groups(desc: GroupTestDesc):
+def test_groups(desc: GroupTestDesc, tmp_path):
     model_desc = desc.model_desc
     model = model_desc.get_model()
     config = NNCFConfig({"input_info": model_desc.create_input_info()})
@@ -346,6 +346,7 @@ def test_groups(desc: GroupTestDesc):
     pruning_producing_types = [x.op_func_name for x in NNCF_PRUNING_MODULES_DICT]
     actual_groups = get_pruning_groups(nncf_network.get_graph(),
                                        PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
-                                       pruning_producing_types)
+                                       pruning_producing_types,
+                                       tmp_path)
 
     assert actual_groups == desc.ref_groups

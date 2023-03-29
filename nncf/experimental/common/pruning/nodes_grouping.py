@@ -16,11 +16,13 @@ from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
 from typing import Any
+from typing import Optional
 from typing import Dict
 from typing import List
 from typing import Set
 
 import networkx as nx
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.common.utils.dot_file_rw import write_dot_graph
@@ -46,26 +48,61 @@ class MaskProducer:
 
 class PropagationBlock:
     """
-    Defines a pruning block - how much and which particular channels are supposed to be pruned for the node when a
-    single element of pruning mask is 0. We assume that pruning mask is a vector with 1's and 0's. 1 retains the
-    corresponding channel in weights, 0 prunes it.
+    Defines a pruning block - how much and which particular channels are supposed to be pruned at the same time for
+    the node when a single element of pruning mask is 0. We assume that the pruning mask is a vector with 1's and 0's.
+    1 retains the corresponding set of channels in weights, 0 prunes it.
     The block is initialized on producers of pruning and is propagated until consumers within PropagationGroup and
     PropagationMask.
     Essentially, the propagation block is parametrized by size and offset. Size is the number of sequent channels to be
-    included to the block. When offset is not equal to 0, it prescribes adding channels with indent equals value of
-    offset parameter.
-    By default, a single element of structured pruning mask corresponds to a single channel in the producer.
+    included to the block. When offset is not equal to 0, the block is formed by taking the `size` number of
+    sequent channels, then skipping the `offset` number of channels and repeating the procedure for the rest channels.
+
+    Let's consider 3 possible examples.
+    Notation:
+    "-" is not a pruned channel
+    "x" is a channel that is included to the block or pruned
+
+    1) By default, a single element of structured pruning mask corresponds to a single channel in the producer.
     Size is equal to 1, offset is 0. It means that block consist of just 1 channel.
-    But in some cases, pruning can be performed by set of channels, rather than individual one.
+
+    size = 1
+    offset = 0
+    number of all channels = 18
+
+    all channels                        ------------------
+    block #1, mask: 011111111111111111  x-----------------
+
+    2) But in some cases, pruning can be performed by set of channels, rather than individual one.
     For instance, head pruning in the Transformers is removal of N sequent channels, when N is the size of the
     head. In that case, the propagation block is encoded by size=N and offset=0.
-    Or potentially, one can remove the same propagation in each Transformer's head. The propagation block would be as
-    follows: size=1 and offset=N. It means that block is formed by taking 1 channel
-    with offset N until the end of pruning mask. Let's say size of pruning mask is 3N,
-    the size of block will be equal to 3. Block will contain 6 elements, if size=2 offset=N with the same size of
-    pruning mask.
-    """
 
+    size = 6 (head size)
+    offset = 0
+    number of all channels = 18
+
+    all channels           ------------------
+    block #1, mask: 011    xxxxxx------------
+    block #2, mask: 101    ------xxxxxx------
+    block #3, mask: 110    ------------xxxxxx
+    mask: 100              ------xxxxxxxxxxxx
+
+    3) Or potentially, one can remove the same dimension in each Transformer's head. The propagation block would be as
+    follows: size=1 and offset=N. It means that block is formed by taking the `size` number of sequent channels, then
+    skipping the `offset` number of sequent channels and repeating the procedure for the rest channels. For that
+    particular case, if total number of channels is 3N, the size of block will be equal to 3.
+    Block will contain 6 elements, if size=2 offset=N with the same size of pruning mask.
+
+    size = 1
+    offset = 6 (head size)
+    number of all channels = 18
+
+    all channels              ------------------
+    block #1, mask: 011111    x-----x-----x-----
+    block #2, mask: 101111    -x-----x-----x----
+    ...
+    block #6, mask: 111110    -----x-----x-----x
+    mask 110000               --xxxx--xxxx--xxxx
+    """
     def __init__(self,
                  producer: MaskProducer,
                  size: int = 1,
@@ -75,8 +112,9 @@ class PropagationBlock:
         """
 
         :param producer: descriptor of the producer
-        :param size: number of sequent channels
-        :param offset: when not equal to 0, it prescribes adding channels with indent equals value of the parameter.
+        :param size: number of sequent channels.
+        :param offset: when not equal to 0, block is formed by taking `size` number of sequent channels,
+        then skipping `offset` number of sequent channels and repeating the procedure for the rest of channels.
         :param pruning_dimension: axis number from 0 to N-1 in weights along which the dimension block defines pruning
         structure. N is total number of dimensions.
         :param closed_branches: number of branches where propagation block reached a consumer node on the passage from
@@ -213,7 +251,7 @@ class PropagationGroup:
 class PropagationMask:
     """
     Contains information about pruning in the current node:
-    a group of propagation blocks per a dimension for which they are applied.
+    a group of propagation blocks per dimension for which they are applied.
 
     It's assumed that the propagation mask is initialized on producers and then propagated through the
     execution graph until consumer nodes.
@@ -334,8 +372,9 @@ def build_block_hierarchy(root_groups: List[PropagationGroup]) -> nx.DiGraph:
 
 
 def get_pruning_groups(graph: NNCFGraph,
-                       pruning_operations_metatypes,
-                       prune_operations_types) -> List[PruningGroup]:
+                       pruning_operations_metatypes: PruningOperationsMetatypeRegistry,
+                       prune_operations_types: List[str],
+                       dump_dir: Optional[Path] = None) -> List[PruningGroup]:
     """
     Determines how nodes of the given types should be pruned: which nodes should be pruned together, along which
     dimension, how many sequent channels with which offset. It's done by initializing PropagationMask's on the
@@ -388,14 +427,12 @@ def get_pruning_groups(graph: NNCFGraph,
 
     try:
         # 2. Propagate masks
-        MaskPropagationAlgorithm(
-            graph, pruning_operations_metatypes).mask_propagation()
+        MaskPropagationAlgorithm(graph, pruning_operations_metatypes).mask_propagation()
     finally:
-        block_graph = build_block_hierarchy(list(roots.values()))
-        dump_dir = Path(DEBUG_LOG_DIR)
-        dump_dir.mkdir(parents=True, exist_ok=True)
-        write_dot_graph(block_graph, dump_dir / 'latest_block_group_hierarchy.dot')
-        save_for_netron(graph, str(dump_dir / 'latest_propagated_graph.xml'), get_attributes_fn=get_attributes_fn)
+        if dump_dir is not None:
+            block_graph = build_block_hierarchy(list(roots.values()))
+            write_dot_graph(block_graph, dump_dir / 'latest_block_group_hierarchy.dot')
+            save_for_netron(graph, str(dump_dir / 'latest_propagated_graph.xml'), get_attributes_fn=get_attributes_fn)
 
     # 3. Collect groups from producers
     blocks_map: Dict[int, List[List[PropagationBlock]]] = {}
