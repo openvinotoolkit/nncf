@@ -1047,11 +1047,11 @@ class Float64InputMulModel(ONNXReferenceModel):
         model_reciprocal_op_name = 'Reciprocal'
         model_cast_op_name = 'Cast'
         model_cast_output = 'Cast_Y'
-    
+
         X = onnx.helper.make_tensor_value_info(model_input_name,
                                                onnx.TensorProto.DOUBLE,
                                                input_shape)
-        
+
         reciprocal_node = onnx.helper.make_node(
             name=model_reciprocal_op_name,
             op_type="Reciprocal",
@@ -1066,7 +1066,7 @@ class Float64InputMulModel(ONNXReferenceModel):
             outputs=[model_cast_output],
             to=onnx.TensorProto.FLOAT
         )
-        
+
         tensor = np.array((1)).astype(np.float32)
         tensor_name = "Tensor"
         initializer_tensor = create_initializer_tensor(

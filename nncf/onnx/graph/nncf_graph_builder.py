@@ -130,11 +130,11 @@ class GraphConverter:
     def convert_np_dtype_to_nncf_dtype(np_dtype: np.dtype) -> Dtype:
         """
         Converts the data type from the numpy domain to the NNCF domain.
-        
+
         :param np_dtype: Numpy data type.
         :return: NNCF data type.
         """
-        if np_dtype == np.float32 or np_dtype == np.int32:
+        if np_dtype in [np.float32, np.int32]:
             return Dtype.FLOAT
         return Dtype.INTEGER
 

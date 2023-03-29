@@ -120,8 +120,8 @@ class ONNXGraph:
         """
         return self._get_nodes_by_lambda(input_name, lambda node: node.input)
 
-    def _get_nodes_by_lambda(self, name: str, func: Callable[[onnx.NodeProto], List[onnx.NodeProto]]) -> List[
-        onnx.NodeProto]:
+    def _get_nodes_by_lambda(self, name: str,
+                             func: Callable[[onnx.NodeProto], List[onnx.NodeProto]]) -> List[onnx.NodeProto]:
         output = []
         for node in self.get_all_nodes():
             if name in func(node):

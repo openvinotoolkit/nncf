@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import NamedTuple, Union
+from typing import Union
 from copy import deepcopy
 import onnx
 from onnx import TensorProto  # pylint:disable=no-name-in-module
