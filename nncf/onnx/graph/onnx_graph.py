@@ -31,18 +31,13 @@ class ONNXGraph:
     def __init__(self, onnx_model: onnx.ModelProto):
         self.onnx_model = onnx_model
         self._node_name_to_node = None  # type: Dict[str, onnx.NodeProto]
-        self._activations_tensor_name_to_value_info = None  # type: Dict[str, onnx.ValueInfoProto]
+        self._edge_name_to_value_info = None  # type: Dict[str, onnx.ValueInfoProto]
 
-    def _update_activation_tensors(self) -> None:
+    def _update_edges(self) -> None:
         self.onnx_model = onnx.shape_inference.infer_shapes(self.onnx_model)
-        self._activations_tensor_name_to_value_info = {tensor.name: tensor for tensor in
-                                                       self.onnx_model.graph.value_info}
-        model_inputs_name_to_value_info = {tensor.name: tensor for tensor in self.onnx_model.graph.input}
-        model_outputs_name_to_value_info = {tensor.name: tensor for tensor in self.onnx_model.graph.output}
-        initializers = {tensor.name: tensor for tensor in self.onnx_model.graph.initializer}
-        self._activations_tensor_name_to_value_info.update(model_inputs_name_to_value_info)
-        self._activations_tensor_name_to_value_info.update(model_outputs_name_to_value_info)
-        self._activations_tensor_name_to_value_info.update(initializers)
+        value_infos = [self.onnx_model.graph.value_info, self.onnx_model.graph.input,
+                       self.onnx_model.graph.output, self.onnx_model.graph.initializer]
+        self._edge_name_to_value_info = {tensor.name: tensor for tensor in value_infos}
 
     def _update_node_names(self) -> None:
         self._node_name_to_node = {n.name: n for n in self.onnx_model.graph.node}
@@ -71,19 +66,18 @@ class ONNXGraph:
     def get_edge(self, edge_name: str) -> onnx.ValueInfoProto:
         """
         Returns edge by its name.
-        If the activations tensor is not in self._activations_tensor_name_to_value_info or
-            there is no self._activations_tensor_name_to_value_info, it updates it.
-        If after update, there is still no such edge, raise a .
+        If there is no such name in self._edge_name_to_value_info or
+            self._edge_name_to_value_info is None, updates it.
+        If after update, there is still no such name, raises a KeyError.
 
         :param edge_name: Name of edge.
         :return: Edge.
         """
-        if self._activations_tensor_name_to_value_info is None or \
-                edge_name not in self._activations_tensor_name_to_value_info:
-            self._update_activation_tensors()
-        if edge_name not in self._activations_tensor_name_to_value_info:
+        if self._edge_name_to_value_info is None or edge_name not in self._edge_name_to_value_info:
+            self._update_edges()
+        if edge_name not in self._edge_name_to_value_info:
             raise KeyError('There is no edge with the name {}'.format(edge_name))
-        return self._activations_tensor_name_to_value_info[edge_name]
+        return self._edge_name_to_value_info[edge_name]
 
     def get_model_inputs(self) -> List[onnx.ValueInfoProto]:
         """

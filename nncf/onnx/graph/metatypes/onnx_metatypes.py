@@ -333,7 +333,7 @@ class ONNXFloorMetatype(ONNXOpMetatype):
 @ONNX_OPERATION_METATYPES.register()
 class ONNXPowMetatype(ONNXOpMetatype):
     name = 'SqrtOp'
-    op_names = ['Sqrt', 'Pow']
+    op_names = ['Sqrt', 'Pow', 'Reciprocal']
     hw_config_names = [HWConfigOpName.POWER]
 
 
@@ -468,12 +468,6 @@ class ONNXQuantizeLinearMetatype(ONNXOpMetatype):
 class ONNXDequantizeLinearMetatype(ONNXOpMetatype):
     name = 'DequantizeLinearOp'
     op_names = ['DequantizeLinear']
-
-
-@ONNX_OPERATION_METATYPES.register()
-class ONNXReciprocalMetatype(ONNXOpMetatype):
-    name = 'ReciprocalOp'
-    op_names = ['Reciprocal']
 
 
 WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
