@@ -118,7 +118,6 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> PTNNCFTensor:
-        assert output_name is None
         return PTNNCFTensor(raw_data)
 
     @staticmethod
@@ -139,18 +138,6 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         if torch.count_nonzero(current_bias_value == 0) == 0:
             bias_shift_magnitude = torch.max(torch.abs((updated_bias_value - current_bias_value) / current_bias_value))
         return bias_shift_magnitude
-
-    @staticmethod
-    def correction_of_bias_shift_shape(bias_shift: torch.Tensor, bias_value: torch.Tensor, channel_axis: int) -> float:
-        if bias_value.ndim > 1:
-            # Implementation of numpy.expand_dims
-            # TODO: can be used reshape?
-            for i in range(bias_value.ndim):
-                if i < channel_axis:
-                    bias_shift = torch.unsqueeze(bias_shift, dim=0)
-                if i > channel_axis:
-                    bias_shift = torch.unsqueeze(bias_shift, dim=-1)
-        return bias_shift
 
     @staticmethod
     def post_process_output_data(data: List[torch.Tensor]) -> torch.Tensor:

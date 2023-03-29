@@ -160,8 +160,9 @@ class FastBiasCorrection(Algorithm):
             )
 
             if bias_value.ndim > 1:
-                axes = [i for i in range(bias_value.ndim) if i != channel_axis]
-                bias_shift = np.expand_dims(bias_shift, axes)
+                new_shape = [1] * bias_value.ndim
+                new_shape[channel_axis] = bias_shift.shape[0]
+                bias_shift = bias_shift.reshape(new_shape)
 
             updated_bias = bias_value + bias_shift
             magnitude = self._backend_entity.get_bias_shift_magnitude(bias_value, updated_bias)
