@@ -1038,22 +1038,20 @@ class ShapeOfModel(ONNXReferenceModel):
 
 
 @ALL_SYNTHETIC_MODELS.register()
-class Float64ConvolutionalModel(ONNXReferenceModel):
+class Float64InputMulModel(ONNXReferenceModel):
     def __init__(self):
-        
         input_shape = [1, 3, 10, 10]
         model_input_name = "X"
-        X = onnx.helper.make_tensor_value_info(model_input_name,
-                                               onnx.TensorProto.DOUBLE,
-                                               input_shape)
-        
-        
         model_mul_op_name = 'Mul'
         model_output_name = "Y"
         model_reciprocal_op_name = 'Reciprocal'
         model_cast_op_name = 'Cast'
         model_cast_output = 'Cast_Y'
-
+    
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.DOUBLE,
+                                               input_shape)
+        
         reciprocal_node = onnx.helper.make_node(
             name=model_reciprocal_op_name,
             op_type="Reciprocal",
