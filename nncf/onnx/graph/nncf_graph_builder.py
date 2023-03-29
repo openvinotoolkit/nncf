@@ -133,10 +133,7 @@ class GraphConverter:
         :return: NNCF primitive type.
         """
         conversion_map = {
-            "FLOAT": "float",
-            "FLOAT16": "float",
-            "BFLOAT16": "float",
-            "DOUBLE": "float",
+            "FLOAT": "float"
         }
         return Dtype(conversion_map.get(onnx_dtype, 'int'))
 

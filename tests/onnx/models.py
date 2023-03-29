@@ -1035,3 +1035,68 @@ class ShapeOfModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'shape_of_model.dot')
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class Float64ConvolutionalModel(ONNXReferenceModel):
+    def __init__(self):
+        
+        input_shape = [1, 3, 10, 10]
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.DOUBLE,
+                                               input_shape)
+        
+        
+        model_mul_op_name = 'Mul'
+        model_output_name = "Y"
+        model_reciprocal_op_name = 'Reciprocal'
+        model_cast_op_name = 'Cast'
+        model_cast_output = 'Cast_Y'
+
+        reciprocal_node = onnx.helper.make_node(
+            name=model_reciprocal_op_name,
+            op_type="Reciprocal",
+            inputs=[model_input_name],
+            outputs=[model_input_name + '_X']
+        )
+
+        cast_node = onnx.helper.make_node(
+            name=model_cast_op_name,
+            op_type="Cast",
+            inputs=[model_input_name + '_X'],
+            outputs=[model_cast_output],
+            to=onnx.TensorProto.FLOAT
+        )
+        
+        tensor = np.array((1)).astype(np.float32)
+        tensor_name = "Tensor"
+        initializer_tensor = create_initializer_tensor(
+            name=tensor_name,
+            tensor_array=tensor,
+            data_type=onnx.TensorProto.FLOAT)
+
+        mul_node = onnx.helper.make_node(
+            name=model_mul_op_name,
+            op_type="Mul",
+            inputs=[model_cast_output, tensor_name],
+            outputs=[model_output_name],
+        )
+
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[reciprocal_node, cast_node, mul_node],
+            name="Float64Net",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[initializer_tensor],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], 'float64_model.dot')
