@@ -126,5 +126,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
             bias_shift = np.expand_dims(bias_shift, axes)
         return bias_shift
 
+    @staticmethod
     def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
         return np.array(data)

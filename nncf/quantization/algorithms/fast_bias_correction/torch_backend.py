@@ -152,5 +152,6 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
                     bias_shift = torch.unsqueeze(bias_shift, dim=-1)
         return bias_shift
 
+    @staticmethod
     def post_process_output_data(data: List[torch.Tensor]) -> torch.Tensor:
         return torch.Tensor(data)
