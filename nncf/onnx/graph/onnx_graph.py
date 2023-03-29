@@ -35,8 +35,8 @@ class ONNXGraph:
 
     def _update_edges(self) -> None:
         self.onnx_model = onnx.shape_inference.infer_shapes(self.onnx_model)
-        value_infos = [self.onnx_model.graph.value_info, self.onnx_model.graph.input,
-                       self.onnx_model.graph.output, self.onnx_model.graph.initializer]
+        value_infos = [*self.onnx_model.graph.value_info, *self.onnx_model.graph.input,
+                       *self.onnx_model.graph.output, *self.onnx_model.graph.initializer]
         self._edge_name_to_value_info = {tensor.name: tensor for tensor in value_infos}
 
     def _update_node_names(self) -> None:

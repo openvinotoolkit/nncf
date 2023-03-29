@@ -36,7 +36,7 @@ def load_model_topology_with_zeros_weights(model_path: Union[str, Path]) -> onnx
     onnx_graph = ONNXGraph(model)
     for tensor in onnx_graph.onnx_model.graph.initializer:
         if uses_external_data(tensor):
-            np_dtype = onnx.helper.tensor_dtype_to_np_dtype(tensor)
+            np_dtype = onnx.helper.tensor_dtype_to_np_dtype(tensor.data_type)
             np_tensor = np.zeros(list(tensor.dims)).astype(np_dtype)
             tensor_with_zeros = onnx.numpy_helper.from_array(np_tensor, name=tensor.name)
             tensor.CopyFrom(tensor_with_zeros)
