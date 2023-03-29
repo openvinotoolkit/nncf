@@ -333,7 +333,7 @@ class OVModelTransformer(ModelTransformer):
                 continue
             input_port = input_node.input(0)
             input_node_output = input_port.get_source_output()
-            new_param = opset.parameter(shape=input_node_output.get_shape(),
+            new_param = opset.parameter(shape=input_node_output.partial_shape,
                                         dtype=input_node_output.get_element_type(),
                                         name=f'{input_name}_input')
             input_port.replace_source_output(new_param.output(0))
