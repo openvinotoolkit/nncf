@@ -102,8 +102,7 @@ class QuantizationAccuracyRestorer:
     def __init__(self,
                  ranking_subset_size: int = 300,
                  max_num_iterations: int = sys.maxsize,
-                 max_drop: float = 0.01,
-                 is_native: bool = True):
+                 max_drop: float = 0.01):
         """
         :param ranking_subset_size: The number of data items that will be selected from
             the dataset to rank groups of quantizers.
@@ -113,9 +112,6 @@ class QuantizationAccuracyRestorer:
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations
         self.max_drop = max_drop
-        # TODO(andrey-churkin): Should be removed when native implementation
-        # will become the main one.
-        self.is_native = is_native
 
     def restore_accuracy(self,
                          initial_model: TModel,

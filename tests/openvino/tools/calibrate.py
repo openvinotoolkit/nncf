@@ -16,7 +16,7 @@ import os
 import multiprocessing
 from argparse import ArgumentParser
 from collections import OrderedDict
-from typing import Optional, TypeVar, List, Iterable
+from typing import Optional, TypeVar, Iterable
 
 import numpy as np
 import openvino.runtime as ov
