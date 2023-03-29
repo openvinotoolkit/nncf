@@ -470,6 +470,12 @@ class ONNXDequantizeLinearMetatype(ONNXOpMetatype):
     op_names = ['DequantizeLinear']
 
 
+@ONNX_OPERATION_METATYPES.register()
+class ONNXReciprocalMetatype(ONNXOpMetatype):
+    name = 'ReciprocalOp'
+    op_names = ['Reciprocal']
+
+
 WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                           ONNXDepthwiseConvolutionMetatype,
                           ONNXConvolutionTransposeMetatype,
