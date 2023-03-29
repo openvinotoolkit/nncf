@@ -122,3 +122,6 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
             axes = [i for i in range(bias_value.ndim) if i != channel_axis]
             bias_shift = np.expand_dims(bias_shift, axes)
         return bias_shift
+
+    def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
+        return np.array(data)

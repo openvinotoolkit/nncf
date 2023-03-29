@@ -298,7 +298,7 @@ class FastBiasCorrection(Algorithm):
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
         q_outputs = self._backend_entity.tensor_processor.mean_per_channel(q_outputs, channel_axis).tensor
-        bias_shift = type(q_outputs)(output_fp) - q_outputs
+        bias_shift = self._backend_entity.post_process_output_data(output_fp) - q_outputs
         return bias_shift
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:

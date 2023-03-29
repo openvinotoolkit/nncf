@@ -203,3 +203,12 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
         :return: The bias with corrected shape.
         """
+
+    def post_process_output_data(data: List[TTensor]) -> TTensor:
+        """
+        _summary_
+
+        :param data: _description_
+
+        :return TTensor: _description_
+        """

@@ -92,7 +92,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
-        blob = torch.zeros(shape)
+        blob = torch.zeros(shape, dtype=data[0].dtype)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
             blob[index] = data[j]
@@ -151,3 +151,6 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
                 if i > channel_axis:
                     bias_shift = torch.unsqueeze(bias_shift, dim=-1)
         return bias_shift
+
+    def post_process_output_data(data: List[torch.Tensor]) -> torch.Tensor:
+        return torch.Tensor(data)
