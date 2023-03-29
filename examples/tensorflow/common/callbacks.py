@@ -127,7 +127,10 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
 
     def _calculate_lr(self) -> int:
         """Calculates the learning rate given the current step."""
-        return get_scalar_from_tensor(self._get_base_optimizer().lr(self.step))
+        lr = self._get_base_optimizer().lr
+        if callable(lr):
+            lr = lr(self.step)
+        return get_scalar_from_tensor(lr)
 
     def _get_base_optimizer(self) -> tf.keras.optimizers.Optimizer:
         """Get the base optimizer used by the current model."""

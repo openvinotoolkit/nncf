@@ -203,7 +203,9 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
             if np.isnan(train_metric_result['total_loss']):
                 raise ValueError('total loss is NaN')
 
-            train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
+            train_metric_result.update({
+                'learning_rate':
+                    (optimizer.lr(optimizer.iterations) if callable(optimizer.lr) else optimizer.lr).numpy()})
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
 
