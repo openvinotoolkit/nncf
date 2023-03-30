@@ -1954,7 +1954,7 @@ strict digraph  {
 "829 QuantizeLinear_backbones.ResNet101FPN.lateral4.weight_1" -> "830 DequantizeLinear_backbones.ResNet101FPN.lateral4.weight_1"  [label="[256, 1024, 1, 1]", style=dashed];
 "830 DequantizeLinear_backbones.ResNet101FPN.lateral4.weight_1" -> "831 Conv_343"  [label="[256, 1024, 1, 1]", style=solid];
 "831 Conv_343" -> "836 QuantizeLinear_1006_1"  [label="[1, 256, 30, 40]", style=solid];
-"832 Constant_nncf_344" -> "835 Resize_nncf_345"  [label="[8]", style=solid];
+"832 Constant_nncf_344" -> "835 Resize_nncf_345"  [label="[8,]", style=solid];
 "833 QuantizeLinear_1005_1" -> "834 DequantizeLinear_1005_1"  [label="[1, 256, 15, 20]", style=dashed];
 "834 DequantizeLinear_1005_1" -> "835 Resize_nncf_345"  [label="[1, 256, 15, 20]", style=solid];
 "834 DequantizeLinear_1005_1" -> "872 Conv_354"  [label="[1, 256, 15, 20]", style=solid];
@@ -1967,7 +1967,7 @@ strict digraph  {
 "841 QuantizeLinear_backbones.ResNet101FPN.lateral3.weight_1" -> "842 DequantizeLinear_backbones.ResNet101FPN.lateral3.weight_1"  [label="[256, 512, 1, 1]", style=dashed];
 "842 DequantizeLinear_backbones.ResNet101FPN.lateral3.weight_1" -> "843 Conv_346"  [label="[256, 512, 1, 1]", style=solid];
 "843 Conv_346" -> "848 QuantizeLinear_1017_1"  [label="[1, 256, 60, 80]", style=solid];
-"844 Constant_nncf_348" -> "847 Resize_nncf_349"  [label="[8]", style=solid];
+"844 Constant_nncf_348" -> "847 Resize_nncf_349"  [label="[8,]", style=solid];
 "845 QuantizeLinear_1016_1" -> "846 DequantizeLinear_1016_1"  [label="[1, 256, 30, 40]", style=dashed];
 "846 DequantizeLinear_1016_1" -> "847 Resize_nncf_349"  [label="[1, 256, 30, 40]", style=solid];
 "846 DequantizeLinear_1016_1" -> "869 Conv_353"  [label="[1, 256, 30, 40]", style=solid];
