@@ -13,19 +13,22 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar, Optional
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 import numpy as np
+
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNode
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
-
 
 TModel = TypeVar('TModel')
 OutputType = TypeVar('OutputType')
@@ -80,7 +83,7 @@ class BiasCorrectionAlgoBackend(ABC):
         """
         Returns backend-specific command to extract sub-model based on input & output names.
 
-        :param inputs: List of the input names for sub-model beggining.
+        :param inputs: List of the input names for sub-model beginning.
         :param outputs: List of the output names for sub-model end.
         :return: Backend-specific TransformationCommand for the model extraction.
         """
