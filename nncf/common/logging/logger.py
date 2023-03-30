@@ -41,6 +41,17 @@ def set_log_level(level: int):
         handler.setLevel(level)
 
 
+def set_log_file(filename: str):
+    """
+    Sets the log file for the NNCF logging.
+
+    :param filename: Path to the file to save the log.
+    """
+    file_handler = logging.FileHandler(filename)
+    file_handler.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
+    nncf_logger.addHandler(file_handler)
+
+
 def disable_logging():
     """
     Disables NNCF logging entirely. `FutureWarning`s are still shown.
