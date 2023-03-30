@@ -184,8 +184,8 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
 
     :param statistics: Collected statistics for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
-    :param half_range: If ``True`` effectively only a half of a quantizer range are used.
-        False - the full range are used.
+    :param half_range: If True effectively only a half of a quantizer range is used.
+        False - the full range is used.
     :param quantizer_group: Group of the quantizer.
     :return: Parameters of the FakeQuantize layer.
     """
@@ -195,12 +195,11 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
     num_bits = quantizer_config.num_bits
     narrow_range = quantizer_config.mode == QuantizationMode.SYMMETRIC and quant_group == QuantizerGroup.WEIGHTS
 
-    if half_range:
-        assert quantizer_config.mode == QuantizationMode.SYMMETRIC
-        num_bits = num_bits - 1
-        narrow_range = False
-
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
+        if half_range:
+            num_bits = num_bits - 1
+            narrow_range = False
+    
         _, _, levels = calculate_symmetric_level_ranges(num_bits,
                                                         signed=True, narrow_range=narrow_range)
         input_low, input_high = symmetric_range(min_values, max_values,
@@ -212,6 +211,8 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
             input_low *= (export_levels - 1) / (levels - 1)
             levels = export_levels
     else:
+        if half_range:
+            raise RuntimeError('half_range is only applied to symmetric quantization mode.')
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
         input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 

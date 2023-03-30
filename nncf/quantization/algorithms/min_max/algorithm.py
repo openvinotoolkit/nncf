@@ -59,21 +59,21 @@ from nncf.common.factory import ModelTransformerFactory
 TModel = TypeVar('TModel')
 
 
-def is_half_range(overflow_fix: OverflowFix, qconfig: QuantizerConfig, weight_tensor_names: Set[str]) -> bool:
+def is_half_range(overflow_fix: OverflowFix, qconfig: QuantizerConfig, is_first_layer: bool) -> bool:
     """
-    Returns True if half_range parameter should be True to the following operation.
+    Returns True if half_range parameter should be True to the following quantizer.
 
     :param overflow_fix: This option controls whether to apply the overflow issue fix.
             If set to `disable`, the fix will not be applied. If set to `enable` or `first_layer_only`,
             the fix will be applied to all layers or to the first convolutional layer respectively.
     :param qconfig: Quantization config.
-    :param weight_tensor_names: Names of registered weight tensors.
+    :param is_first_layer: If True it considered that the quantizer is the first in topological order.
     :return: True if half_range parameter is applied, otherwise - False.
     """
     if qconfig.mode == QuantizationMode.SYMMETRIC:
         if overflow_fix == OverflowFix.ENABLE:
             return True
-        if overflow_fix == OverflowFix.FIRST_LAYER and not weight_tensor_names:
+        if overflow_fix == OverflowFix.FIRST_LAYER and is_first_layer:
             return True
     return False
 
@@ -427,7 +427,8 @@ class MinMaxQuantization(Algorithm):
                     weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
                     if weights_name in weight_layer_names:
                         continue
-                    half_range = is_half_range(self._parameters.overflow_fix, qconfig, weight_layer_names)
+                    is_first_layer = len(weight_layer_names) == 0
+                    half_range = is_half_range(self._parameters.overflow_fix, qconfig, is_first_layer)
                     statistics = tensor_collector.get_statistics()
                     parameters = calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)
                     command = self._backend_entity.create_weight_quantizer_insertion_command(
