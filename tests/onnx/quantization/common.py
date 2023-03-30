@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any, Dict
 
 import os
 
@@ -87,12 +87,14 @@ class ModelToTest:
 
 
 def min_max_quantize_model(original_model: onnx.ModelProto, convert_model_opset: bool = True,
-                           ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
+                           dataset_has_batch_size: bool = False,
+                           quantization_params: Dict[str, Any] = None) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
+    quantization_params = {} if quantization_params is None else quantization_params
     post_training_quantization = PostTrainingQuantization(
-        PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+        PostTrainingQuantizationParameters(number_samples=1, **quantization_params))
     # Using PTQ, but apply only MinMax
     updated_algorithms = []
     for algo in post_training_quantization.algorithms:
@@ -104,12 +106,14 @@ def min_max_quantize_model(original_model: onnx.ModelProto, convert_model_opset:
 
 
 def ptq_quantize_model(original_model: onnx.ModelProto, convert_model_opset: bool = True,
-                       ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
+                       dataset_has_batch_size: bool = False,
+                       quantization_params: Dict[str, Any] = None) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
+    quantization_params = {} if quantization_params is None else quantization_params
     post_training_quantization = PostTrainingQuantization(
-        PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+        PostTrainingQuantizationParameters(number_samples=1, **quantization_params))
     quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 
