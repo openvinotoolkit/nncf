@@ -393,7 +393,7 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
 
 def test_a_packaging_version():
     print(parse_version(tf.__version__).__dict__)
-    assert parse_version(tf.__version__).release == (2, 11, 1)
+    assert parse_version(tf.__version__)._version.release == (2, 11, 1)
 
 
 class TestModelsGraph:
