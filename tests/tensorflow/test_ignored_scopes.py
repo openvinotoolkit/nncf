@@ -69,8 +69,6 @@ def test_raise_runtimeerror_for_not_matched_scope_names(algo_name):
     model = get_mock_model()
     config = get_empty_config()
     config['compression'] = {'algorithm': algo_name, 'ignored_scopes': ['unknown']}
-    if algo_name == "quantization":
-        config['compression']["initializer"] = {"batchnorm_adaptation": {"num_bn_adaptation_samples": 0}}
 
     with pytest.raises(RuntimeError) as exc_info:
         create_compressed_model_and_algo_for_test(model, config)

@@ -33,12 +33,7 @@ def test_strip(enable_quantization):
         config["compression"].append(
             {
                 "algorithm": "quantization",
-                "preset": "mixed",
-                "initializer": {
-                    "batchnorm_adaptation": {
-                        "num_bn_adaptation_samples": 0,
-                    }
-                },
+                "preset": "mixed"
             }
         )
 

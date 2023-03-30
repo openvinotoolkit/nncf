@@ -148,6 +148,15 @@ def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Opt
     return get_bn_adapt_algo_kwargs(config, params)
 
 
+def has_bn_section(config: NNCFConfig, algo_name: str) -> bool:
+    algo_config = extract_algo_specific_config(config, algo_name)
+    return algo_config.get('initializer', {}).get('batchnorm_adaptation') is not None
+
+
+class BNAdaptDataLoaderNotFoundError(RuntimeError):
+    pass
+
+
 def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) -> Dict[str, Any]:
     num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', NUM_BN_ADAPTATION_SAMPLES)
 
@@ -157,7 +166,7 @@ def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) ->
     try:
         args = nncf_config.get_extra_struct(BNAdaptationInitArgs)
     except KeyError:
-        raise RuntimeError(
+        raise BNAdaptDataLoaderNotFoundError(
             'Unable to create the batch-norm statistics adaptation algorithm '
             'because the data loader is not provided as an extra struct. Refer to the '
             '`NNCFConfig.register_extra_structs` method and the `BNAdaptationInitArgs` class.') from None
