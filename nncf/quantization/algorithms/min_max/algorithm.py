@@ -279,10 +279,7 @@ class MinMaxQuantization(Algorithm):
                                                             self._backend_entity.shapeof_metatypes,
                                                             self._backend_entity.similar_input_metatypes)
         ip_graph = InsertionPointGraph(inference_nncf_graph)
-        similar_input_nodes = inference_nncf_graph.get_nodes_by_metatypes(self._backend_entity.similar_input_metatypes)
-        non_constant_nodes = list(weighted_node_and_qconf_lists.keys())
-        non_constant_node_keys = [n.data[NNCFGraph.KEY_NODE_ATTR] for n in non_constant_nodes + similar_input_nodes]
-        ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, non_constant_node_keys)
+        ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
         post_processing_types = self._backend_entity.post_processing_metatypes
         solver = QuantizerPropagationSolver(ignored_scopes=ignored_names,
                                             target_scopes=None,

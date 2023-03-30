@@ -303,8 +303,7 @@ class InsertionPointGraph(nx.DiGraph):
         return node_key
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
-                                                         full_fusing_pattern: GraphPattern,
-                                                         known_non_constant_node_keys: Optional[List[str]] = None) \
+                                                         full_fusing_pattern: GraphPattern) \
             -> 'InsertionPointGraph':
         """
         Returns an InsertionPointGraph in which the nodes that match a HW-specific list of patterns are fused into a
@@ -314,15 +313,11 @@ class InsertionPointGraph(nx.DiGraph):
         then 'known_non_constant_node_keys' should be pass. This is the list of the node known that are non constansts.
 
         :param full_fusing_pattern: The GraphPatttern object representing a composition of fusing pattern variants.
-        :param known_non_constant_node_keys: Keys of the nodes which known to be non constant.
         :return: The InsertionPointGraph with nodes fused according to pattern matching.
         """
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
-        filtered_ip_graph = deepcopy(self)
-        if known_non_constant_node_keys is not None:
-            filtered_ip_graph = ConstantNodesFilter.filter(filtered_ip_graph, known_non_constant_node_keys)
-        matches = find_subgraphs_matching_pattern(filtered_ip_graph.get_base_nx_graph(), full_fusing_pattern)
+        matches = find_subgraphs_matching_pattern(merged_ip_graph.get_base_nx_graph(), full_fusing_pattern)
         for match in matches:
             if len(match) == 1:
                 continue

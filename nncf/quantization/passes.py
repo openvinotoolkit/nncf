@@ -31,6 +31,7 @@ def transform_to_inference_graph(nncf_graph: NNCFGraph,
     :return: NNCFGraph in the inference style.
     """
     inference_nncf_graph = remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, similar_input_metatypes)
+    inference_nncf_graph = filter_constant_nodes(nncf_graph, similar_input_metatypes)
     return inference_nncf_graph
 
 
@@ -46,10 +47,10 @@ def remove_shapeof_subgraphs(nncf_graph: NNCFGraph,
         that also can be interpreted as inputs (ReadValue).
     :return: NNCFGraph without ShapeOf subgraphs.
     """
+    similar_input_metatypes = similar_input_metatypes if similar_input_metatypes else []
     nodes_to_drop = set()
     shape_of_nodes = []
     infer_nodes = []
-    similar_input_metatypes = similar_input_metatypes if similar_input_metatypes else []
 
     similar_inputs = nncf_graph.get_nodes_by_metatypes(similar_input_metatypes)
     nodes_queue = collections.deque(nncf_graph.get_input_nodes() + similar_inputs)
@@ -78,4 +79,37 @@ def remove_shapeof_subgraphs(nncf_graph: NNCFGraph,
             shape_of_queue.extend(nncf_graph.get_next_nodes(node) + nncf_graph.get_previous_nodes(node))
 
     nncf_graph.remove_nodes_from(nodes_to_drop)
+    return nncf_graph
+
+
+def filter_constant_nodes(nncf_graph: NNCFGraph,
+                          similar_input_metatypes: Optional[List[OperatorMetatype]] = None) -> NNCFGraph:
+    """
+    Removes all Constant nodes from NNCFGraph, making it inference graph.
+    The traversing starts from the input nodes and nodes with weights.
+
+    :param nncf_graph: NNCFGraph instance for the transformation.
+    :param similar_input_metatypes: List of backend-specific metatypes
+        that also can be interpreted as inputs (ReadValue).
+    :return: NNCFGraph without Constant nodes.
+    """
+    similar_input_metatypes = similar_input_metatypes if similar_input_metatypes else []
+    input_nodes = nncf_graph.get_input_nodes()
+    similar_input_nodes = nncf_graph.get_nodes_by_metatypes(similar_input_metatypes)
+
+    start_nodes = input_nodes + similar_input_nodes
+
+    if not start_nodes:
+        return nncf_graph
+
+    visited_nodes = set()
+    nodes_queue = collections.deque(start_nodes)
+    while nodes_queue:
+        node = nodes_queue.pop()
+        if node in visited_nodes:
+            continue
+        visited_nodes.add(node)
+        nodes_queue.extend(nncf_graph.get_next_nodes(node))
+    constant_nodes = [node for node in nncf_graph.get_all_nodes() if node not in visited_nodes]
+    nncf_graph.remove_nodes_from(constant_nodes)
     return nncf_graph
