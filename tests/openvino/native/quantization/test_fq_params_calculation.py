@@ -20,6 +20,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.quantization.algorithms.definitions import OverflowFix
 
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.omz_helpers import convert_model
@@ -31,6 +32,7 @@ from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import FPModel
+from tests.openvino.native.models import WeightsModel
 
 REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_scales'
 
@@ -92,6 +94,24 @@ def test_syntetic_models_fq_scales(model_creator_func, preset):
     nodes = get_fq_nodes_stats_algo(quantized_model)
 
     ref_stats_name = model.ref_graph_name.split(".")[0] + f'_{preset.value}.json'
+    ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
+
+    # Unkomment lines below to generate reference for new models.
+    # from tests.openvino.native.common import dump_to_json
+    # dump_to_json(ref_stats_path, nodes)
+
+    ref_nodes = load_json(ref_stats_path)
+    compare_stats(ref_nodes, nodes)
+    
+    
+@pytest.mark.parametrize('overflow_fix', [OverflowFix.DISABLE, OverflowFix.ENABLE, OverflowFix.FIRST_LAYER],
+                         ids=[OverflowFix.DISABLE.value, OverflowFix.ENABLE.value, OverflowFix.FIRST_LAYER.value])
+def test_overflow_fix_scales(overflow_fix):
+    model = WeightsModel()
+    quantized_model = quantize_model(model.ov_model, {'overflow_fix': overflow_fix})
+    nodes = get_fq_nodes_stats_algo(quantized_model)
+
+    ref_stats_name = model.ref_graph_name.split(".")[0] + f'_overflow_fix_{overflow_fix.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
     # Unkomment lines below to generate reference for new models.
