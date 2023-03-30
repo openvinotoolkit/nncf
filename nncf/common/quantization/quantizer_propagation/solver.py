@@ -35,7 +35,6 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
-from nncf.common.insertion_point_graph import ConstantNodesFilter
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
