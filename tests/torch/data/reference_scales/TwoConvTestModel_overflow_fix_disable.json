@@ -1,0 +1,56 @@
+{
+    "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]": {
+        "input_low": [
+            [
+                [
+                    [
+                        -1.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        -1.0
+                    ]
+                ]
+            ]
+        ],
+        "input_high": [
+            [
+                [
+                    [
+                        1.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        1.0
+                    ]
+                ]
+            ]
+        ]
+    },
+    "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]": {
+        "input_low": [
+            [
+                [
+                    [
+                        -1.0
+                    ]
+                ]
+            ]
+        ],
+        "input_high": [
+            [
+                [
+                    [
+                        1.0
+                    ]
+                ]
+            ]
+        ]
+    }
+}
