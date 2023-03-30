@@ -30,8 +30,7 @@ def transform_to_inference_graph(nncf_graph: NNCFGraph,
         that also can be interpreted as inputs (ReadValue).
     :return: NNCFGraph in the inference style.
     """
-    inference_nncf_graph = remove_shapeof_subgraphs(
-        nncf_graph, shapeof_metatypes, similar_input_metatypes)
+    inference_nncf_graph = remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, similar_input_metatypes)
     return inference_nncf_graph
 
 
@@ -50,8 +49,10 @@ def remove_shapeof_subgraphs(nncf_graph: NNCFGraph,
     nodes_to_drop = set()
     shape_of_nodes = []
     infer_nodes = []
+    similar_input_metatypes = similar_input_metatypes if similar_input_metatypes else []
 
-    nodes_queue = collections.deque(nncf_graph.get_input_nodes())
+    similar_inputs = nncf_graph.get_nodes_by_metatypes(similar_input_metatypes)
+    nodes_queue = collections.deque(nncf_graph.get_input_nodes() + similar_inputs)
     while nodes_queue:
         node = nodes_queue.pop()
         if node.metatype in shapeof_metatypes:
@@ -69,9 +70,7 @@ def remove_shapeof_subgraphs(nncf_graph: NNCFGraph,
         shape_of_queue.extend(nncf_graph.get_next_nodes(shape_of_node))
         while shape_of_queue:
             node = shape_of_queue.pop()
-            if node in nodes_to_drop or \
-                    node in infer_nodes or \
-                    node.metatype in similar_input_metatypes:
+            if node in nodes_to_drop or node in infer_nodes:
                 continue
             nodes_to_drop.add(node)
             # traverse forward and backward to exclude full shape of subgraph

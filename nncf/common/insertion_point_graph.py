@@ -321,9 +321,7 @@ class InsertionPointGraph(nx.DiGraph):
         merged_ip_graph = deepcopy(self)
         filtered_ip_graph = deepcopy(self)
         if known_non_constant_node_keys is not None:
-            start_traversing_node_keys = [node.node.data[NNCFGraph.KEY_NODE_ATTR] for node in
-                                          known_non_constant_node_keys]
-            filtered_ip_graph = ConstantNodesFilter.filter(filtered_ip_graph, start_traversing_node_keys)
+            filtered_ip_graph = ConstantNodesFilter.filter(filtered_ip_graph, known_non_constant_node_keys)
         matches = find_subgraphs_matching_pattern(filtered_ip_graph.get_base_nx_graph(), full_fusing_pattern)
         for match in matches:
             if len(match) == 1:

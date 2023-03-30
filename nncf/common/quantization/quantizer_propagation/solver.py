@@ -468,11 +468,7 @@ class QuantizerPropagationSolver:
         configurations.
         """
         self._num_potential_quantized_activations = 0
-        quantizable_layer_node_keys = []
-        if self._quantizable_layer_nodes is not None:
-            quantizable_layer_node_keys = [node.node.data['key'] for node in self._quantizable_layer_nodes]
-        filtered_ip_graph = ConstantNodesFilter.filter(ip_graph, quantizable_layer_node_keys)
-        quant_prop_graph = QuantizerPropagationStateGraph(filtered_ip_graph,
+        quant_prop_graph = QuantizerPropagationStateGraph(ip_graph,
                                                           self._ignored_scopes,
                                                           self._target_scopes)
         if self._post_processing_marker_metatypes is not None:
