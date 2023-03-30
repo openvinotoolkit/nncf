@@ -391,6 +391,11 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
                                    graph_to_layer_var_names_map)
 
 
+def test_a_packaging_version():
+    import packaging
+    assert parse_version(packaging.__version__).base_version == '23.0'
+
+
 class TestModelsGraph:
     @pytest.mark.parametrize('desc', get_test_models_desc('quantization'), ids=[
         get_model_name(m) for m in get_test_models_desc('quantization')])

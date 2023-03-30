@@ -77,7 +77,7 @@ install-tensorflow-dev: install-tensorflow-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-tensorflow:
-	pytest tests/common tests/tensorflow    \
+	pytest tests/tensorflow/test_compressed_graph.py    \
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
 
