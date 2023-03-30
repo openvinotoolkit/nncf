@@ -111,17 +111,15 @@ class PTInsertionCommand(TransformationCommand):
 
 class PTModelExtractionCommand(Command):
     """
-    Extracts sub-graph based on the sub-model input and output names.
+    Extracts node by name.
     """
 
-    def __init__(self, inputs: List[str], outputs: List[str]):
+    def __init__(self, node_name: str):
         """
-        :param inputs: List of the input names that denote the sub-graph beginning.
-        :param outputs: List of the output names that denote the sub-graph ending.
+        :param node_name: Node name that will be extracted.
         """
         super().__init__(TransformationType.EXTRACT)
-        self.inputs = inputs
-        self.outputs = outputs
+        self.node_name = node_name
 
     def union(self, other: 'Command') -> 'Command':
         raise NotImplementedError()

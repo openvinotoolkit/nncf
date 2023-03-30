@@ -83,14 +83,8 @@ class PTModelTransformer(ModelTransformer):
             self._model.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
 
     def _apply_extraction_transformations(self, transformations: List[TransformationCommand]) -> nn.Module:
-        model_extraction = transformations[0]
-
         assert len(transformations) == 1, "Support only one node extraction"
-        assert model_extraction.inputs == model_extraction.outputs, "Support only one node extraction"
-        assert len(model_extraction.inputs) == 1, "Support only one node extraction"
-
-        node_name = model_extraction.inputs[0]
-        extracted_module = self._model.get_containing_module(node_name)
+        extracted_module = self._model.get_containing_module(transformations[0].node_name)
         # Return copy of the module without pre and post operations.
         extracted_module = copy.deepcopy(extracted_module)
         extracted_module.reset()

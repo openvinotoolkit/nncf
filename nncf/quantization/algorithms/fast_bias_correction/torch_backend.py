@@ -77,7 +77,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> PTModelExtractionCommand:
-        return PTModelExtractionCommand(inputs, outputs)
+        return PTModelExtractionCommand(inputs[0])
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
