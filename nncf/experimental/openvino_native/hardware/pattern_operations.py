@@ -19,6 +19,7 @@ LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVConvolutionMeta
                                                   ov_metatypes.OVDepthwiseConvolutionMetatype,
                                                   ov_metatypes.OVConvolutionBackpropDataMetatype,
                                                   ov_metatypes.OVGroupConvolutionBackpropDataMetatype,
+                                                  ov_metatypes.OVDeformableConvolutionMetatype,
                                                   ov_metatypes.OVMatMulMetatype
                                                   ],
                      GraphPattern.LABEL_ATTR: 'LINEAR'}
