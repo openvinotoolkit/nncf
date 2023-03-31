@@ -541,7 +541,8 @@ class TestSotaCheckpoints(RunTest):
             mo_cmd_tail = f' --framework tf' \
                           f' --input_shape {self.get_input_shape(eval_test_struct.config_name_)}' \
                           f' --input_model {tf_checkpoint}' \
-                          f' --output_dir {ir_model_folder}'
+                          f' --output_dir {ir_model_folder}' \
+                          f' --use_new_frontend'
             mo_cmd = f'mo {mo_cmd_tail}'
             if eval_test_struct.reverse_input_channels_:
                 mo_cmd += ' --reverse_input_channels'
