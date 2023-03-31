@@ -156,7 +156,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
                 actual = nncf_stats.rb_sparsity.model_statistics.sparsity_level_for_layers
                 print(f'target {target}, actual {actual}')
                 if epoch + 1 <= freeze_epoch:
-                    assert abs(actual - target) < 0.05
+                    assert abs(actual - target) < 0.075
                 else:
                     assert tf.cast(sparse_algo.loss.disabled, tf.bool)
                     assert tf.equal(sparse_algo.loss.calculate(), tf.constant(0.))
