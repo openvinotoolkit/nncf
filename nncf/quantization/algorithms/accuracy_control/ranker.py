@@ -28,7 +28,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.common.logging import nncf_logger
-from nncf.common.utils.helpers import timer
+from nncf.common.utils.timer import timer
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 
 

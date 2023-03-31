@@ -14,8 +14,6 @@ import itertools
 import os
 import os.path as osp
 import datetime
-import time
-from contextlib import contextmanager
 
 from typing import Dict
 from typing import Hashable
@@ -65,11 +63,3 @@ def product_dict(d: Dict[Hashable, List]) -> Dict:
     vals = d.values()
     for instance in itertools.product(*vals):
         yield dict(zip(keys, instance))
-
-
-@contextmanager
-def timer():
-    start_time = time.perf_counter()
-    yield
-    elapsed_time = time.perf_counter() - start_time
-    print('\tElapsed Time:', time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))

@@ -27,7 +27,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.openvino.quantization.quantize import quantize_impl
-from nncf.common.utils.helpers import timer
+from nncf.common.utils.timer import timer
 
 
 def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model) -> None:
