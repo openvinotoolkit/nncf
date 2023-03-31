@@ -52,5 +52,13 @@
                 ]
             ]
         ]
+    },
+    "/nncf_model_input_0": {
+        "input_low": 0.0,
+        "input_high": 0.9998044371604919
+    },
+    "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0": {
+        "input_low": -3.895618200302124,
+        "input_high": 3.8651835918426514
     }
 }

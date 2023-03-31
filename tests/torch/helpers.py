@@ -345,6 +345,7 @@ class BaseDatasetMock(Dataset, ABC):
         super().__init__()
         self._input_size = input_size
         self._len = num_samples
+        torch.manual_seed(42)
 
     @abstractmethod
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
