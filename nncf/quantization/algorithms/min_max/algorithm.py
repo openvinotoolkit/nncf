@@ -109,8 +109,11 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Desrciptor of the layers which input must not be quantized.
         :param overflow_fix: This option controls whether to apply the overflow issue fix.
-            If set to `disable`, the fix will not be applied. If set to `enable` or `first_layer_only`,
-            the fix will be applied to all layers or to the first convolutional layer respectively.
+            If set to `disable`, there is no effect. 
+            If set to `enable`, the fix will be applied to all weight quantizers. 
+            If set to `first_layer_only` the fix will be applied to the first weight quantizers.
+            
+            The fix itself pushes weights FakeQuantizers effectively use only a half quantization range.
         """
         self.number_samples = number_samples
         self.target_device = target_device
@@ -367,7 +370,7 @@ class MinMaxQuantization(Algorithm):
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         self._apply_model_type_pass(self._parameters.model_type, quantizer_setup, nncf_graph)
         quantization_points = list(quantizer_setup.quantization_points.values())
-        quantization_points = self._sort_quantization_points(quantization_points, nncf_graph)
+        quantization_points = self._topological_sort_quantization_points(quantization_points, nncf_graph)
         for quantization_point in quantization_points:
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point, nncf_graph)
@@ -377,10 +380,10 @@ class MinMaxQuantization(Algorithm):
                 raise RuntimeError('Incorrect quantization point')
         return self._quantization_target_points_to_qconfig
 
-    def _sort_quantization_points(self, quantization_points: List[SingleConfigQuantizationPoint],
-                                  nncf_graph: NNCFGraph) -> List[SingleConfigQuantizationPoint]:
+    def _topological_sort_quantization_points(self, quantization_points: List[SingleConfigQuantizationPoint],
+                                              nncf_graph: NNCFGraph) -> List[SingleConfigQuantizationPoint]:
         """
-        Sort quantization_points based on the order on the topological order obtained form nncf_graph.
+        Sorts quantization_points based on the topological order of nodes obtained form nncf_graph.
 
         :param quantization_points: Quantization points.
         :param nncf_graph: Instance of NNCFgraph used to get topological sort.
@@ -391,9 +394,10 @@ class MinMaxQuantization(Algorithm):
         return quantization_points
 
     def _get_first_quantized_weight_node(self, quantization_points: List[TargetPoint],
-                                         starting_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[TargetPoint]:     
+                                         starting_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[TargetPoint]:   
         """
-        Returns first visited target point starting from starting_node, which is included in quantization_points.
+        Returns a first visited target point, which is included in quantization_points.
+        A traversal of nncf_graph is started from starting_node.
         
         :param quantization_points: Quantization target points.
         :param starting_node: Node from which traversing is started.
@@ -408,13 +412,13 @@ class MinMaxQuantization(Algorithm):
             if node_name in target_node_names_to_qp:
                 return target_node_names_to_qp[node_name]
             queue.extend(nncf_graph.get_next_nodes(node))
-        return None  
-        
+        return None
+
     def _get_quantization_points_overflow_fix(self, overflow_fix: OverflowFix, 
                                               quantization_target_points: OrderedDict[TargetPoint, QuantizerConfig],
                                               nncf_graph: NNCFGraph) -> Set[TargetPoint]:
         """
-        Returns quantization target points for whom overflow_fix should be applied.
+        Returns quantization target points, for whom overflow_fix should be applied.
         If overflow_fix is enable, returns all weights quantization target points.
         If overflow_fix is disable, returns an empty set.
         If overflow_fix is first_layer_only, returns all first weights quantization target points.
@@ -428,10 +432,10 @@ class MinMaxQuantization(Algorithm):
         """
         weight_quantization_points = set(filter(lambda point: point.is_weight_target_point(),
                                         quantization_target_points.keys()))
-        if overflow_fix == OverflowFix.ENABLE:
-            return set(weight_quantization_points)
         if overflow_fix == OverflowFix.DISABLE:
             return set()
+        if overflow_fix == OverflowFix.ENABLE:
+            return weight_quantization_points
         if overflow_fix == OverflowFix.FIRST_LAYER:
             output = set()
             for input_node in nncf_graph.get_input_nodes():
