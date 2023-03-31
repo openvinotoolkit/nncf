@@ -193,27 +193,29 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
     max_values = np.array(statistics.max_values).astype(np.float32)
 
     num_bits = quantizer_config.num_bits
-    narrow_range = quantizer_config.mode == QuantizationMode.SYMMETRIC and quant_group == QuantizerGroup.WEIGHTS
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         if half_range:
-            num_bits = num_bits - 1
-            narrow_range = False
-    
-        _, _, levels = calculate_symmetric_level_ranges(num_bits,
-                                                        signed=True, narrow_range=narrow_range)
-        input_low, input_high = symmetric_range(min_values, max_values,
-                                                levels, quantizer_config, quant_group)
-        if half_range:
-            _, _, export_levels = calculate_symmetric_level_ranges(num_bits + 1,
+            _, _, levels = calculate_symmetric_level_ranges(num_bits - 1,
+                                                            signed=True, narrow_range=False)
+            input_low, input_high = symmetric_range(min_values, max_values,
+                                                    levels, quantizer_config, quant_group)
+            
+            _, _, export_levels = calculate_symmetric_level_ranges(num_bits,
                                                                    signed=True, narrow_range=True)
             input_high *= (export_levels - 1) / (levels - 1)
             input_low *= (export_levels - 1) / (levels - 1)
             levels = export_levels
+        else:
+            narrow_range = quantizer_config.mode == QuantizationMode.SYMMETRIC and quant_group == QuantizerGroup.WEIGHTS
+            _, _, levels = calculate_symmetric_level_ranges(num_bits,
+                                                            signed=True, narrow_range=narrow_range)
+            input_low, input_high = symmetric_range(min_values, max_values,
+                                                    levels, quantizer_config, quant_group)
     else:
         if half_range:
             raise RuntimeError('half_range is only applied to symmetric quantization mode.')
-        _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
+        _, _, levels = calculate_asymmetric_level_ranges(num_bits, narrow_range=False)
         input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     if not quantizer_config.per_channel:
