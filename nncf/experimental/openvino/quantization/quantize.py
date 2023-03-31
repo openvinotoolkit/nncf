@@ -50,7 +50,7 @@ def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model)
 
         name_to_search = initial_name
         if 'compressed' in name_to_search:
-            name_to_search = name_to_search[:name_to_search.rfind('compressed')-1]
+            name_to_search = name_to_search[:name_to_search.rfind('compressed') - 1]
 
         for modified_name, const_op in modified_name_to_const_map.items():
             if modified_name.startswith(name_to_search):

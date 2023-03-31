@@ -607,10 +607,7 @@ METATYPES_WITH_CONST_PORT_ID = GENERAL_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
 OPERATIONS_WITH_BIAS_METATYPES = [OVConvolutionMetatype,
                                   OVConvolutionBackpropDataMetatype,
                                   #TODO: add all metatypes with bias
-                                  OVMatMulMetatype,
-                                  OVGroupConvolutionMetatype,
-                                  OVGroupConvolutionBackpropDataMetatype,
-                                  OVDepthwiseConvolutionMetatype]
+                                  OVMatMulMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
