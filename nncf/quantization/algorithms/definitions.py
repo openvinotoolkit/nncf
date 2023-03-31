@@ -27,9 +27,11 @@ class RangeType(Enum):
 class OverflowFix(Enum):
     """
     This option controls whether to apply the overflow issue fix.
-    If set to `disable`, the fix will not be applied. If set to `enable` or `first_layer_only`,
-    the fix will be applied to all layers or to the first convolutional layer respectively.
-    The fix itself pushes weights FakeQuantizes effectively use only a half quantization range.
+    If set to `disable`, there is no effect. 
+    If set to `enable`, the fix will be applied to all weight quantizers. 
+    If set to `first_layer_only` the fix will be applied to the first weight quantizers.
+    
+    The fix itself pushes weights FakeQuantizers effectively use only a half quantization range.
     """
     ENABLE = 'enable'
     FIRST_LAYER = 'first_layer_only'
