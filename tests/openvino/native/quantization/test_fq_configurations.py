@@ -165,5 +165,5 @@ def test_calculate_weight_quantizer_parameters(case_to_test):
         quantize_params = calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)
         compare_fq_parameters(ref_quantize_params, quantize_params)
     else:
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError):
             calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)
