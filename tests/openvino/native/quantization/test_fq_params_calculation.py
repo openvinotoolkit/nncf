@@ -48,10 +48,10 @@ def get_fq_nodes_stats_algo(model):
             output_high = op.input_value(4).get_node().get_data()
 
             nodes[op.get_friendly_name()] = {
-                    'input_low': input_low,
-                    'input_high': input_high,
-                    'output_low': output_low,
-                    'output_high': output_high
+                'input_low': input_low,
+                'input_high': input_high,
+                'output_low': output_low,
+                'output_high': output_high
             }
     return nodes
 
@@ -127,11 +127,11 @@ def test_omz_models_fq_scales(model_name, preset, tmp_path):
 
     ref_stats_name = str(Path(model_path).name).rsplit('.', maxsplit=1)[0] + f'_{preset.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
-    
+
     # Unkomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
-    
+
     ref_nodes = load_json(ref_stats_path)
     params = ['input_low', 'input_high', 'output_low', 'output_high']
     compare_stats(ref_nodes, nodes, params)

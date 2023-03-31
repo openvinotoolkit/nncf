@@ -1,6 +1,6 @@
 {
     "QuantizeLinear_X_1": {
-        "scale": 0.003920373041182756,
+        "scale": 0.003921568859368563,
         "zero_point": 0
     },
     "QuantizeLinear_Conv1_W_1": {
@@ -74,11 +74,11 @@
         ]
     },
     "QuantizeLinear_ReLU1_Y_1": {
-        "scale": 0.18565277755260468,
+        "scale": 0.4649198055267334,
         "zero_point": 0
     },
     "QuantizeLinear_Avg_Pool1_Y_1": {
-        "scale": 0.13755862414836884,
+        "scale": 0.464920312166214,
         "zero_point": 0
     },
     "QuantizeLinear_Conv2_W_1": {

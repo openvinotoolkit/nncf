@@ -168,7 +168,7 @@ def dump_to_json(local_path: Path, data: Dict[str, np.ndarray]):
         json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
 
 
-def compare_stats(expected: Dict[str, np.ndarray], 
+def compare_stats(expected: Dict[str, np.ndarray],
                   actual: Dict[str, np.ndarray], param_names: List[str]):
     assert len(expected) == len(actual)
     for ref_name in expected:
@@ -176,4 +176,4 @@ def compare_stats(expected: Dict[str, np.ndarray],
         stats = actual[ref_name]
         for param in param_names:
             ref_param, actual_param = ref_stats.get(param), stats.get(param)
-            assert np.allclose(ref_param, stats, atol=1e-6)
+            assert np.allclose(ref_param, actual_param, atol=1e-6)

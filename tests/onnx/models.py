@@ -86,10 +86,11 @@ class LinearModel(ONNXReferenceModel):
         )
 
         bn1_output_node_name = "BN1_Y"
-        bn1_scale = np.random.randn(conv1_out_channels).astype(np.float32)
-        bn1_bias = np.random.randn(conv1_out_channels).astype(np.float32)
-        bn1_mean = np.random.randn(conv1_out_channels).astype(np.float32)
-        bn1_var = np.random.rand(conv1_out_channels).astype(np.float32)
+        rng = np.random.default_rng(seed=0)
+        bn1_scale = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
+        bn1_bias = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
+        bn1_mean = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
+        bn1_var = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
         bn1_scale_initializer_tensor_name = "BN1_Scale"
         bn1_bias_initializer_tensor_name = "BN1_Bias"
         bn1_mean_initializer_tensor_name = "BN1_Mean"
@@ -435,11 +436,11 @@ class ReshapeWeightModel(ONNXReferenceModel):
         Y = onnx.helper.make_tensor_value_info(model_output_name,
                                                onnx.TensorProto.FLOAT,
                                                [1, model_output_channels])
-
+        rng = np.random.default_rng(seed=0)
+        shape = [1, 1, model_input_channels, model_output_channels]
         w_tensor = create_initializer_tensor(
             name="W",
-            tensor_array=np.random.standard_normal(
-                [1, 1, model_input_channels, model_output_channels]),
+            tensor_array=rng.uniform(0, 1, shape).astype(np.float32),
             data_type=onnx.TensorProto.FLOAT)
 
         w_shape_tensor = create_initializer_tensor(
@@ -449,7 +450,7 @@ class ReshapeWeightModel(ONNXReferenceModel):
 
         z_tensor = create_initializer_tensor(
             name="z_tensor",
-            tensor_array=np.random.standard_normal([1, model_input_channels]),
+            tensor_array=rng.uniform(0, 1, [1, model_input_channels]).astype(np.float32),
             data_type=onnx.TensorProto.FLOAT)
 
         reshaped_w_node = onnx.helper.make_node(
