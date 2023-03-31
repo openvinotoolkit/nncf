@@ -136,13 +136,18 @@ class ACValidationFunction:
             self._model_evaluator.process_dataset_async(**kwargs)
 
         # Calculate metrics
-        metrics = OrderedDict([
-            (
-                metric.name, np.mean(metric.evaluated_value)
-                    if metric.meta.get('calculate_mean', True) else metric.evaluated_value[0]
-            )
-            for metric in self._model_evaluator.compute_metrics(print_results=False)
-        ])
+        metrics = OrderedDict()
+        for metric in self._model_evaluator.compute_metrics(print_results=False):
+            sign = 1.0
+            if metric.meta.get('target', 'higher-better') == 'higher-worse':
+                sign = -1.0
+
+            if metric.meta.get('calculate_mean', True):
+                metric_value = np.mean(metric.evaluated_value)
+            else:
+                metric_value = metric.evaluated_value[0]
+
+            metrics[metric.name] = sign * metric_value
 
         self._model_evaluator.reset()
 
