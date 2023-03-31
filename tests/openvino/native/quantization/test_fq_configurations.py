@@ -131,7 +131,7 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
 
     statistics = OVMinMaxTensorStatistic(min_values, max_values)
     qconfig = QuantizerConfig(num_bits=8, mode=mode, signedness_to_force=sign, per_channel=per_ch)
-    quantize_params = calculate_quantizer_parameters(statistics, qconfig, False, QuantizerGroup.ACTIVATIONS)
+    quantize_params = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.ACTIVATIONS)
 
     compare_fq_parameters(ref_quantize_params, quantize_params)
 
@@ -162,8 +162,8 @@ def test_calculate_weight_quantizer_parameters(case_to_test):
         max_values = np.amax(data, axis=axes, keepdims=qconfig.per_channel)
     statistics = OVMinMaxTensorStatistic(min_values, max_values)
     if not fail:
-        quantize_params = calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)
+        quantize_params = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS, half_range)
         compare_fq_parameters(ref_quantize_params, quantize_params)
     else:
         with pytest.raises(RuntimeError):
-            calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)
+            calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS, half_range)
