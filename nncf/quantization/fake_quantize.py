@@ -177,16 +177,16 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
 
 def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
                                    quantizer_config: QuantizerConfig,
-                                   half_range: bool,
-                                   quant_group: QuantizerGroup) -> FakeQuantizeParameters:
+                                   quant_group: QuantizerGroup,
+                                   half_range: bool = False) -> FakeQuantizeParameters:
     """
     Calculates FakeQuantize layer attributes for weight/activation quantizer.
 
     :param statistics: Collected statistics for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
+    :param quantizer_group: Group of the quantizer.
     :param half_range: If True effectively only a half of a quantizer range is used.
         False - the full range is used.
-    :param quantizer_group: Group of the quantizer.
     :return: Parameters of the FakeQuantize layer.
     """
     min_values = np.array(statistics.min_values).astype(np.float32)
