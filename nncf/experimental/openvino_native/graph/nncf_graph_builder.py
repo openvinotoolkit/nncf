@@ -12,6 +12,8 @@
 """
 
 from typing import Dict, List, Type
+from collections import deque
+
 import openvino.runtime as ov
 
 from nncf.common.graph import BaseLayerAttributes
@@ -231,7 +233,19 @@ def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
     # (Constant) -> (Convert) -> (FakeQuantize) -> (Reshape) -> (Operation)
     #  and etc. We need properly find the constant node. So we start with
     # `node` and traverse up until the constant node is not found.
-    while OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node.get_type_name()) != OVConstantMetatype:
-        node = node.input_value(0).get_node()
+    queue = deque([node])
+    constant_node = None
 
-    return node
+    while len(queue) != 0:
+        curr_node = queue.popleft()
+        if OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(curr_node.get_type_name()) == OVConstantMetatype:
+            constant_node = curr_node
+            break
+        if len(curr_node.inputs()) == 0:
+            break
+        queue.append(curr_node.input_value(0).get_node())
+
+    if constant_node is None:
+        raise RuntimeError('Constant node was expected but could not find it.')
+
+    return constant_node
