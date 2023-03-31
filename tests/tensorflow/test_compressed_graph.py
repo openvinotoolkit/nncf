@@ -361,9 +361,10 @@ def prepare_and_check_nx_graph(tf_graph: tf.Graph, graph_path: str, ref_graph_ex
 
 
 def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, rename_resource_nodes):
-    tf_version = parse_version(tf.__version__)
+    tf_version = parse_version(tf.__version__).base_version
+    tf_version_major, tf_version_minor = tuple(map(int, tf_version.split('.')))[:2]
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reference_graphs',
-                            f'{tf_version.major}.{tf_version.minor}')
+                            f'{tf_version_major}.{tf_version_minor}')
     graph_dir = os.path.join(data_dir, ref_graph_dir)
     graph_path = os.path.abspath(os.path.join(graph_dir, ref_graph_filename))
 
@@ -378,7 +379,7 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
     if not rename_resource_nodes:
         graph_to_layer_var_names_map = {}
 
-    if tf_version.major == 2 and tf_version.minor >= 8:
+    if tf_version_major == 2 and tf_version_minor >= 8:
         compressed_graph = remove_node_by_name('NoOp', compressed_graph)
 
     ref_graph_ext = os.path.splitext(ref_graph_filename)[1]
@@ -389,11 +390,6 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
     else:
         prepare_and_check_nx_graph(compressed_graph, graph_path, ref_graph_exist,
                                    graph_to_layer_var_names_map)
-
-
-def test_a_packaging_version():
-    print(parse_version(tf.__version__).__dict__)
-    assert parse_version(tf.__version__)._version.release == (2, 11, 1)
 
 
 class TestModelsGraph:
