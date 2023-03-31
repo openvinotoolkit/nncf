@@ -109,8 +109,8 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Desrciptor of the layers which input must not be quantized.
         :param overflow_fix: This option controls whether to apply the overflow issue fix.
-            If set to `disable`, there is no effect. 
-            If set to `enable`, the fix will be applied to all weight quantizers. 
+            If set to `disable`, there is no effect.
+            If set to `enable`, the fix will be applied to all weight quantizers.
             If set to `first_layer_only` the fix will be applied to the first weight quantizers.
             
             The fix itself pushes weights FakeQuantizers effectively use only a half quantization range.
@@ -322,8 +322,8 @@ class MinMaxQuantization(Algorithm):
         weights_port_ids = self._backend_entity.get_weight_tensor_port_ids(node)
         for port_id in weights_port_ids:
             weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                                node_name,
-                                                                                port_id)
+                                                                                 node_name,
+                                                                                 port_id)
             self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
 
     def _add_activation_quantization_target_point(self,
@@ -390,21 +390,27 @@ class MinMaxQuantization(Algorithm):
         :return: Sorted quantization_points.
         """
         node_names_to_pos = {node.node_name: i for i, node in enumerate(nncf_graph.topological_sort())}
-        quantization_points.sort(key = lambda point: node_names_to_pos[point.insertion_point.target_node_name])
+        quantization_points.sort(key=lambda point: node_names_to_pos[point.insertion_point.target_node_name])
         return quantization_points
 
-    def _get_first_quantized_weight_node(self, quantization_points: List[TargetPoint],
-                                         starting_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[TargetPoint]:   
+    def _get_first_quantized_weight_nodes(self, quantization_points: List[TargetPoint],
+                                          starting_node: NNCFNode,
+                                          nncf_graph: NNCFGraph) -> Optional[List[TargetPoint]]:
         """
-        Returns a first visited target point, which is included in quantization_points.
+        Returns target points connected to a first visited node, which are included in quantization_points.
         A traversal of nncf_graph is started from starting_node.
-        
+
         :param quantization_points: Quantization target points.
         :param starting_node: Node from which traversing is started.
         :param nncf_graph: Instance of NNCFGraph to traverse.
-        :return: First visited target point.
-        """   
-        target_node_names_to_qp = {q_p.target_node_name: q_p for q_p in quantization_points}
+        :return: First visited target points.
+        """
+        target_node_names_to_qp = {}
+        for q_p in quantization_points:
+            if q_p.target_node_name not in target_node_names_to_qp:
+                target_node_names_to_qp[q_p.target_node_name] = [q_p]
+            else:
+                target_node_names_to_qp[q_p.target_node_name].append(q_p)
         queue = collections.deque(nncf_graph.get_next_nodes(starting_node))
         while queue:
             node = queue.popleft()
@@ -414,7 +420,7 @@ class MinMaxQuantization(Algorithm):
             queue.extend(nncf_graph.get_next_nodes(node))
         return None
 
-    def _get_quantization_points_overflow_fix(self, overflow_fix: OverflowFix, 
+    def _get_quantization_points_overflow_fix(self, overflow_fix: OverflowFix,
                                               quantization_target_points: OrderedDict[TargetPoint, QuantizerConfig],
                                               nncf_graph: NNCFGraph) -> Set[TargetPoint]:
         """
@@ -431,19 +437,18 @@ class MinMaxQuantization(Algorithm):
                  If overflow_fix is first_layer_only, returns all first weights quantization target points.
         """
         weight_quantization_points = set(filter(lambda point: point.is_weight_target_point(),
-                                        quantization_target_points.keys()))
-        if overflow_fix == OverflowFix.DISABLE:
-            return set()
+                                                quantization_target_points.keys()))
         if overflow_fix == OverflowFix.ENABLE:
             return weight_quantization_points
         if overflow_fix == OverflowFix.FIRST_LAYER:
             output = set()
             for input_node in nncf_graph.get_input_nodes():
-                node = self._get_first_quantized_weight_node(weight_quantization_points, input_node, nncf_graph)
-                if node:
-                    output.add(node)
+                nodes = self._get_first_quantized_weight_nodes(weight_quantization_points, input_node, nncf_graph)
+                if nodes:
+                    output.update(nodes)
             return output
-
+        return set()
+        
     def _apply(self,
                model: TModel,
                statistic_points: Optional[StatisticPointsContainer] = None,
@@ -452,7 +457,7 @@ class MinMaxQuantization(Algorithm):
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         model_transformer = ModelTransformerFactory.create(model)
         quantization_target_points = self._get_quantization_target_points(model)
-        quantization_points_overflow_fix = self._get_quantization_points_overflow_fix(self._parameters.overflow_fix, 
+        quantization_points_overflow_fix = self._get_quantization_points_overflow_fix(self._parameters.overflow_fix,
                                                                                       quantization_target_points,
                                                                                       nncf_graph)
         weight_layer_names = set()
