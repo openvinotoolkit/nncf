@@ -14,9 +14,8 @@
 from typing import Dict, Any
 
 import pytest
+import torch
 import numpy as np
-import json
-from copy import deepcopy
 
 import nncf
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -30,56 +29,19 @@ from nncf.torch.model_creation import create_nncf_network
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_random_mock_dataloader
 from tests.shared.paths import TEST_ROOT
+from tests.shared.helpers import load_json
+from tests.shared.helpers import compare_stats
 
-TORCH_TEST_ROOT = TEST_ROOT / 'torch'
-REFERENCE_SCALES_DIR = TORCH_TEST_ROOT / 'data' / 'reference_scales'
+REFERENCE_SCALES_DIR = TEST_ROOT / 'torch' / 'data' / 'reference_scales'
 
-def load_json(stats_path):
-    with open(stats_path, 'r', encoding='utf8') as json_file:
-        return json.load(json_file)
-
-
-class NumpyEncoder(json.JSONEncoder):
-    """ Special json encoder for numpy types """
-    # pylint: disable=W0221, E0202
-
-    def default(self, o):
-        if isinstance(o, np.integer):
-            return int(o)
-        if isinstance(o, np.floating):
-            return float(o)
-        if isinstance(o, np.ndarray):
-            return o.tolist()
-        return json.JSONEncoder.default(self, o)
-
-
-def dump_to_json(local_path, data):
-    with open(local_path, 'w', encoding='utf8') as file:
-        json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
-
-def compare_stats(expected, actual):
-    assert len(expected) == len(actual)
-    for ref_name in expected:
-        ref_stats = expected[ref_name]
-        ref_input_low, ref_input_high = ref_stats['input_low'], ref_stats['input_high']
-
-        stats = actual[ref_name]
-        input_low, input_high = stats['input_low'], stats['input_high']
-
-        assert np.allclose(ref_input_low, input_low, atol=1e-6)
-        assert np.allclose(ref_input_high, input_high, atol=1e-6)
-
-
-def min_max_quantize_model(original_model, quantization_params: Dict[str, Any] = None):
-    config = nncf.NNCFConfig.from_dict({'input_info': 
-                                            {'sample_size': [1, 1, 10, 10]}
-        })
+def min_max_quantize_model(original_model: torch.nn.Module, quantization_params: Dict[str, Any] = None):
+    config = nncf.NNCFConfig.from_dict({'input_info': {'sample_size': [1, 1, 10, 10]}})
     
-    dataset = create_random_mock_dataloader(config)
+    dataloader = create_random_mock_dataloader(config)
     def transform_fn(sample):
-        inp, target = sample
+        inp, _ = sample
         return inp
-    dataset = nncf.Dataset(dataset, transform_func=transform_fn)
+    dataset = nncf.Dataset(dataloader, transform_func=transform_fn)
     
     post_training_quantization = PostTrainingQuantization(
         PostTrainingQuantizationParameters(number_samples=1, **quantization_params))
@@ -92,23 +54,21 @@ def min_max_quantize_model(original_model, quantization_params: Dict[str, Any] =
     
     original_model.eval()
     nncf_network = create_nncf_network(original_model, config)
-    
     quantized_model = post_training_quantization.apply(nncf_network, dataset=dataset)
     
     return quantized_model
 
 
-def get_fq_nodes(model):
+def get_fq_nodes_params(model: torch.nn.Module) -> Dict[str, np.ndarray]:
     output = {}
-
     quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
     nncf_module_quantizations = get_all_modules_by_type(model, quantization_types)
-
-    for quantization_type in quantization_types:
-        nncf_module_quantizations.update(get_all_modules_by_type(model, quantization_type))
+    
     for name, nncf_module_quantization in nncf_module_quantizations.items():
         input_low, input_high = nncf_module_quantization.get_input_low_input_high()
-        output[str(name)] = {'input_low': input_low.cpu().detach().numpy(), 'input_high': input_high.cpu().detach().numpy()}
+        input_low = input_low.cpu().detach().numpy()
+        input_high = input_high.cpu().detach().numpy()
+        output[str(name)] = {'input_low': input_low, 'input_high': input_high}
     
     return output
 
@@ -117,13 +77,15 @@ def get_fq_nodes(model):
 def test_overflow_fix_scales(overflow_fix):
     model = TwoConvTestModel()
     quantized_model = min_max_quantize_model(model, quantization_params={'overflow_fix': overflow_fix})
-    nodes = get_fq_nodes(quantized_model)
+    fq_nodes_params = get_fq_nodes_params(quantized_model)
 
     ref_stats_name = 'TwoConvTestModel' + f'_overflow_fix_{overflow_fix.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
     # Unkomment lines below to generate reference for new models.
-    # dump_to_json(ref_stats_path, nodes)
+    # from tests.shared.helpers import dump_to_json
+    # dump_to_json(ref_stats_path, fq_nodes_params)
 
-    ref_nodes = load_json(ref_stats_path)
-    compare_stats(ref_nodes, nodes)
+    ref_nodes_params = load_json(ref_stats_path)
+    params = ['input_low', 'input_high']
+    compare_stats(ref_nodes_params, fq_nodes_params, params)

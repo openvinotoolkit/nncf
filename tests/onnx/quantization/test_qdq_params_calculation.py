@@ -10,14 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
 
-from typing import List
-
-import pytest
 import numpy as np
+import pytest
 import onnx
-import json
-from copy import deepcopy
 
 from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.onnx.graph.onnx_graph import ONNXGraph
@@ -25,55 +22,20 @@ from nncf.onnx.graph.onnx_graph import ONNXGraph
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import LinearModel
 from tests.onnx.quantization.common import min_max_quantize_model
-
+from tests.shared.helpers import load_json
+from tests.shared.helpers import compare_stats
 
 REFERENCE_SCALES_DIR = ONNX_TEST_ROOT / 'data' / 'reference_scales'
 
 
-def load_json(stats_path):
-    with open(stats_path, 'r', encoding='utf8') as json_file:
-        return json.load(json_file)
-
-
-class NumpyEncoder(json.JSONEncoder):
-    """ Special json encoder for numpy types """
-    # pylint: disable=W0221, E0202
-
-    def default(self, o):
-        if isinstance(o, np.integer):
-            return int(o)
-        if isinstance(o, np.floating):
-            return float(o)
-        if isinstance(o, np.ndarray):
-            return o.tolist()
-        return json.JSONEncoder.default(self, o)
-
-
-def dump_to_json(local_path, data):
-    with open(local_path, 'w', encoding='utf8') as file:
-        json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
-
-
-def compare_stats(expected, actual):
-    assert len(expected) == len(actual)
-    for ref_name in expected:
-        ref_stats = expected[ref_name]
-        stats = actual[ref_name]
-        ref_scale, ref_zero_point = ref_stats['scale'], ref_stats['zero_point']
-        scale, zero_point = stats['scale'], stats['zero_point']
-
-        assert np.allclose(ref_scale, scale, atol=1e-6)
-        assert np.allclose(ref_zero_point, zero_point, atol=1e-6)
-
-
-def get_q_nodes(model: onnx.ModelProto) -> List[onnx.NodeProto]:
+def get_q_nodes_params(model: onnx.ModelProto) -> Dict[str, np.ndarray]:
     output = {}
     onnx_graph = ONNXGraph(model)
     for node in onnx_graph.get_all_nodes():
         if node.op_type == 'QuantizeLinear':
             scale = onnx_graph.get_initializers_value(node.input[1])
-            z_p = onnx_graph.get_initializers_value(node.input[2])
-            output[node.name] = {'scale': scale, 'zero_point': z_p}
+            zero_point = onnx_graph.get_initializers_value(node.input[2])
+            output[node.name] = {'scale': scale, 'zero_point': zero_point}
     return output
 
 
@@ -82,13 +44,15 @@ def get_q_nodes(model: onnx.ModelProto) -> List[onnx.NodeProto]:
 def test_overflow_fix_scales(overflow_fix):
     model = LinearModel()
     quantized_model = min_max_quantize_model(model.onnx_model, quantization_params={'overflow_fix': overflow_fix})
-    nodes = get_q_nodes(quantized_model)
+    q_nodes_params = get_q_nodes_params(quantized_model)
 
     ref_stats_name = model.path_ref_graph.split(".")[0] + f'_overflow_fix_{overflow_fix.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
     # Unkomment lines below to generate reference for new models.
-    dump_to_json(ref_stats_path, nodes)
+    # from tests.shared.helpers import dump_to_json
+    # dump_to_json(ref_stats_path, q_nodes_params)
 
-    ref_nodes = load_json(ref_stats_path)
-    compare_stats(ref_nodes, nodes)
+    ref_nodes_params = load_json(ref_stats_path)
+    params = ['scale', 'zero_point']
+    compare_stats(ref_nodes_params, q_nodes_params, params)

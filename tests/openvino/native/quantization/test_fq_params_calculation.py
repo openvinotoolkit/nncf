@@ -26,7 +26,8 @@ from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 from tests.openvino.native.common import get_dataset_for_test
-from tests.openvino.native.common import load_json
+from tests.shared.helpers import load_json
+from tests.shared.helpers import compare_stats
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
@@ -55,23 +56,6 @@ def get_fq_nodes_stats_algo(model):
     return nodes
 
 
-def compare_stats(expected, actual):
-    assert len(expected) == len(actual)
-    for ref_name in expected:
-        ref_stats = expected[ref_name]
-        ref_input_low, ref_input_high = ref_stats['input_low'], ref_stats['input_high']
-        ref_output_low, ref_output_high = ref_stats['output_low'], ref_stats['output_high']
-
-        stats = actual[ref_name]
-        input_low, input_high = stats['input_low'], stats['input_high']
-        output_low, output_high = stats['output_low'], stats['output_high']
-
-        assert np.allclose(ref_input_low, input_low, atol=1e-6)
-        assert np.allclose(ref_input_high, input_high, atol=1e-6)
-        assert np.allclose(ref_output_low, output_low, atol=1e-6)
-        assert np.allclose(ref_output_high, output_high, atol=1e-6)
-
-
 # pylint: disable=protected-access
 def quantize_model(ov_model, q_params):
     dataset = get_dataset_for_test(ov_model)
@@ -97,13 +81,14 @@ def test_syntetic_models_fq_scales(model_creator_func, preset):
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
     # Unkomment lines below to generate reference for new models.
-    # from tests.openvino.native.common import dump_to_json
+    # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
-    compare_stats(ref_nodes, nodes)
-    
-    
+    params = ['input_low', 'input_high', 'output_low', 'output_high']
+    compare_stats(ref_nodes, nodes, params)
+
+
 @pytest.mark.parametrize('overflow_fix', [OverflowFix.DISABLE, OverflowFix.ENABLE, OverflowFix.FIRST_LAYER],
                          ids=[OverflowFix.DISABLE.value, OverflowFix.ENABLE.value, OverflowFix.FIRST_LAYER.value])
 def test_overflow_fix_scales(overflow_fix):
@@ -115,11 +100,12 @@ def test_overflow_fix_scales(overflow_fix):
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
     # Unkomment lines below to generate reference for new models.
-    # from tests.openvino.native.common import dump_to_json
+    # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
-    compare_stats(ref_nodes, nodes)
+    params = ['input_low', 'input_high', 'output_low', 'output_high']
+    compare_stats(ref_nodes, nodes, params)
 
 
 OMZ_MODELS = [
@@ -141,9 +127,14 @@ def test_omz_models_fq_scales(model_name, preset, tmp_path):
 
     ref_stats_name = str(Path(model_path).name).rsplit('.', maxsplit=1)[0] + f'_{preset.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
+    
+    # Unkomment lines below to generate reference for new models.
+    # from tests.shared.helpers import dump_to_json
+    # dump_to_json(ref_stats_path, nodes)
+    
     ref_nodes = load_json(ref_stats_path)
-
-    compare_stats(ref_nodes, nodes)
+    params = ['input_low', 'input_high', 'output_low', 'output_high']
+    compare_stats(ref_nodes, nodes, params)
 
 
 REF_NODES_SHAPES = {
