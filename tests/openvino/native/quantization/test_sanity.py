@@ -55,6 +55,5 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
 
     report_path = tmp_path / f'{model}.csv'
     metrics = calculate_metrics(int8_ir_path, config_path, extracted_data_dir, report_path, eval_size=1000)
-    print(f'Metrics = {metrics}')
     for metric_name, metric_val in ref_metrics.items():
         assert metrics[metric_name] == pytest.approx(metric_val, abs=0.006)

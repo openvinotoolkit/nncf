@@ -43,6 +43,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
 from tests.shared.command import Command as BaseCommand
 from tests.shared.helpers import BaseTensorListComparator
+from tests.shared.definitions import GLOBAL_NNCF_SEED
 
 TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 
@@ -345,7 +346,7 @@ class BaseDatasetMock(Dataset, ABC):
         super().__init__()
         self._input_size = input_size
         self._len = num_samples
-        torch.manual_seed(42)
+        torch.manual_seed(GLOBAL_NNCF_SEED)
 
     @abstractmethod
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -451,7 +452,7 @@ def register_bn_adaptation_init_args(config: NNCFConfig):
 
 
 @contextlib.contextmanager
-def set_torch_seed(seed: int = 42):
+def set_torch_seed(seed: int = GLOBAL_NNCF_SEED):
     saved_seed = torch.seed()
     torch.manual_seed(seed)
     yield

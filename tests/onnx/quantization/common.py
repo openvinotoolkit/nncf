@@ -20,10 +20,6 @@ import onnx
 import onnxruntime as rt
 
 from nncf import Dataset
-from tests.shared.paths import TEST_ROOT
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.nx_graph import check_nx_graph
-from tests.onnx.opset_converter import convert_opset_version
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
@@ -31,6 +27,13 @@ from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+
+from tests.shared.paths import TEST_ROOT
+from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.shared.nx_graph import check_nx_graph
+from tests.onnx.opset_converter import convert_opset_version
+from tests.shared.definitions import GLOBAL_NNCF_SEED
+
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
@@ -62,7 +65,7 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool,
             input_dtype = onnx_graph.get_edge_dtype(key)
             input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
             shape = onnx_graph.get_edge_shape(key)
-            rng = np.random.default_rng(seed=0)
+            rng = np.random.default_rng(seed=GLOBAL_NNCF_SEED)
             tensor = rng.uniform(0, 1, shape).astype(input_np_dtype)
             if has_batch_dim:
                 tensor = np.squeeze(tensor, axis=0)
