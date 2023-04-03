@@ -51,6 +51,26 @@ LIST_OF_ME_DESCS = [
         blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
     ),
     MultiElasticityTestDesc(
+        name='resnet50_width_overwrite_groups',
+        model_creator=resnet50_cifar10,
+        ref_model_stats=RefModelStats(
+            supernet=ModelStats(651_599_872, 23_467_712),
+            kernel_stage=ModelStats(651_599_872, 23_467_712),
+            depth_stage=ModelStats(615_948_288, 23_398_080),
+            width_stage=ModelStats(589_209_600, 23_238_336)
+        ),
+        blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
+        algo_params={'width': {
+            "overwrite_groups": [
+                [
+                    "ResNet/Sequential[layer2]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0",
+                    "ResNet/Sequential[layer2]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d_0"
+                ],
+            ],
+            "overwrite_groups_widths":[[128, 96, 64]]
+        }},
+    ),
+    MultiElasticityTestDesc(
         name='resnet50_tv',
         model_creator=partial(resnet50, num_classes=10),
         ref_model_stats=RefModelStats(

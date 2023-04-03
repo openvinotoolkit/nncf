@@ -126,8 +126,6 @@ class ShapePruningProcessor:
 
         for node in cluster.elements:
             output_channels[node.node_name] -= pruned_elems
-            if node.is_depthwise:
-                input_channels[node.node_name] -= pruned_elems
 
         # Prune in channels in all next nodes
         next_nodes_info = pruning_groups_next_nodes[cluster.id]
@@ -201,7 +199,6 @@ class ShapePruningProcessor:
                 curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, self._prunable_types)
 
                 next_nodes_cluster = next_nodes_cluster.union(curr_next_nodes)
-            next_nodes_cluster = next_nodes_cluster - cluster_nodes
             next_nodes[cluster.id] = []
             for next_node in next_nodes_cluster:
                 sparse_multiplier = self._get_next_node_sparse_multiplier(graph, next_node, cluster)

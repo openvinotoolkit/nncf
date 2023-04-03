@@ -457,7 +457,8 @@ def test_collect_output_shapes(model, ref_output_shapes):
 
 
 BigPruningTestModelNextNodesRef = {
-    0: [{'node_name': 'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0', 'sparse_multiplier': 1}],
+    0: [{'node_name': 'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0', 'sparse_multiplier': 1},
+        {'node_name': 'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0', 'sparse_multiplier': 1}],
     1: [{'node_name': 'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0', 'sparse_multiplier': 1}],
     2: [{'node_name': 'BigPruningTestModel/NNCFLinear[linear]/linear_0', 'sparse_multiplier': 49}],
     3: [{'node_name': 'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0', 'sparse_multiplier': 1}],
