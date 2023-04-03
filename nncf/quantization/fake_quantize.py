@@ -195,23 +195,18 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
     num_bits = quantizer_config.num_bits
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        narrow_range = quantizer_config.mode == QuantizationMode.SYMMETRIC and quant_group == QuantizerGroup.WEIGHTS
+        narrow_range = quant_group == QuantizerGroup.WEIGHTS and num_bits == 8 and not half_range
+        num_bits = num_bits - 1 if half_range else num_bits
+        _, _, levels = calculate_symmetric_level_ranges(num_bits,
+                                                signed=True, narrow_range=narrow_range)
+        input_low, input_high = symmetric_range(min_values, max_values,
+                                        levels, quantizer_config, quant_group)
         if half_range:
-            _, _, levels = calculate_symmetric_level_ranges(num_bits - 1,
-                                                            signed=True, narrow_range=False)
-            input_low, input_high = symmetric_range(min_values, max_values,
-                                                    levels, quantizer_config, quant_group)
-
             _, _, export_levels = calculate_symmetric_level_ranges(num_bits,
                                                                    signed=True, narrow_range=narrow_range)
             input_high *= (export_levels - 1) / (levels - 1)
             input_low *= (export_levels - 1) / (levels - 1)
             levels = export_levels
-        else:
-            _, _, levels = calculate_symmetric_level_ranges(num_bits,
-                                                            signed=True, narrow_range=narrow_range)
-            input_low, input_high = symmetric_range(min_values, max_values,
-                                                    levels, quantizer_config, quant_group)
     else:
         if half_range:
             raise RuntimeError('half_range is only applied to symmetric quantization mode.')
