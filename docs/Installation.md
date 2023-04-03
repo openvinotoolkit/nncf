@@ -6,7 +6,7 @@ If you want to optimize a model from TensorFlow, install TensorFlow by following
 
 #### As a package built from a checked-out repository:
 
-Install the package and its dependencies by running the following in the repository root directory:
+Install the package and its dependencies by running the following command in the repository root directory:
 ```
 pip install .
 ```

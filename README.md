@@ -314,11 +314,11 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 This repository is tested on Python* 3.8.10, PyTorch* 1.12.1 (NVidia CUDA\* Toolkit 11.6) and TensorFlow* 2.8.4 (NVidia CUDA\* Toolkit 11.2).
 
 ## Installation
-For detailed installation instructions please refer to [Installation](./docs/Installation.md) page.
+For detailed installation instructions please refer to the [Installation](./docs/Installation.md) page.
 
 #### As a package built from a checked-out repository:
 
-Install the package and its dependencies by running the following in the repository root directory:
+Install the package and its dependencies by running the following command in the repository root directory:
 ```
 pip install .
 ```
