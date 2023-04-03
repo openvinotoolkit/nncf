@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import pkgutil
+from pathlib import Path
 
 import nncf
 
@@ -33,4 +34,20 @@ print("API entities:")
 for api_fqn in api_fqns:
     print(api_fqn)
 
+DOC_ROOT = Path(__file__).parent
+template_file = DOC_ROOT / 'source' / 'index_template.rst'
+target_file = DOC_ROOT / 'source' / 'index.rst'
 
+with open(template_file, encoding='utf-8', mode='r') as f:
+    old_lines = f.readlines()
+    for idx, line in enumerate(old_lines):
+        anchor_line = idx
+        if line == '.. API_ENTITIES_TEMPLATE_ANCHOR' + '\n':
+            break
+    api_section = ""
+    for api_fqn in api_fqns:
+        api_section += f"  {api_fqn}\n"
+    content = ''.join(old_lines[:anchor_line]) + api_section + ''.join(old_lines[anchor_line + 1:])
+
+with open(target_file, encoding='utf-8', mode='w+') as f:
+    f.write(content)

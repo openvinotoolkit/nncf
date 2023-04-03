@@ -13,7 +13,5 @@ Welcome to nncf's documentation!
 
 .. autosummary::
    :toctree: _autosummary
-   :template: custom-module-template.rst
-   :recursive:
 
-   nncf
+.. API_ENTITIES_TEMPLATE_ANCHOR
