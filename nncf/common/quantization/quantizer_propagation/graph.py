@@ -56,7 +56,7 @@ from nncf.common.scopes import should_consider_scope
 
 
 class QuantizerPropagationStateGraph(nx.DiGraph):
-    #pylint:disable=too-many-public-methods
+    #pylint:disable=too-many-public-methods,too-many-return-statements
     """
     This class is based upon InsertionPointGraph and represents
     a"chessboard" for PropagatingQuantizer items.  It tracks the current state of
