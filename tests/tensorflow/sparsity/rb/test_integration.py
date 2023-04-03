@@ -156,7 +156,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
                 actual = nncf_stats.rb_sparsity.model_statistics.sparsity_level_for_layers
                 print(f'target {target}, actual {actual}')
                 if epoch + 1 <= freeze_epoch:
-                    assert abs(actual - target) < 0.075
+                    assert abs(actual - target) < 0.05
                 else:
                     assert tf.cast(sparse_algo.loss.disabled, tf.bool)
                     assert tf.equal(sparse_algo.loss.calculate(), tf.constant(0.))
@@ -174,7 +174,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
 
         compress_model.compile(
             loss=loss_obj,
-            optimizer=tf.keras.optimizers.Adam(5e-3),
+            optimizer=tf.keras.optimizers.Adam(1e-2),
             metrics=metrics,
         )
 
