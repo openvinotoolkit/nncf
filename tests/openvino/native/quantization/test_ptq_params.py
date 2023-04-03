@@ -19,6 +19,7 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns import GraphPattern
 from nncf.parameters import TargetDevice
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
@@ -26,6 +27,7 @@ from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import DepthwiseConv4DModel
@@ -65,6 +67,9 @@ class TestPTQParams(TemplateTestPTQParams):
         else:
             assert act_num_q == 1
         assert weight_num_q == 1
+
+    def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
+        return OVTargetPoint(target_type, target_node_name, port_id)
 
     @pytest.fixture(scope='session')
     def test_params(self):

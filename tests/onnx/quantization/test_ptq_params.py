@@ -16,7 +16,8 @@ import pytest
 from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
-from nncf.quantization.algorithms.definitions import OverflowFix
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
@@ -61,6 +62,9 @@ class TestPTQParams(TemplateTestPTQParams):
             assert act_num_q == 1
         assert weight_num_q == 1
 
+    def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
+        return ONNXTargetPoint(target_type, target_node_name, port_id)
+
     @pytest.fixture(scope='session')
     def test_params(self):
         return {
@@ -87,11 +91,3 @@ class TestPTQParams(TemplateTestPTQParams):
                             (IgnoredScope(['/Conv_1_0']), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param
-
-
-@pytest.mark.parametrize('overflow_fix', OverflowFix)
-def test_overflow_fix(overflow_fix):
-    algo = PostTrainingQuantization(PostTrainingQuantizationParameters(overflow_fix=overflow_fix))
-    min_max_algo = algo.algorithms[0]
-    min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
-    assert min_max_algo._parameters.overflow_fix == overflow_fix

@@ -18,12 +18,14 @@ from torch import nn
 from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
+from nncf.torch.graph.graph import PTTargetPoint
 
 from tests.torch.helpers import create_bn, create_conv, create_depthwise_conv
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
@@ -93,6 +95,9 @@ class TestPTQParams(TemplateTestPTQParams):
         else:
             assert act_num_q == 1
         assert weight_num_q == 1
+
+    def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
+        return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
     @pytest.fixture(scope='session')
     def test_params(self):
