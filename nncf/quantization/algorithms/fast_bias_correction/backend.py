@@ -195,9 +195,8 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     def post_process_output_data(data: List[TTensor]) -> TTensor:
         """
-        _summary_
+        Convert data to backend specific type.
 
-        :param data: _description_
-
-        :return TTensor: _description_
+        :param data: List of data.
+        :return TTensor: Converted data.
         """

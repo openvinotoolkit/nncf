@@ -59,6 +59,11 @@ from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
+    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
+        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
+        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
+    }
+
     @property
     def mat_mul_metatype(self) -> OperatorMetatype:
         return om.PTModuleLinearMetatype
@@ -83,17 +88,11 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def model_transformer(model: NNCFNetwork) -> ModelTransformer:
         return PTModelTransformer(model)
 
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
-
     @staticmethod
     def target_point(target_type: TargetType,
                      target_node_name: str,
                      port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name or \
-                target_type == TargetType.POST_LAYER_OPERATION:
+        if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             port_id = None
         if target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
             target_type = PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]

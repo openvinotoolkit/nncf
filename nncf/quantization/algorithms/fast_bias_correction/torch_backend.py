@@ -40,10 +40,15 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.collectors import PTMeanStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
-
+from nncf.torch.graph.node_utils import get_bias_value
 
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
+
+    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
+        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
+        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
+    }
 
     @property
     def operation_metatypes(self) -> Registry:
@@ -53,17 +58,11 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def tensor_processor(self) -> PTNNCFCollectorTensorProcessor:
         return PTNNCFCollectorTensorProcessor()
 
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
-
     @staticmethod
     def target_point(target_type: TargetType,
                      target_node_name: str,
                      port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name or\
-            target_type == TargetType.POST_LAYER_OPERATION:
+        if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             port_id = None
         if target_type in PTFastBiasCorrectionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
             target_type = PTFastBiasCorrectionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
@@ -100,10 +99,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module) -> np.ndarray:
-        node_module = model.get_containing_module(node.node_name)
-        if node_module.bias is None:
-            return None
-        return node_module.bias.data
+        return get_bias_value(node, model)
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:

@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-import numpy as np
+from torch import Tensor
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
@@ -19,7 +19,7 @@ from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 
-def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> PTBiasCorrectionCommand:
+def create_bias_correction_command(node: NNCFNode, bias_value: Tensor) -> PTBiasCorrectionCommand:
     """
      Creates bias correction command.
 

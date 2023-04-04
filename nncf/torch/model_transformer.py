@@ -33,20 +33,26 @@ from nncf.torch.nncf_network import PTInsertionPoint
 
 
 class PTModelTransformer(ModelTransformer):
+    """
+    Applies transformations upon PyTorch model.
+    """
+
     def __init__(self, model: NNCFNetwork):
         super().__init__(model)
         self._node_to_op_address_mapping = model.get_node_to_op_address_mapping()
 
     def transform(self, transformation_layout: PTTransformationLayout) -> NNCFNetwork:
         transformations = transformation_layout.transformations
-        insertion_transformations = []
-        extraction_transformations = []
+
         bias_correction_transformations = []
+        extraction_transformations = None
+        insertion_transformations = []
+
         for transformation in transformations:
             if isinstance(transformation, PTInsertionCommand):
                 insertion_transformations.append(transformation)
             if isinstance(transformation, PTModelExtractionCommand):
-                extraction_transformations.append(transformation)
+                extraction_transformations = transformation
             if isinstance(transformation, PTBiasCorrectionCommand):
                 bias_correction_transformations.append(transformation)
 
@@ -59,7 +65,7 @@ class PTModelTransformer(ModelTransformer):
             self._apply_bias_correction_transformations(bias_correction_transformations)
         return self._model
 
-    def _apply_output_insertion_transformations(self, transformations: List[TransformationCommand]) -> None:
+    def _apply_output_insertion_transformations(self, transformations: List[PTInsertionCommand]) -> None:
         fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
         for transformation_command in transformations:  # type: PTInsertionCommand
             target_point = transformation_command.target_point  # type: PTTargetPoint
@@ -82,15 +88,14 @@ class PTModelTransformer(ModelTransformer):
             fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
             self._model.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
 
-    def _apply_extraction_transformations(self, transformations: List[TransformationCommand]) -> nn.Module:
-        assert len(transformations) == 1, "Support only one node extraction"
-        extracted_module = self._model.get_containing_module(transformations[0].node_name)
+    def _apply_extraction_transformations(self, transformation: PTModelExtractionCommand) -> nn.Module:
+        extracted_module = self._model.get_containing_module(transformation.node_name)
         # Return copy of the module without pre and post operations.
         extracted_module = copy.deepcopy(extracted_module)
         extracted_module.reset()
         return extracted_module
 
-    def _apply_bias_correction_transformations(self, transformations: List[TransformationCommand]) -> None:
+    def _apply_bias_correction_transformations(self, transformations: List[PTBiasCorrectionCommand]) -> None:
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
             node = self._model.get_containing_module(node_name)

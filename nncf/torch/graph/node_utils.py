@@ -10,7 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from torch import Tensor
 from nncf.common.graph.graph import NNCFNode
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_BIAS_METATYPES
 
 
@@ -24,3 +26,17 @@ def is_node_with_bias(node: NNCFNode) -> bool:
         `False` otherwise.
     """
     return node.metatype in OPERATORS_WITH_BIAS_METATYPES
+
+
+def get_bias_value(node: NNCFNode, model: NNCFNetwork) -> Tensor:
+    """
+    Returns the bias tensor for the biased node.
+
+    :param node: The node that corresponds to the operation with bias.
+    :param model: The model that contains this operation.
+    :return: The bias value that is applied to the output tensor of the node's operation.
+    """
+    node_module = model.get_containing_module(node.node_name)
+    if node_module.bias is None:
+        return None
+    return node_module.bias.data
