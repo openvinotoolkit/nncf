@@ -77,7 +77,7 @@ def get_fq_nodes_params(model: NNCFNetwork) -> Dict[str, np.ndarray]:
 
 @pytest.mark.parametrize('overflow_fix', [OverflowFix.DISABLE, OverflowFix.ENABLE, OverflowFix.FIRST_LAYER],
                          ids=[OverflowFix.DISABLE.value, OverflowFix.ENABLE.value, OverflowFix.FIRST_LAYER.value])
-def test_overflow_fix_scales(overflow_fix):
+def test_overflow_fix_scales(_seed, overflow_fix):
     model = TwoConvTestModel()
     quantized_model = min_max_quantize_model(model, quantization_params={'overflow_fix': overflow_fix})
     fq_nodes_params = get_fq_nodes_params(quantized_model)

@@ -17,7 +17,11 @@ import numpy as np
 import onnx
 
 from nncf.common.utils.registry import Registry
-from tests.shared.definitions import GLOBAL_NNCF_SEED
+
+from tests.onnx.common import get_random_generator
+
+OPSET_VERSION = 13
+ALL_SYNTHETIC_MODELS = Registry('ONNX_SYNTHETIC_MODELS')
 
 # pylint: disable=no-member, too-many-lines
 
@@ -29,10 +33,6 @@ def create_initializer_tensor(name: str, tensor_array: np.ndarray,
         dims=tensor_array.shape,
         vals=tensor_array.flatten().tolist())
     return initializer_tensor
-
-
-OPSET_VERSION = 13
-ALL_SYNTHETIC_MODELS = Registry('ONNX_SYNTHETIC_MODELS')
 
 
 class ONNXReferenceModel:
@@ -57,7 +57,7 @@ class LinearModel(ONNXReferenceModel):
         Y = onnx.helper.make_tensor_value_info(model_output_name,
                                                onnx.TensorProto.FLOAT,
                                                [1, model_output_channels, 1, 1])
-        rng = np.random.default_rng(seed=GLOBAL_NNCF_SEED)
+        rng = get_random_generator()
         conv1_output_node_name = "Conv1_Y"
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3, 32, (3, 3)
         conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
@@ -364,7 +364,7 @@ class OneConvolutionalModel(ONNXReferenceModel):
         X = onnx.helper.make_tensor_value_info(model_input_name,
                                                onnx.TensorProto.FLOAT,
                                                input_shape)
-        rng = np.random.default_rng(seed=GLOBAL_NNCF_SEED)
+        rng = get_random_generator()
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3, 32, (1, 1)
         conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
         conv1_B = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
@@ -718,7 +718,7 @@ class OneDepthwiseConvolutionalModel(ONNXReferenceModel):
                                                input_shape)
         conv_group = 3
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3 // conv_group, 27, (1, 1)
-        rng = np.random.default_rng(seed=GLOBAL_NNCF_SEED)
+        rng = get_random_generator()
         conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
         conv1_B = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
 
@@ -816,7 +816,7 @@ class IdentityConvolutionalModel(ONNXReferenceModel):
                                                input_shape)
 
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = inp_ch, out_ch, (kernel_size,) * 2
-        rng = np.random.default_rng(seed=GLOBAL_NNCF_SEED)
+        rng = get_random_generator()
         conv1_W = conv_w
         if conv1_W is None:
             conv1_W = rng.uniform(0, 1 ,(conv1_out_channels, conv1_in_channels, *conv1_kernel_shape))
@@ -901,7 +901,7 @@ class ShapeOfModel(ONNXReferenceModel):
 
         conv1_output_node_name = "Conv1_Y"
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3, 32, (3, 3)
-        rng = np.random.default_rng(seed=GLOBAL_NNCF_SEED)
+        rng = get_random_generator()
         conv1_W = rng.uniform(0, 1,
                               (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
         conv1_B = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
@@ -989,7 +989,6 @@ class ShapeOfModel(ONNXReferenceModel):
         )
 
         conv2_in_channels, conv2_out_channels, conv2_kernel_shape = conv1_out_channels, model_output_channels, (1, 1)
-        rng = np.random.default_rng(seed=GLOBAL_NNCF_SEED)
         conv2_W = rng.uniform(0, 1, (conv2_out_channels, conv2_in_channels, *conv2_kernel_shape)).astype(np.float32)
         conv2_B = rng.uniform(0, 1, conv2_out_channels).astype(np.float32)
 

@@ -346,7 +346,6 @@ class BaseDatasetMock(Dataset, ABC):
         super().__init__()
         self._input_size = input_size
         self._len = num_samples
-        torch.manual_seed(GLOBAL_NNCF_SEED)
 
     @abstractmethod
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -452,7 +451,7 @@ def register_bn_adaptation_init_args(config: NNCFConfig):
 
 
 @contextlib.contextmanager
-def set_torch_seed(seed: int = GLOBAL_NNCF_SEED):
+def set_torch_seed(seed: int = 42):
     saved_seed = torch.seed()
     torch.manual_seed(seed)
     yield
