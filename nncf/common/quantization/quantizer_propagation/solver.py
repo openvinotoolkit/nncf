@@ -418,6 +418,7 @@ class QuantizerPropagationSolver:
         if quantizable_layer_nodes is not None:
             self._weight_quantizable_node_names_vs_qconfigs = {
                 x.node.node_name: x.qconfig_list for x in quantizable_layer_nodes
+                                                 if x.node.node_name not in ignored_scopes
             }  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
         else:
             self._weight_quantizable_node_names_vs_qconfigs = {}  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
@@ -504,6 +505,15 @@ class QuantizerPropagationSolver:
 
         if self._run_consistency_checks:
             quant_prop_graph.run_consistency_check()
+
+        for node_key in filtered_ip_graph:
+            node = filtered_ip_graph.nodes[node_key]
+            if node.get(InsertionPointGraph.IS_MERGED_NODE_ATTR, False):
+                merged_nncf_nodes = node[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]
+                # If first op in fused pattern has weights, then they should be quantized
+                for node in merged_nncf_nodes[1:]:
+                    if node.node_name in self._weight_quantizable_node_names_vs_qconfigs:
+                        self._weight_quantizable_node_names_vs_qconfigs.pop(node.node_name)
 
         quantizer_setup = quant_prop_graph.create_quantizer_setup(self._weight_quantizable_node_names_vs_qconfigs)
         insertions_vs_associated_prop_quants = self._map_quantization_points_to_prop_quantizers(

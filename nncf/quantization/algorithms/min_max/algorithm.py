@@ -264,7 +264,6 @@ class MinMaxQuantization(Algorithm):
                                                                                       nncf_graph, strict=False))
 
         weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph)
-        weight_nodes = [node for node in weight_nodes if node.node_name not in ignored_names]
 
         default_weight_qconfig = self._get_default_qconfig(
             self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
