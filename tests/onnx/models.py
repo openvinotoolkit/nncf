@@ -139,8 +139,7 @@ class LinearModel(ONNXReferenceModel):
         )
 
         conv2_in_channels, conv2_out_channels, conv2_kernel_shape = conv1_out_channels, model_output_channels, (1, 1)
-        conv2_W = rng.uniform(0, 1, (conv2_out_channels, conv2_in_channels,
-                                 *conv2_kernel_shape)).astype(np.float32)
+        conv2_W = rng.uniform(0, 1, (conv2_out_channels, conv2_in_channels, *conv2_kernel_shape)).astype(np.float32)
         conv2_B = rng.uniform(0, 1, conv2_out_channels).astype(np.float32)
 
         conv2_W_initializer_tensor_name = "Conv2_W"
@@ -819,7 +818,7 @@ class IdentityConvolutionalModel(ONNXReferenceModel):
         rng = get_random_generator()
         conv1_W = conv_w
         if conv1_W is None:
-            conv1_W = rng.uniform(0, 1 ,(conv1_out_channels, conv1_in_channels, *conv1_kernel_shape))
+            conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape))
         conv1_W = conv1_W.astype(np.float32)
 
         conv1_B = conv_b

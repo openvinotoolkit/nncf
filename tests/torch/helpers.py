@@ -43,7 +43,6 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
 from tests.shared.command import Command as BaseCommand
 from tests.shared.helpers import BaseTensorListComparator
-from tests.shared.definitions import GLOBAL_NNCF_SEED
 
 TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 
