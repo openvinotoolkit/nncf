@@ -39,6 +39,7 @@ from nncf.experimental.common.pruning.nodes_grouping import PropagationGroup
 from nncf.experimental.common.pruning.nodes_grouping import PropagationBlock
 from nncf.experimental.common.pruning.nodes_grouping import MaskProducer
 from nncf.experimental.common.pruning.nodes_grouping import PropagationMask
+from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
 
 
 class BasePruningOp:
@@ -134,7 +135,10 @@ class LinearPruningOp(BasePruningOp):
             for dim, groups in input_masks[0].dim_groups_map.items():
                 if dim == input_shape_len - 1:
                     for group in groups:
-                        cls.add_consumer_block(group, node)
+                        # TODO: is it needed? is it always linear or can be matmul?
+                        if node.layer_attributes is not None:
+                            consumer = ConsumerInfo(node_id=node.node_id, pruning_dimension=1)
+                            group.add_consumer(consumer)
                 else:
                     output_mask.dim_groups_map[dim] = groups
         elif len(input_masks) == 2:
@@ -160,7 +164,7 @@ class LinearPruningOp(BasePruningOp):
                     right = right_dim_groups[dim]
                     assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
                     output_mask.dim_groups_map[dim] = [
-                        PropagationGroup.join_groups(left_dim_groups[dim][0], right_dim_groups[dim][0])
+                        PropagationGroup.join_groups(left[0], right[0])
                     ]
             # Propagating left rows / right cols
             for idx, dim in enumerate(range(input_shape_len - 2, input_shape_len)):
@@ -173,28 +177,14 @@ class LinearPruningOp(BasePruningOp):
                 right = right_dim_groups[input_shape_len - 2]
                 assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
                 group = PropagationGroup.join_groups(left[0], right[0])
-                cls.add_consumer_block(group, node)
+                # TODO: is it needed? is it always linear or can be matmul?
+                if node.layer_attributes is not None:
+                    consumer = cls.create_consumer_info(group, node)
+                    group.add_consumer(consumer)
+        else:
+            output_mask = node.data.get('output_mask', None)
 
         node.data['output_mask'] = output_mask
-
-    @classmethod
-    def add_consumer_block(cls, group: PropagationGroup, node: NNCFNode) -> None:
-        """
-        Explicitly adds a consumer block to the given group.
-
-        :param group: the given block group.
-        :param node: node that corresponds to the consumer.
-        """
-        if node.layer_attributes is not None:
-            first_block: PropagationBlock = group.get_blocks()[0]
-            consumer_block = PropagationBlock(
-                MaskProducer(node.node_id),
-                size=first_block.size,
-                offset=first_block.offset,
-                pruning_dimension=1
-            )
-            group.add_block(consumer_block)
-
 
 class BatchNormPruningOp(BasePruningOp):
     @classmethod
@@ -645,6 +635,7 @@ class ReshapePruningOp(BasePruningOp):
         new_blocks: List[List[PropagationBlock]] = []
         child_groups: List[PropagationGroup] = []
 
+        consumers = group.get_consumers()
         for block in group.get_blocks():
             dot_product = reduce((lambda x, y: x * y), list_output_channels)
             assert dot_product == input_channels
@@ -652,7 +643,7 @@ class ReshapePruningOp(BasePruningOp):
 
         # forms [(a1,a2), (b1,b2)] from [(a1,b1), (a2,b2)]
         for block_groups in zip(*new_blocks):
-            child_group = PropagationGroup(blocks=list(block_groups))
+            child_group = PropagationGroup(blocks=list(block_groups), consumers=consumers))
             group.add_child(child_group)
             child_groups.append(child_group)
         return child_groups

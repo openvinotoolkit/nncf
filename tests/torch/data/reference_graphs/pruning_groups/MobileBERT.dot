@@ -1,79 +1,98 @@
 strict digraph  {
-0 [color=red, label="S:1__O:0__ID:11", style=filled];
-1 [color=grey, label="S:1__O:0__ID:19", style=filled];
-2 [color=grey, label="S:1__O:0__ID:44
-S:1__O:0__ID:19
-S:1__O:0__ID:48", style=filled];
-3 [color=grey, label="S:1__O:0__ID:50
+0 [color=red, label="P:[S:1__O:0__ID:11]
+C:[]", style=filled];
+1 [color=grey, label="P:[S:1__O:0__ID:19]
+C:[]", style=filled];
+2 [color=grey, label="P:[S:1__O:0__ID:44
+S:1__O:0__ID:19]
+C:[S:1__O:0__ID:48]", style=filled];
+3 [color=grey, label="P:[S:1__O:0__ID:50
 S:1__O:0__ID:44
-S:1__O:0__ID:19
-S:1__O:0__ID:48
-S:1__O:0__ID:54", style=filled];
-4 [color=grey, label="S:1__O:0__ID:56
+S:1__O:0__ID:19]
+C:[S:1__O:0__ID:48
+S:1__O:0__ID:54]", style=filled];
+4 [color=grey, label="P:[S:1__O:0__ID:56
 S:1__O:0__ID:50
 S:1__O:0__ID:44
-S:1__O:0__ID:19
-S:1__O:0__ID:48
+S:1__O:0__ID:19]
+C:[S:1__O:0__ID:48
 S:1__O:0__ID:54
-S:1__O:0__ID:60", style=filled];
-5 [color=grey, label="S:1__O:0__ID:62
+S:1__O:0__ID:60]", style=filled];
+5 [color=grey, label="P:[S:1__O:0__ID:62
 S:1__O:0__ID:56
 S:1__O:0__ID:50
 S:1__O:0__ID:44
-S:1__O:0__ID:19
-S:1__O:0__ID:48
+S:1__O:0__ID:19]
+C:[S:1__O:0__ID:48
 S:1__O:0__ID:54
 S:1__O:0__ID:60
-S:1__O:0__ID:66", style=filled];
-6 [color=green, label="S:1__O:0__ID:68
+S:1__O:0__ID:66]", style=filled];
+6 [color=green, label="P:[S:1__O:0__ID:68
 S:1__O:0__ID:62
 S:1__O:0__ID:56
 S:1__O:0__ID:50
 S:1__O:0__ID:44
-S:1__O:0__ID:19
-S:1__O:0__ID:48
+S:1__O:0__ID:19]
+C:[S:1__O:0__ID:48
 S:1__O:0__ID:54
 S:1__O:0__ID:60
 S:1__O:0__ID:66
-S:1__O:0__ID:72", style=filled];
-7 [color=green, label="S:1__O:0__ID:22
-S:1__O:0__ID:25
-S:1__O:0__ID:26", style=filled];
-8 [color=grey, label="S:1__O:0__ID:25", style=filled];
-9 [color=grey, label="S:64__O:0__ID:25", style=filled];
-10 [color=grey, label="S:64__O:0__ID:25
-S:64__O:0__ID:26", style=filled];
-11 [color=green, label="S:64__O:0__ID:25
+S:1__O:0__ID:72]", style=filled];
+7 [color=green, label="P:[S:1__O:0__ID:22]
+C:[S:1__O:0__ID:25
+S:1__O:0__ID:26]", style=filled];
+8 [color=grey, label="P:[S:1__O:0__ID:25]
+C:[]", style=filled];
+9 [color=grey, label="P:[S:64__O:0__ID:25]
+C:[]", style=filled];
+10 [color=grey, label="P:[S:64__O:0__ID:25
+S:64__O:0__ID:26]
+C:[]", style=filled];
+11 [color=green, label="P:[S:64__O:0__ID:25
 S:64__O:0__ID:26
-S:64__O:0__ID:27
-S:64__O:0__ID:44", style=filled];
-12 [color=grey, label="S:1__O:64__ID:25", style=filled];
-13 [color=green, label="S:1__O:64__ID:25
-S:1__O:64__ID:26", style=filled];
-14 [color=grey, label="S:1__O:0__ID:26", style=filled];
-15 [color=grey, label="S:64__O:0__ID:26", style=filled];
-16 [color=grey, label="S:1__O:64__ID:26", style=filled];
-17 [color=grey, label="S:1__O:0__ID:27", style=filled];
-18 [color=grey, label="S:64__O:0__ID:27", style=filled];
-19 [color=green, label="S:1__O:64__ID:27
-S:1__O:64__ID:44", style=filled];
-20 [color=grey, label="S:1__O:0__ID:44", style=filled];
-21 [color=green, label="S:1__O:0__ID:48
-S:1__O:0__ID:50", style=filled];
-22 [color=grey, label="S:1__O:0__ID:50", style=filled];
-23 [color=green, label="S:1__O:0__ID:54
-S:1__O:0__ID:56", style=filled];
-24 [color=grey, label="S:1__O:0__ID:56", style=filled];
-25 [color=green, label="S:1__O:0__ID:60
-S:1__O:0__ID:62", style=filled];
-26 [color=grey, label="S:1__O:0__ID:62", style=filled];
-27 [color=green, label="S:1__O:0__ID:66
-S:1__O:0__ID:68", style=filled];
-28 [color=grey, label="S:1__O:0__ID:68", style=filled];
-29 [color=red, label="S:1__O:0__ID:72", style=filled];
-30 [color=green, label="S:1__O:0__ID:78
-S:1__O:0__ID:81", style=filled];
-31 [color=red, label="S:1__O:0__ID:81", style=filled];
+S:64__O:0__ID:27]
+C:[S:64__O:0__ID:44]", style=filled];
+12 [color=grey, label="P:[S:1__O:64__ID:25]
+C:[]", style=filled];
+13 [color=green, label="P:[S:1__O:64__ID:25
+S:1__O:64__ID:26]
+C:[]", style=filled];
+14 [color=grey, label="P:[S:1__O:0__ID:26]
+C:[]", style=filled];
+15 [color=grey, label="P:[S:64__O:0__ID:26]
+C:[]", style=filled];
+16 [color=grey, label="P:[S:1__O:64__ID:26]
+C:[]", style=filled];
+17 [color=grey, label="P:[S:1__O:0__ID:27]
+C:[]", style=filled];
+18 [color=grey, label="P:[S:64__O:0__ID:27]
+C:[S:1__O:64__ID:44]", style=filled];
+19 [color=green, label="P:[S:1__O:64__ID:27]
+C:[S:1__O:64__ID:44]", style=filled];
+20 [color=grey, label="P:[S:1__O:0__ID:44]
+C:[]", style=filled];
+21 [color=green, label="P:[S:1__O:0__ID:48]
+C:[S:1__O:0__ID:50]", style=filled];
+22 [color=grey, label="P:[S:1__O:0__ID:50]
+C:[]", style=filled];
+23 [color=green, label="P:[S:1__O:0__ID:54]
+C:[S:1__O:0__ID:56]", style=filled];
+24 [color=grey, label="P:[S:1__O:0__ID:56]
+C:[]", style=filled];
+25 [color=green, label="P:[S:1__O:0__ID:60]
+C:[S:1__O:0__ID:62]", style=filled];
+26 [color=grey, label="P:[S:1__O:0__ID:62]
+C:[]", style=filled];
+27 [color=green, label="P:[S:1__O:0__ID:66]
+C:[S:1__O:0__ID:68]", style=filled];
+28 [color=grey, label="P:[S:1__O:0__ID:68]
+C:[]", style=filled];
+29 [color=red, label="P:[S:1__O:0__ID:72]
+C:[]", style=filled];
+30 [color=green, label="P:[S:1__O:0__ID:78]
+C:[S:1__O:0__ID:81]", style=filled];
+31 [color=red, label="P:[S:1__O:0__ID:81]
+C:[]", style=filled];
 1 -> 2;
 2 -> 3;
 3 -> 4;

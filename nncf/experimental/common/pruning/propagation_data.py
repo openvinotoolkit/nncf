@@ -11,21 +11,32 @@
  limitations under the License.
 """
 
+from dataclasses import dataclass
 import json
-from typing import Dict
+from typing import Dict, Optional, Set
 from typing import List
 
 
+# probably not needed
+@dataclass
 class MaskProducer:
     """
     Defines producer of the pruning.
     """
-
+    # TODO: rename to node_id
     def __init__(self, id_) -> None:
         """
         :param id_: identification of the producer node in the NNCFGraph.
         """
-        self.id = id_
+        self.node_id = id_
+
+@dataclass
+class ConsumerInfo:
+    """
+    Defines the node that absorbs (consume) pruning
+    """
+    node_id: int
+    pruning_dimension: int
 
 
 class PropagationBlock:
@@ -108,10 +119,10 @@ class PropagationBlock:
         return self.pruning_dimension == other.pruning_dimension and \
             self.size == other.size and \
             self.offset == other.offset and \
-            self._producer.id == other._producer.id
+            self._producer.node_id == other._producer.id
 
     def __str__(self) -> str:
-        return f"S:{self.size}__O:{self.offset}__ID:{self._producer.id}"
+        return f"S:{self.size}__O:{self.offset}__ID:{self._producer.node_id}"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -122,14 +133,22 @@ class PropagationGroup:
     Defines a group of propagation blocks and links it with the list of children groups.
     The group is initialized on producers of pruning and is propagated until consumers within PropagationMask.
     """
-
-    def __init__(self, blocks: List[PropagationBlock]) -> None:
+    # TODO: rename blocks to producers everywhere
+    # TODO: make a set of blocks, since check for repeating and order is not important???
+    def __init__(self, blocks: List[PropagationBlock], consumers: Optional[Set[ConsumerInfo]] = None) -> None:
         self._blocks = blocks
+        if consumers is None:
+            consumers = []
+        for block in blocks + consumers:
+            block.set_group(self)
         self._children: List['PropagationGroup'] = []
         self.is_invalid = False
+        self._consumers = consumers
 
     def __str__(self) -> str:
-        return '\n'.join(map(str, self._blocks))
+        producers = '\n'.join(map(str, self._blocks))
+        consumers = '\n'.join(map(str, self._consumers))
+        return f'Producers\n{producers}\nConsumers\n{consumers}'
 
     def invalidate(self) -> None:
         """
@@ -152,15 +171,16 @@ class PropagationGroup:
 
         retval = PropagationGroup([])
         blocks = []
+        consumers = []
         for group in args:
             group.add_child(retval)
             for block in group.get_blocks():
                 if block not in blocks:
-                    blocks.append(block)
-        for block in blocks:
-            retval.add_block(block)
+                    retval.add_block(block)
+            for consumer in group.get_consumers():
+                if consumer not in consumers:
+                    retval.add_consumer(consumer)
         return retval
-
 
     def get_state(self) -> str:
         """
@@ -171,11 +191,25 @@ class PropagationGroup:
         """
         return list(map(str, self._blocks))
 
+    def add_consumer(self, block: PropagationBlock):
+        """
+        Adds consumer block to the group and to all children.
+        The idea is to have up-to-date list of consumers in each leaf eventually.
+
+        :param block: propagation block the corresponds to the consumer node.
+        """
+        self._consumers.append(block)
+        for child in self._children:
+            child.add_consumer(block)
+
     def get_blocks(self) -> List[PropagationBlock]:
         return self._blocks.copy()
 
     def get_children(self) -> List['PropagationGroup']:
         return self._children.copy()
+
+    def get_consumers(self) -> List[PropagationBlock]:
+        return self._consumers.copy()
 
     def has_children(self) -> bool:
         return bool(self._children)

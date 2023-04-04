@@ -1,8 +1,7 @@
 strict digraph  {
 0 [color=grey, label="S:1__O:0__ID:1", style=filled];
 1 [color=grey, label="S:15__O:0__ID:1", style=filled];
-2 [color=red, label="S:2__O:0__ID:1
-S:2__O:0__ID:5", style=filled];
+2 [color=red, label="S:2__O:0__ID:1", style=filled];
 3 [color=red, label="S:1__O:2__ID:1", style=filled];
 4 [color=red, label="S:1__O:15__ID:1", style=filled];
 5 [color=red, label="S:1__O:0__ID:5", style=filled];

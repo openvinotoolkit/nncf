@@ -145,10 +145,12 @@ SYNTHETIC_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
+                producers={
                     PruningBlock(64, 0, 1, 0),
                     PruningBlock(64, 0, 2, 0),
                     PruningBlock(64, 0, 3, 0),
+                },
+                consumers={
                     PruningBlock(64, 0, 17, 1)
                 }
             )
@@ -161,8 +163,10 @@ SYNTHETIC_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=2, offset=0, producer_id=1, pruning_dimension=0),
+                producers={
+                    PruningBlock(size=2, offset=0, producer_id=1, pruning_dimension=0)
+                },
+                consumers={
                     PruningBlock(size=2, offset=0, producer_id=7, pruning_dimension=1)
                 }
             ),
@@ -195,16 +199,20 @@ NLP_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
+                producers={
                     PruningBlock(size=64, offset=0, producer_id=11, pruning_dimension=0),
                     PruningBlock(size=64, offset=0, producer_id=12, pruning_dimension=0),
                     PruningBlock(size=64, offset=0, producer_id=15, pruning_dimension=0),
+                },
+                consumers={
                     PruningBlock(size=64, offset=0, producer_id=30, pruning_dimension=1)
                 }
             ),
             PruningGroup(
-                dim_blocks={
+                producers={
                     PruningBlock(size=1, offset=0, producer_id=34, pruning_dimension=0),
+                },
+                consumers={
                     PruningBlock(size=1, offset=0, producer_id=36, pruning_dimension=1)
                 }
             )
@@ -230,23 +238,29 @@ NLP_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
+                producers={
                     PruningBlock(size=2, offset=0, producer_id=12, pruning_dimension=0),
                     PruningBlock(size=2, offset=0, producer_id=16, pruning_dimension=0),
-                    PruningBlock(size=2, offset=0, producer_id=31, pruning_dimension=1),
                     PruningBlock(size=2, offset=0, producer_id=13, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=2, offset=0, producer_id=31, pruning_dimension=1),
                 }
             ),
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=37, pruning_dimension=1),
+                producers={
                     PruningBlock(size=1, offset=0, producer_id=35, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=1, offset=0, producer_id=37, pruning_dimension=1),
                 }
             ),
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=45, pruning_dimension=1),
+                producers={
                     PruningBlock(size=1, offset=0, producer_id=42, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=1, offset=0, producer_id=45, pruning_dimension=1)
                 }
             )
         ]
@@ -261,17 +275,21 @@ NLP_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=64, offset=0, producer_id=38, pruning_dimension=1),
+                producers={
                     PruningBlock(size=64, offset=0, producer_id=19, pruning_dimension=0),
                     PruningBlock(size=64, offset=0, producer_id=20, pruning_dimension=0),
                     PruningBlock(size=64, offset=0, producer_id=23, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=64, offset=0, producer_id=38, pruning_dimension=1),
                 }
             ),
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=44, pruning_dimension=1),
+                producers={
                     PruningBlock(size=1, offset=0, producer_id=42, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=1, offset=0, producer_id=44, pruning_dimension=1),
                 }
             )
         ]
@@ -294,17 +312,21 @@ NLP_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
+                producers={
                     PruningBlock(size=2, offset=0, producer_id=13, pruning_dimension=0),
-                    PruningBlock(size=2, offset=0, producer_id=29, pruning_dimension=1),
                     PruningBlock(size=2, offset=0, producer_id=10, pruning_dimension=0),
                     PruningBlock(size=2, offset=0, producer_id=7, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=2, offset=0, producer_id=29, pruning_dimension=1),
                 }
             ),
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=34, pruning_dimension=1),
+                producers={
                     PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=1, offset=0, producer_id=34, pruning_dimension=1),
                 }
             ),
         ]
@@ -329,32 +351,32 @@ NLP_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
+                producers={
                     PruningBlock(size=1, offset=0, producer_id=68, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=48, pruning_dimension=1),
                     PruningBlock(size=1, offset=0, producer_id=62, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=54, pruning_dimension=1),
                     PruningBlock(size=1, offset=0, producer_id=56, pruning_dimension=0),
                     PruningBlock(size=1, offset=0, producer_id=50, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=72, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=66, pruning_dimension=1),
                     PruningBlock(size=1, offset=0, producer_id=19, pruning_dimension=0),
                     PruningBlock(size=1, offset=0, producer_id=44, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=48, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=54, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=72, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=66, pruning_dimension=1),
                 }
             ),
             PruningGroup(
-                dim_blocks={
+                producers={PruningBlock(size=1, offset=0, producer_id=22, pruning_dimension=0)},
+                consumers={
                     PruningBlock(size=1, offset=0, producer_id=26, pruning_dimension=1),
                     PruningBlock(size=1, offset=0, producer_id=25, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=22, pruning_dimension=0)
                 }
             ),
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=81, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=78, pruning_dimension=0)
-                }
+                producers={PruningBlock(size=1, offset=0, producer_id=78, pruning_dimension=0)},
+                consumers={PruningBlock(size=1, offset=0, producer_id=81, pruning_dimension=1)}
             ),
         ]
     ),
@@ -377,18 +399,16 @@ CV_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
+                producers={
                     PruningBlock(size=2, offset=0, producer_id=15, pruning_dimension=0),
                     PruningBlock(size=2, offset=0, producer_id=18, pruning_dimension=0),
                     PruningBlock(size=2, offset=0, producer_id=14, pruning_dimension=0),
-                    PruningBlock(size=2, offset=0, producer_id=33, pruning_dimension=1)
-                }
+                },
+                consumers={PruningBlock(size=2, offset=0, producer_id=33, pruning_dimension=1)}
             ),
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=45, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=43, pruning_dimension=0)
-                }
+                producers={PruningBlock(size=1, offset=0, producer_id=43, pruning_dimension=0)},
+                consumers={PruningBlock(size=1, offset=0, producer_id=45, pruning_dimension=1)}
             )
         ]
     ),
@@ -408,14 +428,18 @@ CV_DESCS = [
                                   ))
         ),
         ref_groups=[
-            PruningGroup(dim_blocks={
-                PruningBlock(size=1, offset=0, producer_id=8, pruning_dimension=0),
-                PruningBlock(size=1, offset=0, producer_id=26, pruning_dimension=1),
-                PruningBlock(size=1, offset=0, producer_id=9, pruning_dimension=0),
-                PruningBlock(size=1, offset=0, producer_id=12, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={
-                PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
-                PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)}),
+            PruningGroup(
+                producers={
+                    PruningBlock(size=1, offset=0, producer_id=8, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=9, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=12, pruning_dimension=0)
+                },
+                consumers={PruningBlock(size=1, offset=0, producer_id=26, pruning_dimension=1)},
+            ),
+            PruningGroup(
+                producers={PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)},
+                consumers={PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1)}
+            ),
         ]
     ),
     GroupTestDesc(
@@ -434,14 +458,18 @@ CV_DESCS = [
                                   ))
         ),
         ref_groups=[
-            PruningGroup(dim_blocks={
-                PruningBlock(size=2, offset=0, producer_id=12, pruning_dimension=0),
-                PruningBlock(size=2, offset=0, producer_id=26, pruning_dimension=1),
-                PruningBlock(size=2, offset=0, producer_id=8, pruning_dimension=0),
-                PruningBlock(size=2, offset=0, producer_id=9, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={
-                PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
-                PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)}),
+            PruningGroup(
+                producers={
+                    PruningBlock(size=2, offset=0, producer_id=12, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=8, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=9, pruning_dimension=0)
+                },
+                consumers={PruningBlock(size=2, offset=0, producer_id=26, pruning_dimension=1)}
+            ),
+            PruningGroup(
+                producers={PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1)},
+                consumers={PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)}
+            ),
         ]
     ),
     GroupTestDesc(
@@ -461,17 +489,21 @@ CV_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
+                producers={
                     PruningBlock(size=2, offset=0, producer_id=15, pruning_dimension=0),
                     PruningBlock(size=2, offset=0, producer_id=11, pruning_dimension=0),
-                    PruningBlock(size=2, offset=0, producer_id=33, pruning_dimension=1),
                     PruningBlock(size=2, offset=0, producer_id=9, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=2, offset=0, producer_id=33, pruning_dimension=1),
                 }
             ),
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=40, pruning_dimension=1),
+                producers={
                     PruningBlock(size=1, offset=0, producer_id=36, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=1, offset=0, producer_id=40, pruning_dimension=1),
                 }
             ),
         ]
@@ -495,17 +527,21 @@ AUDIO_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                dim_blocks={
+                producers={
                     PruningBlock(size=8, offset=0, producer_id=35, pruning_dimension=0),
-                    PruningBlock(size=8, offset=0, producer_id=53, pruning_dimension=1),
                     PruningBlock(size=8, offset=0, producer_id=31, pruning_dimension=0),
                     PruningBlock(size=8, offset=0, producer_id=29, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=8, offset=0, producer_id=53, pruning_dimension=1),
                 }
             ),
             PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=1),
+                producers={
                     PruningBlock(size=1, offset=0, producer_id=57, pruning_dimension=0)
+                },
+                consumers={
+                    PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=1),
                 }
             ),
         ]

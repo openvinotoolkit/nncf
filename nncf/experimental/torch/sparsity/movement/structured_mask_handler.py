@@ -192,14 +192,14 @@ class StructuredMaskContext:
         pruned_weight_shape = list(weight_shape)
         head_id_to_keep = []
         if self.prune_by_row:
-            pruneable_rows = self.sparsifier_operand.weight_ctx.binary_mask.amax(dim=1)
-            pruned_weight_shape[0] = int(pruneable_rows.count_nonzero().item())
-            kept_row_blocks = F.max_pool1d(pruneable_rows.unsqueeze(0), kernel_size=self.grid_size[0]).squeeze(0)
+            prunable_rows = self.sparsifier_operand.weight_ctx.binary_mask.amax(dim=1)
+            pruned_weight_shape[0] = int(prunable_rows.count_nonzero().item())
+            kept_row_blocks = F.max_pool1d(prunable_rows.unsqueeze(0), kernel_size=self.grid_size[0]).squeeze(0)
             head_id_to_keep = kept_row_blocks.nonzero().view(-1).cpu().numpy().tolist()
         else:
-            pruneable_cols = self.sparsifier_operand.weight_ctx.binary_mask.amax(dim=0)
-            pruned_weight_shape[1] = int(pruneable_cols.count_nonzero().item())
-            kept_col_blocks = F.max_pool1d(pruneable_cols.unsqueeze(0), kernel_size=self.grid_size[1]).squeeze(0)
+            prunable_cols = self.sparsifier_operand.weight_ctx.binary_mask.amax(dim=0)
+            pruned_weight_shape[1] = int(prunable_cols.count_nonzero().item())
+            kept_col_blocks = F.max_pool1d(prunable_cols.unsqueeze(0), kernel_size=self.grid_size[1]).squeeze(0)
             head_id_to_keep = kept_col_blocks.nonzero().view(-1).cpu().numpy().tolist()
 
         pruned_bias_shape = bias_shape
@@ -223,7 +223,7 @@ class StructuredMaskContext:
     @staticmethod
     def _inflate_structured_mask(structured_mask: torch.Tensor, grid_size: Tuple[int, int]) -> torch.Tensor:
         assert len(structured_mask.shape) == len(grid_size), \
-            f'Unmatching dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D.'
+            f'Unmatched dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D.'
         inflated_mask = structured_mask.clone()
         for axis, repeat_times in enumerate(grid_size):
             inflated_mask = inflated_mask.repeat_interleave(repeat_times, dim=axis)
@@ -375,7 +375,7 @@ class StructuredMaskHandler:
         result = []
         for group_id, group in enumerate(pruning_groups):
             ctxes = []
-            for block in group.dim_blocks:
+            for block in group.producers.union(group.consumers):
                 nncf_node = nncf_graph.get_node_by_id(block.producer_id)
                 module = nncf_network.nncf.get_containing_module(nncf_node.node_name)
                 if module in module_vs_sparse_module_info_map:
@@ -388,6 +388,9 @@ class StructuredMaskHandler:
                                                 prune_grid,
                                                 prune_by_row)
                     ctxes.append(ctx)
+                else:
+                    raise RuntimeError('The given unstructured sparse structure does not match automatically found '
+                                       'structured pruning groups.')
             if ctxes:
                 result.append(StructuredMaskContextGroup(group_id, ctxes))
         return result

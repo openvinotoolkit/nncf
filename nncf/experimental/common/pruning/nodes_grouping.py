@@ -56,7 +56,7 @@ class PruningBlock:
         """
         Creates an object by taking all necessary information from PropagationBlock.
         """
-        return cls(block.size, block.offset, block._producer.id, block.pruning_dimension)
+        return cls(block.size, block.offset, block._producer.node_id, block.pruning_dimension)
 
     def __str__(self) -> str:
         return f'S{self.size}_O{self.offset}_PID{self.producer_id}'
@@ -72,18 +72,21 @@ class PruningGroup:
     """
     Group of pruning blocks that is obtained after propagation.
     """
-    dim_blocks: Set[PruningBlock]
+    producers: Set[PruningBlock]
+    consumers: Set[PruningBlock]
 
     def __eq__(self, other: 'PruningGroup'):
-        return self.dim_blocks == other.dim_blocks
+        return self.producers == other.producers and self.consumers == other.consumers
 
     @classmethod
     def from_propagation_group(cls, group: PropagationGroup) -> 'PruningGroup':
         """
         Creates an object by taking all necessary information from PropagationGroup.
         """
-        dim_blocks = {PruningBlock.from_propagation_block(block) for block in group.get_blocks()}
-        return cls(dim_blocks)
+        producers = {PruningBlock.from_propagation_block(block) for block in group.get_blocks()}
+        consumers = {PruningBlock.from_propagation_block(block) for block in group.get_consumers()}
+        return cls(producers, consumers)
+
 
 def get_pruning_groups(graph: NNCFGraph,
                        pruning_operations_metatypes: PruningOperationsMetatypeRegistry,
@@ -160,10 +163,10 @@ def select_largest_groups(pruning_groups: List[PruningGroup]) -> List[PruningGro
     Selects largest pruning groups with larger number of pruning blocks.
     """
     finished_producers = set()
-    sorted_groups = sorted(pruning_groups, key=lambda group: len(group.dim_blocks), reverse=True)
+    sorted_groups = sorted(pruning_groups, key=lambda group: len(group.producers), reverse=True)
     result = []
     for group in sorted_groups:
-        producers = {block.producer_id for block in group.dim_blocks}
+        producers = {block.producer_id for block in group.producers}
         if not producers.intersection(finished_producers):
             finished_producers.update(producers)
             result.append(group)
