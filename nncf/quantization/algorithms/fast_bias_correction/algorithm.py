@@ -139,6 +139,10 @@ class FastBiasCorrection(Algorithm):
                 nncf_logger.debug(f'Skipping node {node_name} because weights were not quantized')
                 continue
 
+            if bias_value is None:
+                nncf_logger.debug(f'Skipping node {node_name} because bias is None')
+                continue
+
             input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
             output_fp = self._get_fp_outputs(statistic_points, node_name)
 

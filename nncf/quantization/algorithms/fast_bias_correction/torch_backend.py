@@ -102,14 +102,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module) -> np.ndarray:
         node_module = model.get_containing_module(node.node_name)
         if node_module.bias is None:
-            # Initialize bias as zeros for node node without bias
-            node_module.bias = nn.Parameter(
-                torch.zeros(
-                    node_module.weight.data.shape[0],
-                    dtype=node_module.weight.data.dtype,
-                    device=node_module.weight.data.device,
-                )
-            )
+            return None
         return node_module.bias.data
 
     @staticmethod
