@@ -60,12 +60,12 @@ class PTModelTransformer(ModelTransformer):
             return self._apply_extraction_transformations(extraction_transformations)
 
         if insertion_transformations:
-            self._apply_output_insertion_transformations(insertion_transformations)
+            self._apply_insertion_transformations(insertion_transformations)
         if bias_correction_transformations:
             self._apply_bias_correction_transformations(bias_correction_transformations)
         return self._model
 
-    def _apply_output_insertion_transformations(self, transformations: List[PTInsertionCommand]) -> None:
+    def _apply_insertion_transformations(self, transformations: List[PTInsertionCommand]) -> None:
         fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
         for transformation_command in transformations:  # type: PTInsertionCommand
             target_point = transformation_command.target_point  # type: PTTargetPoint
