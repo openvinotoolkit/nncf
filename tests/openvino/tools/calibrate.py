@@ -22,6 +22,7 @@ from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator imp
 from openvino.tools.pot.configs.config import Config
 
 import nncf
+from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data.dataset import Dataset
 from nncf.experimental.openvino_native.quantization.quantize import \
@@ -259,6 +260,7 @@ def main():
     accuracy_checcker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression)
 
+    set_log_file(f'{args.output_dir}/log.txt')
     output_dir = os.path.join(args.output_dir, 'optimized')
     os.makedirs(output_dir, exist_ok=True)
 
