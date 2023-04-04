@@ -20,7 +20,6 @@ from torch import nn
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -90,9 +89,7 @@ class PTModelTransformer(ModelTransformer):
 
     def _apply_extraction_transformations(self, transformation: PTModelExtractionCommand) -> nn.Module:
         extracted_module = self._model.get_containing_module(transformation.node_name)
-        # Return copy of the module without pre and post operations.
         extracted_module = copy.deepcopy(extracted_module)
-        extracted_module.reset()
         return extracted_module
 
     def _apply_bias_correction_transformations(self, transformations: List[PTBiasCorrectionCommand]) -> None:
