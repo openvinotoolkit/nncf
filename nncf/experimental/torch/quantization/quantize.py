@@ -55,7 +55,7 @@ def quantize_impl(
         fast_bias_correction=fast_bias_correction,
     )
 
-    nncf_logger.warning('Bias correction algorithms are not supported by Torch backend by now.')
+    nncf_logger.warning('BiasCorrection algorithm is not supported by Torch backend by now.')
     params.algorithms.pop(BiasCorrection, None)
 
     quantization_algorithm = PostTrainingQuantization(params)
