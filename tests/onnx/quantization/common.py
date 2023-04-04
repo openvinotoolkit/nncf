@@ -32,7 +32,7 @@ from tests.shared.paths import TEST_ROOT
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.nx_graph import check_nx_graph
 from tests.onnx.opset_converter import convert_opset_version
-from tests.shared.definitions import GLOBAL_NNCF_SEED
+from tests.onnx.common import get_random_generator
 
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
@@ -65,7 +65,7 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool,
             input_dtype = onnx_graph.get_edge_dtype(key)
             input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
             shape = onnx_graph.get_edge_shape(key)
-            rng = np.random.default_rng(seed=GLOBAL_NNCF_SEED)
+            rng = get_random_generator()
             tensor = rng.uniform(0, 1, shape).astype(input_np_dtype)
             if has_batch_dim:
                 tensor = np.squeeze(tensor, axis=0)
