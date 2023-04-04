@@ -14,6 +14,7 @@ import numpy as np
 
 from tests.shared.definitions import GLOBAL_NNCF_SEED
 
+
 def get_random_generator(seed: int = GLOBAL_NNCF_SEED):
     rng = np.random.default_rng(seed)
     return rng

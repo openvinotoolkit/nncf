@@ -13,17 +13,15 @@
 from typing import Dict
 
 import numpy as np
-import pytest
 import onnx
-
-from nncf.quantization.algorithms.definitions import OverflowFix
-from nncf.onnx.graph.onnx_graph import ONNXGraph
-
+import pytest
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import LinearModel
 from tests.onnx.quantization.common import min_max_quantize_model
-from tests.shared.helpers import load_json
-from tests.shared.helpers import compare_stats
+from tests.shared.helpers import compare_stats, load_json
+
+from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.quantization.algorithms.definitions import OverflowFix
 
 REFERENCE_SCALES_DIR = ONNX_TEST_ROOT / 'data' / 'reference_scales'
 
@@ -39,8 +37,11 @@ def get_q_nodes_params(model: onnx.ModelProto) -> Dict[str, np.ndarray]:
     return output
 
 
-@pytest.mark.parametrize('overflow_fix', [OverflowFix.DISABLE, OverflowFix.ENABLE, OverflowFix.FIRST_LAYER],
-                         ids=[OverflowFix.DISABLE.value, OverflowFix.ENABLE.value, OverflowFix.FIRST_LAYER.value])
+@pytest.mark.parametrize(
+    'overflow_fix',
+    [OverflowFix.DISABLE, OverflowFix.ENABLE, OverflowFix.FIRST_LAYER],
+    ids=[OverflowFix.DISABLE.value, OverflowFix.ENABLE.value, OverflowFix.FIRST_LAYER.value],
+)
 def test_overflow_fix_scales(overflow_fix):
     model = LinearModel()
     quantized_model = min_max_quantize_model(model.onnx_model, quantization_params={'overflow_fix': overflow_fix})
