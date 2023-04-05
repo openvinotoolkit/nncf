@@ -18,7 +18,6 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from torch import nn
 from torch.quantization.fake_quantize import FakeQuantize
 
 from nncf.common.graph import NNCFGraph
@@ -30,17 +29,19 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
+from nncf.torch.graph.node_utils import get_bias_value
 from nncf.torch.graph.node_utils import is_node_with_bias
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.collectors import PTMeanStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
-from nncf.torch.graph.node_utils import get_bias_value
+
 
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
@@ -59,9 +60,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return PTNNCFCollectorTensorProcessor()
 
     @staticmethod
-    def target_point(target_type: TargetType,
-                     target_node_name: str,
-                     port_id: int) -> PTTargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             port_id = None
         if target_type in PTFastBiasCorrectionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
@@ -85,7 +84,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return PTMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def get_sub_input_output_names(subgraph: nn.Module) -> Tuple[str, str]:
+    def get_sub_input_output_names(subgraph: NNCFNetwork) -> Tuple[str, str]:
         # Pytorch does not have name for extracted node
         return None, None
 
@@ -98,7 +97,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return blob
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> np.ndarray:
         return get_bias_value(node, model)
 
     @staticmethod
@@ -110,7 +109,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return PTNNCFTensor(raw_data)
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> bool:
         node_module = model.get_containing_module(node.node_name)
         for pre_op in node_module.pre_ops.values():
             if isinstance(pre_op.op, (BaseQuantizer, FakeQuantize)):
@@ -118,8 +117,8 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return False
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        return is_node_with_bias(node)
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> bool:
+        return is_node_with_bias(node, model)
 
     @staticmethod
     def get_bias_shift_magnitude(current_bias_value: torch.Tensor, updated_bias_value: torch.Tensor) -> float:

@@ -16,16 +16,18 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_BIAS_METATYPES
 
 
-def is_node_with_bias(node: NNCFNode) -> bool:
+def is_node_with_bias(node: NNCFNode, model: NNCFNetwork) -> bool:
     """
     Checks if the node has a bias or not.
 
     :param node: The node to check.
+    :param model: The model that contains this operation.
     :return: Return `True` if `node` corresponds to the operation
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
-    return node.metatype in OPERATORS_WITH_BIAS_METATYPES
+    node_module = model.get_containing_module(node.node_name)
+    return node.metatype in OPERATORS_WITH_BIAS_METATYPES and node_module.bias is not None
 
 
 def get_bias_value(node: NNCFNode, model: NNCFNetwork) -> Tensor:

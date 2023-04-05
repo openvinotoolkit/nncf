@@ -173,12 +173,13 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> bool:
         """
         Checks whether the node has a bias or not.
 
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph that contains node.
+        :param model: Backend-specific model.
         :return: Boolean indicating whether the node has a bias or not.
         """
 
