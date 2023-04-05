@@ -35,6 +35,7 @@ from torch import nn
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
+from nncf.common.api_marker import api
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -1275,6 +1276,7 @@ class QuantizationControllerBase(PTCompressionAlgorithmController):
         raise NotImplementedError
 
 
+@api()
 class QuantizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork,
                  config: NNCFConfig,

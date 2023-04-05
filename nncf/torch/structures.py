@@ -17,9 +17,11 @@ from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
+from nncf.common.api_marker import api
 from nncf.config.structures import NNCFExtraConfigStruct
 
 
+@api()
 class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
     """
     Stores arguments for initialization of quantization's bitwidth.
@@ -55,6 +57,7 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
         return "quantization_precision_init_args"
 
 
+@api()
 class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
     """
     :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
@@ -79,6 +82,7 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
         return "autoq_precision_init_args"
 
 
+@api()
 class LeGRInitArgs(NNCFExtraConfigStruct):
     """
     Stores arguments for learning global ranking in pruning algorithm.
@@ -112,6 +116,7 @@ class LeGRInitArgs(NNCFExtraConfigStruct):
         return "legr_init_args"
 
 
+@api()
 class DistributedCallbacksArgs(NNCFExtraConfigStruct):
     """
     A pair of callbacks that is needed for distributed training of the model: wrapping model with wrapping_callback for
@@ -132,6 +137,7 @@ class DistributedCallbacksArgs(NNCFExtraConfigStruct):
         return "distributed_callbacks_args"
 
 
+@api()
 class ExecutionParameters:
     """
     Parameters that are necessary for distributed training of the model.

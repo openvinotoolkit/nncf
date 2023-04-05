@@ -15,6 +15,7 @@ from copy import deepcopy
 
 from torch import nn
 
+from nncf.common.api_marker import api
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.config.schemata.defaults import KNOWLEDGE_DISTILLATION_SCALE
@@ -52,6 +53,7 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
         pass
 
 
+@api()
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str, scale: float,
                  temperature: float):

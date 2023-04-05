@@ -18,6 +18,7 @@ import torch
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.api_marker import api
 from nncf.common.graph import NNCFNode
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.schedulers import StubCompressionScheduler
@@ -51,6 +52,7 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
         return MagnitudeSparsityController(model, self._sparsified_module_info, self.config)
 
 
+@api()
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_magnitude_sparsity')
 class MagnitudeSparsityController(BaseSparsityAlgoController):
     def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo],

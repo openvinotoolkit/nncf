@@ -13,6 +13,7 @@
 
 from typing import Optional, Callable
 
+from nncf.common.api_marker import api
 from nncf.common.initialization.dataloader import NNCFDataLoader
 
 
@@ -27,6 +28,7 @@ class NNCFExtraConfigStruct:
         raise NotImplementedError
 
 
+@api()
 class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
     """
     Stores additional arguments for quantization range initialization algorithms.
@@ -59,6 +61,7 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
         return 'quantization_range_init_args'
 
 
+@api()
 class BNAdaptationInitArgs(NNCFExtraConfigStruct):
     """
     Stores additional arguments for batchnorm statistics adaptation algorithm.
@@ -91,6 +94,7 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
         return 'bn_adaptation_init_args'
 
 
+@api()
 class ModelEvaluationArgs(NNCFExtraConfigStruct):
     def __init__(self,
                  eval_fn: Callable):

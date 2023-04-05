@@ -45,6 +45,7 @@ from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
 from nncf.torch.utils import training_mode_switcher
 
 
+@api()
 @tracked_function(NNCF_PT_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
 def create_compressed_model(model: Module,
                             config: NNCFConfig,
@@ -132,7 +133,7 @@ def create_compressed_model(model: Module,
     synchronize_all_processes_in_distributed_mode()
     return compression_ctrl, compressed_model
 
-@api()
+
 def create_nncf_network(model: torch.nn.Module,
                         config: NNCFConfig,
                         dummy_forward_fn: Callable[[Module], Any] = None,

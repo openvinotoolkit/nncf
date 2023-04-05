@@ -21,6 +21,7 @@ import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.api_marker import api
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
@@ -58,7 +59,7 @@ def create_compression_algorithm_builder(config: NNCFConfig,
 
     return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 
-
+@api()
 @tracked_function(NNCF_TF_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
 def create_compressed_model(model: tf.keras.Model,
                             config: NNCFConfig,
