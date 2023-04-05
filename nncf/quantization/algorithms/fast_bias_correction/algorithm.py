@@ -156,7 +156,7 @@ class FastBiasCorrection(Algorithm):
             if bias_value.ndim > 1:
                 # Make index positive
                 channel_axis = range(bias_value.ndim)[channel_axis]
-            input_blob = self._create_input_data(input_shape, input_fp, sub_input_name, channel_axis)
+            input_blob = self._backend_entity.create_input_data(input_shape, input_fp, sub_input_name, channel_axis)
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,
@@ -293,7 +293,7 @@ class FastBiasCorrection(Algorithm):
         :param channel_axis: Axis to fill the blob with provided data.
         :return: The dictionary of the blob by input name.
         """
-        input_blob = self._backend_entity.create_blob(input_shape, input_fp, channel_axis)
+        input_blob = self._backend_entity.create_input_data(input_shape, input_fp, input_name, channel_axis)
         if input_name is None:
             # For unnamed inputs, as in pytorch
             return input_blob

@@ -113,12 +113,13 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
+    def create_input_data(shape: Tuple[int], data: List[np.ndarray], input_name: str, channel_axis: int) -> np.ndarray:
         """
-        Creates the backend-specific (because of layout) blob.
+        Creates input data for the bias shift calculation.
 
         :param shape: Shape of the blob.
         :param data: Data to fill the blob.
+        :param input_name: Name for the output dictionary.
         :param channel_axis: Axis to fill the blob with provided data.
         :return: np.ndarray blob.
         """

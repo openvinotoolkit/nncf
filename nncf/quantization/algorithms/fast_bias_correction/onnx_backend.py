@@ -78,13 +78,14 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return subgraph.graph.input[0].name, subgraph.graph.output[0].name
 
     @staticmethod
-    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
+    def create_input_data(shape: Tuple[int], data: List[np.ndarray], input_name: str, channel_axis: int) -> np.ndarray:
         blob = np.zeros(shape)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
             blob[index] = data[j]
         blob = blob.astype(data[0].dtype)
-        return blob
+        input_data = {input_name: blob}
+        return input_data
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> np.ndarray:
