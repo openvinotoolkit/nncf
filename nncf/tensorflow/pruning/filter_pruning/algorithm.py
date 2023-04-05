@@ -20,6 +20,7 @@ import tensorflow as tf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage
+from nncf.common.api_marker import api
 from nncf.common.graph import NNCFGraph
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.pruning.clusterization import Cluster
@@ -97,6 +98,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return TFElementwisePruningOp.get_all_op_aliases()
 
 
+@api()
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_filter_pruning')
 class FilterPruningController(BasePruningAlgoController):
     """

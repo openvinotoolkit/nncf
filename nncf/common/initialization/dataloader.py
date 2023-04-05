@@ -13,7 +13,10 @@
 
 from abc import ABC, abstractmethod
 
+from nncf.common.api_marker import api
 
+
+@api()
 class NNCFDataLoader(ABC):
     """
     Wraps a custom data source.

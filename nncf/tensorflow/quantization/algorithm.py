@@ -22,6 +22,7 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
+from nncf.common.api_marker import api
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
@@ -680,6 +681,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return f'{layer_name}_{weight_attr_name}_quantizer'
 
 
+@api()
 class QuantizationController(BaseCompressionAlgorithmController):
     def __init__(self, target_model, config, op_names: List[str]):
         super().__init__(target_model)

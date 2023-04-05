@@ -168,7 +168,7 @@ class QuantizerSpec:
                    narrow_range,
                    half_range)
 
-@api()
+
 class QuantizationConstraints:
     REF_QCONF_OBJ = QuantizerConfig()
 

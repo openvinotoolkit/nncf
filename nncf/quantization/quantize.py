@@ -14,6 +14,7 @@
 from typing import Any, Callable, Iterable, Optional
 
 from nncf.api.compression import TModel
+from nncf.common.api_marker import api
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -25,6 +26,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope
 
 
+@api()
 def quantize(model: TModel,
              calibration_dataset: Dataset,
              preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
