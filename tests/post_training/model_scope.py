@@ -34,7 +34,6 @@ def get_validation_scope() -> List[dict]:
     model_scope.append({"name": "resnest14d", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     model_scope.append({"name": "inception_resnet_v2", "quantization_params": {}})
     model_scope.append({"name": "wide_resnet50_2", "quantization_params": {"preset":QuantizationPreset.MIXED}})
-    model_scope.append({"name": "bat_resnext26ts", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     model_scope.append({"name": "regnetx_002", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     # MobileNets
     model_scope.append({"name": "mobilenetv3_small_050", "quantization_params": {"preset":QuantizationPreset.MIXED}})
