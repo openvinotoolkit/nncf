@@ -38,6 +38,7 @@ from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 
 TModel = TypeVar('TModel')
+TTensor = TypeVar('TTensor')
 
 
 class FastBiasCorrectionParameters(AlgorithmParameters):
@@ -168,7 +169,7 @@ class FastBiasCorrection(Algorithm):
                 new_shape = [1] * bias_value.ndim
                 new_shape[channel_axis] = bias_shift.shape[0]
                 bias_shift = bias_shift.reshape(new_shape)
-
+            bias_shift = self._reshape_bias_shift(bias_shift, bias_value, channel_axis)
             updated_bias = bias_value + bias_shift
             magnitude = self._backend_entity.get_bias_shift_magnitude(bias_value, updated_bias)
 
@@ -187,6 +188,22 @@ class FastBiasCorrection(Algorithm):
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
+
+    def _reshape_bias_shift(bias_shift: TTensor, bias_value: TTensor, channel_axis: int) -> TTensor:
+        """
+        Reshape bias_shift tensor in case of dimensions of bias_value is more then 1.
+
+        :param bias_shift: Bias shit tensor.
+        :param bias_value: Bias value tensor.
+        :param channel_axis: Axis to update bias.
+
+        :return TTensor: Updated bias_shift.
+        """
+        if bias_value.ndim > 1:
+            new_shape = [1] * bias_value.ndim
+            new_shape[channel_axis] = bias_shift.shape[0]
+            bias_shift = bias_shift.reshape(new_shape)
+        return bias_shift
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
         """
@@ -212,7 +229,7 @@ class FastBiasCorrection(Algorithm):
             input_shape.extend(statistic.shape)
         return input_fp, input_shape
 
-    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[np.ndarray]:
+    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[TTensor]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 
@@ -265,7 +282,7 @@ class FastBiasCorrection(Algorithm):
 
     def _create_input_data(self,
                            input_shape: Tuple[int],
-                           input_fp: List[np.ndarray],
+                           input_fp: List[TTensor],
                            input_name: str,
                            channel_axis: int) -> Dict[str, NNCFTensor]:
         """
@@ -287,8 +304,8 @@ class FastBiasCorrection(Algorithm):
                         model: TModel,
                         input_blob: Dict[str, NNCFTensor],
                         channel_axis: Tuple[int],
-                        output_fp: List[np.ndarray],
-                        output_name: str) -> np.ndarray:
+                        output_fp: List[TTensor],
+                        output_name: str) -> TTensor:
         """
         Calculates updated bias.
 
