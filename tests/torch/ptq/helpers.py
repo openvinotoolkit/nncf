@@ -48,7 +48,7 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
     return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype, conv_layer_attrs)
 
 
-def get_single_no_weigth_matmul_nncf_graph() -> NNCFGraphToTest:
+def get_single_no_weight_matmul_nncf_graph() -> NNCFGraphToTest:
     return NNCFGraphToTest(PTModuleLinearMetatype, None, PTNNCFGraph)
 
 
@@ -85,7 +85,7 @@ def get_min_max_algo_for_test():
     params.algorithms = {MinMaxQuantization: min_max_params}
     return PostTrainingQuantization(params)
 
-def get_min_max_and_fast_bias_correction_algo_for_test():
+def get_min_max_and_fbc_algo_for_test():
     params = PostTrainingQuantizationParameters()
     params.algorithms = {
         MinMaxQuantization: params.algorithms[MinMaxQuantization],
