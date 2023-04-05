@@ -14,6 +14,7 @@
 from typing import List
 
 import torch
+from torch import nn
 
 from nncf import NNCFConfig
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -32,6 +33,7 @@ from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.models import NNCFGraphToTestSumAggregation
+from tests.torch.helpers import create_conv
 
 
 def get_single_conv_nncf_graph() -> NNCFGraphToTest:
@@ -102,3 +104,14 @@ def mock_collect_statistics(mocker):
     _ = mocker.patch(
         'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics',
         return_value=PTMinMaxTensorStatistic(min_, max_))
+
+
+class ConvTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self, bias=True):
+        super().__init__()
+        self.conv = create_conv(1, 2, 2, -1, -2, bias=bias)
+
+    def forward(self, x):
+        return self.conv(x)

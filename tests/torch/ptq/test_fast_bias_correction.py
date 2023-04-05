@@ -17,14 +17,15 @@ from torch import Tensor
 from nncf.data import Dataset
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.torch.nncf_network import ExtraCompressionModuleType
-from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import RandomDatasetMock
+from tests.torch.ptq.helpers import ConvTestModel
 from tests.torch.ptq.helpers import get_min_max_and_fbc_algo_for_test
 from tests.torch.ptq.helpers import get_nncf_network
 
 
-def test_fast_bias_correction_algo():
-    model = BasicConvTestModel()
+@pytest.mark.parametrize("with_bias", (False, True))
+def test_fast_bias_correction_algo(with_bias):
+    model = ConvTestModel(bias=with_bias)
     input_shape = [1, 1, 4, 4]
     nncf_network = get_nncf_network(model, input_shape)
     nncf_network.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
@@ -37,7 +38,10 @@ def test_fast_bias_correction_algo():
     dataset = Dataset(RandomDatasetMock(input_shape), transform_fn)
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=dataset)
 
-    assert not torch.equal(model.conv.bias.data, quantized_model.conv.bias.data)
+    if with_bias:
+        assert not torch.equal(model.conv.bias.data, quantized_model.conv.bias.data)
+    else:
+        assert quantized_model.conv.bias is None
 
 
 @pytest.mark.parametrize(
