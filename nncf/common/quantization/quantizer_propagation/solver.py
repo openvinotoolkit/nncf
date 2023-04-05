@@ -310,7 +310,7 @@ class PostprocessingNodeLocator:
             return False, output
 
         partial_backward_traverse_function = partial(backward_traverse_function, visited_nodes=visited_nodes)
-        output = []
+        output = set()
 
         output_nodes = []
         for output_metatype in OUTPUT_NOOP_METATYPES.values():
@@ -322,7 +322,7 @@ class PostprocessingNodeLocator:
                                                               output=[], traverse_forward=False)
             if self._post_processing_marker_encountered:
                 ignored_node_keys = self._get_ignored_node_keys(node_keys)
-                output.extend(ignored_node_keys)
+                output.update(ignored_node_keys)
 
         return output
 
@@ -908,7 +908,7 @@ class QuantizerPropagationSolver:
                 num_input_activations = quant_prop_graph.get_num_input_activations(node_key)
                 self._num_potential_quantized_activations += num_input_activations
                 if node_key in quant_prop_graph.ignored_node_keys:
-                    nncf_logger.info(f"Not adding activation input quantizer for operation: {node_key}")
+                    nncf_logger.debug(f"Not adding activation input quantizer for operation: {node_key}")
                     continue
                 self._setup_initial_quantizers_for_operator_node(node_key, quant_prop_graph)
 
