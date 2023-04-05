@@ -84,10 +84,10 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Descriptor of the layers which input must not be quantized.
         :param overflow_fix: This option controls whether to apply the overflow issue fix.
-            If set to `disable`, there is no effect. 
-            If set to `enable`, the fix will be applied to all weight quantizers. 
+            If set to `disable`, there is no effect.
+            If set to `enable`, the fix will be applied to all weight quantizers.
             If set to `first_layer_only` the fix will be applied to the first weight quantizers.
-            
+
             The fix itself pushes weights FakeQuantizers effectively use only a half quantization range.
         """
         self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(

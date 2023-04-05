@@ -112,7 +112,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
             If set to `disable`, there is no effect.
             If set to `enable`, the fix will be applied to all weight quantizers.
             If set to `first_layer_only` the fix will be applied to the first weight quantizers.
-            
+
             The fix itself pushes weights FakeQuantizers effectively use only a half quantization range.
         """
         self.number_samples = number_samples
@@ -448,7 +448,7 @@ class MinMaxQuantization(Algorithm):
                     output.update(nodes)
             return output
         return set()
-        
+
     def _apply(self,
                model: TModel,
                statistic_points: Optional[StatisticPointsContainer] = None,
