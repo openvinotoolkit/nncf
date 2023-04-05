@@ -398,3 +398,16 @@ def test_raise_runtimeerror_for_not_matched_scope_names(algo_name):
     with pytest.raises(RuntimeError) as exc_info:
         create_compressed_model_and_algo_for_test(model, config)
     assert "No match has been found among the model" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("algos", (["quantization", ],
+                                   ["magnitude_sparsity", "filter_pruning"]))
+def test_compressed_model_has_controller_references(algos: List[str]):
+    model = BasicLinearTestModel()
+    cc = ConfigCreator()
+    for algo_name in algos:
+        cc.add_algo(algo_name)
+    config = cc.create()
+    register_bn_adaptation_init_args(config)
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    assert compression_ctrl is model.nncf.compression_controller

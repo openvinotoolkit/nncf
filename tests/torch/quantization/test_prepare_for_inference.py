@@ -78,7 +78,7 @@ def check_quantizer_operators(model, levels=255, overflow_fix=True):
                 op = nncf_module.get_pre_op(key).op
                 assert isinstance(op, FakeQuantize)
                 is_symmetric = op.qscheme in [torch.per_tensor_symmetric, torch.per_channel_symmetric]
-                narrow_range = not overflow_fix
+                narrow_range = levels in [255, 256] and not overflow_fix
                 ref_levels = levels - 1 if is_symmetric and narrow_range else levels
                 assert op.quant_max - op.quant_min == ref_levels
 
