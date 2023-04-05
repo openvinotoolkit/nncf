@@ -10,8 +10,3 @@ Welcome to nncf's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
-.. autosummary::
-   :toctree: _autosummary
-
-.. API_ENTITIES_TEMPLATE_ANCHOR
