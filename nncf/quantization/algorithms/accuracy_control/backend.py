@@ -111,12 +111,11 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: TModel, port_id: int) -> Any:
+    def get_weight_value(node_with_weight: NNCFNode, model: TModel, port_id: int) -> Any:
         """
         Returns the weight value for the node with weight.
 
         :param node_with_weight: The node with weight.
-        :param nncf_graph: The NNCF graph.
         :param model: The model that contains this operation.
         :param port_id: The input port ID to get weight input.
         :return: The weight value.

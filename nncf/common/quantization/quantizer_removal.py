@@ -123,10 +123,11 @@ def revert_operations_to_floating_point_precision(operations: List[NNCFNode],
         if node.layer_attributes is not None:
             weight_port_ids = node.layer_attributes.get_const_port_ids()
             for port_id in weight_port_ids:
-                original_weight = node.data[f'original_weight.{port_id}']
-                transformation_layout.register(
-                    command_creator.create_command_to_update_weight(node, original_weight, port_id)
-                )
+                original_weight = node.data.get(f'original_weight.{port_id}', None)
+                if original_weight is not None:
+                    transformation_layout.register(
+                        command_creator.create_command_to_update_weight(node, original_weight, port_id)
+                    )
 
     model_transformer = ModelTransformerFactory.create(quantized_model)
     transformed_model = model_transformer.transform(transformation_layout)
