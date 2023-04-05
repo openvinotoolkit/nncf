@@ -238,13 +238,13 @@ class PostprocessingNodeLocator:
                 output.append(node_key)
         return output
 
-    def get_post_processing_node_keys(self) -> List[str]:
+    def get_post_processing_node_keys(self) -> Set[str]:
         """
         Finds out the nodes of the QuantizerPropagationStateGraph, which are in post-processing part of the model.
         Starting from the output nodes all the nodes are added, until the quantizable nodes with weights are faced.
         If the path with the nodes has the post-processing marker node,
         all the nodes in this path will be added into ignored.
-        :return: The list of the node keys to be ignored.
+        :return: Set of the node keys to be ignored.
         """
 
         visited_nodes = set()
