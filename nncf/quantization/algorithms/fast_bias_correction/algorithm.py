@@ -124,21 +124,24 @@ class FastBiasCorrection(Algorithm):
         self._set_backend_entity(model)
 
         nncf_graph = NNCFGraphFactory.create(model)
-        node_and_bias_value = (
-            (node, self._backend_entity.get_bias_value(node, nncf_graph, model))
-            for node in nncf_graph.get_all_nodes()
-            if self._backend_entity.is_node_with_bias(node, nncf_graph, model)
-        )
 
         model_transformer = ModelTransformerFactory.create(model)
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []
-        for node, bias_value in node_and_bias_value:
+        for node in nncf_graph.get_all_nodes():
+            if not self._backend_entity.is_node_with_bias(node, nncf_graph, model):
+                continue
+
             node_name = node.node_name
+            bias_value = self._backend_entity.get_bias_value(node, nncf_graph, model)
 
             if not self._backend_entity.is_quantized_weights(node, nncf_graph, model):
                 nncf_logger.debug(f'Skipping node {node_name} because weights were not quantized')
+                continue
+
+            if bias_value is None:
+                nncf_logger.debug(f'Skipping node {node_name} because bias_value is None')
                 continue
 
             input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
