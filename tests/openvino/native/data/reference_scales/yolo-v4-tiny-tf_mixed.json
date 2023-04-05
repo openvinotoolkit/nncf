@@ -14334,10 +14334,10 @@
         ]
     },
     "leaky_re_lu_13/LeakyRelu/fq_output_0": {
-        "input_low": -0.6044138073921204,
-        "input_high": 3.561140775680542,
-        "output_low": -0.6044138073921204,
-        "output_high": 3.561140775680542
+        "input_low": -0.7855932116508484,
+        "input_high": 3.5693256855010986,
+        "output_low": -0.7855932116508484,
+        "output_high": 3.5693256855010986
     },
     "conv2d_13/Conv2D/fq_weights_1": {
         "input_low": [
@@ -21518,10 +21518,10 @@
         ]
     },
     "leaky_re_lu_11/LeakyRelu/fq_output_0": {
-        "input_low": -0.5603258013725281,
-        "input_high": 4.5426411628723145,
-        "output_low": -0.5603258013725281,
-        "output_high": 4.5426411628723145
+        "input_low": -0.5701775550842285,
+        "input_high": 4.62251091003418,
+        "output_low": -0.5701775550842285,
+        "output_high": 4.62251091003418
     },
     "conv2d_11/Conv2D/fq_weights_1": {
         "input_low": [
@@ -25118,10 +25118,10 @@
         ]
     },
     "leaky_re_lu_10/LeakyRelu/fq_output_0": {
-        "input_low": -0.785110592842102,
-        "input_high": 2.551609516143799,
-        "output_low": -0.785110592842102,
-        "output_high": 2.551609516143799
+        "input_low": -0.7855932116508484,
+        "input_high": 3.5693256855010986,
+        "output_low": -0.7855932116508484,
+        "output_high": 3.5693256855010986
     },
     "conv2d_10/Conv2D/fq_weights_1": {
         "input_low": [
@@ -32302,10 +32302,10 @@
         ]
     },
     "leaky_re_lu_9/LeakyRelu/fq_output_0": {
-        "input_low": -0.9730269312858582,
-        "input_high": 5.919247150421143,
-        "output_low": -0.9730269312858582,
-        "output_high": 5.919247150421143
+        "input_low": -0.993779182434082,
+        "input_high": 5.855239391326904,
+        "output_low": -0.993779182434082,
+        "output_high": 5.855239391326904
     },
     "conv2d_9/Conv2D/fq_weights_1": {
         "input_low": [
@@ -35902,10 +35902,10 @@
         ]
     },
     "leaky_re_lu_7/LeakyRelu/fq_output_0": {
-        "input_low": -0.6263532042503357,
-        "input_high": 9.35615062713623,
-        "output_low": -0.6263532042503357,
-        "output_high": 9.35615062713623
+        "input_low": -0.7652093768119812,
+        "input_high": 9.504706382751465,
+        "output_low": -0.7652093768119812,
+        "output_high": 9.504706382751465
     },
     "conv2d_7/Conv2D/fq_weights_1": {
         "input_low": [
@@ -37710,10 +37710,10 @@
         ]
     },
     "leaky_re_lu_6/LeakyRelu/fq_output_0": {
-        "input_low": -0.9872968792915344,
-        "input_high": 3.590170383453369,
-        "output_low": -0.9872968792915344,
-        "output_high": 3.590170383453369
+        "input_low": -0.993779182434082,
+        "input_high": 5.855239391326904,
+        "output_low": -0.993779182434082,
+        "output_high": 5.855239391326904
     },
     "conv2d_6/Conv2D/fq_weights_1": {
         "input_low": [
@@ -41311,9 +41311,9 @@
     },
     "leaky_re_lu_5/LeakyRelu/fq_output_0": {
         "input_low": -1.2554621696472168,
-        "input_high": 5.2780656814575195,
+        "input_high": 10.178211212158203,
         "output_low": -1.2554621696472168,
-        "output_high": 5.2780656814575195
+        "output_high": 10.178211212158203
     },
     "conv2d_5/Conv2D/fq_weights_1": {
         "input_low": [
@@ -43118,10 +43118,10 @@
         ]
     },
     "leaky_re_lu_3/LeakyRelu/fq_output_0": {
-        "input_low": -0.6521164178848267,
-        "input_high": 5.743640899658203,
-        "output_low": -0.6521164178848267,
-        "output_high": 5.743640899658203
+        "input_low": -0.791810154914856,
+        "input_high": 6.170658588409424,
+        "output_low": -0.791810154914856,
+        "output_high": 6.170658588409424
     },
     "conv2d_3/Conv2D/fq_weights_1": {
         "input_low": [
@@ -44030,10 +44030,10 @@
         ]
     },
     "leaky_re_lu_2/LeakyRelu/fq_output_0": {
-        "input_low": -0.8225899934768677,
-        "input_high": 10.21743392944336,
-        "output_low": -0.8225899934768677,
-        "output_high": 10.21743392944336
+        "input_low": -1.2554621696472168,
+        "input_high": 10.178211212158203,
+        "output_low": -1.2554621696472168,
+        "output_high": 10.178211212158203
     },
     "conv2d_2/Conv2D/fq_weights_1": {
         "input_low": [
@@ -49477,9 +49477,9 @@
     },
     "leaky_re_lu_8/LeakyRelu/fq_output_0": {
         "input_low": -0.7652093768119812,
-        "input_high": 7.365140438079834,
+        "input_high": 9.504706382751465,
         "output_low": -0.7652093768119812,
-        "output_high": 7.365140438079834
+        "output_high": 9.504706382751465
     },
     "conv2d_8/Conv2D/fq_weights_1": {
         "input_low": [
@@ -51285,9 +51285,9 @@
     },
     "leaky_re_lu_12/LeakyRelu/fq_output_0": {
         "input_low": -0.5701775550842285,
-        "input_high": 4.276331901550293,
+        "input_high": 4.62251091003418,
         "output_low": -0.5701775550842285,
-        "output_high": 4.276331901550293
+        "output_high": 4.62251091003418
     },
     "conv2d_12/Conv2D/fq_weights_1": {
         "input_low": [
@@ -54884,10 +54884,10 @@
         ]
     },
     "up_sampling2d/resize/ResizeNearestNeighbor/fq_output_0": {
-        "input_low": -0.49521908164024353,
-        "input_high": 3.578357219696045,
-        "output_low": -0.49521908164024353,
-        "output_high": 3.578357219696045
+        "input_low": -0.7855932116508484,
+        "input_high": 3.5693256855010986,
+        "output_low": -0.7855932116508484,
+        "output_high": 3.5693256855010986
     },
     "leaky_re_lu_17/LeakyRelu/fq_output_0": {
         "input_low": -0.49521908164024353,

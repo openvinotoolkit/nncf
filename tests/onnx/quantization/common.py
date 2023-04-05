@@ -36,6 +36,7 @@ REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
 def mock_collect_statistics(mocker):
+    get_statistics_value = ONNXMinMaxTensorStatistic(min_values=-1, max_values=1)
     _ = mocker.patch(
         'nncf.quantization.fake_quantize.calculate_quantizer_parameters',
         return_value=FakeQuantizeParameters(np.array(0), np.array(0), np.array(0), np.array(0), 256))
@@ -43,7 +44,7 @@ def mock_collect_statistics(mocker):
         'nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics', return_value=None)
     _ = mocker.patch(
         'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics',
-        return_value=ONNXMinMaxTensorStatistic(min_values=np.array(0), max_values=np.array(0)))
+        return_value=get_statistics_value)
 
 
 def _get_input_keys(original_model: onnx.ModelProto) -> str:
