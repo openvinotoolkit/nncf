@@ -460,3 +460,24 @@ class MatmulSoftmaxMatmulBlock(OVReferenceModel):
         result = opset.result(matmul_2, name="Result")
         model = ov.Model([result], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class IntegerModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 192, 1], name="Input")
+        convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
+        gather_1 = opset.gather(convert_1, 2, axis=0, batch_dims=0)
+        gather_2_data = self._rng.random((369, 160)).astype(np.float32)
+        gather_2 = opset.gather(gather_2_data, gather_1, axis=0, batch_dims=0)
+        gather_3 = opset.gather(gather_2, 2, axis=0, batch_dims=0)
+        matmul_1_data = self._rng.random((160, 160)).astype(np.float32)
+        matmul_1 = opset.matmul(gather_3, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_1")
+        gather_4 = opset.gather(input_1, 0, axis=2, batch_dims=0)
+        matmul_1_data = self._rng.random((160, 192)).astype(np.float32)
+        matmul_2 = opset.matmul(gather_4, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_2")
+        add_1 = opset.add(matmul_1, matmul_2, name="Add_1")
+
+        result = opset.result(add_1, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
