@@ -70,7 +70,7 @@ def should_consider_scope(
     :return: A boolean value specifying whether a serializable_id should be considered (i.e. "not ignored", "targeted")
     """
     string_id = str(serializable_id)
-    return (target_scopes is None or matches_any(string_id, target_scopes)) \
+    return (not target_scopes or matches_any(string_id, target_scopes)) \
                and not matches_any(string_id, ignored_scopes)
 
 

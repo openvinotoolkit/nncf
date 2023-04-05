@@ -24,6 +24,7 @@ from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
+from typing import Union
 
 import networkx as nx
 
@@ -55,6 +56,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.scopes import matches_any
+from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
@@ -346,7 +348,9 @@ class QuantizerPropagationSolver:
 
     def __init__(self,
                  ignored_scopes: List[str] = None,
+                 ignored_scopes_per_group: Dict[QuantizerGroup, List[str]] = None,
                  target_scopes: List[str] = None,
+                 target_scopes_per_group: Dict[QuantizerGroup, List[str]] = None,
                  hw_config: HWConfig = None,
                  default_trait_to_metatype_map: Dict[QuantizationTrait, List[OperatorMetatype]] = None,
                  propagation_strategy: PropagationStrategy = None,
@@ -365,9 +369,16 @@ class QuantizerPropagationSolver:
           and ignore matching nodes. Ignored nodes will not have quantizers applied to their inputs (even if
           required by node's metatype and HW config), and the downstream quantizers will not propagate upwards
           through the corresponding node.
+        :param ignored_scopes_per_group: A dict stores mapping of quantizer group to list of strings
+          to match against NNCFGraph node names and ignore matching nodes.
+          Ignored nodes will not have quantizers applied to corresponing quantizer group.
         :param target_scopes: A list of strings to match against NNCFGraph and define a set of nodes
           to be considered during quantizer propagation. When `ignored_scopes` is a "denylist",
           the `target_scopes` is an "allowlist"; otherwise, same effects apply as for `ignored_scopes`.
+        :param target_scopes_per_group: A dict stores mapping of quantizer group to list of strings
+          to match against NNCFGraph and define a set of nodes to be considered during quantizer propagation.
+          When `ignored_scopes_per_group` is a "denylist" for quantizer group,
+          the `target_scopes_per_group` is an "allowlist"; otherwise, same effects apply as for `ignored_scopes_per_group`.
         :param hw_config: A hardware config to be used for determining the set of operations to be quantized with
         respect to their inputs and, for every such operation, the set of allowed quantizer configurations
         :param default_trait_to_metatype_map: The mapping of QuantizationTrait's to the metatypes to be associated with
@@ -415,13 +426,37 @@ class QuantizerPropagationSolver:
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
         self._operator_allowed_qconfigs_map = self._get_operator_qconfigs_map()
         self._quantize_outputs = quantize_outputs
+        self._ignored_scopes = QuantizerPropagationSolver._str_or_list_to_list(ignored_scopes)
+        self._target_scopes = QuantizerPropagationSolver._str_or_list_to_list(target_scopes)
+        self._weight_quantizable_node_names_vs_qconfigs = {}  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
         if quantizable_layer_nodes is not None:
-            self._weight_quantizable_node_names_vs_qconfigs = {
-                x.node.node_name: x.qconfig_list for x in quantizable_layer_nodes
-                                                 if x.node.node_name not in ignored_scopes
-            }  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
-        else:
-            self._weight_quantizable_node_names_vs_qconfigs = {}  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
+            weights_ignored_scopes = deepcopy(self._ignored_scopes)
+            if ignored_scopes_per_group:
+                weights_ignored_scopes += QuantizerPropagationSolver._str_or_list_to_list(
+                    ignored_scopes_per_group[QuantizerGroup.WEIGHTS]
+                )
+
+            weights_target_scopes = deepcopy(self._target_scopes)
+            if target_scopes_per_group:
+                weights_target_scopes += QuantizerPropagationSolver._str_or_list_to_list(
+                    target_scopes_per_group[QuantizerGroup.WEIGHTS]
+                )
+            for x in quantizable_layer_nodes:
+                node_name = x.node.node_name
+                if should_consider_scope(node_name,
+                                         ignored_scopes=weights_ignored_scopes,
+                                         target_scopes=weights_target_scopes):
+                    self._weight_quantizable_node_names_vs_qconfigs[node_name] = x.qconfig_list
+
+        if ignored_scopes_per_group:
+            self._ignored_scopes += QuantizerPropagationSolver._str_or_list_to_list(
+                ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS]
+            )
+        if target_scopes_per_group:
+            self._target_scopes += QuantizerPropagationSolver._str_or_list_to_list(
+                target_scopes_per_group[QuantizerGroup.ACTIVATIONS]
+            )
+
         if scope_overrides is None:
             self._scope_overrides = {}
         else:
@@ -444,14 +479,18 @@ class QuantizerPropagationSolver:
                         self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
         self._active_propagating_quantizers_queue = deque()
         self._finished_propagating_quantizers = []  # type: List[PropagatingQuantizer]
-        self._ignored_scopes = ignored_scopes
-        self._target_scopes = target_scopes
         self._quantizers_waiting_for_branch_merge = QuantizersWaitingForMergeManager()
 
         self._potential_quantizers = {}
         self._num_potential_quantized_activations = 0
         self._quantizable_layer_nodes = quantizable_layer_nodes
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
+
+    @staticmethod
+    def _str_or_list_to_list(list_or_str: Union[List[str], str]) -> List[str]:
+        if list_or_str is None:
+            return []
+        return [list_or_str] if isinstance(list_or_str, str) else list_or_str
 
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
         """

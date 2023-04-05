@@ -318,13 +318,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
         self.ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes', [])
-        if self.ignored_scopes is not None:
-            self.ignored_scopes_per_group[quantizer_group] += self.ignored_scopes
-        target_scopes = params_dict_from_config.get('target_scopes')
-        if target_scopes is None and self.target_scopes is not None:
-            self.target_scopes_per_group[quantizer_group] = self.target_scopes
-        else:
-            self.target_scopes_per_group[quantizer_group] = target_scopes
+        self.target_scopes_per_group[quantizer_group] = params_dict_from_config.get('target_scopes')
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
         qconfig = deepcopy(self.DEFAULT_QCONFIG)
@@ -567,10 +561,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if metatype in OUTPUT_NOOP_METATYPES:
                 continue
 
-            if not (metatype in QUANTIZATION_LAYER_METATYPES
-                    and should_consider_scope(node.node_name,
-                                              ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
-                                              target_scopes=None)):
+            if not metatype in QUANTIZATION_LAYER_METATYPES:
                 continue
 
             assert issubclass(metatype, TFLayerWithWeightsMetatype) or \
@@ -604,12 +595,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             nncf_logger.warning(
                 f'Following custom layers will be ignored during quantization (custom layer quantization not supported '
                 f'by NNCF yet):\n[{custom_layer_node_names_str}]')
-        ignored_scopes_for_solver = self.ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS] + \
+        ignored_scopes_for_solver = self.ignored_scopes + \
                                     input_preprocessing_node_names + custom_layer_node_names
-
         solver = QuantizerPropagationSolver(
             ignored_scopes=ignored_scopes_for_solver,
-            target_scopes=self.target_scopes_per_group[QuantizerGroup.ACTIVATIONS],
+            ignored_scopes_per_group=self.ignored_scopes_per_group,
+            target_scopes=self.target_scopes,
+            target_scopes_per_group=self.target_scopes_per_group,
             hw_config=self.hw_config,
             default_trait_to_metatype_map=DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT,
             default_qconfig_list=[self._get_default_qconfig(
