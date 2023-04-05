@@ -36,6 +36,7 @@ from nncf.torch.graph.transformations.command_creation import create_bias_correc
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.tensor import PTNNCFTensor
@@ -112,7 +113,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> bool:
         node_module = model.get_containing_module(node.node_name)
         for pre_op in node_module.pre_ops.values():
-            if isinstance(pre_op.op, (BaseQuantizer, FakeQuantize)):
+            if isinstance(pre_op, UpdateWeight) and isinstance(pre_op.op, (BaseQuantizer, FakeQuantize)):
                 return True
         return False
 
