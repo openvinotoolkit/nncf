@@ -94,7 +94,7 @@ class OVModelTransformer(ModelTransformer):
         if model_extraction_transformation:
             model = self._apply_model_extraction_transformation(model, model_extraction_transformation)
         if inplace_stat_transformations:
-            model = self._apply_inplace_operation_insertion(model, inplace_stat_transformations)
+            model = self._apply_insert_operation(model, inplace_stat_transformations)
         if output_insertion_transformations:
             model = self._apply_output_insertion_transformations(model, output_insertion_transformations)
         return model
@@ -359,8 +359,8 @@ class OVModelTransformer(ModelTransformer):
         return ov.Model(results, params)
 
     @staticmethod
-    def _apply_inplace_operation_insertion(model: ov.Model,
-                                           transformations: OVInplaceFnInsertionCommand) -> ov.Model:
+    def _apply_insert_operation(model: ov.Model,
+                                transformations: OVInplaceFnInsertionCommand) -> ov.Model:
         """
         Applies inplace fn insertion transformation to the model.
 

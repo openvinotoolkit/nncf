@@ -91,10 +91,10 @@ class StatisticsAggregator(ABC):
     def _get_transformation_layout_extra_outputs(self,
                                                  statistic_points: StatisticPointsContainer) -> TransformationLayout:
         """
-        Creates backend-specific transformation layout for the further statistics collection
+        Creates backend-specific transformation layout for the further statistics collection.
 
         :param statistic_points: StatisticPointsContainer to add outputs
-        :returns: TransformationLayout with the corresponding transformations
+        :return: TransformationLayout with the corresponding transformations
         """
 
     @staticmethod
@@ -109,7 +109,7 @@ class StatisticsAggregator(ABC):
 
         :param statistic_points: Registered statistic points with possible tensor collectors duplicates.
         :param model: Framework specific target model.
-        :returns: Merged statistic points container bounded with given statistic point container.
+        :return: Merged statistic points container bounded with given statistic point container.
         """
 
     @staticmethod
@@ -119,5 +119,5 @@ class StatisticsAggregator(ABC):
         Post-process model outputs for the further statistics collection.
 
         :param outputs: raw model outputs
-        :returns: processed model outputs in Dict[str, NNCFTensor] format
+        :return: processed model outputs in Dict[str, NNCFTensor] format
         """

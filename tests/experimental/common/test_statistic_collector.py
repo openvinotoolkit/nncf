@@ -48,7 +48,7 @@ class DummyTensorAggregatorA(DummyTensorAggregator):
     pass
 
 
-def test_aggregator_enabled():
+def test_aggregator_enabled_and_reset():
     collector = TensorCollector()
     reducer = DummyTensorReducer('Dummy')
     aggregator = DummyTensorAggregator(5)
@@ -57,19 +57,26 @@ def test_aggregator_enabled():
 
     for _ in range(3):
         collector.register_inputs(inputs)
+    assert len(aggregator._container) == 3
     assert aggregator._collected_samples == 3
 
     collector.disable()
 
     for _ in range(3):
         collector.register_inputs(inputs)
+    assert len(aggregator._container) == 3
     assert aggregator._collected_samples == 3
 
     collector.enable()
 
     for _ in range(3):
         collector.register_inputs(inputs)
+    assert len(aggregator._container) == 5
     assert aggregator._collected_samples == 5
+
+    collector.reset()
+    assert len(aggregator._container) == 0
+    assert aggregator._collected_samples == 0
 
 
 def test_duplicated_statistics_are_merged():

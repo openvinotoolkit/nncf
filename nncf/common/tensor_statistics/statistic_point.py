@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Callable, Generator, Optional
+from typing import Callable, Generator, Optional, Tuple
 
 from collections import UserDict
 
@@ -50,7 +50,12 @@ class StatisticPointsContainer(UserDict):
     Container with iteration interface for handling a composition of StatisticPoint.
     """
 
-    def add_statistic_point(self, statistic_point: StatisticPoint):
+    def add_statistic_point(self, statistic_point: StatisticPoint) -> None:
+        """
+        Method to add statistic point to statistic point container.
+
+        :param statistic_point: Statistic point to add.
+        """
         target_node_name = statistic_point.target_point.target_node_name
         if target_node_name not in self.data:
             self.data[target_node_name] = [statistic_point]
@@ -69,7 +74,14 @@ class StatisticPointsContainer(UserDict):
 
     def iter_through_statistic_points_in_target_node(self, target_node_name: str,
                                                      statistic_point_condition_func: Callable[
-                                                         [StatisticPoint], bool]):
+                                                         [StatisticPoint], bool]) -> StatisticPoint:
+        """
+        Returns iterable through all statistic points in node with target_node_name.
+
+        :param statistic_point_condition_func: Callable to filter statistic containers according to
+            its statistic point.
+        :return: Iterable through all statistic points in node with target_node_name.
+        """
         _statistic_points = self.data[target_node_name]
         for _statistic_point in _statistic_points:
             if statistic_point_condition_func(_statistic_point):
@@ -77,7 +89,16 @@ class StatisticPointsContainer(UserDict):
 
     def get_tensor_collectors(
             self,
-            statistic_point_condition_func: Optional[Callable[[StatisticPoint], bool]] = None):
+            statistic_point_condition_func: Optional[Callable[[StatisticPoint], bool]] = None) ->\
+                Generator[Tuple['Algorithm', StatisticPoint, TensorStatisticCollectorBase], None, None]:
+        """
+        Returns iterable through all tensor collectors.
+
+        :param statistic_point_condition_func: Callable to filter statistic containers according to
+            its statistic point. Filter nothing by default.
+        :return: Iterable through all tensor collectors in form of tuple of algorithm description,
+            correspondent statistic point and tensor collector.
+        """
         if statistic_point_condition_func is None:
             def default_filter(stat_point: StatisticPoint):
                 return True
@@ -96,7 +117,13 @@ class StatisticPointsContainer(UserDict):
             target_node_name: str,
             statistic_point_condition_func: Callable[[StatisticPoint], bool],
             algorithm: 'Algorithm') -> Generator[TensorStatisticCollectorBase, None, None]:
+        """
+        Returns iterable through all statistic collectors in node with target_node_name.
 
+        :param statistic_point_condition_func: Callable to filter statistic containers according to
+            its statistic point.
+        :return: Iterable through all statistic collectors in node with target_node_name.
+        """
         for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name,
                                                                                   statistic_point_condition_func):
             for _tensor_collector in _statistic_point.algorithm_to_tensor_collectors[algorithm]:
