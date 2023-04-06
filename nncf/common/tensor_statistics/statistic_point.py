@@ -34,10 +34,11 @@ class StatisticPoint:
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
 
     def __eq__(self, other):
-        if self.target_point == other.target_point and \
-                self.algorithm_to_tensor_collectors == other.self.algorithm_to_tensor_collectors:
-            return True
-        return False
+        return (
+            self.target_point == other.target_point
+            and self.algorithm_to_tensor_collectors
+            == other.self.algorithm_to_tensor_collectors
+        )
 
     def register_tensor(self, x: TensorType):
         for tensor_collectors in self.algorithm_to_tensor_collectors.values():
@@ -72,8 +73,9 @@ class StatisticPointsContainer(UserDict):
                         return
             self.data[target_node_name].append(statistic_point)
 
-    def iter_through_statistic_points_in_target_node(self, target_node_name: str,
-                                                     filter_fn: Callable[[StatisticPoint], bool]) -> StatisticPoint:
+    def iter_through_statistic_points_in_target_node(
+        self, target_node_name: str, filter_fn: Callable[[StatisticPoint], bool]
+    ) -> StatisticPoint:
         """
         Returns iterable through all statistic points in node with target_node_name.
 
@@ -86,9 +88,10 @@ class StatisticPointsContainer(UserDict):
                 yield _statistic_point
 
     def get_tensor_collectors(
-            self,
-            filter_fn: Optional[Callable[[StatisticPoint], bool]] = None) \
-            -> Generator[Tuple['Algorithm', StatisticPoint, TensorStatisticCollectorBase], None, None]:
+        self, filter_fn: Optional[Callable[[StatisticPoint], bool]] = None
+    ) -> Generator[
+        Tuple["Algorithm", StatisticPoint, TensorStatisticCollectorBase], None, None
+    ]:
         """
         Returns iterable through all tensor collectors.
 
@@ -111,10 +114,11 @@ class StatisticPointsContainer(UserDict):
                         yield algorithm, statistic_point, tensor_collector
 
     def get_algo_statistics_for_node(
-            self,
-            target_node_name: str,
-            filter_fn: Callable[[StatisticPoint], bool],
-            algorithm: 'Algorithm') -> Generator[TensorStatisticCollectorBase, None, None]:
+        self,
+        target_node_name: str,
+        filter_fn: Callable[[StatisticPoint], bool],
+        algorithm: "Algorithm",
+    ) -> Generator[TensorStatisticCollectorBase, None, None]:
         """
         Returns iterable through all statistic collectors in node with target_node_name.
 
