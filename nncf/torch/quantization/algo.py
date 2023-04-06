@@ -68,7 +68,6 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
-from nncf.common.scopes import matches_any
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model

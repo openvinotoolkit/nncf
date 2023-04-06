@@ -377,8 +377,8 @@ class QuantizerPropagationSolver:
           the `target_scopes` is an "allowlist"; otherwise, same effects apply as for `ignored_scopes`.
         :param target_scopes_per_group: A dict stores mapping of quantizer group to list of strings
           to match against NNCFGraph and define a set of nodes to be considered during quantizer propagation.
-          When `ignored_scopes_per_group` is a "denylist" for quantizer group,
-          the `target_scopes_per_group` is an "allowlist"; otherwise, same effects apply as for `ignored_scopes_per_group`.
+          When `ignored_scopes_per_group` is a "denylist" for quantizer group, the `target_scopes_per_group`
+          is an "allowlist"; otherwise, same effects apply as for `ignored_scopes_per_group`.
         :param hw_config: A hardware config to be used for determining the set of operations to be quantized with
         respect to their inputs and, for every such operation, the set of allowed quantizer configurations
         :param default_trait_to_metatype_map: The mapping of QuantizationTrait's to the metatypes to be associated with
@@ -428,25 +428,8 @@ class QuantizerPropagationSolver:
         self._quantize_outputs = quantize_outputs
         self._ignored_scopes = QuantizerPropagationSolver._str_or_list_to_list(ignored_scopes)
         self._target_scopes = QuantizerPropagationSolver._str_or_list_to_list(target_scopes)
-        self._weight_quantizable_node_names_vs_qconfigs = {}  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
-        if quantizable_layer_nodes is not None:
-            weights_ignored_scopes = deepcopy(self._ignored_scopes)
-            if ignored_scopes_per_group:
-                weights_ignored_scopes += QuantizerPropagationSolver._str_or_list_to_list(
-                    ignored_scopes_per_group[QuantizerGroup.WEIGHTS]
-                )
-
-            weights_target_scopes = deepcopy(self._target_scopes)
-            if target_scopes_per_group:
-                weights_target_scopes += QuantizerPropagationSolver._str_or_list_to_list(
-                    target_scopes_per_group[QuantizerGroup.WEIGHTS]
-                )
-            for x in quantizable_layer_nodes:
-                node_name = x.node.node_name
-                if should_consider_scope(node_name,
-                                         ignored_scopes=weights_ignored_scopes,
-                                         target_scopes=weights_target_scopes):
-                    self._weight_quantizable_node_names_vs_qconfigs[node_name] = x.qconfig_list
+        self._weight_quantizable_node_names_vs_qconfigs = self._filter_by_weight_ignored_target_scopes(
+            quantizable_layer_nodes, ignored_scopes_per_group, target_scopes_per_group)
 
         if ignored_scopes_per_group:
             self._ignored_scopes += QuantizerPropagationSolver._str_or_list_to_list(
@@ -491,6 +474,34 @@ class QuantizerPropagationSolver:
         if list_or_str is None:
             return []
         return [list_or_str] if isinstance(list_or_str, str) else list_or_str
+
+    def _filter_by_weight_ignored_target_scopes(self,
+                                                quantizable_layer_nodes: List[QuantizableWeightedLayerNode],
+                                                ignored_scopes_per_group: Dict[QuantizerGroup, List[str]],
+                                                target_scopes_per_group: Dict[QuantizerGroup, List[str]]
+    ) -> Dict[NNCFNodeName, List[QuantizerConfig]]:
+        weight_quantizable_node_names_vs_qconfigs = {}
+        if quantizable_layer_nodes is not None:
+            weights_ignored_scopes = deepcopy(self._ignored_scopes)
+            if ignored_scopes_per_group:
+                weights_ignored_scopes += QuantizerPropagationSolver._str_or_list_to_list(
+                    ignored_scopes_per_group[QuantizerGroup.WEIGHTS]
+                )
+
+            weights_target_scopes = deepcopy(self._target_scopes)
+            if target_scopes_per_group:
+                weights_target_scopes += QuantizerPropagationSolver._str_or_list_to_list(
+                    target_scopes_per_group[QuantizerGroup.WEIGHTS]
+                )
+            for x in quantizable_layer_nodes:
+                node_name = x.node.node_name
+                if should_consider_scope(node_name,
+                                        ignored_scopes=weights_ignored_scopes,
+                                        target_scopes=weights_target_scopes):
+                    weight_quantizable_node_names_vs_qconfigs[node_name] = x.qconfig_list
+                else:
+                    nncf_logger.info(f"Ignored adding weight quantizer for: {node_name}")
+        return weight_quantizable_node_names_vs_qconfigs
 
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
         """

@@ -48,7 +48,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.scopes import check_scopes_in_graph
-from nncf.common.scopes import should_consider_scope
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import copy_model
@@ -595,8 +594,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             nncf_logger.warning(
                 f'Following custom layers will be ignored during quantization (custom layer quantization not supported '
                 f'by NNCF yet):\n[{custom_layer_node_names_str}]')
-        ignored_scopes_for_solver = self.ignored_scopes + \
-                                    input_preprocessing_node_names + custom_layer_node_names
+        ignored_scopes_for_solver = input_preprocessing_node_names + custom_layer_node_names
+        if self.ignored_scopes:
+            ignored_scopes_for_solver += self.ignored_scopes
         solver = QuantizerPropagationSolver(
             ignored_scopes=ignored_scopes_for_solver,
             ignored_scopes_per_group=self.ignored_scopes_per_group,
