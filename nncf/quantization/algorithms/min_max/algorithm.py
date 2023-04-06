@@ -43,6 +43,7 @@ from nncf.common.utils.backend import get_backend
 from nncf.common.logging import nncf_logger
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
@@ -51,6 +52,7 @@ from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -58,6 +60,24 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.factory import ModelTransformerFactory
 
 TModel = TypeVar('TModel')
+
+
+def _filter_target_points_by_metatypes(quantization_target_points: Set[TargetPoint],
+                                       metatypes: List[OperatorMetatype],
+                                       nncf_graph: NNCFGraph) -> Set[TargetPoint]:
+    """Returns TargetPoints which are suited to a node having metatype specified in 'metatypes'.
+
+    :param quantization_target_points: TargetPoints to be filtered.
+    :param metatypes: Metatypes that pass filtering.
+    :param nncf_graph: Instance of NNCFgraph used to get node by name.
+    :return: Filtered TargetPoints.
+    """
+    output = set()
+    for quantization_target_point in quantization_target_points:
+        node = nncf_graph.get_node_by_name(quantization_target_point.target_node_name)
+        if node.metatype in metatypes:
+            output.add(quantization_target_point)
+    return output
 
 
 class MinMaxQuantizationParameters(AlgorithmParameters):
@@ -393,24 +413,21 @@ class MinMaxQuantization(Algorithm):
         quantization_points.sort(key=lambda point: node_names_to_pos[point.insertion_point.target_node_name])
         return quantization_points
 
-    def _get_first_quantized_weight_nodes(self, quantization_points: List[TargetPoint],
+    def _get_first_quantized_convolutions(self, quantization_points: List[TargetPoint],
                                           starting_node: NNCFNode,
-                                          nncf_graph: NNCFGraph) -> Optional[List[TargetPoint]]:
+                                          nncf_graph: NNCFGraph) -> List[TargetPoint]:
         """
-        Returns target points connected to a first visited node, which are included in quantization_points.
-        A traversal of nncf_graph is started from starting_node.
+        Returns target points connected to a first visited node with Convolution metatype,
+            which are included in quantization_points. A traversal of nncf_graph is started from starting_node.
 
         :param quantization_points: Quantization target points.
-        :param starting_node: Node from which traversing is started.
+        :param starting_node: Node from which traversal is started.
         :param nncf_graph: Instance of NNCFGraph to traverse.
         :return: First visited target points.
         """
-        target_node_names_to_qp = {}
+        target_node_names_to_qp = collections.defaultdict(list)
         for q_p in quantization_points:
-            if q_p.target_node_name not in target_node_names_to_qp:
-                target_node_names_to_qp[q_p.target_node_name] = [q_p]
-            else:
-                target_node_names_to_qp[q_p.target_node_name].append(q_p)
+            target_node_names_to_qp[q_p.target_node_name].append(q_p)
         queue = collections.deque(nncf_graph.get_next_nodes(starting_node))
         while queue:
             node = queue.popleft()
@@ -418,36 +435,35 @@ class MinMaxQuantization(Algorithm):
             if node_name in target_node_names_to_qp:
                 return target_node_names_to_qp[node_name]
             queue.extend(nncf_graph.get_next_nodes(node))
-        return None
+        return []
 
     def _get_quantization_points_overflow_fix(self, overflow_fix: OverflowFix,
                                               quantization_target_points: OrderedDict[TargetPoint, QuantizerConfig],
                                               nncf_graph: NNCFGraph) -> Set[TargetPoint]:
         """
         Returns quantization target points, for whom overflow_fix should be applied.
-        If overflow_fix is enable, returns all weights quantization target points.
-        If overflow_fix is disable, returns an empty set.
-        If overflow_fix is first_layer_only, returns all first weights quantization target points.
+        See description in nncf/nncf/quantization/algorithms/definitions.py
 
         :param overflow_fix: OverflowFix parameter.
         :param quantization_target_points: Quantization target points.
         :param nncf_graph: Instance of NNCFGraph to traverse.
-        :return: If overflow_fix is enable, returns all weights quantization target points.
-                 If overflow_fix is disable, returns an empty set.
-                 If overflow_fix is first_layer_only, returns all first weights quantization target points.
+        :return: quantization target points to apply 
         """
         weight_quantization_points = set(filter(lambda point: point.is_weight_target_point(),
                                                 quantization_target_points.keys()))
+        output = set()
         if overflow_fix == OverflowFix.ENABLE:
-            return weight_quantization_points
+            output = _filter_target_points_by_metatypes(weight_quantization_points,
+                                                        self._backend_entity.overflow_fix_metatypes,
+                                                        nncf_graph)
         if overflow_fix == OverflowFix.FIRST_LAYER:
-            output = set()
+            weight_quantization_points = _filter_target_points_by_metatypes(weight_quantization_points,
+                                                                            self._backend_entity.conv_metatype,
+                                                                            nncf_graph)
             for input_node in nncf_graph.get_input_nodes():
-                nodes = self._get_first_quantized_weight_nodes(weight_quantization_points, input_node, nncf_graph)
-                if nodes:
-                    output.update(nodes)
-            return output
-        return set()
+                nodes = self._get_first_quantized_convolutions(weight_quantization_points, input_node, nncf_graph)
+                output.update(nodes)
+        return output
 
     def _apply(self,
                model: TModel,
@@ -477,15 +493,19 @@ class MinMaxQuantization(Algorithm):
                     weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
                     if weights_name in weight_layer_names:
                         continue
-                    half_range = quantization_target_point in quantization_points_overflow_fix
-                    statistics = tensor_collector.get_statistics()
-                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS, half_range)
+                    weight_layer_names.add(weights_name)
+                    quant_group = QuantizerGroup.WEIGHTS
+                else:
+                    quant_group = QuantizerGroup.ACTIVATIONS
+                    
+                half_range = quantization_target_point in quantization_points_overflow_fix
+                narrow_range = get_quantizer_narrow_range(qconfig, quant_group, half_range)
+                statistics = tensor_collector.get_statistics()
+                parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
+                if quantization_target_point.is_weight_target_point():
                     command = self._backend_entity.create_weight_quantizer_insertion_command(
                         nncf_graph, quantization_target_point, qconfig, parameters)
-                    weight_layer_names.add(weights_name)
                 else:
-                    statistics = tensor_collector.get_statistics()
-                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.ACTIVATIONS)
                     command = self._backend_entity.create_activation_quantizer_insertion_command(
                         nncf_graph, quantization_target_point, qconfig, parameters)
 

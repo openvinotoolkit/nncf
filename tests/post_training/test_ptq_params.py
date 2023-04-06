@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
 
 import pytest
 from abc import abstractmethod
@@ -23,12 +24,14 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 
+from tests.common.quantization.metatypes import TestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import IdentityTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -52,15 +55,15 @@ class ModelToTestOverflowFix:
     #          |
     #       Output_1
     
-    def __init__(self):
+    def __init__(self, metatypes: Dict[TestMetatype, OperatorMetatype]):
         nodes = [NodeWithType('Input_1', InputNoopMetatype),
                  NodeWithType('Input_2', InputNoopMetatype),
-                 NodeWithType('Conv_1', Conv2dTestMetatype),
-                 NodeWithType('FC_1', LinearTestMetatype),
-                 NodeWithType('FC_2', LinearTestMetatype),
+                 NodeWithType('Conv_1', metatypes[Conv2dTestMetatype]),
+                 NodeWithType('FC_1', metatypes[LinearTestMetatype]),
+                 NodeWithType('FC_2', metatypes[LinearTestMetatype]),
                  NodeWithType('Identity_1', IdentityTestMetatype),
                  NodeWithType('Output_2', OutputNoopMetatype),
-                 NodeWithType('SoftMax', SoftmaxTestMetatype),
+                 NodeWithType('SoftMax', metatypes[SoftmaxTestMetatype]),
                  NodeWithType('Output_1', OutputNoopMetatype),
                  ]
         node_edges = [('Input_1', 'Conv_1'), ('Conv_1', 'FC_2'), ('FC_2', 'Identity_1'), ('Identity_1', 'SoftMax'),
@@ -69,7 +72,8 @@ class ModelToTestOverflowFix:
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
         self.weight_quantization_target_point_names = []
-        for node in self.nncf_graph.get_nodes_by_metatypes([Conv2dTestMetatype, LinearTestMetatype]):
+        weigth_meatypes = [metatypes[Conv2dTestMetatype], metatypes[LinearTestMetatype]]
+        for node in self.nncf_graph.get_nodes_by_metatypes(weigth_meatypes):
             self.weight_quantization_target_point_names.append(node.node_name)
 
 
@@ -106,6 +110,11 @@ class TemplateTestPTQParams:
 
     @abstractmethod
     def target_point(self, target_type: TargetType, target_node_name: str, port_id: int):
+        pass
+    
+    @property
+    @abstractmethod
+    def metatypes_mapping(self):
         pass
 
     @pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
@@ -220,16 +229,16 @@ class TemplateTestPTQParams:
     @pytest.mark.parametrize('overflow_fix, affected_target_points, ignored_ops', 
                              [
                                  [OverflowFix.DISABLE, [], []],
-                                 [OverflowFix.FIRST_LAYER, ['/Conv_1_0', '/FC_1_0'], []],
-                                 [OverflowFix.FIRST_LAYER, ['/Conv_1_0', '/FC_2_0'], ['/FC_1_0']],
-                                 [OverflowFix.FIRST_LAYER, ['/FC_2_0'], ['/FC_1_0', '/Conv_1_0']],
+                                 [OverflowFix.FIRST_LAYER, ['/Conv_1_0'], []],
+                                 [OverflowFix.FIRST_LAYER, ['/Conv_1_0'], ['/FC_1_0']],
+                                 [OverflowFix.FIRST_LAYER, [], ['/FC_1_0', '/Conv_1_0']],
                                  [OverflowFix.FIRST_LAYER, [], ['/FC_1_0', '/Conv_1_0', '/FC_2_0']],
                                  [OverflowFix.ENABLE, ['/Conv_1_0', '/FC_1_0', '/FC_2_0'], []],
                                  [OverflowFix.ENABLE, ['/FC_1_0'], ['/Conv_1_0', '/FC_2_0']]
                              ])
     def test_quantization_points_overflow_fix(self, overflow_fix, affected_target_points, ignored_ops):
         # Checks the return value of _get_quantization_points_overflow_fix based on the overflow_fix and weight target points.
-        model = ModelToTestOverflowFix()
+        model = ModelToTestOverflowFix(self.metatypes_mapping)
         nncf_graph = model.nncf_graph
        
         # Imitate _get_quantization_target_points
@@ -245,5 +254,6 @@ class TemplateTestPTQParams:
                 filtered_weight_target_points[t_p] = weight_target_points[t_p]
 
         algo = MinMaxQuantization(MinMaxQuantizationParameters())
+        algo._backend_entity = self.get_algo_backend()
         target_points_overflow_fix = algo._get_quantization_points_overflow_fix(overflow_fix, filtered_weight_target_points, nncf_graph)
         assert Counter([t_p.target_node_name for t_p in target_points_overflow_fix]) == Counter(affected_target_points)

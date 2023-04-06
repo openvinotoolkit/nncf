@@ -28,11 +28,18 @@ from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMax
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
 
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 from tests.post_training.models import NNCFGraphToTestMatMul
+from tests.common.quantization.metatypes import Conv2dTestMetatype
+from tests.common.quantization.metatypes import LinearTestMetatype
+from tests.common.quantization.metatypes import SoftmaxTestMetatype
+
 
 
 def get_patterns_setup() -> GraphPattern:
@@ -70,6 +77,12 @@ class TestPTQParams(TemplateTestPTQParams):
 
     def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
         return OVTargetPoint(target_type, target_node_name, port_id)
+
+    @property
+    def metatypes_mapping(self):
+        return {Conv2dTestMetatype: OVConvolutionMetatype,
+                LinearTestMetatype: OVMatMulMetatype,
+                SoftmaxTestMetatype: OVSoftmaxMetatype}
 
     @pytest.fixture(scope='session')
     def test_params(self):

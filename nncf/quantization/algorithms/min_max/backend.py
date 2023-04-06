@@ -58,6 +58,20 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def conv_metatype(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Convolution metatypes.
+        """
+        
+    @property
+    @abstractmethod
+    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes for which overflow_fix is applicable.
+        """
+
+    @property
+    @abstractmethod
     def hw_config(self) -> HWConfig:
         """
         Property for the hardware backend-specific configuration.

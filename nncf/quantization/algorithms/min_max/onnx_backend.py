@@ -38,6 +38,8 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
@@ -63,6 +65,16 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
         return [ONNXShapeMetatype]
+
+    @property
+    def conv_metatype(self) -> List[OperatorMetatype]:
+        return [ONNXConvolutionMetatype]
+
+    @property
+    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+        return [ONNXConvolutionMetatype,
+                ONNXConvolutionTransposeMetatype,
+                ONNXLinearMetatype]
 
     @property
     def hw_config(self) -> HWConfig:
