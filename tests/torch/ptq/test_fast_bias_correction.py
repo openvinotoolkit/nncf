@@ -53,5 +53,5 @@ def test_fast_bias_correction_algo(with_bias):
     ),
 )
 def test_reshape_bias_shift(bias_value, bias_shift, channel_axis, ref_shape):
-    new_bias_shit = FastBiasCorrection.reshape_bias_shift(bias_value, bias_shift, channel_axis)
+    new_bias_shit = FastBiasCorrection.reshape_bias_shift(bias_shift, bias_value, channel_axis)
     assert list(new_bias_shit.shape) == ref_shape
