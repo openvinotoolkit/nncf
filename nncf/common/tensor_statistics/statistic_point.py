@@ -73,39 +73,39 @@ class StatisticPointsContainer(UserDict):
             self.data[target_node_name].append(statistic_point)
 
     def iter_through_statistic_points_in_target_node(self, target_node_name: str,
-                                                     filter: Callable[[StatisticPoint], bool]) -> StatisticPoint:
+                                                     filter_fn: Callable[[StatisticPoint], bool]) -> StatisticPoint:
         """
         Returns iterable through all statistic points in node with target_node_name.
 
-        :param filter: Callable to filter statistic containers according to its statistic point.
+        :param filter_fn: Callable to filter statistic containers according to its statistic point.
         :return: Iterable through all statistic points in node with target_node_name.
         """
         _statistic_points = self.data[target_node_name]
         for _statistic_point in _statistic_points:
-            if filter(_statistic_point):
+            if filter_fn(_statistic_point):
                 yield _statistic_point
 
     def get_tensor_collectors(
             self,
-            filter: Optional[Callable[[StatisticPoint], bool]] = None) \
+            filter_fn: Optional[Callable[[StatisticPoint], bool]] = None) \
             -> Generator[Tuple['Algorithm', StatisticPoint, TensorStatisticCollectorBase], None, None]:
         """
         Returns iterable through all tensor collectors.
 
-        :param filter: Callable to filter statistic containers according to
-            its statistic point. Filter nothing by default.
+        :param filter_fn: Callable to filter statistic containers according to
+            its statistic point. filter nothing by default.
         :return: Iterable through all tensor collectors in form of tuple of algorithm description,
             correspondent statistic point and tensor collector.
         """
-        if filter is None:
-            def default_filter(stat_point: StatisticPoint):
+        if filter_fn is None:
+            def default_filter_fn(stat_point: StatisticPoint):
                 return True
-            filter = default_filter
+            filter_fn = default_filter_fn
 
         for target_node_name in self.data:
             for statistic_point in\
                 self.iter_through_statistic_points_in_target_node(target_node_name,
-                                                                  filter):
+                                                                  filter_fn):
                 for algorithm, tensor_collectors in statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
                         yield algorithm, statistic_point, tensor_collector
@@ -113,15 +113,15 @@ class StatisticPointsContainer(UserDict):
     def get_algo_statistics_for_node(
             self,
             target_node_name: str,
-            filter: Callable[[StatisticPoint], bool],
+            filter_fn: Callable[[StatisticPoint], bool],
             algorithm: 'Algorithm') -> Generator[TensorStatisticCollectorBase, None, None]:
         """
         Returns iterable through all statistic collectors in node with target_node_name.
 
-        :param filter: Callable to filter statistic containers according to its statistic point.
+        :param filter_fn: Callable to filter statistic containers according to its statistic point.
         :return: Iterable through all statistic collectors in node with target_node_name.
         """
         for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name,
-                                                                                  filter):
+                                                                                  filter_fn):
             for _tensor_collector in _statistic_point.algorithm_to_tensor_collectors[algorithm]:
                 yield _tensor_collector
