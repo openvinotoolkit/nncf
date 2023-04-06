@@ -23,8 +23,11 @@ from tests.torch.ptq.helpers import get_min_max_and_fbc_algo_for_test
 from tests.torch.ptq.helpers import get_nncf_network
 
 
-@pytest.mark.parametrize("with_bias", (False, True))
-def test_fast_bias_correction_algo(with_bias):
+@pytest.mark.parametrize("with_bias, ref_bias", ((False, None), (True, Tensor([-1.9974, -1.9974]))))
+def test_fast_bias_correction_algo(with_bias, ref_bias):
+    """
+    Check working on fast bias correction algorithm and compare bias in quantized model with reference
+    """
     model = ConvTestModel(bias=with_bias)
     input_shape = [1, 1, 4, 4]
     nncf_network = get_nncf_network(model, input_shape)
@@ -35,13 +38,15 @@ def test_fast_bias_correction_algo(with_bias):
         images, _ = data_item
         return images
 
+    torch.manual_seed(42)
     dataset = Dataset(RandomDatasetMock(input_shape), transform_fn)
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=dataset)
 
-    if with_bias:
-        assert not torch.equal(model.conv.bias.data, quantized_model.conv.bias.data)
-    else:
+    if ref_bias is None:
         assert quantized_model.conv.bias is None
+    else:
+        assert all(torch.isclose(quantized_model.conv.bias.data, ref_bias, rtol=0.0001))
+
 
 
 @pytest.mark.parametrize(
@@ -53,5 +58,8 @@ def test_fast_bias_correction_algo(with_bias):
     ),
 )
 def test_reshape_bias_shift(bias_value, bias_shift, channel_axis, ref_shape):
+    """
+    Checks the result of the FastBiasCorrection.reshape_bias_shift method if torch.Tensor is used.
+    """
     new_bias_shit = FastBiasCorrection.reshape_bias_shift(bias_shift, bias_value, channel_axis)
     assert list(new_bias_shit.shape) == ref_shape

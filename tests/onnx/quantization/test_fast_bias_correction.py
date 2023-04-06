@@ -28,8 +28,11 @@ def get_data_from_node(model: onnx.ModelProto, node_name: str):
     return None
 
 
-@pytest.mark.parametrize("with_bias", (False, True))
-def test_fast_bias_correction_algo(with_bias, tmpdir):
+@pytest.mark.parametrize("with_bias, ref_bias", ((False, None), (True, np.array([-2.0181384, -2.0181384]))))
+def test_fast_bias_correction_algo(with_bias, ref_bias, tmpdir):
+    """
+    Check working on fast bias correction algorithm and compare bias in quantized model with reference
+    """
     model = ConvTestModel(bias=with_bias)
     input_shape = [1, 1, 4, 4]
 
@@ -39,15 +42,17 @@ def test_fast_bias_correction_algo(with_bias, tmpdir):
 
     quantization_algorithm = get_min_max_and_fbc_algo_for_test()
 
+    np.random.seed(42)
     dataset = get_random_dataset_for_test(onnx_model, False)
     quantized_model = quantization_algorithm.apply(onnx_model, dataset=dataset)
 
-    if with_bias:
-        assert not np.all(
-            np.equal(get_data_from_node(onnx_model, "conv.bias"), get_data_from_node(quantized_model, "conv.bias"))
-        )
-    else:
+    if ref_bias is None:
         assert get_data_from_node(quantized_model, "conv.bias") is None
+    else:
+        assert np.all(
+            np.isclose(get_data_from_node(quantized_model, "conv.bias"), ref_bias)
+        )
+
 
 
 @pytest.mark.parametrize(
@@ -59,5 +64,8 @@ def test_fast_bias_correction_algo(with_bias, tmpdir):
     ),
 )
 def test_reshape_bias_shift(bias_value, bias_shift, channel_axis, ref_shape):
+    """
+    Checks the result of the FastBiasCorrection.reshape_bias_shift method if np.array is used.
+    """
     new_bias_shit = FastBiasCorrection.reshape_bias_shift(bias_shift, bias_value, channel_axis)
     assert list(new_bias_shit.shape) == ref_shape
