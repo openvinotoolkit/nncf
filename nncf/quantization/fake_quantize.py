@@ -176,7 +176,7 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
 
 
 def get_quantizer_narrow_range(quantizer_config: QuantizerConfig,
-                               quant_group: QuantizerGroup, half_range: bool) -> bool:
+                               quant_group: QuantizerGroup, half_range: bool = False) -> bool:
     """
     Returns narrow_range parameter: True if the range of quantized values is reduced by 1 compared to the
         naive case, False otherwise.

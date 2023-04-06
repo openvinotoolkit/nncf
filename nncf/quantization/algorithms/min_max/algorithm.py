@@ -416,7 +416,38 @@ class MinMaxQuantization(Algorithm):
                 self._add_activation_quantization_target_point(quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
-        return self._quantization_target_points_to_qconfig
+        return self._quantization_target_points_to_qconfig, self._unified_scale_groups
+
+    def _collect_unified_groups(self, quantizer_setup: SingleConfigQuantizerSetup) -> List[List[TargetPoint]]:
+        """
+        Collects the group of quantizers for unification.
+        :param quantizer_setup: SingleConfigQuantizerSetup instance.
+        :return: List with the groups of the TargetPoints.
+        """
+        unified_scale_groups = []
+        for quantizer_ids in quantizer_setup.unified_scale_groups.values():
+            unified_scale_group = []
+            for quantizer_id in quantizer_ids:
+                quantization_point = quantizer_setup.quantization_points[quantizer_id]
+
+                # Only activation quantizers can be unified
+                if quantization_point.is_activation_quantization_point():
+                    activation_target_point = self._get_activation_quantization_target_point(quantization_point)
+                    unified_scale_group.append(activation_target_point)
+                else:
+                    raise RuntimeError('Only activation quantizers can be unified.')
+            unified_scale_groups.append(unified_scale_group)
+        return unified_scale_groups
+
+    def _get_graph_pattern(self, model: TModel) -> GraphPattern:
+        """
+        Returns full graph pattern for quantizer setup calculation.
+        :param model: Backend-specific model.
+        :return: GraphPattern instance.
+        """
+        backend = get_backend(model)
+        device = self._parameters.target_device
+        return PatternsManager.get_full_pattern_graph(backend, device)
 
     def _topological_sort_quantization_points(self, quantization_points: List[SingleConfigQuantizationPoint],
                                               nncf_graph: NNCFGraph) -> List[SingleConfigQuantizationPoint]:
@@ -510,10 +541,13 @@ class MinMaxQuantization(Algorithm):
                     filter_func,
                     MinMaxQuantization):
                     group_statistics.append(tensor_collector.get_statistics())
+
             unified_values = self._backend_entity.unify_statistics(group_statistics)
             for quantization_target_point in unified_scale_group:
                 qconfig = quantization_target_points[quantization_target_point]
-                parameters = calculate_quantizer_parameters(unified_values, qconfig, QuantizerGroup.ACTIVATIONS)
+                narrow_range = get_quantizer_narrow_range(qconfig, QuantizerGroup.ACTIVATIONS)
+                parameters = calculate_quantizer_parameters(unified_values, qconfig,
+                                                            QuantizerGroup.ACTIVATIONS, narrow_range)
                 command = self._backend_entity.create_activation_quantizer_insertion_command(
                     nncf_graph, quantization_target_point,
                     qconfig, parameters)

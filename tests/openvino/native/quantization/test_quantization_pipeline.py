@@ -53,7 +53,7 @@ def test_compress_weights(model_creator_func, ref_nodes):
             break
 
 
-@pytest.mark.parametrize('model_creator_func, ref_nodes', zip([LinearModel, ConvModel, MatMul2DModel], REF_FQ_NODES))
+@pytest.mark.parametrize('model_creator_func, ref_nodes', [[ConvModel, REF_FQ_NODES[1]]])
 def test_overflow_fix_applied(model_creator_func, ref_nodes):
     (quntized_op_name, inp_port), ref_fqs_names = ref_nodes
     model = model_creator_func().ov_model

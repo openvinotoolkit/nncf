@@ -19,6 +19,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
@@ -131,7 +132,9 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
 
     statistics = OVMinMaxTensorStatistic(min_values, max_values)
     qconfig = QuantizerConfig(num_bits=8, mode=mode, signedness_to_force=sign, per_channel=per_ch)
-    quantize_params = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.ACTIVATIONS)
+    q_group = QuantizerGroup.ACTIVATIONS
+    narrow_range = get_quantizer_narrow_range(qconfig, q_group)
+    quantize_params = calculate_quantizer_parameters(statistics, qconfig, q_group, narrow_range)
 
     compare_fq_parameters(ref_quantize_params, quantize_params)
 
@@ -161,9 +164,11 @@ def test_calculate_weight_quantizer_parameters(case_to_test):
     else:
         max_values = np.amax(data, axis=axes, keepdims=qconfig.per_channel)
     statistics = OVMinMaxTensorStatistic(min_values, max_values)
+    q_group = QuantizerGroup.WEIGHTS
+    narrow_range = get_quantizer_narrow_range(qconfig, q_group, half_range)
     if not fail:
-        quantize_params = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS, half_range)
+        quantize_params = calculate_quantizer_parameters(statistics, qconfig, q_group, narrow_range, half_range)
         compare_fq_parameters(ref_quantize_params, quantize_params)
     else:
         with pytest.raises(RuntimeError):
-            calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS, half_range)
+            calculate_quantizer_parameters(statistics, qconfig, q_group, narrow_range, half_range)
