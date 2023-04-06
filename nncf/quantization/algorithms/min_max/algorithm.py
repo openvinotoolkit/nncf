@@ -406,7 +406,6 @@ class MinMaxQuantization(Algorithm):
         pattern = PatternsManager.get_full_pattern_graph(backend, device)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         self._apply_model_type_pass(self._parameters.model_type, quantizer_setup, nncf_graph)
-        #TODO: make sort before everything
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup)
         quantization_points = list(quantizer_setup.quantization_points.values())
         quantization_points = self._topological_sort_quantization_points(quantization_points, nncf_graph)
