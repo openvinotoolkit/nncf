@@ -23,8 +23,6 @@ from typing import Set
 
 import networkx as nx
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.common.utils.debug import DEBUG_LOG_DIR
-from nncf.torch.nested_objects_traversal import objwalk
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -114,18 +112,17 @@ class PropagationBlock:
         :param producer: descriptor of the producer
         :param size: number of sequent channels.
         :param offset: when not equal to 0, block is formed by taking `size` number of sequent channels,
-        then skipping `offset` number of sequent channels and repeating the procedure for the rest of channels.
+            then skipping `offset` number of sequent channels and repeating the procedure for the rest of channels.
         :param pruning_dimension: axis number from 0 to N-1 in weights along which the dimension block defines pruning
-        structure. N is total number of dimensions.
+            structure. N is total number of dimensions.
         :param closed_branches: number of branches where propagation block reached a consumer node on the passage from
-        the producer nodes.
+            the producer nodes.
         """
         self.size = size
         self.offset = offset
         self.pruning_dimension = pruning_dimension
         self._producer = producer
         self._closed_branches = closed_branches
-        self._group = None
         self._is_invalid = False
 
     def __eq__(self, other) -> bool:
@@ -147,9 +144,6 @@ class PropagationBlock:
         """
         self._closed_branches += 1
 
-    def set_group(self, group) -> None:
-        self._group = group
-
 
 class PropagationGroup:
     """
@@ -159,8 +153,6 @@ class PropagationGroup:
 
     def __init__(self, blocks: List[PropagationBlock]) -> None:
         self._blocks = blocks
-        for block in blocks:
-            block.set_group(self)
         self._children: List['PropagationGroup'] = []
         self.is_invalid = False
 
@@ -245,7 +237,6 @@ class PropagationGroup:
 
     def add_block(self, block: PropagationBlock) -> None:
         self._blocks.append(block)
-        block.set_group(self)
 
 
 class PropagationMask:
@@ -330,7 +321,7 @@ def add_group_to_graph(graph: nx.DiGraph,
     """
     Recursive helper to traverse children of the given PropagationBlock with adding them to the graph.
 
-    :param graph: hierarhy of the propagation groups/blocks.
+    :param graph: hierarchy of the propagation groups/blocks.
     :param root_group: current group for traversing.
     :param visited_block_ids_map: helper mapping of group addresses to the id in the graph.
     """
@@ -378,14 +369,14 @@ def get_pruning_groups(graph: NNCFGraph,
     """
     Determines how nodes of the given types should be pruned: which nodes should be pruned together, along which
     dimension, how many sequent channels with which offset. It's done by initializing PropagationMask's on the
-    operations with prunable paramaters (producers of pruning) and propagating them through the execution graph.
+    operations with prunable parameters (producers of pruning) and propagating them through the execution graph.
 
     :param graph: nncf graph to initialize and propagate masks.
     :param pruning_operations_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
-    metatypes describing operations with common pruning mask application and propagation properties, e.g.
-    IdentityMaskForwardOps unifies operations that propagate pruning masks as is (relu, swish etc.), whereas
-    Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks and
-    provide some output masks.
+        metatypes describing operations with common pruning mask application and propagation properties, e.g.
+        IdentityMaskForwardOps unifies operations that propagate pruning masks as is (relu, swish etc.), whereas
+        Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks and
+        provide some output masks.
     :param prune_operations_types: types of operations with prunable parameters.
     :param dump_dir: path to the directory for dumping debug files.
     :return: list of groups with parameters of pruning.
@@ -397,8 +388,9 @@ def get_pruning_groups(graph: NNCFGraph,
         assert isinstance(node.layer_attributes, (LinearLayerAttributes, ConvolutionLayerAttributes))
         pruning_dim = node.layer_attributes.get_target_dim_for_compression()
         output_tensors_shapes = [x.tensor_shape for x in graph.get_output_edges(node)]
-        assert len(output_tensors_shapes) == 1 or len( set(output_tensors_shapes)) <= 1, node.node_name
+        assert not len(set(output_tensors_shapes)) > 1, node.node_name
         output_tensors_shape = output_tensors_shapes[0]
+        # TODO: (107663) generalize by introducing get_output_dim_affected_by_compression for layer_attributes
         target_output_dim_for_compression = len(output_tensors_shape) - 1
         root_group = PropagationGroup(
             blocks=[
@@ -442,7 +434,7 @@ def get_pruning_groups(graph: NNCFGraph,
 
     # Filter non closing and duplicated groups
     pruning_groups = []  # type: List[PruningGroup]
-    finished_producers = []
+    selected_producers = []
     for groups in blocks_map.values():
         for group in groups:
             blocks = []
@@ -451,16 +443,17 @@ def get_pruning_groups(graph: NNCFGraph,
                 blocks.append(x)
                 return x
 
+            from nncf.torch.nested_objects_traversal import objwalk
             objwalk(group, lambda x: isinstance(x, PropagationBlock), collect_block_fn)
             if all(block._closed_branches == 1 for block in blocks):
                 for block in group:
                     assert not block._is_invalid, 'invalid groups are not handled'
                 min_group = set(map(PruningBlock.from_propagation_block, group))
-                all_not_finished = all(g.producer_id not in finished_producers for g in min_group)
+                all_not_selected = all(g.producer_id not in selected_producers for g in min_group)
                 candidate_group = PruningGroup(min_group)
-                if candidate_group not in pruning_groups and all_not_finished:
+                if candidate_group not in pruning_groups and all_not_selected:
                     pruning_groups.append(candidate_group)
-                    finished_producers.extend(g.producer_id for g in min_group)
-                break  # iterate and choose first valid and not finished
+                    selected_producers.extend(g.producer_id for g in min_group)
+                break  # iterate and choose first valid and not selected
 
     return pruning_groups

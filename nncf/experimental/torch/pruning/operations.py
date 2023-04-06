@@ -18,12 +18,6 @@ from nncf.torch.graph.operator_metatypes import (
     PTAvgPool2dMetatype,
     PTBatchNormMetatype,
     PTCatMetatype,
-    PTConv1dMetatype,
-    PTConv2dMetatype,
-    PTConv3dMetatype,
-    PTConvTranspose1dMetatype,
-    PTConvTranspose2dMetatype,
-    PTConvTranspose3dMetatype,
     PTDivMetatype,
     PTDropoutMetatype,
     PTELUMetatype,
@@ -62,8 +56,6 @@ from nncf.experimental.common.pruning.operations import (
     InputPruningOp,
     OutputPruningOp,
     IdentityMaskForwardPruningOp,
-    ConvolutionPruningOp,
-    TransposeConvolutionPruningOp,
     BatchNormPruningOp,
     LinearPruningOp,
     GroupNormPruningOp,
@@ -98,16 +90,6 @@ class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp):
                 PTAvgPool2dMetatype, PTMaxPool2dMetatype, PTDropoutMetatype, PTSILUMetatype, PTPowerMetatype,
                 PTHardSwishMetatype, PTHardSigmoidMetatype, PTNoopMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
-
-
-@PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('convolution')
-class PTConvolutionPruningOp(ConvolutionPruningOp):
-    subtypes = [PTConv1dMetatype, PTConv2dMetatype, PTConv3dMetatype]
-
-
-@PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
-class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp):
-    subtypes = [PTConvTranspose1dMetatype, PTConvTranspose2dMetatype, PTConvTranspose3dMetatype]
 
 
 @PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('linear')

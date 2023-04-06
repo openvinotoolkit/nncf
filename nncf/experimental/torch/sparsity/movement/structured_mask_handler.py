@@ -24,7 +24,6 @@ from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.logging import nncf_logger
 from nncf.torch.layers import NNCFLinear
-from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import SparseModuleInfo
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
@@ -366,8 +365,8 @@ class StructuredMaskHandler:
     ) -> List[StructuredMaskContextGroup]:
         module_vs_sparse_module_info_map = {minfo.module: minfo for minfo in sparsified_module_info_list}
 
-        pruning_producing_types = [x.op_func_name for x in NNCF_PRUNING_MODULES_DICT]
-        nncf_graph = nncf_network.get_graph()
+        pruning_producing_types = ['linear']
+        nncf_graph = nncf_network.get_original_graph()
         pruning_groups = get_pruning_groups(nncf_graph,
                                             PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
                                             pruning_producing_types)
