@@ -281,7 +281,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             stripped_model = ctrl.strip_model(stripped_model)
         self._model = stripped_model
 
-    def prepare_for_inference(self, do_copy: bool = True) -> TModel:
+    def strip(self, do_copy: bool = True) -> TModel:
         model = self.model
         if do_copy:
             model = copy_model(model)

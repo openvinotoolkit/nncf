@@ -21,7 +21,7 @@ from tests.tensorflow.pruning.helpers import get_concat_test_model
 
 
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
-def test_prepare_for_inference(enable_quantization):
+def test_strip(enable_quantization):
     input_shape = (1, 8, 8, 3)
     model = get_concat_test_model(input_shape)
 
@@ -46,7 +46,7 @@ def test_prepare_for_inference(enable_quantization):
     input_tensor = tf.ones(input_shape)
     x_nncf = compressed_model(input_tensor)
 
-    inference_model = compression_ctrl.prepare_for_inference()
+    inference_model = compression_ctrl.strip()
     x_tf = inference_model(input_tensor)
 
     TFTensorListComparator.check_equal(x_nncf, x_tf)
@@ -65,7 +65,7 @@ def test_do_copy(do_copy, enable_quantization):
         config["compression"].append({"algorithm": "quantization", "preset": "mixed"})
 
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
-    inference_model = compression_ctrl.prepare_for_inference(do_copy=do_copy)
+    inference_model = compression_ctrl.strip(do_copy=do_copy)
 
     # Transform model for pruning creates copy of the model in both cases
     assert id(inference_model) != id(compression_model)
