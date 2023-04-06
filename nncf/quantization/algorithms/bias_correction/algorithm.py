@@ -156,7 +156,7 @@ class BiasCorrection(Algorithm):
             # the model transformer (that uses during sub-graph extraction) already does this internally when creating.
             model_copy_subgraph = self._prepare_subgraph(node, model_copy, nncf_graph, subgraph_data)
 
-            feed_dicts = self._create_feed_dicts(nncf_graph, model_copy_subgraph, subgraph_data, statistic_points)
+            feed_dicts = self._create_feed_dicts(model_copy_subgraph, subgraph_data, statistic_points)
 
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
 
@@ -257,6 +257,7 @@ class BiasCorrection(Algorithm):
         for stat_node in stats_nodes:
             input_nodes.extend(nncf_graph.traverse_graph(stat_node, traverse_to_input_layers, traverse_forward=False))
 
+        output_nodes = output_nodes if output_nodes else stats_nodes
         subgraph_data = {
             'input_node_names': [input_node.node_name for input_node in input_nodes],
             'output_node_names': [n.node_name for n in output_nodes],
@@ -289,14 +290,13 @@ class BiasCorrection(Algorithm):
         return model_transformer.transform(transformation_layout)
 
     def _create_feed_dicts(self,
-                           nncf_subgraph: NNCFGraph,
                            model: TModel,
                            subgraph_data: Dict,
                            statistic_points: StatisticPointsContainer) -> List[Dict]:
         """
         Creates the list of the dictionaries that contains the input data for the model exection.
 
-        :param nncf_subgraph: NNCFGraph instance.
+        :param model: TModel instance.
         :param subgraph_data: A dictionary with the necessary data for current node.
         :param statistic_points: StatisticPointsContainer instance.
         :return: List of the dictionaries with the input data.
@@ -305,8 +305,7 @@ class BiasCorrection(Algorithm):
         for stat_id in range(self.number_samples):
             feed_dict = {}
             for input_node_name in subgraph_data['input_node_names']:
-                input_node = nncf_subgraph.get_node_by_name(input_node_name)
-                input_tensor_name = self._backend_entity.get_input_name(model, input_node.node_name)
+                input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
                 input_fp = self._get_fp_inputs(statistic_points, input_node_name)
                 feed_dict[input_tensor_name] = np.mean(input_fp[stat_id], axis=0, keepdims=True)
             feed_dicts.append(feed_dict)

@@ -308,6 +308,17 @@ def create_linear_bn_scale_shift_activation() -> GraphPattern:
     return linear_batch_norm
 
 
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SQUEEZE_ACTIVATIONS)
+def create_linear_squeeze_activation():
+    linear = linear_operations()
+    squeeze = squeeze_operation()
+    activations = atomic_activations_operations()
+
+    linear.join_patterns(squeeze)
+    linear.join_patterns(activations)
+    return linear
+
+
 @ONNX_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
 def create_bn_scale_shift_activation() -> GraphPattern:
     batch_norm = batch_normalization_operations()
@@ -356,4 +367,11 @@ def atomic_activations_operations():
 def arithmetic_operations():
     pattern = GraphPattern()
     pattern.add_node(**ARITHMETIC_OPERATIONS)
+    return pattern
+
+
+def squeeze_operation():
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SQUEEZE',
+                        GraphPattern.METATYPE_ATTR: om.ONNXSqueezeMetatype})
     return pattern
