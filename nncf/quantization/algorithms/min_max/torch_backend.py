@@ -70,11 +70,11 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
         return []
-    
+
     @property
     def conv_metatype(self) -> List[OperatorMetatype]:
         return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
-    
+
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTModuleConv1dMetatype,
@@ -85,7 +85,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTModuleConvTranspose2dMetatype,
                 om.PTModuleConvTranspose3dMetatype,
                 ]
-    
+
     @property
     def hw_config(self) -> HWConfig:
         return PTHWConfig

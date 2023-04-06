@@ -180,7 +180,7 @@ def get_quantizer_narrow_range(quantizer_config: QuantizerConfig,
     """
     Returns narrow_range parameter: True if the range of quantized values is reduced by 1 compared to the
         naive case, False otherwise.
-    
+
     :param quantizer_config: Config of the quantization configuration.
     :param quant_group: Group of the quantizer.
     :param half_range: If True effectively only a half of a quantizer range is used.

@@ -64,7 +64,7 @@ class MinMaxAlgoBackend(ABC):
         """
         Property for the backend-specific Convolution metatypes.
         """
-        
+
     @property
     @abstractmethod
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:

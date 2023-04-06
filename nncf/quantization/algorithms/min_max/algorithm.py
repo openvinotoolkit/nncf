@@ -417,7 +417,7 @@ class MinMaxQuantization(Algorithm):
     def _collect_unified_groups(self, quantizer_setup: SingleConfigQuantizerSetup) -> List[List[TargetPoint]]:
         """
         Collects the group of quantizers for unification.
-        
+
         :param quantizer_setup: SingleConfigQuantizerSetup instance.
         :return: List with the groups of the TargetPoints.
         """
@@ -439,7 +439,7 @@ class MinMaxQuantization(Algorithm):
     def _get_graph_pattern(self, model: TModel) -> GraphPattern:
         """
         Returns full graph pattern for quantizer setup calculation.
-        
+
         :param model: Backend-specific model.
         :return: GraphPattern instance.
         """
@@ -494,7 +494,7 @@ class MinMaxQuantization(Algorithm):
         :param overflow_fix: OverflowFix parameter.
         :param quantization_target_points: Quantization target points.
         :param nncf_graph: Instance of NNCFGraph to traverse.
-        :return: quantization target points to apply 
+        :return: quantization target points to apply
         """
         weight_quantization_points = set(filter(lambda point: point.is_weight_target_point(),
                                                 quantization_target_points.keys()))
@@ -543,12 +543,11 @@ class MinMaxQuantization(Algorithm):
             unified_values = self._backend_entity.unify_statistics(group_statistics)
             for quantization_target_point in unified_scale_group:
                 qconfig = quantization_target_points[quantization_target_point]
-                narrow_range = get_quantizer_narrow_range(qconfig, QuantizerGroup.ACTIVATIONS)
-                parameters = calculate_quantizer_parameters(unified_values, qconfig,
-                                                            QuantizerGroup.ACTIVATIONS, narrow_range)
+                q_group = QuantizerGroup.ACTIVATIONS
+                narrow_range = get_quantizer_narrow_range(qconfig, q_group)
+                parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
                 command = self._backend_entity.create_activation_quantizer_insertion_command(
-                    nncf_graph, quantization_target_point,
-                    qconfig, parameters)
+                    nncf_graph, quantization_target_point, qconfig, parameters)
                 transformation_layout.register(command)
                 unified_ops_list.add(quantization_target_point)
 
@@ -569,7 +568,7 @@ class MinMaxQuantization(Algorithm):
                     quant_group = QuantizerGroup.WEIGHTS
                 else:
                     quant_group = QuantizerGroup.ACTIVATIONS
-                    
+    
                 half_range = quantization_target_point in quantization_points_overflow_fix
                 narrow_range = get_quantizer_narrow_range(qconfig, quant_group, half_range)
                 statistics = tensor_collector.get_statistics()
