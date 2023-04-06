@@ -26,12 +26,22 @@ class RangeType(Enum):
 
 class OverflowFix(Enum):
     """
-    This option controls whether to apply the overflow issue fix.
-    If set to `disable`, there is no effect.
-    If set to `enable`, the fix will be applied to all weight quantizers.
-    If set to `first_layer_only` the fix will be applied to the first weight quantizers.
-
-    The fix itself pushes weights FakeQuantizers effectively use only a half quantization range.
+    This option controls whether to apply the overflow issue fix for the 8-bit quantization.
+    
+    8-bit instructions of older Intel CPU generations (based on SSE, AVX-2, and AVX-512 instruction sets)
+        suffer from the so-called saturation (overflow) issue: in some configurations, 
+        the output does not fit into an intermediate buffer and has to be clamped.
+    This can lead to an accuracy drop on the aforementioned architectures.
+    The fix set to use only half a quantization range to avoid overflow for specific operations.
+    
+    If you are going to infer the quantized model on the architectures with AVX-2, and AVX-512 instruction sets,
+        we highly recommend using this option.
+    
+    :param ENABLE: All weights of all types of Convolutions and MatMul operations
+        are be quantized using a half of the 8-bit quantization range.
+    :param FIRST_LAYER: Weights of the first Convolutions of each model inputs
+        are quantized using a half of the 8-bit quantization range.
+    :param DISABLE: All weights are quantized using the full 8-bit quantization range.
     """
     ENABLE = 'enable'
     FIRST_LAYER = 'first_layer_only'
