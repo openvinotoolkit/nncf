@@ -286,40 +286,7 @@ class GatherPruningOp(BasePruningOp):
             node.data['output_mask'] = None
             return
 
-        def is_dim_removed_by_splitting() -> Optional[int]:
-            """
-            Determines whether the operations going from parent's op is equivalent to split
-            Currently, limited to the case of simple __getitem__ with axis=0 and integer key rather than more general
-            `gather` operation or __getitem__ with slice or tuple.
-            q, k, v = qkv[0], qkv[1], qkv[2] (like in official SwinTransformer implementation)
-
-            - look at all consumer of parent node
-            - all of them should
-                - be getitem
-                - slice along the same axis
-                - combine the whole input (the keys should contain all dimension along axis. size of first dim=3 => [0,1,2])
-            :return : axis that is removed by split, or None otherwise
-            """
-            split_axis = None
-            if isinstance(node.layer_attributes, GetItemLayerAttributes):
-                input_edge = graph.get_input_edges(node)[0]
-                input_shape = input_edge.tensor_shape
-                parent_node = input_edge.from_node
-                child_nodes = graph.get_next_nodes(parent_node)
-                child_attributes = [cnode.layer_attributes for cnode in child_nodes]
-                all_getitem = all(isinstance(ca, GetItemLayerAttributes) for ca in child_attributes)
-                assert all_getitem, "currently supported only case with all  __getitem__ on branches"
-                all_int_keys = all(isinstance(ca.key, int) for ca in child_attributes)
-                # currently supported only case __getitem__ with single int, no slices
-                if not all_int_keys:
-                    return None
-                all_keys = set(ca.key for ca in child_attributes)
-                split_dim = input_shape[0]
-                if all_keys == set(range(split_dim)):
-                    split_axis = 0
-            return split_axis
-
-        removed_axis = is_dim_removed_by_splitting()
+        removed_axis = cls.is_dim_removed_by_splitting(graph, node)
         if removed_axis is not None:
             output_mask = PropagationMask()
             for input_mask in input_masks:
@@ -333,6 +300,41 @@ class GatherPruningOp(BasePruningOp):
             cls.invalidate_masks(input_masks)
             node.data['output_mask'] = None
 
+    @classmethod
+    def _is_dim_removed_by_splitting(cls, graph: NNCFGraph, node: NNCFNode) -> Optional[int]:
+        """
+        Determines whether the operations going from parent's op is equivalent to split
+        Currently, limited to the case of simple __getitem__ with axis=0 and integer key rather than more general
+        `gather` operation or __getitem__ with slice or tuple.
+        q, k, v = qkv[0], qkv[1], qkv[2] (like in official SwinTransformer implementation)
+
+        - look at all consumer of parent node
+        - all of them should
+            - be getitem
+            - slice along the same axis
+            - combine the whole input (the keys should contain all dimension along axis. size of first dim=3 => [0,1,2])
+        :param graph: NNCF graph to work with.
+        :param node: A child node with __getitem__ operation.
+        :return : axis that is removed by split, or None otherwise
+        """
+        split_axis = None
+        if isinstance(node.layer_attributes, GetItemLayerAttributes):
+            input_edge = graph.get_input_edges(node)[0]
+            input_shape = input_edge.tensor_shape
+            parent_node = input_edge.from_node
+            child_nodes = graph.get_next_nodes(parent_node)
+            child_attributes = [cnode.layer_attributes for cnode in child_nodes]
+            all_getitem = all(isinstance(ca, GetItemLayerAttributes) for ca in child_attributes)
+            assert all_getitem, "currently supported only case with all  __getitem__ on branches"
+            all_int_keys = all(isinstance(ca.key, int) for ca in child_attributes)
+            # currently supported only case __getitem__ with single int, no slices
+            if not all_int_keys:
+                return None
+            all_keys = set(ca.key for ca in child_attributes)
+            split_dim = input_shape[0]
+            if all_keys == set(range(split_dim)):
+                split_axis = 0
+        return split_axis
 
 class SplitPruningOp(BasePruningOp):
     @classmethod
