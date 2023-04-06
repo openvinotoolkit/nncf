@@ -15,8 +15,10 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 from typing import List, Tuple, Dict, Callable
+from collections import defaultdict
 
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.model_transformer import TModel
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
@@ -34,6 +36,17 @@ class OVModelTransformer(ModelTransformer):
     """
     Applies transformations to an OpenVINO model.
     """
+    def __init__(self, model: TModel):
+        super().__init__(model)
+        self._command_transformation_ordered_pairs = [
+            (OVFQNodeRemovingCommand, self._apply_fq_nodes_removing_transformation),
+            (OVQuantizerInsertionCommand, self._apply_quantizer_insertion_transformations),
+            (OVBiasCorrectionCommand, self._apply_bias_correction_transformations),
+            (OVWeightUpdateCommand, self._apply_weight_update_transformations),
+            (OVModelExtractionCommand, self._apply_model_extraction_transformation),
+            (OVInplaceFnInsertionCommand, self._apply_insert_operation),
+            (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
+        ]
 
     @staticmethod
     def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
@@ -55,48 +68,19 @@ class OVModelTransformer(ModelTransformer):
         :param transformation_layout: Transformation commands.
         :return: The new instance of a model with applied transformations.
         """
-        # pylint:disable=too-many-branches
-        output_insertion_transformations = []
-        fq_nodes_removing_transformations = []
-        quantizer_insertion_transformations = []
-        bias_correction_transformations = []
-        weight_update_transformations = []
-        inplace_stat_transformations = []
-        model_extraction_transformation = None
-        transformations = transformation_layout.transformations
 
+        transformations = transformation_layout.transformations
+        aggregated_transformations = defaultdict(list)
         for transformation in transformations:
-            if isinstance(transformation, OVOutputInsertionCommand):
-                output_insertion_transformations.append(transformation)
-            if isinstance(transformation, OVInplaceFnInsertionCommand):
-                inplace_stat_transformations.append(transformation)
-            elif isinstance(transformation, OVFQNodeRemovingCommand):
-                fq_nodes_removing_transformations.append(transformation)
-            elif isinstance(transformation, OVQuantizerInsertionCommand):
-                quantizer_insertion_transformations.append(transformation)
-            elif isinstance(transformation, OVModelExtractionCommand):
-                model_extraction_transformation = transformation
-            elif isinstance(transformation, OVBiasCorrectionCommand):
-                bias_correction_transformations.append(transformation)
-            elif isinstance(transformation, OVWeightUpdateCommand):
-                weight_update_transformations.append(transformation)
+            aggregated_transformations[transformation.__class__].append(transformation)
 
         model = self._model.clone()
         # Inplace transformations; Using deepcopy of model
-        if fq_nodes_removing_transformations:
-            model = self._apply_fq_nodes_removing_transformation(model, fq_nodes_removing_transformations)
-        if quantizer_insertion_transformations:
-            model = self._apply_quantizer_insertion_transformations(model, quantizer_insertion_transformations)
-        if bias_correction_transformations:
-            model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
-        if weight_update_transformations:
-            model = self._apply_weight_update_transformations(model, weight_update_transformations)
-        if model_extraction_transformation:
-            model = self._apply_model_extraction_transformation(model, model_extraction_transformation)
-        if inplace_stat_transformations:
-            model = self._apply_insert_operation(model, inplace_stat_transformations)
-        if output_insertion_transformations:
-            model = self._apply_output_insertion_transformations(model, output_insertion_transformations)
+        for transformation_cls, transformation_fn in self._command_transformation_ordered_pairs:
+            transformations = aggregated_transformations[transformation_cls]
+            if transformations:
+                model = transformation_fn(model, transformations)
+
         return model
 
     @staticmethod
@@ -324,7 +308,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_model_extraction_transformation(model: ov.Model,
-                                               transformation: OVModelExtractionCommand) -> ov.Model:
+                                               transformations: List[OVModelExtractionCommand]) -> ov.Model:
         """
         Extracts sub-model from the original based on the inputs and outputs names.
 
@@ -332,6 +316,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformation: Model extraction transformation.
         :return: Extracted sub-model.
         """
+        transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         params, results = [], []
         for input_name in transformation.inputs:

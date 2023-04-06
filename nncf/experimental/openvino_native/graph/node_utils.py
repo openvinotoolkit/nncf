@@ -24,7 +24,6 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 
-
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
 
@@ -147,7 +146,7 @@ def get_inplace_reduce_op(op: Type[ov.Node], node_type: str, reduction_axes: Tup
     """
     Returns inplace insertion function that adds reduce node to a passed node.
 
-    :param op: Openvino reduction operation type to insert.
+    :param op: OpenVINO reduction operation type to insert.
     :param node_type: String that describes reduce node type.
     :param reduction_axes: Target reduction axes for the reduction node.
     :param use_abs: Wheather reduce absolute values of input tensors or not.

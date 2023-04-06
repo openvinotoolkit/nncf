@@ -44,18 +44,18 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
     :param threshold: The magnitude threshold that regulates the application of the shift.
     """
 
-    def __init__(self, number_samples: int = 100, threshold: float = 2.0,
-                 inplace_statistics: bool = False) -> None:
+    def __init__(self, inplace_statistics: bool, number_samples: int = 100, threshold: float = 2.0,
+                 ) -> None:
         """
+        :param inplace_statistics: Appliclable only to backends that are using static graph during inference.
+            Defines wheather to calculate algorithm specific statistics by backend graph operations
+            or by default Python implementation. Statistics computated inplace tend to be
+            calculated faster and with lower memory stamp.
         :param number_samples: The number of the samples for the statistics collection.
             This statistics uses for the further calculation of the bias shift.
         :param threshold: The magnitude threshold that regulates the application of the shift.
             Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
             If the calculated value less than threshold, shift will apply to the bias.
-        :param inplace_statistics: Appliclable only to backends that are using static graph during inference.
-            Defines wheather to calculate algorithm specific statistics by backend graph operations
-            or by default Python implementation. Statistics computated inplace tend to be
-            calculated faster and with lower memory stamp.
         """
         self.number_samples = number_samples
         self.threshold = threshold

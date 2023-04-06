@@ -107,14 +107,14 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         )}
 
         bias_correction_algo = {BiasCorrection: BiasCorrectionParameters(
-            number_samples=number_samples,
-            inplace_statistics=inplace_statistics
+            inplace_statistics=inplace_statistics,
+            number_samples=number_samples
         )}
 
         if fast_bias_correction:
             bias_correction_algo = {FastBiasCorrection: FastBiasCorrectionParameters(
-                number_samples=number_samples,
-                inplace_statistics=inplace_statistics
+                inplace_statistics=inplace_statistics,
+                number_samples=number_samples
             )}
         self.algorithms.update(bias_correction_algo)
 

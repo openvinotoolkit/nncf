@@ -22,7 +22,6 @@ from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor import TensorType
 
-
 InplaceInsertionFNType = TypeVar('InplaceInsertionFNType')
 
 
@@ -172,11 +171,11 @@ class TensorAggregatorBase:
 
 class TensorCollector:
     """
-    Calculates statistics at given tensors acording to registered statistic branches.
-    Statistic branch consist of one reducer and one aggregator instance. TensorCollector
-    applies reducer on a correspondent input and then passes reduced tensor to
+    Calculates statistics at given tensors according to registered statistic branches.
+    Statistic branch consists of one reducer and one aggregator instance. TensorCollector
+    applies a reducer on a correspondent input and then passes the reduced tensor to
     a correspondent aggregator for each registered statistic branch.
-    Recieves tesnors by `register_input` method. Aggregated values as a TensorStatistic instance or
+    Receives tesnors by `register_input` method. Aggregated values as a TensorStatistic instance or
     a dict could be collected by `get_statistics` call.
     """
 

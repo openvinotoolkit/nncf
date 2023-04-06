@@ -86,16 +86,17 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
+                                 inplace: bool,
                                  num_samples: Optional[int] = None,
                                  window_size: Optional[int] = None,
-                                 inplace: bool = False) -> TensorStatisticCollectorBase:
+                                 ) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific mean statistic collector.
 
         :param reduction_shape: Channel axes for the statistics aggregation.
+        :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
-        :param inplace: Whether to calculate statistic inplace or not.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
 

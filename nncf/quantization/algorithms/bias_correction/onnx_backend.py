@@ -83,13 +83,14 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
+                                 inplace: bool,
                                  num_samples: Optional[int] = None,
                                  window_size: Optional[int] = None,
-                                 inplace: bool = False) -> ONNXMeanStatisticCollector:
+                                 ) -> ONNXMeanStatisticCollector:
         return ONNXMeanStatisticCollector(reduction_shape,  num_samples, window_size)
 
     @staticmethod
-    def batch_statistic_collector(num_samples: int = None, inplace: bool = False) -> ONNXMeanStatisticCollector:
+    def batch_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
         return ONNXBatchStatisticCollector(num_samples)
 
     @staticmethod

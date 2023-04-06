@@ -102,13 +102,13 @@ class StatisticsAggregator(ABC):
     def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, model: TModel) ->\
             StatisticPointsContainer:
         """
-        Creates new StatisticPointContainer that has no duplicated tesnor collectors for one
-        unique statistic point. Alters statistic collectors in given statistic point container so statistics
-        collected by merged statistic collectors will be available in all correspondend statistic collectors
-        from given statistic point container.
+        Creates a new StatisticPointContainer that has no duplicated tensor collectors for one
+        unique statistic point. Alters statistic collectors in the given statistic point container so statistics
+        collected by merged statistic collectors will be available in all corresponding statistic collectors
+        from the given statistic point container.
 
         :param statistic_points: Registered statistic points with possible tensor collectors duplicates.
-        :param model: Framework specific target model.
+        :param model: Backend-specific target model.
         :return: Merged statistic points container bounded with given statistic point container.
         """
 

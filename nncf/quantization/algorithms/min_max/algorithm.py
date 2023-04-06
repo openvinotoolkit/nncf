@@ -69,6 +69,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                                       per_channel=False)
 
     def __init__(self,
+                 inplace_statistics: bool,
                  number_samples: int = 300,
                  preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                  weight_bits: Optional[int] = None,
@@ -82,9 +83,11 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[IgnoredScope] = None,
                  model_type: Optional[ModelType] = None,
-                 inplace_statistics: bool = False,
                  ):
         """
+        :param inplace_statistics: Appliclable only to backends that are using static graph during inference.
+            Defines wheather to calculate quantizers statistics by backend graph operations or by default Python
+            implementation. Statistics computated inplace tend to be calculated faster and with lower memory stamp.
         :param number_samples: Number of samples for the statistics collection.
         :param preset: Preset parameter for Quantization.
             Defines the mode: symmetric or asymmetric of the activation quantizers.
@@ -106,9 +109,6 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Desrciptor of the layers which input must not be quantized.
-        :param inplace_statistics: Appliclable only to backends that are using static graph during inference.
-            Defines wheather to calculate quantizers statistics by backend graph operations or by default Python
-            implementation. Statistics computated inplace tend to be calculated faster and with lower memory stamp.
         """
         self.number_samples = number_samples
         self.target_device = target_device
