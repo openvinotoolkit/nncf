@@ -128,12 +128,8 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Desrciptor of the layers which input must not be quantized.
-        :param overflow_fix: This option controls whether to apply the overflow issue fix.
-            If set to `disable`, there is no effect.
-            If set to `enable`, the fix will be applied to all weight quantizers.
-            If set to `first_layer_only` the fix will be applied to the first weight quantizers.
-
-            The fix itself pushes weights FakeQuantizers effectively use only a half quantization range.
+        :param overflow_fix: This option controls whether to apply the overflow issue fix for the 8-bit quantization.
+            See the full descitption in nncf/nncf/quantization/algorithms/definitions.py
         """
         self.number_samples = number_samples
         self.target_device = target_device
@@ -421,6 +417,7 @@ class MinMaxQuantization(Algorithm):
     def _collect_unified_groups(self, quantizer_setup: SingleConfigQuantizerSetup) -> List[List[TargetPoint]]:
         """
         Collects the group of quantizers for unification.
+        
         :param quantizer_setup: SingleConfigQuantizerSetup instance.
         :return: List with the groups of the TargetPoints.
         """
@@ -442,6 +439,7 @@ class MinMaxQuantization(Algorithm):
     def _get_graph_pattern(self, model: TModel) -> GraphPattern:
         """
         Returns full graph pattern for quantizer setup calculation.
+        
         :param model: Backend-specific model.
         :return: GraphPattern instance.
         """
