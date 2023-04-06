@@ -17,8 +17,6 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
-import numpy as np
-
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
