@@ -40,6 +40,7 @@ install-openvino-test:
 	pip install -U pip
 	pip install -e .[openvino]
 	git clone https://github.com/openvinotoolkit/open_model_zoo.git
+	cd open_model_zoo && git checkout 9a978b18ad6240582618ec793af179a9b34b25ad
 	pip install open_model_zoo/tools/model_tools
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
