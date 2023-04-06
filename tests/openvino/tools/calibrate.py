@@ -389,7 +389,7 @@ def quantize_model_with_accuracy_control(xml_path: str,
                                          quantization_parameters):
     ov_model = ov.Core().read_model(xml_path, bin_path)
     model_evaluator = create_model_evaluator(accuracy_checcker_config)
-    model_evaluator.load_network([{'model': ov_model}])
+    model_evaluator.load_network_from_ir([{'model': xml_path, 'weights': bin_path}])
     model_evaluator.select_dataset('')
 
     def transform_fn(data_item):
