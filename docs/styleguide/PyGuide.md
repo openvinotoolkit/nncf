@@ -10,10 +10,10 @@
     *   [3.2 3rd party packages](#s3.2-3rd-party-packages)
     *   [3.3 Global variables](#s3.3-global-variables)
     *   [3.4 Nested/Local/Inner Classes and Functions](#s3.4-nested)
-    *   [3.6 Default Iterators and Operators](#s3.4-default-iterators-and-operators)
-    *   [3.7 Type Annotated Code](#s3.4-type-annotated-code)
-    *   [3.8 Files and Sockets](#3.4-files-and-sockets)
-    *   [3.9 Abstract Classes](#3.4-abstract-classes)
+    *   [3.5 Default Iterators and Operators](#s3.5-default-iterators-and-operators)
+    *   [3.6 Type Annotated Code](#s3.6-type-annotated-code)
+    *   [3.7 Files and Sockets](#s3.7-files-and-sockets)
+    *   [3.8 Abstract Classes](#s3.8-abstract-classes)
 -   [4 Python Style Rules](#s4-python-style-rules)
     *   [4.1 Comments and Docstrings](#s4.1-comments-and-docstrings)
         +   [4.1.1 Modules](#s4.1.1-modules)
@@ -103,7 +103,7 @@ Run [pylint](https://github.com/PyCQA/pylint) over your code using this [pylintr
   - *Exception*: Suppress the warning if they are inappropriate so that other issues are not hidden.
     To suppress warnings you can set a line-level comment
     ```python
-    dict = 'something awful'  # Bad Idea... pylint: disable=redefined-builtin
+    dict = "something awful"  # Bad Idea... pylint: disable=redefined-builtin
     ```
     or update [pylintrc](../../.pylintrc) if applicable for the whole project. If the reason for the suppression
     is not clear from the symbolic name, add an explanation.
@@ -513,14 +513,14 @@ import nncf
 from nncf.common.logging import nncf_logger
 
 # OK:
-nncf_logger.info('Test message: %s', nncf.__version__)
+nncf_logger.info("Test message: %s", nncf.__version__)
 
 # Also OK:
-nncf_logger.info(f'Test message: {nncf.__version__}')
+nncf_logger.info(f"Test message: {nncf.__version__}")
 
 # Probably not OK:
 for i in range(1000000):
-    nncf_logger.info(f'Test message: {sum(range(10000000))}')
+    nncf_logger.info(f"Test message: {sum(range(10000000))}")
 ```
 
 Use proper logging levels (https://docs.python.org/3/library/logging.html#logging-levels) when printing out a message to the logger.
@@ -742,6 +742,6 @@ This allows them to be imported and unit tested.
 def main():
     ...
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 ```
