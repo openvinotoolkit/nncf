@@ -26,11 +26,17 @@ from tests.post_training.test_ptq_params import TemplateTestPTQParams
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
 from nncf.torch.graph.graph import PTTargetPoint
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
+from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
 
 from tests.torch.helpers import create_bn, create_conv, create_depthwise_conv
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
 from tests.torch.ptq.helpers import get_single_no_weigth_matmul_nncf_graph
 from tests.torch.ptq.helpers import get_nncf_network
+from tests.common.quantization.metatypes import Conv2dTestMetatype
+from tests.common.quantization.metatypes import LinearTestMetatype
+from tests.common.quantization.metatypes import SoftmaxTestMetatype
 
 # pylint: disable=protected-access
 
@@ -98,6 +104,12 @@ class TestPTQParams(TemplateTestPTQParams):
 
     def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
+
+    @property
+    def metatypes_mapping(self):
+        return {Conv2dTestMetatype: PTModuleConv2dMetatype,
+                LinearTestMetatype: PTModuleLinearMetatype,
+                SoftmaxTestMetatype: PTSoftmaxMetatype}
 
     @pytest.fixture(scope='session')
     def test_params(self):

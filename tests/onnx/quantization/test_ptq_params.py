@@ -25,6 +25,7 @@ from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 
 from tests.onnx.models import LinearModel
@@ -32,6 +33,9 @@ from tests.onnx.models import OneDepthwiseConvolutionalModel
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestMatMul
+from tests.common.quantization.metatypes import Conv2dTestMetatype
+from tests.common.quantization.metatypes import LinearTestMetatype
+from tests.common.quantization.metatypes import SoftmaxTestMetatype
 
 
 # pylint: disable=protected-access
@@ -64,6 +68,12 @@ class TestPTQParams(TemplateTestPTQParams):
 
     def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
+
+    @property
+    def metatypes_mapping(self):
+        return {Conv2dTestMetatype: ONNXConvolutionMetatype,
+                LinearTestMetatype: ONNXLinearMetatype,
+                SoftmaxTestMetatype: ONNXSoftmaxMetatype}
 
     @pytest.fixture(scope='session')
     def test_params(self):
