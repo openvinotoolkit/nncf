@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, Callable, Tuple, Type
+from typing import Optional, Callable, Tuple, List, Type
 
 import numpy as np
 import openvino.runtime as ov
@@ -260,9 +260,9 @@ def get_partial_shape_safe(node, port_id) -> int:
     return partial_shape
 
 
-def get_reducer_output_node_name(
+def get_reducer_output_node_names(
         node_type, target_node_name: str,
-        port_id: int, fn_output_port_id: int, inplace: bool) -> str:
+        port_id: int, fn_output_port_id: int, inplace: bool) -> List[str]:
     """
     Returns output name to feed to a reducer node.
 
@@ -272,9 +272,9 @@ def get_reducer_output_node_name(
     :param port_id: Target port id of the target node.
     :param fn_output_port_id: Port id of the reducer subgraph.
     :param inplace: Wheather reducer calculated inplace or not.
-    :return: Output name to feed to a reducer node.
+    :return: Output names to feed to a reducer node.
     """
     if inplace:
         target_node_name = get_reduce_node_name(target_node_name, node_type, port_id)
-        return get_result_node_name(target_node_name, fn_output_port_id)
-    return get_result_node_name(target_node_name, port_id)
+        return [get_result_node_name(target_node_name, fn_output_port_id)]
+    return [get_result_node_name(target_node_name, port_id)]

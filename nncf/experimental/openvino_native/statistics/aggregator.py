@@ -24,6 +24,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
@@ -58,7 +59,8 @@ class OVStatisticsAggregator(StatisticsAggregator):
                              f' {target_point.type}')
 
             input_info = tensor_collector.get_output_info(stat_node_name, port_id)
-            tensor_collector.register_inputs({reducer: outputs[name] for reducer, name in input_info})
+            target_inputs = TensorCollector.get_target_inputs(outputs, input_info)
+            tensor_collector.register_inputs(target_inputs)
 
     def _get_transformation_layout_extra_outputs(self,
                                                  statistic_points: StatisticPointsContainer) -> TransformationLayout:

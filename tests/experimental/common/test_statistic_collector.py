@@ -1,5 +1,5 @@
 import pytest
-from typing import Optional
+from typing import Optional, List
 import numpy as np
 
 from nncf.experimental.common.tensor_statistics.collectors import TensorType
@@ -16,14 +16,14 @@ class DummyTensorReducer(TensorReducerBase):
         self._output_name = output_name
         self._inplace_mock = inplace_mock
 
-    def _reduce_out_of_place(self, x: TensorType):
+    def _reduce_out_of_place(self, x: List[TensorType]):
         return x
 
     def get_inplace_fn(self):
         return self._inplace_mock
 
-    def get_output_name(self, target_node_name: str, port_id: int) -> str:
-        return self._output_name
+    def get_output_names(self, target_node_name: str, port_id: int) -> str:
+        return [self._output_name]
 
     def _get_processor(self):
         return None
@@ -53,7 +53,9 @@ def test_aggregator_enabled_and_reset():
     reducer = DummyTensorReducer('Dummy')
     aggregator = DummyTensorAggregator(5)
     collector.register_statistic_branch('A', reducer, aggregator)
-    inputs = {collector.get_output_info(None, None)[0][0]: np.array(100)}
+    input_name = 'input_name'
+    inputs = TensorCollector.get_target_inputs({input_name: np.array(100)},
+                                                [(hash(reducer), [input_name])])
 
     for _ in range(3):
         collector.register_inputs(inputs)
@@ -104,11 +106,12 @@ def test_duplicated_statistics_are_merged():
 
     output_info = collector.get_output_info(None, None)
     # Check output info
-    assert sorted(output_info) == sorted([(hash(reducer_inplace), 'Dummy_inplace'),
-                                         (hash(reducer_a), 'A'), (hash(reducer), 'Dummy')])
+    assert sorted(output_info) == sorted([(hash(reducer_inplace), ['Dummy_inplace']),
+                                         (hash(reducer_a), ['A']), (hash(reducer), ['Dummy'])])
 
     outputs = {'Dummy': np.array(5), 'A': np.array(0), 'Dummy_inplace': np.array(6)}
-    collector.register_inputs({reducer: outputs[name] for reducer, name in output_info})
+    target_inputs = TensorCollector.get_target_inputs(outputs, output_info)
+    collector.register_inputs(target_inputs)
 
     # Check aggregators recieved inputs as expected
     assert aggregators[0]._collected_samples == 1
@@ -169,7 +172,7 @@ def test_merged_tensor_collector():
     assert len(merged_collector._aggregators) == num_collectors
 
     # Check aggregators was replaced correctly
-    common_branch_key = (hash(reducer_common), hash(aggregator_common))
+    common_branch_key = (hash(reducer_common), 0, hash(aggregator_common))
     common_aggregator = merged_collector._aggregators[common_branch_key]
     for collector in collectors[:-1]:
         assert collector.aggregators[common_branch_key] is common_aggregator
@@ -177,7 +180,8 @@ def test_merged_tensor_collector():
     output_info = merged_collector.get_output_info(None, None)
     outputs = {'common_input': np.array(0)}
     outputs.update({f'input_{idx + 1}': np.array(idx + 1) for idx, _ in enumerate(collectors[:-1])})
-    merged_collector.register_inputs({reducer: outputs[name] for reducer, name in output_info})
+    target_inputs = TensorCollector.get_target_inputs(outputs, output_info)
+    merged_collector.register_inputs(target_inputs)
 
     # Check statistics are collected in a correct way
     for idx, collector in enumerate(collectors[:-1]):

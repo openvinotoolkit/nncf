@@ -14,7 +14,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Tuple, Optional, List, Union
+from typing import Tuple, Optional, List, Union, Callable, Any
 
 import numpy as np
 from nncf.common.tensor import NNCFTensor
@@ -181,7 +181,12 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def stack(x: NNCFTensor) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def stack(x: NNCFTensor, axis: int = 0) -> NNCFTensor:
         """
         Stacks a list or deque of NNCFTensors rank-R tensors into one NNCFTensor rank-(R+1) tensor.
 
@@ -192,7 +197,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def unstack(x: NNCFTensor) -> List[NNCFTensor]:
+    def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         """
         Unstack a NNCFTensor into list.
 
@@ -210,6 +215,29 @@ class NNCFCollectorTensorProcessor(ABC):
         :param tensor: Given NNCFTensor.
         :returns: Sum of each elements of the given NNCFTensor.
         """
+
+    @staticmethod
+    @abstractmethod
+    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]],
+                 axis: Union[int, tuple, list]) -> List[TensorElementsType]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def map_per_channel(x: NNCFTensor, ch_axis: int,
+                        fn: Callable[[np.array, int], Any]):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def mean_per_channel(cls, x: NNCFTensor, axis: int) -> NNCFTensor:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def no_outliers_map_per_channel(cls, x: NNCFTensor, ch_axis: int,
+                                    fn: Callable[[NNCFTensor, Optional[int]], Any], alpha: float = 0.01):
+        pass
 
 
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
