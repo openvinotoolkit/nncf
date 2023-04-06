@@ -404,14 +404,6 @@ class MeanPerChReducer(TensorReducerBase):
         return self._tensor_processor.mean_per_channel(x, self._reduction_shape)
 
 
-class NumpyConverter(TensorReducerBase):
-    def __init__(self):
-        super().__init__(None, False)
-
-    def _reduce_out_of_place(self, x: TensorType) -> TensorType:
-        return self._tensor_processor.to_numpy(x)
-
-
 ##################################################Aggregators##################################################
 
 
