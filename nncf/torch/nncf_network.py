@@ -288,8 +288,7 @@ class NNCFNetworkInterface(torch.nn.Module):
                                                           ShapeIgnoringTensorMetaComparator())
         self._load_listener = None
 
-
-
+        self.compression_controller = None  # type: PTCompressionAlgorithmController
 
     @property
     def _model_ref(self) -> 'NNCFNetwork':
@@ -698,6 +697,9 @@ class NNCFNetworkInterface(torch.nn.Module):
             nncf_node = self._original_graph.get_node_by_id(node_id)
             retval[nncf_node.node_name] = op_address
         return retval
+
+    def set_compression_controller(self, ctrl: 'PTCompressionAlgorithmController'):
+        self.compression_controller = ctrl
 
 
 class NNCFNetworkMeta(type):

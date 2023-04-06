@@ -22,6 +22,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.backend import get_backend
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
@@ -99,25 +100,18 @@ class QuantizationAccuracyRestorer:
     """
 
     def __init__(self,
-                 algo_backend: AccuracyControlAlgoBackend,
                  ranking_subset_size: int = 300,
                  max_num_iterations: int = sys.maxsize,
-                 max_drop: float = 0.01,
-                 is_native: bool = True):
+                 max_drop: float = 0.01):
         """
-        :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         :param ranking_subset_size: The number of data items that will be selected from
             the dataset to rank groups of quantizers.
         :param max_num_iterations: A maximal number of iterations.
         :param max_drop: The maximum absolute accuracy drop that should be achieved.
         """
-        self.algo_backend = algo_backend
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations
         self.max_drop = max_drop
-        # TODO(andrey-churkin): Should be removed when native implementation
-        # will become the main one.
-        self.is_native = is_native
 
     def restore_accuracy(self,
                          initial_model: TModel,
@@ -146,6 +140,10 @@ class QuantizationAccuracyRestorer:
 
             initial_metric - final_metric <= max_drop.
         """
+
+        backend = get_backend(initial_model)
+        algo_backend = get_algo_backend(backend)
+
         accuracy_drop = initial_metric - quantized_metric
         nncf_logger.info(f'Accuracy drop: {accuracy_drop}')
 
@@ -160,18 +158,18 @@ class QuantizationAccuracyRestorer:
         # Store this data inside the `node.data` dictionary.
         # This data will be used in the `revert_operations_to_floating_point_precision()` method.
         QuantizationAccuracyRestorer._collect_original_biases_and_weights(initial_model_graph, quantized_model_graph,
-                                                                          initial_model, self.algo_backend)
+                                                                          initial_model, algo_backend)
 
         # Show the number of quantized operations in the model.
         report = QuantizationAccuracyRestorerReport()
         report.num_quantized_operations = get_number_of_quantized_ops(quantized_model_graph,
-                                                                      self.algo_backend.get_quantizer_metatypes(),
-                                                                      self.algo_backend.get_quantizable_metatypes())
+                                                                      algo_backend.get_quantizer_metatypes(),
+                                                                      algo_backend.get_quantizable_metatypes())
         nncf_logger.info(f'Total number of quantized operations in the model: {report.num_quantized_operations}')
 
         nncf_logger.info('Ranking groups of quantizers was started')
         ranker = QuantizationAccuracyRestorer._create_ranker(initial_model, validation_fn, validation_dataset,
-                                                             self.ranking_subset_size, self.algo_backend)
+                                                             self.ranking_subset_size, algo_backend)
         groups_to_rank = ranker.find_groups_of_quantizers_to_rank(quantized_model_graph)
         ranked_groups = ranker.rank_groups_of_quantizers(groups_to_rank, initial_model, quantized_model,
                                                          quantized_model_graph)
@@ -201,7 +199,7 @@ class QuantizationAccuracyRestorer:
                              f'precision: \n{_create_message(current_group.operations)}')
 
             # Calculate drop for new quantization scope.
-            current_metric = validation_fn(self.algo_backend.prepare_for_inference(current_model),
+            current_metric = validation_fn(algo_backend.prepare_for_inference(current_model),
                                            validation_dataset.get_data())
             current_accuracy_drop = initial_metric - current_metric
             nncf_logger.info('Accuracy drop with the new quantization scope is %s', float(current_accuracy_drop))
@@ -265,7 +263,7 @@ class QuantizationAccuracyRestorer:
             if algo_backend.is_node_with_weight(node):
                 node_with_weight = quantized_model_graph.get_node_by_name(node.node_name)
                 for port_id in algo_backend.get_weight_tensor_port_ids(node_with_weight):
-                    weight = algo_backend.get_weight_value(node, initial_model_graph, initial_model, port_id)
+                    weight = algo_backend.get_weight_value(node, initial_model, port_id)
                     node_with_weight.data[f'original_weight.{port_id}'] = weight
 
     @staticmethod
@@ -308,7 +306,7 @@ class QuantizationAccuracyRestorer:
         :param max_num_iterations: A maximal number of iterations.
         """
         if report.removed_all or not report.reached_required_drop:
-            nncf_logger.info('The algorithm could not achieve the required accuracy drop.', force=True)
+            nncf_logger.info('The algorithm could not achieve the required accuracy drop.')
 
         if report.num_iterations + 1 >= max_num_iterations:
             nncf_logger.info('Maximum number of iteration was reached.')

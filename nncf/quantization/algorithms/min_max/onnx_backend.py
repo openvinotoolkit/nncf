@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple, Optional
 import numpy as np
+from typing import Dict, List, Tuple, Optional
 
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -45,6 +45,7 @@ from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -107,6 +108,16 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
+
+    @staticmethod
+    def unify_statistics(statistics: List[ONNXMinMaxTensorStatistic]) -> ONNXMinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        max_values = np.max(max_values, axis=0)
+        min_values = np.min(min_values, axis=0)
+        return ONNXMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
     def _get_input_edges_mapping(nncf_graph: NNCFGraph):

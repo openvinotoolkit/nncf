@@ -18,6 +18,8 @@ from typing import Callable, Any, List, Iterable, Optional, TypeVar
 from dataclasses import dataclass
 from copy import deepcopy
 
+import numpy as np
+
 from nncf.data.dataset import Dataset
 from nncf.quantization.passes import remove_shapeof_subgraphs
 from nncf.common.factory import EngineFactory
@@ -25,6 +27,8 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
+from nncf.common.logging import nncf_logger
+from nncf.common.utils.timer import timer
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 
 
@@ -44,6 +48,15 @@ def get_ranking_subset_indices(errors: List[float], ranking_subset_size: int) ->
     ordered_indices = [
         idx for idx, _ in sorted(enumerate(errors), key=operator.itemgetter(1), reverse=True)
     ]
+    end_index = min(ranking_subset_size, len(ordered_indices))
+    return sorted(ordered_indices[:end_index])
+
+
+def get_ranking_subset_indices_pot_version(errors: List[float], ranking_subset_size: int) -> List[int]:
+    """
+    POT implementation of the `get_ranking_subset_indices()` method.
+    """
+    ordered_indices = np.flip(np.argsort(errors)).tolist()
     end_index = min(ranking_subset_size, len(ordered_indices))
     return sorted(ordered_indices[:end_index])
 
@@ -100,25 +113,27 @@ class Ranker(ABC):
         """
         groups_to_rank = []
         processed = {}
-        quantizers = quantized_model_graph.get_nodes_by_metatypes(self._algo_backend.get_quantizer_metatypes())
+        quantizers = [x for x in quantized_model_graph.topological_sort() \
+                      if x.metatype in self._algo_backend.get_quantizer_metatypes()]
+
         quantized_model_graph_without_shapeof = remove_shapeof_subgraphs(
             deepcopy(quantized_model_graph),
             self._algo_backend.get_shapeof_metatypes()
         )
 
-        for quantizer_node in quantizers:
+        for quantizer_node in reversed(quantizers):
             if processed.get(quantizer_node.node_name, False):
                 continue
-            quantizers, operations = find_quantizer_nodes_to_cut(quantized_model_graph_without_shapeof,
-                                                                 quantizer_node,
-                                                                 self._algo_backend.get_quantizer_metatypes(),
-                                                                 self._algo_backend.get_const_metatypes(),
-                                                                 self._algo_backend.get_quantizable_metatypes(),
-                                                                 self._algo_backend.get_quantize_agnostic_metatypes())
-            for x in quantizers:
+            group, operations = find_quantizer_nodes_to_cut(quantized_model_graph_without_shapeof,
+                                                            quantizer_node,
+                                                            self._algo_backend.get_quantizer_metatypes(),
+                                                            self._algo_backend.get_const_metatypes(),
+                                                            self._algo_backend.get_quantizable_metatypes(),
+                                                            self._algo_backend.get_quantize_agnostic_metatypes())
+            for x in group:
                 processed[x.node_name] = True
 
-            groups_to_rank.append(GroupToRank(quantizers, operations))
+            groups_to_rank.append(GroupToRank(group, operations))
 
         return groups_to_rank
 
@@ -140,32 +155,38 @@ class Ranker(ABC):
         """
         # See `Ranker.__init__()` to understand why we should do this.
         if self._ref_values is None:
-            self._ref_values = self._collect_values_for_each_item(initial_model,
-                                                                  self._get_data_items())
+            nncf_logger.info('Collecting metrics for each data item using an initial model')
+            with timer():
+                self._ref_values = self._collect_values_for_each_item(initial_model,
+                                                                      self._get_data_items())
 
-        approx_values = self._collect_values_for_each_item(quantized_model,
-                                                           self._get_data_items())
+        nncf_logger.info('Collecting metrics for each data item using a quantized model')
+        with timer():
+            approx_values = self._collect_values_for_each_item(quantized_model,
+                                                               self._get_data_items())
 
         # Create a subset of data items that will be used to rank groups of quantizers.
         scores = [
             self._ranking_fn(ref_val, approx_val) for ref_val, approx_val in zip(self._ref_values, approx_values)
         ]
-        ranking_subset_indices = get_ranking_subset_indices(scores, self._ranking_subset_size)
+        ranking_subset_indices = get_ranking_subset_indices_pot_version(scores, self._ranking_subset_size)
         # TODO(andrey-churkin): The ranking subset size usually is small. So it is possible
         # to save all ranking data items in memory and don't read them again.
         ranking_data_items = self._get_data_items(ranking_subset_indices)
 
-        # Calculate ranking score for groups of quantizers.
-        ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
-        for current_group in groups_to_rank:
-            modified_model = revert_operations_to_floating_point_precision(current_group.operations,
-                                                                           current_group.quantizers,
-                                                                           quantized_model,
-                                                                           quantized_model_graph)
-            # Calculate the ranking score for the current group of quantizers.
-            ranking_score = self._calculate_ranking_score(modified_model, ranking_data_items, ranking_subset_indices)
-
-            ranking_scores.append(float(ranking_score))
+        nncf_logger.info('Calculating ranking score for groups of quantizers')
+        with timer():
+            # Calculate ranking score for groups of quantizers.
+            ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
+            for current_group in groups_to_rank:
+                modified_model = revert_operations_to_floating_point_precision(current_group.operations,
+                                                                               current_group.quantizers,
+                                                                               quantized_model,
+                                                                               quantized_model_graph)
+                # Calculate the ranking score for the current group of quantizers.
+                ranking_score = self._calculate_ranking_score(modified_model, ranking_data_items,
+                                                              ranking_subset_indices)
+                ranking_scores.append(float(ranking_score))
 
         # Rank groups.
         ranked_groups = [
@@ -290,10 +311,13 @@ class MetricBasedRanker(Ranker):
         :param data_items: Data items.
         :return: A list that contains a metric for each item from the dataset.
         """
-        metrics = [
-            self._validation_fn(self._algo_backend.prepare_for_inference(model), [data_item]) \
-                for data_item in data_items
-        ]
+        model_for_inference = self._algo_backend.prepare_for_inference(model)
+
+        metrics = []
+        for data_item in data_items:
+            value = self._validation_fn(model_for_inference, [data_item])
+            metrics.append(value)
+
         return metrics
 
     def _calculate_ranking_score(self,

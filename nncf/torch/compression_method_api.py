@@ -161,7 +161,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         """
         Builds `PTCompressionAlgorithmController` to handle the additional modules,
         parameters, and hooks inserted into the model to enable algorithm-specific
-        compression.
+        compression. Registers the built controller in the model's NNCFNetworkInterface.
 
         :param model: The model with additional modifications necessary to enable
             algorithm-specific compression during fine-tuning.
