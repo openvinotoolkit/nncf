@@ -163,10 +163,6 @@ class FastBiasCorrection(Algorithm):
                 output_name=sub_output_name
             )
 
-            if bias_value.ndim > 1:
-                new_shape = [1] * bias_value.ndim
-                new_shape[channel_axis] = bias_shift.shape[0]
-                bias_shift = bias_shift.reshape(new_shape)
             bias_shift = self.reshape_bias_shift(bias_shift, bias_value, channel_axis)
             updated_bias = bias_value + bias_shift
             magnitude = self._backend_entity.get_bias_shift_magnitude(bias_value, updated_bias)

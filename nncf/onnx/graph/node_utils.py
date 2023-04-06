@@ -11,18 +11,19 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple
+from typing import Dict
+from typing import Tuple
 
-import onnx
 import numpy as np
+import onnx
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
-from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
+from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 
 def is_node_with_bias(node: NNCFNode) -> bool:
@@ -44,7 +45,7 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     """
     Returns the bias tensor for the biased node.
 
-    :param node_with_bias : The node that corresponds to the operation with bias.
+    :param node_with_bias: The node that corresponds to the operation with bias.
     :param model: The model that contains this operation.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
@@ -63,7 +64,7 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
 
 def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]:
     """
-    Returns mapping between NNNCFGraph input nodes and following by ONNX nodes with corresponding input port ids.
+    Returns mapping between NNCFGraph input nodes and following by ONNX nodes with corresponding input port ids.
 
     :param nncf_graph: instance of NNCFGraph
     :return: A mapping of NNCF input node names and a tuple with the consumed node names and their input port ids.
