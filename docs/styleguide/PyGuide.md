@@ -60,7 +60,20 @@ pre-commit run -a  # Check and format all files
 
 Also recommend configuring your IDE to run Black and isort tools automatically when saving files.
 
-Automatic code formatting is mandatory for all Python files, but you can disable it for specific cases if required.
+Automatic code formatting is mandatory for all Python files, but you can disable it for specific cases if required:
+  - if you need a specialized order of importing modules;
+  - for large data structures for which autoformatting unnecessarily breaks into lines,
+    e.g. reference data in tests or a list of classes;
+  - for structures for which formatting helps understanding, such as matrix.
+
+Example for 'isort':
+
+```python
+import c
+# isort: off
+import b
+import a
+```
 
 Example for 'black':
 
@@ -76,14 +89,6 @@ arr2 = [
   0, 1,
 ]
 # fmt: on
-```
-Example for 'isort':
-
-```python
-import c
-# isort: off
-import b
-import a
 ```
 
 <a id="s3-python-language-rules"></a>
