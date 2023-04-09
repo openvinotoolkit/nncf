@@ -128,3 +128,8 @@ test-install-torch-gpu:
 	pytest tests/cross_fw/install -s        \
 		--backend torch                     \
 		--junitxml ${JUNITXML_PATH}
+
+###############################################################################
+# Code Style
+code-style:
+	pre-commit run -a

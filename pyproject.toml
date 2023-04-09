@@ -4,3 +4,5 @@ line-length = 120
 [tool.isort]
 line_length = 120
 force_single_line = true
+profile = 'black'
+single_line_exclusions = ['typing']
