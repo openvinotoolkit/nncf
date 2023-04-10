@@ -130,6 +130,7 @@ test-install-torch-gpu:
 		--junitxml ${JUNITXML_PATH}
 
 ###############################################################################
-# Code Style
-code-style:
+# Pre commit check
+pre-commit:
+	pip install pre-commit==3.2.2
 	pre-commit run -a
