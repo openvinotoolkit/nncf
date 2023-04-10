@@ -54,7 +54,7 @@ it's important to run a pre-commit command to ensure that the code is properly f
 You can use the following commands for this:
 
 ```bash
-make code-style
+make pre-commit
 ```
 
 Also recommend configuring your IDE to run Black and isort tools automatically when saving files.
