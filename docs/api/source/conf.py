@@ -31,6 +31,13 @@ autoapi_options = ['members', 'show-inheritance',
                    'show-module-summary', 'special-members', 'imported-members']
 
 autoapi_template_dir = '_autoapi_templates'
+autoapi_keep_files = True
+autoapi_add_toctree_entry = False
+
+html_theme_options = {
+    'navigation_depth': -1,
+}
+
 exclude_patterns = []
 
 
@@ -99,5 +106,5 @@ def setup(sphinx):
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
