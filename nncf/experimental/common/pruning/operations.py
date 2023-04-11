@@ -354,12 +354,17 @@ class SplitPruningOp(BasePruningOp):
         input_shape = input_edge.tensor_shape
         output_shape = output_edge.tensor_shape
         is_chunk_axis_removed = (chunks == input_shape[chunk_axis]) and (len(input_shape) > len(output_shape))
-        if is_chunk_axis_removed:
+        is_unit_chunk = input_shape[chunk_axis] // chunks == 1
+        if is_chunk_axis_removed or is_unit_chunk:
             output_mask = PropagationMask()
             for dim, groups in input_masks[0].dim_groups_map.items():
                 if dim != chunk_axis:
+                    # not affected by split groups are propagated further
                     output_mask.dim_groups_map[dim] = groups
-                    # other groups propagated further
+                else:
+                    # invalidate groups, that assigned to the removed dimension or to the dimension that have 1 channel
+                    for group in groups:
+                        group.invalidate()
         else:
             nncf_logger.warning("symbolic mask propagation for split by prune dimension is not implemented, "
                                 "just propagate further for now")

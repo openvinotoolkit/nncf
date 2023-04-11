@@ -16,7 +16,6 @@ from typing import Dict
 from typing import List
 
 
-# probably not needed
 class MaskProducer:
     """
     Defines producer of the pruning.
@@ -104,8 +103,6 @@ class PropagationBlock:
         self.offset = offset
         self.pruning_dimension = pruning_dimension
         self._producer = producer
-        # TODO: probably not needed
-        self._group = None
 
     def __eq__(self, other) -> bool:
         return self.pruning_dimension == other.pruning_dimension and \
@@ -119,9 +116,6 @@ class PropagationBlock:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def set_group(self, group) -> None:
-        self._group = group
-
 
 class PropagationGroup:
     """
@@ -131,8 +125,6 @@ class PropagationGroup:
 
     def __init__(self, blocks: List[PropagationBlock]) -> None:
         self._blocks = blocks
-        for block in blocks:
-            block.set_group(self)
         self._children: List['PropagationGroup'] = []
         self.is_invalid = False
 
@@ -193,7 +185,6 @@ class PropagationGroup:
 
     def add_block(self, block: PropagationBlock) -> None:
         self._blocks.append(block)
-        block.set_group(self)
 
 
 class PropagationMask:

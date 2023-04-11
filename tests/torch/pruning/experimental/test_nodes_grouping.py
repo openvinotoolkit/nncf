@@ -409,8 +409,6 @@ CV_DESCS = [
             PruningGroup(dim_blocks={
                 PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
                 PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={
-                PruningBlock(size=1, offset=0, producer_id=1, pruning_dimension=0)}),
         ]
     ),
     GroupTestDesc(
@@ -437,8 +435,6 @@ CV_DESCS = [
             PruningGroup(dim_blocks={
                 PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
                 PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={
-                PruningBlock(size=1, offset=0, producer_id=1, pruning_dimension=0)}),
         ]
     ),
     GroupTestDesc(
@@ -471,7 +467,6 @@ CV_DESCS = [
                     PruningBlock(size=1, offset=0, producer_id=36, pruning_dimension=0)
                 }
             ),
-            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=1, pruning_dimension=0)}),
         ]
     ),
 ]
@@ -506,13 +501,6 @@ AUDIO_DESCS = [
                     PruningBlock(size=1, offset=0, producer_id=57, pruning_dimension=0)
                 }
             ),
-            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=2, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=5, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=7, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=9, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=11, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=13, pruning_dimension=0)}),
-            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=22, pruning_dimension=0)}),
         ]
     ),
 ]
@@ -537,9 +525,9 @@ def test_groups(desc: GroupTestDesc, tmp_path, mocker):
     pruning_producing_types = ['linear']
     get_graph_spy = mocker.spy(BlockHierarchy, '_get_graph_for_visualization')
     not_filtered_groups = get_pruning_groups(nncf_network.get_graph(),
-                                                PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
-                                                pruning_producing_types,
-                                                tmp_path)
+                                             PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
+                                             pruning_producing_types,
+                                             tmp_path)
 
     nx_graph = get_graph_spy.spy_return
     path_to_dot = get_full_path_to_the_graph(f'{str(desc)}.dot', 'pruning_groups')
@@ -547,4 +535,3 @@ def test_groups(desc: GroupTestDesc, tmp_path, mocker):
 
     filtered_groups = select_largest_groups(not_filtered_groups)
     assert filtered_groups == desc.ref_groups
-

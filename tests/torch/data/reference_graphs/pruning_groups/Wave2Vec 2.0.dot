@@ -1,47 +1,39 @@
 strict digraph  {
-0 [color=green, label="S:1__O:0__ID:2", style=filled];
-1 [color=green, label="S:1__O:0__ID:5", style=filled];
-2 [color=green, label="S:1__O:0__ID:7", style=filled];
-3 [color=green, label="S:1__O:0__ID:9", style=filled];
-4 [color=green, label="S:1__O:0__ID:11", style=filled];
-5 [color=green, label="S:1__O:0__ID:13", style=filled];
-6 [color=red, label="S:1__O:0__ID:15", style=filled];
-7 [color=red, label="S:1__O:0__ID:19", style=filled];
-8 [color=green, label="S:1__O:0__ID:22", style=filled];
-9 [color=grey, label="S:1__O:0__ID:29", style=filled];
-10 [color=grey, label="S:8__O:0__ID:29", style=filled];
-11 [color=grey, label="S:8__O:0__ID:29
+0 [color=red, label="S:1__O:0__ID:19", style=filled];
+1 [color=grey, label="S:1__O:0__ID:29", style=filled];
+2 [color=grey, label="S:8__O:0__ID:29", style=filled];
+3 [color=grey, label="S:8__O:0__ID:29
 S:8__O:0__ID:31", style=filled];
-12 [color=green, label="S:8__O:0__ID:29
+4 [color=green, label="S:8__O:0__ID:29
 S:8__O:0__ID:31
 S:8__O:0__ID:35
 S:8__O:0__ID:53", style=filled];
-13 [color=grey, label="S:1__O:8__ID:29", style=filled];
-14 [color=green, label="S:1__O:8__ID:29
-S:1__O:8__ID:31", style=filled];
-15 [color=grey, label="S:1__O:0__ID:31", style=filled];
-16 [color=grey, label="S:8__O:0__ID:31", style=filled];
-17 [color=grey, label="S:1__O:8__ID:31", style=filled];
-18 [color=grey, label="S:1__O:0__ID:35", style=filled];
-19 [color=grey, label="S:8__O:0__ID:35", style=filled];
-20 [color=green, label="S:1__O:8__ID:35
-S:1__O:8__ID:53", style=filled];
-21 [color=red, label="S:1__O:0__ID:53", style=filled];
-22 [color=green, label="S:1__O:0__ID:57
+5 [color=grey, label="S:1__O:8.0__ID:29", style=filled];
+6 [color=green, label="S:1__O:8.0__ID:29
+S:1__O:8.0__ID:31", style=filled];
+7 [color=grey, label="S:1__O:0__ID:31", style=filled];
+8 [color=grey, label="S:8__O:0__ID:31", style=filled];
+9 [color=grey, label="S:1__O:8.0__ID:31", style=filled];
+10 [color=grey, label="S:1__O:0__ID:35", style=filled];
+11 [color=grey, label="S:8__O:0__ID:35", style=filled];
+12 [color=green, label="S:1__O:8.0__ID:35
+S:1__O:8.0__ID:53", style=filled];
+13 [color=red, label="S:1__O:0__ID:53", style=filled];
+14 [color=green, label="S:1__O:0__ID:57
 S:1__O:0__ID:60", style=filled];
-23 [color=red, label="S:1__O:0__ID:60", style=filled];
-24 [color=red, label="S:1__O:0__ID:64", style=filled];
-25 [color=red, label="S:1__O:0__ID:66", style=filled];
-9 -> 10;
-9 -> 13;
+15 [color=red, label="S:1__O:0__ID:60", style=filled];
+16 [color=red, label="S:1__O:0__ID:64", style=filled];
+17 [color=red, label="S:1__O:0__ID:66", style=filled];
+1 -> 2;
+1 -> 5;
+2 -> 3;
+3 -> 4;
+5 -> 6;
+7 -> 8;
+7 -> 9;
+8 -> 3;
+9 -> 6;
 10 -> 11;
-11 -> 12;
-13 -> 14;
-15 -> 16;
-15 -> 17;
-16 -> 11;
-17 -> 14;
-18 -> 19;
-18 -> 20;
-19 -> 12;
+10 -> 12;
+11 -> 4;
 }
