@@ -547,7 +547,7 @@ MATCH_KEY_DESC_LIST = [
         .keys_to_load([OP1_PREFIX, OP1_NOT_PARAM, OP2_NOT_PARAM])
         .model_keys([OP1_PREFIX, OP1_NOT_PARAM, OP2_MIDDLE])
         .missing([OP2_MIDDLE]).unexpected([OP2_NOT_PARAM]).matched([OP1_PREFIX, OP1_NOT_PARAM]),
-]
+]  # fmt: skip
 
 
 @pytest.mark.parametrize('desc', MATCH_KEY_DESC_LIST, ids=[str(d) for d in MATCH_KEY_DESC_LIST])

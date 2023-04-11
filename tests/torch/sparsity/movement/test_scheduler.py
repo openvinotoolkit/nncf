@@ -75,7 +75,7 @@ class TestSchedulerParams:
                          importance_regularization_factor=-1),
              error=ValueError,
              match='should not be a negative number'),
-    ])
+    ])  # fmt: skip
     def test_error_on_wrong_config(self, desc: dict):
         with pytest.raises(desc['error'], match=desc['match']):
             _ = MovementSchedulerParams.from_dict(desc['params'])
@@ -140,7 +140,7 @@ desc_current_importance_threshold_and_regularization_factor = {
         ref_factor=[0., 0., 0., 0., 0., 0.0234, 0.0438, 0.0609, 0.0750, 0.0859, 0.0938, 0.0984,
                     0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
     )
-}
+}  # fmt: skip
 
 
 class TestSchedulerStatus:
@@ -387,7 +387,7 @@ class TestSchedulerAdaptiveInitThreshold:
                                                   depths=(2, 2, 18, 2), num_heads=(6, 12, 24, 48)),
              ref_threshold=8.3142,
              ref_sparsity=0.0010),
-    ], ids=['bert_toy', 'bert_large', 'swin_large'])
+    ], ids=['bert_toy', 'bert_large', 'swin_large'])  # fmt: skip
     def test_set_init_importance_threshold(self, desc: dict):
         recipe: BaseMockRunRecipe = desc['recipe']
         ref_threshold: float = desc['ref_threshold']

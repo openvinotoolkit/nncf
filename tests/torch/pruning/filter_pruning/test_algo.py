@@ -195,7 +195,7 @@ BIG_PRUNING_MODEL_TEST_PARAMS_VALUES = \
     (True, True, 0.7, False, { 1 : gen_ref_masks([(4, 28), (32, 32), (93, 35)]),
                          2 : gen_ref_masks([(6, 26), (36, 28), (102, 26)]),
                          3 : gen_ref_masks([(7, 25), (38, 26), (106, 22)])}),
-]
+]  # fmt: skip
 
 
 @pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES )
@@ -443,7 +443,7 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
      'PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0': (6, 6),
      'PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0': (1, 1152),
      'PruningTestModelDiffChInPruningCluster/NNCFLinear[last_linear]/linear_0': (1, 1)})
-     ])
+     ])  # fmt: skip
 def test_collect_output_shapes(model, ref_output_shapes):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
@@ -455,7 +455,7 @@ def test_collect_output_shapes(model, ref_output_shapes):
     output_shapes = collect_output_shapes(graph)
     assert output_shapes == ref_output_shapes
 
-
+# fmt: off
 BigPruningTestModelNextNodesRef = {
     0: [{'node_name': 'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0', 'sparse_multiplier': 1}],
     1: [{'node_name': 'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0', 'sparse_multiplier': 1}],
@@ -688,8 +688,7 @@ PruningTestModelDiffChInPruningClusterRef = {
                            'PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0': 32,
                            'PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0': 1152,
                            'PruningTestModelDiffChInPruningCluster/NNCFLinear[last_linear]/linear_0': 1}
-
-}
+}  # fmt: on
 
 @pytest.mark.parametrize(
     ('model_module', 'all_weights', 'pruning_flops_target', 'ref_flops',
@@ -707,7 +706,7 @@ PruningTestModelDiffChInPruningClusterRef = {
         (PruningTestModelDiffChInPruningCluster, False, 0.3, 982336, 453792,
          PruningTestModelDiffChInPruningClusterRef),
 
-     ])
+     ])  # fmt: skip
 def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_flops, ref_params_num, refs):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
@@ -847,7 +846,7 @@ def test_disconnected_graph():
         'DisconectedGraphModel/NNCFConv2d[conv2]/conv2d_0': ((8, 8), 8),
         'DisconectedGraphModel/NNCFConv2d[conv3]/conv2d_0': ((8, 8), 1),
         'DisconectedGraphModel/NNCFLinear[fc]/linear_0': ((1, 3), None),
-    }
+    }  # fmt: skip
     # pylint:disable=protected-access
     collected_shapes = compression_controller._output_shapes
     for name, (shape, mask_sum) in nodes_output_mask_map.items():

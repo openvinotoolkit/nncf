@@ -748,7 +748,7 @@ class TestQuantizerPropagationSolver:
                         None
                     ])
             })
-    ]
+    ]  # fmt: skip
 
     @staticmethod
     @pytest.fixture(params=QCONFIG_PRIMARY_SECONDARY_BEFORE_AND_AFTER_MERGING)
@@ -1002,7 +1002,7 @@ class TestQuantizerPropagationSolver:
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('5 /E_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
-    ]
+    ]  # fmt: skip
 
     @staticmethod
     @pytest.fixture(params=BRANCH_TRANSITION_TEST_CASES)
@@ -1281,8 +1281,7 @@ class TestQuantizerPropagationSolver:
             target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /A_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
-
-    ]
+    ]  # fmt: skip
 
     @staticmethod
     @pytest.fixture(params=PATH_TRANSITION_TEST_CASES)
@@ -1379,7 +1378,7 @@ class TestQuantizerPropagationSolver:
             current_location_node_key_for_propagated_quant=InsertionPointGraph.get_post_hook_node_key('9 /I_0'),
             added_quantizer_location_node_keys=[InsertionPointGraph.get_pre_hook_node_key('9 /I_0', input_port_id=1)]
         )
-    ]
+    ]  # fmt: skip
 
     @staticmethod
     @pytest.fixture(params=PROPAGATION_STEP_TEST_CASES)
@@ -1549,7 +1548,7 @@ class TestQuantizerPropagationSolver:
             expected_count_active_quant=0,
             ignored_scopes=[TwoFcAfterDropout.FC_2_NODE_NAME]
         )
-    ]
+    ]  # fmt: skip
 
     @staticmethod
     @pytest.fixture(params=RUN_ON_IP_GRAPH_TEST_CASES)
@@ -1669,7 +1668,7 @@ class TestQuantizerPropagationSolver:
             ],
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         )
-    ]
+    ]  # fmt: skip
 
     @pytest.fixture(params=INT_EDGE_PROPAGATION_CASES)
     def int_prop_test_struct(self, request):
