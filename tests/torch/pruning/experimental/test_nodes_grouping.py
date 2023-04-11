@@ -20,34 +20,41 @@ import torch
 from torch import nn
 
 from nncf import NNCFConfig
-from nncf.common.utils import dot_file_rw
-from nncf.common.utils.dot_file_rw import read_dot_graph, write_dot_graph
 # NNCF Torch should be imported before transformers in order to patch all operations before they added to some global vars,
 # otherwise test may fail with some error (e.g. IndexError: list index out of range).
 from nncf.torch.model_creation import create_nncf_network
-from nncf.experimental.common.pruning.nodes_grouping import PruningBlock, select_largest_groups
-from nncf.experimental.common.pruning.nodes_grouping import PruningGroup
-from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
+
+from nncf.experimental.common.pruning.nodes_grouping import (
+    PruningBlock,
+    PruningGroup,
+    get_pruning_groups,
+    select_largest_groups
+)
 from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
 from nncf.experimental.common.pruning.block_hierarchy import BlockHierarchy
 
-from transformers import AutoModelForImageClassification
-from transformers import RobertaConfig
-from transformers import SwinConfig
-from transformers import ViTConfig
-from transformers import AutoModelForAudioClassification
-from transformers import AutoModelForQuestionAnswering
-from transformers import AutoModelForSequenceClassification
-from transformers import BertConfig
-from transformers import Wav2Vec2Config
-from transformers import MobileBertConfig
-from transformers import DistilBertConfig
-from transformers import CLIPVisionConfig
-from transformers import CLIPVisionModel
+from transformers import (
+    AutoModelForImageClassification,
+    RobertaConfig,
+    SwinConfig,
+    ViTConfig,
+    AutoModelForAudioClassification,
+    AutoModelForQuestionAnswering,
+    AutoModelForSequenceClassification,
+    BertConfig,
+    Wav2Vec2Config,
+    MobileBertConfig,
+    DistilBertConfig,
+    CLIPVisionConfig,
+    CLIPVisionModel
+)
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 
-from tests.torch.test_compressed_graph import GeneralModelDesc, get_full_path_to_the_graph
-from tests.torch.test_compressed_graph import IModelDesc
+from tests.torch.test_compressed_graph import (
+    GeneralModelDesc,
+    get_full_path_to_the_graph,
+    IModelDesc
+)
 
 
 class SelfAttention(nn.Module):

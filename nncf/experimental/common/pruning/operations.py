@@ -35,7 +35,6 @@ from nncf.common.logging import nncf_logger
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import identity_mask_propagation
-from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.pruning.nodes_grouping import PropagationGroup
 from nncf.experimental.common.pruning.nodes_grouping import PropagationBlock
 from nncf.experimental.common.pruning.nodes_grouping import MaskProducer
@@ -98,13 +97,8 @@ class OutputPruningOp(BasePruningOp):
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         node.data['output_mask'] = None
-
-        # TODO: more safe if there's no masks
         input_masks = get_input_masks(node, graph)
-        for m in input_masks:
-            if m:
-                m.invalidate_groups()
-
+        cls.invalidate_masks(input_masks)
 
 
 class IdentityMaskForwardPruningOp(BasePruningOp):
@@ -183,7 +177,6 @@ class LinearPruningOp(BasePruningOp):
 
         node.data['output_mask'] = output_mask
 
-    #TODO: add consumer to the group by passing it to the leaves
     @classmethod
     def add_consumer_block(cls, group: PropagationGroup, node: NNCFNode) -> None:
         """
@@ -242,10 +235,11 @@ class ElementwisePruningOp(BasePruningOp):
                                 "node_name={node.node_name}")
             output_mask = input_masks[0]
         elif any(m is None for m in input_masks):
-            for m in input_masks:
-                if m:
-                    m.invalidate_groups()
+            # Need masks on all branches in order to properly propagate pruning mask, otherwise - invalidate masks
+            cls.invalidate_masks(input_masks)
         else:
+            # Each branch/mask should have a single group along the same dimension. These groups are joined, all others
+            # are invalidated.
             output_mask = PropagationMask()
             first_mask = input_masks[0]
             dims_to_invalidate = []
@@ -262,7 +256,6 @@ class ElementwisePruningOp(BasePruningOp):
                         dims_to_invalidate.append(dim)
                 else:
                     dims_to_invalidate.append(dim)
-
 
             for dim in dims_to_invalidate:
                 for m in input_masks:

@@ -28,7 +28,8 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import SparseModuleInfo
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
-from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups, select_largest_groups
+from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
+from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
 
 SUPPORTED_NNCF_MODULES = [NNCFLinear]
 EXPECTED_NODE_LAYER_ATTRS = [LinearLayerAttributes]
