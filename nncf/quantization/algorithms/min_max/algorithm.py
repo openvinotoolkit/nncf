@@ -568,7 +568,7 @@ class MinMaxQuantization(Algorithm):
                     quant_group = QuantizerGroup.WEIGHTS
                 else:
                     quant_group = QuantizerGroup.ACTIVATIONS
-    
+
                 half_range = quantization_target_point in quantization_points_overflow_fix
                 narrow_range = get_quantizer_narrow_range(qconfig, quant_group, half_range)
                 statistics = tensor_collector.get_statistics()
