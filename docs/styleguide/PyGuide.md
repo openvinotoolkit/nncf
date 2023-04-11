@@ -62,7 +62,7 @@ Also recommend configuring your IDE to run Black and isort tools automatically w
 Automatic code formatting is mandatory for all Python files, but you can disable it for specific cases if required:
   - if you need a specialized order of importing modules;
   - for large data structures for which autoformatting unnecessarily breaks into lines,
-    e.g. reference data in tests or a list of classes;
+    e.g. reference data in tests, class lists or arguments for subprocess;
   - for structures for which formatting helps understanding, such as matrix.
 
 Example for 'isort':
