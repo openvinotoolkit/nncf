@@ -15,21 +15,22 @@
     *   [3.7 Files and Sockets](#s3.7-files-and-sockets)
     *   [3.8 Abstract Classes](#s3.8-abstract-classes)
 -   [4 Python Style Rules](#s4-python-style-rules)
-    *   [4.1 Comments and Docstrings](#s4.1-comments-and-docstrings)
-        +   [4.1.1 Modules](#s4.1.1-modules)
-        +   [4.1.2 Functions and Methods](#s4.1.2-functions-and-methods)
-        +   [4.1.3 Classes](#s4.1.3-classes)
-        +   [4.1.4 Block and Inline Comments](#s4.1.4-block-and-inline-comments)
-    *   [4.2 Strings](#s4.2-strings)
-    *   [4.3 Logging](#s4.3-logging)
-    *   [4.4 Error Messages](#s4.4-error-messages)
-    *   [4.5 TODO Comments](#s4.5-todo-comments)
-    *   [4.6 Naming](#s4.6-naming)
-        +   [4.6.1 Names to Avoid](#s4.6.1-names-to-avoid)
-        +   [4.6.2 Naming Conventions](#s4.6.2-naming-conventions)
-        +   [4.6.3 Framework specific class naming](#s4.6.3-framework-specific-class-naming)
-        +   [4.6.4 File Naming](#s4.6.4-file-naming)
-    *   [4.7 Main](#s4.7-main)
+    *   [4.1 Line length](#s4.1-line-length)
+    *   [4.2 Comments and Docstrings](#s4.2-comments-and-docstrings)
+        +   [4.2.1 Modules](#s4.2.1-modules)
+        +   [4.2.2 Functions and Methods](#s4.2.2-functions-and-methods)
+        +   [4.2.3 Classes](#s4.2.3-classes)
+        +   [4.2.4 Block and Inline Comments](#s4.2.4-block-and-inline-comments)
+    *   [4.3 Strings](#s4.3-strings)
+    *   [4.4 Logging](#s4.4-logging)
+    *   [4.5 Error Messages](#s4.5-error-messages)
+    *   [4.6 TODO Comments](#s4.6-todo-comments)
+    *   [4.7 Naming](#s4.7-naming)
+        +   [4.7.1 Names to Avoid](#s4.7.1-names-to-avoid)
+        +   [4.7.2 Naming Conventions](#s4.7.2-naming-conventions)
+        +   [4.7.3 Framework specific class naming](#s4.7.3-framework-specific-class-naming)
+        +   [4.7.4 File Naming](#s4.7.4-file-naming)
+    *   [4.8 Main](#s4.8-main)
 </details>
 
 <a id="s1-introduction"></a>
@@ -279,18 +280,34 @@ class C(ABC):
 <a id="python-style-rules"></a>
 ## 4 Python Style Rules
 
-<a id="s4.1-comments-and-docstrings"></a>
-<a id="41-comments-and-docstrings"></a>
+<a id="s4.1-line-length"></a>
+<a id="41-line-length"></a>
+<a id="line-length"></a>
+### 4.1 Line length
+
+Maximum line length is *120 characters*.
+
+Explicit exceptions to the 120 character limit:
+
+-   Long import statements.
+-   URLs, pathnames, or long flags in comments.
+-   Long string module level constants not containing whitespace that would be
+    inconvenient to split across lines such as URLs or pathnames.
+    -   Pylint disable comments. (e.g.: `# pylint: disable=invalid-name`)
+
+
+<a id="s4.2-comments-and-docstrings"></a>
+<a id="42-comments-and-docstrings"></a>
 <a id="comments-and-docstrings"></a>
-### 4.1 Comments and Docstrings
+### 4.2 Comments and Docstrings
 
 Be sure to use the right style for module, function, method docstrings and
 inline comments.
 
-<a id="s4.1.1-modules"></a>
-<a id="411-modules"></a>
+<a id="s4.2.1-modules"></a>
+<a id="421-modules"></a>
 <a id="modules"></a>
-#### 4.1.1 Modules
+#### 4.2.1 Modules
 
 Every file should contain a license boilerplate.
 
@@ -309,10 +326,10 @@ Every file should contain a license boilerplate.
 """
 ```
 
-<a id="s4.1.2-functions-and-methods"></a>
-<a id="412-functions-and-methods"></a>
+<a id="s4.2.2-functions-and-methods"></a>
+<a id="422-functions-and-methods"></a>
 <a id="functions-and-methods"></a>
-#### 4.1.2 Functions and Methods
+#### 4.2.2 Functions and Methods
 
 In this section, "function" means a method, function, or generator.
 
@@ -345,10 +362,10 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
     """
 ```
 
-<a id="s4.1.3-classes"></a>
-<a id="413-classes"></a>
+<a id="s4.2.3-classes"></a>
+<a id="423-classes"></a>
 <a id="classes"></a>
-#### 4.1.3 Classes
+#### 4.2.3 Classes
 
 Classes should have a docstring below the class definition describing the class. If your class
 has public attributes, they should be documented here follow the same formatting as a function's
@@ -429,10 +446,10 @@ class ComplexKlass(BaseClass):
         # ... potentially more code which is not understandable at a glance
 ```
 
-<a id="s4.1.4-block-and-inline-comments"></a>
-<a id="414-block-and-inline-comments"></a>
+<a id="s4.2.4-block-and-inline-comments"></a>
+<a id="424-block-and-inline-comments"></a>
 <a id="block-and-inline-comments"></a>
-#### 4.1.4 Block and Inline Comments
+#### 4.2.4 Block and Inline Comments
 
 The final place to have comments is in tricky parts of the code. If you're going to have to explain it
 in the future, you should comment it now. Complicated operations get a few lines of comments before
@@ -459,10 +476,10 @@ knows Python (though not what you're trying to do) better than you do.
 # the next element is i+1
 ```
 
-<a id="s4.2-strings"></a>
-<a id="42-strings"></a>
+<a id="s4.3-strings"></a>
+<a id="43-strings"></a>
 <a id="strings"></a>
-### 4.2 Strings
+### 4.3 Strings
 
 
 ```python
@@ -487,10 +504,10 @@ long_string = textwrap.dedent(
 )
 ```
 
-<a id="s4.3-logging"></a>
-<a id="43-logging"></a>
+<a id="s4.4-logging"></a>
+<a id="44-logging"></a>
 <a id="logging"></a>
-### 4.3 Logging
+### 4.4 Logging
 Use the logger object built into NNCF for all purposes of logging within the NNCF package code.
 Do not use `print(...)` or other ways of output.
 
@@ -549,10 +566,10 @@ At all log levels the log lines should not be duplicated during execution, if po
 For deprecation warnings, use `nncf.common.logging.logger.warning_deprecated` instead of the regular `nncf_logger.warning`.
 This ensures that the deprecation warning is seen to the user at all NNCF log levels.
 
-<a id="s4.4-error-messages"></a>
-<a id="44-error-messages"></a>
+<a id="s4.5-error-messages"></a>
+<a id="45-error-messages"></a>
 <a id="error-messages"></a>
-### 4.4 Error Messages
+### 4.5 Error Messages
 
 Error messages (such as: message strings on exceptions like `ValueError`, or
 messages shown to the user) should follow guidelines:
@@ -560,10 +577,10 @@ messages shown to the user) should follow guidelines:
 - Interpolated pieces need to always be clearly identifiable as such.
 - The message should start with a capital letter.
 
-<a id="s4.5-todo-comments"></a>
-<a id="45-todo-comments"></a>
+<a id="s4.6-todo-comments"></a>
+<a id="46-todo-comments"></a>
 <a id="todo-comments"></a>
-### 4.5 TODO Comments
+### 4.6 TODO Comments
 
 Use `TODO` comments for code that is temporary, a short-term solution, or
 good-enough but not perfect.
@@ -588,10 +605,10 @@ If your `TODO` is of the form "At a future date do something" make sure that you
 either include a very specific date ("Fix by November 2030") or a very specific
 event ("Remove this code when all clients can handle XML responses.").
 
-<a id="s4.6-naming"></a>
-<a id="46-naming"></a>
+<a id="s4.7-naming"></a>
+<a id="47-naming"></a>
 <a id="naming"></a>
-### 4.6 Naming
+### 4.7 Naming
 
 `module_name`, `package_name`, `ClassName`, `method_name`, `ExceptionName`,
 `function_name`, `GLOBAL_CONSTANT_NAME`, `global_var_name`, `instance_var_name`,
@@ -683,10 +700,10 @@ Always use a `.py` filename extension. Never use dashes.
 
 </table>
 
-<a id="s4.6.1-names-to-avoid"></a>
-<a id="461-names-to-avoid"></a>
+<a id="s4.7.1-names-to-avoid"></a>
+<a id="471-names-to-avoid"></a>
 <a id="names-to-avoid"></a>
-#### 4.6.1 Names to Avoid
+#### 4.7.1 Names to Avoid
 
 -   single character names, except for specifically allowed cases:
     -   counters or iterators (e.g. `i`, `j`, `k`, `v`, et al.)
@@ -702,10 +719,10 @@ Always use a `.py` filename extension. Never use dashes.
 -   names that needlessly include the type of the variable (for example:
     `id_to_name_dict`)
 
-<a id="s4.6.2-naming-conventions"></a>
-<a id="462-naming-convention"></a>
+<a id="s4.7.2-naming-conventions"></a>
+<a id="472-naming-convention"></a>
 <a id="naming-conventions"></a>
-#### 4.6.2 Naming Conventions
+#### 4.7.2 Naming Conventions
 
 -   "Internal" means internal to a module, or protected or private within a
     class.
@@ -721,26 +738,26 @@ Always use a `.py` filename extension. Never use dashes.
 -   Use the word "layer" (instead of "module") in the `nncf.common` module to
     refer to the building block of neural networks.
 
-<a id="s4.6.3-framework-specific-class-naming"></a>
-<a id="463-framework-specific-class-naming"></a>
+<a id="s4.7.3-framework-specific-class-naming"></a>
+<a id="473-framework-specific-class-naming"></a>
 <a id="framework-specific-class-naming"></a>
-#### 4.6.3 Framework specific class naming
+#### 4.7.3 Framework specific class naming
 
 - `PTClassName` for Torch
 - `TFClassName` for TensorFlow
 
-<a id="s4.6.4-file-naming"></a>
-<a id="464-file-naming"></a>
+<a id="s4.7.4-file-naming"></a>
+<a id="474-file-naming"></a>
 <a id="file-naming"></a>
-#### 4.6.4 File Naming
+#### 4.7.4 File Naming
 
 Python filenames must have a `.py` extension and must not contain dashes (`-`).
 This allows them to be imported and unit tested.
 
-<a id="s4.7-main"></a>
-<a id="4.7-main"></a>
+<a id="s4.8-main"></a>
+<a id="4.8-main"></a>
 <a id="main"></a>
-### 4.7 Main
+### 4.8 Main
 
 ```python
 def main():
