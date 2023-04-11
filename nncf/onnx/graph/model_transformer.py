@@ -143,9 +143,11 @@ class ONNXModelTransformer(ModelTransformer):
         onnx_graph = ONNXGraph(model)
         model_outputs = []
         for output in outputs:
-            # shape should be None; if you place not None, some models will have inference problems (e.g. Mask RCNN)
-            np_dtype = onnx_graph.get_edge_dtype(output)
+            edge = onnx_graph.get_edge(output)
+            np_dtype = ONNXGraph.get_edge_dtype(edge)
             onnx_dtype = onnx.helper.np_dtype_to_tensor_dtype(np_dtype)
+            # shape should be None to demolish shape inference problems (e.g. Mask RCNN)
+            # tensor shape should be updated via shape_inference() call. 
             type_proto = onnx.helper.make_tensor_type_proto(onnx_dtype, shape=None)
             model_outputs.append(onnx.helper.make_value_info(name=output, type_proto=type_proto))
 

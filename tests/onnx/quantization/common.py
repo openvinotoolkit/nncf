@@ -59,8 +59,9 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool,
     def transform_fn(i):
         output = {}
         for key in keys:
-            input_np_dtype = onnx_graph.get_edge_dtype(key)
-            shape = onnx_graph.get_edge_shape(key)
+            edge = onnx_graph.get_edge(key)
+            input_np_dtype = ONNXGraph.get_edge_dtype(edge)
+            shape = ONNXGraph.get_edge_shape(edge)
             tensor = np.random.random(shape).astype(input_np_dtype)
             if has_batch_dim:
                 tensor = np.squeeze(np.random.random(shape).astype(input_np_dtype), axis=0)
@@ -135,7 +136,8 @@ def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_
 
 def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> None:
     onnx_graph = ONNXGraph(quantized_model)
-    input_dtype = onnx_graph.get_edge_dtype(quantized_model.graph.input[0].name)
+    edge = onnx_graph.get_edge(quantized_model.graph.input[0].name)
+    input_dtype = ONNXGraph.get_edge_dtype(edge)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     serialized_model = quantized_model.SerializeToString()
     sess = rt.InferenceSession(serialized_model, providers=['OpenVINOExecutionProvider'])

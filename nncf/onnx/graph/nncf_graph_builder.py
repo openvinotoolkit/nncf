@@ -15,7 +15,6 @@ from typing import List, Tuple, Optional
 from collections import Counter
 import numpy as np
 import onnx
-from onnx import ModelProto  # pylint:disable=no-name-in-module
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -59,7 +58,7 @@ class GraphConverter:
         return model
 
     @staticmethod
-    def _add_nncf_input_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph) -> None:
+    def _add_nncf_input_nodes(onnx_graph: ONNXGraph, nncf_graph: NNCFGraph) -> None:
         """
         Adds special NNCF Input nodes to NNCFGraph.
         For all the ONNX model inputs, the special NNCF Input node is placed and then corresponding edges are added.
@@ -75,8 +74,9 @@ class GraphConverter:
             to_nodes = onnx_graph.get_nodes_by_input(input_name)
 
             input_node_node_id = input_node.node_id
-            input_shape = onnx_graph.get_edge_shape(input_name)
-            np_dtype = onnx_graph.get_edge_dtype(input_name)
+            edge = onnx_graph.get_edge(input_name)
+            input_shape = ONNXGraph.get_edge_shape(edge)
+            np_dtype = ONNXGraph.get_edge_dtype(edge)
             nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
             output_port_id = 0
             for node in to_nodes:
@@ -93,7 +93,7 @@ class GraphConverter:
                 output_port_id += 1
 
     @staticmethod
-    def _add_nncf_output_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph) -> None:
+    def _add_nncf_output_nodes(onnx_graph: ONNXGraph, nncf_graph: NNCFGraph) -> None:
         """
         Adds special NNCF Output nodes to NNCFGraph.
         For all the ONNX model outputs, the special NNCF Output node is placed and then corresponding edges are added.
@@ -109,8 +109,9 @@ class GraphConverter:
             from_nodes = onnx_graph.get_nodes_by_output(output_name)
 
             output_node_node_id = output_node.node_id
-            output_shape = onnx_graph.get_edge_shape(output_name)
-            np_dtype = onnx_graph.get_edge_dtype(output_name)
+            edge = onnx_graph.get_edge(output_name)
+            output_shape = ONNXGraph.get_edge_shape(edge)
+            np_dtype = ONNXGraph.get_edge_dtype(edge)
             nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
             input_port_id = 0
             for node in from_nodes:
@@ -134,12 +135,10 @@ class GraphConverter:
         :param np_dtype: Numpy data type.
         :return: NNCF data type.
         """
-        if np_dtype in [np.float32, np.int32]:
-            return Dtype.FLOAT
-        return Dtype.INTEGER
+        return Dtype.FLOAT if np_dtype == np.float32 else Dtype.INTEGER
 
     @staticmethod
-    def create_nncf_graph(onnx_model: ModelProto) -> NNCFGraph:
+    def create_nncf_graph(onnx_model: onnx.ModelProto) -> NNCFGraph:
         """
         Creates NNCFGraph from 'onnx_model'.
         Initially, ONNXGraph is built. All nodes from onnx_model which have valid metatype are added to NNCFGraph.
@@ -160,29 +159,30 @@ class GraphConverter:
 
             if metatype in WEIGHT_LAYER_METATYPES:
                 is_shared = onnx_graph.is_node_shared(node)
-                layer_name = onnx_graph.get_node_layer_name(node)
-                weight_shape = onnx_graph.get_edge_shape(layer_name)
+                weight_edge_name = onnx_graph.get_weight_tensor_edge(node)
+                edge = onnx_graph.get_edge(weight_edge_name)
+                weight_shape = ONNXGraph.get_edge_shape(edge)
                 layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
             else:
-                is_shared, layer_name, layer_attributes = None, None, None
+                is_shared, weight_edge_name, layer_attributes = None, None, None
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
                                      layer_attributes=layer_attributes,
-                                     layer_name=layer_name,
+                                     layer_name=weight_edge_name,
                                      is_shared=is_shared)
         for output_node in onnx_graph.get_all_nodes():
             output_edges = onnx_graph.get_node_edge_names(output_node.name)['output']
             for output_edge in output_edges:
-                try:
-                    tensor_shape = onnx_graph.get_edge_shape(output_edge)
-                    np_dtype = onnx_graph.get_edge_dtype(output_edge)
-                except KeyError:
-                    # If the edge was not added during inference of ONNX model,
-                    # we do not add it to NNCFGraph.
-                    # Particularly, BatchNorm exported in Training mode has unused outputs edges:
+                edge = onnx_graph.get_edge(output_edge)
+                if edge is None:
+                    # If the edge was not added during shape inference of ONNX model,
+                    # we should not add it to NNCFGraph, meaning that these edge was not used during inference,
+                    # e.g. BatchNorm exported in Training mode has unused outputs edges:
                     # mean, var, saved_mean, saved_var.
                     continue
+                tensor_shape = ONNXGraph.get_edge_shape(edge)
+                np_dtype = ONNXGraph.get_edge_dtype(edge)
                 nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
                 output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
                 input_nodes = onnx_graph.get_nodes_by_input(output_edge)

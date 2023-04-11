@@ -63,21 +63,17 @@ class ONNXGraph:
             self._update_node_names()
         return self._node_name_to_node[node_name] if node_name in self._node_name_to_node else None
 
-    def get_edge(self, edge_name: str) -> onnx.ValueInfoProto:
+    def get_edge(self, edge_name: str) -> Optional[onnx.ValueInfoProto]:
         """
-        Returns edge by its name.
-        If there is no such name in self._edge_name_to_value_info or
-            self._edge_name_to_value_info is None, updates it.
-        If after update, there is still no such name, raises a KeyError.
+        Returns edge by its name or None if the model has no such edge.
+        If self._edge_name_to_value_info is not initialized runs an initialization.
 
         :param edge_name: Name of edge.
         :return: Edge.
         """
-        if self._edge_name_to_value_info is None or edge_name not in self._edge_name_to_value_info:
+        if self._edge_name_to_value_info is None:
             self._update_edges()
-        if edge_name not in self._edge_name_to_value_info:
-            raise KeyError('There is no edge with the name {}'.format(edge_name))
-        return self._edge_name_to_value_info[edge_name]
+        return self._edge_name_to_value_info.get(edge_name, None)
 
     def get_model_inputs(self) -> List[onnx.ValueInfoProto]:
         """
@@ -327,16 +323,16 @@ class ONNXGraph:
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
     @staticmethod
-    def _get_tensor_shape(tensor: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> List[int]:
+    def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> List[int]:
         """
-        Returns 'tensor' shape.
+        Returns edge shape.
 
-        :param tensor: The tensor.
+        :param edge: The edge.
         :return: Shape of the Tensor.
         """
-        if isinstance(tensor, onnx.TensorProto):
-            return list(tensor.dims)
-        tensor_type = tensor.type.tensor_type
+        if isinstance(edge, onnx.TensorProto):
+            return list(edge.dims)
+        tensor_type = edge.type.tensor_type
         shape = []
         if tensor_type.HasField("shape"):
             for d in tensor_type.shape.dim:
@@ -353,24 +349,14 @@ class ONNXGraph:
                     return shape
         return shape
 
-    def get_edge_shape(self, edge_name: str) -> List[int]:
+    @staticmethod
+    def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> np.dtype:
         """
-        Returns a shape of the edge with the name 'edge_name'.
+        Returns the data type of the edge.
 
-        :param edge_name: The name of the edge.
-        :return: Shape of the tensor on that edge.
-        """
-        edge = self.get_edge(edge_name)
-        return ONNXGraph._get_tensor_shape(edge)
-
-    def get_edge_dtype(self, edge_name: str) -> np.dtype:
-        """
-        Returns the data type of the edge with the name 'edge_name'.
-
-        :param edge_name: The name of the edge.
+        :param edge: The edge.
         :return: Data type of the edge.
         """
-        edge = self.get_edge(edge_name)
         if isinstance(edge, onnx.ValueInfoProto):
             d_type = edge.type.tensor_type.elem_type
         else:
@@ -423,12 +409,3 @@ class ONNXGraph:
         weight_tensor_edge = self.get_weight_tensor_edge(node)
         nodes = self.get_nodes_by_input(weight_tensor_edge)
         return len(nodes) > 1
-
-    def get_node_layer_name(self, node: onnx.NodeProto) -> Optional[str]:
-        """
-        Returns name of a weight tensor if it exists.
-
-        :param node: Node.
-        :return: Name of a weight tensor or None if the node does not have a weight.
-        """
-        return self.get_weight_tensor_edge(node)
