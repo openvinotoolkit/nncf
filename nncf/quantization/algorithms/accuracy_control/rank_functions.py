@@ -11,26 +11,26 @@
  limitations under the License.
 """
 
-from typing import Dict
-
 import numpy as np
 
+from nncf.quantization.algorithms.accuracy_control.evaluator import Output
 
-def normalized_mse(x_ref: Dict[str, np.ndarray], x_approx: Dict[str, np.ndarray]) -> float:
+
+def normalized_mse(ref_outputs: Output, approx_outputs: Output) -> float:
     """
-    Calculates normalized mean square error between `x_ref` and `x_approx`.
+    Calculates normalized mean square error between `ref_outputs` and `approx_outputs`.
     The normalized mean square error is defined as
 
     NMSE(x_ref, x_approx) = MSE(x_ref, x_approx) / MSE(x_ref, 0)
 
-    :param x_ref: Dictionary of arrays. Represents the reference values.
-    :param x_approx: Dictionary of arrays. Represents the measured values.
-    :return: The normalized mean square error between `x_ref` and `x_approx`.
+    :param ref_outputs: Reference outputs.
+    :param approx_outputs: Approximate outputs.
+    :return: The normalized mean square error between `ref_outputs` and `approx_outputs`.
     """
     metrics = []
-    for output_name in x_ref:
-        error_flattened = (x_ref[output_name] - x_approx[output_name]).flatten()
-        x_ref_flattened = x_ref[output_name].flatten()
+    for x_ref, x_approx in zip(ref_outputs, approx_outputs):
+        error_flattened = (x_ref - x_approx).flatten()
+        x_ref_flattened = x_ref.flatten()
         nmse = np.dot(error_flattened, error_flattened) / np.dot(x_ref_flattened, x_ref_flattened)
         metrics.append(nmse)
     nmse = sum(metrics) / len(metrics)

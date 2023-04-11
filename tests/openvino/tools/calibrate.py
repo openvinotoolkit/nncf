@@ -106,6 +106,7 @@ class ACValidationFunction:
         self._model_evaluator = model_evaluator
         self._metric_name = metric_name
         self._requests_number = requests_number
+        self._values_for_each_item = []
 
     def __call__(self, compiled_model: ov.CompiledModel, indices: Optional[Iterable[int]] = None) -> float:
         """
@@ -124,6 +125,7 @@ class ACValidationFunction:
 
         kwargs = {
             'subset': indices,
+            'output_callback': self._output_callback,
             'check_progress': False,
             'dataset_tag': '',
             'calculate_metrics': True,
@@ -151,7 +153,36 @@ class ACValidationFunction:
 
         self._model_evaluator.reset()
 
-        return metrics[self._metric_name]
+        values_for_each_item = sorted(self._values_for_each_item, key=lambda x: x['sample_id'])
+        values_for_each_item = [x['metric_value'] for x in values_for_each_item]
+        self._values_for_each_item = []
+
+        return metrics[self._metric_name], values_for_each_item
+
+    def _output_callback(self, raw_predictions, **kwargs):
+        if not ('metrics_result' in kwargs and 'dataset_indices' in kwargs):
+            raise RuntimeError('Expected "metrics_result", "dataset_indices" be passed to '
+                               'output_callback inside accuracy checker')
+
+        metrics_result = kwargs['metrics_result']
+        if metrics_result is None:
+            return
+
+        for sample_id, results in metrics_result.items():
+            for metric_result in results:
+                if metric_result.metric_name != self._metric_name:
+                    continue
+
+                sign = 1.0
+                if metric_result.direction == 'higher-worse':
+                    sign = -1.0
+                metric_value = sign * float(metric_result.result)
+                self._values_for_each_item.append(
+                    {
+                        'sample_id': sample_id,
+                        'metric_value': metric_value
+                    }
+                )
 
     @staticmethod
     def _set_requests_number(params, requests_number):

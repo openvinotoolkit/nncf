@@ -17,10 +17,8 @@ from typing import Optional, Callable, Any, Iterable
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
-from nncf.common.logging import nncf_logger
 from nncf.data import Dataset
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.backend import get_backend
 from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -29,9 +27,7 @@ from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQu
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
-from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
-from nncf.common.utils.timer import timer
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -83,28 +79,9 @@ def quantize_with_accuracy_control(model: ov.Model,
     """
     quantized_model = quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                                     fast_bias_correction, model_type, ignored_scope, compress_weights=False)
-
-    # Backends
-    backend = get_backend(model)
-    algo_backend = get_algo_backend(backend)
-
-    nncf_logger.info('Validation of initial model was started')
-    with timer():
-        initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
-                                       validation_dataset.get_data())
-    nncf_logger.info(f'Metric of initial model: {initial_metric}')
-
-    nncf_logger.info('Validation of quantized model was started')
-    with timer():
-        quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
-                                         validation_dataset.get_data())
-    nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
-
-    accuracy_aware_loop = QuantizationAccuracyRestorer(max_num_iterations=max_num_iterations,
-                                                       max_drop=max_drop)
-    quantized_model = accuracy_aware_loop.restore_accuracy(model, initial_metric,
-                                                           quantized_model, quantized_metric,
-                                                           validation_dataset, validation_fn)
+    accuracy_restorer = QuantizationAccuracyRestorer(max_num_iterations=max_num_iterations,
+                                                     max_drop=max_drop)
+    quantized_model = accuracy_restorer.apply(model, quantized_model, validation_dataset, validation_fn)
     compress_quantize_weights_transformation(quantized_model)
 
     return quantized_model
