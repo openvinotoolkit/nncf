@@ -23,6 +23,7 @@ import pytest
 import torch
 
 from nncf.torch.utils import get_model_device
+from tests.torch.test_models.synthetic import Baddbmm
 from tests.torch.test_models.synthetic import ConvBNLeakyReLU
 from tests.torch.test_models.synthetic import ConvGeluGetItem
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
@@ -603,6 +604,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TorchBinaryMethodDesc(model_name='MatMul', torch_method=torch.matmul),
     SingleLayerModelDesc(model_name='BMM', layer=torch.bmm, input_sample_sizes=([1, 1, 1], [1, 1, 1]),
                          wrap_inputs_fn=n_inputs_fn),
+    GeneralModelDesc(model_builder=Baddbmm,
+                     input_sample_sizes=([1, 1, 1], [1, 1, 1], [1, 1, 1])),
     TensorBinaryMethodsDesc(model_name='MatMul', tensor_method='matmul'),
 
     SingleLayerModelDesc(model_name='Mean', layer=torch.mean),
