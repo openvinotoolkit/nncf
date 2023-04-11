@@ -176,19 +176,15 @@ class GraphConverter:
             for output_edge in output_edges:
                 edge = onnx_graph.get_edge(output_edge)
                 if edge is None:
-                    # If the edge was not added during shape inference of ONNX model,
-                    # we should not add it to NNCFGraph, meaning that these edge was not used during inference,
-                    # e.g. BatchNorm exported in Training mode has unused outputs edges:
-                    # mean, var, saved_mean, saved_var.
+                    # If the edge is None it means that the edge was not added during shape inference of ONNX model.
+                    # BatchNorm exported in Training mode has unused outputs edges: mean, var, saved_mean, saved_var.                    
+                    # NNCFGraph should not contain such edges.
                     continue
                 tensor_shape = ONNXGraph.get_edge_shape(edge)
                 np_dtype = ONNXGraph.get_edge_dtype(edge)
                 nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
                 output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
                 input_nodes = onnx_graph.get_nodes_by_input(output_edge)
-                if not input_nodes:
-                    # if this node is output
-                    continue
                 for input_node in input_nodes:
                     port_ids = ONNXGraph.get_port_ids_between_nodes(output_node, input_node)
                     input_port_id = port_ids['input_port_id']
