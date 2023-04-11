@@ -13,7 +13,6 @@
 
 from typing import List
 import csv
-import re
 import numpy as np
 
 from tests.shared.command import Command
@@ -35,11 +34,7 @@ def download_model(name, path):
         "--name", name,
         "-o", str(path)
     ]
-    cmd_output = run_command(com_line)
-    re_exp = r"========== (Downloading|Retrieving) ([^\s]+)"
-    match = re.search(re_exp, str(cmd_output))
-    model_path = match.group(2)
-    return model_path
+    _ = run_command(com_line)
 
 
 def convert_model(name, path, model_precision='FP32'):
@@ -50,12 +45,7 @@ def convert_model(name, path, model_precision='FP32'):
         "--precisions", model_precision,
         "-o", str(path)
     ]
-    cmd_output = run_command(com_line)
-
-    re_exp = r"XML file: ([^\s]+)"
-    match = re.search(re_exp, str(cmd_output))
-    model_path = match.group(1)
-    return model_path
+    _ = run_command(com_line)
 
 
 def calculate_metrics(model_path, config_path, data_dir, report_path,

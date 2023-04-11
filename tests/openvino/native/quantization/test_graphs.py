@@ -63,8 +63,9 @@ OMZ_MODELS_QUANTIZE_PARAMS = {
 def test_omz_models_fq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
     q_params.update({'inplace_statistics': True})
-    _ = download_model(model_name, tmp_path)
-    model_path = convert_model(model_name, tmp_path)
+    download_model(model_name, tmp_path)
+    convert_model(model_name, tmp_path)
+    model_path = tmp_path / 'public' / model_name / 'FP32' / f'{model_name}.xml'
     model = ov.Core().read_model(model_path)
     quantized_model = quantize_model(model, q_params)
 
