@@ -16,9 +16,10 @@ from typing import Dict
 import numpy as np
 import onnxruntime as rt
 
+from nncf.common.api_marker import api
 from nncf.common.engine import Engine
 
-
+@api()
 class ONNXEngine(Engine):
     """
     Engine for ONNX backend using ONNXRuntime to infer the model.

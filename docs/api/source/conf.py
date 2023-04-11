@@ -11,6 +11,8 @@ import pkgutil
 import sys
 from typing import List
 
+from sphinx.ext.autodoc import mock
+
 import nncf
 
 sys.path.insert(0, os.path.abspath('../../..'))
@@ -72,7 +74,9 @@ def collect_api_entities() -> List[str]:
         print(api_fqn)
     return api_fqns
 
-api_fqns = collect_api_entities()
+
+with mock(['tensorflow', 'tensorflow_addons']):
+    api_fqns = collect_api_entities()
 
 
 module_fqns = set()
