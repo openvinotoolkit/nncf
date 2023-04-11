@@ -12,7 +12,6 @@
 """
 
 import sys
-import operator
 from typing import Callable, Any, Iterable, List, TypeVar, Tuple, Union
 
 from nncf.data.dataset import Dataset
@@ -137,23 +136,17 @@ class QuantizationAccuracyRestorer:
 
             initial_metric - final_metric <= max_drop.
         """
-        backend = get_backend(initial_model)
-        algo_backend = get_algo_backend(backend)
-
+        algo_backend = get_algo_backend(get_backend(initial_model))
         # Validate initial and quantized model.
         evaluator = Evaluator(validation_fn, algo_backend)
-        nncf_logger.info('Validation of initial model was started')
-        with timer():
-            initial_metric, reference_values_for_each_item = evaluator.validate(initial_model,
-                                                                                validation_dataset)
-        nncf_logger.info(f'Metric of initial model: {initial_metric}')
-
-        nncf_logger.info('Validation of quantized model was started')
-        with timer():
-            quantized_metric, approximate_values_for_each_item = evaluator.validate(quantized_model,
-                                                                                    validation_dataset)
-        nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
-
+        initial_metric, reference_values_for_each_item = self._collect_metric_and_values(initial_model,
+                                                                                         validation_dataset,
+                                                                                         evaluator,
+                                                                                         'initial')
+        quantized_metric, approximate_values_for_each_item = self._collect_metric_and_values(quantized_model,
+                                                                                             validation_dataset,
+                                                                                             evaluator,
+                                                                                             'quantized')
         accuracy_drop = initial_metric - quantized_metric
         nncf_logger.info(f'Accuracy drop: {accuracy_drop}')
 
@@ -303,3 +296,14 @@ class QuantizationAccuracyRestorer:
             nncf_logger.info(f'{len(report.reverted_operations)} out of {report.num_quantized_operations} '
                              'were reverted back to the floating-point precision:'
                              f'\n{_create_message(report.reverted_operations)}')
+
+    @staticmethod
+    def _collect_metric_and_values(model: TModel,
+                                   dataset: Dataset,
+                                   evaluator: Evaluator,
+                                   model_name: str) -> Tuple[float, Union[List[float], List[Output], None]]:
+        nncf_logger.info(f'Validation of {model_name} model was started')
+        with timer():
+            metric, values_for_each_item = evaluator.validate(model, dataset)
+        nncf_logger.info(f'Metric of {model_name} model: {metric}')
+        return metric, values_for_each_item

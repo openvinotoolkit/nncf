@@ -104,6 +104,7 @@ class Evaluator:
         :param dataset: Dataset to validate the model.
         """
         data_item = dataset.get_data([0])
+        # pylint: disable=W0703
         try:
             _, values_for_each_item = self._validation_fn(model_for_inference, data_item)
 
@@ -149,4 +150,3 @@ class Evaluator:
                 values_for_each_item.append(output)
 
         return values_for_each_item
-
