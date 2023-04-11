@@ -1,0 +1,42 @@
+name: API changes check
+on:
+  pull_request_target:
+    branches:
+      - develop
+
+env:
+  API_DOC_HTML_ROOT_RELATIVE_PATH: autoapi
+
+concurrency:
+  group: ci-${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  call-build-api-doc:
+    uses: ./.github/workflows/build_html_doc.yml
+  compare-api-doc-with-develop:
+    needs: call-build-api-doc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download built HTML doc as artifact from previous step
+        uses: alehechka/download-tartifact@v2
+        with:
+          name: html_doc_artifact
+      - name: Checkout latest doc_pages branch tip
+        uses: actions/checkout@v3
+        with:
+          ref: doc_pages
+          path: previous_doc_state
+      - name: Get changed file names in API doc path
+        id: diff
+        run: |
+          cd html_build/html/$API_DOC_HTML_ROOT_RELATIVE_PATH
+          find . -name "*.html" -exec diff -qrBZ {} $GITHUB_WORKSPACE/previous_doc_state/$API_DOC_HTML_ROOT_RELATIVE_PATH/{} \;
+      - uses: actions-ecosystem/action-add-labels@v1
+        if: ${{ steps.diff.outputs }} != ""
+        with:
+          labels: API
+      - uses: actions-ecosystem/action-remove-labels@v1
+        if: ${{ steps.diff.outputs }} == ""
+        with:
+          labels: API

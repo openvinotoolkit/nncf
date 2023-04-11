@@ -22,7 +22,6 @@ from openvino.tools import pot
 import openvino.runtime as ov
 
 from nncf.api.compression import TModel
-from nncf.common.api_marker import api
 from nncf.data import Dataset
 from nncf.data.dataset import DataProvider
 
@@ -117,7 +116,6 @@ def calc_per_sample_metrics(compiled_model: ov.CompiledModel,
 
 # TODO(andrey-churkin): This class should be refactored. We will be able to do that when
 # we will have POT code in NNCF.
-@api()
 class OVEngine(pot.IEEngine):
     """
     Implementation of the engine for OpenVINO backend.

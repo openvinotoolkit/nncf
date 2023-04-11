@@ -1,4 +1,4 @@
-NNCF doc testing!
+NNCF documentation
 ================================
 
 .. toctree::
@@ -6,5 +6,5 @@ NNCF doc testing!
    :maxdepth: 3
 
    API Reference<autoapi/nncf/index>
-   JSON configuration file schema<./schema.html#http://>
+   JSON configuration file schema<./schema#http://>
 
