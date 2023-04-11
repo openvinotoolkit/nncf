@@ -1,11 +1,5 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
 import importlib
 import inspect
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 import os
 import pkgutil
 import sys
@@ -21,9 +15,6 @@ project = 'nncf'
 copyright = '2023, Intel Corporation'
 author = 'Intel Corporation'
 release = 'v2.4.0'
-
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 
 extensions = ['autoapi.extension']
@@ -44,6 +35,11 @@ exclude_patterns = []
 
 
 def collect_api_entities() -> List[str]:
+    """
+    Collects the fully qualified names of symbols in NNCF package that contain a special attribute (set via
+    `nncf.common.api_marker.api` decorator) marking them as API entities.
+    :return: A list of fully qualified names of API symbols.
+    """
     modules = {}
     skipped_modules = []
     for importer, modname, ispkg in pkgutil.walk_packages(path=nncf.__path__,
@@ -75,9 +71,8 @@ def collect_api_entities() -> List[str]:
     return api_fqns
 
 
-with mock(['tensorflow', 'tensorflow_addons']):
+with mock(['torch', 'onnx', 'openvino', 'tensorflow', 'tensorflow_addons']):
     api_fqns = collect_api_entities()
-
 
 module_fqns = set()
 
@@ -89,8 +84,11 @@ for fqn in api_fqns:
 
 
 def skip_non_api(app, what, name, obj, skip, options):
+    # AutoAPI-allowed callback to skip certain elements from generated documentation.
+    # We use it to only allow API entities in the documentation (otherwise AutoAPI would generate docs for every
+    # non-private symbol available in NNCF)
     if what in ["module", "package"] and name in module_fqns:
-        print(f"VSHAMPOR: keeping module {name}")
+        print(f"skip_non_api: keeping module {name}")
         return skip
     if what in ["method", "attribute"]:
         class_name = name.rpartition('.')[0]
@@ -99,16 +97,13 @@ def skip_non_api(app, what, name, obj, skip, options):
     if name not in api_fqns:
        skip = True
     else:
-        print(f"VSHAMPOR: keeping API entity {name}")
+        print(f"skip_non_api: keeping API entity {name}")
     return skip
 
 
 def setup(sphinx):
    sphinx.connect("autoapi-skip-member", skip_non_api)
 
-
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
