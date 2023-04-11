@@ -17,7 +17,6 @@ from nncf.torch.graph.operator_metatypes import (
     PTAddMetatype,
     PTAvgPool2dMetatype,
     PTBatchNormMetatype,
-    PTCatMetatype,
     PTDivMetatype,
     PTDropoutMetatype,
     PTELUMetatype,
@@ -59,7 +58,6 @@ from nncf.experimental.common.pruning.operations import (
     BatchNormPruningOp,
     LinearPruningOp,
     GroupNormPruningOp,
-    ConcatPruningOp,
     ElementwisePruningOp,
     ReshapePruningOp,
     TransposePruningOp,
@@ -126,11 +124,6 @@ class PTTransposePruningOp(TransposePruningOp):
 @PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('reshape')
 class PTReshape(ReshapePruningOp):
     subtypes = [PTReshapeMetatype]
-
-
-@PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('concat')
-class PTConcatPruningOp(ConcatPruningOp):
-    subtypes = [PTCatMetatype]
 
 
 @PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('split')

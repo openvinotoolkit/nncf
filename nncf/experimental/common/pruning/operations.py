@@ -225,34 +225,6 @@ class GroupNormPruningOp(BasePruningOp):
         else:
             node.data['output_mask'] = None
 
-
-class ConcatPruningOp(BasePruningOp):
-    @classmethod
-    def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph,
-                             tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> Optional[NNCFTensor]:
-        """
-        Generate output mask from input masks with all None replaced by identity masks.
-        If all input masks is None return None.
-
-        :param node: Node to determine it's sources.
-        :param graph: NNCF graph to work with.
-        :param tensor_processor: Interface with tensor processing methods.
-        :return: Filled input masks.
-        """
-        input_edges = graph.get_input_edges(node)
-        previous_nodes = [edge.from_node for edge in input_edges]
-        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]  # type: List[NNCFTensor]
-        not_empty_masks = [mask for mask in input_masks if mask is not None]
-        if not not_empty_masks:
-            return None
-
-    @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
-                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
-        result_mask = cls.generate_output_mask(node, graph, tensor_processor)
-        node.data['output_mask'] = result_mask
-
-
 class ElementwisePruningOp(BasePruningOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
@@ -286,7 +258,7 @@ class GatherPruningOp(BasePruningOp):
             node.data['output_mask'] = None
             return
 
-        removed_axis = cls.is_dim_removed_by_splitting(graph, node)
+        removed_axis = cls._is_dim_removed_by_splitting(graph, node)
         if removed_axis is not None:
             output_mask = PropagationMask()
             for input_mask in input_masks:
@@ -350,7 +322,6 @@ class SplitPruningOp(BasePruningOp):
         assert isinstance(node.layer_attributes, MultipleOutputLayerAttributes)
         chunk_axis = node.layer_attributes.axis
         chunks = node.layer_attributes.chunks
-        print(node.layer_attributes)
 
         input_edge = graph.get_input_edges(node)[0]
         input_shape = input_edge.tensor_shape
@@ -373,6 +344,8 @@ class ReshapeMode(Enum):
     Here's examples of reshaping for each mode:
         Extend: [N,C,H,W] ----(reshaped to)---> [N, C1, C2, H, W1, W2], when C=C1*C2 and W=W1*W2
         Shrink is opposite to Extend: [N, C1, C2, H, W1, W2] ----(reshaped to)---> [N,C,H,W]
+        "Identity without ones" happens when removing ones from input and output shapes leads to identity mapping.
+            For instance: [1, N] -> [N] is [N] or [N, 1, C] -> [1, N, 1, 1, C]
         Default - all other cases.
     """
     SHRINK = auto()
@@ -568,10 +541,21 @@ class ReshapePruningOp(BasePruningOp):
 
     @classmethod
     def _convert_to_not_cut(cls,
-                            source_indexes_not_cut_map,
-                            target_indexes_not_cut_map,
-                            source_to_targets_map
+                            source_indexes_not_cut_map: List[int],
+                            target_indexes_not_cut_map: List[int],
+                            source_to_targets_map: DIMENSION_MAP
         ) -> DIMENSION_MAP:
+        """
+        Perform re-mapping indexes for the cut arrays to non-cut ones.
+
+        :param source_indexes_not_cut_map: indexes of not cut elements in the uncut source array.
+            The indexes are in the order of the elements in the array, so it can be used to map indexes from a cut array
+            to uncut one.
+        :param target_indexes_not_cut_map: indexes of not cut elements in the uncut target array. The indexes are in the
+            order of the elements in the array, so it can be used to map indexes from a cut array to uncut one.
+        :param source_to_targets_map: mapping from source elements to target ones in the cut arrays.
+        :return: mapping from source elements to target ones in the not cut arrays.
+        """
         source_to_targets_map_not_cut = {}
         for source_index, target_indexes in source_to_targets_map.items():
             source_index_not_cut = source_indexes_not_cut_map[source_index]
@@ -647,9 +631,9 @@ class ReshapePruningOp(BasePruningOp):
 
         # forms [(a1,a2), (b1,b2)] from [(a1,b1), (a2,b2)]
         for block_groups in zip(*new_blocks):
-            child_groups.append(PropagationGroup(blocks=list(block_groups)))
-        for child_group in child_groups:
+            child_group = PropagationGroup(blocks=list(block_groups))
             group.add_child(child_group)
+            child_groups.append(child_group)
         return child_groups
 
 

@@ -68,6 +68,20 @@ RESHAPE_PARSING_DESCS = [
         out_map={0: [1]},
     ),
     ReshapeParsingDesc(
+        input_shape=[2, 1],
+        output_shape=[2],
+        mode=ReshapeMode.IDENTITY_WITHOUT_ONES,
+        in_map={0: [0]},
+        out_map={0: [0]},
+    ),
+    ReshapeParsingDesc(
+        input_shape=[2],
+        output_shape=[2, 1],
+        mode=ReshapeMode.IDENTITY_WITHOUT_ONES,
+        in_map={0: [0]},
+        out_map={0: [0]},
+    ),
+    ReshapeParsingDesc(
         input_shape=[6, 4, 5],
         output_shape=[2, 3, 20],
     ),
