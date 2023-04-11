@@ -32,6 +32,7 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationPar
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
+from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
@@ -232,7 +233,7 @@ class SyntheticDataset(torch.utils.data.Dataset):
         return self._length
 
 
-def calculate_statistics(data, mode, qgroup):
+def calculate_statistics(data, mode, qgroup, half_range=False):
     data = data.detach().numpy()
     per_ch = qgroup == QuantizerGroup.WEIGHTS
     axes = (1, 2, 3) if per_ch else None
@@ -246,7 +247,8 @@ def calculate_statistics(data, mode, qgroup):
                                          max_values=torch.from_numpy(np.array(max_values)))
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
     qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)
-    fq_params = calculate_quantizer_parameters(statistics, qconfig, qgroup)
+    narrow_range = get_quantizer_narrow_range(qconfig, qgroup, half_range)
+    fq_params = calculate_quantizer_parameters(statistics, qconfig, qgroup, narrow_range, half_range)
     return {'input_low': fq_params.input_low, 'input_high': fq_params.input_high}
 
 
@@ -258,7 +260,8 @@ def calculate_fq_params(model, input_data):
     conv2_stats = calculate_statistics(relu, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
 
     conv1_w = model.conv1.weight
-    conv1_w_stats = calculate_statistics(conv1_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS)
+    conv1_w_stats = calculate_statistics(conv1_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS,
+                                         True)
     conv2_w = model.conv2.weight
     conv2_w_stats = calculate_statistics(conv2_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS)
     return {'FakeQuantize_6': conv1_stats,
