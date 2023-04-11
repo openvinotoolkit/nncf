@@ -629,6 +629,20 @@ def _is_depthwise_conv(node: ov.Node) -> bool:
     :param node: GroupConvolution node to check whether it is depthwise.
     :return: True if the convolution is depthwise, False - otherwise.
     """
-    inp_channels = node.input_value(0).get_shape()[1]
-    groups = node.input_value(1).get_shape()[0]
+    if node.input_value(0).get_partial_shape().is_dynamic:
+        inp_channels = node.input_value(0).get_partial_shape().get_dimension(1)
+        if inp_channels.is_dynamic:
+            return False
+        inp_channels = inp_channels.get_length()
+    else:
+        inp_channels = node.input_value(0).get_shape()[1]
+
+    if node.input_value(1).get_partial_shape().is_dynamic:
+        groups = node.input_value(1).get_partial_shape().get_dimension(0)
+        if groups.is_dynamic:
+            return False
+        groups = groups.get_length()
+    else:
+        groups = node.input_value(1).get_shape()[0]
+
     return groups == inp_channels and inp_channels > 1
