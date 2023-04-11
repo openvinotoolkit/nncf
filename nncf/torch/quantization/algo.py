@@ -217,8 +217,14 @@ class QuantizerSetupGeneratorBase:
                 nncf_logger.info(f'Preset quantizer parameters {overridden_params} explicitly overridden by config.')
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
-        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes')
-        self._target_scopes_per_group[quantizer_group] = params_dict_from_config.get('target_scopes')
+        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes', [])
+        if self.ignored_scopes is not None:
+            self._ignored_scopes_per_group[quantizer_group] += self.ignored_scopes
+        target_scopes = params_dict_from_config.get('target_scopes')
+        if target_scopes is None and self.target_scopes is not None:
+            self._target_scopes_per_group[quantizer_group] = self.target_scopes
+        else:
+            self._target_scopes_per_group[quantizer_group] = target_scopes
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
         qconfig = deepcopy(DEFAULT_QUANTIZER_CONFIG)
@@ -347,11 +353,14 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         from nncf.common.quantization.quantizer_propagation.solver import \
             QuantizerPropagationSolver  # pylint: disable=cyclic-import
-
-        prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
-                                                       ignored_scopes_per_group=self._ignored_scopes_per_group,
-                                                       target_scopes=self.target_scopes,
-                                                       target_scopes_per_group=self._target_scopes_per_group,
+        prop_graph_solver = QuantizerPropagationSolver(activation_ignored_scopes=self._ignored_scopes_per_group[
+                                                           QuantizerGroup.ACTIVATIONS],
+                                                       weight_ignored_scopes=self._ignored_scopes_per_group[
+                                                           QuantizerGroup.WEIGHTS],
+                                                       activation_target_scopes=self._target_scopes_per_group[
+                                                           QuantizerGroup.ACTIVATIONS],
+                                                       weight_target_scopes=self._target_scopes_per_group[
+                                                           QuantizerGroup.WEIGHTS],
                                                        hw_config=self.hw_config,
                                                        default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
                                                        default_qconfig_list=[self._get_default_qconfig(

@@ -281,8 +281,8 @@ class MinMaxQuantization(Algorithm):
         ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
-        solver = QuantizerPropagationSolver(ignored_scopes=ignored_names,
-                                            target_scopes=None,
+        solver = QuantizerPropagationSolver(activation_ignored_scopes=ignored_names,
+                                            weight_ignored_scopes=ignored_names,
                                             hw_config=hw_config,
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
                                             default_qconfig_list=[self._get_default_qconfig(
