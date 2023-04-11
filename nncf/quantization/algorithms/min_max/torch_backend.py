@@ -71,7 +71,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def similar_input_metatypes(self) -> List[OperatorMetatype]:
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
 
     @property

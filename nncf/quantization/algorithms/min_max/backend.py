@@ -59,7 +59,7 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def similar_input_metatypes(self) -> List[OperatorMetatype]:
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
         """
