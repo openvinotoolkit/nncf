@@ -10,9 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+# isort: off
+# pylint: skip-file
+
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
-# pylint: skip-file
+
 from nncf.version import BKC_TORCH_VERSION
 
 import torch

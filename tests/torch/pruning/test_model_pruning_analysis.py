@@ -91,7 +91,7 @@ class GroupPruningModulesTestStruct:
     def __init__(self, model: Union[Type[torch.nn.Module], Callable[[], torch.nn.Module]],
                  non_pruned_module_nodes: List[NNCFNodeName],
                  pruned_groups: List[List[NNCFNodeName]],
-                 pruned_groups_by_node_id: [List[List[int]]],
+                 pruned_groups_by_node_id: List[List[int]],
                  can_prune_after_analysis: Dict[int, bool],
                  final_can_prune: Dict[int, PruningAnalysisDecision],
                  prune_params: Tuple[bool, bool],
@@ -618,7 +618,7 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                          5: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
                          7: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
         prune_params=(True, True)),
-]
+]  # fmt: skip
 
 
 @pytest.fixture(params=GROUP_PRUNING_MODULES_TEST_CASES,
@@ -792,7 +792,7 @@ MODEL_ANALYSER_TEST_CASES = [
                        8: True, 9: True, 10: True, 11: False, 12: True, 13: True, 14: False, 15: True,
                        16: True}
     )
-]
+]  # fmt: skip
 
 
 @pytest.fixture(params=MODEL_ANALYSER_TEST_CASES, name='test_struct')
@@ -891,7 +891,7 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
                             'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv2]/conv2d_0': True,
                             'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv3]/conv2d_0': True,
                             'MultipleDepthwiseConvolutionModel/NNCFConv2d[depthwise_conv]/conv2d_0': False})
-]
+]  # fmt: skip
 
 
 @pytest.fixture(params=IS_MODULE_PRUNABLE_TEST_CASES, name='test_prunable_struct')

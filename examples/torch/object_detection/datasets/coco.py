@@ -23,6 +23,7 @@ from torch.utils import data
 
 from examples.torch.common.example_logger import logger
 
+# fmt: off
 COCO_CLASSES = (  # always index 0
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
     "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant",
@@ -31,7 +32,8 @@ COCO_CLASSES = (  # always index 0
     "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli",
     "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet",
     "tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
-    "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush")
+    "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
+)
 
 COCO_NAMES = (
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22",
@@ -42,9 +44,11 @@ COCO_NAMES = (
 )
 
 # for making bounding boxes pretty
-COLORS = ((255, 0, 0, 128), (0, 255, 0, 128), (0, 0, 255, 128),
-          (0, 255, 255, 128), (255, 0, 255, 128), (255, 255, 0, 128))
-
+COLORS = (
+    (255, 0, 0, 128), (0, 255, 0, 128), (0, 0, 255, 128),
+    (0, 255, 255, 128), (255, 0, 255, 128), (255, 255, 0, 128)
+)
+# fmt: on
 
 def _read_coco_annotation(annotation_file, images_folder):
     images_folder = Path(images_folder)

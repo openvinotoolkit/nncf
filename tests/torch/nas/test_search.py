@@ -147,7 +147,7 @@ NAS_MODELS_SEARCH_ENCODING = {
                            0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
                            0, 0, 0, 255],
     'tcn': [3]
-}
+}  # fmt:skip
 
 
 class TestSearchAlgorithm:

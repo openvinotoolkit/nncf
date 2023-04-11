@@ -60,8 +60,8 @@ ALL_MODELS = [(task, os.path.splitext(model)[0]) for task in TASKS for model in
 # Default E2E Scope of Models
 E2E_MODELS = [(task_type, model_name) for task_type, model_name in ALL_MODELS if model_name in
               ['densenet-12', 'mobilenetv2-12', 'resnet50-v2-7', 'shufflenet-v2-12', 'squeezenet1.0-12',
-               'efficientnet-lite4-11', 'inception-v1-12',
-               'ssd-12', 'yolov3-12', 'yolov4', 'ResNet101-DUC-12', 'FasterRCNN-12', 'MaskRCNN-12', 'retinanet-9']]
+               'efficientnet-lite4-11', 'inception-v1-12', 'ssd-12', 'yolov3-12', 'yolov4', 'ResNet101-DUC-12',
+               'FasterRCNN-12', 'MaskRCNN-12', 'retinanet-9']]  # fmt: skip
 # Fail Model and Reason of Failure
 XFAIL_MODELS = {
     # model name: reason of skipping
@@ -287,7 +287,7 @@ class TestPTQ:
             "-a", str(anno_dir),
             "-ss", str(ptq_size),
             "--target_tags", CPU_EP_COL_NAME  # This need to not quantize twice, because two targets in AC config
-        ]
+        ]  # fmt: skip
 
         run_command(com_line)
 
@@ -314,7 +314,7 @@ class TestBenchmark:
             "-s", str(data_dir),
             "-a", str(anno_dir),
             "--csv_result", str(out_file_name)
-        ]
+        ]  # fmt: skip
         if eval_size is not None:
             com_line += ["-ss", str(eval_size)]
         return com_line
