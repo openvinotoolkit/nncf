@@ -1,0 +1,21 @@
+strict digraph  {
+0 [color=green, label="S:1__O:0__ID:1", style=filled];
+1 [color=grey, label="S:1__O:0__ID:8", style=filled];
+2 [color=grey, label="S:1__O:0__ID:8
+S:1__O:0__ID:9", style=filled];
+3 [color=green, label="S:1__O:0__ID:8
+S:1__O:0__ID:9
+S:1__O:0__ID:12
+S:1__O:0__ID:26", style=filled];
+4 [color=grey, label="S:1__O:0__ID:9", style=filled];
+5 [color=grey, label="S:1__O:0__ID:12", style=filled];
+6 [color=red, label="S:1__O:0__ID:26", style=filled];
+7 [color=green, label="S:1__O:0__ID:30
+S:1__O:0__ID:32", style=filled];
+8 [color=red, label="S:1__O:0__ID:32", style=filled];
+9 [color=red, label="S:1__O:0__ID:37", style=filled];
+1 -> 2;
+2 -> 3;
+4 -> 2;
+5 -> 3;
+}

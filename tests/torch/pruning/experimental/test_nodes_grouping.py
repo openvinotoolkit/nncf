@@ -20,13 +20,16 @@ import torch
 from torch import nn
 
 from nncf import NNCFConfig
+from nncf.common.utils import dot_file_rw
+from nncf.common.utils.dot_file_rw import read_dot_graph, write_dot_graph
 # NNCF Torch should be imported before transformers in order to patch all operations before they added to some global vars,
 # otherwise test may fail with some error (e.g. IndexError: list index out of range).
 from nncf.torch.model_creation import create_nncf_network
-from nncf.experimental.common.pruning.nodes_grouping import PruningBlock
+from nncf.experimental.common.pruning.nodes_grouping import PruningBlock, select_largest_groups
 from nncf.experimental.common.pruning.nodes_grouping import PruningGroup
 from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
 from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
+from nncf.experimental.common.pruning.block_hierarchy import BlockHierarchy
 
 from transformers import AutoModelForImageClassification
 from transformers import RobertaConfig
@@ -38,17 +41,18 @@ from transformers import AutoModelForSequenceClassification
 from transformers import BertConfig
 from transformers import Wav2Vec2Config
 from transformers import MobileBertConfig
-from transformers import GPT2Config
 from transformers import DistilBertConfig
 from transformers import CLIPVisionConfig
 from transformers import CLIPVisionModel
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 
-from tests.torch.test_compressed_graph import GeneralModelDesc
+from tests.torch.test_compressed_graph import GeneralModelDesc, get_full_path_to_the_graph
 from tests.torch.test_compressed_graph import IModelDesc
 
 
 class SelfAttention(nn.Module):
     INPUT_SAMPLE_SIZES = ([384, 768])
+
     def __init__(self):
         super().__init__()
         self.q = nn.Linear(768, 768)
@@ -71,25 +75,23 @@ class SelfAttention(nn.Module):
 
 
 class DiffNumBranchesOnJoining(nn.Module):
-    INPUT_SAMPLE_SIZES = ([1, 3])
+    INPUT_SAMPLE_SIZES = ([1, 1])
 
     def __init__(self):
         super().__init__()
         self.q = nn.Linear(1, 6)
         self.k = nn.Linear(1, 6)
-        self.o = nn.Linear(2, 4)
 
     def forward(self, x):
-        k = self.k(x)  # [6]
-        q = self.q(x)  # [6]
-        k = k.view(2, 3).permute(1, 0)  # [3, 2]
-        q = q.view(2, 3)  # [2, 3]
-        o1 = torch.matmul(k, q)
-        o2 = self.o(q)
-        return o1, o2
+        k = self.k(x)  # [1, 6]
+        q = self.q(x)  # [1, 6]
+        k = k.view(1, 2, 3).permute(0, 2, 1)  # [1, 3, 2]
+        q_reshaped = q.view(1, 2, 3)  # [1, 2, 3]
+        o1 = torch.matmul(k, q_reshaped)
+        return o1, q
 
 
-class ReshapeReshape(nn.Module):
+class ReshapeReshape1Block(nn.Module):
     def __init__(self):
         super().__init__()
         self.base = nn.Linear(3, 60)
@@ -105,12 +107,30 @@ class ReshapeReshape(nn.Module):
         return o2, o4
 
 
+class ReshapeReshape0Block(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.base = nn.Linear(3, 60)
+        self.final_2 = nn.Linear(2, 5)
+
+    def forward(self, x):
+        base = self.base(x)
+        o4 = base.view(1, 4, 15)
+        reshape2 = o4.view(1, 2, 2, 15)
+        o2 = self.final_2(reshape2.permute(0, 3, 2, 1))
+        return o2, o4
+
+
 @dataclass
 class GroupTestDesc:
     model_desc: IModelDesc
     ref_groups: List[PruningGroup]
 
-SYNTHETIC_DESCS= [
+    def __str__(self) -> str:
+        return self.model_desc.model_name
+
+
+SYNTHETIC_DESCS = [
     GroupTestDesc(
         model_desc=GeneralModelDesc(
             model_builder=SelfAttention,
@@ -123,28 +143,37 @@ SYNTHETIC_DESCS= [
                     PruningBlock(64, 0, 2, 0),
                     PruningBlock(64, 0, 3, 0),
                     PruningBlock(64, 0, 17, 1)
-                })
+                }
+            )
         ]
     ),
-
     GroupTestDesc(
         model_desc=GeneralModelDesc(
-            model_builder=ReshapeReshape,
+            model_builder=ReshapeReshape1Block,
             input_sample_sizes=([1, 3])
         ),
         ref_groups=[
-            # TODO: ticket 106556: issue with open/closed branches and filtering blocks
+            PruningGroup(
+                dim_blocks={
+                    PruningBlock(size=2, offset=0, producer_id=1, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=7, pruning_dimension=1)
+                }
+            ),
         ]
     ),
-    # TODO: E       RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x3 and 1x6)
-    # test for open/closed branches??
+    GroupTestDesc(
+        model_desc=GeneralModelDesc(
+            model_builder=ReshapeReshape0Block,
+            input_sample_sizes=([1, 3])
+        ),
+        ref_groups=[]
+    ),
     GroupTestDesc(
         model_desc=GeneralModelDesc(
             model_builder=DiffNumBranchesOnJoining,
             input_sample_sizes=DiffNumBranchesOnJoining.INPUT_SAMPLE_SIZES
         ),
-        ref_groups=[
-        ]
+        ref_groups=[]
     ),
 ]
 
@@ -154,21 +183,24 @@ NLP_DESCS = [
             model_name='1_layer_BERT',
             input_info=[dict(sample_size=[1, 10], type='long')] * 3,
             model_builder=partial(
-                AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1))
+                AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1)
+            )
         ),
         ref_groups=[
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(64, 0, 11, 0),
-                    PruningBlock(64, 0, 12, 0),
-                    PruningBlock(64, 0, 15, 0),
-                    PruningBlock(64, 0, 30, 1),
-                }),
+                    PruningBlock(size=64, offset=0, producer_id=11, pruning_dimension=0),
+                    PruningBlock(size=64, offset=0, producer_id=12, pruning_dimension=0),
+                    PruningBlock(size=64, offset=0, producer_id=15, pruning_dimension=0),
+                    PruningBlock(size=64, offset=0, producer_id=30, pruning_dimension=1)
+                }
+            ),
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(1, 0, 34, 0),
-                    PruningBlock(1, 0, 36, 1)
-                })
+                    PruningBlock(size=1, offset=0, producer_id=34, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=36, pruning_dimension=1)
+                }
+            )
         ]
     ),
     GroupTestDesc(
@@ -192,22 +224,22 @@ NLP_DESCS = [
         ref_groups=[
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(size=2, offset=0, producer_id=31, pruning_dimension=1),
-                    PruningBlock(size=2, offset=0, producer_id=16, pruning_dimension=0),
                     PruningBlock(size=2, offset=0, producer_id=12, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=16, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=31, pruning_dimension=1),
                     PruningBlock(size=2, offset=0, producer_id=13, pruning_dimension=0)
                 }
             ),
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=35, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=37, pruning_dimension=1)
+                    PruningBlock(size=1, offset=0, producer_id=37, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=35, pruning_dimension=0)
                 }
             ),
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=42, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=45, pruning_dimension=1)
+                    PruningBlock(size=1, offset=0, producer_id=45, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=42, pruning_dimension=0)
                 }
             )
         ]
@@ -289,44 +321,26 @@ NLP_DESCS = [
                                   ))
         ),
         ref_groups=[
-            # TODO: Why was this group filtered out?
-            # PruningGroup(
-            #     dim_blocks={
-            #         PruningBlock(size=1, offset=0, producer_id=22, pruning_dimension=0),
-            #         PruningBlock(size=1, offset=0, producer_id=24, pruning_dimension=1),
-            #         PruningBlock(size=1, offset=0, producer_id=25, pruning_dimension=1),
-            #     }
-            # ),
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(size=64, offset=0, producer_id=26, pruning_dimension=0),
-                    PruningBlock(size=64, offset=0, producer_id=27, pruning_dimension=0),
-                    PruningBlock(size=64, offset=0, producer_id=25, pruning_dimension=0),
-                    PruningBlock(size=64, offset=0, producer_id=44, pruning_dimension=1)
+                    PruningBlock(size=1, offset=0, producer_id=68, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=48, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=62, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=54, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=56, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=50, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=72, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=66, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=19, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=44, pruning_dimension=0)
                 }
             ),
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=50, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=48, pruning_dimension=0)
-                }
-            ),
-            PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=56, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=54, pruning_dimension=0)
-                }
-            ),
-            PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=62, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=0)
-                }
-            ),
-            PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=68, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=66, pruning_dimension=0)
+                    PruningBlock(size=1, offset=0, producer_id=26, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=25, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=22, pruning_dimension=0)
                 }
             ),
             PruningGroup(
@@ -334,21 +348,8 @@ NLP_DESCS = [
                     PruningBlock(size=1, offset=0, producer_id=81, pruning_dimension=1),
                     PruningBlock(size=1, offset=0, producer_id=78, pruning_dimension=0)
                 }
-            )
+            ),
         ]
-    ),
-    # TODO: need to handle model_output in the middle of each Transformer layer
-    # TODO: note, that Split before Reshape, but each branch has the same Reshape - should be fine
-    # TODO: support Addmm properly, attributes?
-    # TODO: need symbolic mask propagation
-    GroupTestDesc(
-        model_desc=GeneralModelDesc(
-            model_name='GPT2Text',
-            input_info=[dict(sample_size=[1, 128], type='long')] * 1,
-            model_builder=partial(AutoModelForSequenceClassification.from_config,
-                                  GPT2Config(n_embd=4, n_layer=2, n_head=2, vocab_size=2))
-        ),
-        ref_groups=[]
     ),
 ]
 
@@ -400,20 +401,16 @@ CV_DESCS = [
                                   ))
         ),
         ref_groups=[
-            PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=26, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=9, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=8, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=12, pruning_dimension=0)
-                }
-            ),
-            PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)
-                }
-            ),
+            PruningGroup(dim_blocks={
+                PruningBlock(size=1, offset=0, producer_id=8, pruning_dimension=0),
+                PruningBlock(size=1, offset=0, producer_id=26, pruning_dimension=1),
+                PruningBlock(size=1, offset=0, producer_id=9, pruning_dimension=0),
+                PruningBlock(size=1, offset=0, producer_id=12, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={
+                PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
+                PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={
+                PruningBlock(size=1, offset=0, producer_id=1, pruning_dimension=0)}),
         ]
     ),
     GroupTestDesc(
@@ -432,23 +429,18 @@ CV_DESCS = [
                                   ))
         ),
         ref_groups=[
-            PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=2, offset=0, producer_id=26, pruning_dimension=1),
-                    PruningBlock(size=2, offset=0, producer_id=9, pruning_dimension=0),
-                    PruningBlock(size=2, offset=0, producer_id=8, pruning_dimension=0),
-                    PruningBlock(size=2, offset=0, producer_id=12, pruning_dimension=0)
-                }
-            ),
-            PruningGroup(
-                dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
-                    PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)
-                }
-            ),
+            PruningGroup(dim_blocks={
+                PruningBlock(size=2, offset=0, producer_id=12, pruning_dimension=0),
+                PruningBlock(size=2, offset=0, producer_id=26, pruning_dimension=1),
+                PruningBlock(size=2, offset=0, producer_id=8, pruning_dimension=0),
+                PruningBlock(size=2, offset=0, producer_id=9, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={
+                PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
+                PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={
+                PruningBlock(size=1, offset=0, producer_id=1, pruning_dimension=0)}),
         ]
     ),
-     # TODO: need to handle concat with constant
     GroupTestDesc(
         model_desc=GeneralModelDesc(
             model_name='CLIP',
@@ -468,9 +460,9 @@ CV_DESCS = [
             PruningGroup(
                 dim_blocks={
                     PruningBlock(size=2, offset=0, producer_id=15, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=11, pruning_dimension=0),
                     PruningBlock(size=2, offset=0, producer_id=33, pruning_dimension=1),
-                    PruningBlock(size=2, offset=0, producer_id=9, pruning_dimension=0),
-                    PruningBlock(size=2, offset=0, producer_id=11, pruning_dimension=0)
+                    PruningBlock(size=2, offset=0, producer_id=9, pruning_dimension=0)
                 }
             ),
             PruningGroup(
@@ -479,6 +471,7 @@ CV_DESCS = [
                     PruningBlock(size=1, offset=0, producer_id=36, pruning_dimension=0)
                 }
             ),
+            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=1, pruning_dimension=0)}),
         ]
     ),
 ]
@@ -501,18 +494,25 @@ AUDIO_DESCS = [
         ref_groups=[
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(size=8, offset=0, producer_id=31, pruning_dimension=0),
+                    PruningBlock(size=8, offset=0, producer_id=35, pruning_dimension=0),
                     PruningBlock(size=8, offset=0, producer_id=53, pruning_dimension=1),
-                    PruningBlock(size=8, offset=0, producer_id=29, pruning_dimension=0),
-                    PruningBlock(size=8, offset=0, producer_id=35, pruning_dimension=0)
+                    PruningBlock(size=8, offset=0, producer_id=31, pruning_dimension=0),
+                    PruningBlock(size=8, offset=0, producer_id=29, pruning_dimension=0)
                 }
             ),
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=57, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=1)
+                    PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=57, pruning_dimension=0)
                 }
-            )
+            ),
+            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=2, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=5, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=7, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=9, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=11, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=13, pruning_dimension=0)}),
+            PruningGroup(dim_blocks={PruningBlock(size=1, offset=0, producer_id=22, pruning_dimension=0)}),
         ]
     ),
 ]
@@ -524,18 +524,27 @@ TEST_DESCS = [
     *CV_DESCS,
     *AUDIO_DESCS
 ]
+
+
 @pytest.mark.parametrize(
-    "desc", TEST_DESCS, ids=[m.model_desc.model_name for m in TEST_DESCS]
+    "desc", TEST_DESCS, ids=map(str, TEST_DESCS)
 )
-def test_groups(desc: GroupTestDesc, tmp_path):
+def test_groups(desc: GroupTestDesc, tmp_path, mocker):
     model_desc = desc.model_desc
     model = model_desc.get_model()
     config = NNCFConfig({"input_info": model_desc.create_input_info()})
     nncf_network = create_nncf_network(model, config)
     pruning_producing_types = ['linear']
-    actual_groups = get_pruning_groups(nncf_network.get_graph(),
-                                       PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
-                                       pruning_producing_types,
-                                       tmp_path)
+    get_graph_spy = mocker.spy(BlockHierarchy, '_get_graph_for_visualization')
+    not_filtered_groups = get_pruning_groups(nncf_network.get_graph(),
+                                                PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
+                                                pruning_producing_types,
+                                                tmp_path)
 
-    assert actual_groups == desc.ref_groups
+    nx_graph = get_graph_spy.spy_return
+    path_to_dot = get_full_path_to_the_graph(f'{str(desc)}.dot', 'pruning_groups')
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=False)
+
+    filtered_groups = select_largest_groups(not_filtered_groups)
+    assert filtered_groups == desc.ref_groups
+

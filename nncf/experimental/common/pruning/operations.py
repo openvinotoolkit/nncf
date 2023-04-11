@@ -99,6 +99,13 @@ class OutputPruningOp(BasePruningOp):
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         node.data['output_mask'] = None
 
+        # TODO: more safe if there's no masks
+        input_masks = get_input_masks(node, graph)
+        for m in input_masks:
+            if m:
+                m.invalidate_groups()
+
+
 
 class IdentityMaskForwardPruningOp(BasePruningOp):
     @classmethod
@@ -133,7 +140,6 @@ class LinearPruningOp(BasePruningOp):
             for dim, groups in input_masks[0].dim_groups_map.items():
                 if dim == input_shape_len - 1:
                     for group in groups:
-                        group.close_branch()
                         cls.add_consumer_block(group, node)
                 else:
                     output_mask.dim_groups_map[dim] = groups
@@ -173,11 +179,11 @@ class LinearPruningOp(BasePruningOp):
                 right = right_dim_groups[input_shape_len - 2]
                 assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
                 group = PropagationGroup.join_groups(left[0], right[0])
-                group.close_branch()
                 cls.add_consumer_block(group, node)
 
         node.data['output_mask'] = output_mask
 
+    #TODO: add consumer to the group by passing it to the leaves
     @classmethod
     def add_consumer_block(cls, group: PropagationGroup, node: NNCFNode) -> None:
         """
@@ -192,8 +198,7 @@ class LinearPruningOp(BasePruningOp):
                 MaskProducer(node.node_id),
                 size=first_block.size,
                 offset=first_block.offset,
-                pruning_dimension=1,
-                closed_branches=1
+                pruning_dimension=1
             )
             group.add_block(consumer_block)
 
@@ -228,17 +233,42 @@ class ElementwisePruningOp(BasePruningOp):
         if not input_masks:
             input_masks = [None]
 
-        output_mask = input_masks[0]
+        output_mask = None
         if len(input_masks) == 1:
             nncf_logger.warning(f"ElementWise with a single input is not properly supported. "
                                 "The second input might be a constant without node in the graph. "
                                 "The constant should be in the graph or in the node attributes. "
                                 "It's also should be pruned in accordance with an input mask. "
                                 "node_name={node.node_name}")
+            output_mask = input_masks[0]
+        elif any(m is None for m in input_masks):
+            for m in input_masks:
+                if m:
+                    m.invalidate_groups()
+        else:
+            output_mask = PropagationMask()
+            first_mask = input_masks[0]
+            dims_to_invalidate = []
+            for dim in first_mask.dim_groups_map:
+                is_dim_in_masks = all(dim in m.dim_groups_map for m in input_masks[1:])
+                if is_dim_in_masks:
+                    is_one_group_per_dim = all(len(m.dim_groups_map[dim]) == 1 for m in input_masks)
+                    if is_one_group_per_dim:
+                        groups_to_join = [m.dim_groups_map[dim][0] for m in input_masks]
+                        output_mask.dim_groups_map[dim] = [
+                            PropagationGroup.join_groups(*groups_to_join)
+                        ]
+                    else:
+                        dims_to_invalidate.append(dim)
+                else:
+                    dims_to_invalidate.append(dim)
 
-        if any(m is None for m in input_masks):
-            output_mask = None
-            cls.invalidate_masks(input_masks)
+
+            for dim in dims_to_invalidate:
+                for m in input_masks:
+                    if dim in m.dim_groups_map:
+                        for group in m.dim_groups_map[dim]:
+                            group.invalidate()
 
         node.data['output_mask'] = output_mask
 
@@ -320,8 +350,10 @@ class SplitPruningOp(BasePruningOp):
         chunks = node.layer_attributes.chunks
 
         input_edge = graph.get_input_edges(node)[0]
+        output_edge = graph.get_output_edges(node)[0]
         input_shape = input_edge.tensor_shape
-        is_chunk_axis_removed = chunks == input_shape[chunk_axis]
+        output_shape = output_edge.tensor_shape
+        is_chunk_axis_removed = (chunks == input_shape[chunk_axis]) and (len(input_shape) > len(output_shape))
         if is_chunk_axis_removed:
             output_mask = PropagationMask()
             for dim, groups in input_masks[0].dim_groups_map.items():
@@ -329,7 +361,8 @@ class SplitPruningOp(BasePruningOp):
                     output_mask.dim_groups_map[dim] = groups
                     # other groups propagated further
         else:
-            raise NotImplementedError("symbolic mask propagation for split by prune dimension is not implemented")
+            nncf_logger.warning("symbolic mask propagation for split by prune dimension is not implemented, "
+                                "just propagate further for now")
 
         node.data['output_mask'] = output_mask
 

@@ -1,0 +1,38 @@
+strict digraph  {
+0 [color=green, label="S:1__O:0__ID:1", style=filled];
+1 [color=grey, label="S:1__O:0__ID:8", style=filled];
+2 [color=grey, label="S:2__O:0__ID:8", style=filled];
+3 [color=grey, label="S:2__O:0__ID:8
+S:2__O:0__ID:9", style=filled];
+4 [color=green, label="S:2__O:0__ID:8
+S:2__O:0__ID:9
+S:2__O:0__ID:12
+S:2__O:0__ID:26", style=filled];
+5 [color=grey, label="S:1__O:2__ID:8", style=filled];
+6 [color=green, label="S:1__O:2__ID:8
+S:1__O:2__ID:9", style=filled];
+7 [color=grey, label="S:1__O:0__ID:9", style=filled];
+8 [color=grey, label="S:2__O:0__ID:9", style=filled];
+9 [color=grey, label="S:1__O:2__ID:9", style=filled];
+10 [color=grey, label="S:1__O:0__ID:12", style=filled];
+11 [color=grey, label="S:2__O:0__ID:12", style=filled];
+12 [color=green, label="S:1__O:2__ID:12
+S:1__O:2__ID:26", style=filled];
+13 [color=red, label="S:1__O:0__ID:26", style=filled];
+14 [color=green, label="S:1__O:0__ID:30
+S:1__O:0__ID:32", style=filled];
+15 [color=red, label="S:1__O:0__ID:32", style=filled];
+16 [color=red, label="S:1__O:0__ID:37", style=filled];
+1 -> 2;
+1 -> 5;
+2 -> 3;
+3 -> 4;
+5 -> 6;
+7 -> 8;
+7 -> 9;
+8 -> 3;
+9 -> 6;
+10 -> 11;
+10 -> 12;
+11 -> 4;
+}
