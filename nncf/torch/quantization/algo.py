@@ -771,7 +771,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             if qp.is_weight_quantization_point():
                 use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
-                narrow_range = not half_range
+                narrow_range = qconfig.num_bits == 8 and not half_range
             else:
                 use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.ACTIVATIONS]
                 narrow_range = False

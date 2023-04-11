@@ -12,6 +12,8 @@
 """
 
 from typing import List, Tuple, Dict
+from collections import deque
+
 import openvino.runtime as ov
 import numpy as np
 from openvino.runtime import opset9 as opset
@@ -286,12 +288,24 @@ class OVModelTransformer(ModelTransformer):
     def _set_const_value(node_with_const: ov.Node,
                          const_port_id: int,
                          const_value: np.ndarray) -> None:
-        const_port = node_with_const.input(const_port_id)
-        const_node = node_with_const.input_value(const_port_id).get_node()
-        if const_node.get_type_name() == 'Convert':
-            const_port = const_node.input(0)
-            const_node = const_node.input_value(0).get_node()
-        assert const_node.get_type_name() == 'Constant'
+        port = node_with_const.input(const_port_id)
+        node = node_with_const.input_value(const_port_id).get_node()
+
+        const_port = None
+        const_node = None
+        queue = deque([(port, node)])
+        while len(queue) != 0:
+            curr_port, curr_node = queue.popleft()
+            if curr_node.get_type_name() == 'Constant':
+                const_port = curr_port
+                const_node = curr_node
+                break
+            if len(curr_node.inputs()) == 0:
+                break
+            queue.append((curr_node.input(0), curr_node.input_value(0).get_node()))
+
+        if const_node is None:
+            raise RuntimeError('Constant node was expected but could not find it.')
 
         const_shape = const_node.get_data().shape
         const_value = np.reshape(const_value, const_shape)
@@ -333,7 +347,7 @@ class OVModelTransformer(ModelTransformer):
                 continue
             input_port = input_node.input(0)
             input_node_output = input_port.get_source_output()
-            new_param = opset.parameter(shape=input_node_output.get_shape(),
+            new_param = opset.parameter(shape=input_node_output.partial_shape,
                                         dtype=input_node_output.get_element_type(),
                                         name=f'{input_name}_input')
             input_port.replace_source_output(new_param.output(0))

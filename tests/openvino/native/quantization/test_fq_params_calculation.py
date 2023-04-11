@@ -113,8 +113,9 @@ OMZ_MODELS = [
                          ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value])
 @pytest.mark.parametrize('model_name', OMZ_MODELS)
 def test_omz_models_fq_scales(model_name, preset, tmp_path):
-    _ = download_model(model_name, tmp_path)
-    model_path = convert_model(model_name, tmp_path)
+    download_model(model_name, tmp_path)
+    convert_model(model_name, tmp_path)
+    model_path = tmp_path / 'public' / model_name / 'FP32' / f'{model_name}.xml'
     model = ov.Core().read_model(model_path)
     quantized_model = quantize_model(model, {'preset': preset})
     nodes = get_fq_nodes_stats_algo(quantized_model)

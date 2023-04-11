@@ -38,8 +38,9 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
     extracted_data_dir = os.path.dirname(get_dataset_for_test(dataset, data_dir))
     config_path = AC_CONFIGS_DIR / f'{model}.yml'
 
-    _ = download_model(model, tmp_path)
-    model_path = convert_model(model, tmp_path)
+    download_model(model, tmp_path)
+    convert_model(model, tmp_path)
+    model_path = tmp_path / 'public' / model / 'FP32' / f'{model}.xml'
 
     fp_model_dir = os.path.dirname(model_path)
     int8_ir_path = os.path.join(fp_model_dir, f'{model}_int8.xml')

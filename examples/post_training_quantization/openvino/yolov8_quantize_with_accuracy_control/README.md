@@ -11,8 +11,6 @@ The example includes the following steps:
 # Install requirements
 
 To run the example you should install the corresponding Python dependencies:
-
-To run the example you should install the corresponding Python dependencies:
 - Install NNCF from source:
 ```
 git clone https://github.com/openvinotoolkit/nncf.git
@@ -26,7 +24,7 @@ pip install -r requirements.txt
 
 # Run Example
 
-The example is fully automated. Just run the following comman in the prepared Python environment:
+The example is fully automated. Just run the following command in the prepared Python environment:
 
 ```
 python main.py
