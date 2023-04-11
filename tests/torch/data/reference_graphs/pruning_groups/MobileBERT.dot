@@ -47,16 +47,16 @@ S:64__O:0__ID:26", style=filled];
 S:64__O:0__ID:26
 S:64__O:0__ID:27
 S:64__O:0__ID:44", style=filled];
-12 [color=grey, label="S:1__O:64.0__ID:25", style=filled];
-13 [color=green, label="S:1__O:64.0__ID:25
-S:1__O:64.0__ID:26", style=filled];
+12 [color=grey, label="S:1__O:64__ID:25", style=filled];
+13 [color=green, label="S:1__O:64__ID:25
+S:1__O:64__ID:26", style=filled];
 14 [color=grey, label="S:1__O:0__ID:26", style=filled];
 15 [color=grey, label="S:64__O:0__ID:26", style=filled];
-16 [color=grey, label="S:1__O:64.0__ID:26", style=filled];
+16 [color=grey, label="S:1__O:64__ID:26", style=filled];
 17 [color=grey, label="S:1__O:0__ID:27", style=filled];
 18 [color=grey, label="S:64__O:0__ID:27", style=filled];
-19 [color=green, label="S:1__O:64.0__ID:27
-S:1__O:64.0__ID:44", style=filled];
+19 [color=green, label="S:1__O:64__ID:27
+S:1__O:64__ID:44", style=filled];
 20 [color=grey, label="S:1__O:0__ID:44", style=filled];
 21 [color=green, label="S:1__O:0__ID:48
 S:1__O:0__ID:50", style=filled];

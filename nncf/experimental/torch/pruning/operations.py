@@ -146,4 +146,3 @@ class PTExpandAsPruningOp(ExpandAsPruningOp):
 @PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('masked_fill')
 class PTScatterPruningOp(ScatterPruningOp):
     subtypes = [PTScatterMetatype]
-

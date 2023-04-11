@@ -624,7 +624,7 @@ class ReshapePruningOp(BasePruningOp):
         new_blocks = []
         divided_shapes = filter(lambda x: x != 1, list_output_channels)
         for divided_shape in divided_shapes:
-            offset = current_size % dot_product
+            offset = int(current_size % dot_product)
             current_size /= divided_shape
             new_block = copy.copy(block)
             new_block.size = int(current_size)
