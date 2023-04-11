@@ -20,6 +20,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTDivMetatype,
     PTDropoutMetatype,
     PTELUMetatype,
+    PTExpandAsMetatype,
     PTRELU6Metatype,
     PTGELUMetatype,
     PTGroupNormMetatype,
@@ -40,6 +41,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTPRELUMetatype,
     PTLeakyRELUMetatype,
     PTRELUMetatype,
+    PTScatterMetatype,
     PTSigmoidMetatype,
     PTSILUMetatype,
     PTSoftmaxMetatype,
@@ -52,9 +54,13 @@ from nncf.torch.graph.operator_metatypes import (
     PTGatherMetatype
 )
 from nncf.experimental.common.pruning.operations import (
+    ExpandAsPruningOp,
     InputPruningOp,
     OutputPruningOp,
     IdentityMaskForwardPruningOp,
+    ConvolutionPruningOp,
+    ScatterPruningOp,
+    TransposeConvolutionPruningOp,
     BatchNormPruningOp,
     LinearPruningOp,
     GroupNormPruningOp,
@@ -134,3 +140,12 @@ class PTSplitPruningOp(SplitPruningOp):
 @PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('gather')
 class PTGatherPruningOp(GatherPruningOp):
     subtypes = [PTGatherMetatype]
+
+@PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('expend_as')
+class PTExpandAsPruningOp(ExpandAsPruningOp):
+    subtypes = [PTExpandAsMetatype]
+
+@PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register('masked_fill')
+class PTScatterPruningOp(ScatterPruningOp):
+    subtypes = [PTScatterMetatype]
+

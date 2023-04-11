@@ -93,12 +93,7 @@ class InputPruningOp(BasePruningOp):
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         node.data['output_mask'] = None
 
-
 class OutputPruningOp(BasePruningOp):
-    @classmethod
-    def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        return True
-
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
@@ -235,10 +230,11 @@ class ElementwisePruningOp(BasePruningOp):
 
         output_mask = input_masks[0]
         if len(input_masks) == 1:
-            nncf_logger.warning(f"ElementWise with a single input is not properly supported. node_name={node.node_name}"
+            nncf_logger.warning(f"ElementWise with a single input is not properly supported. "
                                 "The second input might be a constant without node in the graph. "
                                 "The constant should be in the graph or in the node attributes. "
-                                "It's also should be pruned in accordance with an input mask.")
+                                "It's also should be pruned in accordance with an input mask. "
+                                "node_name={node.node_name}")
 
         if any(m is None for m in input_masks):
             output_mask = None
@@ -356,12 +352,6 @@ class ReshapeMode(Enum):
 
 class ReshapePruningOp(BasePruningOp):
     DIMENSION_MAP = Dict[int, List[int]]
-
-    @classmethod
-    def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        if node.layer_attributes is None:
-            return False
-        return True
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
@@ -668,15 +658,57 @@ class TransposePruningOp(BasePruningOp):
 
         node.data['output_mask'] = output_mask
 
-
 class StopMaskForwardPruningOp(BasePruningOp):
-    @classmethod
-    def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        return False
-
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         cls.invalidate_masks(input_masks)
         node.data['output_mask'] = None
+
+class ExpandAsPruningOp(BasePruningOp):
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+        input_edges = graph.get_input_edges(node)
+        assert len(input_edges) == 2, 'expand should always have 2 inputs'
+        input_to_expand = input_edges[0].from_node
+        mask = input_to_expand.data.get('output_mask')
+        propagated_mask = None
+        if mask is not None:
+            nncf_logger.warning(f"expand_as is applied to the node with propagation mask. Currently, it's not supported "
+                                "and mask is invalidated. node_name={node.node_name}")
+            mask.invalidate_groups()
+        input_to_get_shape = input_edges[1].from_node
+        mask: PropagationMask = input_to_get_shape.data.get('output_mask')
+        if mask is not None:
+            target_shape = input_edges[1].tensor_shape
+            source_shape = input_edges[0].tensor_shape
+            for dim, groups in mask.dim_groups_map.items():
+                if target_shape[dim] == source_shape[dim]:
+                    nncf_logger.warning(f"expand_as takes the shape from the node with propagation mask and pruning "
+                                        "dimension in the mask matches the dimension in the expanded input. Currently, "
+                                        "it's not supported and mask is invalidated. node_name={node.node_name}")
+                    for group in groups:
+                        group.invalidate()
+            propagated_mask = mask
+        node.data['output_mask'] = propagated_mask
+
+
+class ScatterPruningOp(BasePruningOp):
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+        input_masks = [input_edge.from_node.data.get('output_mask') for input_edge in graph.get_input_edges(node)]
+        assert len(input_masks) == 2, 'expect that masked_fill should always have 2 inputs'
+        i1, i2 = input_masks
+        propagated_mask = None
+        if i1 != i2:
+            nncf_logger.warning(f"expand_as takes the shape from the node with propagation mask and pruning "
+                                "dimension in the mask matches the dimension in the expanded input. Currently, "
+                                "it's not supported and mask is invalidated. node_name={node.node_name}")
+            if i1 != None:
+                i1.invalidate_groups()
+        else:
+            propagated_mask = i1
+        node.data['output_mask'] = propagated_mask
