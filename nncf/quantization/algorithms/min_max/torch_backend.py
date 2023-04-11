@@ -47,6 +47,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -122,6 +123,16 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                                        target_point,
                                                                        quantizer_config,
                                                                        parameters)
+
+    @staticmethod
+    def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        max_values = torch.max(torch.tensor(max_values))
+        min_values = torch.min(torch.tensor(min_values))
+        return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,

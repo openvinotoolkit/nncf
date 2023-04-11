@@ -26,6 +26,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
@@ -120,6 +121,16 @@ class MinMaxAlgoBackend(ABC):
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+        """
+        Returns backend-specific unified statistics.
+
+        :param statistics: List of MinMaxTensorStatistic instances.
+        :return: Unified MinMaxTensorStatistic value.
         """
 
     @staticmethod

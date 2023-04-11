@@ -108,8 +108,11 @@ def create_compressed_model(model: Module,
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
     compressed_model = builder.apply_to(nncf_network)
     compression_ctrl = builder.build_controller(compressed_model)
+
     if is_state_loadable:
         compression_ctrl.load_state(compression_state[BaseController.CONTROLLER_STATE])
+
+    compressed_model.nncf.set_compression_controller(compression_ctrl)
 
     # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
     # In particular, this is currently required for correct functioning of RNNs.

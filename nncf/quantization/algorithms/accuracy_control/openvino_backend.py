@@ -75,9 +75,8 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
         return get_bias_value(node_with_bias, nncf_graph, model)
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph,
-                         model: ov.Model, port_id: int) -> np.ndarray:
-        return get_weight_value(node_with_weight, nncf_graph, model, port_id)
+    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
+        return get_weight_value(node_with_weight, model, port_id)
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
