@@ -34,26 +34,27 @@ class OVNativeEngine(Engine):
 
         ie = ov.Core()
         self.compiled_model = ie.compile_model(model, target_device.value)
-        self.input_names = set(inp.get_friendly_name() for inp in model.get_parameters())
+        self.input_tensor_names = set()
+        self.number_of_inputs = len(model.inputs)
+        for model_input in model.inputs:
+            self.input_tensor_names.update(model_input.get_names())
 
-    @staticmethod
     def _check_input_data_format(
-            input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]],
-            input_names: Set[str]) -> None:
+            self,
+            input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]) -> None:
         """
         Checks correspondence of the model input names and the passed data.
         If there is a mismatch, the method throws a more specific and readable error than
         original error raised by the compiled model.
 
         :param input_data: Provided inputs to infer the model.
-        :param input_names: Model input names.
         """
         actual_num_inputs = 1 if isinstance(input_data, np.ndarray) else len(input_data)
-        if actual_num_inputs != len(input_names):
-            raise RuntimeError(f'Model expects {len(input_names)} inputs, but {actual_num_inputs} are provided.')
+        if actual_num_inputs != self.number_of_inputs:
+            raise RuntimeError(f'Model expects {self.number_of_inputs} inputs, but {actual_num_inputs} are provided.')
         if isinstance(input_data, dict):
-            for name in input_names:
-                if name not in input_data:
+            for name in input_data:
+                if isinstance(name, str) and name not in self.input_tensor_names:
                     raise RuntimeError(f'Missing a required input: {name} to run the model.')
 
     def infer(self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]) \
@@ -65,6 +66,6 @@ class OVNativeEngine(Engine):
         :param input_data: Inputs for the model.
         :return output_data: Model's output.
         """
-        self._check_input_data_format(input_data, self.input_names)
+        self._check_input_data_format(input_data)
         model_outputs = self.compiled_model(input_data)
         return {out.get_node().get_friendly_name(): data for out, data in model_outputs.items()}

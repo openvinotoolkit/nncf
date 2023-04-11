@@ -369,7 +369,10 @@ def quantize_model(xml_path, bin_path, accuracy_checcker_config,
         _, batch_annotation, batch_input, _ = data_item
         filled_inputs, _, _ = model_evaluator._get_batch_input(
             batch_input, batch_annotation)
-        return filled_inputs[0]
+        input_data = {}
+        for name, value in filled_inputs[0].items():
+            input_data[model_evaluator.launcher.input_to_tensor_name[name]] = value
+        return input_data
 
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
     if quantization_impl == 'pot':
