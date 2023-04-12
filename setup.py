@@ -124,6 +124,8 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
 
 TF_EXTRAS = [
         "tensorflow~=2.8.4",
+        # The workaround of the protobuf issue and should be fixed with migration on TF 2.11
+        "tensorflow-metadata<=1.13.0",
     ]
 
 TORCH_EXTRAS = [
