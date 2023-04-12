@@ -370,7 +370,8 @@ class StructuredMaskHandler:
         nncf_graph = nncf_network.get_original_graph()
         pruning_groups = get_pruning_groups(nncf_graph,
                                             PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
-                                            pruning_producing_types)
+                                            pruning_producing_types,
+                                            dump_dir=Path(''))
         pruning_groups = select_largest_groups(pruning_groups)
         result = []
         for group_id, group in enumerate(pruning_groups):
@@ -390,8 +391,9 @@ class StructuredMaskHandler:
                                                 prune_by_row)
                     ctxes.append(ctx)
                 else:
-                    raise RuntimeError('The given unstructured sparse structure does not match automatically found '
-                                       'structured pruning groups.')
+                    nncf_logger.warning(f'Automatically found structured pruning group does not match the given '
+                                        f'unstructured sparse structures:\n {group}')
+                    break
             if ctxes:
                 result.append(StructuredMaskContextGroup(group_id, ctxes))
         return result
