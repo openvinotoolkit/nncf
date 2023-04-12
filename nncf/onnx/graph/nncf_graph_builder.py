@@ -177,7 +177,7 @@ class GraphConverter:
                 edge = onnx_graph.get_edge(output_edge)
                 if edge is None:
                     # If the edge is None it means that the edge was not added during shape inference of ONNX model.
-                    # BatchNorm exported in Training mode has unused outputs edges: mean, var, saved_mean, saved_var.                    
+                    # BatchNorm exported in Training mode has unused outputs edges: mean, var, saved_mean, saved_var.
                     # NNCFGraph should not contain such edges.
                     continue
                 tensor_shape = ONNXGraph.get_edge_shape(edge)

@@ -21,7 +21,6 @@ from tests.onnx.quantization.common import ModelToTest
 import torch
 import onnx
 
-from tests.shared.paths import TEST_ROOT
 from tests.onnx.weightless_model import save_model_without_tensors
 
 
