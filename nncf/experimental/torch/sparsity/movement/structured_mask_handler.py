@@ -381,12 +381,6 @@ class StructuredMaskHandler:
                 if module in module_vs_sparse_module_info_map:
                     # 0 dimension corresponds to row (output channels), 1st dimension - to column (input channels)
                     prune_by_row = not bool(block.pruning_dimension)
-            for block in group.dim_blocks:
-                nncf_node = nncf_graph.get_node_by_id(block.producer_id)
-                module = nncf_network.nncf.get_containing_module(nncf_node.node_name)
-                if module in module_vs_sparse_module_info_map:
-                    # 0 dimension corresponds to row (output channels), 1st dimension - to column (input channels)
-                    prune_by_row = not bool(block.pruning_dimension)
                     minfo = module_vs_sparse_module_info_map[module]
                     prune_grid = (block.size, -1) if prune_by_row else (-1, block.size)
                     ctx = StructuredMaskContext(minfo.operand,
