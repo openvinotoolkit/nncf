@@ -375,6 +375,7 @@ class StructuredMaskHandler:
         result = []
         for group_id, group in enumerate(pruning_groups):
             ctxes = []
+            # TODO: collect consumer that has pruning dim only
             for block in group.producers.union(group.consumers):
                 nncf_node = nncf_graph.get_node_by_id(block.producer_id)
                 module = nncf_network.nncf.get_containing_module(nncf_node.node_name)

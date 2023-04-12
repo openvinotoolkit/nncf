@@ -135,10 +135,9 @@ class LinearPruningOp(BasePruningOp):
             for dim, groups in input_masks[0].dim_groups_map.items():
                 if dim == input_shape_len - 1:
                     for group in groups:
-                        # TODO: is it needed? is it always linear or can be matmul?
-                        if node.layer_attributes is not None:
-                            consumer = ConsumerInfo(node_id=node.node_id, pruning_dimension=1)
-                            group.add_consumer(consumer)
+                        assert node.layer_attributes is not None
+                        consumer = ConsumerInfo(node_id=node.node_id, pruning_dimension=1)
+                        group.add_consumer(consumer)
                 else:
                     output_mask.dim_groups_map[dim] = groups
         elif len(input_masks) == 2:
@@ -177,10 +176,11 @@ class LinearPruningOp(BasePruningOp):
                 right = right_dim_groups[input_shape_len - 2]
                 assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
                 group = PropagationGroup.join_groups(left[0], right[0])
-                # TODO: is it needed? is it always linear or can be matmul?
-                if node.layer_attributes is not None:
-                    consumer = cls.create_consumer_info(group, node)
-                    group.add_consumer(consumer)
+                pruning_dimension = 1
+                if node.layer_attributes is None:
+                    pruning_dimension = None
+                consumer = ConsumerInfo(node_id=node.node_id, pruning_dimension=pruning_dimension)
+                group.add_consumer(consumer)
         else:
             output_mask = node.data.get('output_mask', None)
 
@@ -643,7 +643,7 @@ class ReshapePruningOp(BasePruningOp):
 
         # forms [(a1,a2), (b1,b2)] from [(a1,b1), (a2,b2)]
         for block_groups in zip(*new_blocks):
-            child_group = PropagationGroup(blocks=list(block_groups), consumers=consumers))
+            child_group = PropagationGroup(blocks=list(block_groups), consumers=consumers)
             group.add_child(child_group)
             child_groups.append(child_group)
         return child_groups

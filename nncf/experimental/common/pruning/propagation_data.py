@@ -38,6 +38,11 @@ class ConsumerInfo:
     node_id: int
     pruning_dimension: int
 
+    def __hash__(self) -> int:
+        return hash((self.node_id, self.pruning_dimension))
+
+    def __str__(self) -> str:
+        return f'ID: {self.node_id}'
 
 class PropagationBlock:
     """
@@ -135,12 +140,12 @@ class PropagationGroup:
     """
     # TODO: rename blocks to producers everywhere
     # TODO: make a set of blocks, since check for repeating and order is not important???
+    # TODO: separate block and producers...
     def __init__(self, blocks: List[PropagationBlock], consumers: Optional[Set[ConsumerInfo]] = None) -> None:
+        # TODO: all blocks inside the group should have the same, size and offset
         self._blocks = blocks
         if consumers is None:
-            consumers = []
-        for block in blocks + consumers:
-            block.set_group(self)
+            consumers = set()
         self._children: List['PropagationGroup'] = []
         self.is_invalid = False
         self._consumers = consumers
@@ -191,16 +196,16 @@ class PropagationGroup:
         """
         return list(map(str, self._blocks))
 
-    def add_consumer(self, block: PropagationBlock):
+    def add_consumer(self, consumer: ConsumerInfo):
         """
-        Adds consumer block to the group and to all children.
+        Adds information about consumer to the group and to all children.
         The idea is to have up-to-date list of consumers in each leaf eventually.
 
         :param block: propagation block the corresponds to the consumer node.
         """
-        self._consumers.append(block)
+        self._consumers.add(consumer)
         for child in self._children:
-            child.add_consumer(block)
+            child.add_consumer(consumer)
 
     def get_blocks(self) -> List[PropagationBlock]:
         return self._blocks.copy()
@@ -208,7 +213,7 @@ class PropagationGroup:
     def get_children(self) -> List['PropagationGroup']:
         return self._children.copy()
 
-    def get_consumers(self) -> List[PropagationBlock]:
+    def get_consumers(self) -> Set[ConsumerInfo]:
         return self._consumers.copy()
 
     def has_children(self) -> bool:

@@ -12,6 +12,8 @@
 """
 
 from dataclasses import dataclass
+from functools import reduce
+import operator
 from pathlib import Path
 from typing import (
     Any,
@@ -29,6 +31,7 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.experimental.common.graph.netron import save_for_netron
 from nncf.experimental.common.pruning.propagation_data import (
+    ConsumerInfo,
     MaskProducer,
     PropagationBlock,
     PropagationGroup,
@@ -72,8 +75,18 @@ class PruningGroup:
     """
     Group of pruning blocks that is obtained after propagation.
     """
+    # TODO: group should have:
+    #   1) pruning block that is common for producers and consumers??? always True?
+    #   2) producer ids
+    #   3) consumer ids
+    #   4) symbolic channel mapping
+    # producer_info: Set[ProducerInfo]
+    # consumer_info: Set[ConsumerInfo] # node_id & pruning dimension...
+    # block: PruningBlock
+
     producers: Set[PruningBlock]
     consumers: Set[PruningBlock]
+
 
     def __eq__(self, other: 'PruningGroup'):
         return self.producers == other.producers and self.consumers == other.consumers
@@ -84,7 +97,14 @@ class PruningGroup:
         Creates an object by taking all necessary information from PropagationGroup.
         """
         producers = {PruningBlock.from_propagation_block(block) for block in group.get_blocks()}
-        consumers = {PruningBlock.from_propagation_block(block) for block in group.get_consumers()}
+        first_producer = next(iter(producers))
+        size = first_producer.size
+        offset = first_producer.offset
+        assert all(b.size == size for b in producers) == 1 and all(b.offset == offset for b in producers)
+        # TODO: consumer should not be a pruning block, as well as producer.
+        consumers = {
+            PruningBlock(size, offset, c.node_id, c.pruning_dimension) for c in group.get_consumers()
+        }
         return cls(producers, consumers)
 
 

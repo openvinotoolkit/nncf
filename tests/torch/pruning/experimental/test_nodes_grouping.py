@@ -167,7 +167,8 @@ SYNTHETIC_DESCS = [
                     PruningBlock(size=2, offset=0, producer_id=1, pruning_dimension=0)
                 },
                 consumers={
-                    PruningBlock(size=2, offset=0, producer_id=7, pruning_dimension=1)
+                    PruningBlock(size=2, offset=0, producer_id=7, pruning_dimension=1),
+                    PruningBlock(size=2, offset=0, producer_id=5, pruning_dimension=1)
                 }
             ),
         ]
@@ -368,12 +369,20 @@ NLP_DESCS = [
                 }
             ),
             PruningGroup(
+                producers={PruningBlock(size=64, offset=0, producer_id=26, pruning_dimension=0), PruningBlock(size=64, offset=0, producer_id=27, pruning_dimension=0), PruningBlock(size=64, offset=0, producer_id=25, pruning_dimension=0)},
+                consumers={PruningBlock(size=64, offset=0, producer_id=44, pruning_dimension=1)}
+            ),
+            PruningGroup(
                 producers={PruningBlock(size=1, offset=0, producer_id=22, pruning_dimension=0)},
                 consumers={
                     PruningBlock(size=1, offset=0, producer_id=26, pruning_dimension=1),
                     PruningBlock(size=1, offset=0, producer_id=25, pruning_dimension=1),
                 }
             ),
+            PruningGroup(producers={PruningBlock(size=1, offset=0, producer_id=48, pruning_dimension=0)}, consumers={PruningBlock(size=1, offset=0, producer_id=50, pruning_dimension=1)}),
+            PruningGroup(producers={PruningBlock(size=1, offset=0, producer_id=54, pruning_dimension=0)}, consumers={PruningBlock(size=1, offset=0, producer_id=56, pruning_dimension=1)}),
+            PruningGroup(producers={PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=0)}, consumers={PruningBlock(size=1, offset=0, producer_id=62, pruning_dimension=1)}),
+            PruningGroup(producers={PruningBlock(size=1, offset=0, producer_id=66, pruning_dimension=0)}, consumers={PruningBlock(size=1, offset=0, producer_id=68, pruning_dimension=1)}),
             PruningGroup(
                 producers={PruningBlock(size=1, offset=0, producer_id=78, pruning_dimension=0)},
                 consumers={PruningBlock(size=1, offset=0, producer_id=81, pruning_dimension=1)}
@@ -467,8 +476,8 @@ CV_DESCS = [
                 consumers={PruningBlock(size=2, offset=0, producer_id=26, pruning_dimension=1)}
             ),
             PruningGroup(
-                producers={PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1)},
-                consumers={PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)}
+                producers={PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)},
+                consumers={PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1)}
             ),
         ]
     ),
