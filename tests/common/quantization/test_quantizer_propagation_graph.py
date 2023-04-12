@@ -24,6 +24,7 @@ from typing import Tuple
 import networkx as nx
 import pytest
 
+from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -1009,6 +1010,26 @@ class TestRedundantQuantizerMerge:
             qpsg.propagate_quantizer_via_path(pq_3, path)
             return qpsg
 
+    class NoRedundancyState2(RedundantQuantizerMergeTestStruct):
+
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_pre_hook_node_key('9 /J_0'),
+            InsertionPointGraph.get_pre_hook_node_key('13 /N_0')
+        }
+        operator_node_key_vs_trait_dict = {
+            '9 /J_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '10 /K_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '12 /L_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '13 /N_0': QuantizationTrait.INPUTS_QUANTIZABLE
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            _ = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 /J_0'))
+            _ = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                                  InsertionPointGraph.get_pre_hook_node_key('13 /N_0'))
+            return qpsg
+
     REDUNDANT_QUANTIZER_MERGE_TEST_CASES = [
         # No connecting quantization-agnostic paths between quantizers
         NoConnectingPathsState0(),
@@ -1019,7 +1040,8 @@ class TestRedundantQuantizerMerge:
         MergeState0(),
         MergeState1(),
         NoRedundancyState0(),
-        NoRedundancyState1()
+        NoRedundancyState1(),
+        NoRedundancyState2()
     ]
 
     @pytest.fixture(params=REDUNDANT_QUANTIZER_MERGE_TEST_CASES)
@@ -1043,21 +1065,32 @@ class TestRedundantQuantizerMerge:
         #      (1 /B_0)
         #    /        \
         # (2 /C_0)     (3 /D_0)
-        #   |          |
+        #   |            |
         # (5 /F_0)     (4 /E_0)
-        #   |          |
+        #   |            |
         # (6 /G_0)       |
-        #   |          |
+        #   |            |
         # (7 /H_0)       |
-        #    \        /
+        #    \          /
         #      (8 /I_0)
-        node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+        #    /          \
+        # (9 /J_0)    (10 /K_0)
+        #                |
+        # (11 /M_0)      |
+        #     \\        /
+        #      (12 /L_0)
+        #         |
+        #      (13 /N_0)
+        node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']
         for node_key in node_keys:
             mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
             mock_graph.add_node(node_key, **mock_node_attrs)
 
         mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('D', 'E'), ('C', 'F'),
-                                   ('F', 'G'), ('G', 'H'), ('H', 'I'), ('E', 'I')])
+                                   ('F', 'G'), ('G', 'H'), ('H', 'I'), ('E', 'I'), ('I', 'J'),
+                                   ('I', 'K'), ('M', 'L'), ('K', 'L'), ('L', 'N')])
+        mock_graph.edges[('K', 'L')][NNCFGraph.DTYPE_EDGE_ATTR] = Dtype.INTEGER
+
         mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
         return get_nncf_graph_from_mock_nx_graph(mock_graph)
 
