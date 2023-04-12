@@ -1013,8 +1013,8 @@ class TestRedundantQuantizerMerge:
     class NoRedundancyState2(RedundantQuantizerMergeTestStruct):
 
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_pre_hook_node_key('9 /J_0'),
-            InsertionPointGraph.get_pre_hook_node_key('13 /N_0')
+            InsertionPointGraph.get_post_hook_node_key('8 /I_0'),
+            InsertionPointGraph.get_post_hook_node_key('12 /L_0')
         }
         operator_node_key_vs_trait_dict = {
             '9 /J_0': QuantizationTrait.INPUTS_QUANTIZABLE,
@@ -1024,10 +1024,18 @@ class TestRedundantQuantizerMerge:
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
-            _ = qpsg.add_propagating_quantizer([QuantizerConfig()],
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
                                                   InsertionPointGraph.get_pre_hook_node_key('9 /J_0'))
-            _ = qpsg.add_propagating_quantizer([QuantizerConfig()],
+            pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig()],
                                                   InsertionPointGraph.get_pre_hook_node_key('13 /N_0'))
+            qpsg.propagate_quantizer_via_path(pq_1, [
+                (InsertionPointGraph.get_post_hook_node_key('8 /I_0'),
+                 InsertionPointGraph.get_pre_hook_node_key('9 /J_0'))
+            ])
+            qpsg.propagate_quantizer_via_path(pq_2, [
+                (InsertionPointGraph.get_post_hook_node_key('12 /L_0'),
+                 InsertionPointGraph.get_pre_hook_node_key('13 /N_0'))
+            ])
             return qpsg
 
     REDUNDANT_QUANTIZER_MERGE_TEST_CASES = [
