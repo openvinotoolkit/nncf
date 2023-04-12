@@ -348,9 +348,7 @@ class ReshapePruningOp(BasePruningOp):
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        if node.layer_attributes is None:
-            return False
-        return True
+        return node.layer_attributes is not None
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
