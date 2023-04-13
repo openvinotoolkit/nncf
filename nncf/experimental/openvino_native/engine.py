@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple, Set, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import openvino.runtime as ov
