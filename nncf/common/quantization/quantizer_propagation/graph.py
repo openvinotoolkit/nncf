@@ -57,7 +57,7 @@ from nncf.common.scopes import should_consider_scope
 
 
 class QuantizerPropagationStateGraph(nx.DiGraph):
-    #pylint:disable=too-many-public-methods
+    #pylint:disable=too-many-public-methods,too-many-return-statements
     """
     This class is based upon InsertionPointGraph and represents
     a"chessboard" for PropagatingQuantizer items.  It tracks the current state of
@@ -953,6 +953,13 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             affecting_pq, prev_node_key = affecting_pq_and_prev_node_key
             curr_node = self.nodes[curr_node_key]
             curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+
+            # Skipping traversing through the INTEGER path.
+            if curr_node_key != prev_node_key:
+                edge = self.edges[prev_node_key, curr_node_key]
+                if edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
+                    return False, (None, curr_node_key)
+
             if self.is_insertion_point(curr_node_type):
                 curr_pq = curr_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
                 if curr_pq is not None:
