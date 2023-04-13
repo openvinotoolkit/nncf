@@ -36,8 +36,7 @@ from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import identity_mask_propagation
 from nncf.experimental.common.pruning.nodes_grouping import PropagationGroup
-from nncf.experimental.common.pruning.nodes_grouping import PropagationBlock
-from nncf.experimental.common.pruning.nodes_grouping import MaskProducer
+from nncf.experimental.common.pruning.nodes_grouping import PruningBlock
 from nncf.experimental.common.pruning.nodes_grouping import PropagationMask
 from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
 
@@ -137,7 +136,7 @@ class LinearPruningOp(BasePruningOp):
                     for group in groups:
                         assert node.layer_attributes is not None
                         consumer = ConsumerInfo(node_id=node.node_id, pruning_dimension=1)
-                        group.add_consumer(consumer)
+                        group.add_consumers({consumer})
                 else:
                     output_mask.dim_groups_map[dim] = groups
         elif len(input_masks) == 2:
@@ -180,7 +179,7 @@ class LinearPruningOp(BasePruningOp):
                 if node.layer_attributes is None:
                     pruning_dimension = None
                 consumer = ConsumerInfo(node_id=node.node_id, pruning_dimension=pruning_dimension)
-                group.add_consumer(consumer)
+                group.add_consumers({consumer})
         else:
             output_mask = node.data.get('output_mask', None)
 
@@ -575,15 +574,12 @@ class ReshapePruningOp(BasePruningOp):
         return source_to_targets_map_not_cut
 
     @staticmethod
-    def _split_block(
-        block: PropagationBlock,
-        list_output_channels: List[int]
-    ) -> List[PropagationBlock]:
+    def _split_block(block: PruningBlock, list_output_channels: List[int]) -> List[PruningBlock]:
         """
-        Splits a dimension block into multiple blocks.
+        Splits a pruning block into multiple blocks.
         It's applied when some number of channels S is reshaped to N channels, e.g. S -> [A,B,C,D] and S=A*B*C*D.
         Now we assume that pruning is possible along each new dimension instead of S one.
-        The dimension block encoding pruning of a single channel from S is no longer valid.
+        The pruning block encoding pruning of a single channel from S is no longer valid.
         This function creates new blocks that encodes how many channels from S is pruned if we prune along a new
         dimension from [A,B,C,D].
         It forms new constraints by the following rules:
@@ -594,7 +590,7 @@ class ReshapePruningOp(BasePruningOp):
             | C*D   | B*C*D % S       |
             | B*C*D | A*B*C*D % S = 0 |
 
-        :param block: dimension block to split
+        :param block: pruning block to split
         :param list_output_channels: list of output channels (A,B,C,D)
         :return:
         """
@@ -621,32 +617,25 @@ class ReshapePruningOp(BasePruningOp):
                      input_channels: int,
                      list_output_channels: List[int]) -> List[PropagationGroup]:
         """
-        Splits a group of dimension blocks into new child groups by a pruning dimension.
-        Internally calls "_split_block" to split each block from the given group. Please refer to the
-        description of the method for more details about splitting blocks.
-        Group can have multiple blocks. E.g. s1 and s2. Let's say s1 is splitted into (a1,b1), s2 - into (a2,b2).
-        The method will return 2 children groups: (a1,a2) and (b1,b2).
+        Splits a pruning block within the given group into multiple blocks - each within new groups.
+        It's applied when some number of input channels S is reshaped to N output channels,
+        e.g. S -> [A,B,C,D] and S=A*B*C*D.
 
         :param input_channels: splitted input channels (S).
         :param list_output_channels: list of output channels (A,B,C,D).
-        :param group: a group of dimension blocks for splitting.
+        :param group: a group for splitting.
         :return: list of new groups which results from the split.
         """
-        new_blocks: List[List[PropagationBlock]] = []
-        child_groups: List[PropagationGroup] = []
+        dot_product = reduce((lambda x, y: x * y), list_output_channels)
+        assert dot_product == input_channels
 
-        consumers = group.get_consumers()
-        for block in group.get_blocks():
-            dot_product = reduce((lambda x, y: x * y), list_output_channels)
-            assert dot_product == input_channels
-            new_blocks.append(cls._split_block(block, list_output_channels))
-
-        # forms [(a1,a2), (b1,b2)] from [(a1,b1), (a2,b2)]
-        for block_groups in zip(*new_blocks):
-            child_group = PropagationGroup(blocks=list(block_groups), consumers=consumers)
-            group.add_child(child_group)
-            child_groups.append(child_group)
-        return child_groups
+        new_groups: List[PropagationGroup] = []
+        new_blocks = cls._split_block(group.block, list_output_channels)
+        for block in new_blocks:
+            new_group = PropagationGroup(block=block, producers=group.get_producers(), consumers=group.get_consumers())
+            group.add_child(new_group)
+            new_groups.append(new_group)
+        return new_groups
 
 
 class TransposePruningOp(BasePruningOp):

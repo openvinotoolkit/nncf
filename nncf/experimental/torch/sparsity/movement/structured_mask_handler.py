@@ -23,6 +23,7 @@ import torch.nn.functional as F
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.logging import nncf_logger
+from nncf.experimental.common.pruning.propagation_data import ProducerInfo
 from nncf.torch.layers import NNCFLinear
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import SparseModuleInfo
@@ -376,13 +377,18 @@ class StructuredMaskHandler:
         result = []
         for group_id, group in enumerate(pruning_groups):
             ctxes = []
-            # TODO: collect consumer that has pruning dim only
-            for block in group.producers.union(group.consumers):
-                nncf_node = nncf_graph.get_node_by_id(block.producer_id)
+            block = group.block
+            extended_producers = group.producers
+            for consumer in group.consumers:
+                if consumer.pruning_dimension is not None:
+                    extended_producers.add(ProducerInfo(consumer.node_id, consumer.pruning_dimension))
+
+            for producer_info in extended_producers:
+                nncf_node = nncf_graph.get_node_by_id(producer_info.node_id)
                 module = nncf_network.nncf.get_containing_module(nncf_node.node_name)
                 if module in module_vs_sparse_module_info_map:
                     # 0 dimension corresponds to row (output channels), 1st dimension - to column (input channels)
-                    prune_by_row = not bool(block.pruning_dimension)
+                    prune_by_row = not bool(producer_info.pruning_dimension)
                     minfo = module_vs_sparse_module_info_map[module]
                     prune_grid = (block.size, -1) if prune_by_row else (-1, block.size)
                     ctx = StructuredMaskContext(minfo.operand,
