@@ -98,13 +98,13 @@ After the compressed model has been fine-tuned to acceptable accuracy and compre
     Refer to [compression algorithm documentation](./compression_algorithms) for details.
     Also, this method is limited to the supported formats for export.
 
-2. Call the compression controller's `prepare_for_inference` method, to properly get the model without NNCF specific
+2. Call the compression controller's `strip` method, to properly get the model without NNCF specific
     nodes for training compressed model, after that you can trace the model via inference in framework operations.
     It gives more flexibility to deploy model after optimization. As well as this method also allows you to connect
     third-party inference solutions, like OpenVINO.
 
     ```python
-    inference_model = compression_ctrl.prepare_for_inference()
+    inference_model = compression_ctrl.strip()
     # To ONNX format
     import torch
     torch.onnx.export(inference_model, dummy_input, './compressed_model.onnx')

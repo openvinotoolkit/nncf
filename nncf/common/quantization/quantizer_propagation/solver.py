@@ -35,7 +35,6 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
-from nncf.common.insertion_point_graph import ConstantNodesFilter
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
@@ -44,6 +43,7 @@ from nncf.common.quantization.quantizer_propagation.structs import PropagatingQu
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
+from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -55,6 +55,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.scopes import matches_any
+from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
@@ -238,13 +239,13 @@ class PostprocessingNodeLocator:
                 output.append(node_key)
         return output
 
-    def get_post_processing_node_keys(self) -> List[str]:
+    def get_post_processing_node_keys(self) -> Set[str]:
         """
         Finds out the nodes of the QuantizerPropagationStateGraph, which are in post-processing part of the model.
         Starting from the output nodes all the nodes are added, until the quantizable nodes with weights are faced.
         If the path with the nodes has the post-processing marker node,
         all the nodes in this path will be added into ignored.
-        :return: The list of the node keys to be ignored.
+        :return: Set of the node keys to be ignored.
         """
 
         visited_nodes = set()
@@ -310,7 +311,7 @@ class PostprocessingNodeLocator:
             return False, output
 
         partial_backward_traverse_function = partial(backward_traverse_function, visited_nodes=visited_nodes)
-        output = []
+        output = set()
 
         output_nodes = []
         for output_metatype in OUTPUT_NOOP_METATYPES.values():
@@ -322,7 +323,7 @@ class PostprocessingNodeLocator:
                                                               output=[], traverse_forward=False)
             if self._post_processing_marker_encountered:
                 ignored_node_keys = self._get_ignored_node_keys(node_keys)
-                output.extend(ignored_node_keys)
+                output.update(ignored_node_keys)
 
         return output
 
@@ -345,8 +346,10 @@ class QuantizerPropagationSolver:
     DEFAULT_PROPAGATION_STRATEGY = PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT
 
     def __init__(self,
-                 ignored_scopes: List[str] = None,
-                 target_scopes: List[str] = None,
+                 activation_ignored_scopes: List[str] = None,
+                 weight_ignored_scopes: List[str] = None,
+                 activation_target_scopes: List[str] = None,
+                 weight_target_scopes: List[str] = None,
                  hw_config: HWConfig = None,
                  default_trait_to_metatype_map: Dict[QuantizationTrait, List[OperatorMetatype]] = None,
                  propagation_strategy: PropagationStrategy = None,
@@ -361,13 +364,20 @@ class QuantizerPropagationSolver:
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
 
-        :param ignored_scopes: A list of strings to match against NNCFGraph node names
-          and ignore matching nodes. Ignored nodes will not have quantizers applied to their inputs (even if
-          required by node's metatype and HW config), and the downstream quantizers will not propagate upwards
-          through the corresponding node.
-        :param target_scopes: A list of strings to match against NNCFGraph and define a set of nodes
-          to be considered during quantizer propagation. When `ignored_scopes` is a "denylist",
-          the `target_scopes` is an "allowlist"; otherwise, same effects apply as for `ignored_scopes`.
+        :param activation_ignored_scopes: A list of strings to match against NNCFGraph node names
+          and ignore matching nodes. Ignored nodes will not have quantizers applied to their activation inputs
+          (even if required by node's metatype and HW config), and the downstream quantizers will not propagate
+          upwards through the corresponding node.
+        :param weight_ignored_scopes: A list of strings to match against NNCFGraph node names
+          and ignore matching nodes. Ignored nodes will not have quantizers applied to their weight inputs
+          (even if required by node's metatype and HW config).
+        :param activation_target_scopes: A list of strings to match against NNCFGraph and define a set of nodes
+          to be considered during quantizer propagation. When `activation_ignored_scopes` is a "denylist",
+          the `activation_target_scopes` is an "allowlist";
+          otherwise, same effects apply as for `activation_ignored_scopes`.
+        :param weight_target_scopes: A list of strings to match against NNCFGraph and define a set of nodes
+          which weights should be quantized. When `weight_ignored_scopes` is a "denylist",
+          the `weight_target_scopes` is an "allowlist"; otherwise, same effects apply as for `weight_ignored_scopes`.
         :param hw_config: A hardware config to be used for determining the set of operations to be quantized with
         respect to their inputs and, for every such operation, the set of allowed quantizer configurations
         :param default_trait_to_metatype_map: The mapping of QuantizationTrait's to the metatypes to be associated with
@@ -415,12 +425,11 @@ class QuantizerPropagationSolver:
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
         self._operator_allowed_qconfigs_map = self._get_operator_qconfigs_map()
         self._quantize_outputs = quantize_outputs
-        if quantizable_layer_nodes is not None:
-            self._weight_quantizable_node_names_vs_qconfigs = {
-                x.node.node_name: x.qconfig_list for x in quantizable_layer_nodes
-            }  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
-        else:
-            self._weight_quantizable_node_names_vs_qconfigs = {}  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
+        self._ignored_scopes = activation_ignored_scopes
+        self._target_scopes = activation_target_scopes
+        self._weight_quantizable_node_names_vs_qconfigs = self._filter_by_weight_ignored_target_scopes(
+            quantizable_layer_nodes, weight_ignored_scopes, weight_target_scopes)
+
         if scope_overrides is None:
             self._scope_overrides = {}
         else:
@@ -443,14 +452,31 @@ class QuantizerPropagationSolver:
                         self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
         self._active_propagating_quantizers_queue = deque()
         self._finished_propagating_quantizers = []  # type: List[PropagatingQuantizer]
-        self._ignored_scopes = ignored_scopes
-        self._target_scopes = target_scopes
         self._quantizers_waiting_for_branch_merge = QuantizersWaitingForMergeManager()
 
         self._potential_quantizers = {}
         self._num_potential_quantized_activations = 0
         self._quantizable_layer_nodes = quantizable_layer_nodes
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
+
+    def _filter_by_weight_ignored_target_scopes(self,
+                                                quantizable_layer_nodes: List[QuantizableWeightedLayerNode],
+                                                weight_ignored_scopes: Dict[QuantizerGroup, List[str]],
+                                                weight_target_scopes: Dict[QuantizerGroup, List[str]]
+    ) -> Dict[NNCFNodeName, List[QuantizerConfig]]:
+        if quantizable_layer_nodes is None:
+            return {}
+
+        weight_quantizable_node_names_vs_qconfigs = {}
+        for x in quantizable_layer_nodes:
+            node_name = x.node.node_name
+            if should_consider_scope(node_name,
+                                    ignored_scopes=weight_ignored_scopes,
+                                    target_scopes=weight_target_scopes):
+                weight_quantizable_node_names_vs_qconfigs[node_name] = x.qconfig_list
+            else:
+                nncf_logger.debug(f"Ignored adding weight quantizer for: {node_name}")
+        return weight_quantizable_node_names_vs_qconfigs
 
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
         """
@@ -468,11 +494,7 @@ class QuantizerPropagationSolver:
         configurations.
         """
         self._num_potential_quantized_activations = 0
-        quantizable_layer_node_keys = []
-        if self._quantizable_layer_nodes is not None:
-            quantizable_layer_node_keys = [node.node.data['key'] for node in self._quantizable_layer_nodes]
-        filtered_ip_graph = ConstantNodesFilter.filter(ip_graph, quantizable_layer_node_keys)
-        quant_prop_graph = QuantizerPropagationStateGraph(filtered_ip_graph,
+        quant_prop_graph = QuantizerPropagationStateGraph(ip_graph,
                                                           self._ignored_scopes,
                                                           self._target_scopes)
         if self._post_processing_marker_metatypes is not None:
@@ -505,6 +527,15 @@ class QuantizerPropagationSolver:
         if self._run_consistency_checks:
             quant_prop_graph.run_consistency_check()
 
+        for node_key in filtered_ip_graph:
+            node = filtered_ip_graph.nodes[node_key]
+            if node.get(InsertionPointGraph.IS_MERGED_NODE_ATTR, False):
+                merged_nncf_nodes = node[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]
+                # If first op in fused pattern has weights, then they should be quantized
+                for node in merged_nncf_nodes[1:]:
+                    if node.node_name in self._weight_quantizable_node_names_vs_qconfigs:
+                        self._weight_quantizable_node_names_vs_qconfigs.pop(node.node_name)
+
         quantizer_setup = quant_prop_graph.create_quantizer_setup(self._weight_quantizable_node_names_vs_qconfigs)
         insertions_vs_associated_prop_quants = self._map_quantization_points_to_prop_quantizers(
             self._finished_propagating_quantizers, quant_prop_graph, quantizer_setup)
@@ -514,7 +545,7 @@ class QuantizerPropagationSolver:
                                     quantization_point_id_vs_prop_quantizer=insertions_vs_associated_prop_quants)
 
     def _add_node_to_ignored(self, node_key: str, quant_prop_graph: QuantizerPropagationStateGraph) -> None:
-        quant_prop_graph.ignored_node_keys.append(node_key)
+        quant_prop_graph.ignored_node_keys[node_key] = IgnoreReason.AUTOGENERATED
         quant_prop_graph.nodes[node_key][quant_prop_graph.IS_IN_IGNORED_SCOPES] = True
 
     def _map_quantization_points_to_prop_quantizers(self,
@@ -908,7 +939,11 @@ class QuantizerPropagationSolver:
                 num_input_activations = quant_prop_graph.get_num_input_activations(node_key)
                 self._num_potential_quantized_activations += num_input_activations
                 if node_key in quant_prop_graph.ignored_node_keys:
-                    nncf_logger.info(f"Not adding activation input quantizer for operation: {node_key}")
+                    msg = f"Not adding activation input quantizer for operation: {node_key}"
+                    if quant_prop_graph.ignored_node_keys[node_key] == IgnoreReason.AUTOGENERATED:
+                        nncf_logger.debug(msg)
+                    else:
+                        nncf_logger.info(msg)
                     continue
                 self._setup_initial_quantizers_for_operator_node(node_key, quant_prop_graph)
 

@@ -22,7 +22,7 @@ from tests.common.quantization.data_generators import generate_lazy_sweep_data
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_prepare_for_inference import check_quantizer_operators
+from tests.torch.quantization.test_strip import check_quantizer_operators
 from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
@@ -49,7 +49,7 @@ def _get_config_for_algo(input_size, quantization=False):
 
 
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
-def test_prepare_for_inference_sparsity(enable_quantization):
+def test_strip_sparsity(enable_quantization):
     input_size = [1, 1, 8, 8]
     model = BasicConvTestModel()
     config = _get_config_for_algo(input_size, enable_quantization)
@@ -68,7 +68,7 @@ def test_prepare_for_inference_sparsity(enable_quantization):
     input_tensor = torch.Tensor(generate_lazy_sweep_data(input_size))
     x_nncf = compressed_model(input_tensor)
 
-    inference_model = compression_ctrl.prepare_for_inference()
+    inference_model = compression_ctrl.strip()
     x_torch = inference_model(input_tensor)
 
     check_quantizer_operators(inference_model)
@@ -88,7 +88,7 @@ def test_do_copy(do_copy, enable_quantization):
     config = _get_config_for_algo(model.INPUT_SIZE, enable_quantization)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    inference_model = compression_ctrl.prepare_for_inference(do_copy=do_copy)
+    inference_model = compression_ctrl.strip(do_copy=do_copy)
 
     if do_copy:
         assert id(inference_model) != id(compressed_model)
@@ -108,7 +108,7 @@ def test_corruption_binary_masks():
     ref_mask_1 = torch.clone(compression_ctrl.sparsified_module_info[0].operand.binary_mask)
     ref_mask_2 = torch.clone(compression_ctrl.sparsified_module_info[1].operand.binary_mask)
 
-    compression_ctrl.prepare_for_inference(do_copy=False)
+    compression_ctrl.strip(do_copy=False)
 
     after_mask_1 = compression_ctrl.sparsified_module_info[0].operand.binary_mask
     after_mask_2 = compression_ctrl.sparsified_module_info[1].operand.binary_mask
@@ -137,7 +137,7 @@ def tests_weights_after_onnx_export(tmp_path):
             weights_sparse.append(data)
 
     onnx_sparse_model_prepare_path = f"{tmp_path}/sparse_model_prepare.onnx"
-    compression_ctrl.prepare_for_inference(do_copy=False)
+    compression_ctrl.strip(do_copy=False)
     compression_ctrl.export_model(onnx_sparse_model_prepare_path, "onnx")
 
     onnx_prepare_model = onnx.load(onnx_sparse_model_prepare_path)

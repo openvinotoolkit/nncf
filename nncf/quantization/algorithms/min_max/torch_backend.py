@@ -16,6 +16,7 @@ import torch
 import numpy as np
 
 from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.scopes import IgnoredScope
 from nncf.common.hardware.config import HWConfig
 from nncf.common.graph.graph import NNCFGraph
@@ -46,6 +47,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -67,6 +69,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
 
     @property
@@ -117,6 +123,16 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                                        target_point,
                                                                        quantizer_config,
                                                                        parameters)
+
+    @staticmethod
+    def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        max_values = torch.max(torch.tensor(max_values))
+        min_values = torch.min(torch.tensor(min_values))
+        return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
@@ -253,10 +269,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
     @staticmethod
-    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
+    def get_model_type_ignore_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [om.PTAddMetatype, om.PTPowerMetatype, om.PTSubMetatype, om.PTMeanMetatype]
+            if device != TargetDevice.CPU_SPR:
+                metatypes_to_add.append(om.PTMulMetatype)
             type_name_to_add = ["squeeze"]
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())

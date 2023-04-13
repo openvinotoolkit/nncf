@@ -21,7 +21,7 @@ from nncf.config import NNCFConfig
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.prepare_for_inference import convert_to_torch_fakequantizer
+from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
 from tests.common.quantization.data_generators import check_outputs
 from tests.common.quantization.data_generators import generate_lazy_sweep_data
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
@@ -78,7 +78,7 @@ def check_quantizer_operators(model, levels=255, overflow_fix=True):
                 op = nncf_module.get_pre_op(key).op
                 assert isinstance(op, FakeQuantize)
                 is_symmetric = op.qscheme in [torch.per_tensor_symmetric, torch.per_channel_symmetric]
-                narrow_range = not overflow_fix
+                narrow_range = levels in [255, 256] and not overflow_fix
                 ref_levels = levels - 1 if is_symmetric and narrow_range else levels
                 assert op.quant_max - op.quant_min == ref_levels
 
@@ -246,7 +246,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
 @pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
 @pytest.mark.parametrize("overflow_fix", ("disable", "enable"), ids=("overflow_fix_disable", "overflow_fix_enable"))
 @pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
-def test_prepare_for_inference_quantization(mode, overflow_fix, num_bits):
+def test_strip_quantization(mode, overflow_fix, num_bits):
     model = BasicConvTestModel()
 
     config = _get_config_for_algo(model.INPUT_SIZE, mode, overflow_fix, bits=num_bits)
@@ -256,7 +256,7 @@ def test_prepare_for_inference_quantization(mode, overflow_fix, num_bits):
     input_tensor = torch.Tensor(generate_lazy_sweep_data(model.INPUT_SIZE))
     x_nncf = compressed_model(input_tensor)
 
-    inference_model = compression_ctrl.prepare_for_inference()
+    inference_model = compression_ctrl.strip()
     x_torch = inference_model(input_tensor)
     # overflow_fix = False, because target_device = TRIAL
     check_quantizer_operators(inference_model, 2**num_bits - 1, overflow_fix=False)
@@ -271,7 +271,7 @@ def test_do_copy(do_copy):
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    inference_model = compression_ctrl.prepare_for_inference(do_copy=do_copy)
+    inference_model = compression_ctrl.strip(do_copy=do_copy)
 
     if do_copy:
         assert id(inference_model) != id(compressed_model)

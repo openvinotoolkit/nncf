@@ -243,7 +243,7 @@ def run_evaluation(config, eval_timeout=None):
 
         if 'export' in config.mode:
             save_path, save_format = get_saving_parameters(config)
-            export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+            export_model(compression_ctrl.strip(), save_path, save_format)
             logger.info('Saved to {}'.format(save_path))
 
     elif 'train' in config.mode:
@@ -282,7 +282,7 @@ def export(config):
     compression_ctrl, _, _ = restore_compressed_model(config, strategy, model_builder, config.ckpt_path)
 
     save_path, save_format = get_saving_parameters(config)
-    export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+    export_model(compression_ctrl.strip(), save_path, save_format)
     logger.info('Saved to {}'.format(save_path))
 
 

@@ -23,17 +23,17 @@ from nncf.common.sparsity.statistics import SparsifiedLayerSummary
 from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import create_table
-from nncf.experimental.torch.sparsity.movement.functions import binary_mask_by_threshold
-from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
-from nncf.experimental.torch.sparsity.movement.layers import SparseConfig
-from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
-from nncf.experimental.torch.sparsity.movement.layers import SparseStructure
-from nncf.experimental.torch.sparsity.movement.loss import ImportanceLoss
 from nncf.torch import create_compressed_model
 from nncf.torch.layers import NNCFLinear
 from tests.torch.sparsity.movement.helpers import LinearRunRecipe
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 from tests.torch.sparsity.movement.helpers import mock_linear_nncf_node
+from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
+from nncf.experimental.torch.sparsity.movement.functions import binary_mask_by_threshold
+from nncf.experimental.torch.sparsity.movement.layers import SparseConfig
+from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
+from nncf.experimental.torch.sparsity.movement.layers import SparseStructure
+from nncf.experimental.torch.sparsity.movement.loss import ImportanceLoss
 
 
 class TestSparseConfigByScope:
