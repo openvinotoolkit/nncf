@@ -84,7 +84,7 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         return NNCFStatistics()
 
-    def prepare_for_inference(self, do_copy: bool = True) -> NNCFNetwork:
+    def strip(self, do_copy: bool = True) -> NNCFNetwork:
         model = self.model
         if do_copy:
             model = copy_model(self.model)

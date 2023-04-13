@@ -937,9 +937,6 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     return list(PT_OPERATOR_METATYPES.registry_dict.values())
 
 
-OP_NAMES_REQUIRING_ATTRIBUTES_FROM_ARGS_KWARGS = [PTTransposeMetatype.get_all_aliases()]
-
-
 OPERATORS_WITH_WEIGHTS_METATYPES = [
     PTModuleConv1dMetatype,
     PTModuleConv2dMetatype,
