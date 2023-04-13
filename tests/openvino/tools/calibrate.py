@@ -11,12 +11,13 @@
  limitations under the License.
 """
 
-import json
-import os
-import multiprocessing
 from argparse import ArgumentParser
 from collections import OrderedDict
-from typing import Optional, TypeVar, Iterable
+from dataclasses import asdict
+import json
+import multiprocessing
+import os
+from typing import Iterable, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
@@ -28,15 +29,14 @@ import nncf
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data.dataset import Dataset
-from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
 from nncf.experimental.openvino.quantization.quantize import \
     quantize_with_accuracy_control as pot_quantize_with_native_accuracy_control
+from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
 from nncf.experimental.openvino_native.quantization.quantize import \
     quantize_with_accuracy_control as native_quantize_with_native_accuracy_control
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.scopes import IgnoredScope
-from nncf.scopes import convert_ignored_scope_to_list
-from nncf.parameters import ModelType, TargetDevice
-
 
 TModel = TypeVar('TModel')
 
@@ -83,7 +83,7 @@ class CustomJSONEncoder(json.JSONEncoder):
                           nncf.QuantizationPreset)):
             return o.value
         if isinstance(o, (nncf.IgnoredScope)):
-            return ','.join(convert_ignored_scope_to_list(o))
+            return asdict(o)
         raise TypeError(f'Object of type {o.__class__.__name__} '
                         f'is not JSON serializable')
 
@@ -197,13 +197,15 @@ def map_ignored_scope(ignored):
                          'supported')
 
     operations  = ignored.get('operations')
+    ignored_operations = []
     if operations is not None:
         for op in operations:
             if op.get('attributes') is not None:
                 raise ValueError('Attributes in the ignored operations '
                                  'are not supported')
+            ignored_operations.append(op['type'])
     return {'ignored_scope': nncf.IgnoredScope(names=ignored.get('scope'),
-                                               types=ignored.get('types'))}
+                                               types=ignored_operations)}
 
 
 def map_preset(preset):
