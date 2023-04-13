@@ -316,3 +316,7 @@ class FC_ConstMul(torch.nn.Module):
         x1 = self.fc1(x)
         x1 = x1 * 2
         return x + x1
+
+class Baddbmm(torch.nn.Module):
+    def forward(self, x, y, z):
+        return torch.baddbmm(x, y, z)

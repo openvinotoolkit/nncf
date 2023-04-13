@@ -11,32 +11,40 @@
  limitations under the License.
 """
 
-import json
-import os
 from argparse import ArgumentParser
-from typing import Optional, TypeVar
+from collections import OrderedDict
+from dataclasses import asdict
+import json
+import multiprocessing
+import os
+from typing import Iterable, Optional, TypeVar
 
+import numpy as np
 import openvino.runtime as ov
-from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import \
-    create_model_evaluator
+from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
+from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
 from openvino.tools.pot.configs.config import Config
 
 import nncf
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data.dataset import Dataset
+from nncf.experimental.openvino.quantization.quantize import \
+    quantize_with_accuracy_control as pot_quantize_with_native_accuracy_control
+from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
 from nncf.experimental.openvino_native.quantization.quantize import \
-    quantize_impl
+    quantize_with_accuracy_control as native_quantize_with_native_accuracy_control
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.scopes import IgnoredScope
-from nncf.scopes import convert_ignored_scope_to_list
-from nncf.parameters import (
-    ModelType,
-    TargetDevice
-)
 
 TModel = TypeVar('TModel')
 
-MAP_POT_NNCF_ALGORITHMS = {'DefaultQuantization': 'quantize'}
+
+MAP_POT_NNCF_ALGORITHMS = {
+    'DefaultQuantization': 'quantize',
+    'AccuracyAwareQuantization': 'quantize_with_accuracy_control',
+}
 
 
 def parse_args():
@@ -75,9 +83,83 @@ class CustomJSONEncoder(json.JSONEncoder):
                           nncf.QuantizationPreset)):
             return o.value
         if isinstance(o, (nncf.IgnoredScope)):
-            return ','.join(convert_ignored_scope_to_list(o))
+            return asdict(o)
         raise TypeError(f'Object of type {o.__class__.__name__} '
                         f'is not JSON serializable')
+
+
+class ACValidationFunction:
+    """
+    Implementation of a validation function using the Accuracy Checker.
+    """
+
+    def __init__(self,
+                 model_evaluator: ModelEvaluator,
+                 metric_name: str,
+                 requests_number: Optional[int] = None):
+        """
+        :param model_evaluator: Model Evaluator.
+        :param metric_name: Name of a metric.
+        :param requests_number: A number of infer requests. If it is `None`,
+            the count will be selected automatically.
+        """
+        self._model_evaluator = model_evaluator
+        self._metric_name = metric_name
+        self._requests_number = requests_number
+
+    def __call__(self, compiled_model: ov.CompiledModel, indices: Optional[Iterable[int]] = None) -> float:
+        """
+        Calculates metrics for the provided model.
+
+        :param compiled_model: A compiled model to validate.
+        :param indices: The zero-based indices of data items
+            that should be selected from the whole dataset.
+        :return: Calculated metrics.
+        """
+        self._model_evaluator.launcher.exec_network = compiled_model
+        self._model_evaluator.launcher.infer_request = compiled_model.create_infer_request()
+
+        if indices:
+            indices = list(indices)
+
+        kwargs = {
+            'subset': indices,
+            'check_progress': False,
+            'dataset_tag': '',
+            'calculate_metrics': True,
+        }
+
+        if self._requests_number == 1:
+            self._model_evaluator.process_dataset(**kwargs)
+        else:
+            self._set_requests_number(kwargs, self._requests_number)
+            self._model_evaluator.process_dataset_async(**kwargs)
+
+        # Calculate metrics
+        metrics = OrderedDict()
+        for metric in self._model_evaluator.compute_metrics(print_results=False):
+            sign = 1.0
+            if metric.meta.get('target', 'higher-better') == 'higher-worse':
+                sign = -1.0
+
+            if metric.meta.get('calculate_mean', True):
+                metric_value = np.mean(metric.evaluated_value)
+            else:
+                metric_value = metric.evaluated_value[0]
+
+            metrics[metric.name] = sign * metric_value
+
+        self._model_evaluator.reset()
+
+        return metrics[self._metric_name]
+
+    @staticmethod
+    def _set_requests_number(params, requests_number):
+        if requests_number:
+            params['nreq'] = np.clip(requests_number, 1, multiprocessing.cpu_count())
+            if params['nreq'] != requests_number:
+                print('Number of requests {} is out of range [1, {}]. Will be used {}.'
+                      .format(requests_number, multiprocessing.cpu_count(), params['nreq']))
 
 
 def dump_to_json(path, value, keys):
@@ -115,13 +197,15 @@ def map_ignored_scope(ignored):
                          'supported')
 
     operations  = ignored.get('operations')
+    ignored_operations = []
     if operations is not None:
         for op in operations:
             if op.get('attributes') is not None:
                 raise ValueError('Attributes in the ignored operations '
                                  'are not supported')
+            ignored_operations.append(op['type'])
     return {'ignored_scope': nncf.IgnoredScope(names=ignored.get('scope'),
-                                               types=ignored.get('types'))}
+                                               types=ignored_operations)}
 
 
 def map_preset(preset):
@@ -129,6 +213,23 @@ def map_preset(preset):
     if preset not in [p.value for p in nncf.QuantizationPreset]:
         raise ValueError(f'{preset} preset is not supported')
     return {'preset': nncf.QuantizationPreset(preset)}
+
+
+def create_parameters_for_algorithm(pot_parameters, supported_parameters, default_parameters, ignored_parameters):
+    result = {}
+    for name in pot_parameters:
+        if (name in ignored_parameters or
+            (name in default_parameters and
+             pot_parameters[name] == default_parameters[name])):
+            continue
+        if name in supported_parameters:
+            kwarg = supported_parameters[name](pot_parameters[name])
+            if kwarg is not None:
+                result.update(kwarg)
+        else:
+            raise ValueError(f'{name} parameter is not supported')
+
+    return result
 
 
 def map_quantization_parameters(pot_parameters):
@@ -160,18 +261,47 @@ def map_quantization_parameters(pot_parameters):
         'weight_decay'
     ]
 
-    result = {}
-    for name in pot_parameters:
-        if (name in ignored_parameters or
-            (name in default_parameters and
-             pot_parameters[name] == default_parameters[name])):
-            continue
-        if name in supported_parameters:
-            kwarg = supported_parameters[name](pot_parameters[name])
-            if kwarg is not None:
-                result.update(kwarg)
-        else:
-            raise ValueError(f'{name} parameter is not supported')
+    result = create_parameters_for_algorithm(pot_parameters, supported_parameters,
+                                             default_parameters, ignored_parameters)
+
+    return result
+
+
+def map_quantize_with_accuracy_control_parameters(pot_parameters):
+    supported_parameters = {
+        'target_device': map_target_device,
+        'model_type': map_model_type,
+        'ignored': map_ignored_scope,
+        'preset': map_preset,
+        'stat_subset_size': lambda x: {'subset_size': x},
+        'use_fast_bias': lambda x: {'fast_bias_correction': x},
+        # Accuracy control parameters
+        'maximal_drop': lambda x: {'max_drop': x},
+        'max_iter_num': lambda x: {'max_num_iterations': x},
+    }
+
+    default_parameters = {}
+
+    ignored_parameters = [
+        'dump_intermediate_model',
+        'inplace_statistics',
+        'activations',
+        'weights',
+        # Accuracy control parameters
+        'ranking_subset_size',
+        'drop_type',
+        'use_prev_if_drop_increase',
+        'base_algorithm',
+        'annotation_free',
+        'annotation_conf_threshold',
+        'convert_to_mixed_preset',
+        'metrics',
+        'metric_subset_ratio',
+        'tune_hyperparams',
+    ]
+
+    result = create_parameters_for_algorithm(pot_parameters, supported_parameters,
+                                             default_parameters, ignored_parameters)
 
     return result
 
@@ -179,6 +309,8 @@ def map_quantization_parameters(pot_parameters):
 def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters):
     if pot_algo_name == 'DefaultQuantization' and nncf_algo_name == 'quantize':
         return map_quantization_parameters(pot_parameters)
+    if pot_algo_name == 'AccuracyAwareQuantization' and nncf_algo_name == 'quantize_with_accuracy_control':
+        return map_quantize_with_accuracy_control_parameters(pot_parameters)
     raise ValueError(f'Mapping POT {pot_algo_name} parameters to NNCF '
                      f'{nncf_algo_name} parameters is not supported')
 
@@ -251,6 +383,46 @@ def quantize_model(xml_path, bin_path, accuracy_checcker_config,
     return quantized_model
 
 
+# pylint: disable=protected-access
+def quantize_model_with_accuracy_control(xml_path: str,
+                                         bin_path: str,
+                                         accuracy_checcker_config,
+                                         quantization_impl: str,
+                                         quantization_parameters):
+    ov_model = ov.Core().read_model(xml_path, bin_path)
+    model_evaluator = create_model_evaluator(accuracy_checcker_config)
+    model_evaluator.load_network_from_ir([{'model': xml_path, 'weights': bin_path}])
+    model_evaluator.select_dataset('')
+
+    def transform_fn(data_item):
+        _, batch_annotation, batch_input, _ = data_item
+        filled_inputs, _, _ = model_evaluator._get_batch_input(
+            batch_input, batch_annotation)
+        return filled_inputs[0]
+
+    calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
+    validation_dataset = nncf.Dataset(list(range(model_evaluator.dataset.full_size)))
+
+    metric_name = accuracy_checcker_config['models'][0]['datasets'][0]['metrics'][0].get('name', None)
+    if metric_name is None:
+        metric_name = accuracy_checcker_config['models'][0]['datasets'][0]['metrics'][0]['type']
+    validation_fn = ACValidationFunction(model_evaluator, metric_name)
+
+    name_to_quantization_impl_map = {
+        'pot': pot_quantize_with_native_accuracy_control,
+        'native': native_quantize_with_native_accuracy_control,
+    }
+
+    quantization_impl_fn = name_to_quantization_impl_map.get(quantization_impl)
+    if quantization_impl:
+        quantized_model = quantization_impl_fn(ov_model, calibration_dataset, validation_dataset,
+                                               validation_fn, **quantization_parameters)
+    else:
+        raise NotImplementedError(f'Unsupported implementation: {quantization_impl}')
+
+    return quantized_model
+
+
 def main():
     args = parse_args()
     config = Config.read_config(args.config)
@@ -264,9 +436,14 @@ def main():
     output_dir = os.path.join(args.output_dir, 'optimized')
     os.makedirs(output_dir, exist_ok=True)
 
+    algo_name_to_method_map = {
+        'quantize': quantize_model,
+        'quantize_with_accuracy_control': quantize_model_with_accuracy_control,
+    }
     for algo_config in nncf_algorithms_config:
         algo_name = algo_config['name']
-        if algo_name == 'quantize':
+        algo_fn = algo_name_to_method_map.get(algo_name, None)
+        if algo_fn:
             quantize_model_arguments = {
                 'xml_path': xml_path,
                 'bin_path': bin_path,
@@ -275,7 +452,7 @@ def main():
                     'quantization_parameters': algo_config['parameters']
             }
 
-            output_model = quantize_model(**quantize_model_arguments)
+            output_model = algo_fn(**quantize_model_arguments)
 
             path = os.path.join(output_dir, 'algorithm_parameters.json')
             keys = ['xml_path',

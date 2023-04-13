@@ -491,3 +491,35 @@ class IntegerModel(OVReferenceModel):
         result = opset.result(add_1, name="Result")
         model = ov.Model([result], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class SeBlockModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_shape = [1, 3, 5, 6]
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+
+        input_1 = opset.parameter(input_shape, name="Input")
+        kernel0 = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        conv0 = opset.convolution(input_1, kernel0, strides, pads, pads, dilations, name="Conv0")
+        add0 = opset.add(conv0, self._rng.random((1, 3, 1, 1)).astype(np.float32), name="Add0")
+
+        reduce_mean = opset.reduce_mean(add0, np.array([2, 3]), keep_dims=True)
+        kernel = self._rng.random((5, 3, 1, 1)).astype(np.float32)
+        conv = opset.convolution(reduce_mean, kernel, strides, pads, pads, dilations, name="Conv")
+        add = opset.add(conv, self._rng.random((1, 5, 1, 1)).astype(np.float32), name="Add")
+        relu = opset.relu(add, name="Relu")
+
+        kernel2 = self._rng.random((3, 5, 1, 1)).astype(np.float32)
+        conv2 = opset.convolution(relu, kernel2, strides, pads, pads, dilations, name="Conv2")
+        add2 = opset.add(conv2, self._rng.random((1, 3, 1, 1)).astype(np.float32), name="Add2")
+        sigmoid = opset.sigmoid(add2, name="Sigmoid")
+        multiply = opset.multiply(add0, sigmoid, name="Mul")
+
+        data = self._rng.random((1, 3, 6, 5)).astype(np.float32)
+        matmul = opset.matmul(multiply, data, transpose_a=False, transpose_b=False, name="MatMul")
+        result_1 = opset.result(matmul, name="Result")
+        model = ov.Model([result_1], [input_1])
+        return model

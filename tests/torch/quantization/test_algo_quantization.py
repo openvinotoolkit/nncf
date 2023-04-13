@@ -134,7 +134,7 @@ def test_quantization_configs__custom():
                                        mode=QuantizationMode.ASYMMETRIC,
                                        signedness_to_force=None,
                                        scale_shape=model.wq_scale_shape_per_channel,
-                                       narrow_range=True,
+                                       narrow_range=False,
                                        half_range=False,
                                        logarithm_scale=False)
     for wq_info in weight_quantizers.values():

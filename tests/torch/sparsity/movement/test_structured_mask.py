@@ -23,7 +23,7 @@ from pkg_resources import parse_version
 
 from nncf.common.logging import nncf_logger
 from nncf.config import NNCFConfig
-from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
+from nncf.experimental.torch.sparsity.movement.algo import is_supported_model_family
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.experimental.torch.sparsity.movement.layers import SparseConfig
 from nncf.experimental.torch.sparsity.movement.layers import SparseStructure
@@ -31,9 +31,6 @@ from nncf.experimental.torch.sparsity.movement.structured_mask_handler import St
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskContextGroup
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskContextStatistics
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskHandler
-from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
-from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import StructuredMaskRule
-from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import detect_supported_model_family
 from nncf.torch import create_compressed_model
 from tests.shared.logging import nncf_caplog  # pylint:disable=unused-import
 from tests.torch.sparsity.movement.helpers import BaseMockRunRecipe
@@ -269,8 +266,8 @@ class TestStructuredMaskContextGroup:
     @pytest.mark.parametrize('num_contexts', [0, 1, 2])
     def test_string_representation(self, num_contexts: int):
         ctxes = [Mock(__str__=Mock(return_value=f'ctx{i}')) for i in range(num_contexts)]
-        ctx_group = StructuredMaskContextGroup(0, BuildingBlockType.FF, ctxes)
-        prefix = f'StructuredMaskContextGroup[0]({BuildingBlockType.FF}): '
+        ctx_group = StructuredMaskContextGroup(0, ctxes)
+        prefix = 'StructuredMaskContextGroup[0]: '
         if num_contexts == 0:
             assert str(ctx_group) == f'{prefix}[]'
         else:
@@ -278,16 +275,6 @@ class TestStructuredMaskContextGroup:
                 prefix=prefix,
                 ctxes=''.join(f'\n\tctx{i}' for i in range(num_contexts))
             )
-
-
-class TestStructuredMaskRule:
-    @pytest.mark.parametrize('keywords', ['key1', ['key1', 'key2']])
-    def test_string_representation(self, keywords):
-        rule = StructuredMaskRule(keywords, True, (1, 1))
-        keywords = [keywords] if isinstance(keywords, str) else keywords
-        ref_str = f'StructuredMaskRule(keywords={keywords}, prune_by_row={True}, prune_grid=(1, 1))'
-        assert str(rule) == ref_str
-
 
 desc_test_resolve_dependent_structured = {
     'prune_1head_1channel': dict(
@@ -340,17 +327,10 @@ class TestStructuredMaskHandler:
         handler, _ = self._get_handler_from_ctrl(compression_ctrl)
         num_transformer_blocks = sum(tbinfo.num_hidden_layers for tbinfo in run_recipe.transformer_block_info)
         assert len(handler._structured_mask_ctx_groups) == num_transformer_blocks * 2
-        handler._structured_mask_ctx_groups.sort(key=lambda group: group.group_type.value)
-        for i in range(num_transformer_blocks):
-            group_ff = handler._structured_mask_ctx_groups[i]
-            assert isinstance(group_ff, StructuredMaskContextGroup)
-            assert group_ff.group_type == BuildingBlockType.FF
-            assert len(group_ff.structured_mask_contexts) == 2
-        for i in range(num_transformer_blocks, num_transformer_blocks * 2):
-            group_mhsa = handler._structured_mask_ctx_groups[i]
-            assert isinstance(group_mhsa, StructuredMaskContextGroup)
-            assert group_mhsa.group_type == BuildingBlockType.MHSA
-            assert len(group_mhsa.structured_mask_contexts) == 4
+        for i in range(num_transformer_blocks * 2):
+            group = handler._structured_mask_ctx_groups[i]
+            assert isinstance(group, StructuredMaskContextGroup)
+            assert len(group.structured_mask_contexts) in (2, 4)
 
     def test_update_independent_structured_mask(self, mocker):
         run_recipe = STRUCTURED_MASK_SUPPORTED_RECIPES[0]
@@ -410,7 +390,7 @@ class TestStructuredMaskHandler:
         assert isinstance(df, pd.DataFrame)
         columns = df.columns.to_list()
         mock_stat = StructuredMaskContextStatistics(*([mocker.Mock()] * 6))
-        ref_columns = ['group_id', 'type', 'torch_module', *mock_stat.__dict__.keys()]
+        ref_columns = ['group_id', 'torch_module', *mock_stat.__dict__.keys()]
         assert sorted(columns) == sorted(ref_columns)
         assert len(df) == 6 * sum(tbinfo.num_hidden_layers for tbinfo in run_recipe.transformer_block_info)
         for item in df['head_or_channel_id_to_keep']:
@@ -438,36 +418,5 @@ class TestStructuredMaskStrategy:
         _, compressed_model = create_compressed_model(run_recipe.model(),
                                                       empty_nncf_config,
                                                       dump_graphs=False)
-        retval = detect_supported_model_family(compressed_model)
-        if run_recipe.supports_structured_masking:
-            assert retval == run_recipe.model_family
-            assert retval in STRUCTURED_MASK_STRATEGY.registry_dict
-        else:
-            assert retval is None
-
-    @pytest.mark.parametrize('run_recipe', STRUCTURED_MASK_SUPPORTED_RECIPES)
-    def test_create_strategy(self, run_recipe: BaseMockRunRecipe):
-        empty_nncf_config = NNCFConfig(input_info=run_recipe.dumps_model_input_info())
-        _, compressed_model = create_compressed_model(run_recipe.model(),
-                                                      empty_nncf_config,
-                                                      dump_graphs=False)
-        strategy_cls = STRUCTURED_MASK_STRATEGY.get(run_recipe.model_family)
-        strategy = strategy_cls.from_compressed_model(compressed_model)
-        ref_dim_per_head = run_recipe.transformer_block_info[0].dim_per_head
-        assert strategy.dim_per_head == ref_dim_per_head
-        rules_by_group_type = strategy.rules_by_group_type
-        for group_type, rule_list in rules_by_group_type.items():
-            assert group_type in [BuildingBlockType.MHSA, BuildingBlockType.FF]
-            assert isinstance(rule_list, list)
-            for rule in rule_list:
-                assert isinstance(rule, StructuredMaskRule)
-
-    def test_error_on_unsupported_swin_models(self):
-        run_recipe = SwinRunRecipe().model_config_(depths=[1, 1], num_heads=[2, 2])
-        empty_nncf_config = NNCFConfig(input_info=run_recipe.dumps_model_input_info())
-        _, compressed_model = create_compressed_model(run_recipe.model(),
-                                                      empty_nncf_config,
-                                                      dump_graphs=False)
-        strategy_cls = STRUCTURED_MASK_STRATEGY.get(run_recipe.model_family)
-        with pytest.raises(NotImplementedError, match='the same dimension'):
-            strategy_cls.from_compressed_model(compressed_model)
+        is_supported = is_supported_model_family(compressed_model)
+        assert is_supported == run_recipe.supports_structured_masking
