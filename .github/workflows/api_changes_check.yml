@@ -31,12 +31,14 @@ jobs:
         id: diff
         run: |
           cd html_build/html/$API_DOC_HTML_ROOT_RELATIVE_PATH
-          find . -name "*.html" -exec diff -qrBZ {} $GITHUB_WORKSPACE/previous_doc_state/$API_DOC_HTML_ROOT_RELATIVE_PATH/{} \;
+          CHANGED_FILES=$(find . -name "*.html" -exec diff -qrBZ {} $GITHUB_WORKSPACE/previous_doc_state/$API_DOC_HTML_ROOT_RELATIVE_PATH/{} \;)
+          echo ${CHANGED_FILES}
+          echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
       - uses: actions-ecosystem/action-add-labels@v1
-        if: ${{ steps.diff.outputs }} != ""
+        if: ${{ steps.diff.outputs.changed_files }} != ""
         with:
           labels: API
       - uses: actions-ecosystem/action-remove-labels@v1
-        if: ${{ steps.diff.outputs }} == ""
+        if: ${{ steps.diff.outputs.changed_files }} == ""
         with:
           labels: API
