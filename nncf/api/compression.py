@@ -270,10 +270,11 @@ class CompressionAlgorithmController(ABC):
         """
         self._model = self.strip_model(self._model)
 
-    def prepare_for_inference(self, do_copy: bool = True) -> TModel:
+    def strip(self, do_copy: bool = True) -> TModel:
         """
-        Prepare the compressed model for inference and export by removing NNCF-specific operations, as it's
-        only needed for training.
+        Return model where removes as much custom NNCF additions as possible from the model object
+        while preserving the functioning of the model object as a compressed model.
+
 
         :param do_copy: `True` means that a copy of the model will be modified.
             `False` means that the original model will be modify. Defaults to True.

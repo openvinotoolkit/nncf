@@ -20,21 +20,21 @@ from torch.nn import Linear
 from torch.nn import Module as TorchModule
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.layer_attributes import GetItemLayerAttributes
 from nncf.common.graph.utils import get_concat_axis
 from nncf.common.graph.utils import get_split_axis
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
+from nncf.common.graph.layer_attributes import GetItemLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import TransposeLayerAttributes
+from nncf.common.graph.layer_attributes import PadLayerAttributes
 from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
-from nncf.torch.graph.operator_metatypes import PTGatherMetatype
-from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
+from nncf.torch.graph.operator_metatypes import PTPadMetatype
 from nncf.torch.graph.operator_metatypes import PTGroupNormMetatype
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
@@ -44,12 +44,14 @@ from nncf.torch.layers import NNCF_MODULES_DICT
 
 OP_NAMES_REQUIRING_MODULE_ATTRS = [
     v.op_func_name for v in NNCF_MODULES_DICT] + list(PTGroupNormMetatype.get_all_aliases())
-OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS = list(
-    PTTransposeMetatype.get_all_aliases() + PTGatherMetatype.get_all_aliases()
-)
+
 TRANSPOSE_OP_NAMES = ['transpose', 'transpose_']
 PERMUTE_OP_NAMES = ['permute']
 GETITEM_OP_NAMES = ['__getitem__']
+PAD_OP_NAMES = PTPadMetatype.get_all_aliases()
+OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS = list(
+    TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + PAD_OP_NAMES
+)
 
 
 def get_layer_attributes_from_module(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
@@ -102,6 +104,8 @@ def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> Bas
         layer_attrs = _get_permute_attrs_from_args_kwargs(args, kwargs)
     elif op_name in GETITEM_OP_NAMES:
         layer_attrs = _get_getitem_attrs_from_args_kwargs(args, kwargs)
+    elif op_name in PAD_OP_NAMES:
+        layer_attrs = _get_pad_attrs_from_args_kwargs(args, kwargs)
     return layer_attrs
 
 
@@ -154,6 +158,12 @@ def _get_permute_attrs_from_args_kwargs(args, kwargs) -> PermuteLayerAttributes:
     arg_name = 'dims'
     dims = kwargs[arg_name] if arg_name in kwargs else args[1:]
     return PermuteLayerAttributes(dims)
+
+
+def _get_pad_attrs_from_args_kwargs(args, kwargs) -> PadLayerAttributes:
+    mode = kwargs.get('mode', 'constant' if len(args) < 3 else args[2])
+    value = kwargs.get('value', 0 if len(args) < 4 else args[3])
+    return PadLayerAttributes(mode, value)
 
 
 def _get_kwargs_shifted(args_names, args, kwargs, shift=1):

@@ -515,8 +515,8 @@ class PTErfMetatype(PTOperatorMetatype):
 class PTMatMulMetatype(PTOperatorMetatype):
     name = "MatMulOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["matmul"],
-        NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
+        NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__"],
+        NamespaceTarget.TORCH: ["matmul", "bmm", "mm", "baddbmm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]
 
@@ -929,9 +929,6 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     :return: List of operator metatypes .
     """
     return list(PT_OPERATOR_METATYPES.registry_dict.values())
-
-
-OP_NAMES_REQUIRING_ATTRIBUTES_FROM_ARGS_KWARGS = [PTTransposeMetatype.get_all_aliases()]
 
 
 OPERATORS_WITH_WEIGHTS_METATYPES = [

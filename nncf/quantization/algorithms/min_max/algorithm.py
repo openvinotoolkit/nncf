@@ -271,7 +271,6 @@ class MinMaxQuantization(Algorithm):
                                                                                       nncf_graph, strict=False))
 
         weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph)
-        weight_nodes = [node for node in weight_nodes if node.node_name not in ignored_names]
 
         default_weight_qconfig = self._get_default_qconfig(
             self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
@@ -289,8 +288,8 @@ class MinMaxQuantization(Algorithm):
         ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
-        solver = QuantizerPropagationSolver(ignored_scopes=ignored_names,
-                                            target_scopes=None,
+        solver = QuantizerPropagationSolver(activation_ignored_scopes=ignored_names,
+                                            weight_ignored_scopes=ignored_names,
                                             hw_config=hw_config,
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
                                             default_qconfig_list=[self._get_default_qconfig(
