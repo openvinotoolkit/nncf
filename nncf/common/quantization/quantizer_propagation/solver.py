@@ -35,7 +35,6 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
-from nncf.common.insertion_point_graph import ConstantNodesFilter
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
@@ -495,11 +494,7 @@ class QuantizerPropagationSolver:
         configurations.
         """
         self._num_potential_quantized_activations = 0
-        quantizable_layer_node_keys = []
-        if self._quantizable_layer_nodes is not None:
-            quantizable_layer_node_keys = [node.node.data['key'] for node in self._quantizable_layer_nodes]
-        filtered_ip_graph = ConstantNodesFilter.filter(ip_graph, quantizable_layer_node_keys)
-        quant_prop_graph = QuantizerPropagationStateGraph(filtered_ip_graph,
+        quant_prop_graph = QuantizerPropagationStateGraph(ip_graph,
                                                           self._ignored_scopes,
                                                           self._target_scopes)
         if self._post_processing_marker_metatypes is not None:
@@ -532,8 +527,8 @@ class QuantizerPropagationSolver:
         if self._run_consistency_checks:
             quant_prop_graph.run_consistency_check()
 
-        for node_key in filtered_ip_graph:
-            node = filtered_ip_graph.nodes[node_key]
+        for node_key in ip_graph:
+            node = ip_graph.nodes[node_key]
             if node.get(InsertionPointGraph.IS_MERGED_NODE_ATTR, False):
                 merged_nncf_nodes = node[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]
                 # If first op in fused pattern has weights, then they should be quantized
