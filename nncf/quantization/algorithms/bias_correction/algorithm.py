@@ -47,18 +47,18 @@ class BiasCorrectionParameters(AlgorithmParameters):
     :param threshold: Magnitude threshold that regulates application of shift.
     """
 
-    def __init__(self, inplace_statistics: bool, number_samples: int = 100,
-                 threshold: float = 1000) -> None:
+    def __init__(self, number_samples: int = 100, threshold: float = 1000,
+                 inplace_statistics: bool = True) -> None:
         """
-        :param inplace_statistics: Appliclable only to backends that are using static graph during inference.
-            Defines wheather to calculate algorithm specific statistics by backend graph operations
-            or by default Python implementation. Statistics computated inplace tend to be
-            calculated faster and with lower memory stamp.
         :param number_samples: The number of samples for the statistics collection.
             This statistic uses for the further calculation of the bias shift.
         :param threshold: The magnitude threshold regulates the application of the shift.
             Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
             If the calculated value is less than the threshold, the shift will apply to the bias.
+        :param inplace_statistics: Appliclable only for OpenVINO backend.
+            Will be available for ONNX backend in future. Defines wheather to calculate quantizers statistics
+            by backend graph operations or by default Python implementation.
+            Statistics computated inplace tend to be calculated faster and with lower memory stamp.
         """
         self.number_samples = number_samples
         self.threshold = threshold

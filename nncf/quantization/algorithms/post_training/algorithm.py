@@ -58,7 +58,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  ignored_scopes: Optional[IgnoredScope] = None,
                  model_type: Optional[ModelType] = None,
                  fast_bias_correction: bool = True,
-                 inplace_statistics: bool = False,
+                 inplace_statistics: bool = True,
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
@@ -85,8 +85,8 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         :param model_type: Model type is needed to specify additional patterns
             in the model. Supported only `transformer` now.
         :param fast_bias_correction: Defines whether to use fast version of bias correction algorithm.
-        :param inplace_statistics: Appliclable only to backends that are using static graph during inference.
-            Defines wheather to calculate quantization statistics by backend graph operations or by default Python
+        :param inplace_statistics: Appliclable only for OpenVINO backend. Will be available for ONNX backend in future.
+            Defines whether to calculate quantization statistics by backend graph operations or by default Python
             implementation. Statistics computated inplace tend to be calculated faster and with lower memory stamp.
         """
         self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
@@ -107,14 +107,14 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         )}
 
         bias_correction_algo = {BiasCorrection: BiasCorrectionParameters(
-            inplace_statistics=inplace_statistics,
-            number_samples=number_samples
+            number_samples=number_samples,
+            inplace_statistics=inplace_statistics
         )}
 
         if fast_bias_correction:
             bias_correction_algo = {FastBiasCorrection: FastBiasCorrectionParameters(
-                inplace_statistics=inplace_statistics,
-                number_samples=number_samples
+                number_samples=number_samples,
+                inplace_statistics=inplace_statistics
             )}
         self.algorithms.update(bias_correction_algo)
 
