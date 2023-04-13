@@ -3105,6 +3105,18 @@
             ]
         ]
     },
+    "Add/fq_output_0": {
+        "input_low": 0.0,
+        "input_high": 0.9766141176223755,
+        "output_low": 0.0,
+        "output_high": 0.9766141176223755
+    },
+    "ReadValue_1/fq_output_0": {
+        "input_low": 0.0,
+        "input_high": 7.999999797903001e-05,
+        "output_low": 0.0,
+        "output_high": 7.999999797903001e-05
+    },
     "MatMul_1/fq_output_0": {
         "input_low": 0.0,
         "input_high": 48.822410583496094,
