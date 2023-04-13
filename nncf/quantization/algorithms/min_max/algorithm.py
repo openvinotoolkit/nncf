@@ -129,7 +129,6 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Desrciptor of the layers which input must not be quantized.
         :param overflow_fix: This option controls whether to apply the overflow issue fix for the 8-bit quantization.
-            See the full descitption in nncf/nncf/quantization/algorithms/definitions.py
         """
         self.number_samples = number_samples
         self.target_device = target_device
@@ -465,7 +464,7 @@ class MinMaxQuantization(Algorithm):
                                           nncf_graph: NNCFGraph) -> List[TargetPoint]:
         """
         Returns target points connected to a first visited node with Convolution metatype,
-            which are included in quantization_points. A traversal of nncf_graph is started from starting_node.
+        which are included in quantization_points. A traversal of nncf_graph is started from starting_node.
 
         :param quantization_points: Quantization target points.
         :param starting_node: Node from which traversal is started.

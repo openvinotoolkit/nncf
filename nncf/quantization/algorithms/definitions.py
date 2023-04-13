@@ -29,13 +29,14 @@ class OverflowFix(Enum):
     This option controls whether to apply the overflow issue fix for the 8-bit quantization.
 
     8-bit instructions of older Intel CPU generations (based on SSE, AVX-2, and AVX-512 instruction sets)
-        suffer from the so-called saturation (overflow) issue: in some configurations,
-        the output does not fit into an intermediate buffer and has to be clamped.
+    suffer from the so-called saturation (overflow) issue: in some configurations,
+    the output does not fit into an intermediate buffer and has to be clamped.
     This can lead to an accuracy drop on the aforementioned architectures.
     The fix set to use only half a quantization range to avoid overflow for specific operations.
 
     If you are going to infer the quantized model on the architectures with AVX-2, and AVX-512 instruction sets,
-        we highly recommend using this option.
+    we recommend using FIRST_LAYER option as lower aggressive fix of the overflow issue.
+    If you still face significant accuracy drop, try using ENABLE, but this may get worse the accuracy.
 
     :param ENABLE: All weights of all types of Convolutions and MatMul operations
         are be quantized using a half of the 8-bit quantization range.

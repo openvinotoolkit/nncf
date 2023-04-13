@@ -84,7 +84,6 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Descriptor of the layers which input must not be quantized.
         :param overflow_fix: This option controls whether to apply the overflow issue fix for the 8-bit quantization.
-            See the full descitption in nncf/nncf/quantization/algorithms/definitions.py
         """
         self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
             preset=preset,
