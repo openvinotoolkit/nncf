@@ -136,9 +136,9 @@ from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitia
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
-from nncf.torch.quantization.prepare_for_inference import remove_disabled_quantizers
-from nncf.torch.quantization.prepare_for_inference import replace_quantizer_to_torch_native_module
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
+from nncf.torch.quantization.strip import remove_disabled_quantizers
+from nncf.torch.quantization.strip import replace_quantizer_to_torch_native_module
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.translator import PTTargetPointTranslator
