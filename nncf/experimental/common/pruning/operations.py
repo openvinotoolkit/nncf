@@ -275,6 +275,9 @@ class GatherPruningOp(BasePruningOp):
                         shifted_dim = dim - 1
                         output_mask.dim_groups_map[shifted_dim] = groups
                         # other groups propagated further
+                    else:
+                        for group in groups:
+                            group.invalidate()
             node.data['output_mask'] = output_mask
         else:
             cls.invalidate_masks(input_masks)

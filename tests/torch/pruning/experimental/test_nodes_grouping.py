@@ -59,6 +59,7 @@ from tests.torch.test_compressed_graph import (
     get_full_path_to_the_graph,
     IModelDesc
 )
+from tests.torch.test_models.swin import SwinTransformerBlock
 
 
 class SelfAttention(nn.Module):
@@ -403,6 +404,23 @@ CV_DESCS = [
             PruningGroup(block=PruningBlock(), producers={ProducerInfo(36)}, consumers={ConsumerInfo(40)}),
         ]
     ),
+    GroupTestDesc(
+        model_desc=GeneralModelDesc(
+            model_name='Swin_MS',
+            input_info=dict(sample_size=[1, 4 * 4, 8]),
+            model_builder=partial(SwinTransformerBlock, dim=8, input_resolution=[4, 4], num_heads=2)
+        ),
+        ref_groups=[
+            PruningGroup(block=PruningBlock(size=4, offset=8),
+                         producers={ProducerInfo(8, 0)},
+                         consumers={ConsumerInfo(23, 1)}
+            ),
+            PruningGroup(block=PruningBlock(size=1, offset=0),
+                         producers={ProducerInfo(33, 0)},
+                         consumers={ConsumerInfo(36, 1)}
+            ),
+        ]
+    )
 ]
 
 
