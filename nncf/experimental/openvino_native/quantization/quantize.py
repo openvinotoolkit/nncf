@@ -12,7 +12,7 @@
 """
 
 import sys
-from typing import Optional, Callable, Any, Iterable
+from typing import Optional, Callable, Any, Iterable, Tuple, Union, List
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -28,6 +28,10 @@ from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantiz
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
+from nncf.quantization.algorithms.accuracy_control.evaluator import Output
+
+
+ValidationFunction = Callable[[Any, Iterable[Any]], Tuple[float, Union[List[float], List[Output], None]]]
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -64,7 +68,7 @@ def quantize_impl(model: ov.Model,
 def quantize_with_accuracy_control(model: ov.Model,
                                    calibration_dataset: Dataset,
                                    validation_dataset: Dataset,
-                                   validation_fn: Callable[[Any, Iterable[Any]], float],
+                                   validation_fn: ValidationFunction,
                                    max_drop: float = 0.01,
                                    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                                    target_device: TargetDevice = TargetDevice.ANY,

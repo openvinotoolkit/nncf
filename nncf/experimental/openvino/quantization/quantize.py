@@ -12,7 +12,7 @@
 """
 
 import sys
-from typing import Callable, Any, Iterable, Optional
+from typing import Callable, Any, Iterable, Optional, Tuple, Union, List
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -24,6 +24,10 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.openvino.quantization.quantize import quantize_impl
+from nncf.quantization.algorithms.accuracy_control.evaluator import Output
+
+
+ValidationFunction = Callable[[Any, Iterable[Any]], Tuple[float, Union[List[float], List[Output], None]]]
 
 
 def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model) -> None:
@@ -61,7 +65,7 @@ def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model)
 def quantize_with_accuracy_control(model: ov.Model,
                                    calibration_dataset: Dataset,
                                    validation_dataset: Dataset,
-                                   validation_fn: Callable[[Any, Iterable[Any]], float],
+                                   validation_fn: ValidationFunction,
                                    max_drop: float = 0.01,
                                    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                                    target_device: TargetDevice = TargetDevice.ANY,
