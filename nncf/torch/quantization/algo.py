@@ -68,7 +68,6 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
-from nncf.common.scopes import matches_any
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
@@ -218,8 +217,14 @@ class QuantizerSetupGeneratorBase:
                 nncf_logger.info(f'Preset quantizer parameters {overridden_params} explicitly overridden by config.')
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
-        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes')
-        self._target_scopes_per_group[quantizer_group] = params_dict_from_config.get('target_scopes')
+        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes', [])
+        if self.ignored_scopes is not None:
+            self._ignored_scopes_per_group[quantizer_group] += self.ignored_scopes
+        target_scopes = params_dict_from_config.get('target_scopes')
+        if target_scopes is None and self.target_scopes is not None:
+            self._target_scopes_per_group[quantizer_group] = self.target_scopes
+        else:
+            self._target_scopes_per_group[quantizer_group] = target_scopes
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
         qconfig = deepcopy(DEFAULT_QUANTIZER_CONFIG)
@@ -227,35 +232,10 @@ class QuantizerSetupGeneratorBase:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _should_consider_scope_for_group(self, node_name: NNCFNodeName, group: QuantizerGroup) -> bool:
-        if self.target_scopes is not None or self._target_scopes_per_group[group] is not None:
-            if matches_any(node_name, self.target_scopes):
-                return True
-            if matches_any(node_name, self._target_scopes_per_group[group]):
-                return True
-
-            return False
-
-        if matches_any(node_name, self.ignored_scopes):
-            return False
-        if matches_any(node_name, self._ignored_scopes_per_group[group]):
-            return False
-
-        return True
-
     def _filter_by_ignored_algo(self, nodes: List[NNCFNode]) -> List[NNCFNode]:
         retval = []
         for node in nodes:
             if 'quantization' in node.ignored_algorithms:
-                continue
-            retval.append(node)
-        return retval
-
-    def _filter_by_weight_ignored_target_scopes(self, weighted_nodes: List[NNCFNode]) -> List[NNCFNode]:
-        retval = []
-        for node in weighted_nodes:
-            if not self._should_consider_scope_for_group(node.node_name, QuantizerGroup.WEIGHTS):
-                nncf_logger.info(f"Ignored adding weight quantizer for: {node.node_name}")
                 continue
             retval.append(node)
         return retval
@@ -270,7 +250,6 @@ class QuantizerSetupGeneratorBase:
         quantized_modules_with_potential_qconfig = []
 
         weighted_nodes = self._filter_by_ignored_algo(weighted_nodes)
-        weighted_nodes = self._filter_by_weight_ignored_target_scopes(weighted_nodes)
         weighted_node_vs_qconfig_list = self._assign_qconfig_lists_to_modules(weighted_nodes)
 
         for node, qconfig_list in weighted_node_vs_qconfig_list.items():
@@ -374,16 +353,14 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         from nncf.common.quantization.quantizer_propagation.solver import \
             QuantizerPropagationSolver  # pylint: disable=cyclic-import
-
-        def str_or_list_to_list(list_or_str: Union[List[str], str]) -> List:
-            if list_or_str is None:
-                return []
-            return [list_or_str] if isinstance(list_or_str, str) else list_or_str
-
-        ignored_scopes_for_solver = str_or_list_to_list(self.ignored_scopes) + \
-                                    str_or_list_to_list(self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS])
-        prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=ignored_scopes_for_solver,
-                                                       target_scopes=self.target_scopes,
+        prop_graph_solver = QuantizerPropagationSolver(activation_ignored_scopes=self._ignored_scopes_per_group[
+                                                           QuantizerGroup.ACTIVATIONS],
+                                                       weight_ignored_scopes=self._ignored_scopes_per_group[
+                                                           QuantizerGroup.WEIGHTS],
+                                                       activation_target_scopes=self._target_scopes_per_group[
+                                                           QuantizerGroup.ACTIVATIONS],
+                                                       weight_target_scopes=self._target_scopes_per_group[
+                                                           QuantizerGroup.WEIGHTS],
                                                        hw_config=self.hw_config,
                                                        default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
                                                        default_qconfig_list=[self._get_default_qconfig(

@@ -56,6 +56,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.scopes import matches_any
+from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
@@ -346,8 +347,10 @@ class QuantizerPropagationSolver:
     DEFAULT_PROPAGATION_STRATEGY = PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT
 
     def __init__(self,
-                 ignored_scopes: List[str] = None,
-                 target_scopes: List[str] = None,
+                 activation_ignored_scopes: List[str] = None,
+                 weight_ignored_scopes: List[str] = None,
+                 activation_target_scopes: List[str] = None,
+                 weight_target_scopes: List[str] = None,
                  hw_config: HWConfig = None,
                  default_trait_to_metatype_map: Dict[QuantizationTrait, List[OperatorMetatype]] = None,
                  propagation_strategy: PropagationStrategy = None,
@@ -362,13 +365,20 @@ class QuantizerPropagationSolver:
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
 
-        :param ignored_scopes: A list of strings to match against NNCFGraph node names
-          and ignore matching nodes. Ignored nodes will not have quantizers applied to their inputs (even if
-          required by node's metatype and HW config), and the downstream quantizers will not propagate upwards
-          through the corresponding node.
-        :param target_scopes: A list of strings to match against NNCFGraph and define a set of nodes
-          to be considered during quantizer propagation. When `ignored_scopes` is a "denylist",
-          the `target_scopes` is an "allowlist"; otherwise, same effects apply as for `ignored_scopes`.
+        :param activation_ignored_scopes: A list of strings to match against NNCFGraph node names
+          and ignore matching nodes. Ignored nodes will not have quantizers applied to their activation inputs
+          (even if required by node's metatype and HW config), and the downstream quantizers will not propagate
+          upwards through the corresponding node.
+        :param weight_ignored_scopes: A list of strings to match against NNCFGraph node names
+          and ignore matching nodes. Ignored nodes will not have quantizers applied to their weight inputs
+          (even if required by node's metatype and HW config).
+        :param activation_target_scopes: A list of strings to match against NNCFGraph and define a set of nodes
+          to be considered during quantizer propagation. When `activation_ignored_scopes` is a "denylist",
+          the `activation_target_scopes` is an "allowlist";
+          otherwise, same effects apply as for `activation_ignored_scopes`.
+        :param weight_target_scopes: A list of strings to match against NNCFGraph and define a set of nodes
+          which weights should be quantized. When `weight_ignored_scopes` is a "denylist",
+          the `weight_target_scopes` is an "allowlist"; otherwise, same effects apply as for `weight_ignored_scopes`.
         :param hw_config: A hardware config to be used for determining the set of operations to be quantized with
         respect to their inputs and, for every such operation, the set of allowed quantizer configurations
         :param default_trait_to_metatype_map: The mapping of QuantizationTrait's to the metatypes to be associated with
@@ -416,12 +426,11 @@ class QuantizerPropagationSolver:
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
         self._operator_allowed_qconfigs_map = self._get_operator_qconfigs_map()
         self._quantize_outputs = quantize_outputs
-        if quantizable_layer_nodes is not None:
-            self._weight_quantizable_node_names_vs_qconfigs = {
-                x.node.node_name: x.qconfig_list for x in quantizable_layer_nodes
-            }  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
-        else:
-            self._weight_quantizable_node_names_vs_qconfigs = {}  # type: Dict[NNCFNodeName, List[QuantizerConfig]]
+        self._ignored_scopes = activation_ignored_scopes
+        self._target_scopes = activation_target_scopes
+        self._weight_quantizable_node_names_vs_qconfigs = self._filter_by_weight_ignored_target_scopes(
+            quantizable_layer_nodes, weight_ignored_scopes, weight_target_scopes)
+
         if scope_overrides is None:
             self._scope_overrides = {}
         else:
@@ -444,14 +453,31 @@ class QuantizerPropagationSolver:
                         self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
         self._active_propagating_quantizers_queue = deque()
         self._finished_propagating_quantizers = []  # type: List[PropagatingQuantizer]
-        self._ignored_scopes = ignored_scopes
-        self._target_scopes = target_scopes
         self._quantizers_waiting_for_branch_merge = QuantizersWaitingForMergeManager()
 
         self._potential_quantizers = {}
         self._num_potential_quantized_activations = 0
         self._quantizable_layer_nodes = quantizable_layer_nodes
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
+
+    def _filter_by_weight_ignored_target_scopes(self,
+                                                quantizable_layer_nodes: List[QuantizableWeightedLayerNode],
+                                                weight_ignored_scopes: Dict[QuantizerGroup, List[str]],
+                                                weight_target_scopes: Dict[QuantizerGroup, List[str]]
+    ) -> Dict[NNCFNodeName, List[QuantizerConfig]]:
+        if quantizable_layer_nodes is None:
+            return {}
+
+        weight_quantizable_node_names_vs_qconfigs = {}
+        for x in quantizable_layer_nodes:
+            node_name = x.node.node_name
+            if should_consider_scope(node_name,
+                                    ignored_scopes=weight_ignored_scopes,
+                                    target_scopes=weight_target_scopes):
+                weight_quantizable_node_names_vs_qconfigs[node_name] = x.qconfig_list
+            else:
+                nncf_logger.debug(f"Ignored adding weight quantizer for: {node_name}")
+        return weight_quantizable_node_names_vs_qconfigs
 
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
         """
@@ -505,6 +531,15 @@ class QuantizerPropagationSolver:
 
         if self._run_consistency_checks:
             quant_prop_graph.run_consistency_check()
+
+        for node_key in filtered_ip_graph:
+            node = filtered_ip_graph.nodes[node_key]
+            if node.get(InsertionPointGraph.IS_MERGED_NODE_ATTR, False):
+                merged_nncf_nodes = node[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]
+                # If first op in fused pattern has weights, then they should be quantized
+                for node in merged_nncf_nodes[1:]:
+                    if node.node_name in self._weight_quantizable_node_names_vs_qconfigs:
+                        self._weight_quantizable_node_names_vs_qconfigs.pop(node.node_name)
 
         quantizer_setup = quant_prop_graph.create_quantizer_setup(self._weight_quantizable_node_names_vs_qconfigs)
         insertions_vs_associated_prop_quants = self._map_quantization_points_to_prop_quantizers(

@@ -1564,9 +1564,11 @@ class TestQuantizerPropagationSolver:
         nncf_graph = run_on_ip_graph_test_struct.base_graph
         ip_graph = get_ip_graph_for_test(nncf_graph)
 
-        quant_prop_solver = QuantizerPropagationSolver(ignored_scopes=run_on_ip_graph_test_struct.ignored_scopes,
-                                                       default_trait_to_metatype_map=DEFAULT_TEST_QUANT_TRAIT_MAP,
-                                                       run_consistency_checks=True)
+        quant_prop_solver = QuantizerPropagationSolver(
+            activation_ignored_scopes=run_on_ip_graph_test_struct.ignored_scopes,
+            weight_ignored_scopes=run_on_ip_graph_test_struct.ignored_scopes,
+            default_trait_to_metatype_map=DEFAULT_TEST_QUANT_TRAIT_MAP,
+            run_consistency_checks=True)
         retval = quant_prop_solver.run_on_ip_graph(ip_graph)
 
         assert retval.quantizer_setup.quantization_points == run_on_ip_graph_test_struct.retval_qps
