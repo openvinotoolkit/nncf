@@ -527,8 +527,8 @@ class QuantizerPropagationSolver:
         if self._run_consistency_checks:
             quant_prop_graph.run_consistency_check()
 
-        for node_key in filtered_ip_graph:
-            node = filtered_ip_graph.nodes[node_key]
+        for node_key in ip_graph:
+            node = ip_graph.nodes[node_key]
             if node.get(InsertionPointGraph.IS_MERGED_NODE_ATTR, False):
                 merged_nncf_nodes = node[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]
                 # If first op in fused pattern has weights, then they should be quantized

@@ -141,9 +141,14 @@ class PropagationGroup:
                  consumers: Optional[Set[ConsumerInfo]] = None) -> None:
         self.block = block
         self._children: List['PropagationGroup'] = []
-        self.is_invalid = False
+        self._is_invalid = False
         self._producers = set() if producers is None else producers
         self._consumers = set() if consumers is None else consumers
+
+    @property
+    def is_invalid(self):
+        return self._is_invalid
+
 
     def __str__(self) -> str:
         producers = ','.join(map(str, self._producers))
@@ -161,7 +166,7 @@ class PropagationGroup:
         """
         Invalidate all blocks in the group and do the same for child groups.
         """
-        self.is_invalid = True
+        self._is_invalid = True
         for child in self._children:
             child.invalidate()
 
