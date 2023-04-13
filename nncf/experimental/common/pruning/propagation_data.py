@@ -126,7 +126,11 @@ class PropagationGroup:
     def __init__(self, blocks: List[PropagationBlock]) -> None:
         self._blocks = blocks
         self._children: List['PropagationGroup'] = []
-        self.is_invalid = False
+        self._is_invalid = False
+
+    @property
+    def is_invalid(self):
+        return self._is_invalid
 
     def __str__(self) -> str:
         return '\n'.join(map(str, self._blocks))
@@ -135,7 +139,7 @@ class PropagationGroup:
         """
         Invalidate all blocks in the group and do the same for child groups.
         """
-        self.is_invalid = True
+        self._is_invalid = True
         for child in self._children:
             child.invalidate()
 
