@@ -11,13 +11,16 @@
  limitations under the License.
 """
 
+from dataclasses import dataclass
+from dataclasses import field
 import re
 from typing import List, Optional
 
-from nncf.common.logging import nncf_logger
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.logging import nncf_logger
 
 
+@dataclass
 class IgnoredScope:
     """
     Dataclass that contains description of the ignored scope.
@@ -53,21 +56,15 @@ class IgnoredScope:
     ```
 
     **Note** Operation types must be specified according to the model framework.
-    """
 
-    def __init__(self,
-                 names: Optional[List[str]] = None,
-                 patterns: Optional[List[str]] = None,
-                 types: Optional[List[str]] = None):
-        """
-        :param names: List of ignored node names.
-        :param patterns: List of regular expressions that define patterns for
-            names of ignored nodes.
-        :param types: List of ignored operation types.
-        """
-        self.names = names if names is not None else []
-        self.patterns = patterns if patterns is not None else []
-        self.types = types if types is not None else []
+    :param names: List of ignored node names.
+    :param patterns: List of regular expressions that define patterns for names of
+        ignored nodes.
+    :param types: List of ignored operation types.
+    """
+    names: List[str] = field(default_factory=list)
+    patterns: List[str] = field(default_factory=list)
+    types: List[str] = field(default_factory=list)
 
 
 def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List[str]:

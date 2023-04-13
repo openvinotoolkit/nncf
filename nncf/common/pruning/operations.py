@@ -315,6 +315,15 @@ class SplitPruningOp(BasePruningOp):
         node.data['output_mask'] = result_masks
 
 
+class PadPruningOp(IdentityMaskForwardPruningOp):
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
+        mode, value = node.layer_attributes.mode, node.layer_attributes.value
+        if mode == "constant" and value != 0:
+            return False
+        return True
+
+
 class ElementwisePruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:

@@ -20,7 +20,7 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.pruning.helpers import BigPruningTestModel
-from tests.torch.quantization.test_prepare_for_inference import check_quantizer_operators
+from tests.torch.quantization.test_strip import check_quantizer_operators
 
 
 def _get_config_for_algo(input_size, quantization=False):
@@ -47,7 +47,7 @@ def _get_config_for_algo(input_size, quantization=False):
 
 
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
-def test_prepare_for_inference_pruning(enable_quantization):
+def test_strip_pruning(enable_quantization):
     input_size = [1, 1, 8, 8]
     model = BigPruningTestModel().eval()
     config = _get_config_for_algo(input_size, enable_quantization)
@@ -56,7 +56,7 @@ def test_prepare_for_inference_pruning(enable_quantization):
     input_tensor = torch.Tensor(generate_lazy_sweep_data(input_size))
     x_nncf = compressed_model(input_tensor)
 
-    inference_model = compression_ctrl.prepare_for_inference()
+    inference_model = compression_ctrl.strip()
     x_torch = inference_model(input_tensor)
 
     check_quantizer_operators(inference_model)
@@ -74,7 +74,7 @@ def test_do_copy(do_copy, enable_quantization):
     config = _get_config_for_algo(model.INPUT_SIZE, enable_quantization)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    inference_model = compression_ctrl.prepare_for_inference(do_copy=do_copy)
+    inference_model = compression_ctrl.strip(do_copy=do_copy)
 
     if do_copy:
         assert id(inference_model) != id(compressed_model)

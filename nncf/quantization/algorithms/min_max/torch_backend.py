@@ -72,6 +72,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def hw_config(self) -> HWConfig:
         return PTHWConfig
 
