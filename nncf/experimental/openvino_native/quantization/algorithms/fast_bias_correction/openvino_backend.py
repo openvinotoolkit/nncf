@@ -72,7 +72,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_sub_input_output_names(subgraph: ov.Model) -> Tuple[str, str]:
-        return subgraph.inputs[0].node.friendly_name, subgraph.outputs[0].node.friendly_name
+        return subgraph.inputs[0].get_any_name(), subgraph.outputs[0].get_any_name()
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:

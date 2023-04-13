@@ -101,13 +101,16 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def get_input_name(model: ov.Model, node_name: str) -> str:
         ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
 
-        if node_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
+        model_input_names = []
+        for tensor in model.inputs:
+            model_input_names.extend(tensor.get_names())
+        if node_name in model_input_names:
             return node_name
 
         for input_port in ops_dict[node_name].inputs():
             input_node = input_port.get_source_output().get_node()
             if input_node.get_type_name() == 'Parameter':
-                return input_node.get_friendly_name()
+                return input_port.get_tensor().get_any_name()
         raise RuntimeError(f'Input layer not found for {node_name}')
 
     @staticmethod
@@ -118,7 +121,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
             for output_input_port in output_port.get_target_inputs():
                 output_node = output_input_port.get_node()
                 if output_node.get_type_name() == 'Result':
-                    return output_node.get_friendly_name()
+                    return output_port.get_any_name()
         raise RuntimeError(f'Output layer not found for {node_name}')
 
     @staticmethod

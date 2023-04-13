@@ -68,4 +68,9 @@ class OVNativeEngine(Engine):
         """
         self._check_input_data_format(input_data)
         model_outputs = self.compiled_model(input_data)
-        return {out.get_node().get_friendly_name(): data for out, data in model_outputs.items()}
+
+        output_data = {}
+        for tensor, value in model_outputs.items():
+            for tensor_name in tensor.get_names():
+                output_data[tensor_name] = value
+        return output_data

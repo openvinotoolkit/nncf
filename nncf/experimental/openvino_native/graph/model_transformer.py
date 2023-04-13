@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, TypeVar
 from collections import deque
 
 import openvino.runtime as ov
@@ -30,6 +30,8 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVF
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
 
+DescriptorTensor = TypeVar('DescriptorTensor')
+
 
 class OVModelTransformer(ModelTransformer):
     """
@@ -45,6 +47,19 @@ class OVModelTransformer(ModelTransformer):
         :return: Mapping from node name to node.
         """
         return {op.get_friendly_name(): op for op in model.get_ops()}
+
+    @staticmethod
+    def _update_tensor_name(tensors: List[DescriptorTensor], name: str) -> None:
+        """
+        Updates tensors names in-place.
+
+        :param model: List of the tensors.
+        :param name: New name for tensor.
+        """
+        for tensor in tensors:
+            current_names = tensor.get_names()
+            current_names.add(name)
+            tensor.set_names(current_names)
 
     def transform(self, transformation_layout: TransformationLayout) -> ov.Model:
         """
@@ -152,7 +167,9 @@ class OVModelTransformer(ModelTransformer):
         for (output, port_id) in outputs:
             output_name = output.get_node().get_friendly_name()
             # TODO: (KodiaqQ) check out the models with the Split
-            result = opset.result(output, name=get_result_node_name(output_name, port_id))
+            result_name = get_result_node_name(output_name, port_id)
+            result = opset.result(output, name=result_name)
+            OVModelTransformer._update_tensor_name([result.get_output_tensor(0)], result_name)
             extra_model_outputs.append(result)
 
         return ov.Model(results=results + extra_model_outputs,
@@ -347,16 +364,21 @@ class OVModelTransformer(ModelTransformer):
                 continue
             input_port = input_node.input(0)
             input_node_output = input_port.get_source_output()
+            parameter_name = f'Parameter_{input_name}'
             new_param = opset.parameter(shape=input_node_output.partial_shape,
                                         dtype=input_node_output.get_element_type(),
-                                        name=f'{input_name}_input')
+                                        name=parameter_name)
             input_port.replace_source_output(new_param.output(0))
+            new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
+            OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
             params.append(new_param)
 
         for output_name in transformation.outputs:
             output_node = name_to_node_mapping[output_name]
             for node_out in output_node.outputs():
-                new_result = opset.result(node_out, name=f'{output_name}_output')
+                result_name = get_result_node_name(output_name, 0)
+                new_result = opset.result(node_out, name=result_name)
+                OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_name)
                 results.append(new_result)
 
         if not results:
