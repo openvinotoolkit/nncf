@@ -316,35 +316,20 @@ This repository is tested on Python* 3.8.10, PyTorch* 1.12.1 (NVidia CUDA\* Tool
 ## Installation
 For detailed installation instructions please refer to the [Installation](./docs/Installation.md) page.
 
-#### As a PyPI package:
-
 NNCF can be installed as a regular PyPI package via pip:
 ```
 pip install nncf
 ```
-If you want to install both NNCF and the supported PyTorch version in one line, you can do this by simply running:
-```
-pip install nncf[torch]
-```
-Other viable options besides `[torch]` are `[tf]`, `[onnx]` and `[openvino]`.
 
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 ```
 conda install -c conda-forge nncf
 ```
 
-#### As a package built from a checked-out repository:
-
 Install the package and its dependencies by running the following command in the repository root directory:
 ```
 pip install .
 ```
-
-Use the same `pip install` syntax as above to install NNCF along with the backend package version in one go:
-```
-pip install .[torch]
-```
-Again, for other backends you may use `[tf]`, `[onnx]` or `[openvino]`.
 
 
 #### As a Docker image
