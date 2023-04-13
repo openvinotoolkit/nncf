@@ -320,6 +320,11 @@ NNCF can be installed as a regular PyPI package via pip:
 ```
 pip install nncf
 ```
+If you want to install both NNCF and the supported PyTorch version in one line, you can do this by simply running:
+```
+pip install nncf[torch]
+```
+Other viable options besides `[torch]` are `[tf]`, `[onnx]` and `[openvino]`.
 
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 ```
