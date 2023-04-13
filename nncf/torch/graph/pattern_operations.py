@@ -23,7 +23,8 @@ LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: ['linear',
                                                   'addmm',
                                                   'bmm',
                                                   'matmul',
-                                                  'mm'
+                                                  'mm',
+                                                  'baddbmm'
                                                   ],
                      GraphPattern.LABEL_ATTR: 'LINEAR'}
 

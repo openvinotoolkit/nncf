@@ -48,7 +48,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.scopes import check_scopes_in_graph
-from nncf.common.scopes import should_consider_scope
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import copy_model
@@ -567,10 +566,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if metatype in OUTPUT_NOOP_METATYPES:
                 continue
 
-            if not (metatype in QUANTIZATION_LAYER_METATYPES
-                    and should_consider_scope(node.node_name,
-                                              ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
-                                              target_scopes=None)):
+            if not metatype in QUANTIZATION_LAYER_METATYPES:
                 continue
 
             assert issubclass(metatype, TFLayerWithWeightsMetatype) or \
@@ -606,10 +602,11 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 f'by NNCF yet):\n[{custom_layer_node_names_str}]')
         ignored_scopes_for_solver = self.ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS] + \
                                     input_preprocessing_node_names + custom_layer_node_names
-
         solver = QuantizerPropagationSolver(
-            ignored_scopes=ignored_scopes_for_solver,
-            target_scopes=self.target_scopes_per_group[QuantizerGroup.ACTIVATIONS],
+            activation_ignored_scopes=ignored_scopes_for_solver,
+            weight_ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
+            activation_target_scopes=self.target_scopes_per_group[QuantizerGroup.ACTIVATIONS],
+            weight_target_scopes=self.target_scopes_per_group[QuantizerGroup.WEIGHTS],
             hw_config=self.hw_config,
             default_trait_to_metatype_map=DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT,
             default_qconfig_list=[self._get_default_qconfig(

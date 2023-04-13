@@ -12,6 +12,7 @@
 """
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Tuple, Any, Union
 
@@ -227,30 +228,24 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
         return 0
 
 
+@dataclass
 class ReshapeLayerAttributes(BaseLayerAttributes):
-    def __init__(self,
-                 input_shape: List[int],
-                 output_shape: List[int]):
-        """
-
-        :param input_shape: number of elements of each of the axes of a input tensor.
-        :param output_shape: number of elements of each of the axes of a output tensor.
-        """
-        self.input_shape = input_shape
-        self.output_shape = output_shape
+    """
+    :param input_shape: number of elements of each of the axes of a input tensor.
+    :param output_shape: number of elements of each of the axes of a output tensor.
+    """
+    input_shape: List[int]
+    output_shape: List[int]
 
 
+@dataclass
 class TransposeLayerAttributes(BaseLayerAttributes):
-    def __init__(self,
-                 dim0: int,
-                 dim1: int):
-        """
-
-        :param dim0: the first dimension to be transposed.
-        :param dim1: the second dimension to be transposed.
-        """
-        self.dim0 = dim0
-        self.dim1 = dim1
+    """
+    :param dim0: the first dimension to be transposed.
+    :param dim1: the second dimension to be transposed.
+    """
+    dim0: int
+    dim1: int
 
     def __eq__(self, other: Any) -> bool:
         return isinstance(other, TransposeLayerAttributes) \
@@ -259,14 +254,12 @@ class TransposeLayerAttributes(BaseLayerAttributes):
                and self.dim1 == other.dim1
 
 
+@dataclass
 class PermuteLayerAttributes(BaseLayerAttributes):
-    def __init__(self,
-                 permutation: List[int]):
-        """
-
-        :param permutation: the desired ordering of dimensions.
-        """
-        self.permutation = permutation
+    """
+    :param permutation: the desired ordering of dimensions.
+    """
+    permutation: List[int]
 
     def __eq__(self, other: Any) -> bool:
         return isinstance(other, PermuteLayerAttributes) \
@@ -274,10 +267,20 @@ class PermuteLayerAttributes(BaseLayerAttributes):
                and len(self.permutation) == len(other.permutation) \
                and (l == r for l, r in zip(self.permutation, other.permutation))
 
-class GetItemLayerAttributes(BaseLayerAttributes):
-    def __init__(self, key: Any):
-        """
 
-        :param key: usually int, tuple of int or slice.
-        """
-        self.key = key
+@dataclass
+class GetItemLayerAttributes(BaseLayerAttributes):
+    """
+    :param key: usually int, tuple of int or slice.
+    """
+    key: Any
+
+
+@dataclass
+class PadLayerAttributes(BaseLayerAttributes):
+    """
+    :param mode: mode of the padding operation.
+    :param value: fill value of the padding operation.
+    """
+    mode: str = 'constant'
+    value: float = 0

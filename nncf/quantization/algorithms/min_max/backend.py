@@ -74,6 +74,13 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
+        """
+
+    @property
+    @abstractmethod
     def hw_config(self) -> HWConfig:
         """
         Property for the hardware backend-specific configuration.
