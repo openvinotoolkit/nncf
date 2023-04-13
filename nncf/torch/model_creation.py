@@ -151,20 +151,22 @@ def create_nncf_network(model: torch.nn.Module,
         the internal graph representation via tracing. Specifying this is useful when the original training pipeline
         has special formats of data loader output or has additional *forward* arguments other than input tensors.
         Otherwise, the *forward* call of the model during graph tracing will be made with mock tensors according
-        to the shape specified in the config object. The dummy_forward_fn code MUST contain calls to nncf.nncf_model_input
+        to the shape specified in the config object. The dummy_forward_fn code MUST contain calls to
+        nncf.nncf_model_input
         functions made with each compressed model input tensor in the underlying model's args/kwargs tuple, and these
         calls should be exactly the same as in the wrap_inputs_fn function code (see below); if dummy_forward_fn is
         specified, then wrap_inputs_fn also must be specified.
     :param wrap_inputs_fn: if supplied, will be used on the module's input arguments during a regular, non-dummy
         forward call before passing the inputs to the underlying compressed model. This is required if the model's input
-        tensors that are important for compression are not supplied as arguments to the model's forward call directly, but
-        instead are located in a container (such as list), and the model receives the container as an argument.
+        tensors that are important for compression are not supplied as arguments to the model's forward call directly,
+        but instead are located in a container (such as list), and the model receives the container as an argument.
         wrap_inputs_fn should take as input two arguments - the tuple of positional arguments to the underlying
-        model's forward call, and a dict of keyword arguments to the same. The function should wrap each tensor among the
-        supplied model's args and kwargs that is important for compression (e.g. quantization) with an nncf.nncf_model_input
-        function, which is a no-operation function and marks the tensors as inputs to be traced by NNCF in the internal
-        graph representation. Output is the tuple of (args, kwargs), where args and kwargs are the same as were supplied in
-        input, but each tensor in the original input. Must be specified if dummy_forward_fn is specified.
+        model's forward call, and a dict of keyword arguments to the same. The function should wrap each tensor among
+        the supplied model's args and kwargs that is important for compression (e.g. quantization) with an
+        nncf.nncf_model_input function, which is a no-operation function and marks the tensors as inputs to be traced
+        by NNCF in the internal graph representation. Output is the tuple of (args, kwargs), where args and kwargs are
+        the same as were supplied in input, but each tensor in the original input. Must be specified if
+        dummy_forward_fn is specified.
     :param wrap_outputs_fn: if supplied, will be used on the module's output during a regular, non-dummy forward call.
     :return: A model wrapped by NNCFNetwork, which is ready for adding compression. """
 
