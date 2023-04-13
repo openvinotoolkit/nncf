@@ -16,6 +16,7 @@ from typing import Any, List, MutableMapping
 import tensorflow as tf
 from absl import logging
 
+from examples.tensorflow.common.utils import get_learning_rate
 from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
 
 
@@ -48,14 +49,6 @@ def get_progress_bar(stateful_metrics: list = None):
     stateful_metrics.extend(['val_' + metric_name for metric_name in stateful_metrics])
     return tf.keras.callbacks.ProgbarLogger(count_mode='steps',
                                             stateful_metrics=stateful_metrics)
-
-
-def get_scalar_from_tensor(t: tf.Tensor) -> int:
-    """Utility function to convert a Tensor to a scalar."""
-    t = tf.keras.backend.get_value(t)
-    if callable(t):
-        return t()
-    return t
 
 
 class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
@@ -122,15 +115,8 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
     def _calculate_metrics(self) -> MutableMapping[str, Any]:
         logs = {}
         if self._track_lr:
-            logs['learning_rate'] = self._calculate_lr()
+            logs['learning_rate'] = get_learning_rate(self._get_base_optimizer(), self.step)
         return logs
-
-    def _calculate_lr(self) -> int:
-        """Calculates the learning rate given the current step."""
-        lr = self._get_base_optimizer().lr
-        if callable(lr):
-            lr = lr(self.step)
-        return get_scalar_from_tensor(lr)
 
     def _get_base_optimizer(self) -> tf.keras.optimizers.Optimizer:
         """Get the base optimizer used by the current model."""

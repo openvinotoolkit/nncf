@@ -32,6 +32,7 @@ from examples.tensorflow.common.utils import Timer
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_saving_parameters
+from examples.tensorflow.common.utils import get_learning_rate
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import serialize_config
@@ -189,9 +190,7 @@ def train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_ep
         if np.isnan(train_metric_result['total_loss']):
             raise ValueError('total loss is NaN')
 
-        train_metric_result.update({
-            'learning_rate':
-                (optimizer.lr(optimizer.iterations) if callable(optimizer.lr) else optimizer.lr).numpy()})
+        train_metric_result.update({'learning_rate': get_learning_rate(optimizer, optimizer.iterations)})
 
         train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
 
