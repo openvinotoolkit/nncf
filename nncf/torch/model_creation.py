@@ -91,6 +91,7 @@ def create_compressed_model(model: Module,
     as an object of NNCFNetwork."""
 
     set_debug_log_dir(config.get("log_dir", "."))
+    print("Test")
 
     is_legacy_model_state_dict = compression_state is not None and \
                                  BaseController.BUILDER_STATE not in compression_state and \
