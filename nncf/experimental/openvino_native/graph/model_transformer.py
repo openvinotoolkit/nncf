@@ -11,12 +11,13 @@
  limitations under the License.
 """
 
-from typing import List, Tuple, Dict, TypeVar
+from typing import List, Tuple, Dict
 from collections import deque
 
 import openvino.runtime as ov
 import numpy as np
 from openvino.runtime import opset9 as opset
+from openvino._pyopenvino import DescriptorTensor
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -29,8 +30,6 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVB
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
-
-DescriptorTensor = TypeVar('DescriptorTensor')
 
 
 class OVModelTransformer(ModelTransformer):
