@@ -1,9 +1,8 @@
 import torch
-import torch.nn as nn
+from torch import nn
 from timm.models.layers import DropPath
 from timm.models.layers import to_2tuple
 from timm.models.layers import trunc_normal_
-from torch.nn.init import trunc_normal_
 
 WindowProcess = None
 WindowProcessReverse = None
@@ -175,7 +174,8 @@ class SwinTransformerBlock(nn.Module):
         drop_path (float, optional): Stochastic depth rate. Default: 0.0
         act_layer (nn.Module, optional): Activation layer. Default: nn.GELU
         norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
-        fused_window_process (bool, optional): If True, use one kernel to fused window shift & window partition for acceleration, similar for the reversed part. Default: False
+        fused_window_process (bool, optional): If True, use one kernel to fused window shift & window partition for
+        acceleration, similar for the reversed part. Default: False
     """
 
     def __init__(self, dim, input_resolution, num_heads, window_size=7, shift_size=0,
