@@ -33,11 +33,11 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return ONNXMinMaxAlgoBackend()
 
-    def get_min_max_statistic_collector_cls(self):
-        return ONNXMinMaxStatisticCollector
+    def check_is_min_max_statistic_collector(self, tensor_collector):
+        assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
 
-    def get_mean_max_statistic_collector_cls(self):
-        return ONNXMeanMinMaxStatisticCollector
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
+        assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
 
     @pytest.fixture(params=[pytest.param((TargetType.PRE_LAYER_OPERATION, '/Sum_1_0', (0, 2), (0, 1, 2)),
                                          marks=pytest.mark.skip(

@@ -371,8 +371,7 @@ class StructuredMaskHandler:
         nncf_graph = nncf_network.get_original_graph()
         pruning_groups = get_pruning_groups(nncf_graph,
                                             PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
-                                            pruning_producing_types,
-                                            dump_dir=Path(''))
+                                            pruning_producing_types)
         pruning_groups = select_largest_groups(pruning_groups)
         result = []
         for group_id, group in enumerate(pruning_groups):

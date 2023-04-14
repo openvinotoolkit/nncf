@@ -705,8 +705,8 @@ class ExpandAsPruningOp(BasePruningOp):
                                         "it's not supported and mask is invalidated. node_name={node.node_name}")
                     for group in groups:
                         group.invalidate()
-            # TODO: assume that expand_as is on constant path that does not affect pruning, otherwise pruning of
-            # self attention block would be not possible in the general case.
+            # TODO: (nlyalyus) assume that expand_as is on constant path that does not affect pruning, otherwise pruning
+            # of self attention block would be not possible in the general case.
             propagated_mask = mask
         node.data['output_mask'] = propagated_mask
 

@@ -13,8 +13,14 @@
 
 from copy import copy
 from dataclasses import dataclass
-from functools import reduce
 from pathlib import Path
+from typing import (
+    Any,
+    Optional,
+    Dict,
+    List,
+    Set
+)
 from typing import (
     Any,
     Optional,
@@ -38,7 +44,6 @@ from nncf.experimental.common.pruning.propagation_data import (
     PropagationMask,
 )
 from nncf.experimental.common.pruning.block_hierarchy import BlockHierarchy
-
 
 @dataclass
 class PruningGroup:

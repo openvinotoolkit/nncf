@@ -278,7 +278,9 @@ def test_quantizer_parameters_export(tmp_path: Path):
     fq_params = calculate_fq_params(model, input_data)
 
     dataset = Dataset(data_loader)
-    min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, preset=QuantizationPreset.PERFORMANCE))
+    min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1,
+                                                                   preset=QuantizationPreset.PERFORMANCE,
+                                                                   inplace_statistics=False))
     statistics_aggregator = PTStatisticsAggregator(dataset)
 
     nncf_config = NNCFConfig({'input_info': {'sample_size': [1, 3, 32, 32]}})
