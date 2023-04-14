@@ -121,6 +121,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
         num_of_replicas = 3
         strategy = tf.distribute.MirroredStrategy([f'GPU:{i}' for i in range(num_of_replicas)])
     else:
+        num_of_replicas = 1
         strategy = tf.distribute.OneDeviceStrategy('device:CPU:0')
 
     tf.keras.backend.clear_session()
@@ -174,7 +175,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
 
         compress_model.compile(
             loss=loss_obj,
-            optimizer=tf.keras.optimizers.Adam(1e-2),
+            optimizer=tf.keras.optimizers.Adam(5e-3 * num_of_replicas),
             metrics=metrics,
         )
 
