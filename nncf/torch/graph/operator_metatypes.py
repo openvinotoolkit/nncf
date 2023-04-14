@@ -522,6 +522,22 @@ class PTExpMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTLogMetatype(PTOperatorMetatype):
+    name = "LogOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["log"],
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTAbsMetatype(PTOperatorMetatype):
+    name = "AbsOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["abs"],
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTErfMetatype(PTOperatorMetatype):
     name = "ErfOp"
     module_to_function_names = {
@@ -895,8 +911,18 @@ class PTLogicalNotMetatype(PTOperatorMetatype):
 class PTPowerMetatype(PTOperatorMetatype):
     name = "PowerOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["__pow__", "pow", "sqrt", "sqrt_"],
-        NamespaceTarget.TORCH: ["pow", "sqrt", "sqrt_"]
+        NamespaceTarget.TORCH_TENSOR: ["__pow__", "pow"],
+        NamespaceTarget.TORCH: ["pow"]
+    }
+    hw_config_names = [HWConfigOpName.POWER]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTSqrtMetatype(PTOperatorMetatype):
+    name = "SqrtOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["sqrt", "sqrt_"],
+        NamespaceTarget.TORCH: ["sqrt", "sqrt_"]
     }
     hw_config_names = [HWConfigOpName.POWER]
 

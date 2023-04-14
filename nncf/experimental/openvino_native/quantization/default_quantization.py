@@ -55,12 +55,15 @@ DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.NON_QUANTIZABLE: [
         ov_metatypes.OVSigmoidMetatype,
         ov_metatypes.OVSoftmaxMetatype,
-        ov_metatypes.OVExpMetatype,
-        ov_metatypes.OVLogMetatype,
         ov_metatypes.OVAssignMetatype,
-        ov_metatypes.OVReluMetatype,
         ov_metatypes.OVDeformableConvolutionMetatype,
-        UnknownMetatype
+        UnknownMetatype,
+        # Ticket: 108478
+        ov_metatypes.OVReluMetatype,
+        ov_metatypes.OVLogMetatype,
+        ov_metatypes.OVExpMetatype,
+        ov_metatypes.OVSqrtMetatype,
+        ov_metatypes.OVAbsMetatype,
     ],
     QuantizationTrait.CONCAT: [ov_metatypes.OVConcatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: []
