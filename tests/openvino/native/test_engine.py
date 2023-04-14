@@ -26,7 +26,7 @@ def check_engine_creation_and_inference(model, input_data):
     outputs = engine.infer(input_data)
     for result in model.get_results():
         res_name = result.get_output_tensor(0).get_any_name()
-        assert res_name in outputs.keys()
+        assert res_name in outputs
         assert outputs[res_name].shape == tuple(result.get_output_shape(0))
 
 
