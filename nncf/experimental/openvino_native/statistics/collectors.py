@@ -111,12 +111,22 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @classmethod
     def no_outliers_map(cls, x: NNCFTensor,
                         fn: Callable[[NNCFTensor, Optional[int]], Any], alpha: float = 0.01):
-        low_values, high_values = cls.quantile(x, [alpha, 1 - alpha], 0)
-        result = []
-        for i, x_sample in enumerate(x.tensor):
-            x_sample = x_sample[(x_sample >= low_values[i]) & (x_sample <= high_values[i])]
-            result.append(x_sample)
-        return fn(OVNNCFTensor(np.array(result)), 0)
+        low_values, high_values = cls.quantile(x, [alpha, 1 - alpha], 0).tensor
+        x = x.tensor
+        if len(x.shape) < 2:
+            x = np.expand_dims(x, -1)
+            low_values, high_values = np.array([low_values]), np.array([high_values])
+
+        result = np.empty_like(low_values)
+        for idx in np.ndindex(low_values.shape):
+            x_elem = x[:, idx]
+            x_elem = x_elem[(x_elem >= low_values[idx]) & (x_elem <= high_values[idx])]
+            result[idx] = fn(OVNNCFTensor(x_elem), axis=None).tensor
+
+        if len(x.shape) < 2:
+            result = np.squeeze(result)
+
+        return OVNNCFTensor(result)
 
     @staticmethod
     def batch_mean(x: NNCFTensor) -> NNCFTensor:

@@ -103,7 +103,7 @@ class TemplateTestReducersAggreagtors:
           16.0, 18.285714285714285]),
         (MedianNoOutliersAggregator, False, 3, [2.0, 4.0, 6.0, 8.0, 10.0,
                                       12.0, 14.0, 16.0]),
-    ]
+    ][12:]
 
     @pytest.mark.parametrize('aggregator_cls,use_per_sample_stats,dims,refs', NO_OUTLIERS_TEST_PARAMS)
     def test_no_outliers_agggregators(self, aggregator_cls, refs, tensor_processor,

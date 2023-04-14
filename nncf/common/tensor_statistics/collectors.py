@@ -239,6 +239,12 @@ class NNCFCollectorTensorProcessor(ABC):
                                     fn: Callable[[NNCFTensor, Optional[int]], Any], alpha: float = 0.01):
         pass
 
+    @classmethod
+    @abstractmethod
+    def no_outliers_map(cls, x: NNCFTensor,
+                        fn: Callable[[NNCFTensor, Optional[int]], Any], alpha: float = 0.01):
+        pass
+
 
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
     """Collector estimates min of minimum values and max of maximum values."""
