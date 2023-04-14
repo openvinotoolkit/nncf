@@ -337,8 +337,8 @@ def ov_native_runner(model, calibration_dataset,
     core = ov.Core()
     ov_native_model = core.read_model(ov_native_model_path)
 
-    input_names = set(inp.get_output_tensor(0).get_any_name() for inp in ov_native_model.inputs)
-    if len(model.inputs) != 1:
+    input_names = set(inp.get_any_name() for inp in ov_native_model.inputs)
+    if len(ov_native_model.inputs) != 1:
         RuntimeError('Number of inputs != 1')
 
     def ov_native_transform_fn(data_item):
