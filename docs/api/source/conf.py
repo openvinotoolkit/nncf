@@ -7,7 +7,6 @@ from typing import List
 
 from sphinx.ext.autodoc import mock
 
-import nncf
 
 sys.path.insert(0, os.path.abspath('../../..'))
 
@@ -41,14 +40,15 @@ def collect_api_entities() -> List[str]:
     :return: A list of fully qualified names of API symbols.
     """
     modules = {}
-    skipped_modules = []
+    skipped_modules = {}  # type: Dict[str, str]
+    import nncf
     for importer, modname, ispkg in pkgutil.walk_packages(path=nncf.__path__,
                                                           prefix=nncf.__name__+'.',
                                                           onerror=lambda x: None):
         try:
             modules[modname] = importlib.import_module(modname)
-        except:
-            skipped_modules.append(modname)
+        except Exception as e:
+            skipped_modules[modname] = str(e)
 
     api_fqns = []
     for modname, module in modules.items():
@@ -62,7 +62,7 @@ def collect_api_entities() -> List[str]:
                         api_fqns.append(f"{modname}.{obj_name}")
 
     print()
-    skipped_str = '\n'.join(skipped_modules)
+    skipped_str = '\n'.join([f"{k}: {v}" for k, v in skipped_modules.items()])
     print(f"Skipped: {skipped_str}\n")
 
     print("API entities:")
@@ -71,7 +71,7 @@ def collect_api_entities() -> List[str]:
     return api_fqns
 
 
-with mock(['torch', 'onnx', 'openvino', 'tensorflow', 'tensorflow_addons']):
+with mock(['torch', 'torchvision', 'onnx', 'onnxruntime', 'openvino', 'tensorflow', 'tensorflow_addons']):
     api_fqns = collect_api_entities()
 
 module_fqns = set()
