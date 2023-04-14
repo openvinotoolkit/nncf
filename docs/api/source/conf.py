@@ -58,8 +58,13 @@ def collect_api_entities() -> List[str]:
             if objects_module == modname:
                 if inspect.isclass(obj) or inspect.isfunction(obj):
                     if hasattr(obj, "_nncf_api_marker"):
-                        print(f"\t{obj_name}")
-                        api_fqns.append(f"{modname}.{obj_name}")
+                        marked_object_name = obj._nncf_api_marker
+                        # Check the actual name of the originally marked object
+                        # so that the classes derived from base API classes don't
+                        # all automatically end up in API
+                        if marked_object_name == obj.__name__:
+                            print(f"\t{obj_name}")
+                            api_fqns.append(f"{modname}.{obj_name}")
 
     print()
     skipped_str = '\n'.join([f"{k}: {v}" for k, v in skipped_modules.items()])

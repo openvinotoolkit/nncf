@@ -5,5 +5,7 @@ class api:
         pass
 
     def __call__(self, obj):
-        setattr(obj, api.API_MARKER_ATTR, True)
+        # The value of the marker will be useful in determining
+        # whether we are handling a base class or a derived one.
+        setattr(obj, api.API_MARKER_ATTR, obj.__name__)
         return obj
