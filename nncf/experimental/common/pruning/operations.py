@@ -114,76 +114,88 @@ class LinearPruningOp(BasePruningOp):
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) in [1, 2]
-        is_none_map = map(lambda x: x is None, input_masks)
+        is_input_mask_none_map = map(lambda x: x is None, input_masks)
         output_mask = node.data.get('output_mask', None)
-        if all(is_none_map):
+        input_tensors_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
+        node_id = node.node_id
+        if all(is_input_mask_none_map):
             # It's acceptable to have None instead of PropagationMask on all inputs.
             # It means there's no pruning on this way to node. But the linear op can produce pruning mask,
-            # need to propagate it, if it exists
+            # need to propagate it, if it exists.
             pass
-        elif any(is_none_map):
+        elif any(is_input_mask_none_map):
             # It's NOT acceptable to have None instead of PropagationMask on one of the input and have
             # PropagationMask on another input at once. The mask is invalidated.
             cls.invalidate_masks(input_masks)
             output_mask = None
         elif len(input_masks) == 1:
-            # Linear module with built-in weights. Assume single input for activations.
-            input_tensors_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
-            input_shape_len = len(input_tensors_shapes[0])
-            # Propagate further all except the last one, which is closing
-            for dim, groups in input_masks[0].dim_groups_map.items():
-                if dim == input_shape_len - 1:
-                    for group in groups:
-                        assert node.layer_attributes is not None
-                        consumer = ConsumerInfo(node_id=node.node_id, pruning_dimension=1)
-                        group.add_consumers({consumer})
-                else:
-                    output_mask.dim_groups_map[dim] = groups
+            output_mask = cls._handle_single_input(input_masks, input_tensors_shapes, node_id, output_mask)
         elif len(input_masks) == 2:
-            # Matmul operator with 2 inputs: one - for activation, second - for weights.
-            input_tensors_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
-            assert len(input_tensors_shapes[0]) == len(input_tensors_shapes[1])
-            input_shape_len = len(input_tensors_shapes[0])
-            # Join consumed masks
-            left_dim_groups, right_dim_groups = [input_masks[i].dim_groups_map for i in range(2)]
-
-            def _both_dim_blocks_exist(left_idx, right_idx):
-                if left_idx in left_dim_groups or \
-                        right_idx in right_dim_groups:
-                    assert left_idx in left_dim_groups and right_idx in right_dim_groups
-                    return True
-                return False
-
-            output_mask = PropagationMask()
-            # Propagating batch dims
-            for dim in range(input_shape_len - 2):
-                if _both_dim_blocks_exist(dim, dim):
-                    left = left_dim_groups[dim]
-                    right = right_dim_groups[dim]
-                    assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
-                    output_mask.dim_groups_map[dim] = [
-                        PropagationGroup.join_groups(left[0], right[0])
-                    ]
-            # Propagating left rows / right cols
-            for idx, dim in enumerate(range(input_shape_len - 2, input_shape_len)):
-                if dim in input_masks[idx].dim_groups_map:
-                    output_mask.dim_groups_map[dim] = input_masks[idx].dim_groups_map[dim]
-
-            # Close branch
-            if _both_dim_blocks_exist(input_shape_len - 1, input_shape_len - 2):
-                left = left_dim_groups[input_shape_len - 1]
-                right = right_dim_groups[input_shape_len - 2]
-                assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
-                group = PropagationGroup.join_groups(left[0], right[0])
-                pruning_dimension = 1
-                if node.layer_attributes is None:
-                    pruning_dimension = None
-                consumer = ConsumerInfo(node_id=node.node_id, pruning_dimension=pruning_dimension)
-                group.add_consumers({consumer})
-        else:
-            output_mask = node.data.get('output_mask', None)
+            output_mask = cls._handle_two_inputs(input_masks, input_tensors_shapes, node_id)
 
         node.data['output_mask'] = output_mask
+
+    @staticmethod
+    def _handle_single_input(input_masks: List[PropagationMask],
+                             input_tensors_shapes: List[List[int]],
+                             node_id: int,
+                             output_mask: Optional[PropagationMask] = None) -> Optional[PropagationMask]:
+        # Linear module with built-in weights. Assume single input for activations.
+        input_shape_len = len(input_tensors_shapes[0])
+        # Propagate further all except the last one, which is closing
+        for dim, groups in input_masks[0].dim_groups_map.items():
+            if dim == input_shape_len - 1:
+                for group in groups:
+                    consumer = ConsumerInfo(node_id=node_id, pruning_dimension=1)
+                    group.add_consumers({consumer})
+            else:
+                if output_mask is None:
+                    output_mask = PropagationMask()
+                output_mask.dim_groups_map[dim] = groups
+        return output_mask
+
+    @staticmethod
+    def _handle_two_inputs(input_masks: List[PropagationMask],
+                           input_tensors_shapes: List[List[int]],
+                           node_id: int) -> PropagationMask:
+        # Matmul operator with 2 inputs: one - for activation, second - for weights.
+        assert len(input_tensors_shapes[0]) == len(input_tensors_shapes[1])
+        input_shape_len = len(input_tensors_shapes[0])
+        # Join consumed masks
+        left_dim_groups, right_dim_groups = [input_masks[i].dim_groups_map for i in range(2)]
+
+        def _both_dim_blocks_exist(left_idx, right_idx):
+            if left_idx in left_dim_groups or \
+                    right_idx in right_dim_groups:
+                assert left_idx in left_dim_groups and right_idx in right_dim_groups
+                return True
+            return False
+
+        output_mask = PropagationMask()
+        # Propagating batch dims
+        for dim in range(input_shape_len - 2):
+            if _both_dim_blocks_exist(dim, dim):
+                left = left_dim_groups[dim]
+                right = right_dim_groups[dim]
+                assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
+                output_mask.dim_groups_map[dim] = [
+                    PropagationGroup.join_groups(left[0], right[0])
+                ]
+
+        # Propagating left rows / right cols
+        for idx, dim in enumerate(range(input_shape_len - 2, input_shape_len)):
+            if dim in input_masks[idx].dim_groups_map:
+                output_mask.dim_groups_map[dim] = input_masks[idx].dim_groups_map[dim]
+
+        # Close branch
+        if _both_dim_blocks_exist(input_shape_len - 1, input_shape_len - 2):
+            left = left_dim_groups[input_shape_len - 1]
+            right = right_dim_groups[input_shape_len - 2]
+            assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
+            group = PropagationGroup.join_groups(left[0], right[0])
+            consumer = ConsumerInfo(node_id=node_id, pruning_dimension=None)
+            group.add_consumers({consumer})
+        return output_mask
 
 class BatchNormPruningOp(BasePruningOp):
     @classmethod

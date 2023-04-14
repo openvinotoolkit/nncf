@@ -13,13 +13,17 @@
 
 from dataclasses import dataclass
 import json
-from typing import Dict, Optional, Set
-from typing import List
+from typing import (
+    Dict,
+    Optional,
+    Set,
+    List
+)
 
 @dataclass
 class ProducerInfo:
     """
-    Defines a node that produce pruning. Operation that corresponds to the node has built-in weights.
+    Defines a node that produce pruning masks. Operation that corresponds to the node has built-in weights.
     Pruning dimension is required in comparison with consumer info.
 
     :param node_id: id of the node that produce pruning
@@ -38,10 +42,9 @@ class ProducerInfo:
 @dataclass
 class ConsumerInfo:
     """
-    Defines the node that absorbs (consume) pruning. There are 2 types of consumer. First, have built-in weights,
+    Defines the node that absorbs (consume) pruning masks. There are 2 types of consumer. First, have built-in weights,
     therefore can consume and produce pruning along the input channels. Consumers of the second type don't have built-in
-    weights, instead weights are coming as a second input. In that case, operation can only consume pruning and
-    pruning dimension is None.
+    weights, instead weights are coming as a second input. In that case, pruning dimension is None.
 
     :param node_id: id of the node that consume pruning.
     :param pruning_dimension: axis number from 0 to N-1 in weights along which the pruning structure is defined.
