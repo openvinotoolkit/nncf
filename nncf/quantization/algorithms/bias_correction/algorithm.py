@@ -47,16 +47,22 @@ class BiasCorrectionParameters(AlgorithmParameters):
     :param threshold: Magnitude threshold that regulates application of shift.
     """
 
-    def __init__(self, number_samples: int = 100, threshold: float = 1000) -> None:
+    def __init__(self, number_samples: int = 100, threshold: float = 1000,
+                 inplace_statistics: bool = True) -> None:
         """
         :param number_samples: The number of samples for the statistics collection.
             This statistic uses for the further calculation of the bias shift.
         :param threshold: The magnitude threshold regulates the application of the shift.
             Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
             If the calculated value is less than the threshold, the shift will apply to the bias.
+        :param inplace_statistics: Appliclable only for OpenVINO backend.
+            Will be available for ONNX backend in future. Defines wheather to calculate quantizers statistics
+            by backend graph operations or by default Python implementation.
+            Statistics computated inplace tend to be calculated faster and with lower memory stamp.
         """
         self.number_samples = number_samples
         self.threshold = threshold
+        self.inplace_statistics = inplace_statistics
 
     def to_json(self) -> Dict[str, Union[str, float, int]]:
         """
@@ -99,6 +105,7 @@ class BiasCorrection(Algorithm):
         super().__init__()
         self.number_samples = max(np.int(parameters.number_samples * 0.2), 1)
         self.threshold = parameters.threshold
+        self.inplace_statistics = parameters.inplace_statistics
         self.nncf_graph = None
         self._backend_entity = None
         self._collected_stat_inputs = set()
@@ -466,7 +473,8 @@ class BiasCorrection(Algorithm):
                 statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                     node_name,
                                                                     input_port_id)
-                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples)
+                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples,
+                                                                                inplace=self.inplace_statistics)
                 statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                        tensor_collector=stat_collector,
                                                                        algorithm=BiasCorrection))
@@ -474,7 +482,8 @@ class BiasCorrection(Algorithm):
                                                                 node_name,
                                                                 output_port_id)
             stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=channel_axis,
-                                                                           num_samples=self.number_samples)
+                                                                           num_samples=self.number_samples,
+                                                                           inplace=self.inplace_statistics)
             statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                    tensor_collector=stat_collector,
                                                                    algorithm=BiasCorrection))
@@ -485,7 +494,8 @@ class BiasCorrection(Algorithm):
                 statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                     next_input_node.node_name,
                                                                     port_id=0)
-                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples)
+                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples,
+                                                                                inplace=self.inplace_statistics)
                 statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                        tensor_collector=stat_collector,
                                                                        algorithm=BiasCorrection))

@@ -15,12 +15,14 @@ import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
-from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
-from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSumMetatype
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import OnlineMinAggregator
+from nncf.experimental.common.tensor_statistics.collectors import OnlineMaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import OfflineMeanAggregator
 
 from tests.post_training.test_quantizer_config import TemplateTestQuantizerConfig
 from tests.post_training.models import NNCFGraphToTest
@@ -33,11 +35,17 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return OVMinMaxAlgoBackend()
 
-    def get_min_max_statistic_collector_cls(self):
-        return OVMinMaxStatisticCollector
+    def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert OnlineMinAggregator in aggrs
+        assert OnlineMaxAggregator in aggrs
 
-    def get_mean_max_statistic_collector_cls(self):
-        return OVMeanMinMaxStatisticCollector
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert OfflineMeanAggregator in aggrs
+        assert aggrs[0].__class__ == aggrs[1].__class__
 
     @pytest.fixture(params=[pytest.param((TargetType.PRE_LAYER_OPERATION, '/Sum_1_0', (0, 2), (0, 1, 2)),
                                          marks=pytest.mark.skip(
