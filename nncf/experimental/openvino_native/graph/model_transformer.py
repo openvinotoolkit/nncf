@@ -17,7 +17,7 @@ from collections import deque
 import openvino.runtime as ov
 import numpy as np
 from openvino.runtime import opset9 as opset
-from openvino._pyopenvino import DescriptorTensor
+from openvino._pyopenvino import DescriptorTensor # pylint: disable=no-name-in-module
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
