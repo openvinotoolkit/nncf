@@ -1,6 +1,6 @@
 name: API changes check
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - develop
 
@@ -35,11 +35,11 @@ jobs:
           echo ${CHANGED_FILES}
           CHANGED_FILES=$(echo $CHANGED_FILES | tr '\n' ' ')
           echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
-      - uses: actions-ecosystem/action-add-labels@v1
-        if: ${{ steps.diff.outputs.changed_files }} != ""
+      - uses: actions-ecosystem/action-remove-labels@v1
+        if: ${{ !contains(steps.diff.outputs.changed_files, 'differ') }}
         with:
           labels: API
-      - uses: actions-ecosystem/action-remove-labels@v1
-        if: ${{ steps.diff.outputs.changed_files }} == ""
+      - uses: actions-ecosystem/action-add-labels@v1
+        if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}
         with:
           labels: API

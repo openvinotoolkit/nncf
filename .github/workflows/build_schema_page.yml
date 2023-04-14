@@ -1,10 +1,5 @@
 name: Config schema HTML build
 on:
-  pull_request_target:
-    branches:
-      - develop
-    paths:
-      - nncf/config/**
   workflow_call:
 jobs:
   build-config-schema-html:
