@@ -1,0 +1,16 @@
+strict digraph  {
+0 [color=grey, label="S:1__O:0__ID:1", style=filled];
+1 [color=grey, label="S:3__O:0__ID:1", style=filled];
+2 [color=red, label="S:3__O:0__ID:1
+S:3__O:0__ID:2", style=filled];
+3 [color=red, label="S:1__O:3__ID:1", style=filled];
+4 [color=grey, label="S:1__O:0__ID:2", style=filled];
+5 [color=grey, label="S:3__O:0__ID:2", style=filled];
+6 [color=red, label="S:1__O:3__ID:2", style=filled];
+0 -> 1;
+0 -> 3;
+1 -> 2;
+4 -> 5;
+4 -> 6;
+5 -> 2;
+}

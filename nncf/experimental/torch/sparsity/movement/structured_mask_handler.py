@@ -29,6 +29,7 @@ from nncf.torch.sparsity.base_algo import SparseModuleInfo
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
 from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
+from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
 
 SUPPORTED_NNCF_MODULES = [NNCFLinear]
 EXPECTED_NODE_LAYER_ATTRS = [LinearLayerAttributes]
@@ -370,7 +371,8 @@ class StructuredMaskHandler:
         pruning_groups = get_pruning_groups(nncf_graph,
                                             PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
                                             pruning_producing_types)
-        groups = []
+        pruning_groups = select_largest_groups(pruning_groups)
+        result = []
         for group_id, group in enumerate(pruning_groups):
             ctxes = []
             for block in group.dim_blocks:
@@ -387,5 +389,5 @@ class StructuredMaskHandler:
                                                 prune_by_row)
                     ctxes.append(ctx)
             if ctxes:
-                groups.append(StructuredMaskContextGroup(group_id, ctxes))
-        return groups
+                result.append(StructuredMaskContextGroup(group_id, ctxes))
+        return result
