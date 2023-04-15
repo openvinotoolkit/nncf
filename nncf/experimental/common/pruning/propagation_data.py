@@ -11,24 +11,57 @@
  limitations under the License.
 """
 
+from dataclasses import dataclass
 import json
-from typing import Dict
-from typing import List
+from typing import (
+    Dict,
+    Optional,
+    Set,
+    List
+)
 
-
-class MaskProducer:
+@dataclass
+class ProducerInfo:
     """
-    Defines producer of the pruning.
+    Defines a node that produce pruning masks. Operation that corresponds to the node has built-in weights.
+    Pruning dimension is required in comparison with consumer info.
+
+    :param node_id: id of the node that produce pruning
+    :param pruning_dimension: axis number from 0 to N-1 in weights along which the pruning structure is defined.
+        N is total number of dimensions.
+    """
+    node_id: int
+    pruning_dimension: int = 0
+
+    def __hash__(self) -> int:
+        return hash((self.node_id, self.pruning_dimension))
+
+    def __str__(self) -> str:
+        return str(self.node_id)
+
+@dataclass
+class ConsumerInfo:
+    """
+    Defines the node that absorbs (consume) pruning masks. There are 2 types of consumer. First, have built-in weights,
+    therefore can consume and produce pruning along the input channels. Consumers of the second type don't have built-in
+    weights, instead weights are coming as a second input. In that case, pruning dimension is None.
+
+    :param node_id: id of the node that consume pruning.
+    :param pruning_dimension: axis number from 0 to N-1 in weights along which the pruning structure is defined.
+        N is total number of dimensions. Equals None for the second type of consumers.
     """
 
-    def __init__(self, id_) -> None:
-        """
-        :param id_: identification of the producer node in the NNCFGraph.
-        """
-        self.id = id_
+    node_id: int
+    pruning_dimension: Optional[int] = 1
 
+    def __hash__(self) -> int:
+        return hash((self.node_id, self.pruning_dimension))
 
-class PropagationBlock:
+    def __str__(self) -> str:
+        return str(self.node_id)
+
+@dataclass
+class PruningBlock:
     """
     Defines a pruning block - how much and which particular channels are supposed to be pruned at the same time for
     the node when a single element of pruning mask is 0. We assume that the pruning mask is a vector with 1's and 0's.
@@ -84,37 +117,20 @@ class PropagationBlock:
     ...
     block #6, mask: 111110    -----x-----x-----x
     mask 110000               --xxxx--xxxx--xxxx
-    """
-    def __init__(self,
-                 producer: MaskProducer,
-                 size: int = 1,
-                 offset: int = 0,
-                 pruning_dimension: int = 0) -> None:
-        """
 
-        :param producer: descriptor of the producer
-        :param size: number of sequent channels.
-        :param offset: when not equal to 0, block is formed by taking `size` number of sequent channels,
+    :param size: number of sequent channels.
+    :param offset: when not equal to 0, block is formed by taking `size` number of sequent channels,
         then skipping `offset` number of sequent channels and repeating the procedure for the rest of channels.
-        :param pruning_dimension: axis number from 0 to N-1 in weights along which the dimension block defines pruning
-        structure. N is total number of dimensions.
-        """
-        self.size = size
-        self.offset = offset
-        self.pruning_dimension = pruning_dimension
-        self._producer = producer
+    """
+
+    size: int = 1
+    offset: int = 0
 
     def __eq__(self, other) -> bool:
-        return self.pruning_dimension == other.pruning_dimension and \
-            self.size == other.size and \
-            self.offset == other.offset and \
-            self._producer.id == other._producer.id
+        return self.size == other.size and self.offset == other.offset
 
     def __str__(self) -> str:
-        return f"S:{self.size}__O:{self.offset}__ID:{self._producer.id}"
-
-    def __repr__(self) -> str:
-        return self.__str__()
+        return f"S:{self.size}__O:{self.offset}"
 
 
 class PropagationGroup:
@@ -122,18 +138,32 @@ class PropagationGroup:
     Defines a group of propagation blocks and links it with the list of children groups.
     The group is initialized on producers of pruning and is propagated until consumers within PropagationMask.
     """
-
-    def __init__(self, blocks: List[PropagationBlock]) -> None:
-        self._blocks = blocks
+    def __init__(self,
+                 block: PruningBlock,
+                 producers: Optional[Set[ProducerInfo]] = None,
+                 consumers: Optional[Set[ConsumerInfo]] = None) -> None:
+        self.block = block
         self._children: List['PropagationGroup'] = []
         self._is_invalid = False
+        self._producers = set() if producers is None else producers
+        self._consumers = set() if consumers is None else consumers
 
     @property
     def is_invalid(self):
         return self._is_invalid
 
+
     def __str__(self) -> str:
-        return '\n'.join(map(str, self._blocks))
+        producers = ','.join(map(str, self._producers))
+        consumers = ','.join(map(str, self._consumers))
+        return f'Block: {self.block}\n'\
+               f'Producers: {producers}\n'\
+               f'Consumers: {consumers}'
+
+    def __repr__(self) -> str:
+        producers = ','.join(map(str, self.get_producers()))
+        consumers = ','.join(map(str, self.get_consumers()))
+        return f'{str(self.block)}__P{producers}__C{consumers}'
 
     def invalidate(self) -> None:
         """
@@ -150,33 +180,39 @@ class PropagationGroup:
 
         :return: a new block group.
         """
+        first_block = args[0].block
+        assert all(first_block == group.block for group in args), 'joining groups with different blocks is not '\
+            'supported. Need to implement merging of multiple block by choosing smallest common divisor as size.`'
+
+        new_group = PropagationGroup(block=first_block)
         for group in args:
-            assert isinstance(group, PropagationGroup), \
-                f'Couldn\'t join args {args}, all elements should be BlockGroup instances'
+            group.add_child(new_group)
+            new_group.add_producers(group.get_producers())
+            new_group.add_consumers(group.get_consumers())
+        return new_group
 
-        retval = PropagationGroup([])
-        blocks = []
-        for group in args:
-            group.add_child(retval)
-            for block in group.get_blocks():
-                if block not in blocks:
-                    blocks.append(block)
-        for block in blocks:
-            retval.add_block(block)
-        return retval
-
-
-    def get_state(self) -> str:
+    def add_consumers(self, consumers: Set[ConsumerInfo]):
         """
-        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
-        represents state of the object.
+        Adds information about consumer to the group and to all children.
+        The idea is to have up-to-date list of consumers in each leaf eventually.
 
-        :return: state of the object
+        :param block: propagation block the corresponds to the consumer node.
         """
-        return list(map(str, self._blocks))
+        self._consumers.update(consumers)
+        for child in self._children:
+            child.add_consumers(consumers)
 
-    def get_blocks(self) -> List[PropagationBlock]:
-        return self._blocks.copy()
+    def add_producers(self, producers: Set[ProducerInfo]) -> None:
+        self._producers.update(producers)
+
+    def add_child(self, child: 'PropagationGroup') -> None:
+        self._children.append(child)
+
+    def get_consumers(self) -> Set[ConsumerInfo]:
+        return self._consumers.copy()
+
+    def get_producers(self) -> Set[ProducerInfo]:
+        return self._producers.copy()
 
     def get_children(self) -> List['PropagationGroup']:
         return self._children.copy()
@@ -184,17 +220,11 @@ class PropagationGroup:
     def has_children(self) -> bool:
         return bool(self._children)
 
-    def add_child(self, child: 'PropagationGroup') -> None:
-        self._children.append(child)
-
-    def add_block(self, block: PropagationBlock) -> None:
-        self._blocks.append(block)
-
 
 class PropagationMask:
     """
-    Contains information about pruning in the current node:
-    a group of propagation blocks per dimension for which they are applied.
+    Contains information about pruning in the current node - pruning block within propagation groups per dimension,
+    for which they are applied.
 
     It's assumed that the propagation mask is initialized on producers and then propagated through the
     execution graph until consumer nodes.
@@ -210,7 +240,7 @@ class PropagationMask:
         self.dim_groups_map = dim_groups_map if dim_groups_map is not None else {}
 
     def __str__(self) -> str:
-        state = {dim: list(map(lambda x: x.get_state(), groups)) for dim, groups in self.dim_groups_map.items()}
+        state = {dim: list(map(repr, groups)) for dim, groups in self.dim_groups_map.items()}
         return json.dumps(state)
 
     def invalidate_groups(self) -> None:

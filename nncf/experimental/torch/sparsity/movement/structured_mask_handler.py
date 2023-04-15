@@ -23,6 +23,7 @@ import torch.nn.functional as F
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.logging import nncf_logger
+from nncf.experimental.common.pruning.propagation_data import ProducerInfo
 from nncf.torch.layers import NNCFLinear
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import SparseModuleInfo
@@ -192,14 +193,14 @@ class StructuredMaskContext:
         pruned_weight_shape = list(weight_shape)
         head_id_to_keep = []
         if self.prune_by_row:
-            pruneable_rows = self.sparsifier_operand.weight_ctx.binary_mask.amax(dim=1)
-            pruned_weight_shape[0] = int(pruneable_rows.count_nonzero().item())
-            kept_row_blocks = F.max_pool1d(pruneable_rows.unsqueeze(0), kernel_size=self.grid_size[0]).squeeze(0)
+            prunable_rows = self.sparsifier_operand.weight_ctx.binary_mask.amax(dim=1)
+            pruned_weight_shape[0] = int(prunable_rows.count_nonzero().item())
+            kept_row_blocks = F.max_pool1d(prunable_rows.unsqueeze(0), kernel_size=self.grid_size[0]).squeeze(0)
             head_id_to_keep = kept_row_blocks.nonzero().view(-1).cpu().numpy().tolist()
         else:
-            pruneable_cols = self.sparsifier_operand.weight_ctx.binary_mask.amax(dim=0)
-            pruned_weight_shape[1] = int(pruneable_cols.count_nonzero().item())
-            kept_col_blocks = F.max_pool1d(pruneable_cols.unsqueeze(0), kernel_size=self.grid_size[1]).squeeze(0)
+            prunable_cols = self.sparsifier_operand.weight_ctx.binary_mask.amax(dim=0)
+            pruned_weight_shape[1] = int(prunable_cols.count_nonzero().item())
+            kept_col_blocks = F.max_pool1d(prunable_cols.unsqueeze(0), kernel_size=self.grid_size[1]).squeeze(0)
             head_id_to_keep = kept_col_blocks.nonzero().view(-1).cpu().numpy().tolist()
 
         pruned_bias_shape = bias_shape
@@ -223,7 +224,7 @@ class StructuredMaskContext:
     @staticmethod
     def _inflate_structured_mask(structured_mask: torch.Tensor, grid_size: Tuple[int, int]) -> torch.Tensor:
         assert len(structured_mask.shape) == len(grid_size), \
-            f'Unmatching dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D.'
+            f'Unmatched dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D.'
         inflated_mask = structured_mask.clone()
         for axis, repeat_times in enumerate(grid_size):
             inflated_mask = inflated_mask.repeat_interleave(repeat_times, dim=axis)
@@ -375,12 +376,18 @@ class StructuredMaskHandler:
         result = []
         for group_id, group in enumerate(pruning_groups):
             ctxes = []
-            for block in group.dim_blocks:
-                nncf_node = nncf_graph.get_node_by_id(block.producer_id)
+            block = group.block
+            extended_producers = group.producers
+            for consumer in group.consumers:
+                if consumer.pruning_dimension is not None:
+                    extended_producers.add(ProducerInfo(consumer.node_id, consumer.pruning_dimension))
+
+            for producer_info in extended_producers:
+                nncf_node = nncf_graph.get_node_by_id(producer_info.node_id)
                 module = nncf_network.nncf.get_containing_module(nncf_node.node_name)
                 if module in module_vs_sparse_module_info_map:
                     # 0 dimension corresponds to row (output channels), 1st dimension - to column (input channels)
-                    prune_by_row = not bool(block.pruning_dimension)
+                    prune_by_row = not bool(producer_info.pruning_dimension)
                     minfo = module_vs_sparse_module_info_map[module]
                     prune_grid = (block.size, -1) if prune_by_row else (-1, block.size)
                     ctx = StructuredMaskContext(minfo.operand,
@@ -388,6 +395,10 @@ class StructuredMaskHandler:
                                                 prune_grid,
                                                 prune_by_row)
                     ctxes.append(ctx)
+                else:
+                    nncf_logger.warning(f'Automatically found structured pruning group does not match the given '
+                                        f'unstructured sparse structures:\n {group}')
+                    break
             if ctxes:
                 result.append(StructuredMaskContextGroup(group_id, ctxes))
         return result

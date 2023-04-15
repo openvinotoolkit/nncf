@@ -11,8 +11,16 @@
  limitations under the License.
 """
 
+from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
+from typing import (
+    Any,
+    Optional,
+    Dict,
+    List,
+    Set
+)
 from typing import (
     Any,
     Optional,
@@ -29,61 +37,34 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.experimental.common.graph.netron import save_for_netron
 from nncf.experimental.common.pruning.propagation_data import (
-    MaskProducer,
-    PropagationBlock,
+    ConsumerInfo,
+    ProducerInfo,
+    PruningBlock,
     PropagationGroup,
     PropagationMask,
 )
 from nncf.experimental.common.pruning.block_hierarchy import BlockHierarchy
-
-
-@dataclass
-class PruningBlock:
-    """
-    Final and minimal representation of PropagationBlock after mask propagation.
-    By analogy, it defines how much and which particular channels are supposed to be pruned for the node
-    when a single element of pruning mask is 0.
-    We assume that pruning mask is a vector with 1's and 0's. 1 retains the corresponding channel in weights,
-    0 prunes it.
-    """
-    size: int
-    offset: int
-    producer_id: int
-    pruning_dimension: int
-
-    @classmethod
-    def from_propagation_block(cls, block: PropagationBlock) -> 'PruningBlock':
-        """
-        Creates an object by taking all necessary information from PropagationBlock.
-        """
-        return cls(block.size, block.offset, block._producer.id, block.pruning_dimension)
-
-    def __str__(self) -> str:
-        return f'S{self.size}_O{self.offset}_PID{self.producer_id}'
-
-    def __hash__(self) -> int:
-        return hash(str(self))
-
-    def __eq__(self, other: 'PruningBlock') -> bool:
-        return str(self) == str(other)
 
 @dataclass
 class PruningGroup:
     """
     Group of pruning blocks that is obtained after propagation.
     """
-    dim_blocks: Set[PruningBlock]
+    block: PruningBlock
+    producers: Set[ProducerInfo]
+    consumers: Set[ConsumerInfo]
+
 
     def __eq__(self, other: 'PruningGroup'):
-        return self.dim_blocks == other.dim_blocks
+        return self.block == other.block and self.producers == other.producers and self.consumers == other.consumers
 
     @classmethod
     def from_propagation_group(cls, group: PropagationGroup) -> 'PruningGroup':
         """
         Creates an object by taking all necessary information from PropagationGroup.
         """
-        dim_blocks = {PruningBlock.from_propagation_block(block) for block in group.get_blocks()}
-        return cls(dim_blocks)
+        return cls(copy(group.block), group.get_producers(), group.get_consumers())
+
 
 def get_pruning_groups(graph: NNCFGraph,
                        pruning_operations_metatypes: PruningOperationsMetatypeRegistry,
@@ -116,12 +97,8 @@ def get_pruning_groups(graph: NNCFGraph,
         # TODO: (107663) generalize by introducing get_output_dim_affected_by_compression for layer_attributes
         target_output_dim_for_compression = len(output_tensors_shape) - 1
         root_group = PropagationGroup(
-            blocks=[
-                PropagationBlock(
-                    producer=MaskProducer(node.node_id),
-                    pruning_dimension=pruning_dim
-                )
-            ]
+            block=PruningBlock(),
+            producers={ProducerInfo(node.node_id, pruning_dim)}
         )
         mask = PropagationMask(
             dim_groups_map={
@@ -159,12 +136,12 @@ def select_largest_groups(pruning_groups: List[PruningGroup]) -> List[PruningGro
     """
     Selects largest pruning groups with larger number of pruning blocks.
     """
-    finished_producers = set()
-    sorted_groups = sorted(pruning_groups, key=lambda group: len(group.dim_blocks), reverse=True)
+    selected_producers = set()
+    sorted_groups = sorted(pruning_groups, key=lambda group: len(group.producers), reverse=True)
     result = []
     for group in sorted_groups:
-        producers = {block.producer_id for block in group.dim_blocks}
-        if not producers.intersection(finished_producers):
-            finished_producers.update(producers)
+        producers = {producer_info.node_id for producer_info in group.producers}
+        if not producers.intersection(selected_producers):
+            selected_producers.update(producers)
             result.append(group)
     return result

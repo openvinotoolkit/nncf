@@ -36,9 +36,9 @@ from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import identity_mask_propagation
 from nncf.experimental.common.pruning.nodes_grouping import PropagationGroup
-from nncf.experimental.common.pruning.nodes_grouping import PropagationBlock
-from nncf.experimental.common.pruning.nodes_grouping import MaskProducer
+from nncf.experimental.common.pruning.nodes_grouping import PruningBlock
 from nncf.experimental.common.pruning.nodes_grouping import PropagationMask
+from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
 
 
 class BasePruningOp:
@@ -114,87 +114,88 @@ class LinearPruningOp(BasePruningOp):
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) in [1, 2]
-        is_none_map = map(lambda x: x is None, input_masks)
+        is_input_mask_none_map = map(lambda x: x is None, input_masks)
         output_mask = node.data.get('output_mask', None)
-        if all(is_none_map):
+        input_tensors_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
+        node_id = node.node_id
+        if all(is_input_mask_none_map):
             # It's acceptable to have None instead of PropagationMask on all inputs.
             # It means there's no pruning on this way to node. But the linear op can produce pruning mask,
-            # need to propagate it, if it exists
+            # need to propagate it, if it exists.
             pass
-        elif any(is_none_map):
+        elif any(is_input_mask_none_map):
             # It's NOT acceptable to have None instead of PropagationMask on one of the input and have
             # PropagationMask on another input at once. The mask is invalidated.
             cls.invalidate_masks(input_masks)
             output_mask = None
         elif len(input_masks) == 1:
-            # Linear module with built-in weights. Assume single input for activations.
-            input_tensors_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
-            input_shape_len = len(input_tensors_shapes[0])
-            # Propagate further all except the last one, which is closing
-            for dim, groups in input_masks[0].dim_groups_map.items():
-                if dim == input_shape_len - 1:
-                    for group in groups:
-                        cls.add_consumer_block(group, node)
-                else:
-                    output_mask.dim_groups_map[dim] = groups
+            output_mask = cls._handle_single_input(input_masks, input_tensors_shapes, node_id, output_mask)
         elif len(input_masks) == 2:
-            # Matmul operator with 2 inputs: one - for activation, second - for weights.
-            input_tensors_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
-            assert len(input_tensors_shapes[0]) == len(input_tensors_shapes[1])
-            input_shape_len = len(input_tensors_shapes[0])
-            # Join consumed masks
-            left_dim_groups, right_dim_groups = [input_masks[i].dim_groups_map for i in range(2)]
-
-            def _both_dim_blocks_exist(left_idx, right_idx):
-                if left_idx in left_dim_groups or \
-                        right_idx in right_dim_groups:
-                    assert left_idx in left_dim_groups and right_idx in right_dim_groups
-                    return True
-                return False
-
-            output_mask = PropagationMask()
-            # Propagating batch dims
-            for dim in range(input_shape_len - 2):
-                if _both_dim_blocks_exist(dim, dim):
-                    left = left_dim_groups[dim]
-                    right = right_dim_groups[dim]
-                    assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
-                    output_mask.dim_groups_map[dim] = [
-                        PropagationGroup.join_groups(left_dim_groups[dim][0], right_dim_groups[dim][0])
-                    ]
-            # Propagating left rows / right cols
-            for idx, dim in enumerate(range(input_shape_len - 2, input_shape_len)):
-                if dim in input_masks[idx].dim_groups_map:
-                    output_mask.dim_groups_map[dim] = input_masks[idx].dim_groups_map[dim]
-
-            # Close branch
-            if _both_dim_blocks_exist(input_shape_len - 1, input_shape_len - 2):
-                left = left_dim_groups[input_shape_len - 1]
-                right = right_dim_groups[input_shape_len - 2]
-                assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
-                group = PropagationGroup.join_groups(left[0], right[0])
-                cls.add_consumer_block(group, node)
+            output_mask = cls._handle_two_inputs(input_masks, input_tensors_shapes, node_id)
 
         node.data['output_mask'] = output_mask
 
-    @classmethod
-    def add_consumer_block(cls, group: PropagationGroup, node: NNCFNode) -> None:
-        """
-        Explicitly adds a consumer block to the given group.
+    @staticmethod
+    def _handle_single_input(input_masks: List[PropagationMask],
+                             input_tensors_shapes: List[List[int]],
+                             node_id: int,
+                             output_mask: Optional[PropagationMask] = None) -> Optional[PropagationMask]:
+        # Linear module with built-in weights. Assume single input for activations.
+        input_shape_len = len(input_tensors_shapes[0])
+        # Propagate further all except the last one, which is closing
+        for dim, groups in input_masks[0].dim_groups_map.items():
+            if dim == input_shape_len - 1:
+                for group in groups:
+                    consumer = ConsumerInfo(node_id=node_id, pruning_dimension=1)
+                    group.add_consumers({consumer})
+            else:
+                if output_mask is None:
+                    output_mask = PropagationMask()
+                output_mask.dim_groups_map[dim] = groups
+        return output_mask
 
-        :param group: the given block group.
-        :param node: node that corresponds to the consumer.
-        """
-        if node.layer_attributes is not None:
-            first_block: PropagationBlock = group.get_blocks()[0]
-            consumer_block = PropagationBlock(
-                MaskProducer(node.node_id),
-                size=first_block.size,
-                offset=first_block.offset,
-                pruning_dimension=1
-            )
-            group.add_block(consumer_block)
+    @staticmethod
+    def _handle_two_inputs(input_masks: List[PropagationMask],
+                           input_tensors_shapes: List[List[int]],
+                           node_id: int) -> PropagationMask:
+        # Matmul operator with 2 inputs: one - for activation, second - for weights.
+        assert len(input_tensors_shapes[0]) == len(input_tensors_shapes[1])
+        input_shape_len = len(input_tensors_shapes[0])
+        # Join consumed masks
+        left_dim_groups, right_dim_groups = [input_masks[i].dim_groups_map for i in range(2)]
 
+        def _both_dim_blocks_exist(left_idx, right_idx):
+            if left_idx in left_dim_groups or \
+                    right_idx in right_dim_groups:
+                assert left_idx in left_dim_groups and right_idx in right_dim_groups
+                return True
+            return False
+
+        output_mask = PropagationMask()
+        # Propagating batch dims
+        for dim in range(input_shape_len - 2):
+            if _both_dim_blocks_exist(dim, dim):
+                left = left_dim_groups[dim]
+                right = right_dim_groups[dim]
+                assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
+                output_mask.dim_groups_map[dim] = [
+                    PropagationGroup.join_groups(left[0], right[0])
+                ]
+
+        # Propagating left rows / right cols
+        for idx, dim in enumerate(range(input_shape_len - 2, input_shape_len)):
+            if dim in input_masks[idx].dim_groups_map:
+                output_mask.dim_groups_map[dim] = input_masks[idx].dim_groups_map[dim]
+
+        # Close branch
+        if _both_dim_blocks_exist(input_shape_len - 1, input_shape_len - 2):
+            left = left_dim_groups[input_shape_len - 1]
+            right = right_dim_groups[input_shape_len - 2]
+            assert len(left) == 1 and len(right) == 1, "multiple groups are not supported"
+            group = PropagationGroup.join_groups(left[0], right[0])
+            consumer = ConsumerInfo(node_id=node_id, pruning_dimension=None)
+            group.add_consumers({consumer})
+        return output_mask
 
 class BatchNormPruningOp(BasePruningOp):
     @classmethod
@@ -286,6 +287,9 @@ class GatherPruningOp(BasePruningOp):
                         shifted_dim = dim - 1
                         output_mask.dim_groups_map[shifted_dim] = groups
                         # other groups propagated further
+                    else:
+                        for group in groups:
+                            group.invalidate()
             node.data['output_mask'] = output_mask
         else:
             cls.invalidate_masks(input_masks)
@@ -585,15 +589,12 @@ class ReshapePruningOp(BasePruningOp):
         return source_to_targets_map_not_cut
 
     @staticmethod
-    def _split_block(
-        block: PropagationBlock,
-        list_output_channels: List[int]
-    ) -> List[PropagationBlock]:
+    def _split_block(block: PruningBlock, list_output_channels: List[int]) -> List[PruningBlock]:
         """
-        Splits a dimension block into multiple blocks.
+        Splits a pruning block into multiple blocks.
         It's applied when some number of channels S is reshaped to N channels, e.g. S -> [A,B,C,D] and S=A*B*C*D.
         Now we assume that pruning is possible along each new dimension instead of S one.
-        The dimension block encoding pruning of a single channel from S is no longer valid.
+        The pruning block encoding pruning of a single channel from S is no longer valid.
         This function creates new blocks that encodes how many channels from S is pruned if we prune along a new
         dimension from [A,B,C,D].
         It forms new constraints by the following rules:
@@ -604,7 +605,7 @@ class ReshapePruningOp(BasePruningOp):
             | C*D   | B*C*D % S       |
             | B*C*D | A*B*C*D % S = 0 |
 
-        :param block: dimension block to split
+        :param block: pruning block to split
         :param list_output_channels: list of output channels (A,B,C,D)
         :return:
         """
@@ -631,31 +632,25 @@ class ReshapePruningOp(BasePruningOp):
                      input_channels: int,
                      list_output_channels: List[int]) -> List[PropagationGroup]:
         """
-        Splits a group of dimension blocks into new child groups by a pruning dimension.
-        Internally calls "_split_block" to split each block from the given group. Please refer to the
-        description of the method for more details about splitting blocks.
-        Group can have multiple blocks. E.g. s1 and s2. Let's say s1 is splitted into (a1,b1), s2 - into (a2,b2).
-        The method will return 2 children groups: (a1,a2) and (b1,b2).
+        Splits a pruning block within the given group into multiple blocks - each within new groups.
+        It's applied when some number of input channels S is reshaped to N output channels,
+        e.g. S -> [A,B,C,D] and S=A*B*C*D.
 
         :param input_channels: splitted input channels (S).
         :param list_output_channels: list of output channels (A,B,C,D).
-        :param group: a group of dimension blocks for splitting.
+        :param group: a group for splitting.
         :return: list of new groups which results from the split.
         """
-        new_blocks: List[List[PropagationBlock]] = []
-        child_groups: List[PropagationGroup] = []
+        dot_product = reduce((lambda x, y: x * y), list_output_channels)
+        assert dot_product == input_channels
 
-        for block in group.get_blocks():
-            dot_product = reduce((lambda x, y: x * y), list_output_channels)
-            assert dot_product == input_channels
-            new_blocks.append(cls._split_block(block, list_output_channels))
-
-        # forms [(a1,a2), (b1,b2)] from [(a1,b1), (a2,b2)]
-        for block_groups in zip(*new_blocks):
-            child_group = PropagationGroup(blocks=list(block_groups))
-            group.add_child(child_group)
-            child_groups.append(child_group)
-        return child_groups
+        new_groups: List[PropagationGroup] = []
+        new_blocks = cls._split_block(group.block, list_output_channels)
+        for block in new_blocks:
+            new_group = PropagationGroup(block=block, producers=group.get_producers(), consumers=group.get_consumers())
+            group.add_child(new_group)
+            new_groups.append(new_group)
+        return new_groups
 
 
 class TransposePruningOp(BasePruningOp):
@@ -722,8 +717,8 @@ class ExpandAsPruningOp(BasePruningOp):
                                         "it's not supported and mask is invalidated. node_name={node.node_name}")
                     for group in groups:
                         group.invalidate()
-            # TODO: assume that expand_as is on constant path that does not affect pruning, otherwise pruning of
-            # self attention block would be not possible in the general case.
+            # TODO: (nlyalyus) assume that expand_as is on constant path that does not affect pruning, otherwise pruning
+            # of self attention block would be not possible in the general case.
             propagated_mask = mask
         node.data['output_mask'] = propagated_mask
 
