@@ -32,7 +32,8 @@ QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graph
 @pytest.mark.parametrize('model_creator_func', SYNTHETIC_MODELS.values())
 def test_synthetic_models_fq_placement(model_creator_func):
     model = model_creator_func()
-    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
+    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE,
+                                                      'inplace_statistics': True})
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
     compare_nncf_graphs(quantized_model, path_ref_graph)
@@ -41,7 +42,8 @@ def test_synthetic_models_fq_placement(model_creator_func):
 @pytest.mark.parametrize('model_creator_func', [DepthwiseConv3DModel, DepthwiseConv4DModel, DepthwiseConv5DModel])
 def test_depthwise_models_fq_placement(model_creator_func):
     model = model_creator_func()
-    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
+    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE,
+                                                      'inplace_statistics': True})
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
     compare_nncf_graphs(quantized_model, path_ref_graph)
@@ -59,8 +61,10 @@ OMZ_MODELS_QUANTIZE_PARAMS = {
 @pytest.mark.parametrize('model_name_params', OMZ_MODELS_QUANTIZE_PARAMS.items())
 def test_omz_models_fq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
-    _ = download_model(model_name, tmp_path)
-    model_path = convert_model(model_name, tmp_path)
+    q_params.update({'inplace_statistics': True})
+    download_model(model_name, tmp_path)
+    convert_model(model_name, tmp_path)
+    model_path = tmp_path / 'public' / model_name / 'FP32' / f'{model_name}.xml'
     model = ov.Core().read_model(model_path)
     quantized_model = quantize_model(model, q_params)
 

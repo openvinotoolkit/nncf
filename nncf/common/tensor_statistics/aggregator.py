@@ -49,7 +49,8 @@ class StatisticsAggregator(ABC):
         """
         model_transformer = ModelTransformerFactory.create(model)
 
-        transformation_layout = self._get_transformation_layout_extra_outputs(self.statistic_points)
+        merged_statistics = self._get_merged_statistic_points(self.statistic_points, model)
+        transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = EngineFactory.create(model_with_outputs)
 
@@ -57,7 +58,7 @@ class StatisticsAggregator(ABC):
                                total=self.stat_subset_size):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
-            self._register_statistics(processed_outputs, self.statistic_points)
+            self._register_statistics(processed_outputs, merged_statistics)
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -92,10 +93,25 @@ class StatisticsAggregator(ABC):
     def _get_transformation_layout_extra_outputs(self,
                                                  statistic_points: StatisticPointsContainer) -> TransformationLayout:
         """
-        Create backend-specific transformation layout for the further statistics collection
+        Creates backend-specific transformation layout for the further statistics collection.
 
         :param statistic_points: StatisticPointsContainer to add outputs
         :return: TransformationLayout with the corresponding transformations
+        """
+
+    @staticmethod
+    @abstractmethod
+    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, model: TModel) ->\
+            StatisticPointsContainer:
+        """
+        Creates a new StatisticPointContainer that has no duplicated tensor collectors for one
+        unique statistic point. Alters statistic collectors in the given statistic point container so statistics
+        collected by merged statistic collectors will be available in all corresponding statistic collectors
+        from the given statistic point container.
+
+        :param statistic_points: Registered statistic points with possible tensor collectors duplicates.
+        :param model: Backend-specific target model.
+        :return: Merged statistic points container bounded with given statistic point container.
         """
 
     @staticmethod
