@@ -1,16 +1,18 @@
 import enum
+import os
+import signal
+import textwrap
+from abc import ABC
+from abc import abstractmethod
 from pathlib import Path
 from typing import Callable
 
 import torch
-
-from abc import ABC, abstractmethod
-
 from torch.utils.cpp_extension import _get_build_directory
 
+from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import extension_is_loading_info_log
 from nncf.common.utils.registry import Registry
-from nncf.common.logging import nncf_logger
 
 EXTENSIONS = Registry('extensions')
 
@@ -48,6 +50,12 @@ class ExtensionLoader(ABC):
         return str(get_build_directory_for_extension(cls.name()))
 
 
+class ExtensionLoaderTimeoutException(Exception):
+    """Raises an exception if it takes too long time to load the extension"""
+
+NNCF_TIME_LIMIT_TO_LOAD_EXTENSION = "NNCF_TIME_LIMIT_TO_LOAD_EXTENSION"
+
+
 class ExtensionNamespace:
     """
     Provides lazy loading of the underlying extension, i.e. on the first request of a function from the extension.
@@ -68,8 +76,30 @@ class ExtensionNamespace:
         :return: A callable object corresponding to the requested function.
         """
         if self._loaded_namespace is None:
+            time_limit = int(os.environ.get(NNCF_TIME_LIMIT_TO_LOAD_EXTENSION, 60))
+
+            def extension_loader_timeout_handler(signum, frame):
+                # pylint: disable=line-too-long
+                msg = textwrap.dedent(
+                    f"""\
+                    The extension load function failed to execute within {time_limit} seconds.
+                    To resolve this issue, run the following command:
+                        rm -rf {self._loader.get_build_dir()}
+                    For a machine with poor performance, you may try increasing the time limit by setting the environment variable:
+                        {NNCF_TIME_LIMIT_TO_LOAD_EXTENSION}=180
+                    More information about reasons read on https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
+                    """
+                )
+                raise ExtensionLoaderTimeoutException(msg)
+
             with extension_is_loading_info_log(self._loader.name()):
-                self._loaded_namespace = self._loader.load()
+                signal.signal(signal.SIGALRM, extension_loader_timeout_handler)
+                signal.alarm(time_limit)
+                try:
+                    self._loaded_namespace = self._loader.load()
+                finally:
+                    signal.alarm(0)
+
         return getattr(self._loaded_namespace, fn_name)
 
 

@@ -17,8 +17,8 @@ Sometimes this is not possible to do without the loss of accuracy for the networ
 NNCF provides algorithms that strive for minimal or zero loss of accuracy, which can be applied, depending on the algorithm, during training, fine-tuning or post-training.
 
 ### Does the Neural Network *Compression* Framework provide *lossless compression*?
-Not in the way the term "lossless compression" usually appears in literature. 
-Under "compression" we mean the preparation of the model for *future* efficient execution of this model in the OpenVINO Inference Engine. 
+Not in the way the term "lossless compression" usually appears in literature.
+Under "compression" we mean the preparation of the model for *future* efficient execution of this model in the OpenVINO Inference Engine.
 Under "future" we mean that the process of compression is usually an offline, one-time step before the model is being used in production, which provides a new model object that could then be used instead of the original to run faster and take up lower memory without significantly losing accuracy.
 
 No *compression* in the sense of archiving or entropy coding is being done during NNCF compression.
@@ -79,7 +79,7 @@ It is recommended, although by no means mandatory, to pass a dataloader with the
 
 
 ### The compression process takes too long, how can I make it faster?
-For training approaches the majority of time is taken by the training loop, so any regular methods that improve model convergence should work here. 
+For training approaches the majority of time is taken by the training loop, so any regular methods that improve model convergence should work here.
 Try the built-in [knowledge distillation](./compression_algorithms/KnowledgeDistillation.md) to potentially obtain target accuracy faster.
 Alternatively you may want to reduce the number of initialization samples taken from the initialization dataloader by the algorithms that require it.
 
@@ -97,8 +97,8 @@ This is done by just-in-time compiling a set of C++/CUDA files using the system-
 The compilation happens at the first import of `nncf.torch` or anything under that namespace on the machine, or within the current Python environment.
 The result is a set of the `.so` files containing the compiled extensions binary code stored in a system-specific location (commonly `~/.cache/torch_extensions`, or alternatively wherever `TORCH_EXTENSIONS_DIR` environment variable points to).
 
-To avoid race conditions, PyTorch uses `.lock` files in this folder during compilation.
-Sometimes, when the compilation process is abnormally aborted, these `.lock` files remain in the filesystem, which leads to a hang the next time you import anything from `nncf.torch`, because the just-in-time compilation process will wait indefinitely until the `.lock` files have been cleared.
+To avoid race conditions, PyTorch uses `lock` files in this folder during compilation.
+Sometimes, when the compilation process is abnormally aborted, these `lock` files remain in the filesystem, which leads to a hang the next time you import anything from `nncf.torch`, because the just-in-time compilation process will wait indefinitely until the `lock` files have been cleared.
 To resolve these, delete the `torch_extensions` directory (at `~/.cache`, or pointed to by `TORCH_EXTENSIONS_DIR`, or at your specific location), and re-run the script that imports from `nncf.torch`.
 The compilation takes some time and happens upon import, so do not interrupt the launch of your Python script until the import has been completed.
 
@@ -131,13 +131,13 @@ class MyInitializingDataLoader(PTInitializingDataLoader):
     def  get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
         # your implementation - `dataloader_output` is what is returned by your dataloader,
         # and you have to turn it into a (args, kwargs) tuple that is required by your model
-        # in this function, for instance, if your dataloader returns dictionaries where 
+        # in this function, for instance, if your dataloader returns dictionaries where
         # the input image is under key `"img"`, and your YOLOv8 model accepts the input
         # images as 0-th `forward` positional arg, you would do:
         return dataloader_output["img"], {}
 
    def get_target(self, dataloader_output: Any) -> Any:
-        # and in this function you should extract the "ground truth" value from your 
+        # and in this function you should extract the "ground truth" value from your
         # dataloader, so, for instance, if your dataloader output is a dictionary where
         # ground truth images are under a "gt" key, then here you would write:
         return dataloader_output["gt"]
@@ -155,4 +155,3 @@ nncf_config = register_default_init_args(nncf_config, init_dataloader)
 ## ONNX
 
 *To be filled*
-

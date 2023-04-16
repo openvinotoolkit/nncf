@@ -17,10 +17,14 @@ import subprocess
 import torch
 
 from nncf import nncf_logger
-from nncf.torch.binarization.reference import ReferenceBinarizedFunctions
-from nncf.torch.extensions import CudaNotAvailableStub, ExtensionsType, ExtensionLoader, EXTENSIONS
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
+from nncf.torch.binarization.reference import ReferenceBinarizedFunctions
+from nncf.torch.extensions import EXTENSIONS
+from nncf.torch.extensions import CudaNotAvailableStub
+from nncf.torch.extensions import ExtensionLoader
+from nncf.torch.extensions import ExtensionLoaderTimeoutException
 from nncf.torch.extensions import ExtensionNamespace
+from nncf.torch.extensions import ExtensionsType
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "torch/extensions/src/binarization")
 
@@ -57,6 +61,8 @@ class BinarizedFunctionsCPULoader(ExtensionLoader):
                           extra_include_paths=EXT_INCLUDE_DIRS,
                           build_directory=cls.get_build_dir(),
                           verbose=False)
+        except ExtensionLoaderTimeoutException as e:
+            raise e
         except Exception as e:  # pylint:disable=broad-except
             nncf_logger.warning(f"Could not compile CPU binarization extensions. "
                                 f"Falling back on torch native operations - "
@@ -84,6 +90,8 @@ class BinarizedFunctionsCUDALoader(ExtensionLoader):
                         extra_include_paths=EXT_INCLUDE_DIRS,
                         build_directory=cls.get_build_dir(),
                         verbose=False)
+        except ExtensionLoaderTimeoutException as e:
+            raise e
         except (subprocess.CalledProcessError, OSError, RuntimeError) as e:
             assert torch.cuda.is_available()
             raise RuntimeError("CUDA is available for PyTorch, but NNCF could not compile "
