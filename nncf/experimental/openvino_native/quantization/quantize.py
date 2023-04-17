@@ -49,7 +49,7 @@ def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = No
             dump_parameters(model, value.__dict__, [key])
             continue
         value = value if value else None
-        rt_path = ['optimization'] + path + [key]
+        rt_path = ['nncf', 'quantization'] + path + [key]
         model.set_rt_info(value, rt_path)
 
 

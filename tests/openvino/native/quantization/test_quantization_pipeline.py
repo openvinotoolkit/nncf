@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import openvino.runtime as ov
 
+from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
@@ -51,3 +52,42 @@ def test_compress_weights(model_creator_func, ref_nodes):
                 node = node.input_value(0).get_node()
             assert node.get_element_type() == ov.Type(np.int8)
             break
+
+
+IGNORED_OPTIONS = [
+    IgnoredScope(names=['MatMul']),
+    IgnoredScope(names=['Conv'], types=['Add']),
+    IgnoredScope()
+]
+
+
+@pytest.mark.parametrize('model_creator_func, ignored_options',
+                         zip([LinearModel, ConvModel, MatMul2DModel], IGNORED_OPTIONS))
+def test_meta_information(model_creator_func, ignored_options):
+
+    def check_parameters(quantized_model, parameters, path):
+        for key, value in parameters.items():
+            rt_path = path + [key]
+            if isinstance(value, (QuantizationPreset, TargetDevice)):
+                value = value.value
+            if isinstance(value, IgnoredScope):
+                check_parameters(quantized_model, value.__dict__, rt_path)
+                continue
+            value = value if value else None
+            assert quantized_model.get_rt_info(rt_path) == value
+
+    model = model_creator_func().ov_model
+    dataset = get_dataset_for_test(model)
+    quantize_parameters = {
+        'preset': QuantizationPreset.PERFORMANCE,
+        'target_device': TargetDevice.CPU,
+        'subset_size': 1,
+        'fast_bias_correction': True,
+        'ignored_scope': ignored_options
+    }
+    quantized_model = quantize_impl(model, dataset, **quantize_parameters)
+
+    base_path = ['nncf', 'quantization']
+    assert quantized_model.has_rt_info(base_path)
+
+    check_parameters(quantized_model, quantize_parameters, base_path)
