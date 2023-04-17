@@ -592,6 +592,12 @@ class OVSquaredDifferenceMetatype(OVOpMetatype):
     op_names = ['SquaredDifference']
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVDeformableConvolutionMetatype(OVOpMetatype):
+    name = 'DeformableConvolutionOp'
+    op_names = ['DeformableConvolution']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [OVConvolutionMetatype,
                                   OVGroupConvolutionMetatype,
                                   OVDepthwiseConvolutionMetatype,
