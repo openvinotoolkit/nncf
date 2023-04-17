@@ -34,6 +34,8 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatyp
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqrtMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReciprocalMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDeformableConvolutionMetatype
 
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 
@@ -61,6 +63,8 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
                                         ONNXSqrtMetatype,
                                         ONNXQuantizeLinearMetatype,
                                         ONNXDequantizeLinearMetatype,
+                                        ONNXReluMetatype,
+                                        ONNXDeformableConvolutionMetatype,
                                         UnknownMetatype],
     QuantizationTrait.CONCAT: [ONNXConcatLayerMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: []

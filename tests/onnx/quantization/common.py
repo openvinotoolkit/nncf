@@ -17,7 +17,6 @@ import os
 
 import numpy as np
 import onnx
-import onnxruntime as rt
 
 from nncf import Dataset
 from tests.shared.paths import TEST_ROOT

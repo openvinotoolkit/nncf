@@ -484,6 +484,12 @@ class ONNXDequantizeLinearMetatype(ONNXOpMetatype):
     op_names = ['DequantizeLinear']
 
 
+@ONNX_OPERATION_METATYPES.register()
+class ONNXDeformableConvolutionMetatype(ONNXOpMetatype):
+    name = 'DeformConvOp'
+    op_names = ['DeformConv']
+
+
 WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                           ONNXDepthwiseConvolutionMetatype,
                           ONNXConvolutionTransposeMetatype,
