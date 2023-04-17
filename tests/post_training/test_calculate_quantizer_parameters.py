@@ -19,10 +19,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
@@ -195,11 +193,26 @@ class TemplateTestFQParams(ABC):
 
     @pytest.mark.parametrize('case_to_test', TO_TEST)
     def test_calculate_quantizer_parameters(self, case_to_test):
-        statistics = self.tensor_statistic(max_values=np.array((1)), min_values=np.array((0)))
         q_config = case_to_test.q_config
         quant_group = case_to_test.q_group
         narrow_range = case_to_test.narrow_range
         half_range = case_to_test.half_range
+        
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, 1, (2,3,4,5))
+        
+        if q_config.per_channel:
+            axes = tuple(range(1, len(data.shape)))  # channel_axis = 0
+        else:
+            axes = None
+        min_values = np.amin(data, axis=axes, keepdims=q_config.per_channel)
+        if q_config.mode == QuantizationMode.SYMMETRIC:
+            max_values = np.amax(np.abs(data), axis=axes, keepdims=q_config.per_channel)
+        else:
+            max_values = np.amax(data, axis=axes, keepdims=q_config.per_channel)
+        
+        statistics = self.tensor_statistic(max_values=max_values, min_values=min_values)
+
         if not case_to_test.should_fail:
             fq_params = calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)
             dump_fq_params(fq_params, quant_group, q_config, narrow_range, half_range)
@@ -207,4 +220,4 @@ class TemplateTestFQParams(ABC):
             compare_fq_parameters(fq_params, ref_fq_params)
         else:
             with pytest.raises(RuntimeError):
-                calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)
+                calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)                
