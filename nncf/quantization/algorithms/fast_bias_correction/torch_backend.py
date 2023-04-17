@@ -80,6 +80,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
+                                 inplace: bool,
                                  num_samples: Optional[int] = None,
                                  window_size: Optional[int] = None) -> PTMeanStatisticCollector:
         return PTMeanStatisticCollector(reduction_shape, num_samples, window_size)
