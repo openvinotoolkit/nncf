@@ -38,6 +38,7 @@ from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
+from tests.post_training.test_calculate_quantizer_parameters import TemplateTestFQParams
 
 # pylint: disable=protected-access
 
@@ -314,3 +315,9 @@ def test_quantizer_parameters_export(tmp_path: Path):
         assert name in torch_ptq_params
         assert np.allclose(fq_params[name]['input_low'], torch_ptq_params[name]['input_low'])
         assert np.allclose(fq_params[name]['input_high'], torch_ptq_params[name]['input_high'])
+
+
+class TestFQParams(TemplateTestFQParams):
+    @property
+    def tensor_statistic(self):
+        return PTMinMaxTensorStatistic

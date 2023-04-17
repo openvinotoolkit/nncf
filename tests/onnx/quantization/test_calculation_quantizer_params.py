@@ -46,7 +46,7 @@ def test_calculate_levels(num_bits, tensor_type, ref_levels):
     assert (ref_levels[0], ref_levels[1]) == get_level_low_level_high(tensor_type)
 
 
-class TestFQParams(TemplateTestFQParams):    
+class TestFQParams(TemplateTestFQParams):
     @property
     def tensor_statistic(self):
         return ONNXMinMaxTensorStatistic

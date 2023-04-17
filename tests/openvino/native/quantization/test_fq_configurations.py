@@ -13,7 +13,7 @@
 from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from tests.post_training.test_calculate_quantizer_parameters import TemplateTestFQParams
 
-class TestFQParams(TemplateTestFQParams):    
+class TestFQParams(TemplateTestFQParams):
     @property
     def tensor_statistic(self):
         return OVMinMaxTensorStatistic
