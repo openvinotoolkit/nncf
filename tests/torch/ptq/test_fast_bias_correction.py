@@ -23,8 +23,8 @@ from tests.torch.ptq.helpers import get_min_max_and_fbc_algo_for_test
 from tests.torch.ptq.helpers import get_nncf_network
 
 
-@pytest.mark.parametrize("with_bias, ref_bias", ((False, None), (True, Tensor([-1.9974, -1.9974]))))
-def test_fast_bias_correction_algo(with_bias, ref_bias):
+@pytest.mark.parametrize("with_bias, ref_bias", ((False, None), (True, Tensor([-1.9995, -1.9995]))))
+def test_fast_bias_correction_algo(with_bias, ref_bias, _seed):
     """
     Check working on fast bias correction algorithm and compare bias in quantized model with reference
     """
@@ -38,7 +38,6 @@ def test_fast_bias_correction_algo(with_bias, ref_bias):
         images, _ = data_item
         return images
 
-    torch.manual_seed(42)
     dataset = Dataset(RandomDatasetMock(input_shape), transform_fn)
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=dataset)
 
