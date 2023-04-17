@@ -158,7 +158,7 @@ GLOBAL_CONFIG = {
                         'expected_accuracy': 46.15,
                         'absolute_tolerance_train': 0.5,
                         'absolute_tolerance_test': 0.5,
-                        'weights': 'yolo_v4_coco/yolo_v4_coco.h5',
+                        'weights': 'yolo_v4/yolo_v4.h5',
                     },
                     'sparsity/yolo_v4_coco_magnitude_sparsity.json': {
                         'expected_accuracy': 46.54,
@@ -176,7 +176,7 @@ GLOBAL_CONFIG = {
                     'expected_accuracy': 37.12,
                     'absolute_tolerance_train': 0.5,
                     'absolute_tolerance_test': 0.5,
-                    'weights': 'mask_rcnn_coco',
+                    'weights': 'mask_rcnn_baseline',
                 },
                 'sparsity/mask_rcnn_coco_magnitude_sparsity.json': {
                     'expected_accuracy': 36.93,

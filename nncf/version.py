@@ -2,5 +2,4 @@ __version__ = '2.4.0'
 
 BKC_TORCH_VERSION = '1.13.1'
 BKC_TORCHVISION_VERSION = '0.14.1'
-# FIX
 BKC_TF_VERSION = '2.8.*'
