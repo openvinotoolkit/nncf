@@ -61,5 +61,5 @@ def test_reshape_bias_shift(bias_value, bias_shift, channel_axis, ref_shape):
     """
     Checks the result of the FastBiasCorrection.reshape_bias_shift method if torch.Tensor is used.
     """
-    new_bias_shit = FastBiasCorrection.reshape_bias_shift(bias_shift, bias_value, channel_axis)
-    assert list(new_bias_shit.shape) == ref_shape
+    new_bias_shift = FastBiasCorrection.reshape_bias_shift(bias_shift, bias_value, channel_axis)
+    assert list(new_bias_shift.shape) == ref_shape

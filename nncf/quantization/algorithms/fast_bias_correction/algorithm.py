@@ -11,11 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
@@ -113,8 +109,9 @@ class FastBiasCorrection(Algorithm):
             self._backend_entity = ONNXFastBiasCorrectionAlgoBackend()
         elif model_backend == BackendType.OPENVINO:
             # pylint: disable=line-too-long
-            from nncf.experimental.openvino_native.quantization.algorithms.fast_bias_correction.openvino_backend import \
-                OVFastBiasCorrectionAlgoBackend
+            from nncf.experimental.openvino_native.quantization.algorithms.fast_bias_correction.openvino_backend import (
+                OVFastBiasCorrectionAlgoBackend,
+            )
             self._backend_entity = OVFastBiasCorrectionAlgoBackend()
         elif model_backend == BackendType.TORCH:
             from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
@@ -144,10 +141,6 @@ class FastBiasCorrection(Algorithm):
 
             if not self._backend_entity.is_quantized_weights(node, nncf_graph, model):
                 nncf_logger.debug(f'Skipping node {node_name} because weights were not quantized')
-                continue
-
-            if bias_value is None:
-                nncf_logger.debug(f'Skipping node {node_name} because bias_value is None')
                 continue
 
             input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
@@ -195,7 +188,7 @@ class FastBiasCorrection(Algorithm):
         """
         Reshape bias_shift tensor in case of dimensions of bias_value is more then 1.
 
-        :param bias_shift: Bias shit tensor.
+        :param bias_shift: Bias shift tensor.
         :param bias_value: Bias value tensor.
         :param channel_axis: Axis to update bias.
 
