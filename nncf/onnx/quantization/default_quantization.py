@@ -32,6 +32,8 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXExpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqrtMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReciprocalMetatype
 
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 
@@ -50,11 +52,13 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         ONNXBatchNormMetatype,
         ONNXHardSigmoidMetatype,
         ONNXResizeMetatype,
-        ONNXPowMetatype
+        ONNXPowMetatype,
+        ONNXReciprocalMetatype
     ],
     QuantizationTrait.NON_QUANTIZABLE: [ONNXSigmoidMetatype,
                                         ONNXSoftmaxMetatype,
                                         ONNXExpMetatype,
+                                        ONNXSqrtMetatype,
                                         ONNXQuantizeLinearMetatype,
                                         ONNXDequantizeLinearMetatype,
                                         UnknownMetatype],
