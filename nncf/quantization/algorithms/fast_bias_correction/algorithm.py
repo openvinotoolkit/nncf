@@ -183,8 +183,7 @@ class FastBiasCorrection(Algorithm):
 
         return transformed_model
 
-    @staticmethod
-    def reshape_bias_shift(bias_shift: TTensor, bias_value: TTensor, channel_axis: int) -> TTensor:
+    def reshape_bias_shift(self, bias_shift: TTensor, bias_value: TTensor, channel_axis: int) -> TTensor:
         """
         Reshape bias_shift tensor in case of dimensions of bias_value is more then 1.
 
@@ -197,7 +196,7 @@ class FastBiasCorrection(Algorithm):
         if bias_value.ndim > 1:
             new_shape = [1] * bias_value.ndim
             new_shape[channel_axis] = bias_shift.shape[0]
-            bias_shift = bias_shift.reshape(new_shape)
+            bias_shift = self._backend_entity.reshape_tensor(bias_shift, new_shape)
         return bias_shift
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:

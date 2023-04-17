@@ -4,6 +4,8 @@ from typing import List, TypeVar
 import pytest
 
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
+from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from tests.torch.ptq.helpers import get_min_max_and_fbc_algo_for_test
 
 TModel = TypeVar("TModel")
@@ -14,6 +16,11 @@ class TemplateTestFBCAlgorithm:
     @staticmethod
     @abstractmethod
     def list_to_backend_type(data: List) -> TTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_backend() -> FastBiasCorrectionAlgoBackend:
         pass
 
     @pytest.mark.parametrize(
@@ -31,7 +38,10 @@ class TemplateTestFBCAlgorithm:
         bias_value = self.list_to_backend_type(data=bias_value)
         bias_shift = self.list_to_backend_type(data=bias_shift)
 
-        new_bias_shift = FastBiasCorrection.reshape_bias_shift(bias_shift, bias_value, channel_axis)
+        algo = FastBiasCorrection(FastBiasCorrectionParameters(number_samples=1,inplace_statistics=False))
+        # pylint: disable=protected-access
+        algo._backend_entity = self.get_backend()
+        new_bias_shift = algo.reshape_bias_shift(bias_shift, bias_value, channel_axis)
         assert list(new_bias_shift.shape) == ref_shape
 
     @staticmethod

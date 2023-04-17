@@ -11,10 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -126,3 +123,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
         return np.array(data)
+
+    @staticmethod
+    def reshape_tensor(data: np.ndarray, new_shape: List[int]) -> np.ndarray:
+        return data.reshape(new_shape)

@@ -11,10 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -132,3 +129,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def post_process_output_data(data: List[torch.Tensor]) -> torch.Tensor:
         return torch.Tensor(data)
+
+    @staticmethod
+    def reshape_tensor(data: torch.Tensor, new_shape: List[int]) -> torch.Tensor:
+        return data.reshape(new_shape)

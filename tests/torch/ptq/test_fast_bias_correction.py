@@ -16,6 +16,7 @@ import torch
 from torch import Tensor
 
 from nncf.data import Dataset
+from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
 from nncf.torch.utils import manual_seed
 from tests.post_training.test_fast_bias_correction import TemplateTestFBCAlgorithm
 from tests.torch.helpers import RandomDatasetMock
@@ -27,6 +28,10 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def list_to_backend_type(data: List) -> torch.Tensor:
         return torch.Tensor(data)
+
+    @staticmethod
+    def get_backend() -> PTFastBiasCorrectionAlgoBackend:
+        return PTFastBiasCorrectionAlgoBackend
 
     @staticmethod
     def get_model(with_bias, tmp_dir):

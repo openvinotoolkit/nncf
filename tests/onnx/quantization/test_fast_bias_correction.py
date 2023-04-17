@@ -16,6 +16,7 @@ import numpy as np
 import onnx
 import torch
 
+from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
 from tests.onnx.quantization.common import get_random_dataset_for_test
 from tests.post_training.test_fast_bias_correction import TemplateTestFBCAlgorithm
 from tests.torch.ptq.helpers import ConvTestModel
@@ -32,6 +33,10 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def list_to_backend_type(data: List) -> np.array:
         return np.array(data)
+
+    @staticmethod
+    def get_backend() -> ONNXFastBiasCorrectionAlgoBackend:
+        return ONNXFastBiasCorrectionAlgoBackend
 
     @staticmethod
     def get_model(with_bias, tmp_dir):

@@ -13,10 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
+from typing import List, Optional, Tuple, TypeVar
 
 import numpy as np
 
@@ -188,6 +185,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
 
     @staticmethod
+    @abstractmethod
     def get_bias_shift_magnitude(current_bias_value: TTensor, updated_bias_value: TTensor) -> float:
         """
         Calculates bias shift magnitude based on the current and updated values.
@@ -198,10 +196,21 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
 
     @staticmethod
+    @abstractmethod
     def post_process_output_data(data: List[TTensor]) -> TTensor:
         """
         Convert data to backend specific type.
 
         :param data: List of data.
         :return TTensor: Converted data.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def reshape_tensor(data: TTensor, new_shape: List[int]) -> TTensor:
+        """
+        Reshape tensor.
+
+        :param data: Tensor.
+        :param new_shape: New shape.
         """
