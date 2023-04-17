@@ -32,6 +32,9 @@ class TensorStatistic(ABC):
 
 
 class MinMaxTensorStatistic(TensorStatistic):
+    MIN_STAT = 'min_values'
+    MAX_STAT = 'max_values'
+
     def __init__(self, min_values, max_values):
         self.min_values = min_values
         self.max_values = max_values
@@ -42,6 +45,9 @@ class MinMaxTensorStatistic(TensorStatistic):
 
 
 class MeanTensorStatistic(TensorStatistic):
+    MEAN_STAT = 'mean_values'
+    SHAPE_STAT = 'shape'
+
     """
     Base class for the statistics that collects as mean per-axis
     """
@@ -82,6 +88,8 @@ class PercentileTensorStatistic(TensorStatistic):
         return True
 
 class BatchTensorStatistic(TensorStatistic):
+    VALUES_STATS = 'values'
+
     """
     Base class for the statistics that collects as mean per-batch
     """

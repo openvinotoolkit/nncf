@@ -153,7 +153,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: PTTargetPoint,
                                    quantizer_config: QuantizerConfig,
-                                   num_samples: int = None) -> PTMinMaxStatisticCollector:
+                                   inplace: bool,
+                                   num_samples: int = None,
+                                   ) -> PTMinMaxStatisticCollector:
         return PTMinMaxAlgoBackend._statistic_collector_builder("min_max",
                                                                 nncf_graph,
                                                                 target_point,
@@ -165,7 +167,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                         target_point: PTTargetPoint,
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
-                                        num_samples: int = None) -> PTMeanMinMaxStatisticCollector:
+                                        inplace: bool,
+                                        num_samples: int = None,
+                                        ) -> PTMeanMinMaxStatisticCollector:
         return PTMinMaxAlgoBackend._statistic_collector_builder("mean_min_max",
                                                                 nncf_graph,
                                                                 target_point,

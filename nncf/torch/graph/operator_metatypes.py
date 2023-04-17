@@ -720,6 +720,12 @@ class PTExpandMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_TENSOR: ["expand"]
     }
 
+@PT_OPERATOR_METATYPES.register()
+class PTExpandAsMetatype(PTOperatorMetatype):
+    name = "ExpandAsOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["expand_as"]
+    }
 
 # Non-quantizable ops
 @PT_OPERATOR_METATYPES.register()

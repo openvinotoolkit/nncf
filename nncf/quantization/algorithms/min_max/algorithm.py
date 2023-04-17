@@ -104,7 +104,8 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[IgnoredScope] = None,
                  model_type: Optional[ModelType] = None,
-                 overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
+                 overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
+                 inplace_statistics: bool = True,
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
@@ -129,11 +130,16 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Desrciptor of the layers which input must not be quantized.
         :param overflow_fix: This option controls whether to apply the overflow issue fix for the 8-bit quantization.
+        :param inplace_statistics: Appliclable only for OpenVINO backend.
+            Will be available for ONNX backend in future. Defines wheather to calculate quantizers statistics
+            by backend graph operations or by default Python implementation.
+            Statistics computated inplace tend to be calculated faster and with lower memory stamp.
         """
         self.number_samples = number_samples
         self.target_device = target_device
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
+        self.inplace_statistics = inplace_statistics
         self.ignored_scopes = IgnoredScope() if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
         if weight_granularity is not None:
@@ -249,11 +255,13 @@ class MinMaxQuantization(Algorithm):
 
         if range_type == RangeType.MINMAX:
             return self._backend_entity.minmax_statistic_collector(nncf_graph, target_point, quantizer_config,
-                                                                   num_samples=self._parameters.number_samples)
+                                                                   num_samples=self._parameters.number_samples,
+                                                                   inplace=self._parameters.inplace_statistics)
         if range_type == RangeType.MEAN_MINMAX:
             return self._backend_entity.mean_minmax_statistic_collector(nncf_graph, target_point, quantizer_config,
                                                                         use_per_sample_stats=False,
-                                                                        num_samples=self._parameters.number_samples)
+                                                                        num_samples=self._parameters.number_samples,
+                                                                        inplace=self._parameters.inplace_statistics)
         raise RuntimeError('This range type is not supported!')
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:

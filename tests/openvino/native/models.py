@@ -22,10 +22,10 @@ SYNTHETIC_MODELS = Registry('OV_SYNTHETIC_MODELS')
 
 
 class OVReferenceModel(ABC):
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._rng = np.random.default_rng(seed=0)
         self.ref_graph_name = f'{self.__class__.__name__}.dot'
-        self.ov_model = self._create_ov_model()
+        self.ov_model = self._create_ov_model(**kwargs)
 
     @abstractmethod
     def _create_ov_model(self) -> ov.Model:
@@ -34,13 +34,25 @@ class OVReferenceModel(ABC):
 
 @SYNTHETIC_MODELS.register()
 class LinearModel(OVReferenceModel):
-    def _create_ov_model(self):
-        input_shape = [1, 3, 4, 2]
+    def _create_ov_model(self,
+                         input_shape=None,
+                         reshape_shape=None,
+                         matmul_w_shape=None,
+                         add_shape=None):
+        if input_shape is None:
+            input_shape = [1, 3, 4, 2]
+        if reshape_shape is None:
+            reshape_shape = (1, 3, 2, 4)
+        if matmul_w_shape is None:
+            matmul_w_shape = (1, 3, 4, 5)
+        if add_shape is None:
+            add_shape = (1, 3, 2, 4)
+
         input_1 = opset.parameter(input_shape, name="Input")
-        reshape = opset.reshape(input_1, (1, 3, 2, 4), special_zero=False, name='Reshape')
-        data = self._rng.random((1, 3, 4, 5)).astype(np.float32) - 0.5
+        reshape = opset.reshape(input_1, reshape_shape, special_zero=False, name='Reshape')
+        data = self._rng.random(matmul_w_shape).astype(np.float32) - 0.5
         matmul = opset.matmul(reshape, data, transpose_a=False, transpose_b=False, name="MatMul")
-        add = opset.add(reshape, self._rng.random((1, 3, 2, 4)).astype(np.float32), name="Add")
+        add = opset.add(reshape, self._rng.random(add_shape).astype(np.float32), name="Add")
         r1 = opset.result(matmul, name="Result_MatMul")
         # TODO(KodiaqQ): Remove this after fix - CVS-100010
         r1.get_output_tensor(0).set_names(set(["Result_MatMul"]))
@@ -458,6 +470,84 @@ class MatmulSoftmaxMatmulBlock(OVReferenceModel):
         matmul_2 = opset.matmul(softmax_1, squeeze, transpose_a=False, transpose_b=True, name="MatMul_2")
 
         result = opset.result(matmul_2, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class SimpleSplitModel(OVReferenceModel):
+    def _create_ov_model(self, input_shape=None, splits=None):
+        if input_shape is None:
+            input_shape = [1, 9, 4, 4]
+            splits = 3
+        input_1 = opset.parameter(input_shape, name="Input")
+        split = opset.split(input_1, 1, splits, name="Split")
+        results = []
+        for idx, output in enumerate(split.outputs()):
+            results.append(opset.result(output, name=f'Result_{idx}'))
+
+        model = ov.Model(results, [input_1])
+        return model
+
+
+class SharedConvModel(OVReferenceModel):
+    def _create_ov_model(self, input_name, input_shape, kernel) -> ov.Model:
+        input_1 = opset.parameter(input_shape, name=input_name)
+        const_kernel = opset.constant(kernel, np.float32, name='Shared_conv_w')
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv_1 = opset.convolution(input_1, const_kernel, strides, pads, pads, dilations, name="Conv_1")
+        conv_2 = opset.convolution(input_1, const_kernel, strides, pads, pads, dilations, name="Conv_2")
+        result_1 = opset.result(conv_1, name="Result_1")
+        result_2 = opset.result(conv_2, name="Result_2")
+        model = ov.Model([result_1, result_2], [input_1])
+        return model
+
+
+class SplitConcatModel(OVReferenceModel):
+    def _create_ov_model(self, input_name) -> ov.Model:
+        input_1 = opset.parameter([1, 3, 3, 3], name=input_name)
+        split = opset.split(input_1, 1, 3, name='split')
+        add_const = np.array(1).astype(np.float32)
+        add_1 = opset.add(split.output(0), add_const, name='add_1')
+        add_2 = opset.add(split.output(1), add_const, name='add_2')
+        add_3 = opset.add(split.output(2), add_const, name='add_3')
+        concat = opset.concat([add_1, add_2, add_3], 1, name='concat')
+        add_4 = opset.add(concat, add_const, name='add_4')
+        add_5 = opset.add(concat, add_const, name='add_5')
+        result_1 = opset.result(add_4, name="result_1")
+        result_2 = opset.result(add_5, name="result_2")
+        model = ov.Model([result_1, result_2], [input_1])
+        return model
+
+
+@SYNTHETIC_MODELS.register()
+class IntegerModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 192, 1], name="Input")
+        convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
+
+        gather_1 = opset.gather(convert_1, 2, axis=0, batch_dims=0)
+        gather_1.set_friendly_name("Gather_1")
+
+        gather_2_data = self._rng.random((369, 160)).astype(np.float32)
+        gather_2 = opset.gather(gather_2_data, gather_1, axis=0, batch_dims=0)
+        gather_2.set_friendly_name("Gather_2")
+
+        gather_3 = opset.gather(gather_2, 2, axis=0, batch_dims=0)
+        gather_3.set_friendly_name("Gather_3")
+
+        matmul_1_data = self._rng.random((160, 160)).astype(np.float32)
+        matmul_1 = opset.matmul(gather_3, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_1")
+
+        gather_4 = opset.gather(input_1, 0, axis=2, batch_dims=0)
+        gather_4.set_friendly_name("Gather_4")
+
+        matmul_1_data = self._rng.random((160, 192)).astype(np.float32)
+        matmul_2 = opset.matmul(gather_4, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_2")
+        add_1 = opset.add(matmul_1, matmul_2, name="Add_1")
+
+        result = opset.result(add_1, name="Result")
         model = ov.Model([result], [input_1])
         return model
 

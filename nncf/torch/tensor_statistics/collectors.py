@@ -17,13 +17,13 @@ import torch
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
 from nncf.torch.tensor_statistics.reduction import  expand_like

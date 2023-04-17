@@ -152,13 +152,16 @@ class MinMaxAlgoBackend(ABC):
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: TargetPoint,
                                    quantizer_config: QuantizerConfig,
-                                   num_samples: int = None) -> TensorStatisticCollectorBase:
+                                   inplace: bool,
+                                   num_samples: int = None,
+                                   ) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
 
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
@@ -169,7 +172,9 @@ class MinMaxAlgoBackend(ABC):
                                         target_point: TargetPoint,
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
-                                        num_samples: int = None) -> TensorStatisticCollectorBase:
+                                        inplace: bool,
+                                        num_samples: int = None,
+                                        ) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
 
@@ -177,6 +182,7 @@ class MinMaxAlgoBackend(ABC):
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param use_per_sample_stats: Whether to collect statistics in per sample mode or not.
+        :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """

@@ -24,12 +24,14 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
-from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import OnlineMinAggregator
+from nncf.experimental.common.tensor_statistics.collectors import OnlineMaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import OfflineMeanAggregator
 
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import DepthwiseConv4DModel
@@ -60,11 +62,17 @@ class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
         return OVMinMaxAlgoBackend()
 
-    def get_min_max_statistic_collector_cls(self):
-        return OVMinMaxStatisticCollector
+    def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert OnlineMinAggregator in aggrs
+        assert OnlineMaxAggregator in aggrs
 
-    def get_mean_max_statistic_collector_cls(self):
-        return OVMeanMinMaxStatisticCollector
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert OfflineMeanAggregator in aggrs
+        assert aggrs[0].__class__ == aggrs[1].__class__
 
     def check_quantize_outputs_fq_num(self, quantize_outputs,
                                       act_num_q, weight_num_q):

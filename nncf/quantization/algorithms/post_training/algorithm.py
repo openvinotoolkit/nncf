@@ -60,6 +60,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  model_type: Optional[ModelType] = None,
                  overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
                  fast_bias_correction: bool = True,
+                 inplace_statistics: bool = True,
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
@@ -84,6 +85,12 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Descriptor of the layers which input must not be quantized.
         :param overflow_fix: This option controls whether to apply the overflow issue fix for the 8-bit quantization.
+        :param model_type: Model type is needed to specify additional patterns
+            in the model. Supported only `transformer` now.
+        :param fast_bias_correction: Defines whether to use fast version of bias correction algorithm.
+        :param inplace_statistics: Appliclable only for OpenVINO backend. Will be available for ONNX backend in future.
+            Defines whether to calculate quantization statistics by backend graph operations or by default Python
+            implementation. Statistics computated inplace tend to be calculated faster and with lower memory stamp.
         """
         self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
             preset=preset,
@@ -99,16 +106,19 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             quantize_outputs=quantize_outputs,
             ignored_scopes=ignored_scopes,
             model_type=model_type,
-            overflow_fix=overflow_fix
+            overflow_fix=overflow_fix,
+            inplace_statistics=inplace_statistics
         )}
 
         bias_correction_algo = {BiasCorrection: BiasCorrectionParameters(
-            number_samples=number_samples
+            number_samples=number_samples,
+            inplace_statistics=inplace_statistics
         )}
 
         if fast_bias_correction:
             bias_correction_algo = {FastBiasCorrection: FastBiasCorrectionParameters(
-                number_samples=number_samples
+                number_samples=number_samples,
+                inplace_statistics=inplace_statistics
             )}
         self.algorithms.update(bias_correction_algo)
 

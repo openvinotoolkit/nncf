@@ -179,7 +179,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: ONNXTargetPoint,
                                    quantizer_config: QuantizerConfig,
-                                   num_samples: int = None) -> ONNXMinMaxStatisticCollector:
+                                   inplace: bool,
+                                   num_samples: int = None,
+                                   ) -> ONNXMinMaxStatisticCollector:
         reduction_shape, use_abs_max = \
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph,
                                                                        target_point,
@@ -191,7 +193,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                         target_point: ONNXTargetPoint,
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
-                                        num_samples: int = None) -> ONNXMeanMinMaxStatisticCollector:
+                                        inplace: bool,
+                                        num_samples: int = None,
+                                        ) -> ONNXMeanMinMaxStatisticCollector:
         reduction_shape, use_abs_max = \
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                        quantizer_config)
