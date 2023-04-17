@@ -10,12 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Type
-from typing import TypeVar
+# pylint: disable=too-many-lines
+from typing import Dict, List, Optional, Type, TypeVar
 
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
