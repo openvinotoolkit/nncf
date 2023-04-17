@@ -215,9 +215,10 @@ class TemplateTestFQParams(ABC):
 
         if not case_to_test.should_fail:
             fq_params = calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)
-            dump_fq_params(fq_params, quant_group, q_config, narrow_range, half_range)
+            # Unkomment lines below to generate reference for new models.
+            # dump_fq_params(fq_params, quant_group, q_config, narrow_range, half_range)
             ref_fq_params = read_ref_fq_params(quant_group, q_config, narrow_range, half_range)
             compare_fq_parameters(fq_params, ref_fq_params)
         else:
             with pytest.raises(RuntimeError):
-                calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)                
+                calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)

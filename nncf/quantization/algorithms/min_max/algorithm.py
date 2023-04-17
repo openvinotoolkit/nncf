@@ -496,7 +496,6 @@ class MinMaxQuantization(Algorithm):
                                               nncf_graph: NNCFGraph) -> Set[TargetPoint]:
         """
         Returns quantization target points, for whom overflow_fix should be applied.
-        See description in nncf/nncf/quantization/algorithms/definitions.py
 
         :param overflow_fix: OverflowFix parameter.
         :param quantization_target_points: Quantization target points.
@@ -577,7 +576,7 @@ class MinMaxQuantization(Algorithm):
                     quant_group = QuantizerGroup.ACTIVATIONS
 
                 half_range = quantization_target_point in quantization_points_overflow_fix
-                narrow_range = get_quantizer_narrow_range(qconfig, quant_group, half_range)
+                narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
                 statistics = tensor_collector.get_statistics()
                 parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
                 if quantization_target_point.is_weight_target_point():

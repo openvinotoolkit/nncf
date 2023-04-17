@@ -237,7 +237,7 @@ def _calculate_scaled_parameters(min_values: np.ndarray, max_values: np.ndarray,
     """
     Calculates FakeQuantize layer attributes scaled to effectively use a half range of the quantization range.
 
-    :param min_values: Minimum values of statistics for the quantizer. 
+    :param min_values: Minimum values of statistics for the quantizer.
     :param max_values: Maximum values of statistics for the quantizer.
     :param quantizer_config: Config of the quantization configuration.
     :param quantizer_group: Group of the quantizer.
