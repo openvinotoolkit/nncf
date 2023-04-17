@@ -16,10 +16,12 @@ from dataclasses import field
 import re
 from typing import List, Optional
 
-from nncf.common.graph.graph import NNCFGraph
+from nncf.common.api_marker import api
 from nncf.common.logging import nncf_logger
+from nncf.common.graph.graph import NNCFGraph
 
 
+@api()
 @dataclass
 class IgnoredScope:
     """
@@ -111,11 +113,11 @@ def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope,
             if ignored_node_name in node_names:
                 matched_by_names.append(ignored_node_name)
         if strict and len(ignored_scope.names) != len(matched_by_names):
-                skipped_names = set(ignored_scope.names) - set(matched_by_names)
-                raise RuntimeError(f'Ignored nodes with name {list(skipped_names)}'
-                                    ' were not found in the NNCFGraph. ' + error_msg)
+            skipped_names = set(ignored_scope.names) - set(matched_by_names)
+            raise RuntimeError(f'Ignored nodes with name {list(skipped_names)}'
+                               ' were not found in the NNCFGraph. ' + error_msg)
         nncf_logger.info(f'{len(matched_by_names)}'
-                          ' ignored nodes was found by name in the NNCFGraph')
+                         ' ignored nodes was found by name in the NNCFGraph')
 
     matched_by_patterns = []
     if ignored_scope.patterns:

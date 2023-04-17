@@ -13,6 +13,10 @@
 
 from enum import Enum
 
+from nncf.common.api_marker import api
+
+
+@api()
 class TargetDevice(Enum):
     """
     Describes the target device the specificity of which will be taken
@@ -26,6 +30,7 @@ class TargetDevice(Enum):
     CPU_SPR = 'CPU_SPR'
 
 
+@api()
 class ModelType(Enum):
     """
     Describes the model type the specificity of which will be taken into

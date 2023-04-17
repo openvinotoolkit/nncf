@@ -18,11 +18,13 @@ from typing import List
 from typing import Generic
 from typing import TypeVar
 
+from nncf.common.api_marker import api
 
 DataItem = TypeVar('DataItem')
 ModelInput = TypeVar('ModelInput')
 
 
+@api()
 class Dataset(Generic[DataItem, ModelInput]):
     """
     The `nncf.Dataset` class defines the interface by which compression algorithms
