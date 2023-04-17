@@ -12,7 +12,7 @@
 """
 
 import sys
-from typing import Optional, Callable, Any, Iterable
+from typing import Optional, Callable, Any, Iterable, Dict, List
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -34,6 +34,24 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import Quantization
 from nncf.common.utils.timer import timer
 
 
+def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = []) -> None:
+    """
+    Dumps input parameters into Model's meta section.
+
+    :param model: ov.Model instance.
+    :param parameters: Incoming dictionary with parameters to save.
+    :param path: Optional list of the paths.
+    """
+    for key, value in parameters.items():
+        # Special condition for composed fields like IgnoredScope
+        if isinstance(value, IgnoredScope):
+            dump_parameters(model, value.__dict__, [key])
+            continue
+        value = value if value else None
+        rt_path = ['optimization'] + path + [key]
+        model.set_rt_info(value, rt_path)
+
+
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def quantize_impl(model: ov.Model,
                   calibration_dataset: Dataset,
@@ -47,22 +65,6 @@ def quantize_impl(model: ov.Model,
     """
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
-
-    def dump_parameters(model):
-        configuration = {
-            'preset': preset.value,
-            'target_device': target_device.value,
-            'subset_size': subset_size,
-            'fast_bias_correction': fast_bias_correction,
-            'model_type': model_type,
-            'ignored_scope.names': ignored_scope.names,
-            'ignored_scope.patterns': ignored_scope.patterns,
-            'ignored_scope.types': ignored_scope.types,
-            'compress_weights': compress_weights
-        }
-        for key, value in configuration.items():
-            value = value if value else None
-            model.set_rt_info(value, ['optimization', key])
 
     quantization_parameters = PostTrainingQuantizationParameters(
         preset=preset,
@@ -79,7 +81,17 @@ def quantize_impl(model: ov.Model,
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
-    dump_parameters(quantized_model)
+    dump_parameters(
+        quantized_model,
+        {
+            'preset': preset.value,
+            'target_device': target_device.value,
+            'subset_size': subset_size,
+            'fast_bias_correction': fast_bias_correction,
+            'model_type': model_type,
+            'ignored_scope': ignored_scope,
+            'compress_weights': compress_weights
+        })
     return quantized_model
 
 
@@ -99,23 +111,6 @@ def quantize_with_accuracy_control(model: ov.Model,
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via the
     OpenVINO Runtime API.
     """
-
-    def dump_parameters(model):
-        configuration = {
-            'preset': preset.value,
-            'target_device': target_device.value,
-            'subset_size': subset_size,
-            'fast_bias_correction': fast_bias_correction,
-            'model_type': model_type,
-            'ignored_scope.names': ignored_scope.names,
-            'ignored_scope.patterns': ignored_scope.patterns,
-            'ignored_scope.types': ignored_scope.types,
-            'max_drop': max_drop,
-            'max_num_iterations': max_num_iterations
-        }
-        for key, value in configuration.items():
-            value = value if value else None
-            model.set_rt_info(value, ['optimization', key])
 
     quantized_model = quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                                     fast_bias_correction, model_type, ignored_scope, compress_weights=False)
@@ -143,5 +138,16 @@ def quantize_with_accuracy_control(model: ov.Model,
                                                            validation_dataset, validation_fn)
     compress_quantize_weights_transformation(quantized_model)
 
-    dump_parameters(quantized_model)
+    dump_parameters(
+        quantized_model,
+        {
+            'preset': preset.value,
+            'target_device': target_device.value,
+            'subset_size': subset_size,
+            'fast_bias_correction': fast_bias_correction,
+            'model_type': model_type,
+            'ignored_scope': ignored_scope,
+            'max_drop': max_drop,
+            'max_num_iterations': max_num_iterations
+        })
     return quantized_model
