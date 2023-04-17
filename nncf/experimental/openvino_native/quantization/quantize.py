@@ -34,7 +34,7 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import Quantization
 from nncf.common.utils.timer import timer
 
 
-def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = []) -> None:
+def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = None) -> None:
     """
     Dumps input parameters into Model's meta section.
 
@@ -42,6 +42,7 @@ def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = []
     :param parameters: Incoming dictionary with parameters to save.
     :param path: Optional list of the paths.
     """
+    path = path if path else []
     for key, value in parameters.items():
         # Special condition for composed fields like IgnoredScope
         if isinstance(value, IgnoredScope):
