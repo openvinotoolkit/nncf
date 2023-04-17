@@ -226,6 +226,7 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
         input_low = np.squeeze(input_low)
         input_high = np.squeeze(input_high)
 
+    input_low, input_high = np.array(input_low), np.array(input_high)
     output_low, output_high = input_low, input_high
     return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)
 
