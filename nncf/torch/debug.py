@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import functools
 from typing import List, Dict
 
 from torch.nn import Module
@@ -62,6 +63,7 @@ class DebugInterface:
 
 
 def debuggable_forward(forward_func):
+    @functools.wraps(forward_func)
     def decorated(self: 'NNCFNetwork', *args, **kwargs):
         if hasattr(self, 'nncf') and self.nncf.debug_interface is not None:
             self.nncf.debug_interface.pre_forward_actions(module=self)

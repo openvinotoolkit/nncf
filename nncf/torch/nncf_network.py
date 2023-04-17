@@ -771,6 +771,8 @@ class NNCFNetworkMeta(type):
                                          fn.__defaults__, fn.__closure__)
         new_forward.__dict__.update(fn.__dict__)
         new_forward.__signature__ = inspect.signature(original_class.forward)
+        if is_debug():
+            new_forward = debuggable_forward(new_forward)
         new_class.forward = new_forward
 
         # Make resulting class keep __module__ attributes of the original class,
@@ -835,7 +837,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         """
         return self.forward(*args, **kwargs)
 
-    @debuggable_forward
     def forward(self, *args, **kwargs):
         """
         Wraps the original forward call, doing additional actions before and after the call to facilitate model
