@@ -25,7 +25,7 @@ from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
@@ -48,6 +48,22 @@ def quantize_impl(model: ov.Model,
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
 
+    def dump_parameters(model):
+        configuration = {
+            'preset': preset.value,
+            'target_device': target_device.value,
+            'subset_size': subset_size,
+            'fast_bias_correction': fast_bias_correction,
+            'model_type': model_type,
+            'ignored_scope.names': ignored_scope.names,
+            'ignored_scope.patterns': ignored_scope.patterns,
+            'ignored_scope.types': ignored_scope.types,
+            'compress_weights': compress_weights
+        }
+        for key, value in configuration.items():
+            value = value if value else None
+            model.set_rt_info(value, ['optimization', key])
+
     quantization_parameters = PostTrainingQuantizationParameters(
         preset=preset,
         target_device=target_device,
@@ -63,6 +79,7 @@ def quantize_impl(model: ov.Model,
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
+    dump_parameters(quantized_model)
     return quantized_model
 
 
@@ -82,6 +99,24 @@ def quantize_with_accuracy_control(model: ov.Model,
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via the
     OpenVINO Runtime API.
     """
+
+    def dump_parameters(model):
+        configuration = {
+            'preset': preset.value,
+            'target_device': target_device.value,
+            'subset_size': subset_size,
+            'fast_bias_correction': fast_bias_correction,
+            'model_type': model_type,
+            'ignored_scope.names': ignored_scope.names,
+            'ignored_scope.patterns': ignored_scope.patterns,
+            'ignored_scope.types': ignored_scope.types,
+            'max_drop': max_drop,
+            'max_num_iterations': max_num_iterations
+        }
+        for key, value in configuration.items():
+            value = value if value else None
+            model.set_rt_info(value, ['optimization', key])
+
     quantized_model = quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                                     fast_bias_correction, model_type, ignored_scope, compress_weights=False)
 
@@ -108,4 +143,5 @@ def quantize_with_accuracy_control(model: ov.Model,
                                                            validation_dataset, validation_fn)
     compress_quantize_weights_transformation(quantized_model)
 
+    dump_parameters(quantized_model)
     return quantized_model
