@@ -18,6 +18,8 @@ from nncf.version import BKC_TF_VERSION
 import tensorflow
 from pkg_resources import parse_version
 
+# FIX
+
 tensorflow_version = parse_version(tensorflow.__version__).base_version
 if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
     warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, tensorflow.__version__)

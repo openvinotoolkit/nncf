@@ -103,6 +103,7 @@ def denormalize_boxes(boxes, image_shape):
         if isinstance(image_shape, (list, tuple)):
             height, width = image_shape
         else:
+            print(image_shape)
             image_shape = tf.cast(image_shape, boxes.dtype)
             height, width = tf.split(image_shape, 2, -1)
 
