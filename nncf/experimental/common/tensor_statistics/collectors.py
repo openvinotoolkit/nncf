@@ -116,7 +116,7 @@ class TensorAggregatorBase:
     """
 
     def __init__(self, tensor_processor: NNCFCollectorTensorProcessor,
-                 num_samples: Optional[int] = None, axis: Optional[int] = None):
+                 num_samples: Optional[int] = None):
         """
         :param tensor_processor: Backend-specific tensor processor.
         :param num_samples: Maximum number of samples to collect. Aggregator
@@ -128,7 +128,6 @@ class TensorAggregatorBase:
         self._num_samples = num_samples
         self._collected_samples = 0
         self._container = []
-        self._axis = axis
 
     @property
     def num_samples(self) -> int:
@@ -492,9 +491,8 @@ class MaxAggregator(TensorAggregatorBase):
 
 class OfflineAggregatorBase(TensorAggregatorBase):
     def __init__(self, tensor_processor, use_per_sample_stats: bool,
-                 num_samples: Optional[int] = None, axis: int = 0,
-                 window_size=None):
-        super().__init__(tensor_processor, num_samples, axis)
+                 num_samples: Optional[int] = None, window_size=None):
+        super().__init__(tensor_processor, num_samples)
         self._window_size = window_size
         self._container = deque(maxlen=window_size)
         self._use_per_sample_stats = use_per_sample_stats
@@ -507,8 +505,6 @@ class OfflineAggregatorBase(TensorAggregatorBase):
 
     def _aggregate(self, fn):
         stacked_val = self._tensor_processor.stack(self._container)
-        if self._per_channel:
-            return self._tensor_processor.map_per_channel(stacked_val, self._ch_dim, fn).tensor
         return fn(stacked_val, axis=0).tensor
 
 
@@ -524,15 +520,15 @@ class MedianAggregator(OfflineAggregatorBase):
 
 class NoOutliersAggregatorBase(OfflineAggregatorBase):
     def __init__(self, tensor_processor, use_per_sample_stats: bool,
-                 num_samples: Optional[int] = None, axis: int = 0,
+                 num_samples: Optional[int] = None,
                  window_size=None, quantile: float = 0.01):
-        super().__init__(tensor_processor, use_per_sample_stats, num_samples,
-                         axis, window_size)
+        super().__init__(tensor_processor, use_per_sample_stats, num_samples, window_size)
         self._quantile = quantile
 
     def _aggregate(self, fn) -> List[NNCFTensor]:
         stacked_val = self._tensor_processor.stack(self._container)
-        result = self._tensor_processor.no_outliers_map_common(stacked_val, self._axis, fn)
+        result = self._tensor_processor.no_outliers_map(stacked_val, fn,
+                                                        stack_axis=0, alpha=self._quantile)
         return result.tensor
 
 

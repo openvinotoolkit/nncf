@@ -224,25 +224,20 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def map_per_channel(x: NNCFTensor, ch_axis: int,
-                        fn: Callable[[np.array, int], Any]):
+    def mean_per_channel(cls, x: NNCFTensor, axis: int) -> NNCFTensor:
         pass
 
     @staticmethod
     @abstractmethod
-    def mean_per_channel(cls, x: NNCFTensor, axis: int) -> NNCFTensor:
-        pass
-
-    @classmethod
-    @abstractmethod
-    def no_outliers_map_per_channel(cls, x: NNCFTensor, ch_axis: int,
-                                    fn: Callable[[NNCFTensor, Optional[int]], Any], alpha: float = 0.01):
+    def map_per_channel(x: NNCFTensor, ch_axis: int,
+                        fn: Callable[[np.array, int], Any]):
         pass
 
     @classmethod
     @abstractmethod
     def no_outliers_map(cls, x: NNCFTensor,
-                        fn: Callable[[NNCFTensor, Optional[int]], Any], alpha: float = 0.01):
+                        fn: Callable[[NNCFTensor, Optional[int]], Any],
+                        stack_axis: int = 0, alpha: float = 0.01):
         pass
 
 

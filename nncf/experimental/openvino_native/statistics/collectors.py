@@ -87,37 +87,18 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return fn(x, axis=axes)
 
     @classmethod
-    def no_outliers_map_per_channel(
-            cls, x: NNCFTensor,
-            fn: Callable[[NNCFTensor, Optional[int]], Any],
-            ch_axis: int = 1, alpha: float = 0.01):
-        """Result is 1D array"""
-        def quantile(x: np.array, axis: Tuple[int, ...]):
-            return cls.quantile(x, [alpha, 1 - alpha], axis).tensor, x.tensor
-
-        (low_values, high_values), x = cls.map_per_dim(x, ch_axis, quantile)
-
-        result = []
-        for idx in range(x.shape[ch_axis]):
-            x_dim = np.take(x, idx, ch_axis)
-            x_dim = x_dim[(x_dim >= low_values[idx]) & (x_dim <= high_values[idx])]
-            result.append(fn(OVNNCFTensor(x_dim), axis=None).tensor)
-        return OVNNCFTensor(np.array(result))
-
-    @classmethod
-    def no_outliers_map_per_tensor(
+    def no_outliers_map(
             cls, x: NNCFTensor,
             fn: Callable[[NNCFTensor, Optional[int]], Any],
             stack_axis: int = 0, alpha: float = 0.01):
-        """Result is (x.shape.ndim - 1)D array"""
+        if len(x.shape) == 1:
+            return fn(x, axis=None)
+
+        x = x.tensor
         if stack_axis:
-            x = np.moveaxis(x.tensor, stack_axis, 0)
+            x = np.moveaxis(x, stack_axis, 0)
 
         low_values, high_values = np.quantile(x, [alpha, 1 - alpha], 0)
-
-        if len(x.shape) == 1:
-            x = np.expand_dims(x, -1)
-            low_values, high_values = np.array([low_values]), np.array([high_values])
 
         result = np.empty_like(low_values)
         for idx in np.ndindex(low_values.shape):

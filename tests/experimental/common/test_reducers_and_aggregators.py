@@ -108,13 +108,19 @@ class TemplateTestReducersAggreagtors:
     @pytest.mark.parametrize('aggregator_cls,use_per_sample_stats,dims,refs', NO_OUTLIERS_TEST_PARAMS)
     def test_no_outliers_agggregators(self, aggregator_cls, refs, tensor_processor,
                                       dims, use_per_sample_stats):
-        input_ = np.array([1, 2, -200000, 2, 2, 2, 3, 4, 100000])
+        input_ = np.array([1, 2, 2, 2, 2, 2, 3, 4, 4])
+        input_with_outliers = np.array([100_000, -100_000, 200_000, -200_000, 300_000, -300_000,
+                                        400_000, -400_000, 500_000])
         if dims == 2:
             input_ = input_.reshape((3, 3))
+            input_with_outliers = input_with_outliers.reshape((3, 3))
         if dims == 3:
             input_ = input_.reshape((1, 3, 3))
+            input_with_outliers = input_with_outliers.reshape((1, 3, 3))
         aggregator = aggregator_cls(tensor_processor, use_per_sample_stats)
-        for i in range(1, 9):
+        for i in range(1, 7):
             aggregator.register_reduced_input(self.get_nncf_tensor(input_ * i))
+        for i in range(2):
+            aggregator.register_reduced_input(self.get_nncf_tensor(input_with_outliers * (2 * i - 1)))
         ret_val = aggregator.aggregate()
         assert np.allclose(ret_val, refs)
