@@ -10,55 +10,42 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import pytest
+from typing import List
+
 import torch
 from torch import Tensor
 
 from nncf.data import Dataset
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
-from nncf.torch.nncf_network import ExtraCompressionModuleType
+from nncf.torch.utils import manual_seed
+from tests.post_training.test_fast_bias_correction import TemplateTestFBCAlgorithm
 from tests.torch.helpers import RandomDatasetMock
 from tests.torch.ptq.helpers import ConvTestModel
-from tests.torch.ptq.helpers import get_min_max_and_fbc_algo_for_test
 from tests.torch.ptq.helpers import get_nncf_network
 
 
-@pytest.mark.parametrize("with_bias, ref_bias", ((False, None), (True, Tensor([-1.9995, -1.9995]))))
-def test_fast_bias_correction_algo(with_bias, ref_bias, _seed):
-    """
-    Check working on fast bias correction algorithm and compare bias in quantized model with reference
-    """
-    model = ConvTestModel(bias=with_bias)
-    input_shape = [1, 1, 4, 4]
-    nncf_network = get_nncf_network(model, input_shape)
-    nncf_network.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
-    quantization_algorithm = get_min_max_and_fbc_algo_for_test()
+class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
+    @staticmethod
+    def list_to_backend_type(data: List) -> torch.Tensor:
+        return torch.Tensor(data)
 
-    def transform_fn(data_item):
-        images, _ = data_item
-        return images
+    @staticmethod
+    def get_model(with_bias, tmp_dir):
+        return get_nncf_network(ConvTestModel(bias=with_bias), [1, 1, 4, 4])
 
-    dataset = Dataset(RandomDatasetMock(input_shape), transform_fn)
-    quantized_model = quantization_algorithm.apply(nncf_network, dataset=dataset)
+    @staticmethod
+    def get_dataset(model):
+        manual_seed(42)
 
-    if ref_bias is None:
-        assert quantized_model.conv.bias is None
-    else:
-        assert all(torch.isclose(quantized_model.conv.bias.data, ref_bias, rtol=0.0001))
+        def transform_fn(data_item):
+            images, _ = data_item
+            return images
 
+        dataset = Dataset(RandomDatasetMock(model.INPUT_SIZE), transform_fn)
+        return dataset
 
-
-@pytest.mark.parametrize(
-    "bias_value, bias_shift, channel_axis, ref_shape",
-    (
-        (Tensor([1, 1]), Tensor([0.1, 0.1]), 1, [2]),
-        (Tensor([[1, 1]]), Tensor([0.1, 0.1]), -1, [1, 2]),
-        (Tensor([[1, 1]]), Tensor([0.1, 0.1]), 1, [1, 2]),
-    ),
-)
-def test_reshape_bias_shift(bias_value, bias_shift, channel_axis, ref_shape):
-    """
-    Checks the result of the FastBiasCorrection.reshape_bias_shift method if torch.Tensor is used.
-    """
-    new_bias_shift = FastBiasCorrection.reshape_bias_shift(bias_shift, bias_value, channel_axis)
-    assert list(new_bias_shift.shape) == ref_shape
+    @staticmethod
+    def check_bias(model, with_bias):
+        if with_bias:
+            assert all(torch.isclose(model.conv.bias.data, Tensor([-1.9974, -1.9974]), rtol=0.0001))
+        else:
+            assert model.conv.bias is None

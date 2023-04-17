@@ -10,15 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List
+
 import numpy as np
 import onnx
-import pytest
 import torch
 
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from tests.onnx.quantization.common import get_random_dataset_for_test
+from tests.post_training.test_fast_bias_correction import TemplateTestFBCAlgorithm
 from tests.torch.ptq.helpers import ConvTestModel
-from tests.torch.ptq.helpers import get_min_max_and_fbc_algo_for_test
 
 
 def get_data_from_node(model: onnx.ModelProto, node_name: str):
@@ -28,44 +28,28 @@ def get_data_from_node(model: onnx.ModelProto, node_name: str):
     return None
 
 
-@pytest.mark.parametrize("with_bias, ref_bias", ((False, None), (True, np.array([-2.0181384, -2.0181384]))))
-def test_fast_bias_correction_algo(with_bias, ref_bias, tmpdir):
-    """
-    Check working on fast bias correction algorithm and compare bias in quantized model with reference
-    """
-    model = ConvTestModel(bias=with_bias)
-    input_shape = [1, 1, 4, 4]
+class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
+    @staticmethod
+    def list_to_backend_type(data: List) -> np.array:
+        return np.array(data)
 
-    onnx_path = f"{tmpdir}/model.onnx"
-    torch.onnx.export(model, torch.rand(input_shape), onnx_path, opset_version=13)
-    onnx_model = onnx.load(onnx_path)
+    @staticmethod
+    def get_model(with_bias, tmp_dir):
+        model = ConvTestModel(bias=with_bias)
+        onnx_path = f"{tmp_dir}/model.onnx"
+        torch.onnx.export(model, torch.rand([1, 1, 4, 4]), onnx_path, opset_version=13)
+        onnx_model = onnx.load(onnx_path)
+        return onnx_model
 
-    quantization_algorithm = get_min_max_and_fbc_algo_for_test()
+    @staticmethod
+    def get_dataset(model):
+        np.random.seed(42)
+        dataset = get_random_dataset_for_test(model, False)
+        return dataset
 
-    np.random.seed(42)
-    dataset = get_random_dataset_for_test(onnx_model, False)
-    quantized_model = quantization_algorithm.apply(onnx_model, dataset=dataset)
-
-    if ref_bias is None:
-        assert get_data_from_node(quantized_model, "conv.bias") is None
-    else:
-        assert np.all(
-            np.isclose(get_data_from_node(quantized_model, "conv.bias"), ref_bias)
-        )
-
-
-
-@pytest.mark.parametrize(
-    "bias_value, bias_shift, channel_axis, ref_shape",
-    (
-        (np.array([1, 1]), np.array([0.1, 0.1]), 1, [2]),
-        (np.array([[1, 1]]), np.array([0.1, 0.1]), -1, [1, 2]),
-        (np.array([[1, 1]]), np.array([0.1, 0.1]), 1, [1, 2]),
-    ),
-)
-def test_reshape_bias_shift(bias_value, bias_shift, channel_axis, ref_shape):
-    """
-    Checks the result of the FastBiasCorrection.reshape_bias_shift method if np.array is used.
-    """
-    new_bias_shift = FastBiasCorrection.reshape_bias_shift(bias_shift, bias_value, channel_axis)
-    assert list(new_bias_shift.shape) == ref_shape
+    @staticmethod
+    def check_bias(model, with_bias):
+        if with_bias:
+            assert np.all(np.isclose(get_data_from_node(model, "conv.bias"), np.array([-2.0181384, -2.0181384])))
+        else:
+            assert get_data_from_node(model, "conv.bias") is None
