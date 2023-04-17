@@ -18,6 +18,7 @@ from abc import abstractclassmethod
 from pathlib import Path
 from enum import Enum
 from dataclasses import dataclass
+from tests.shared.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):
@@ -212,3 +213,7 @@ def pytest_runtest_makereport(item, call):
         output_folder = Path(item.config.getoption("--output"))
         output_folder.mkdir(parents=True, exist_ok=True)
         np.savetxt(output_folder / "results.csv", table, delimiter=",", fmt='%s', header=','.join(header))
+
+
+PTQ_TEST_ROOT = TEST_ROOT / 'post_training'
+FQ_CALCULATED_PARAMETERS_PATH = PTQ_TEST_ROOT / 'data' / 'fq_params' / 'fq_params.json'

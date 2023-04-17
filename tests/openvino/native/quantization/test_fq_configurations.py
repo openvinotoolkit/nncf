@@ -23,7 +23,7 @@ from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
-from tests.openvino.native.common import load_json
+from tests.shared.helpers import load_json
 
 FQ_CALCULATED_PARAMETERS_PATH = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_scales' / 'fq_params_synthetic.json'
 

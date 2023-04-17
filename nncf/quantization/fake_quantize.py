@@ -175,20 +175,17 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
     return level_low, level_high
 
 
-def get_quantizer_narrow_range(quantizer_config: QuantizerConfig,
-                               quant_group: QuantizerGroup, half_range: bool = False) -> bool:
+def get_quantizer_narrow_range(quantizer_config: QuantizerConfig, quant_group: QuantizerGroup) -> bool:
     """
     Returns narrow_range parameter: True if the range of quantized values is reduced by 1 compared to the
         naive case, False otherwise.
 
     :param quantizer_config: Config of the quantization configuration.
     :param quant_group: Group of the quantizer.
-    :param half_range: If True effectively only a half of a quantizer range is used.
-        False - the full range is used.
     :return: narrow_range parameter.
     """
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        return quant_group == QuantizerGroup.WEIGHTS and quantizer_config.num_bits == 8 and not half_range
+        return quant_group == QuantizerGroup.WEIGHTS
     return False
 
 
@@ -214,7 +211,8 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
 
     if half_range:
         input_low, input_high, levels = _calculate_scaled_parameters(min_values, max_values,
-                                                                     quantizer_config, quant_group)
+                                                                     quantizer_config, quant_group,
+                                                                     narrow_range)
     else:
         num_bits = quantizer_config.num_bits
         if quantizer_config.mode == QuantizationMode.SYMMETRIC:
@@ -234,18 +232,32 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
 
 def _calculate_scaled_parameters(min_values: np.ndarray, max_values: np.ndarray,
                                  quantizer_config: QuantizerConfig,
-                                 quant_group: QuantizerGroup) -> Tuple[np.ndarray, np.ndarray, int]:
+                                 quant_group: QuantizerGroup,
+                                 narrow_range : bool) -> Tuple[np.ndarray, np.ndarray, int]:
+    """
+    Calculates FakeQuantize layer attributes scaled to effectively use a half range of the quantization range.
 
+    :param min_values: Minimum values of statistics for the quantizer. 
+    :param max_values: Maximum values of statistics for the quantizer.
+    :param quantizer_config: Config of the quantization configuration.
+    :param quantizer_group: Group of the quantizer.
+    :param narrow_range: True if the range of quantized values is reduced by 1 compared to the
+        naive case, False otherwise.
+    :return: A Tuple
+        input_low: Tensor with minimum limit for input value.
+        input_high: Tensor with maximum limit for input value.
+        levels: Number of quantization levels.
+    """
     if quantizer_config.mode == QuantizationMode.ASYMMETRIC:
         raise RuntimeError('half_range is only applied to symmetric quantization mode.')
-    if quant_group == QuantizerGroup.ACTIVATIONS:
+    if quant_group != QuantizerGroup.WEIGHTS:
         raise RuntimeError('half_range is only applied to weight quantizers.')
 
     num_bits = quantizer_config.num_bits
     _, _, levels = calculate_symmetric_level_ranges(num_bits - 1, signed=True, narrow_range=False)
     input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
 
-    _, _, export_levels = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=True)
+    _, _, export_levels = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=narrow_range)
     input_high *= (export_levels - 1) / (levels - 1)
     input_low *= (export_levels - 1) / (levels - 1)
 
