@@ -350,7 +350,7 @@ class ONNXGraph:
         return shape
 
     @staticmethod
-    def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> np.dtype:
+    def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> int:
         """
         Returns the data type of the edge.
 
@@ -358,10 +358,8 @@ class ONNXGraph:
         :return: Data type of the edge.
         """
         if isinstance(edge, onnx.ValueInfoProto):
-            d_type = edge.type.tensor_type.elem_type
-        else:
-            d_type = edge.data_type
-        return onnx.helper.tensor_dtype_to_np_dtype(d_type)
+            return edge.type.tensor_type.elem_type
+        return edge.data_type
 
     def get_parents(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
         """

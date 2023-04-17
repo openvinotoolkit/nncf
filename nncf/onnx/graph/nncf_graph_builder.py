@@ -13,7 +13,6 @@
 from typing import List, Tuple, Optional
 
 from collections import Counter
-import numpy as np
 import onnx
 
 from nncf.common.graph import NNCFGraph
@@ -76,8 +75,8 @@ class GraphConverter:
             input_node_node_id = input_node.node_id
             edge = onnx_graph.get_edge(input_name)
             input_shape = ONNXGraph.get_edge_shape(edge)
-            np_dtype = ONNXGraph.get_edge_dtype(edge)
-            nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
+            onnx_dtype = ONNXGraph.get_edge_dtype(edge)
+            nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             output_port_id = 0
             for node in to_nodes:
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
@@ -111,8 +110,8 @@ class GraphConverter:
             output_node_node_id = output_node.node_id
             edge = onnx_graph.get_edge(output_name)
             output_shape = ONNXGraph.get_edge_shape(edge)
-            np_dtype = ONNXGraph.get_edge_dtype(edge)
-            nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
+            onnx_dtype = ONNXGraph.get_edge_dtype(edge)
+            nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             input_port_id = 0
             for node in from_nodes:
                 from_node_id = nncf_graph.get_node_by_name(node.name).node_id
@@ -128,14 +127,14 @@ class GraphConverter:
                 input_port_id += 1
 
     @staticmethod
-    def convert_np_dtype_to_nncf_dtype(np_dtype: np.dtype) -> Dtype:
+    def convert_onnx_dtype_to_nncf_dtype(onnx_dtype: int) -> Dtype:
         """
-        Converts the data type from the numpy domain to the NNCF domain.
+        Converts the data type from the ONNX domain to the NNCF domain.
 
-        :param np_dtype: Numpy data type.
+        :param np_dtype: ONNX data type.
         :return: NNCF data type.
         """
-        return Dtype.FLOAT if np_dtype == np.float32 else Dtype.INTEGER
+        return Dtype.FLOAT if onnx_dtype == int(onnx.TensorProto.FLOAT) else Dtype.INTEGER
 
     @staticmethod
     def create_nncf_graph(onnx_model: onnx.ModelProto) -> NNCFGraph:
@@ -181,8 +180,8 @@ class GraphConverter:
                     # NNCFGraph should not contain such edges.
                     continue
                 tensor_shape = ONNXGraph.get_edge_shape(edge)
-                np_dtype = ONNXGraph.get_edge_dtype(edge)
-                nncf_dtype = GraphConverter.convert_np_dtype_to_nncf_dtype(np_dtype)
+                onnx_dtype = ONNXGraph.get_edge_dtype(edge)
+                nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
                 input_nodes = onnx_graph.get_nodes_by_input(output_edge)
                 for input_node in input_nodes:

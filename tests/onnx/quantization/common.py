@@ -61,7 +61,8 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool,
         output = {}
         for key in keys:
             edge = onnx_graph.get_edge(key)
-            input_np_dtype = ONNXGraph.get_edge_dtype(edge)
+            input_dtype = ONNXGraph.get_edge_dtype(edge)
+            input_np_dtype = onnx.helper.tensor_dtype_to_np_dtype(input_dtype)
             shape = ONNXGraph.get_edge_shape(edge)
             tensor = np.random.random(shape).astype(input_np_dtype)
             if has_batch_dim:
@@ -133,18 +134,6 @@ def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_
     _nx_graph = _nncf_graph.get_graph_for_structure_analysis(extended=True)
 
     check_nx_graph(nx_graph, _nx_graph, check_edge_attrs=True)
-
-
-def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> None:
-    onnx_graph = ONNXGraph(quantized_model)
-    edge = onnx_graph.get_edge(quantized_model.graph.input[0].name)
-    input_dtype = ONNXGraph.get_edge_dtype(edge)
-    input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
-    serialized_model = quantized_model.SerializeToString()
-    sess = rt.InferenceSession(serialized_model, providers=['OpenVINOExecutionProvider'])
-    _input = np.random.random(input_shape)
-    input_name = sess.get_inputs()[0].name
-    _ = sess.run([], {input_name: _input.astype(input_np_dtype)})
 
 
 def find_ignored_scopes(disallowed_op_types: List[str], model: onnx.ModelProto) -> List[str]:
