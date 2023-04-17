@@ -25,6 +25,8 @@ from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_
     OVMinMaxAlgoBackend
 
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
+from tests.openvino.native.models import SplitConcatModel
+from tests.openvino.native.models import SharedConvModel
 
 
 INPUT_NAME = 'Input'
@@ -54,8 +56,24 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         conv_w = self.dataset_samples_to_conv_w(sample)
         return get_StatisticAgregatorTestModel(INPUT_SHAPE, conv_w)
 
+    @pytest.fixture(scope='session')
+    def test_params(self):
+        return {
+            'test_statistic_merging': {
+                'split_concat': {
+                    'model': self._get_split_concat_backend_model
+                },
+                'shared_conv': {
+                    'model': self._get_shared_conv_model
+                }
+            }
+        }
+
     def get_statistics_aggregator(self, dataset):
         return OVStatisticsAggregator(dataset)
+
+    def get_target_point_cls(self):
+        return OVTargetPoint
 
     def get_dataset(self, samples):
         return Dataset(samples, lambda data: {INPUT_NAME: data})
@@ -66,6 +84,8 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:
             target_node_name = CONV_NODE_NAME
             port_id = 1
+        if target_type == TargetType.PRE_LAYER_OPERATION:
+            target_node_name = CONV_NODE_NAME
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @pytest.fixture
@@ -81,3 +101,17 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @pytest.fixture
     def is_stat_in_shape_of_scale(self) -> bool:
         return True
+
+    @pytest.fixture(params=[True, False],
+                    ids=['inplace', 'out_of_place'])
+    def inplace_statistics(self, request) -> bool:
+        return request.param
+
+    def _get_split_concat_backend_model(self, dataset_samples):
+        return SplitConcatModel(input_name=INPUT_NAME).ov_model
+
+    def _get_shared_conv_model(self, dataset_samples):
+        sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
+        conv_w = self.dataset_samples_to_conv_w(sample)
+        return SharedConvModel(input_name=INPUT_NAME,
+                               input_shape=INPUT_SHAPE, kernel=conv_w).ov_model

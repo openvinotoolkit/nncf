@@ -83,12 +83,14 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
+                                 inplace: bool,
                                  num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None) -> ONNXMeanStatisticCollector:
+                                 window_size: Optional[int] = None,
+                                 ) -> ONNXMeanStatisticCollector:
         return ONNXMeanStatisticCollector(reduction_shape,  num_samples, window_size)
 
     @staticmethod
-    def batch_statistic_collector(num_samples: int = None) -> ONNXMeanStatisticCollector:
+    def batch_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
         return ONNXBatchStatisticCollector(num_samples)
 
     @staticmethod
@@ -117,7 +119,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        input_nodes = nncf_graph.get_previous_nodes(node)
+        input_nodes = [edge.from_node for edge in nncf_graph.get_input_edges(node)]
         weight_port_id = node.metatype.weight_definitions.weight_port_id
         weight_node = input_nodes[weight_port_id]
         return weight_node.metatype == ONNXDequantizeLinearMetatype

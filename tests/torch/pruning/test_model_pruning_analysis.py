@@ -69,6 +69,7 @@ from tests.torch.pruning.helpers import SplitConcatModel
 from tests.torch.pruning.helpers import MultipleSplitConcatModel
 from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import HRNetBlock
+from tests.torch.pruning.helpers import PruningTestModelPad
 from tests.torch.pruning.helpers import GroupNormModel
 from tests.torch.pruning.helpers import PruningTestBatchedLinear
 from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinearWithConcat
@@ -552,7 +553,31 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                          12: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV]),
                          13: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
         prune_params=(True, True)),
-        GroupPruningModulesTestStruct(model=PruningTestBatchedLinear,
+    GroupPruningModulesTestStruct(
+        model=PruningTestModelPad,
+        non_pruned_module_nodes=['PruningTestModelPad/NNCFConv2d[conv7]/conv2d_0',
+                                 'PruningTestModelPad/NNCFConv2d[conv8]/conv2d_0',
+                                 'PruningTestModelPad/NNCFConv2d[conv9]/conv2d_0'],
+        pruned_groups=[['PruningTestModelPad/NNCFConv2d[conv1]/conv2d_0'],
+                       ['PruningTestModelPad/NNCFConv2d[conv2]/conv2d_0'],
+                       ['PruningTestModelPad/NNCFConv2d[conv3]/conv2d_0'],
+                       ['PruningTestModelPad/NNCFConv2d[conv4]/conv2d_0'],
+                       ['PruningTestModelPad/NNCFConv2d[conv5]/conv2d_0'],
+                       ['PruningTestModelPad/NNCFConv2d[conv6]/conv2d_0']],
+        pruned_groups_by_node_id=[[1], [2], [4], [5], [7], [9]],
+        can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True, 8: True,
+                                  9: True, 10: True, 11: False, 12: False, 13: False, 14: False, 15: True, 16: True},
+        final_can_prune={1: PruningAnalysisDecision(True),
+                         2: PruningAnalysisDecision(True),
+                         4: PruningAnalysisDecision(True),
+                         5: PruningAnalysisDecision(True),
+                         7: PruningAnalysisDecision(True),
+                         9: PruningAnalysisDecision(True),
+                         11: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+                         13: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+                         15: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
+        prune_params=(True, True)),
+    GroupPruningModulesTestStruct(model=PruningTestBatchedLinear,
         non_pruned_module_nodes=['PruningTestBatchedLinear/NNCFConv2d[first_conv]/conv2d_0',
                                  'PruningTestBatchedLinear/NNCFLinear[linear1]/linear_0',
                                  'PruningTestBatchedLinear/NNCFLinear[last_linear]/linear_0'],

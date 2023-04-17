@@ -26,6 +26,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
@@ -55,6 +56,13 @@ class MinMaxAlgoBackend(ABC):
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific ShapeOf metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
         """
 
     @property
@@ -117,16 +125,29 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+        """
+        Returns backend-specific unified statistics.
+
+        :param statistics: List of MinMaxTensorStatistic instances.
+        :return: Unified MinMaxTensorStatistic value.
+        """
+
+    @staticmethod
+    @abstractmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: TargetPoint,
                                    quantizer_config: QuantizerConfig,
-                                   num_samples: int = None) -> TensorStatisticCollectorBase:
+                                   inplace: bool,
+                                   num_samples: int = None,
+                                   ) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
 
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
@@ -137,7 +158,9 @@ class MinMaxAlgoBackend(ABC):
                                         target_point: TargetPoint,
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
-                                        num_samples: int = None) -> TensorStatisticCollectorBase:
+                                        inplace: bool,
+                                        num_samples: int = None,
+                                        ) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
 
@@ -145,6 +168,7 @@ class MinMaxAlgoBackend(ABC):
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param use_per_sample_stats: Whether to collect statistics in per sample mode or not.
+        :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """

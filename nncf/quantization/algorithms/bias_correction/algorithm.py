@@ -47,16 +47,22 @@ class BiasCorrectionParameters(AlgorithmParameters):
     :param threshold: Magnitude threshold that regulates application of shift.
     """
 
-    def __init__(self, number_samples: int = 100, threshold: float = 1000) -> None:
+    def __init__(self, number_samples: int = 100, threshold: float = 1000,
+                 inplace_statistics: bool = True) -> None:
         """
         :param number_samples: The number of samples for the statistics collection.
             This statistic uses for the further calculation of the bias shift.
         :param threshold: The magnitude threshold regulates the application of the shift.
             Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
             If the calculated value is less than the threshold, the shift will apply to the bias.
+        :param inplace_statistics: Appliclable only for OpenVINO backend.
+            Will be available for ONNX backend in future. Defines wheather to calculate quantizers statistics
+            by backend graph operations or by default Python implementation.
+            Statistics computated inplace tend to be calculated faster and with lower memory stamp.
         """
         self.number_samples = number_samples
         self.threshold = threshold
+        self.inplace_statistics = inplace_statistics
 
     def to_json(self) -> Dict[str, Union[str, float, int]]:
         """
@@ -99,6 +105,7 @@ class BiasCorrection(Algorithm):
         super().__init__()
         self.number_samples = max(np.int(parameters.number_samples * 0.2), 1)
         self.threshold = parameters.threshold
+        self.inplace_statistics = parameters.inplace_statistics
         self.nncf_graph = None
         self._backend_entity = None
         self._collected_stat_inputs = set()
@@ -156,7 +163,7 @@ class BiasCorrection(Algorithm):
             # the model transformer (that uses during sub-graph extraction) already does this internally when creating.
             model_copy_subgraph = self._prepare_subgraph(node, model_copy, nncf_graph, subgraph_data)
 
-            feed_dicts = self._create_feed_dicts(nncf_graph, model_copy_subgraph, subgraph_data, statistic_points)
+            feed_dicts = self._create_feed_dicts(model_copy_subgraph, subgraph_data, statistic_points)
 
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
 
@@ -257,6 +264,7 @@ class BiasCorrection(Algorithm):
         for stat_node in stats_nodes:
             input_nodes.extend(nncf_graph.traverse_graph(stat_node, traverse_to_input_layers, traverse_forward=False))
 
+        output_nodes = output_nodes if output_nodes else stats_nodes
         subgraph_data = {
             'input_node_names': [input_node.node_name for input_node in input_nodes],
             'output_node_names': [n.node_name for n in output_nodes],
@@ -289,14 +297,13 @@ class BiasCorrection(Algorithm):
         return model_transformer.transform(transformation_layout)
 
     def _create_feed_dicts(self,
-                           nncf_subgraph: NNCFGraph,
                            model: TModel,
                            subgraph_data: Dict,
                            statistic_points: StatisticPointsContainer) -> List[Dict]:
         """
         Creates the list of the dictionaries that contains the input data for the model exection.
 
-        :param nncf_subgraph: NNCFGraph instance.
+        :param model: TModel instance.
         :param subgraph_data: A dictionary with the necessary data for current node.
         :param statistic_points: StatisticPointsContainer instance.
         :return: List of the dictionaries with the input data.
@@ -305,8 +312,7 @@ class BiasCorrection(Algorithm):
         for stat_id in range(self.number_samples):
             feed_dict = {}
             for input_node_name in subgraph_data['input_node_names']:
-                input_node = nncf_subgraph.get_node_by_name(input_node_name)
-                input_tensor_name = self._backend_entity.get_input_name(model, input_node.node_name)
+                input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
                 input_fp = self._get_fp_inputs(statistic_points, input_node_name)
                 feed_dict[input_tensor_name] = np.mean(input_fp[stat_id], axis=0, keepdims=True)
             feed_dicts.append(feed_dict)
@@ -467,7 +473,8 @@ class BiasCorrection(Algorithm):
                 statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                     node_name,
                                                                     input_port_id)
-                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples)
+                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples,
+                                                                                inplace=self.inplace_statistics)
                 statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                        tensor_collector=stat_collector,
                                                                        algorithm=BiasCorrection))
@@ -475,7 +482,8 @@ class BiasCorrection(Algorithm):
                                                                 node_name,
                                                                 output_port_id)
             stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=channel_axis,
-                                                                           num_samples=self.number_samples)
+                                                                           num_samples=self.number_samples,
+                                                                           inplace=self.inplace_statistics)
             statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                    tensor_collector=stat_collector,
                                                                    algorithm=BiasCorrection))
@@ -486,7 +494,8 @@ class BiasCorrection(Algorithm):
                 statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                     next_input_node.node_name,
                                                                     port_id=0)
-                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples)
+                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples,
+                                                                                inplace=self.inplace_statistics)
                 statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                        tensor_collector=stat_collector,
                                                                        algorithm=BiasCorrection))

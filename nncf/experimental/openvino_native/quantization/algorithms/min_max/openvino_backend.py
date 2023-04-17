@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Optional, Tuple
+import numpy as np
+from typing import Dict, List, Tuple, Optional
 
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -26,11 +27,13 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTopKMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVNonMaxSuppressionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReadValueMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVPowerMetatype
@@ -44,9 +47,9 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVQ
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
-from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
-from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
-
+from nncf.experimental.openvino_native.statistics.collectors import get_min_max_stat_collector
+from nncf.experimental.openvino_native.statistics.collectors import get_mean_min_max_stat_collector
+from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
@@ -66,6 +69,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
         return [OVShapeOfMetatype]
+
+    @property
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        return [OVReadValueMetatype]
 
     @property
     def hw_config(self) -> HWConfig:
@@ -96,6 +103,16 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             quantizer_config: QuantizerConfig,
             parameters: FakeQuantizeParameters) -> OVQuantizerInsertionCommand:
         return OVQuantizerInsertionCommand(target_point, parameters)
+
+    @staticmethod
+    def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        max_values = np.max(max_values, axis=0)
+        min_values = np.min(min_values, axis=0)
+        return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
     def _get_reduction_shape_and_use_abs_max(
@@ -133,28 +150,38 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return axes, use_abs_max
 
     @staticmethod
+    def _get_num_samples(num_samples, target_point: OVTargetPoint):
+        if target_point.is_weight_target_point():
+            return 1
+        return num_samples
+
+    @staticmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: OVTargetPoint,
                                    quantizer_config: QuantizerConfig,
-                                   num_samples: int = None) -> OVMinMaxStatisticCollector:
-        reduction_shape, use_abs_max = \
+                                   inplace: bool,
+                                   num_samples: int = None,
+                                   ) -> TensorCollector:
+        reduction_shape, use_abs_max =\
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
-        return OVMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
+        _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
+        return get_min_max_stat_collector(_num_samples, reduction_shape, use_abs_max, inplace)
 
     @staticmethod
     def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
                                         target_point: OVTargetPoint,
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
-                                        num_samples: int = None) -> OVMeanMinMaxStatisticCollector:
+                                        inplace: bool,
+                                        num_samples: int = None,
+                                        ) -> TensorCollector:
         reduction_shape, use_abs_max = \
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
-        return OVMeanMinMaxStatisticCollector(use_per_sample_stats,
-                                              use_abs_max,
-                                              reduction_shape,
-                                              num_samples)
+        _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
+        return get_mean_min_max_stat_collector(_num_samples, reduction_shape,
+                                               use_abs_max, use_per_sample_stats, inplace)
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:

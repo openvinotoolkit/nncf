@@ -21,6 +21,7 @@ from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.experimental.openvino_native.graph.node_utils import InplaceInsertionFnType
 
 
 class OVTargetPoint(TargetPoint):
@@ -60,6 +61,19 @@ class OVInsertionCommand(TransformationCommand):
 
 
 class OVOutputInsertionCommand(OVInsertionCommand):
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVInplaceFnInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint,
+                 inplace_op_fn: InplaceInsertionFnType,
+                 fn_output_port_id : int):
+        super().__init__(target_point)
+        self.inplace_op_fn = inplace_op_fn
+        self.fn_output_port_id = fn_output_port_id
+
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()

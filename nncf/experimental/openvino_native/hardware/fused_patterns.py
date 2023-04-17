@@ -126,6 +126,8 @@ def create_scale_shift():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SE_BLOCK)
 def create_se_block():
     pattern = GraphPattern()
+    any_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ANY',
+                                   GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
     reduce_mean_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'REDUCE_MEAN',
                                            GraphPattern.METATYPE_ATTR: om.OVReduceMeanMetatype})
     linear_node_1 = pattern.add_node(**LINEAR_OPERATIONS)
@@ -143,6 +145,7 @@ def create_se_block():
     multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
                                         GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype})
 
+    pattern.add_edge(any_node, reduce_mean_node)
     pattern.add_edge(reduce_mean_node, linear_node_1)
     pattern.add_edge(linear_node_1, add_node_1)
     pattern.add_edge(add_node_1, activation_node_1)
@@ -150,6 +153,7 @@ def create_se_block():
     pattern.add_edge(linear_node_2, add_node_2)
     pattern.add_edge(add_node_2, activation_node_2)
     pattern.add_edge(activation_node_2, multiply_node)
+    pattern.add_edge(any_node, multiply_node)
     return pattern
 
 

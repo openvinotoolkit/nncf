@@ -43,6 +43,7 @@ from nncf.common.quantization.quantizer_propagation.structs import PropagationPa
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
 from nncf.common.quantization.quantizer_propagation.structs import SharedAffectedOpsPropagatingQuantizerGroup
+from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
@@ -56,7 +57,7 @@ from nncf.common.scopes import should_consider_scope
 
 
 class QuantizerPropagationStateGraph(nx.DiGraph):
-    #pylint:disable=too-many-public-methods
+    #pylint:disable=too-many-public-methods,too-many-return-statements
     """
     This class is based upon InsertionPointGraph and represents
     a"chessboard" for PropagatingQuantizer items.  It tracks the current state of
@@ -89,7 +90,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         self._ignored_scopes = deepcopy(ignored_scopes)
         self._target_scopes = deepcopy(target_scopes)
-        self.ignored_node_keys = []
+        self.ignored_node_keys = {} # type: Dict[str, IgnoreReason]
 
         self._unified_scale_group_manager = UnifiedScalePropagatingQuantizerGroupManager()
         self._input_node_keys_vs_nncf_nodes = {}  # type: Dict[str, NNCFNode]
@@ -137,7 +138,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
                 if ignored:
                     qpg_node[self.IS_IN_IGNORED_SCOPES] = True
-                    self.ignored_node_keys.append(node_key)
+                    self.ignored_node_keys[node_key] = IgnoreReason.USER_REQUESTED
                     # TODO (vshampor): do we need here NoopMetatype
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = NoopMetatype
                 else:
@@ -157,7 +158,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             edge_data[self.IS_INTEGER_PATH_EDGE_ATTR] = is_integer
             self.add_edge(from_node, to_node, **edge_data)
 
-        for barred_node_key in self.ignored_node_keys + iteration_scope_node_keys:
+        for barred_node_key in list(self.ignored_node_keys.keys()) + iteration_scope_node_keys:
             self._add_barrier_after_node(barred_node_key)
 
     def get_node_keys_by_metatype(self, metatype: Type[OperatorMetatype]) -> List[str]:
@@ -952,6 +953,13 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             affecting_pq, prev_node_key = affecting_pq_and_prev_node_key
             curr_node = self.nodes[curr_node_key]
             curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+
+            # Skipping traversing through the INTEGER path.
+            if curr_node_key != prev_node_key:
+                edge = self.edges[prev_node_key, curr_node_key]
+                if edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
+                    return False, (None, curr_node_key)
+
             if self.is_insertion_point(curr_node_type):
                 curr_pq = curr_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
                 if curr_pq is not None:

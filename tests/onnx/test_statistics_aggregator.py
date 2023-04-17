@@ -15,10 +15,11 @@ import pytest
 import numpy as np
 
 from nncf import Dataset
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
+
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
-from nncf.common.graph.transformations.commands import TargetType
 
 from tests.onnx.models import IdentityConvolutionalModel
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
@@ -45,6 +46,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_statistics_aggregator(self, dataset):
         return ONNXStatisticsAggregator(dataset)
 
+    @pytest.fixture(scope='session')
+    def test_params(self):
+        return
+
     def get_dataset(self, samples):
         def transform_fn(data_item):
             inputs = data_item
@@ -60,6 +65,9 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             port_id = 1
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
+    def get_target_point_cls(self):
+        return ONNXTargetPoint
+
     @pytest.fixture
     def dataset_samples(self, dataset_values):
         input_shape = INPUT_SHAPE
@@ -74,3 +82,15 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @pytest.fixture
     def is_stat_in_shape_of_scale(self) -> bool:
         return False
+
+    @pytest.fixture(params=[False], ids=['out_of_palce'])
+    def inplace_statistics(self, request) -> bool:
+        return request.param
+
+    @pytest.mark.skip('Merging is not implemented yet')
+    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics):
+        pass
+
+    @pytest.mark.skip('Merging is not implemented yet')
+    def test_statistic_merging(self, dataset_samples, inplace_statistics):
+        pass

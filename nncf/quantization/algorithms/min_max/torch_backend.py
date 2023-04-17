@@ -47,6 +47,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -68,6 +69,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
 
     @property
@@ -120,10 +125,22 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                                        parameters)
 
     @staticmethod
+    def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        max_values = torch.max(torch.tensor(max_values))
+        min_values = torch.min(torch.tensor(min_values))
+        return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
+
+    @staticmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: PTTargetPoint,
                                    quantizer_config: QuantizerConfig,
-                                   num_samples: int = None) -> PTMinMaxStatisticCollector:
+                                   inplace: bool,
+                                   num_samples: int = None,
+                                   ) -> PTMinMaxStatisticCollector:
         return PTMinMaxAlgoBackend._statistic_collector_builder("min_max",
                                                                 nncf_graph,
                                                                 target_point,
@@ -135,7 +152,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                         target_point: PTTargetPoint,
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
-                                        num_samples: int = None) -> PTMeanMinMaxStatisticCollector:
+                                        inplace: bool,
+                                        num_samples: int = None,
+                                        ) -> PTMeanMinMaxStatisticCollector:
         return PTMinMaxAlgoBackend._statistic_collector_builder("mean_min_max",
                                                                 nncf_graph,
                                                                 target_point,

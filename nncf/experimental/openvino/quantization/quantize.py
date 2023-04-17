@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import sys
 from typing import Callable, Any, Iterable, Optional
 
 import openvino.runtime as ov
@@ -26,6 +27,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.openvino.quantization.quantize import quantize_impl
+from nncf.common.utils.timer import timer
 
 
 def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model) -> None:
@@ -45,11 +47,19 @@ def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model)
 
     for initial_name in initial_name_to_const_map:
         num_matches = 0
+
+        name_to_search = initial_name
+        if 'compressed' in name_to_search:
+            name_to_search = name_to_search[:name_to_search.rfind('compressed') - 1]
+
         for modified_name, const_op in modified_name_to_const_map.items():
-            if modified_name.startswith(initial_name):
+            if modified_name.startswith(name_to_search):
                 num_matches += 1
                 const_op.set_friendly_name(initial_name)
-        assert num_matches == 1
+
+        if num_matches != 1:
+            raise RuntimeError('Unexpected Behavior: number of matches greater than 1\n'
+                               f'num_matches: {num_matches}, name: {initial_name}')
 
 
 def quantize_with_accuracy_control(model: ov.Model,
@@ -62,7 +72,8 @@ def quantize_with_accuracy_control(model: ov.Model,
                                    subset_size: int = 300,
                                    fast_bias_correction: bool = True,
                                    model_type: Optional[ModelType] = None,
-                                   ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
+                                   ignored_scope: Optional[IgnoredScope] = None,
+                                   max_num_iterations: int = sys.maxsize) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via POT.
     """
@@ -80,15 +91,20 @@ def quantize_with_accuracy_control(model: ov.Model,
     backend = get_backend(model)
     algo_backend = get_algo_backend(backend)
 
-    initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
-                                   validation_dataset.get_data())
+    nncf_logger.info('Validation of initial model was started')
+    with timer():
+        initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
+                                       validation_dataset.get_data())
     nncf_logger.info(f'Metric of initial model: {initial_metric}')
 
-    quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
-                                     validation_dataset.get_data())
+    nncf_logger.info('Validation of quantized model was started')
+    with timer():
+        quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
+                                         validation_dataset.get_data())
     nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
 
-    accuracy_aware_loop = QuantizationAccuracyRestorer(algo_backend, max_drop=max_drop, is_native=False)
+    accuracy_aware_loop = QuantizationAccuracyRestorer(max_num_iterations=max_num_iterations,
+                                                       max_drop=max_drop)
     quantized_model = accuracy_aware_loop.restore_accuracy(model, initial_metric,
                                                            quantized_model, quantized_metric,
                                                            validation_dataset, validation_fn)

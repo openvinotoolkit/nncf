@@ -14334,10 +14334,10 @@
         ]
     },
     "leaky_re_lu_13/LeakyRelu/fq_output_0": {
-        "input_low": -3.5850846767425537,
-        "input_high": 3.5570762157440186,
-        "output_low": -3.5850846767425537,
-        "output_high": 3.5570762157440186
+        "input_low": -3.59743070602417,
+        "input_high": 3.5693256855010986,
+        "output_low": -3.59743070602417,
+        "output_high": 3.5693256855010986
     },
     "conv2d_13/Conv2D/fq_weights_1": {
         "input_low": [
@@ -25118,10 +25118,10 @@
         ]
     },
     "leaky_re_lu_10/LeakyRelu/fq_output_0": {
-        "input_low": -2.558670997619629,
-        "input_high": 2.5386812686920166,
-        "output_low": -2.558670997619629,
-        "output_high": 2.5386812686920166
+        "input_low": -3.59743070602417,
+        "input_high": 3.5693256855010986,
+        "output_low": -3.59743070602417,
+        "output_high": 3.5693256855010986
     },
     "conv2d_10/Conv2D/fq_weights_1": {
         "input_low": [
@@ -37710,10 +37710,10 @@
         ]
     },
     "leaky_re_lu_6/LeakyRelu/fq_output_0": {
-        "input_low": -3.6051254272460938,
-        "input_high": 3.576960325241089,
-        "output_low": -3.6051254272460938,
-        "output_high": 3.576960325241089
+        "input_low": -5.901343822479248,
+        "input_high": 5.855239391326904,
+        "output_low": -5.901343822479248,
+        "output_high": 5.855239391326904
     },
     "conv2d_6/Conv2D/fq_weights_1": {
         "input_low": [
@@ -41310,10 +41310,10 @@
         ]
     },
     "leaky_re_lu_5/LeakyRelu/fq_output_0": {
-        "input_low": -5.280087947845459,
-        "input_high": 5.238837242126465,
-        "output_low": -5.280087947845459,
-        "output_high": 5.238837242126465
+        "input_low": -10.120508193969727,
+        "input_high": 10.041441917419434,
+        "output_low": -10.120508193969727,
+        "output_high": 10.041441917419434
     },
     "conv2d_5/Conv2D/fq_weights_1": {
         "input_low": [
@@ -43118,10 +43118,10 @@
         ]
     },
     "leaky_re_lu_3/LeakyRelu/fq_output_0": {
-        "input_low": -5.7802300453186035,
-        "input_high": 5.735072135925293,
-        "output_low": -5.7802300453186035,
-        "output_high": 5.735072135925293
+        "input_low": -6.130911350250244,
+        "input_high": 6.083013534545898,
+        "output_low": -6.130911350250244,
+        "output_high": 6.083013534545898
     },
     "conv2d_3/Conv2D/fq_weights_1": {
         "input_low": [
@@ -49476,10 +49476,10 @@
         ]
     },
     "leaky_re_lu_8/LeakyRelu/fq_output_0": {
-        "input_low": -7.330994129180908,
-        "input_high": 7.273720741271973,
-        "output_low": -7.330994129180908,
-        "output_high": 7.273720741271973
+        "input_low": -9.338680267333984,
+        "input_high": 9.265722274780273,
+        "output_low": -9.338680267333984,
+        "output_high": 9.265722274780273
     },
     "conv2d_8/Conv2D/fq_weights_1": {
         "input_low": [
@@ -51284,10 +51284,10 @@
         ]
     },
     "leaky_re_lu_12/LeakyRelu/fq_output_0": {
-        "input_low": -4.239522457122803,
-        "input_high": 4.206401348114014,
-        "output_low": -4.239522457122803,
-        "output_high": 4.206401348114014
+        "input_low": -4.5784101486206055,
+        "input_high": 4.5426411628723145,
+        "output_low": -4.5784101486206055,
+        "output_high": 4.5426411628723145
     },
     "conv2d_12/Conv2D/fq_weights_1": {
         "input_low": [

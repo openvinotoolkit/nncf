@@ -11,28 +11,44 @@
  limitations under the License.
 """
 
-from typing import List, Tuple, Dict
-import openvino.runtime as ov
+from typing import List, Tuple, Dict, Callable
+from collections import deque
+from collections import defaultdict
+
 import numpy as np
+import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.model_transformer import TModel
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
-from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
+from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 
 
 class OVModelTransformer(ModelTransformer):
     """
     Applies transformations to an OpenVINO model.
     """
+    def __init__(self, model: TModel):
+        super().__init__(model)
+        self._command_transformation_ordered_pairs = [
+            (OVFQNodeRemovingCommand, self._apply_fq_nodes_removing_transformation),
+            (OVQuantizerInsertionCommand, self._apply_quantizer_insertion_transformations),
+            (OVBiasCorrectionCommand, self._apply_bias_correction_transformations),
+            (OVWeightUpdateCommand, self._apply_weight_update_transformations),
+            (OVModelExtractionCommand, self._apply_model_extraction_transformation),
+            (OVInplaceFnInsertionCommand, self._apply_insert_operation),
+            (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
+        ]
 
     @staticmethod
     def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
@@ -54,42 +70,19 @@ class OVModelTransformer(ModelTransformer):
         :param transformation_layout: Transformation commands.
         :return: The new instance of a model with applied transformations.
         """
-        output_insertion_transformations = []
-        fq_nodes_removing_transformations = []
-        quantizer_insertion_transformations = []
-        bias_correction_transformations = []
-        weight_update_transformations = []
-        model_extraction_transformation = None
-        transformations = transformation_layout.transformations
 
+        transformations = transformation_layout.transformations
+        aggregated_transformations = defaultdict(list)
         for transformation in transformations:
-            if isinstance(transformation, OVOutputInsertionCommand):
-                output_insertion_transformations.append(transformation)
-            elif isinstance(transformation, OVFQNodeRemovingCommand):
-                fq_nodes_removing_transformations.append(transformation)
-            elif isinstance(transformation, OVQuantizerInsertionCommand):
-                quantizer_insertion_transformations.append(transformation)
-            elif isinstance(transformation, OVModelExtractionCommand):
-                model_extraction_transformation = transformation
-            elif isinstance(transformation, OVBiasCorrectionCommand):
-                bias_correction_transformations.append(transformation)
-            elif isinstance(transformation, OVWeightUpdateCommand):
-                weight_update_transformations.append(transformation)
+            aggregated_transformations[transformation.__class__].append(transformation)
 
         model = self._model.clone()
         # Inplace transformations; Using deepcopy of model
-        if fq_nodes_removing_transformations:
-            model = self._apply_fq_nodes_removing_transformation(model, fq_nodes_removing_transformations)
-        if quantizer_insertion_transformations:
-            model = self._apply_quantizer_insertion_transformations(model, quantizer_insertion_transformations)
-        if bias_correction_transformations:
-            model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
-        if weight_update_transformations:
-            model = self._apply_weight_update_transformations(model, weight_update_transformations)
-        if model_extraction_transformation:
-            model = self._apply_model_extraction_transformation(model, model_extraction_transformation)
-        if output_insertion_transformations:
-            model = self._apply_output_insertion_transformations(model, output_insertion_transformations)
+        for transformation_cls, transformation_fn in self._command_transformation_ordered_pairs:
+            transformations = aggregated_transformations[transformation_cls]
+            if transformations:
+                model = transformation_fn(model, transformations)
+
         return model
 
     @staticmethod
@@ -126,14 +119,15 @@ class OVModelTransformer(ModelTransformer):
             elif transformation.target_point.type in [TargetType.PRE_LAYER_OPERATION,
                                                       TargetType.OPERATION_WITH_WEIGHTS]:
                 output = node.input_value(port_id)
-                extra_model_outputs.append((output, port_id))
+                extra_model_outputs.append((output, output.get_index()))
             else:
                 raise NotImplementedError(f'Unsupported target point type {transformation.target_point.type}')
 
         return extra_model_outputs
 
     @staticmethod
-    def _insert_outputs(model: ov.Model, outputs: List[Tuple[ov.Output, int]]) -> ov.Model:
+    def _insert_outputs(model: ov.Model,
+                        outputs: List[Tuple[ov.Output, int, Callable[[str, int], str]]]) -> ov.Model:
         """
         Takes a model and adds outputs based on the list of ov.Output.
 
@@ -220,7 +214,6 @@ class OVModelTransformer(ModelTransformer):
 
         :param transformation: FakeQuantize insertion command.
         :param name_to_node_mapping: Mapping from node name to node instance.
-        :return: None
         """
         fq_params = transformation.quantizer_parameters
         input_low = fq_params.input_low
@@ -286,12 +279,24 @@ class OVModelTransformer(ModelTransformer):
     def _set_const_value(node_with_const: ov.Node,
                          const_port_id: int,
                          const_value: np.ndarray) -> None:
-        const_port = node_with_const.input(const_port_id)
-        const_node = node_with_const.input_value(const_port_id).get_node()
-        if const_node.get_type_name() == 'Convert':
-            const_port = const_node.input(0)
-            const_node = const_node.input_value(0).get_node()
-        assert const_node.get_type_name() == 'Constant'
+        port = node_with_const.input(const_port_id)
+        node = node_with_const.input_value(const_port_id).get_node()
+
+        const_port = None
+        const_node = None
+        queue = deque([(port, node)])
+        while len(queue) != 0:
+            curr_port, curr_node = queue.popleft()
+            if curr_node.get_type_name() == 'Constant':
+                const_port = curr_port
+                const_node = curr_node
+                break
+            if len(curr_node.inputs()) == 0:
+                break
+            queue.append((curr_node.input(0), curr_node.input_value(0).get_node()))
+
+        if const_node is None:
+            raise RuntimeError('Constant node was expected but could not find it.')
 
         const_shape = const_node.get_data().shape
         const_value = np.reshape(const_value, const_shape)
@@ -305,6 +310,7 @@ class OVModelTransformer(ModelTransformer):
         Applies weight update transformation to the model.
 
         :param transformations: List of the weight update transformations.
+        :returns: Transformed model.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
@@ -316,7 +322,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_model_extraction_transformation(model: ov.Model,
-                                               transformation: OVModelExtractionCommand) -> ov.Model:
+                                               transformations: List[OVModelExtractionCommand]) -> ov.Model:
         """
         Extracts sub-model from the original based on the inputs and outputs names.
 
@@ -324,6 +330,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformation: Model extraction transformation.
         :return: Extracted sub-model.
         """
+        transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         params, results = [], []
         for input_name in transformation.inputs:
@@ -333,7 +340,7 @@ class OVModelTransformer(ModelTransformer):
                 continue
             input_port = input_node.input(0)
             input_node_output = input_port.get_source_output()
-            new_param = opset.parameter(shape=input_node_output.get_shape(),
+            new_param = opset.parameter(shape=input_node_output.partial_shape,
                                         dtype=input_node_output.get_element_type(),
                                         name=f'{input_name}_input')
             input_port.replace_source_output(new_param.output(0))
@@ -349,3 +356,45 @@ class OVModelTransformer(ModelTransformer):
             results = model.get_results()
 
         return ov.Model(results, params)
+
+    @staticmethod
+    def _apply_insert_operation(model: ov.Model,
+                                transformations: OVInplaceFnInsertionCommand) -> ov.Model:
+        """
+        Applies inplace fn insertion transformation to the model.
+
+        :param transformations: lisf of the OVInplaceFnInsertionCommand.
+        :returns: Transformed model.
+        """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        outputs = []
+        for transformation in transformations:
+            outputs.append(
+                OVModelTransformer._insert_inplace_operation(transformation, name_to_node_mapping))
+        return OVModelTransformer._insert_outputs(model, outputs)
+
+    @staticmethod
+    def _insert_inplace_operation(transformation: OVInplaceFnInsertionCommand,
+                                  name_to_node_mapping: Dict[str, ov.Node]) -> Tuple[ov.Output, int]:
+        """
+        Inserts operation inplace to a model which name_to_node_mapping is passed.
+
+        :param transformation: Inplace fn insertion command.
+        :param name_to_node_mapping: Mapping from node name to node instance.
+        :returns: Pair with inserted node output and corresponded output port id.
+        """
+        transform_type = transformation.target_point.type
+
+        node_name = transformation.target_point.target_node_name
+        target_node = name_to_node_mapping[node_name]
+        port_id = transformation.target_point.port_id
+        fn_output_port_id = transformation.fn_output_port_id
+        if transform_type == TargetType.POST_LAYER_OPERATION:
+            new_node = transformation.inplace_op_fn(target_node, port_id)
+            return (new_node.output(fn_output_port_id), fn_output_port_id)
+        if transform_type in [TargetType.PRE_LAYER_OPERATION,
+                              TargetType.OPERATION_WITH_WEIGHTS]:
+            output = target_node.input_value(port_id)
+            new_node = transformation.inplace_op_fn(output.get_node(), output.get_index())
+            return (new_node.output(fn_output_port_id), fn_output_port_id)
+        raise RuntimeError(f'Transform type {transform_type} is not supported')
