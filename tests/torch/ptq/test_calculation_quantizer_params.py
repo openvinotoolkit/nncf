@@ -248,7 +248,7 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
                                          max_values=torch.from_numpy(np.array(max_values)))
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
     qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)
-    narrow_range = get_quantizer_narrow_range(qconfig, qgroup, half_range)
+    narrow_range = get_quantizer_narrow_range(qconfig, qgroup)
     fq_params = calculate_quantizer_parameters(statistics, qconfig, qgroup, narrow_range, half_range)
     return {'input_low': fq_params.input_low, 'input_high': fq_params.input_high}
 
