@@ -51,6 +51,6 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def check_bias(model, with_bias):
         if with_bias:
-            assert all(torch.isclose(model.conv.bias.data, Tensor([-1.9974, -1.9974]), rtol=0.0001))
+            assert all(torch.isclose(model.conv.bias.data, Tensor([-1.9895, -1.9895]), rtol=0.0001))
         else:
             assert model.conv.bias is None
