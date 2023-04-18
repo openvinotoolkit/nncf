@@ -1,8 +1,18 @@
 import pytest
 import numpy as np
 
-from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
+from nncf.experimental.openvino_native.statistics.collectors import OVNoopReducer
+from nncf.experimental.openvino_native.statistics.collectors import OVMinReducer
+from nncf.experimental.openvino_native.statistics.collectors import OVMaxReducer
+from nncf.experimental.openvino_native.statistics.collectors import OVAbsMaxReducer
+from nncf.experimental.openvino_native.statistics.collectors import OVMeanReducer
+from nncf.experimental.openvino_native.statistics.collectors import OVQuantileReducer
+from nncf.experimental.openvino_native.statistics.collectors import OVAbsQuantileReducer
+from nncf.experimental.openvino_native.statistics.collectors import OVBatchMeanReducer
+from nncf.experimental.openvino_native.statistics.collectors import OVMeanPerChanelReducer
+from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
+
 from tests.experimental.common.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
@@ -11,8 +21,14 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
     def tensor_processor(self):
         return OVNNCFCollectorTensorProcessor
 
-    def test_params(self):
-        pass
-
     def get_nncf_tensor(self, x: np.array):
         return OVNNCFTensor(x)
+
+    @pytest.fixture(scope='module')
+    def reducers(self):
+        return {reducer.NAME: reducer for reducer in\
+            [OVNoopReducer, OVMinReducer, OVMaxReducer, OVAbsMaxReducer, OVMeanReducer,
+             OVQuantileReducer, OVAbsQuantileReducer, OVBatchMeanReducer, OVMeanPerChanelReducer]}
+
+    def all_close(self, val, ref) -> bool:
+        return np.allclose(val, ref)

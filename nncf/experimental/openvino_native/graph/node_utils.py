@@ -193,6 +193,16 @@ def get_inplace_max_op(node_type: str, reduction_shape: Tuple[int, ...], use_abs
     return get_inplace_reduce_op(opset.reduce_max, node_type, reduction_shape, use_abs_max)
 
 
+def get_inplace_mean_op(node_type: str, reduction_shape: Tuple[int, ...]) -> InplaceInsertionFnType:
+    """
+    Returns inplace mean function that adds reduce mean node to a passed node.
+
+    :param node_type: String that describes reduce node type.
+    :returns: Inplace insertion function to use in ModelTransformer.
+    """
+    return get_inplace_reduce_op(opset.reduce_mean, node_type, reduction_shape, False)
+
+
 def get_inplace_batch_mean_op(node_type: str) -> InplaceInsertionFnType:
     """
     Returns inplace batch mean function that adds reduce batch mean node to a passed node.

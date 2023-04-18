@@ -49,8 +49,6 @@ class TensorReducerBase(ABC):
     def inplace(self):
         return self._inplace
 
-    # TODO: employ stack strategy: output port id is always 0 but
-    # several values could be stacked
     @property
     def output_port_id(self) -> int:
         return 0
@@ -92,7 +90,7 @@ class TensorReducerBase(ABC):
         :return: Inplace operation builder if possible else None.
         """
 
-    def __call__(self, x: List[TensorType]):
+    def __call__(self, x: List[NNCFTensor]):
         if self.inplace:
             return x
 
@@ -393,23 +391,23 @@ class NoopReducer(TensorReducerBase):
 
 
 class MinReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         return [self._tensor_processor.reduce_min(x[0], self._reduction_shape)]
 
 
 class MaxReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         return [self._tensor_processor.reduce_max(x[0], self._reduction_shape)]
 
 
 class AbsMaxReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         x = self._tensor_processor.abs(x[0])
         return [self._tensor_processor.reduce_max(x, self._reduction_shape)]
 
 
 class MeanReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         return [self._tensor_processor.mean(x[0], self._reduction_shape)]
 
 
@@ -422,23 +420,32 @@ class QuantileReducerBase(TensorReducerBase):
 
 
 class QuantileReducer(QuantileReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         return self._tensor_processor.quantile(x[0], self._quantile, self._reduction_shape)
 
 
 class AbsQuantileReducer(QuantileReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def __init__(self, reduction_shape: Optional[ReductionShape] = None,
+                 quantile: Union[float, List[float]] = 0.99, inplace: bool = False):
+        super().__init__(reduction_shape, quantile, inplace)
+
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         x = self._tensor_processor.abs(x[0])
         return self._tensor_processor.quantile(x, self._quantile, self._reduction_shape)
 
 
 class BatchMeanReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def __init__(self, inplace: bool = False):
+        super().__init__(None, inplace)
+
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         return [self._tensor_processor.batch_mean(x[0])]
 
 
 class MeanPerChReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def __init__(self, channel_dim: int = 1, inplace: bool = False):
+        super().__init__(channel_dim, inplace)
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         return [self._tensor_processor.mean_per_channel(x[0], self._reduction_shape)]
 
 
@@ -464,7 +471,7 @@ class ShapeAggregator(TensorAggregatorBase):
         self._container = x
 
     def aggregate(self):
-        return self._container.tensor.shape
+        return self._container.shape
 
 
 class MinAggregator(TensorAggregatorBase):
@@ -534,9 +541,9 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase):
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
     def aggregate(self) -> Any:
-        return self._aggregate(self._tensor_processor.mean)
+        return self._aggregate(self._tensor_processor.masked_mean)
 
 
 class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
     def aggregate(self) -> Any:
-        return self._aggregate(self._tensor_processor.median)
+        return self._aggregate(self._tensor_processor.masked_median)

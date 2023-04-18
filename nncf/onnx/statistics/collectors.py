@@ -54,8 +54,8 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return ONNXNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return ONNXNNCFTensor(np.mean(x.tensor, axis=axis))
+    def mean(x: NNCFTensor, axis: Union[int, tuple], keepdims=True) -> NNCFTensor:
+        return ONNXNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:

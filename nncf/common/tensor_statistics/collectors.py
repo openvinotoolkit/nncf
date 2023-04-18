@@ -170,7 +170,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
         """
         Computes the mean of elements across given dimensions of NNCFTensor.
 
@@ -181,7 +181,25 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def median(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list],
+                    mask: NNCFTensor, keepdims: bool = True) -> NNCFTensor:
+        """
+        Computes the mean of elements across given dimensions of NNCFTensor.
+
+        :param x: NNCFTensor to reduce.
+        :param axis: The dimensions to reduce.
+        :return: Reduced NNCFTensor.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor,
+                      keep_dims: bool = True) -> NNCFTensor:
         pass
 
     @staticmethod

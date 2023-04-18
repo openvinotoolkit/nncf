@@ -30,6 +30,7 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVB
 from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_max_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_min_op
+from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_batch_mean_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_per_ch
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
@@ -115,17 +116,19 @@ LINEAR_MODEL_SHAPES ={
 INPLACE_OPS_TEST_CASES = [
     # Forwarded reduce shape
     InplaceOpTestCase('min', (1, 2), get_inplace_min_op, ['ReduceMin'], [(1, 2)]),
+    InplaceOpTestCase('mean', (1, 2), get_inplace_mean_op, ['ReduceMean'], [(1, 2)]),
     InplaceOpTestCase('max', (1, 2), lambda o, r: get_inplace_max_op(o, r, False),
                       ['ReduceMax'], [(1, 2)]),
     InplaceOpTestCase('abs_max', (1, 2), lambda o, r: get_inplace_max_op(o, r, True),
                       ['Abs', 'ReduceMax'], [None, (1, 2)]),
     # Calculated reduce shape
     InplaceOpTestCase('min', None, get_inplace_min_op, ['ReduceMin'], [(0, 1, 2, 3)]),
+    InplaceOpTestCase('mean', None, get_inplace_mean_op, ['ReduceMean'], [(0, 1, 2, 3)]),
     InplaceOpTestCase('max', None, lambda o, r: get_inplace_max_op(o, r, False),
                       ['ReduceMax'], [(0, 1, 2, 3)]),
     InplaceOpTestCase('abs_max', None, lambda o, r: get_inplace_max_op(o, r, True),
                       ['Abs', 'ReduceMax'], [None, (0, 1, 2, 3)]),
-    # Mean operations
+    # Batch mean and mean per ch operations
     InplaceOpTestCase('batch_mean', None, lambda o, r: get_inplace_batch_mean_op(o),
                       ['ReduceMean'], [(0,)]),
     InplaceOpTestCase('mean_per_ch', 1, get_inplace_mean_per_ch,
