@@ -1,0 +1,259 @@
+{
+    "weights_symmetric_sign_None_per_ch_False_narrow_range_True_hf_range_True": {
+        "levels": 255,
+        "input_low": -1.994419813156128,
+        "input_high": 1.994419813156128,
+        "output_low": -1.994419813156128,
+        "output_high": 1.994419813156128
+    },
+    "weights_symmetric_sign_None_per_ch_False_narrow_range_True_hf_range_False": {
+        "levels": 255,
+        "input_low": -0.997209906578064,
+        "input_high": 0.997209906578064,
+        "output_low": -0.997209906578064,
+        "output_high": 0.997209906578064
+    },
+    "weights_symmetric_sign_None_per_ch_False_narrow_range_False_hf_range_True": {
+        "levels": 256,
+        "input_low": -2.0022718596646167,
+        "input_high": 2.0022718596646167,
+        "output_low": -2.0022718596646167,
+        "output_high": 2.0022718596646167
+    },
+    "weights_symmetric_sign_None_per_ch_False_narrow_range_False_hf_range_False": {
+        "levels": 256,
+        "input_low": -0.997209906578064,
+        "input_high": 0.997209906578064,
+        "output_low": -0.997209906578064,
+        "output_high": 0.997209906578064
+    },
+    "weights_asymmetric_sign_None_per_ch_False_narrow_range_False_hf_range_False": {
+        "levels": 256,
+        "input_low": 0.0,
+        "input_high": 0.997209906578064,
+        "output_low": 0.0,
+        "output_high": 0.997209906578064
+    },
+    "activations_symmetric_sign_None_per_ch_False_narrow_range_False_hf_range_False": {
+        "levels": 256,
+        "input_low": 0.0,
+        "input_high": 0.997209906578064,
+        "output_low": 0.0,
+        "output_high": 0.997209906578064
+    },
+    "activations_symmetric_sign_None_per_ch_True_narrow_range_False_hf_range_False": {
+        "levels": 256,
+        "input_low": [
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ]
+        ],
+        "input_high": [
+            [
+                [
+                    [
+                        0.997209906578064
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.9950965046882629
+                    ]
+                ]
+            ]
+        ],
+        "output_low": [
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ]
+        ],
+        "output_high": [
+            [
+                [
+                    [
+                        0.997209906578064
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.9950965046882629
+                    ]
+                ]
+            ]
+        ]
+    },
+    "activations_asymmetric_sign_None_per_ch_False_narrow_range_False_hf_range_False": {
+        "levels": 256,
+        "input_low": 0.0,
+        "input_high": 0.997209906578064,
+        "output_low": 0.0,
+        "output_high": 0.997209906578064
+    },
+    "activations_asymmetric_sign_None_per_ch_True_narrow_range_False_hf_range_False": {
+        "levels": 256,
+        "input_low": [
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ]
+        ],
+        "input_high": [
+            [
+                [
+                    [
+                        0.997209906578064
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.9950965046882629
+                    ]
+                ]
+            ]
+        ],
+        "output_low": [
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ]
+        ],
+        "output_high": [
+            [
+                [
+                    [
+                        0.997209906578064
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.9950965046882629
+                    ]
+                ]
+            ]
+        ]
+    },
+    "activations_asymmetric_sign_True_per_ch_False_narrow_range_False_hf_range_False": {
+        "levels": 256,
+        "input_low": 0.0,
+        "input_high": 0.997209906578064,
+        "output_low": 0.0,
+        "output_high": 0.997209906578064
+    },
+    "activations_asymmetric_sign_True_per_ch_True_narrow_range_False_hf_range_False": {
+        "levels": 256,
+        "input_low": [
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ]
+        ],
+        "input_high": [
+            [
+                [
+                    [
+                        0.997209906578064
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.9950965046882629
+                    ]
+                ]
+            ]
+        ],
+        "output_low": [
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.0
+                    ]
+                ]
+            ]
+        ],
+        "output_high": [
+            [
+                [
+                    [
+                        0.997209906578064
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        0.9950965046882629
+                    ]
+                ]
+            ]
+        ]
+    }
+}

@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any, Dict
 
 import os
 
@@ -20,10 +20,6 @@ import onnx
 import onnxruntime as rt
 
 from nncf import Dataset
-from tests.shared.paths import TEST_ROOT
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.nx_graph import check_nx_graph
-from tests.onnx.opset_converter import convert_opset_version
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
@@ -31,6 +27,13 @@ from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+
+from tests.shared.paths import TEST_ROOT
+from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.shared.nx_graph import check_nx_graph
+from tests.onnx.opset_converter import convert_opset_version
+from tests.onnx.common import get_random_generator
+
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
@@ -63,9 +66,10 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool,
             input_dtype = onnx_graph.get_edge_dtype(key)
             input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
             shape = onnx_graph.get_edge_shape(key)
-            tensor = np.random.random(shape).astype(input_np_dtype)
+            rng = get_random_generator()
+            tensor = rng.uniform(0, 1, shape).astype(input_np_dtype)
             if has_batch_dim:
-                tensor = np.squeeze(np.random.random(shape).astype(input_np_dtype), axis=0)
+                tensor = np.squeeze(tensor, axis=0)
             output[key] = tensor
         return output
 
@@ -88,12 +92,14 @@ class ModelToTest:
 
 
 def min_max_quantize_model(original_model: onnx.ModelProto, convert_model_opset: bool = True,
-                           ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
+                           dataset_has_batch_size: bool = False,
+                           quantization_params: Dict[str, Any] = None) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
+    quantization_params = {} if quantization_params is None else quantization_params
     post_training_quantization = PostTrainingQuantization(
-        PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+        PostTrainingQuantizationParameters(number_samples=1, **quantization_params))
     # Using PTQ, but apply only MinMax
     updated_algorithms = []
     for algo in post_training_quantization.algorithms:
@@ -105,12 +111,14 @@ def min_max_quantize_model(original_model: onnx.ModelProto, convert_model_opset:
 
 
 def ptq_quantize_model(original_model: onnx.ModelProto, convert_model_opset: bool = True,
-                       ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
+                       dataset_has_batch_size: bool = False,
+                       quantization_params: Dict[str, Any] = None) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
+    quantization_params = {} if quantization_params is None else quantization_params
     post_training_quantization = PostTrainingQuantization(
-        PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+        PostTrainingQuantizationParameters(number_samples=1, **quantization_params))
     quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 

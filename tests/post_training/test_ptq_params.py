@@ -10,17 +10,71 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
 
 import pytest
 from abc import abstractmethod
+from collections import Counter
 
 from nncf.parameters import ModelType
+from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
+
+from tests.common.quantization.metatypes import TestMetatype
+from tests.common.quantization.metatypes import Conv2dTestMetatype
+from tests.common.quantization.metatypes import IdentityTestMetatype
+from tests.common.quantization.metatypes import LinearTestMetatype
+from tests.common.quantization.metatypes import SoftmaxTestMetatype
+from tests.common.quantization.mock_graphs import NodeWithType
+from tests.common.quantization.mock_graphs import create_mock_graph
+from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
+
+
+class ModelToTestOverflowFix:
+    #   Input_1       Input_2
+    #      |             |
+    #   Conv_1         FC_1
+    #        \         / |
+    #          \      /  |
+    #            FC_2     \
+    #             /        \
+    #      Identity_1    Output_2
+    #          |
+    #       SoftMax
+    #          |
+    #       Output_1
+    
+    def __init__(self, metatypes: Dict[TestMetatype, OperatorMetatype]):
+        nodes = [NodeWithType('Input_1', InputNoopMetatype),
+                 NodeWithType('Input_2', InputNoopMetatype),
+                 NodeWithType('Conv_1', metatypes[Conv2dTestMetatype]),
+                 NodeWithType('FC_1', metatypes[LinearTestMetatype]),
+                 NodeWithType('FC_2', metatypes[LinearTestMetatype]),
+                 NodeWithType('Identity_1', IdentityTestMetatype),
+                 NodeWithType('Output_2', OutputNoopMetatype),
+                 NodeWithType('SoftMax', metatypes[SoftmaxTestMetatype]),
+                 NodeWithType('Output_1', OutputNoopMetatype),
+                 ]
+        node_edges = [('Input_1', 'Conv_1'), ('Conv_1', 'FC_2'), ('FC_2', 'Identity_1'), ('Identity_1', 'SoftMax'),
+                      ('SoftMax', 'Output_1'), ('Input_2', 'FC_1'), ('FC_1', 'FC_2'),
+                      ('FC_1', 'Output_2')]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
+        self.weight_quantization_target_point_names = []
+        weigth_meatypes = [metatypes[Conv2dTestMetatype], metatypes[LinearTestMetatype]]
+        for node in self.nncf_graph.get_nodes_by_metatypes(weigth_meatypes):
+            self.weight_quantization_target_point_names.append(node.node_name)
 
 
 # pylint: disable=protected-access
@@ -52,6 +106,15 @@ class TemplateTestPTQParams:
     @abstractmethod
     @pytest.fixture
     def ignored_scopes_data(self, request):
+        pass
+
+    @abstractmethod
+    def target_point(self, target_type: TargetType, target_node_name: str, port_id: int):
+        pass
+    
+    @property
+    @abstractmethod
+    def metatypes_mapping(self):
         pass
 
     @pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
@@ -162,3 +225,35 @@ class TemplateTestPTQParams:
                 for node_name in node_names:
                     if nncf_graph.get_node_by_name(node_name).metatype == min_max_algo._backend_entity.mat_mul_metatype:
                         assert quantization_point.qconfig.mode == QuantizationMode.SYMMETRIC
+
+    @pytest.mark.parametrize('overflow_fix, affected_target_points, ignored_ops', 
+                             [
+                                 [OverflowFix.DISABLE, [], []],
+                                 [OverflowFix.FIRST_LAYER, ['/Conv_1_0'], []],
+                                 [OverflowFix.FIRST_LAYER, ['/Conv_1_0'], ['/FC_1_0']],
+                                 [OverflowFix.FIRST_LAYER, [], ['/FC_1_0', '/Conv_1_0']],
+                                 [OverflowFix.FIRST_LAYER, [], ['/FC_1_0', '/Conv_1_0', '/FC_2_0']],
+                                 [OverflowFix.ENABLE, ['/Conv_1_0', '/FC_1_0', '/FC_2_0'], []],
+                                 [OverflowFix.ENABLE, ['/FC_1_0'], ['/Conv_1_0', '/FC_2_0']]
+                             ])
+    def test_quantization_points_overflow_fix(self, overflow_fix, affected_target_points, ignored_ops):
+        # Checks the return value of _get_quantization_points_overflow_fix based on the overflow_fix and weight target points.
+        model = ModelToTestOverflowFix(self.metatypes_mapping)
+        nncf_graph = model.nncf_graph
+       
+        # Imitate _get_quantization_target_points
+        weight_target_points = {}
+        for target_point_name in model.weight_quantization_target_point_names:
+            target_point = self.target_point(TargetType.OPERATION_WITH_WEIGHTS, target_point_name, 0)
+            weight_target_points[target_point] = QuantizerConfig()
+        
+        # Remove ignored nodes from weight_target_points
+        filtered_weight_target_points = {}
+        for t_p in weight_target_points.keys():
+            if t_p.target_node_name not in ignored_ops:
+                filtered_weight_target_points[t_p] = weight_target_points[t_p]
+
+        algo = MinMaxQuantization(MinMaxQuantizationParameters())
+        algo._backend_entity = self.get_algo_backend()
+        target_points_overflow_fix = algo._get_quantization_points_overflow_fix(overflow_fix, filtered_weight_target_points, nncf_graph)
+        assert Counter([t_p.target_node_name for t_p in target_points_overflow_fix]) == Counter(affected_target_points)
