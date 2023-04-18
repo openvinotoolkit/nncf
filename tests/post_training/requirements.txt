@@ -7,4 +7,4 @@ onnxruntime
 pytest
 openvino-dev>=2022.1
 timm
-sklearn
+scikit-learn

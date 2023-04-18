@@ -19,11 +19,15 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns import GraphPattern
 from nncf.parameters import TargetDevice
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
+from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import OnlineMinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import OnlineMaxAggregator
@@ -33,6 +37,10 @@ from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 from tests.post_training.models import NNCFGraphToTestMatMul
+from tests.common.quantization.metatypes import Conv2dTestMetatype
+from tests.common.quantization.metatypes import LinearTestMetatype
+from tests.common.quantization.metatypes import SoftmaxTestMetatype
+
 
 
 def get_patterns_setup() -> GraphPattern:
@@ -73,6 +81,15 @@ class TestPTQParams(TemplateTestPTQParams):
         else:
             assert act_num_q == 1
         assert weight_num_q == 1
+
+    def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
+        return OVTargetPoint(target_type, target_node_name, port_id)
+
+    @property
+    def metatypes_mapping(self):
+        return {Conv2dTestMetatype: OVConvolutionMetatype,
+                LinearTestMetatype: OVMatMulMetatype,
+                SoftmaxTestMetatype: OVSoftmaxMetatype}
 
     @pytest.fixture(scope='session')
     def test_params(self):

@@ -15,6 +15,9 @@ import pytest
 import numpy as np
 from nncf.onnx.quantization.quantizer_parameters import calculate_scale_zero_point
 from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
+from nncf.onnx.statistics.collectors import ONNXMinMaxTensorStatistic
+
+from tests.post_training.test_calculate_quantizer_parameters import TemplateTestFQParams
 
 
 @pytest.mark.parametrize(('inp_low, inp_high, level_low, level_high, narrow_range, ref_scale, ref_zero_point'),
@@ -41,3 +44,9 @@ def test_calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, na
                                                                (8, np.uint8, (0, 255))))
 def test_calculate_levels(num_bits, tensor_type, ref_levels):
     assert (ref_levels[0], ref_levels[1]) == get_level_low_level_high(tensor_type)
+
+
+class TestFQParams(TemplateTestFQParams):
+    @property
+    def tensor_statistic(self):
+        return ONNXMinMaxTensorStatistic

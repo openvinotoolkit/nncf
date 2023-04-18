@@ -16,6 +16,8 @@ import pytest
 from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
@@ -23,6 +25,7 @@ from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 
 from tests.onnx.models import LinearModel
@@ -30,6 +33,9 @@ from tests.onnx.models import OneDepthwiseConvolutionalModel
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestMatMul
+from tests.common.quantization.metatypes import Conv2dTestMetatype
+from tests.common.quantization.metatypes import LinearTestMetatype
+from tests.common.quantization.metatypes import SoftmaxTestMetatype
 
 
 # pylint: disable=protected-access
@@ -59,6 +65,15 @@ class TestPTQParams(TemplateTestPTQParams):
         else:
             assert act_num_q == 1
         assert weight_num_q == 1
+
+    def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
+        return ONNXTargetPoint(target_type, target_node_name, port_id)
+
+    @property
+    def metatypes_mapping(self):
+        return {Conv2dTestMetatype: ONNXConvolutionMetatype,
+                LinearTestMetatype: ONNXLinearMetatype,
+                SoftmaxTestMetatype: ONNXSoftmaxMetatype}
 
     @pytest.fixture(scope='session')
     def test_params(self):

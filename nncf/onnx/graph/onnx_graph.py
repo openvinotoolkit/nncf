@@ -30,20 +30,14 @@ class ONNXGraph:
 
     def __init__(self, onnx_model: onnx.ModelProto):
         self.onnx_model = onnx_model
-        self._node_name_to_node = None  # type: Dict[str, onnx.onnx.NodeProto]
-        self._activations_tensor_name_to_value_info = None  # type: Dict[str, onnx.onnx.ValueInfoProto]
+        self._node_name_to_node = None  # type: Dict[str, onnx.NodeProto]
+        self._edge_name_to_value_info = None  # type: Dict[str, onnx.ValueInfoProto]
 
-    def _update_activation_tensors(self, do_shape_inference: bool = False) -> None:
-        if do_shape_inference:
-            self.onnx_model = onnx.shape_inference.infer_shapes(self.onnx_model)
-        self._activations_tensor_name_to_value_info = {tensor.name: tensor for tensor in
-                                                       self.onnx_model.graph.value_info}
-        model_inputs_name_to_value_info = {tensor.name: tensor for tensor in self.onnx_model.graph.input}
-        model_outputs_name_to_value_info = {tensor.name: tensor for tensor in self.onnx_model.graph.output}
-        initializers = {tensor.name: tensor for tensor in self.onnx_model.graph.initializer}
-        self._activations_tensor_name_to_value_info.update(model_inputs_name_to_value_info)
-        self._activations_tensor_name_to_value_info.update(model_outputs_name_to_value_info)
-        self._activations_tensor_name_to_value_info.update(initializers)
+    def _update_edges(self) -> None:
+        self.onnx_model = onnx.shape_inference.infer_shapes(self.onnx_model)
+        value_infos = [*self.onnx_model.graph.value_info, *self.onnx_model.graph.input,
+                       *self.onnx_model.graph.output, *self.onnx_model.graph.initializer]
+        self._edge_name_to_value_info = {tensor.name: tensor for tensor in value_infos}
 
     def _update_node_names(self) -> None:
         self._node_name_to_node = {n.name: n for n in self.onnx_model.graph.node}
@@ -68,6 +62,18 @@ class ONNXGraph:
         if self._node_name_to_node is None:
             self._update_node_names()
         return self._node_name_to_node[node_name] if node_name in self._node_name_to_node else None
+
+    def get_edge(self, edge_name: str) -> Optional[onnx.ValueInfoProto]:
+        """
+        Returns edge by its name or None if the model has no such edge.
+        If self._edge_name_to_value_info is not initialized runs an initialization.
+
+        :param edge_name: Name of edge.
+        :return: Edge.
+        """
+        if self._edge_name_to_value_info is None:
+            self._update_edges()
+        return self._edge_name_to_value_info.get(edge_name, None)
 
     def get_model_inputs(self) -> List[onnx.ValueInfoProto]:
         """
@@ -110,8 +116,8 @@ class ONNXGraph:
         """
         return self._get_nodes_by_lambda(input_name, lambda node: node.input)
 
-    def _get_nodes_by_lambda(self, name: str, func: Callable[[onnx.NodeProto], List[onnx.NodeProto]]) -> List[
-        onnx.NodeProto]:
+    def _get_nodes_by_lambda(self, name: str,
+                             func: Callable[[onnx.NodeProto], List[onnx.NodeProto]]) -> List[onnx.NodeProto]:
         output = []
         for node in self.get_all_nodes():
             if name in func(node):
@@ -317,16 +323,16 @@ class ONNXGraph:
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
     @staticmethod
-    def _get_tensor_shape(tensor: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> List[int]:
+    def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> List[int]:
         """
-        Returns 'tensor' shape.
+        Returns edge shape.
 
-        :param tensor: The tensor.
+        :param edge: The edge.
         :return: Shape of the Tensor.
         """
-        if isinstance(tensor, onnx.TensorProto):
-            return list(tensor.dims)
-        tensor_type = tensor.type.tensor_type
+        if isinstance(edge, onnx.TensorProto):
+            return list(edge.dims)
+        tensor_type = edge.type.tensor_type
         shape = []
         if tensor_type.HasField("shape"):
             for d in tensor_type.shape.dim:
@@ -343,56 +349,17 @@ class ONNXGraph:
                     return shape
         return shape
 
-    def get_edge_shape(self, edge_name: str) -> List[int]:
+    @staticmethod
+    def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> int:
         """
-        Returns a shape of the edge with the name 'edge_name'.
-        If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
-        If after updating of the self._activations_tensor_name_to_value_info, there is still no such tensor,
-        do shape inference of the model.
+        Returns the data type of the edge.
 
-        :param edge_name: The name of the edge.
-        :return: Shape of the tensor on that edge.
+        :param edge: The edge.
+        :return: Data type of the edge.
         """
-        if self._activations_tensor_name_to_value_info is None:
-            self._update_activation_tensors()
-        if edge_name in self._activations_tensor_name_to_value_info:
-            return ONNXGraph._get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
-        self._update_activation_tensors(do_shape_inference=True)
-        if edge_name in self._activations_tensor_name_to_value_info:
-            return ONNXGraph._get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
-        raise RuntimeError('There is no edge with the name {}'.format(edge_name))
-
-    def get_edge_dtype(self, edge_name: str) -> int:
-        """
-        Returns the data type of the edge with the name 'edge_name'.
-        If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
-        If after updating of the self._activations_tensor_name_to_value_info, there is still no such tensor,
-        do shape inference of the model.
-
-        :param edge_name: The name of the edge.
-        :return: Shape of the tensor on that edge.
-        """
-        if self._activations_tensor_name_to_value_info is None:
-            self._update_activation_tensors()
-        if edge_name in self._activations_tensor_name_to_value_info:
-            if isinstance(self._activations_tensor_name_to_value_info[edge_name], onnx.ValueInfoProto):
-                return self._activations_tensor_name_to_value_info[edge_name].type.tensor_type.elem_type
-            return self._activations_tensor_name_to_value_info[edge_name].data_type
-        self._update_activation_tensors(do_shape_inference=True)
-        if edge_name in self._activations_tensor_name_to_value_info:
-            if isinstance(self._activations_tensor_name_to_value_info[edge_name], onnx.ValueInfoProto):
-                return self._activations_tensor_name_to_value_info[edge_name].type.tensor_type.elem_type
-            return self._activations_tensor_name_to_value_info[edge_name].data_type
-        raise RuntimeError('There is no edge with the name {}'.format(edge_name))
-
-    def get_edge_dtype_name(self, edge_name: str) -> str:
-        """
-        Returns the name of datatype of the edge with the name 'edge_name'.
-
-        :param edge_name: The name of the edge.
-        :return: The Name of the datatype.
-        """
-        return onnx.TensorProto.DataType.Name(self.get_edge_dtype(edge_name))
+        if isinstance(edge, onnx.ValueInfoProto):
+            return edge.type.tensor_type.elem_type
+        return edge.data_type
 
     def get_parents(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
         """
@@ -440,12 +407,3 @@ class ONNXGraph:
         weight_tensor_edge = self.get_weight_tensor_edge(node)
         nodes = self.get_nodes_by_input(weight_tensor_edge)
         return len(nodes) > 1
-
-    def get_node_layer_name(self, node: onnx.NodeProto) -> Optional[str]:
-        """
-        Returns name of a weight tensor if it exists.
-
-        :param node: Node.
-        :return: Name of a weight tensor or None if the node does not have a weight.
-        """
-        return self.get_weight_tensor_edge(node)

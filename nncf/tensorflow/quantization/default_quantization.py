@@ -57,6 +57,7 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
                                         op_metatypes.TFExpOpMetatype,
                                         op_metatypes.TFLogOpMetatype,
                                         op_metatypes.TFSoftmaxOpMetatype,
+                                        op_metatypes.TFReluOpMetatype,
                                         UnknownMetatype],
     QuantizationTrait.CONCAT: [
         layer_metatypes.TFConcatenateLayerMetatype,

@@ -26,12 +26,12 @@ from tqdm import tqdm
 
 MODELS = [
     ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
-     'mobilenetv2-12', 0.7875159235668789),
+     'mobilenetv2-12', 0.7864968152866242),
     ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
-     'resnet50-v1-7', 0.8119745222929936),
+     'resnet50-v1-7', 0.8114649681528663),
     (
     'https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
-    'efficientnet-lite4-11', 0.8015286624203821)
+    'efficientnet-lite4-11', 0.8035668789808917)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
