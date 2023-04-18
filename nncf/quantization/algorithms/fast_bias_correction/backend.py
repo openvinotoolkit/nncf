@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 
@@ -113,7 +113,9 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_input_data(shape: Tuple[int], data: List[np.ndarray], input_name: str, channel_axis: int) -> np.ndarray:
+    def create_input_data(
+        shape: Tuple[int], data: List[TTensor], input_name: str, channel_axis: int
+    ) -> Union[Dict[str, TTensor], TTensor]:
         """
         Creates input data for the bias shift calculation.
 
@@ -121,7 +123,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param data: Data to fill the blob.
         :param input_name: Name for the output dictionary.
         :param channel_axis: Axis to fill the blob with provided data.
-        :return: np.ndarray blob.
+        :return: Created data.
         """
 
     @staticmethod
