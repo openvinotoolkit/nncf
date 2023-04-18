@@ -27,8 +27,10 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.registry import Registry
+from nncf.config.extractors import BNAdaptDataLoaderNotFoundError
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.config.extractors import has_bn_section
 
 TModel = TypeVar('TModel')
 
@@ -285,4 +287,15 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         """
 
     def _parse_bn_adapt_params(self) -> Optional[Dict]:
-        return extract_bn_adaptation_init_params(self.config, self.name)
+        try:
+            return extract_bn_adaptation_init_params(self.config, self.name)
+        except BNAdaptDataLoaderNotFoundError as e:
+            if not has_bn_section(self.config, self.name):
+                nncf_logger.info(
+                    "Data loader for batchnorm adaptation not found in NNCFConfig and no explicit batchnorm adaptation"
+                    "parameters were passed in config - will not perform batchnorm adaptation.\n"
+                    "It is recommended to do batchnorm adaptation after creating a compressed model - use "
+                    "`register_default_init_args` or `nncf.NNCFConfig.register_extra_structs` directly to register a "
+                    "dataloader and NNCF will do batchnorm adaptation automatically at compressed model creation.")
+                return None
+            raise e

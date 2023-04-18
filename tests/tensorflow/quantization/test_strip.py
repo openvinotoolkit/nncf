@@ -26,11 +26,6 @@ def test_strip():
     config["compression"] = {
         "algorithm": "quantization",
         "preset": "mixed",
-        "initializer": {
-            "batchnorm_adaptation": {
-                "num_bn_adaptation_samples": 0,
-            }
-        }
     }
 
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
