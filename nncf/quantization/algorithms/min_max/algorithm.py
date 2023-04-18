@@ -566,9 +566,9 @@ class MinMaxQuantization(Algorithm):
                     filter_func,
                     MinMaxQuantization):
                 if quantization_target_point.is_weight_target_point():
-                    # If the nodes share one weight tensor, we should have only one quantizer on that
                     weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
-                    if weights_name in weight_layer_names:
+
+                    if not self._backend_entity.should_quantize_weight(weights_name, weight_layer_names):
                         continue
                     weight_layer_names.add(weights_name)
                     quant_group = QuantizerGroup.WEIGHTS
