@@ -31,10 +31,12 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDeformableConvolutionMetatype
 
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXConvolutionMetatype,
                                                   ONNXDepthwiseConvolutionMetatype,
                                                   ONNXConvolutionTransposeMetatype,
+                                                  ONNXDeformableConvolutionMetatype,
                                                   ONNXLinearMetatype,
                                                   ONNXMatMulMetatype
                                                   ],

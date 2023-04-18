@@ -61,6 +61,9 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTSigmoidMetatype,
         operator_metatypes.PTExpMetatype,
         operator_metatypes.PTSoftmaxMetatype,
+        operator_metatypes.PTRELUMetatype,
+        operator_metatypes.PTDeformConv2dMetatype,
+        operator_metatypes.PTModuleDeformConv2dMetatype,
         UnknownMetatype
     ],
     QuantizationTrait.CONCAT: [

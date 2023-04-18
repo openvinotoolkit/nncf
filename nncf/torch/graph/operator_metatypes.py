@@ -316,6 +316,24 @@ class PTConvTranspose3dMetatype(PTOperatorMetatype):
     output_channel_axis = 1
 
 
+
+@PT_OPERATOR_METATYPES.register()
+class PTModuleDeformConv2dMetatype(PTModuleOperatorSubtype):
+    name = "DeformConv2dOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["deform_conv2d"]
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTDeformConv2dMetatype(PTOperatorMetatype):
+    name = "DeformConv2dOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["deform_conv2d"]
+    }
+    subtypes = [PTModuleDeformConv2dMetatype]
+
+
 @PT_OPERATOR_METATYPES.register()
 class PTModuleLinearMetatype(PTModuleOperatorSubtype):
     name = "LinearOp"

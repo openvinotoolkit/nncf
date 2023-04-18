@@ -42,6 +42,10 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSquaredDifferenceMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMVNMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
@@ -69,6 +73,18 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
         return [OVShapeOfMetatype]
+
+    @property
+    def conv_metatype(self) -> List[OperatorMetatype]:
+        return [OVConvolutionMetatype]
+
+    @property
+    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+        return [OVConvolutionMetatype,
+                OVGroupConvolutionMetatype,
+                OVConvolutionBackpropDataMetatype,
+                OVGroupConvolutionBackpropDataMetatype,
+                OVMatMulMetatype]
 
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:

@@ -31,6 +31,8 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXExpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDeformableConvolutionMetatype
 
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 
@@ -55,6 +57,8 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
                                         ONNXExpMetatype,
                                         ONNXQuantizeLinearMetatype,
                                         ONNXDequantizeLinearMetatype,
+                                        ONNXReluMetatype,
+                                        ONNXDeformableConvolutionMetatype,
                                         UnknownMetatype],
     QuantizationTrait.CONCAT: [ONNXConcatLayerMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: []

@@ -49,18 +49,6 @@ class ONNXTargetPoint(TargetPoint):
     def __hash__(self) -> int:
         return hash((self.target_node_name, self.port_id, self._target_type))
 
-    def __lt__(self, other: 'ONNXTargetPoint') -> bool:
-        # The ONNXTargetPoint should have the way to compare.
-        # NNCF has to be able returning the Quantization Target Points in the deterministic way.
-        # MinMaxQuantizationAlgorithm returns the sorted Set of such ONNXTargetPoints.
-        params = ['_target_type', 'target_node_name', 'port_id']
-        for param in params:
-            if self.__getattribute__(param) < other.__getattribute__(param):
-                return True
-            if self.__getattribute__(param) > other.__getattribute__(param):
-                return False
-        return False
-
 
 class ONNXInsertionCommand(TransformationCommand):
     def __init__(self, target_point: ONNXTargetPoint, input_edges_mapping: Dict[str, Tuple[str, int]]):

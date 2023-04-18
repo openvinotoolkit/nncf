@@ -11,10 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import TypeVar
+from typing import Dict, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.logging import nncf_logger
@@ -31,6 +28,7 @@ from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrectionParameters
 from nncf.quantization.algorithms.definitions import Granularity
+from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
@@ -60,6 +58,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[IgnoredScope] = None,
                  model_type: Optional[ModelType] = None,
+                 overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
                  fast_bias_correction: bool = True,
                  inplace_statistics: bool = True,
                  ):
@@ -85,6 +84,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Descriptor of the layers which input must not be quantized.
+        :param overflow_fix: This option controls whether to apply the overflow issue fix for the 8-bit quantization.
         :param model_type: Model type is needed to specify additional patterns
             in the model. Supported only `transformer` now.
         :param fast_bias_correction: Defines whether to use fast version of bias correction algorithm.
@@ -106,6 +106,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             quantize_outputs=quantize_outputs,
             ignored_scopes=ignored_scopes,
             model_type=model_type,
+            overflow_fix=overflow_fix,
             inplace_statistics=inplace_statistics
         )}
 

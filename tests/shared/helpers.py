@@ -10,17 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from typing import Dict, Set, Union, TypeVar, List, Callable
 import subprocess
 import sys
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable
-from typing import List
-from typing import TypeVar
-from typing import Union
-from typing import Set
 
+from copy import deepcopy
+import json
 import numpy as np
 from pathlib import Path
 
@@ -152,3 +149,38 @@ def telemetry_send_event_test_driver(mocker, use_nncf_fn: Callable):
     telemetry_send_event_spy = mocker.spy(telemetry, "send_event")
     use_nncf_fn()
     telemetry_send_event_spy.assert_called()
+
+
+def load_json(stats_path: Path):
+    with open(stats_path, 'r', encoding='utf8') as json_file:
+        return json.load(json_file)
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """ Special json encoder for numpy types """
+    # pylint: disable=W0221, E0202
+
+    def default(self, o):
+        if isinstance(o, np.integer):
+            return int(o)
+        if isinstance(o, np.floating):
+            return float(o)
+        if isinstance(o, np.ndarray):
+            return o.tolist()
+        return json.JSONEncoder.default(self, o)
+
+
+def dump_to_json(local_path: Path, data: Dict[str, np.ndarray]):
+    with open(local_path, 'w', encoding='utf8') as file:
+        json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
+
+
+def compare_stats(expected: Dict[str, np.ndarray],
+                  actual: Dict[str, np.ndarray], param_names: List[str]):
+    assert len(expected) == len(actual)
+    for ref_name in expected:
+        ref_stats = expected[ref_name]
+        stats = actual[ref_name]
+        for param in param_names:
+            ref_param, actual_param = ref_stats.get(param), stats.get(param)
+            assert np.allclose(ref_param, actual_param, atol=1e-6)

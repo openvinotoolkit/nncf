@@ -78,6 +78,21 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
+    def conv_metatype(self) -> List[OperatorMetatype]:
+        return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
+
+    @property
+    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+        return [om.PTModuleConv1dMetatype,
+                om.PTModuleConv2dMetatype,
+                om.PTModuleConv3dMetatype,
+                om.PTModuleLinearMetatype,
+                om.PTModuleConvTranspose1dMetatype,
+                om.PTModuleConvTranspose2dMetatype,
+                om.PTModuleConvTranspose3dMetatype,
+                ]
+
+    @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
 
