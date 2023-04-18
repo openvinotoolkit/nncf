@@ -18,6 +18,10 @@ import onnx
 
 from nncf.common.utils.registry import Registry
 
+from tests.onnx.common import get_random_generator
+
+OPSET_VERSION = 13
+ALL_SYNTHETIC_MODELS = Registry('ONNX_SYNTHETIC_MODELS')
 
 # pylint: disable=no-member, too-many-lines
 
@@ -29,10 +33,6 @@ def create_initializer_tensor(name: str, tensor_array: np.ndarray,
         dims=tensor_array.shape,
         vals=tensor_array.flatten().tolist())
     return initializer_tensor
-
-
-OPSET_VERSION = 13
-ALL_SYNTHETIC_MODELS = Registry('ONNX_SYNTHETIC_MODELS')
 
 
 class ONNXReferenceModel:
@@ -57,11 +57,11 @@ class LinearModel(ONNXReferenceModel):
         Y = onnx.helper.make_tensor_value_info(model_output_name,
                                                onnx.TensorProto.FLOAT,
                                                [1, model_output_channels, 1, 1])
-
+        rng = get_random_generator()
         conv1_output_node_name = "Conv1_Y"
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3, 32, (3, 3)
-        conv1_W = np.ones(shape=(conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
-        conv1_B = np.ones(shape=conv1_out_channels).astype(np.float32)
+        conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
+        conv1_B = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
 
         conv1_W_initializer_tensor_name = "Conv1_W"
         conv1_W_initializer_tensor = create_initializer_tensor(
@@ -86,10 +86,10 @@ class LinearModel(ONNXReferenceModel):
         )
 
         bn1_output_node_name = "BN1_Y"
-        bn1_scale = np.random.randn(conv1_out_channels).astype(np.float32)
-        bn1_bias = np.random.randn(conv1_out_channels).astype(np.float32)
-        bn1_mean = np.random.randn(conv1_out_channels).astype(np.float32)
-        bn1_var = np.random.rand(conv1_out_channels).astype(np.float32)
+        bn1_scale = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
+        bn1_bias = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
+        bn1_mean = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
+        bn1_var = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
         bn1_scale_initializer_tensor_name = "BN1_Scale"
         bn1_bias_initializer_tensor_name = "BN1_Bias"
         bn1_mean_initializer_tensor_name = "BN1_Mean"
@@ -139,9 +139,8 @@ class LinearModel(ONNXReferenceModel):
         )
 
         conv2_in_channels, conv2_out_channels, conv2_kernel_shape = conv1_out_channels, model_output_channels, (1, 1)
-        conv2_W = np.ones(shape=(conv2_out_channels, conv2_in_channels,
-                                 *conv2_kernel_shape)).astype(np.float32)
-        conv2_B = np.ones(shape=conv2_out_channels).astype(np.float32)
+        conv2_W = rng.uniform(0, 1, (conv2_out_channels, conv2_in_channels, *conv2_kernel_shape)).astype(np.float32)
+        conv2_B = rng.uniform(0, 1, conv2_out_channels).astype(np.float32)
 
         conv2_W_initializer_tensor_name = "Conv2_W"
         conv2_W_initializer_tensor = create_initializer_tensor(
@@ -364,10 +363,10 @@ class OneConvolutionalModel(ONNXReferenceModel):
         X = onnx.helper.make_tensor_value_info(model_input_name,
                                                onnx.TensorProto.FLOAT,
                                                input_shape)
-
+        rng = get_random_generator()
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3, 32, (1, 1)
-        conv1_W = np.ones(shape=(conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
-        conv1_B = np.ones(shape=conv1_out_channels).astype(np.float32)
+        conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
+        conv1_B = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
 
         model_output_name = "Y"
         Y = onnx.helper.make_tensor_value_info(model_output_name,
@@ -435,11 +434,11 @@ class ReshapeWeightModel(ONNXReferenceModel):
         Y = onnx.helper.make_tensor_value_info(model_output_name,
                                                onnx.TensorProto.FLOAT,
                                                [1, model_output_channels])
-
+        rng = np.random.default_rng(seed=0)
+        shape = [1, 1, model_input_channels, model_output_channels]
         w_tensor = create_initializer_tensor(
             name="W",
-            tensor_array=np.random.standard_normal(
-                [1, 1, model_input_channels, model_output_channels]),
+            tensor_array=rng.uniform(0, 1, shape).astype(np.float32),
             data_type=onnx.TensorProto.FLOAT)
 
         w_shape_tensor = create_initializer_tensor(
@@ -449,7 +448,7 @@ class ReshapeWeightModel(ONNXReferenceModel):
 
         z_tensor = create_initializer_tensor(
             name="z_tensor",
-            tensor_array=np.random.standard_normal([1, model_input_channels]),
+            tensor_array=rng.uniform(0, 1, [1, model_input_channels]).astype(np.float32),
             data_type=onnx.TensorProto.FLOAT)
 
         reshaped_w_node = onnx.helper.make_node(
@@ -718,9 +717,9 @@ class OneDepthwiseConvolutionalModel(ONNXReferenceModel):
                                                input_shape)
         conv_group = 3
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3 // conv_group, 27, (1, 1)
-
-        conv1_W = np.ones(shape=(conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
-        conv1_B = np.ones(shape=conv1_out_channels).astype(np.float32)
+        rng = get_random_generator()
+        conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
+        conv1_B = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
 
         model_output_name = "Y"
         Y = onnx.helper.make_tensor_value_info(model_output_name,
@@ -816,15 +815,15 @@ class IdentityConvolutionalModel(ONNXReferenceModel):
                                                input_shape)
 
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = inp_ch, out_ch, (kernel_size,) * 2
-
+        rng = get_random_generator()
         conv1_W = conv_w
         if conv1_W is None:
-            conv1_W = np.ones(shape=(conv1_out_channels, conv1_in_channels, *conv1_kernel_shape))
+            conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape))
         conv1_W = conv1_W.astype(np.float32)
 
         conv1_B = conv_b
         if conv1_B is None:
-            conv1_B = np.ones(shape=conv1_out_channels)
+            conv1_B = rng.uniform(0, 1, conv1_out_channels)
         conv1_B = conv1_B.astype(np.float32)
 
         model_identity_op_name = 'Identity'
@@ -901,9 +900,10 @@ class ShapeOfModel(ONNXReferenceModel):
 
         conv1_output_node_name = "Conv1_Y"
         conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3, 32, (3, 3)
-        conv1_W = np.ones(shape=(
-            conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
-        conv1_B = np.ones(shape=conv1_out_channels).astype(np.float32)
+        rng = get_random_generator()
+        conv1_W = rng.uniform(0, 1,
+                              (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
+        conv1_B = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
 
         conv1_W_initializer_tensor_name = "Conv1_W"
         conv1_W_initializer_tensor = create_initializer_tensor(
@@ -988,9 +988,8 @@ class ShapeOfModel(ONNXReferenceModel):
         )
 
         conv2_in_channels, conv2_out_channels, conv2_kernel_shape = conv1_out_channels, model_output_channels, (1, 1)
-        conv2_W = np.ones(shape=(conv2_out_channels, conv2_in_channels,
-                                 *conv2_kernel_shape)).astype(np.float32)
-        conv2_B = np.ones(shape=conv2_out_channels).astype(np.float32)
+        conv2_W = rng.uniform(0, 1, (conv2_out_channels, conv2_in_channels, *conv2_kernel_shape)).astype(np.float32)
+        conv2_B = rng.uniform(0, 1, conv2_out_channels).astype(np.float32)
 
         conv2_W_initializer_tensor_name = "Conv2_W"
         conv2_W_initializer_tensor = create_initializer_tensor(
