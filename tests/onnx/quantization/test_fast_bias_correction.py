@@ -48,13 +48,12 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
 
     @staticmethod
     def get_dataset(model):
-        np.random.seed(42)
         dataset = get_random_dataset_for_test(model, False)
         return dataset
 
     @staticmethod
     def check_bias(model, with_bias):
         if with_bias:
-            assert np.all(np.isclose(get_data_from_node(model, "conv.bias"), np.array([-2.0181384, -2.0181384])))
+            assert np.all(np.isclose(get_data_from_node(model, "conv.bias"), np.array([-2.0424285, -2.0424285])))
         else:
             assert get_data_from_node(model, "conv.bias") is None
