@@ -25,15 +25,15 @@ def check_engine_creation_and_inference(model, input_data):
     engine = OVNativeEngine(model)
     outputs = engine.infer(input_data)
     for result in model.get_results():
-        res_name = result.get_friendly_name()
-        assert res_name in outputs.keys()
+        res_name = result.get_output_tensor(0).get_any_name()
+        assert res_name in outputs
         assert outputs[res_name].shape == tuple(result.get_output_shape(0))
 
 
 @pytest.mark.parametrize("model_creator_func", [LinearModel, ConvModel])
 def test_infer_original_model_dict(model_creator_func):
     model = model_creator_func().ov_model
-    input_data = {inp.get_friendly_name(): np.random.rand(*inp.shape) for inp in model.get_parameters()}
+    input_data = {inp.get_any_name(): np.random.rand(*inp.shape) for inp in model.inputs}
     check_engine_creation_and_inference(model, input_data)
 
 
