@@ -20,6 +20,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from pathlib import Path
+from typing import Any
 from typing import Dict
 from typing import Optional
 from typing import Type
@@ -29,19 +30,17 @@ import torch
 from examples.torch.common.utils import get_name
 from nncf import NNCFConfig
 from nncf.common.utils.registry import Registry
+from tests.shared.command import arg_list_from_arg_dict
 from tests.shared.config_factory import ConfigFactory
 from tests.shared.paths import EXAMPLES_DIR
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
 
 
-def create_command_line(args, sample_type, main_filename='main.py'):
-    python_path = PROJECT_ROOT.as_posix()
+def create_command_line(args: Dict[str, Any], sample_type: str, main_filename: str = 'main.py') -> str:
     executable = EXAMPLES_DIR.joinpath('torch', sample_type, main_filename).as_posix()
     cli_args = " ".join(key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
-    return "PYTHONPATH={path} {python_exe} {main_py} {args}".format(
-        path=python_path, main_py=executable, args=cli_args, python_exe=sys.executable
-    )
+    return f"{sys.executable} {executable} {cli_args}"
 
 
 class SampleType(Enum):
@@ -279,7 +278,7 @@ class SanitySampleValidator(BaseSampleValidator, ABC):
         self._sample_handler = desc.sample_handler
 
     def validate_sample(self, args, mocker):
-        arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
+        arg_list = arg_list_from_arg_dict(args.items())
         command_line = " ".join(arg_list)
         print(f"Command line arguments: {command_line}")
 
@@ -288,7 +287,7 @@ class SanitySampleValidator(BaseSampleValidator, ABC):
         sample = importlib.import_module(main_location)
 
         self.setup_spy(mocker)
-        sample.main(shlex.split(command_line))
+        sample.main(arg_list)
         self.validate_spy()
 
     def get_default_args(self, tmp_path):

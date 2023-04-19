@@ -32,6 +32,7 @@ from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 from nncf.torch.nncf_network import LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
 from nncf.torch.quantization.algo import QuantizerBuilderStateVersion
+from tests.shared.paths import ROOT_PYTHONPATH_ENV
 from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -142,7 +143,7 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
     else:
         pytest.skip("DataParallel eval takes too long for this test to be run during pre-commit")
 
-    runner = Command(create_command_line(get_cli_dict_args(args), "classification"))
+    runner = Command(create_command_line(get_cli_dict_args(args), "classification"), env=ROOT_PYTHONPATH_ENV)
     runner.run()
 
     with open(metrics_path, encoding='utf8') as metric_file:

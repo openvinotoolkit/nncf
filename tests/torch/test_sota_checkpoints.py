@@ -16,6 +16,8 @@ import pytest
 from prettytable import PrettyTable
 from yattag import Doc
 
+from nncf.common.utils.os import is_linux
+from nncf.common.utils.os import is_windows
 from nncf.config import NNCFConfig
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
 from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
@@ -113,7 +115,11 @@ class TestSotaCheckpoints:
         print()
         print(comm)
         print()
-        com_line = shlex.split(comm)
+
+        if is_linux():
+            com_line = shlex.split(comm)
+        elif is_windows():
+            com_line = comm
 
         env = os.environ.copy()
         if "PYTHONPATH" in env:

@@ -35,7 +35,9 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.common.compression import BaseControllerStateNames
 from nncf.common.hardware.config import HWConfigType
 from nncf.config import NNCFConfig
+from tests.shared.command import arg_list_from_arg_dict
 from tests.shared.config_factory import ConfigFactory
+from tests.shared.paths import ROOT_PYTHONPATH_ENV
 from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import create_command_line
@@ -196,7 +198,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed, ca
     elif multiprocessing_distributed:
         args["--multiprocessing-distributed"] = True
 
-    runner = Command(create_command_line(args, config["sample_type"]))
+    runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
     runner.run()
 
 
@@ -233,7 +235,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
                     "because it outputs namedtuple, which DP seems to be unable "
                     "to support even still.")
 
-    runner = Command(create_command_line(args, config["sample_type"]))
+    runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
@@ -285,7 +287,7 @@ def test_trained_model_eval(request, config, tmp_path, multiprocessing_distribut
     elif multiprocessing_distributed:
         args["--multiprocessing-distributed"] = True
 
-    runner = Command(create_command_line(args, config["sample_type"]))
+    runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
     runner.run()
 
 
@@ -329,7 +331,7 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
     elif multiprocessing_distributed:
         args["--multiprocessing-distributed"] = True
 
-    runner = Command(create_command_line(args, config["sample_type"]))
+    runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
@@ -373,7 +375,7 @@ def test_export_with_resume(request, config, tmp_path, multiprocessing_distribut
     if not torch.cuda.is_available():
         args["--cpu-only"] = True
 
-    runner = Command(create_command_line(args, config["sample_type"]))
+    runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
     runner.run()
     assert os.path.exists(onnx_path)
 
@@ -402,7 +404,7 @@ def test_export_with_pretrained(tmp_path):
     if not torch.cuda.is_available():
         args["--cpu-only"] = True
 
-    runner = Command(create_command_line(args, "classification"))
+    runner = Command(create_command_line(args, "classification"), env=ROOT_PYTHONPATH_ENV)
     runner.run()
     assert os.path.exists(onnx_path)
 
@@ -443,8 +445,7 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     # to prevent starting a not closed mlflow session due to memory leak of config and SafeMLFLow happens with a
     # mocked train function
     mocker.patch("examples.torch.common.utils.SafeMLFLow")
-    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
-    command_line = " ".join(arg_list)
+    arg_list = arg_list_from_arg_dict(args)
     if config["sample_type"] == "classification":
         import examples.torch.classification.main as sample
         if is_staged_quantization(config["sample_config"]):
@@ -468,7 +469,7 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     # Potentially it might happen when OpenMP is used before fork.
     # The relevant thread: https://github.com/pytorch/pytorch/issues/91547
     with set_num_threads_locally(1) if config["sample_type"] == "semantic_segmentation" else nullcontext():
-        sample.main(shlex.split(command_line))
+        sample.main(arg_list)
 
     # pylint: disable=no-member
     if config["sample_type"] == "classification":
@@ -508,11 +509,10 @@ def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_pat
     if not torch.cuda.is_available():
         args["--cpu-only"] = True
 
-    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
-    command_line = " ".join(arg_list)
+    arg_list = arg_list_from_arg_dict(args)
     import examples.torch.classification.main as sample
     start_worker_mock = mocker.patch("examples.torch.classification.main.start_worker")
-    sample.main(shlex.split(command_line))
+    sample.main(arg_list)
 
     config = start_worker_mock.call_args[0][1].nncf_config
     assert config["target_device"] == target_device
@@ -566,7 +566,7 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
     elif multiprocessing_distributed:
         args["--multiprocessing-distributed"] = True
 
-    runner = Command(create_command_line(args, accuracy_aware_config["sample_type"]))
+    runner = Command(create_command_line(args, accuracy_aware_config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
     runner.run()
 
     from glob import glob
@@ -596,7 +596,7 @@ def test_eval_only_config_fails_to_train(tmp_path, sample_type):
         "--config": config_factory.serialize(),
     }
 
-    runner = Command(create_command_line(args, sample_type))
+    runner = Command(create_command_line(args, sample_type), env=ROOT_PYTHONPATH_ENV)
     return_code = runner.run(assert_returncode_zero=False)
     assert return_code != 0
     assert EVAL_ONLY_ERROR_TEXT in "".join(runner.output)

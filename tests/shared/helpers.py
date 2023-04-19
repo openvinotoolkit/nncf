@@ -21,6 +21,8 @@ import json
 import numpy as np
 from pathlib import Path
 
+from nncf.common.utils.os import is_linux
+from nncf.common.utils.os import is_windows
 from tests.shared.paths import GITHUB_REPO_URL
 from tests.shared.paths import PROJECT_ROOT
 
@@ -41,26 +43,25 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
-    if "linux" in sys.platform:
+    if is_linux():
         python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
         pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
-
-    if "win32" in sys.platform:
+    elif is_windows():
         python_executable_with_venv = f' {venv_path}\\Scripts\\activate && python'
         pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
 
     version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'
 
     if venv_type == 'virtualenv':
-        subprocess.check_call(f'virtualenv -ppython{version_string} {venv_path}', shell=True)
+        subprocess.check_call(f'virtualenv -ppython{version_string} {venv_path}')
     elif venv_type == 'venv':
-        subprocess.check_call(f'python -m venv {venv_path}', shell=True)
+        subprocess.check_call(f'python -m venv {venv_path}')
 
-    subprocess.check_call(f'{pip_with_venv} install --upgrade pip', shell=True)
-    subprocess.check_call(f'{pip_with_venv} install --upgrade wheel setuptools', shell=True)
+    subprocess.check_call(f'{pip_with_venv} install --upgrade pip')
+    subprocess.check_call(f'{pip_with_venv} install --upgrade wheel setuptools')
 
     if package_type in ['build_s', 'build_w']:
-        subprocess.check_call(f'{pip_with_venv} install build', shell=True)
+        subprocess.check_call(f'{pip_with_venv} install build')
 
     run_path = tmp_path / 'run'
     run_path.mkdir()
@@ -91,7 +92,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     if "torch" in extra_reqs and 'build' not in package_type:
         run_cmd_line += torch_extra_index
 
-    subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
+    subprocess.run(run_cmd_line, check=True, cwd=PROJECT_ROOT)
     return venv_path
 
 

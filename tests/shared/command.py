@@ -16,20 +16,27 @@ import sys
 import threading
 import time
 import os
+from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import List
+
+from nncf.common.utils.os import is_windows
 
 
 class Command:
-    def __init__(self, cmd, path=None):
+    def __init__(self, cmd, cwd: Path = None, env: Dict = None):
         self.cmd = cmd
         self.process = None
         self.exec_time = -1
         self.output = []  # store output here
         self.kwargs = {}
         self.timeout = False
-        self.path = path
+        self.cwd = cwd
+        self.env = env if env is not None else os.environ.copy()
 
         # set system/version dependent "start_new_session" analogs
-        if sys.platform == "win32":
+        if is_windows():
             self.kwargs.update(creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
         elif sys.version_info < (3, 2):  # assume posix
             self.kwargs.update(preexec_fn=os.setsid)
@@ -38,7 +45,7 @@ class Command:
 
     def kill_process_tree(self, pid):
         try:
-            if sys.platform != "win32":
+            if is_windows():
                 os.killpg(pid, signal.SIGKILL)
             else:
                 subprocess.call(['taskkill', '/F', '/T', '/PID', str(pid)])
@@ -49,8 +56,8 @@ class Command:
         print(f"Running command: {self.cmd}")
         def target():
             start_time = time.time()
-            with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                                            bufsize=1, cwd=self.path, **self.kwargs) as p:
+            with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                            bufsize=1, cwd=self.cwd, env=self.env, **self.kwargs) as p:
                 self.process = p
                 self.timeout = False
 
@@ -90,3 +97,12 @@ class Command:
 
     def get_execution_time(self):
         return self.exec_time
+
+
+def arg_list_from_arg_dict(dct: Dict[str, Any]) -> List[str]:
+    retval = []
+    for key, val in dct.items():
+        retval.append(key)
+        if not (val is None or val is True):
+            retval.append(str(val))
+    return retval

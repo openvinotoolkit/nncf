@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -30,3 +30,11 @@ def safe_open(file: Path, *args, **kwargs):
         raise RuntimeError('File {} is a symbolic link, aborting.'.format(str(file)))
     with open(str(file), *args, **kwargs) as f:
         yield f
+
+
+def is_windows():
+    return "win32" in sys.platform
+
+
+def is_linux():
+    return "linux" in sys.platform

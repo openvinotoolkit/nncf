@@ -58,7 +58,7 @@ class CachedPipRunner:
         else:
             cache_dir_entry = ""
         subprocess.run(f"{self.venv_activate} && pip {cache_dir_entry} {pip_command}",
-                       check=True, shell=True, cwd=cwd)
+                       check=True, cwd=cwd)
 
 
 class TransformersVirtualEnvInstaller:
@@ -73,7 +73,7 @@ class TransformersVirtualEnvInstaller:
 
     def install_env(self, pip_cache_dir, torch_with_cuda11):
         version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
-        subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_PATH), shell=True)
+        subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_PATH))
         pip_runner = CachedPipRunner(self.VENV_ACTIVATE, pip_cache_dir)
         pip_runner.run_pip("install --upgrade pip")  # cache options are available with pip > 20.2
         pip_runner.run_pip("uninstall setuptools -y")
@@ -84,13 +84,13 @@ class TransformersVirtualEnvInstaller:
             pip_runner.run_pip(torch_install_cmd + '+cu116 --extra-index-url https://download.pytorch.org/whl/cu116')
         pip_runner.run_pip(torch_install_cmd)
         subprocess.run("git clone https://github.com/huggingface/transformers {}".format(self.TRANSFORMERS_REPO_PATH),
-                       check=True, shell=True)
-        subprocess.run("git checkout {}".format(TRANSFORMERS_COMMIT), check=True, shell=True,
+                       check=True)
+        subprocess.run("git checkout {}".format(TRANSFORMERS_COMMIT), check=True,
                        cwd=self.TRANSFORMERS_REPO_PATH)
-        subprocess.run("cp {} .".format(self.PATH_TO_PATCH), check=True, shell=True,
+        subprocess.run("cp {} .".format(self.PATH_TO_PATCH), check=True,
                        cwd=self.TRANSFORMERS_REPO_PATH)
         subprocess.run("git apply 0001-Modifications-for-NNCF-usage.patch",
-                       check=True, shell=True, cwd=self.TRANSFORMERS_REPO_PATH)
+                       check=True, cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install .", cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install -e \".[testing]\"", cwd=self.TRANSFORMERS_REPO_PATH)
         for sample_folder in ['question-answering', 'text-classification', 'language-modeling', 'token-classification']:
