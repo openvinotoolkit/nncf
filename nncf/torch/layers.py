@@ -25,6 +25,7 @@ from torch.nn.utils.rnn import PackedSequence
 from torch.nn.utils.weight_norm import WeightNorm
 
 from nncf import nncf_logger
+from nncf.common.api_marker import api
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
 from nncf.torch.utils import no_jit_trace
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
@@ -385,6 +386,7 @@ UNWRAPPED_USER_MODULES = Registry('user_modules')
 NNCF_WRAPPED_USER_MODULES_DICT = {}
 
 
+@api(canonical_alias="nncf.torch.load_state")
 def register_module(*quantizable_field_names: str, ignored_algorithms: list = None):
     # quantizable_field_names will work for `weight` attributes only. Should later extend to registering
     # customly named attributes if it becomes necessary

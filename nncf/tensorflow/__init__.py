@@ -19,6 +19,7 @@ import tensorflow
 from pkg_resources import parse_version
 
 try:
+    _tf_version = tensorflow.__version__
     tensorflow_version = parse_version(_tf_version).base_version
 except:
     nncf_logger.debug("Could not parse tensorflow version")

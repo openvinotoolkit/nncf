@@ -3,6 +3,7 @@ import inspect
 import os
 import pkgutil
 import sys
+from typing import Dict
 from typing import List
 
 from sphinx.ext.autodoc import mock
@@ -50,30 +51,51 @@ def collect_api_entities() -> List[str]:
         except Exception as e:
             skipped_modules[modname] = str(e)
 
-    api_fqns = []
+    from nncf.common.api_marker import api
+    api_fqns = dict()
+    aliased_fqns = {}  # type: Dict[str, str]
     for modname, module in modules.items():
         print(f"{modname}")
         for obj_name, obj in inspect.getmembers(module):
             objects_module = getattr(obj, '__module__', None)
             if objects_module == modname:
                 if inspect.isclass(obj) or inspect.isfunction(obj):
-                    if hasattr(obj, "_nncf_api_marker"):
+                    if hasattr(obj, api.API_MARKER_ATTR):
                         marked_object_name = obj._nncf_api_marker
                         # Check the actual name of the originally marked object
                         # so that the classes derived from base API classes don't
                         # all automatically end up in API
-                        if marked_object_name == obj.__name__:
-                            print(f"\t{obj_name}")
-                            api_fqns.append(f"{modname}.{obj_name}")
+                        if marked_object_name != obj.__name__:
+                            continue
+                        fqn = f"{modname}.{obj_name}"
+                        if hasattr(obj, api.CANONICAL_ALIAS_ATTR):
+                            canonical_import_name = getattr(obj, api.CANONICAL_ALIAS_ATTR)
+                            aliased_fqns[fqn] = canonical_import_name
+                            if canonical_import_name == fqn:
+                                print(f"\t{obj_name}")
+                            else:
+                                print(f"\t{obj_name} -> {canonical_import_name}")
+                        api_fqns[fqn] = True
 
     print()
     skipped_str = '\n'.join([f"{k}: {v}" for k, v in skipped_modules.items()])
     print(f"Skipped: {skipped_str}\n")
+    for fqn, canonical_alias in aliased_fqns.items():
+        try:
+            module_name, _, function_name = canonical_alias.rpartition('.')
+            getattr(importlib.import_module(module_name), function_name)
+        except (ImportError, AttributeError) as e:
+            print(
+                f"API entity with canonical_alias={canonical_alias} not available for import as specified!\n"
+                f"Adjust the __init__.py files so that the symbol is available for import as {canonical_alias}.")
+            raise e
+        api_fqns.pop(fqn)
+        api_fqns[canonical_alias] = True
 
     print("API entities:")
     for api_fqn in api_fqns:
         print(api_fqn)
-    return api_fqns
+    return list(api_fqns.keys())
 
 
 with mock(['torch', 'torchvision', 'onnx', 'onnxruntime', 'openvino', 'tensorflow', 'tensorflow_addons']):

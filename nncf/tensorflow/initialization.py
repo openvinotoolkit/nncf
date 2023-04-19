@@ -39,7 +39,7 @@ class TFInitializingDataLoader(NNCFDataLoader):
         return iter(self._data_loader)
 
 
-@api()
+@api(canonical_alias="nncf.tensorflow.register_default_init_args")
 def register_default_init_args(nncf_config: NNCFConfig,
                                data_loader: tf.data.Dataset,
                                batch_size: int,

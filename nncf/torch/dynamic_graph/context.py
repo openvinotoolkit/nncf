@@ -22,6 +22,7 @@ from typing import Optional
 
 import torch
 
+from nncf.common.api_marker import api
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.graph import DynamicGraph
@@ -429,6 +430,7 @@ def set_current_context(c: TracingContext):
     _CURRENT_CONTEXT.context = c
 
 
+@api(canonical_alias="nncf.torch.no_nncf_trace")
 @contextmanager
 def no_nncf_trace():
     ctx = get_current_context()
@@ -440,6 +442,7 @@ def no_nncf_trace():
         yield
 
 
+@api(canonical_alias="nncf.torch.forward_nncf_trace")
 @contextmanager
 def forward_nncf_trace():
     ctx = get_current_context()
@@ -455,6 +458,7 @@ def get_current_context() -> TracingContext:
     return _CURRENT_CONTEXT.context
 
 
+@api(canonical_alias="nncf.torch.disable_tracing")
 def disable_tracing(method):
     """
     Patch a method so that it will be executed within no_nncf_trace context

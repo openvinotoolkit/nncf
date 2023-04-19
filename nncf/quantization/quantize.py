@@ -26,7 +26,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope
 
 
-@api()
+@api(canonical_alias="nncf.quantize")
 def quantize(model: TModel,
              calibration_dataset: Dataset,
              preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
@@ -87,6 +87,7 @@ def quantize(model: TModel,
     raise RuntimeError(f'Unsupported type of backend: {backend}')
 
 
+@api(canonical_alias="nncf.quantize_with_accuracy_control")
 def quantize_with_accuracy_control(
     model: TModel,
     calibration_dataset: Dataset,

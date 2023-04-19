@@ -59,7 +59,7 @@ def create_compression_algorithm_builder(config: NNCFConfig,
 
     return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 
-@api()
+@api(canonical_alias="nncf.tensorflow.create_compressed_model")
 @tracked_function(NNCF_TF_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
 def create_compressed_model(model: tf.keras.Model,
                             config: NNCFConfig,

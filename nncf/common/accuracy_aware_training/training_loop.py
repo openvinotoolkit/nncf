@@ -20,6 +20,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.api_marker import api
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.registry import Registry
@@ -168,6 +169,7 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
         return accuracy_budget >= 0 and self.runner.is_model_fully_compressed(self.compression_controller)
 
 
+@api(canonical_alias="nncf.tensorflow.EarlyExitCompressionTrainingLoop")
 class EarlyExitCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     """
     Adaptive compression training loop allows an accuracy-aware training process
@@ -191,6 +193,7 @@ class EarlyExitCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         self.runner = runner_factory.create_training_loop()
 
 
+@api(canonical_alias="nncf.tensorflow.AdaptiveCompressionTrainingLoop")
 class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     """
     Adaptive compression training loop allows an accuracy-aware training process whereby

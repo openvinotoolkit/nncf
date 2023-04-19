@@ -30,7 +30,7 @@ from nncf.config.schema import validate_single_compression_algo_schema
 from nncf.config.structures import NNCFExtraConfigStruct
 
 
-@api()
+@api(canonical_alias="nncf.NNCFConfig")
 class NNCFConfig(dict):
     """A regular dictionary object extended with some utility functions."""
 

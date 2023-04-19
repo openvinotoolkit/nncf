@@ -225,7 +225,7 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
     return criterion(outputs, target)
 
 
-@api()
+@api(canonical_alias="nncf.torch.register_default_init_args")
 def register_default_init_args(nncf_config: 'NNCFConfig',
                                train_loader: torch.utils.data.DataLoader,
                                criterion: _Loss = None,

@@ -24,7 +24,7 @@ DataItem = TypeVar('DataItem')
 ModelInput = TypeVar('ModelInput')
 
 
-@api()
+@api(canonical_alias="nncf.Dataset")
 class Dataset(Generic[DataItem, ModelInput]):
     """
     The `nncf.Dataset` class defines the interface by which compression algorithms

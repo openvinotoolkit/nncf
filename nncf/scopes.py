@@ -21,7 +21,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.graph.graph import NNCFGraph
 
 
-@api()
+@api(canonical_alias="nncf.IgnoredScope")
 @dataclass
 class IgnoredScope:
     """
