@@ -13,7 +13,6 @@
 
 import json
 import os
-import shlex
 import sys
 import tempfile
 from abc import ABC
@@ -33,7 +32,6 @@ from nncf.common.utils.registry import Registry
 from tests.shared.command import arg_list_from_arg_dict
 from tests.shared.config_factory import ConfigFactory
 from tests.shared.paths import EXAMPLES_DIR
-from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
 
 
@@ -277,8 +275,8 @@ class SanitySampleValidator(BaseSampleValidator, ABC):
         self._desc = desc
         self._sample_handler = desc.sample_handler
 
-    def validate_sample(self, args, mocker):
-        arg_list = arg_list_from_arg_dict(args.items())
+    def validate_sample(self, args: Dict[str, Any], mocker):
+        arg_list = arg_list_from_arg_dict(args)
         command_line = " ".join(arg_list)
         print(f"Command line arguments: {command_line}")
 

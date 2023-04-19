@@ -13,7 +13,6 @@
 
 import json
 import os
-import shlex
 import tempfile
 from contextlib import contextmanager
 from contextlib import nullcontext

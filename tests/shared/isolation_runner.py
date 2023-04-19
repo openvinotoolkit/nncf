@@ -23,7 +23,7 @@ def run_pytest_case_function_in_separate_process(fn: Callable) -> Tuple[int, str
     env[ISOLATION_RUN_ENV_VAR] = "1"
     with subprocess.Popen(f'pytest -s {filename} -k {func_name}',
                           stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
+                          stderr=subprocess.STDOUT, shell=True,
                           bufsize=1,
                           env=env) as p:
         stdout, stderr = p.communicate()

@@ -61,7 +61,7 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
         run_cmd_line = f'{pip_with_venv} install {package_path}[{backend}]'
         if backend == "torch":
             run_cmd_line += torch_extra_index
-        subprocess.run(run_cmd_line, check=True)
+        subprocess.run(run_cmd_line, check=True, shell=True)
 
     run_path = tmp_path / 'run'
     install_checks_py_name = f'install_checks_{backend}.py'
@@ -72,7 +72,7 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
     env['PYTHONPATH'] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in install_checks_*.py
     subprocess.run(
         f'{python_executable_with_venv} {final_install_checks_py_path} {install_type} {package_type}',
-        check=True, cwd=run_path, env=env)
+        check=True, shell=True, cwd=run_path, env=env)
 
 
 @pytest.fixture(name="venv_type",

@@ -25,7 +25,7 @@ from nncf.common.utils.os import is_windows
 
 
 class Command:
-    def __init__(self, cmd, cwd: Path = None, env: Dict = None):
+    def __init__(self, cmd: str, cwd: Path = None, env: Dict = None):
         self.cmd = cmd
         self.process = None
         self.exec_time = -1
@@ -38,7 +38,7 @@ class Command:
         # set system/version dependent "start_new_session" analogs
         if is_windows():
             self.kwargs.update(creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-        elif sys.version_info < (3, 2):  # assume posix
+        if sys.version_info < (3, 2):  # assume posix
             self.kwargs.update(preexec_fn=os.setsid)
         else:  # Python 3.2+ and Unix
             self.kwargs.update(start_new_session=True)
@@ -56,7 +56,7 @@ class Command:
         print(f"Running command: {self.cmd}")
         def target():
             start_time = time.time()
-            with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
                                             bufsize=1, cwd=self.cwd, env=self.env, **self.kwargs) as p:
                 self.process = p
                 self.timeout = False
@@ -103,6 +103,11 @@ def arg_list_from_arg_dict(dct: Dict[str, Any]) -> List[str]:
     retval = []
     for key, val in dct.items():
         retval.append(key)
-        if not (val is None or val is True):
-            retval.append(str(val))
+        if not isinstance(val, list):
+            val_list = [val,]
+        else:
+            val_list = val
+        for v in val_list:
+            if not (v is None or v is True):
+                retval.append(str(v))
     return retval

@@ -53,15 +53,15 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'
 
     if venv_type == 'virtualenv':
-        subprocess.check_call(f'virtualenv -ppython{version_string} {venv_path}')
+        subprocess.check_call(f'virtualenv -ppython{version_string} {venv_path}', shell=True)
     elif venv_type == 'venv':
-        subprocess.check_call(f'python -m venv {venv_path}')
+        subprocess.check_call(f'python -m venv {venv_path}', shell=True)
 
-    subprocess.check_call(f'{pip_with_venv} install --upgrade pip')
-    subprocess.check_call(f'{pip_with_venv} install --upgrade wheel setuptools')
+    subprocess.check_call(f'{pip_with_venv} install --upgrade pip', shell=True)
+    subprocess.check_call(f'{pip_with_venv} install --upgrade wheel setuptools', shell=True)
 
     if package_type in ['build_s', 'build_w']:
-        subprocess.check_call(f'{pip_with_venv} install build')
+        subprocess.check_call(f'{pip_with_venv} install build', shell=True)
 
     run_path = tmp_path / 'run'
     run_path.mkdir()
@@ -92,7 +92,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     if "torch" in extra_reqs and 'build' not in package_type:
         run_cmd_line += torch_extra_index
 
-    subprocess.run(run_cmd_line, check=True, cwd=PROJECT_ROOT)
+    subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
     return venv_path
 
 
