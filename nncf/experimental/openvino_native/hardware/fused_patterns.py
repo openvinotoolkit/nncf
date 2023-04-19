@@ -406,7 +406,7 @@ def create_swish_with_hardsigmoid():
     add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD_BIAS',
                                    GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
     hard_sigmoid_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'HARDSIGMOID',
-                                     GraphPattern.METATYPE_ATTR: om.OVHardSigmoidMetatype})
+                                            GraphPattern.METATYPE_ATTR: om.OVHardSigmoidMetatype})
     multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
                                         GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype})
 
