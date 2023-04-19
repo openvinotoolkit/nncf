@@ -479,6 +479,8 @@ class MinMaxQuantization(Algorithm):
         :param nncf_graph: Instance of NNCFGraph to traverse.
         :return: First visited target points.
         """
+        if not quantization_points:
+            return []
         target_node_names_to_qp = collections.defaultdict(list)
         for q_p in quantization_points:
             target_node_names_to_qp[q_p.target_node_name].append(q_p)
