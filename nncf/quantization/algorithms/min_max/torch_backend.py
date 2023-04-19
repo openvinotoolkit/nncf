@@ -56,6 +56,7 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 import nncf.torch.graph.operator_metatypes as om
 
 
+#pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 

@@ -231,4 +231,5 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
-        return True
+        # If the nodes share one weight tensor, we should have only one quantizer on that
+        return weight_name not in quantized_weight_names
