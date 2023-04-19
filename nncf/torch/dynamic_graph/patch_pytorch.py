@@ -97,7 +97,7 @@ class MagicFunctionsToPatch:
     }
 
 
-@api(canonical_alias="nncf.torch.load_state")
+@api(canonical_alias="nncf.torch.register_operator")
 def register_operator(name=None):
     def wrap(operator):
         op_name = name

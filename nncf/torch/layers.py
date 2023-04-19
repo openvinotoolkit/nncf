@@ -386,7 +386,7 @@ UNWRAPPED_USER_MODULES = Registry('user_modules')
 NNCF_WRAPPED_USER_MODULES_DICT = {}
 
 
-@api(canonical_alias="nncf.torch.load_state")
+@api(canonical_alias="nncf.torch.register_module")
 def register_module(*quantizable_field_names: str, ignored_algorithms: list = None):
     # quantizable_field_names will work for `weight` attributes only. Should later extend to registering
     # customly named attributes if it becomes necessary

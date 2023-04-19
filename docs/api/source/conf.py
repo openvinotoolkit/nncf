@@ -54,6 +54,7 @@ def collect_api_entities() -> List[str]:
     from nncf.common.api_marker import api
     api_fqns = dict()
     aliased_fqns = {}  # type: Dict[str, str]
+    canonical_imports_seen = set()
     for modname, module in modules.items():
         print(f"{modname}")
         for obj_name, obj in inspect.getmembers(module):
@@ -70,7 +71,10 @@ def collect_api_entities() -> List[str]:
                         fqn = f"{modname}.{obj_name}"
                         if hasattr(obj, api.CANONICAL_ALIAS_ATTR):
                             canonical_import_name = getattr(obj, api.CANONICAL_ALIAS_ATTR)
+                            if canonical_import_name in canonical_imports_seen:
+                                assert False, f"Duplicate canonical_alias detected: {canonical_import_name}"
                             aliased_fqns[fqn] = canonical_import_name
+                            canonical_imports_seen.add(canonical_import_name)
                             if canonical_import_name == fqn:
                                 print(f"\t{obj_name}")
                             else:
