@@ -20,7 +20,6 @@ import tensorflow as tf
 
 from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
-from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.initialization import register_default_init_args
@@ -39,6 +38,7 @@ from examples.common.sample_config import SampleConfig
 from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
+from examples.tensorflow.common.utils import get_learning_rate
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import serialize_cli_args
@@ -204,7 +204,7 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
             if np.isnan(train_metric_result['total_loss']):
                 raise ValueError('total loss is NaN')
 
-            train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
+            train_metric_result.update({'learning_rate': get_learning_rate(optimizer, optimizer.iterations)})
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
 
@@ -304,8 +304,6 @@ def run_train(config):
     logger.info('Compression statistics')
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())
-
-    close_strategy_threadpool(strategy)
 
 
 def main(argv):

@@ -102,10 +102,10 @@ class MockResultFunctor:
      'final_compression_rate',
      'reference_final_metric'),
     (
-            ({'maximal_relative_accuracy_degradation': 30.0}, 0.9077, 0.214535),
-            ({'maximal_relative_accuracy_degradation': 1.0}, 0.3577, 0.210423),
-            ({'maximal_absolute_accuracy_degradation': 0.0}, 0.1202, 0.236087),
-            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.9077, 0.108224),
+            ({'maximal_relative_accuracy_degradation': 30.0}, -0.0923, 0.04942),
+            ({'maximal_relative_accuracy_degradation': 1.0}, -0.0923, 0.04942),
+            ({'maximal_absolute_accuracy_degradation': 0.0}, -0.0923, 0.04942),
+            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.2077, 0.09749),
     )
 )
 def test_adaptive_compression_training_loop(max_accuracy_degradation, final_compression_rate,

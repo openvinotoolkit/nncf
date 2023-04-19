@@ -558,14 +558,15 @@ def apply_insert_before(model):
 
 
 def check_graphs(model, ref_graph_filename):
-    tensorflow_version = parse_version(tf.__version__).base_version
+    tf_version = parse_version(tf.__version__).base_version
+    tf_version_major, tf_version_minor = tuple(map(int, tf_version.split('.')))[:2]
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_transormer',
-                            tensorflow_version[:3])
+                            f'{tf_version_major}.{tf_version_minor}')
     ref_graph_path = os.path.abspath(os.path.join(data_dir, ref_graph_filename))
 
     graph, graph_to_layer_var_names_map = keras_model_to_tf_graph(model)
 
-    if tensorflow_version.startswith('2.8'):
+    if tf_version_major == 2 and tf_version_minor >= 8:
         graph = remove_node_by_name('NoOp', graph)
 
     nx_graph = get_nx_graph_from_tf_graph(graph, graph_to_layer_var_names_map)

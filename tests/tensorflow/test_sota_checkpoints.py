@@ -539,6 +539,7 @@ class TestSotaCheckpoints(RunTest):
 
         if exit_code == 0:
             mo_cmd_tail = f' --framework tf' \
+                          f' --use_new_frontend' \
                           f' --input_shape {self.get_input_shape(eval_test_struct.config_name_)}' \
                           f' --input_model {tf_checkpoint}' \
                           f' --output_dir {ir_model_folder}'
