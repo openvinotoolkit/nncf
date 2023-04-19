@@ -161,11 +161,11 @@ def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num,
         assert node.type_info.name == t
         if ref_val is not None:
             const = get_prev_node(node, 1)
-            if not len(ref_val):
+            if ref_val == []:
                 assert const.get_data().shape == (0,)
-                continue
-            res = np.equal(const.get_data(), np.array(ref_val))
-            assert all(res)
+            else:
+                res = np.equal(const.get_data(), np.array(ref_val))
+                assert all(res)
 
         nodes = get_next_nodes(node, 0)
         assert len(nodes) == 1
