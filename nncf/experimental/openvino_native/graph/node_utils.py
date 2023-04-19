@@ -138,7 +138,7 @@ def get_reduce_node_name(output_name: str, node_type: str, port_id: int) -> str:
     return f'{output_name}_{node_type}.{port_id}'
 
 
-def get_inplace_reduce_op(op: Type[ov.Node], node_type: str, reduction_axes: Tuple[int, ...],
+def get_inplace_reduce_op(op: Type[ov.Node], node_type: str, reduction_axes: Optional[Tuple[int, ...]],
                           use_abs: bool) -> InplaceInsertionFnType:
     """
     Returns inplace insertion function that adds reduce node to a passed node.
@@ -155,7 +155,7 @@ def get_inplace_reduce_op(op: Type[ov.Node], node_type: str, reduction_axes: Tup
         name_output_port_id = output_port_id
         if reduction_axes_ is None:
             partial_shape = get_partial_shape_safe(node, output_port_id)
-            reduction_axes_ = np.array(range(partial_shape.rank.get_length()))
+            reduction_axes_ = np.arange(partial_shape.rank.get_length()).astype(np.int64)
 
         if use_abs:
             op_input = opset.abs(node.output(output_port_id),
