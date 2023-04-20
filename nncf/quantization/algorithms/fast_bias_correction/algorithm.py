@@ -300,10 +300,7 @@ class FastBiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
-        if len(q_outputs.shape) < 3:
-            q_outputs = self._backend_entity.tensor_processor.mean(q_outputs, axis=0)
-        else:
-            q_outputs = self._backend_entity.tensor_processor.mean_per_channel(q_outputs, channel_axis)
+        q_outputs = self._backend_entity.tensor_processor.mean_per_channel(q_outputs, channel_axis).tensor
         bias_shift = np.array(output_fp) - q_outputs
         return bias_shift
 

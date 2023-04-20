@@ -340,11 +340,7 @@ class BiasCorrection(Algorithm):
         for feed_dict in feed_dicts:
             q_output = engine.infer(feed_dict)
             q_output = self._backend_entity.process_model_output(q_output, output_tensor_name)
-            if len(q_output.shape) < 3:
-                q_output = self._backend_entity.tensor_processor.mean(q_output, axis=0, keepdims=False)
-            else:
-                q_output = self._backend_entity.tensor_processor.mean_per_channel(q_output, channel_axis)
-            q_outputs.append(q_output)
+            q_outputs.append(self._backend_entity.tensor_processor.mean_per_channel(q_output, channel_axis).tensor)
         q_output = np.mean(q_outputs, axis=0)
         return output_fp - q_output
 

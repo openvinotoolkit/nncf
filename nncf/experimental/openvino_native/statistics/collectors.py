@@ -42,6 +42,7 @@ from nncf.experimental.openvino_native.graph.node_utils import get_reducer_outpu
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_max_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_min_op
+from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_batch_mean_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_per_ch
 
@@ -99,16 +100,12 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
         return OVNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims).data)
 
-    @classmethod
-    def mean_per_channel(cls, x: NNCFTensor, axis: int) -> NNCFTensor:
-        return cls.map_per_channel(x, axis, cls.mean)
-
-    @staticmethod
-    def map_per_channel(x: NNCFTensor, ch_axis: int,
-                        fn: Callable[[NNCFTensor, int], Any]):
-        axes = list(range(x.tensor.ndim))
-        axes.remove(ch_axis)
-        return fn(x, axis=tuple(axes))
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        if len(x.shape) < 3:
+            return OVNNCFTensor(np.mean(x.tensor, axis=0))
+        x = np.moveaxis(x.tensor, axis, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return OVNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @classmethod
     def no_outliers_map(
@@ -201,7 +198,7 @@ class OVMeanReducer(MeanReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_mean_per_ch(self.NAME, self._reduction_shape)
+        return get_inplace_mean_op(self.NAME, self._reduction_shape)
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return get_reducer_output_node_names(self.NAME, target_node_name, port_id,
