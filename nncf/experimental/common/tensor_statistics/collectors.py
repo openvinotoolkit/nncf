@@ -392,23 +392,23 @@ class NoopReducer(TensorReducerBase):
 
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        return [self._tensor_processor.reduce_min(x[0], self._reduction_shape)]
+        return [self._tensor_processor.reduce_min(x[0], self._reduction_shape, keepdims=True)]
 
 
 class MaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        return [self._tensor_processor.reduce_max(x[0], self._reduction_shape)]
+        return [self._tensor_processor.reduce_max(x[0], self._reduction_shape, keepdims=True)]
 
 
 class AbsMaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         x = self._tensor_processor.abs(x[0])
-        return [self._tensor_processor.reduce_max(x, self._reduction_shape)]
+        return [self._tensor_processor.reduce_max(x, self._reduction_shape, keepdims=True)]
 
 
 class MeanReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        return [self._tensor_processor.mean(x[0], self._reduction_shape)]
+        return [self._tensor_processor.mean(x[0], self._reduction_shape, keepdims=True)]
 
 
 class QuantileReducerBase(TensorReducerBase):
@@ -431,7 +431,7 @@ class AbsQuantileReducer(QuantileReducerBase):
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
         x = self._tensor_processor.abs(x[0])
-        return self._tensor_processor.quantile(x, self._quantile, self._reduction_shape)
+        return self._tensor_processor.quantile(x, [self._quantile], self._reduction_shape)
 
 
 class BatchMeanReducer(TensorReducerBase):
@@ -512,7 +512,7 @@ class OfflineAggregatorBase(TensorAggregatorBase):
 
     def _aggregate(self, fn):
         stacked_val = self._tensor_processor.stack(self._container)
-        return fn(stacked_val, axis=0).tensor
+        return fn(stacked_val, axis=0, keepdims=False).tensor
 
 
 class MeanAggregator(OfflineAggregatorBase):

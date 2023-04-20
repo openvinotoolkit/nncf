@@ -77,10 +77,10 @@ class TemplateTestReducersAggreagtors:
         assert self.all_close(reduced_input[0].tensor, input_)
 
     @pytest.mark.parametrize('reducer_name,ref',
-        [('min', ([[[-26]], [[-17]], [[-8]], [[1]]], -26)),
-         ('max', ([[[-18]], [[-9]], [[0]], [[9]]], 9)),
-         ('abs_max', ([[[26]], [[17]], [[8]], [[9]]], 26)),
-         ('mean', ([[[-22.]], [[-13.]], [[-4.]], [[5.]]], -8.5))])
+        [('min', ([[[-26]], [[-17]], [[-8]], [[1]]], [[[-26]]])),
+         ('max', ([[[-18]], [[-9]], [[0]], [[9]]], [[[9]]])),
+         ('abs_max', ([[[26]], [[17]], [[8]], [[9]]], [[[26]]])),
+         ('mean', ([[[-22.]], [[-13.]], [[-4.]], [[5.]]], [[[-8.5]]]))])
     def test_min_max_mean_reducers(self, reducer_name, ref, reducers):
         reduction_shape = (1, 2)
         input_ = np.arange(-26, 10).reshape((4, 3, 3))
@@ -110,7 +110,7 @@ class TemplateTestReducersAggreagtors:
             [ -9.5,  -8.5,  -7.5],
             [ -6.5,  -5.5,  -4.5]
          ]]]),
-         ('mean_per_ch', [[[[-8.5]]]])])
+         ('mean_per_ch', [-8.5])])
     def test_batch_mean_mean_per_ch_reducers(
             self, reducer_name, ref, reducers):
         input_ = np.arange(-26, 10).reshape((4, 1, 3, 3))
@@ -169,8 +169,8 @@ class TemplateTestReducersAggreagtors:
         assert self.all_close(max_ref, max_aggregator.aggregate())
 
     NO_OUTLIERS_TEST_PARAMS = [
-        (MeanAggregator, True, 1, [1404.5138888888905]),
-        (MedianAggregator, True, 1, [15.5]),
+        (MeanAggregator, True, 1, 1404.5138888888905),
+        (MedianAggregator, True, 1, 15.5),
         (MeanAggregator, False, 1,
          [2503.125, -2493.75,  5009.375,
           -4987.5  ,  7515.625, -7481.25,
@@ -194,13 +194,13 @@ class TemplateTestReducersAggreagtors:
         (MedianAggregator, True, 3,
          DEFALUT_3D_MEDIAN_VALUE),
         (MeanAggregator, False, 3,
-         DEFALUT_3D_MEAN_VALUE),
+         [DEFALUT_3D_MEAN_VALUE]),
         (MedianAggregator, False, 3,
-         DEFALUT_3D_MEDIAN_VALUE),
+         [DEFALUT_3D_MEDIAN_VALUE]),
 
 
-        (default_test_mean_no_outlier, True, 1, [1404.5138888888905]),
-        (default_test_median_no_outlier, True, 1, [15.5]),
+        (default_test_mean_no_outlier, True, 1, 1404.5138888888905),
+        (default_test_median_no_outlier, True, 1, 15.5),
         (default_test_mean_no_outlier, False, 1,
          [ 4.16666667,  8.33333333, 12.5,
           16.66666667, 20.83333333, 25.,
@@ -224,9 +224,9 @@ class TemplateTestReducersAggreagtors:
         (default_test_median_no_outlier, True, 3,
          NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE),
         (default_test_mean_no_outlier, False, 3,
-         NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE),
+         [NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE]),
         (default_test_median_no_outlier, False, 3,
-         NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE),
+         [NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE]),
     ]
 
     @pytest.mark.parametrize('aggregator_cls,use_per_sample_stats,dims,refs', NO_OUTLIERS_TEST_PARAMS)

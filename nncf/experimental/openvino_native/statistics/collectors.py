@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, Union, List, Tuple, Deque, Callable, Any
+from typing import Optional, Union, List, Deque, Callable, Any
 
 import numpy as np
 
@@ -53,12 +53,12 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return OVNNCFTensor(np.amin(x.tensor, axis=axis, keepdims=True))
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple], keepdims: bool = True) -> NNCFTensor:
+        return OVNNCFTensor(np.amin(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return OVNNCFTensor(np.amax(x.tensor, axis=axis, keepdims=True))
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple], keepdims: bool = True) -> NNCFTensor:
+        return OVNNCFTensor(np.amax(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def abs(x: NNCFTensor) -> NNCFTensor:
@@ -73,33 +73,34 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return OVNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple], keepdims: bool = True) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, tuple], keepdims: bool = False) -> NNCFTensor:
         return OVNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         return OVNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
     def masked_mean(cls, x: NNCFTensor,
                     axis: Optional[Union[int, tuple, list]],
                     mask: Optional[NNCFTensor],
-                    keepdims: bool = True) -> NNCFTensor:
+                    keepdims:bool = False) -> NNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        return OVNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=keepdims).data)
+        return OVNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=False).data)
 
     @classmethod
     def masked_median(cls, x: NNCFTensor,
                       axis: Optional[Union[int, tuple, list]],
                     mask: Optional[NNCFTensor],
-                    keepdims: bool = True) -> NNCFTensor:
+                    keepdims: bool = False) -> NNCFTensor:
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
         return OVNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims).data)
 
+    @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         if len(x.shape) < 3:
             return OVNNCFTensor(np.mean(x.tensor, axis=0))
@@ -111,9 +112,10 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     def no_outliers_map(
             cls, x: NNCFTensor,
             fn: Callable[[NNCFTensor, int, NNCFTensor], Any],
-            stack_axis: int = 0, alpha: float = 0.01) -> NNCFTensor:
+            stack_axis: int = 0, alpha: float = 0.01,
+            keepdims: bool = False) -> NNCFTensor:
         if len(x.shape) == 1:
-            return fn(x, axis=None, mask=None)
+            return fn(x, axis=None, mask=None, keepdims=keepdims)
 
         x = x.tensor
         if stack_axis:
@@ -121,7 +123,7 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
         low_values, high_values = np.quantile(x, [alpha, 1 - alpha], 0)
         outliers_mask = np.logical_or(x < low_values, high_values < x)
-        return fn(OVNNCFTensor(x), axis=0, mask=OVNNCFTensor(outliers_mask))
+        return fn(OVNNCFTensor(x), axis=0, mask=OVNNCFTensor(outliers_mask), keepdims=keepdims)
 
     @staticmethod
     def batch_mean(x: NNCFTensor) -> NNCFTensor:
@@ -142,7 +144,7 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]],
-                 axis: Union[int, tuple, list]) -> List[TensorElementsType]:
+                 axis: Union[int, tuple, list]) -> List[NNCFTensor]:
         result = np.quantile(tensor.tensor, quantile, axis, keepdims=False)
         return [OVNNCFTensor(x) for x in result]
 

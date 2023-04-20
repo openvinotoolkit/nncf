@@ -31,4 +31,6 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
              OVQuantileReducer, OVAbsQuantileReducer, OVBatchMeanReducer, OVMeanPerChanelReducer]}
 
     def all_close(self, val, ref) -> bool:
-        return np.allclose(val, ref)
+        val_ = np.array(val)
+        ref_ = np.array(ref)
+        return np.allclose(val_, ref_) and val_.shape == ref_.shape

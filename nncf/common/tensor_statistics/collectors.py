@@ -116,7 +116,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
         """
          Computes minimum of elements across dimensions of NNCFTensor.
 
@@ -127,7 +127,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
         """
         Computes maximum of elements across dimensions of NNCFTensor.
 
@@ -170,7 +170,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
         """
         Computes the mean of elements across given dimensions of NNCFTensor.
 
@@ -181,13 +181,12 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
         pass
 
     @staticmethod
     @abstractmethod
-    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list],
-                    mask: NNCFTensor, keepdims: bool = True) -> NNCFTensor:
+    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
         """
         Computes the mean of elements across given dimensions of NNCFTensor.
 
@@ -198,8 +197,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor,
-                      keep_dims: bool = True) -> NNCFTensor:
+    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
         pass
 
     @staticmethod
@@ -242,13 +240,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean_per_channel(cls, x: NNCFTensor, axis: int) -> NNCFTensor:
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def map_per_channel(x: NNCFTensor, ch_axis: int,
-                        fn: Callable[[np.array, int], Any]):
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         pass
 
     @classmethod
