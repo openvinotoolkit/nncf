@@ -29,6 +29,13 @@ class TemplateTestFBCAlgorithm:
     @staticmethod
     @abstractmethod
     def list_to_backend_type(data: List) -> TTensor:
+        """
+        Convert list to backend specific type
+
+        :param data: List of data.
+
+        :return TTensor: Converted data.
+        """
         pass
 
     @staticmethod
@@ -44,7 +51,7 @@ class TemplateTestFBCAlgorithm:
             ([[1, 1]], [0.1, 0.1], 1, [1, 2]),
         ),
     )
-    def test_reshape_bias_shift(self, bias_value, bias_shift, channel_axis, ref_shape):
+    def test_reshape_bias_shift(self, bias_value: list, bias_shift: list, channel_axis: int, ref_shape: list):
         """
         Checks the result of the FastBiasCorrection.reshape_bias_shift method for backend specific datatype.
         """
@@ -59,21 +66,39 @@ class TemplateTestFBCAlgorithm:
 
     @staticmethod
     @abstractmethod
-    def get_model(with_bias, tmp_dir):
+    def get_model(with_bias: bool, tmp_dir: str):
+        """
+        Return test model.
+
+        :param with_bias: If `True`, the conv module will include a bias value.
+            Otherwise, it will not include a bias value.
+        :param tmp_dir: Temporary directory.
+        """
         pass
 
     @staticmethod
     @abstractmethod
-    def get_dataset(model):
+    def get_dataset(model: TModel):
+        """
+        Return backend specific random dataset.
+
+        :param model: The model for which the dataset is being created.
+        """
         pass
 
     @staticmethod
     @abstractmethod
-    def check_bias(model, with_bias):
+    def check_bias(model: TModel, with_bias: bool):
+        """
+        Check that bias value equal to reference value.
+
+        :param model: Target model.
+        :param with_bias: Model contain bias or not.
+        """
         pass
 
     @pytest.mark.parametrize("with_bias", (False, True))
-    def test_fast_bias_correction_algo(self, with_bias, tmpdir):
+    def test_fast_bias_correction_algo(self, with_bias: bool, tmpdir: str):
         """
         Check working on fast bias correction algorithm and compare bias in quantized model with reference
         """

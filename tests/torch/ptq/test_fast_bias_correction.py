@@ -34,11 +34,11 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         return PTFastBiasCorrectionAlgoBackend
 
     @staticmethod
-    def get_model(with_bias, tmp_dir):
+    def get_model(with_bias: bool, tmp_dir: str):
         return get_nncf_network(ConvTestModel(bias=with_bias), [1, 1, 4, 4])
 
     @staticmethod
-    def get_dataset(model):
+    def get_dataset(model: torch.nn.Module):
         manual_seed(42)
 
         def transform_fn(data_item):
@@ -49,7 +49,7 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         return dataset
 
     @staticmethod
-    def check_bias(model, with_bias):
+    def check_bias(model: torch.nn.Module, with_bias: bool):
         if with_bias:
             assert all(torch.isclose(model.conv.bias.data, Tensor([-1.9895, -1.9895]), rtol=0.0001))
         else:

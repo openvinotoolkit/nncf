@@ -29,9 +29,9 @@ def get_data_from_node(model: onnx.ModelProto, node_name: str):
     return None
 
 
-class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
+class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
-    def list_to_backend_type(data: List) -> np.array:
+    def list_to_backend_type(data: List) -> np.ndarray:
         return np.array(data)
 
     @staticmethod
@@ -39,7 +39,7 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         return ONNXFastBiasCorrectionAlgoBackend
 
     @staticmethod
-    def get_model(with_bias, tmp_dir):
+    def get_model(with_bias: bool, tmp_dir: str):
         model = ConvTestModel(bias=with_bias)
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand([1, 1, 4, 4]), onnx_path, opset_version=13)
@@ -47,12 +47,12 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         return onnx_model
 
     @staticmethod
-    def get_dataset(model):
+    def get_dataset(model: onnx.ModelProto):
         dataset = get_random_dataset_for_test(model, False)
         return dataset
 
     @staticmethod
-    def check_bias(model, with_bias):
+    def check_bias(model: onnx.ModelProto, with_bias: bool):
         if with_bias:
             assert np.all(np.isclose(get_data_from_node(model, "conv.bias"), np.array([-2.0424285, -2.0424285])))
         else:
