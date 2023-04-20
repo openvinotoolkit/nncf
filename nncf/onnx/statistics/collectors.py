@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Union, List, Deque
+from typing import Union, List, Deque, Optional, Callable, Any
 
 import numpy as np
 
@@ -34,12 +34,12 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return ONNXNNCFTensor(np.amin(x.tensor, axis=axis))
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+        return ONNXNNCFTensor(np.amin(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return ONNXNNCFTensor(np.amax(x.tensor, axis=axis))
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+        return ONNXNNCFTensor(np.amax(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def abs(x: NNCFTensor) -> NNCFTensor:
@@ -54,8 +54,50 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return ONNXNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return ONNXNNCFTensor(np.mean(x.tensor, axis=axis))
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        return ONNXNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
+
+    @staticmethod
+    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        return ONNXNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
+
+    @classmethod
+    def masked_mean(cls, x: NNCFTensor,
+                    axis: Optional[Union[int, tuple, list]],
+                    mask: Optional[NNCFTensor],
+                    keepdims:bool = False) -> NNCFTensor:
+        if mask is None:
+            return cls.mean(x, axis=axis, keepdims=keepdims)
+        masked_x = np.ma.array(x.tensor, mask=mask.tensor)
+        return ONNXNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=False).data)
+
+    @classmethod
+    def masked_median(
+            cls, x: NNCFTensor,
+            axis: Optional[Union[int, tuple, list]],
+            mask: Optional[NNCFTensor],
+            keepdims: bool = False) -> NNCFTensor:
+        if mask is None:
+            return cls.median(x, axis=axis, keepdims=keepdims)
+        masked_x = np.ma.array(x.tensor, mask=mask.tensor)
+        return ONNXNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims).data)
+
+    @classmethod
+    def no_outliers_map(
+            cls, x: NNCFTensor,
+            fn: Callable[[NNCFTensor, int, NNCFTensor], Any],
+            stack_axis: int = 0, alpha: float = 0.01,
+            keepdims: bool = False) -> NNCFTensor:
+        if len(x.shape) == 1:
+            return fn(x, axis=None, mask=None, keepdims=keepdims)
+
+        x = x.tensor
+        if stack_axis:
+            x = np.moveaxis(x, stack_axis, 0)
+
+        low_values, high_values = np.quantile(x, [alpha, 1 - alpha], 0)
+        outliers_mask = np.logical_or(x < low_values, high_values < x)
+        return fn(ONNXNNCFTensor(x), axis=0, mask=ONNXNNCFTensor(outliers_mask), keepdims=keepdims)
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:

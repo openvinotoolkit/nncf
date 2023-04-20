@@ -317,7 +317,7 @@ def get_mean_stat_collector(num_samples, reduction_shape, window_size=None, inpl
     # after migration on openvino-dev=2023.0
     inplace = False
     reducer_cls = OVBatchMeanReducer if reduction_shape == 0 else OVMeanPerChanelReducer
-    reducer = reducer_cls(reduction_shape, inplace)
+    reducer = reducer_cls(inplace=inplace)
     noop_reducer = OVNoopReducer()
 
     kwargs = {
