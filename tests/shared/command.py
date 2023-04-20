@@ -34,6 +34,7 @@ class Command:
         self.timeout = False
         self.cwd = cwd
         self.env = env if env is not None else os.environ.copy()
+        self.thread_exc = None
 
         # set system/version dependent "start_new_session" analogs
         if is_windows():
@@ -55,28 +56,35 @@ class Command:
     def run(self, timeout=3600, assert_returncode_zero=True):
         print(f"Running command: {self.cmd}")
         def target():
-            start_time = time.time()
-            with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                                            bufsize=1, cwd=self.cwd, env=self.env, **self.kwargs) as p:
-                self.process = p
-                self.timeout = False
+            try:
+                start_time = time.time()
+                with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
+                                                bufsize=1, cwd=self.cwd, env=self.env, **self.kwargs) as p:
+                    self.process = p
+                    self.timeout = False
 
-                self.output = []
-                for line in self.process.stdout:
-                    line = line.decode('utf-8')
-                    self.output.append(line)
-                    sys.stdout.write(line)
+                    self.output = []
+                    for line in self.process.stdout:
+                        line = line.decode('utf-8')
+                        self.output.append(line)
+                        sys.stdout.write(line)
 
-                sys.stdout.flush()
-                self.process.stdout.close()
+                    sys.stdout.flush()
+                    self.process.stdout.close()
 
-                self.process.wait()
-                self.exec_time = time.time() - start_time
+                    self.process.wait()
+                    self.exec_time = time.time() - start_time
+            except Exception as e:  # pylint:disable=broad-except
+                self.thread_exc = e
 
         thread = threading.Thread(target=target)
         thread.start()
 
         thread.join(timeout)
+
+        if self.thread_exc is not None:
+            raise self.thread_exc
+
         if thread.is_alive():
             try:
                 print("Error: process taking too long to complete--terminating" + ", [ " + self.cmd + " ]")
