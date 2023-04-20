@@ -60,9 +60,7 @@ _Preview means that this is a work in progress and NNCF does not guarantee the f
 
 ### Post-Training Quantization
 
-To run the algorithm you only need your model and the validation part of the dataset without labels.
-
-The basic workflow steps:
+To run the algorithm you only need your model and the validation part of the dataset without labels. The basic workflow steps:
 1) Load a model and a data source.
 2) Create an instance of `nncf.Dataset` class by passing two parameters:
    * `data_source` — Iterable object containing data items for model calibration.
