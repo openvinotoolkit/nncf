@@ -251,7 +251,7 @@ class TensorCollector:
             retval.append((hash(reducer), reducer.get_output_names(target_node_name, port_id)))
         return retval
 
-    def register_inputs(self, inputs: Dict[str, TensorType]) -> None:
+    def register_inputs(self, inputs: Dict[int, List[NNCFTensor]]) -> None:
         """
         Registers given input in TensorCollector.
 
@@ -333,9 +333,9 @@ class TensorCollector:
             aggregator.reset()
 
     @staticmethod
-    def get_target_inputs(inputs: Dict[str, TensorType],
+    def get_target_inputs(inputs: Dict[str, NNCFTensor],
                           input_info: List[Tuple[int, List[str]]]
-    ) -> Dict[int, List[TensorType]]:
+    ) -> Dict[int, List[NNCFTensor]]:
         target_inputs = {}
         for reducer, names in input_info:
             target_inputs[reducer] = [inputs[name] for name in names]

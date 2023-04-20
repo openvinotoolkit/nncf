@@ -171,7 +171,7 @@ def test_merged_tensor_collector():
     assert len(merged_collector._reducers) == num_collectors
     assert len(merged_collector._aggregators) == num_collectors
 
-    # Check aggregators was replaced correctly
+    # Check aggregators were replaced correctly
     common_branch_key = (hash(reducer_common), 0, hash(aggregator_common))
     common_aggregator = merged_collector._aggregators[common_branch_key]
     for collector in collectors[:-1]:
@@ -206,8 +206,46 @@ def test_ambigous_container_key():
 def test_ambiguous_branches():
     collector = TensorCollector()
     reducer = DummyTensorReducer('Dummy')
-    reducer_a = DummyTensorReducerA('Dummy')
     aggregator = DummyTensorAggregator(5)
     collector.register_statistic_branch('A', reducer, aggregator)
     with pytest.raises(RuntimeError):
         collector.register_statistic_branch('B', reducer, aggregator)
+
+
+class DummyMultipleInpOutTensorReducer(DummyTensorReducer):
+    NUM_INPUTS = 3
+    NUM_OUTPUTS = 2
+    def _reduce_out_of_place(self, x: List[TensorType]):
+        return x[:self.NUM_OUTPUTS]
+
+    def get_output_names(self, target_node_name: str, port_id: int) -> str:
+        return [f'{target_node_name}_{port_id}_{self._output_name}_{i}' for i in range(self.NUM_INPUTS)]
+
+def test_multiple_branch_reducer():
+    reducer_output_name = 'reducer_output_name'
+    target_node_name = 'target_node_name'
+    collector = TensorCollector()
+    reducer = DummyMultipleInpOutTensorReducer(reducer_output_name)
+
+    for i in range(reducer.NUM_OUTPUTS):
+        aggregator = DummyTensorAggregator(None)
+        collector.register_statistic_branch(str(i), reducer, aggregator, i)
+
+
+    ref_output_info = [(hash(reducer),
+                         ['target_node_name_0_reducer_output_name_0',
+                          'target_node_name_0_reducer_output_name_1',
+                          'target_node_name_0_reducer_output_name_2'])]
+    inputs = {name: np.array(i) for i, name in enumerate(ref_output_info[0][1])}
+
+    output_info = collector.get_output_info(target_node_name, 0)
+    assert output_info == ref_output_info
+
+    target_inputs = collector.get_target_inputs(inputs, output_info)
+    collector.register_inputs(target_inputs)
+
+    ref_stats = {'0': np.array(0), '1': np.array(1)}
+    stats = collector.get_statistics()
+    assert len(ref_stats) == len(stats)
+    for key in ref_stats:
+        assert ref_stats[key] == stats[key]
