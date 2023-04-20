@@ -60,14 +60,14 @@ _Preview means that this is a work in progress and NNCF does not guarantee the f
 
 ### Post-Training Quantization
 
-To run the algorithm you only need the model and the validation part of the dataset without labels.
+To run the algorithm you only need your model and the validation part of the dataset without labels.
 
 The basic workflow steps:
 1) Load a model and a data source.
 2) Create an instance of `nncf.Dataset` class by passing two parameters:
-   * `data_source` — Iterable python object that contains data items for model calibration (typically, a torch dataloader).
+   * `data_source` — Iterable object containing data items for model calibration (typically, a torch dataloader).
    * `transform_fn` — [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) if your data source returns both images and labels.
-3) Run the quantization pipeline which returns the quantized model used for faster inference.
+3) Run the quantization pipeline. It will return the quantized model for faster inference.
 
 Below are the usage examples for every backend.
 
@@ -185,12 +185,12 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 ### Training-time Compression
 
 The basic workflow steps:
-1) Create an NNCF config object from (1) JSON configuration file and (2) dataloader for the compression initialization.
+1) Create an NNCF config object from (a) JSON configuration file and (b) dataloader for the compression initialization.
 2) Pass your model together with the config to the `create_compressed_model` function which returns two entities:
    1) Compression controller — an object allowing you to control the compression, for example during training.
-   2) Compressed model which may be further used as a regular PyTorch model for fine-tuning and inference .
+   2) Compressed model which may further be used as a regular PyTorch model for fine-tuning and inference.
 
-Please expand below for PyTorch and Tensorflow usage examples 
+Expand the blocks below for PyTorch and Tensorflow usage examples: 
 
 <details><summary><b>PyTorch</b></summary>
 
