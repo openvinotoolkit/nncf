@@ -483,11 +483,15 @@ class MinMaxQuantization(Algorithm):
         for q_p in quantization_points:
             target_node_names_to_qp[q_p.target_node_name].append(q_p)
         queue = collections.deque(nncf_graph.get_next_nodes(starting_node))
-        first_convs = []
 
+        first_convs = []
+        visited = set()
         while queue:
             node = queue.popleft()
             node_name = node.node_name
+            if node_name in visited:
+                continue
+            visited.add(node_name)
             if node_name in target_node_names_to_qp:
                 first_convs.extend(target_node_names_to_qp[node_name])
             else:
