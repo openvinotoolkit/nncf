@@ -86,14 +86,14 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     def no_outliers_map(
             cls, x: NNCFTensor,
             fn: Callable[[NNCFTensor, int, NNCFTensor], Any],
-            stack_axis: int = 0, alpha: float = 0.01,
+            axis: int = 0, alpha: float = 0.01,
             keepdims: bool = False) -> NNCFTensor:
         if len(x.shape) == 1:
             return fn(x, axis=None, mask=None, keepdims=keepdims)
 
         x = x.tensor
-        if stack_axis:
-            x = np.moveaxis(x, stack_axis, 0)
+        if axis:
+            x = np.moveaxis(x, axis, 0)
 
         low_values, high_values = np.quantile(x, [alpha, 1 - alpha], 0)
         outliers_mask = np.logical_or(x < low_values, high_values < x)
@@ -113,7 +113,9 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return np.sum(tensor.tensor)
 
     @staticmethod
-    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list]) -> List[TensorElementsType]:
+    def quantile(tensor: NNCFTensor,
+                 quantile: Union[float, List[float]],
+                 axis: Union[int, tuple, list]) -> List[TensorElementsType]:
         result = np.quantile(tensor.tensor, quantile, axis, keepdims=False)
         return [ONNXNNCFTensor(x) for x in result]
 

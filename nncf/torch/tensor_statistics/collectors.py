@@ -93,7 +93,9 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return torch.sum(tensor.tensor).item()
 
     @staticmethod
-    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list]) -> List[TensorElementsType]:
+    def quantile(tensor: NNCFTensor,
+                 quantile: Union[float, List[float]],
+                 axis: Union[int, tuple, list]) -> List[NNCFTensor]:
         raise NotImplementedError()
 
     @staticmethod
@@ -103,7 +105,7 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @classmethod
     def no_outliers_map(cls, x: NNCFTensor,
                         fn: Callable[[NNCFTensor, Optional[int]], Any],
-                        stack_axis: int = 0, alpha: float = 0.01):
+                        axis: int = 0, alpha: float = 0.01):
         raise NotImplementedError()
 
 

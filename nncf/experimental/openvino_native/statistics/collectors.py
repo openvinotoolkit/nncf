@@ -93,8 +93,8 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @classmethod
     def masked_median(cls, x: NNCFTensor,
                       axis: Optional[Union[int, tuple, list]],
-                    mask: Optional[NNCFTensor],
-                    keepdims: bool = False) -> NNCFTensor:
+                      mask: Optional[NNCFTensor],
+                      keepdims: bool = False) -> NNCFTensor:
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
@@ -112,14 +112,14 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     def no_outliers_map(
             cls, x: NNCFTensor,
             fn: Callable[[NNCFTensor, int, NNCFTensor], Any],
-            stack_axis: int = 0, alpha: float = 0.01,
+            axis: int = 0, alpha: float = 0.01,
             keepdims: bool = False) -> NNCFTensor:
         if len(x.shape) == 1:
             return fn(x, axis=None, mask=None, keepdims=keepdims)
 
         x = x.tensor
-        if stack_axis:
-            x = np.moveaxis(x, stack_axis, 0)
+        if axis:
+            x = np.moveaxis(x, axis, 0)
 
         low_values, high_values = np.quantile(x, [alpha, 1 - alpha], 0)
         outliers_mask = np.logical_or(x < low_values, high_values < x)

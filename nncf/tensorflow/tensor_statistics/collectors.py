@@ -92,17 +92,19 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return tf.reduce_sum(tensor.tensor).numpy()
 
     @staticmethod
-    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list]) -> List[TensorElementsType]:
+    def quantile(tensor: NNCFTensor,
+                 quantile: Union[float, List[float]],
+                 axis: Union[int, tuple, list]) -> List[NNCFTensor]:
         raise NotImplementedError()
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         raise NotImplementedError()
 
-    @staticmethod
+    @classmethod
     def no_outliers_map(cls, x: NNCFTensor,
                         fn: Callable[[NNCFTensor, Optional[int]], Any],
-                        stack_axis: int = 0, alpha: float = 0.01):
+                        axis: int = 0, alpha: float = 0.01):
         raise NotImplementedError()
 
 
