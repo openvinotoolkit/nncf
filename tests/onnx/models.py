@@ -409,7 +409,78 @@ class OneConvolutionalModel(ONNXReferenceModel):
         op.version = OPSET_VERSION
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
+        self.conv_bias = conv1_B
         super().__init__(model, [input_shape], 'one_convolutional_model.dot')
+
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class OneConvolutionalIdentityBiasModel(ONNXReferenceModel):
+    def __init__(self):
+        input_shape = [1, 3, 10, 10]
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+        rng = get_random_generator()
+        conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3, 32, (1, 1)
+        conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
+        conv1_B = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
+
+        model_output_name = "Y"
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               [1, conv1_out_channels, 10, 10])
+
+        conv1_W_initializer_tensor_name = "Conv1_W"
+        conv1_W_initializer_tensor = create_initializer_tensor(
+            name=conv1_W_initializer_tensor_name,
+            tensor_array=conv1_W,
+            data_type=onnx.TensorProto.FLOAT)
+        conv1_B_initializer_tensor_name = "Conv1_B"
+        conv1_B_initializer_tensor = create_initializer_tensor(
+            name=conv1_B_initializer_tensor_name,
+            tensor_array=conv1_B,
+            data_type=onnx.TensorProto.FLOAT)
+
+        identity_output = 'Identity_OUT'
+        identity_node = onnx.helper.make_node(
+            name="Identity",
+            op_type="Identity",
+            inputs=[
+                conv1_B_initializer_tensor_name
+            ],
+            outputs=[identity_output],
+        )
+
+        conv1_node = onnx.helper.make_node(
+            name="Conv1",
+            op_type="Conv",
+            inputs=[
+                model_input_name, conv1_W_initializer_tensor_name,
+                identity_output
+            ],
+            outputs=[model_output_name],
+            kernel_shape=conv1_kernel_shape,
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[identity_node, conv1_node],
+            name="ConvIdentityBiasNet",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[
+                conv1_W_initializer_tensor, conv1_B_initializer_tensor
+            ],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        self.conv_bias = conv1_B
+        super().__init__(model, [input_shape], 'one_convolutional_identity_bias_model.dot')
+
 
 
 @ALL_SYNTHETIC_MODELS.register()
@@ -764,38 +835,6 @@ class OneDepthwiseConvolutionalModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'one_depthwise_convolutional_model.dot')
-
-
-class InputOutputModel(ONNXReferenceModel):
-    def __init__(self):
-        input_shape = [1, 3, 3, 3]
-        model_input_name = "X"
-        X = onnx.helper.make_tensor_value_info(model_input_name,
-                                               onnx.TensorProto.FLOAT,
-                                               input_shape)
-
-        model_output_name = "Y"
-        Y = onnx.helper.make_tensor_value_info(model_output_name,
-                                               onnx.TensorProto.FLOAT,
-                                               input_shape)
-        identity_node = onnx.helper.make_node(
-            name="Identity",
-            op_type="Identity",
-            inputs=["X"],
-            outputs=["Y"]
-        )
-        graph_def = onnx.helper.make_graph(
-            nodes=[identity_node],
-            name="ConvNet",
-            inputs=[X],
-            outputs=[Y],
-        )
-
-        op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
-        model = onnx.helper.make_model(graph_def, opset_imports=[op])
-        onnx.checker.check_model(model)
-        super().__init__(model, [input_shape], 'input_output_model.dot')
 
 
 class IdentityConvolutionalModel(ONNXReferenceModel):
