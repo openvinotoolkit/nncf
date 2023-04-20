@@ -33,6 +33,8 @@ from collections import OrderedDict
 from yattag import Doc
 from pathlib import Path
 
+from nncf.common.utils.os import is_linux
+from nncf.common.utils.os import is_windows
 from tests.shared.paths import DATASET_DEFINITIONS_PATH
 from tests.shared.paths import TEST_ROOT
 from tests.shared.paths import PROJECT_ROOT
@@ -135,7 +137,12 @@ class RunTest(ABC):
     @staticmethod
     def run_cmd(comm: str, cwd: str, venv=None) -> Tuple[int, str]:
         print('\n', comm, '\n')
-        com_line = shlex.split(comm)
+
+        if is_linux():
+            com_line = shlex.split(comm)
+        elif is_windows():
+            com_line = comm
+
         env = os.environ.copy()
 
         if 'PYTHONPATH' in env:

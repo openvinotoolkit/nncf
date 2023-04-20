@@ -46,10 +46,10 @@ class CompressionTrainingValidator(BaseSampleValidator):
     def validate_sample(self, args, mocker):
         cli_args = get_cli_dict_args(args)
         cmd = self._create_command_line(cli_args)
-        runner = Command(cmd)
         env_with_cuda_reproducibility = os.environ.copy()
         env_with_cuda_reproducibility['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
-        runner.kwargs.update(env=env_with_cuda_reproducibility)
+        env_with_cuda_reproducibility['PYTHONPATH'] = str(PROJECT_ROOT)
+        runner = Command(cmd, env=env_with_cuda_reproducibility)
         runner.run(timeout=self._desc.timeout_)
 
     def get_default_args(self, tmp_path):
@@ -73,13 +73,10 @@ class CompressionTrainingValidator(BaseSampleValidator):
         return args
 
     def _create_command_line(self, args):
-        python_path = PROJECT_ROOT.as_posix()
         executable = self._sample_handler.get_executable()
         cli_args = " ".join(
             key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
-        return "PYTHONPATH={path} {python_exe} {main_py} {args}".format(
-            path=python_path, main_py=executable, args=cli_args, python_exe=sys.executable
-        )
+        return f"{sys.executable} {executable} {cli_args}"
 
 
 class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
