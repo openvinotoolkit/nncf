@@ -65,8 +65,8 @@ To run the algorithm you only need your model and the validation part of the dat
 The basic workflow steps:
 1) Load a model and a data source.
 2) Create an instance of `nncf.Dataset` class by passing two parameters:
-   * `data_source` — Iterable object containing data items for model calibration (typically, a torch dataloader).
-   * `transform_fn` — [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) if your data source returns both images and labels.
+   * `data_source` — Iterable object containing data items for model calibration.
+   * `transform_fn` — [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function), if your data source returns both images and labels.
 3) Run the quantization pipeline. It will return the quantized model for faster inference.
 
 Below are the usage examples for every backend.
