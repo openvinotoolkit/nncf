@@ -371,7 +371,6 @@ def ov_runner(model, calibration_dataset,
         return images.numpy()
 
     ov_calibration_dataset = nncf.Dataset(batch_one_dataloader, ov_transform_fn)
-
     ov_model_path = output_folder / (model_name + '.xml')
     core = ov.Core()
     ov_model = core.read_model(ov_model_path)

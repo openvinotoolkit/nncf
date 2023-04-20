@@ -41,6 +41,7 @@ from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import QuantizedModel
 from tests.openvino.native.models import SimpleSplitModel
+from tests.openvino.native.models import ZeroRankEltwiseModel
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 
@@ -160,8 +161,11 @@ def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num,
         assert node.type_info.name == t
         if ref_val is not None:
             const = get_prev_node(node, 1)
-            res = np.equal(const.get_data(), np.array(ref_val))
-            assert all(res)
+            if ref_val == []:
+                assert const.get_data().shape == (0,)
+            else:
+                res = np.equal(const.get_data(), np.array(ref_val))
+                assert all(res)
 
         nodes = get_next_nodes(node, 0)
         assert len(nodes) == 1
@@ -252,6 +256,24 @@ def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     # check_const
     ref_const = np.array([0, 1, 2, 3])
     assert all(np.equal(get_prev_node(op, 1).get_data(), ref_const))
+
+
+@pytest.mark.parametrize('reduction_shape', [None, np.array([], dtype=np.int64)])
+def test_inplace_reduce_fn_zero_rank_output(reduction_shape):
+    model = ZeroRankEltwiseModel().ov_model
+    target_layer = 'Add'
+    port_id = 1
+    name = 'min'
+    transformed_model = create_transformed_model(
+        model, [target_layer], TargetType.OPERATION_WITH_WEIGHTS, OVInplaceFnInsertionCommand,
+        port_id=port_id, inplace_op_fn=get_inplace_min_op(name, reduction_shape=reduction_shape),
+        fn_output_port_id=0)
+    target_node = get_prev_node(get_node_by_name(transformed_model, target_layer), 1)
+    check_inplace_op(target_node, ['ReduceMin'], [[]], 1, 0)
+    extra_outputs = get_extra_outputs(model, transformed_model)
+    ref_output_name = get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), name, 0), 0)
+    assert len(extra_outputs) == 1
+    assert extra_outputs.pop() == ref_output_name
 
 
 DYNAMIC_SHAPE_TEST_CASES = [

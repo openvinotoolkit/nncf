@@ -599,3 +599,14 @@ class SeBlockModel(OVReferenceModel):
         result_1 = opset.result(matmul, name="Result")
         model = ov.Model([result_1], [input_1])
         return model
+
+
+class ZeroRankEltwiseModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_shape = [1, 3, 5, 6]
+
+        input_1 = opset.parameter(input_shape, name="Input")
+        add = opset.add(input_1, np.array(1., dtype=np.float32), name="Add")
+        result_1 = opset.result(add, name="Result")
+        model = ov.Model([result_1], [input_1])
+        return model
