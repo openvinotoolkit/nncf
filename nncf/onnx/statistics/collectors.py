@@ -100,18 +100,6 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return fn(ONNXNNCFTensor(x), axis=0, mask=ONNXNNCFTensor(outliers_mask), keepdims=keepdims)
 
     @staticmethod
-    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
-        if len(x.shape) < 3:
-            return ONNXNNCFTensor(np.mean(x.tensor, axis=0))
-        x = np.moveaxis(x.tensor, axis, 1)
-        t = x.reshape(x.shape[0], x.shape[1], -1)
-        return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
-
-    @staticmethod
-    def batch_mean(x: NNCFTensor) -> NNCFTensor:
-        return ONNXNNCFTensor(np.mean(x.tensor, axis=0, keepdims=True))
-
-    @staticmethod
     def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
         x = [t.tensor for t in x]
         return ONNXNNCFTensor(np.stack(x, axis=axis))
@@ -123,6 +111,23 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return np.sum(tensor.tensor)
+
+    @staticmethod
+    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list]) -> List[TensorElementsType]:
+        result = np.quantile(tensor.tensor, quantile, axis, keepdims=False)
+        return [ONNXNNCFTensor(x) for x in result]
+
+    @staticmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        if len(x.shape) < 3:
+            return ONNXNNCFTensor(np.mean(x.tensor, axis=0))
+        x = np.moveaxis(x.tensor, axis, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
+
+    @staticmethod
+    def batch_mean(x: NNCFTensor) -> NNCFTensor:
+        return ONNXNNCFTensor(np.mean(x.tensor, axis=0, keepdims=True))
 
 
 class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):

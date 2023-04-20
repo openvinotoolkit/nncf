@@ -39,11 +39,11 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         return TFNNCFTensor(tf.reduce_min(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         return TFNNCFTensor(tf.reduce_max(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod

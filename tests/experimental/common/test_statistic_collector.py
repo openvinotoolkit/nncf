@@ -54,7 +54,7 @@ def test_aggregator_enabled_and_reset():
     aggregator = DummyTensorAggregator(5)
     collector.register_statistic_branch('A', reducer, aggregator)
     input_name = 'input_name'
-    inputs = TensorCollector.get_target_inputs({input_name: np.array(100)},
+    inputs = TensorCollector.get_tensor_collector_inputs({input_name: np.array(100)},
                                                 [(hash(reducer), [input_name])])
 
     for _ in range(3):
@@ -110,7 +110,7 @@ def test_duplicated_statistics_are_merged():
                                          (hash(reducer_a), ['A']), (hash(reducer), ['Dummy'])])
 
     outputs = {'Dummy': np.array(5), 'A': np.array(0), 'Dummy_inplace': np.array(6)}
-    target_inputs = TensorCollector.get_target_inputs(outputs, output_info)
+    target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     collector.register_inputs(target_inputs)
 
     # Check aggregators recieved inputs as expected
@@ -180,7 +180,7 @@ def test_merged_tensor_collector():
     output_info = merged_collector.get_output_info(None, None)
     outputs = {'common_input': np.array(0)}
     outputs.update({f'input_{idx + 1}': np.array(idx + 1) for idx, _ in enumerate(collectors[:-1])})
-    target_inputs = TensorCollector.get_target_inputs(outputs, output_info)
+    target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     merged_collector.register_inputs(target_inputs)
 
     # Check statistics are collected in a correct way
@@ -241,7 +241,7 @@ def test_multiple_branch_reducer():
     output_info = collector.get_output_info(target_node_name, 0)
     assert output_info == ref_output_info
 
-    target_inputs = collector.get_target_inputs(inputs, output_info)
+    target_inputs = collector.get_tensor_collector_inputs(inputs, output_info)
     collector.register_inputs(target_inputs)
 
     ref_stats = {'0': np.array(0), '1': np.array(1)}

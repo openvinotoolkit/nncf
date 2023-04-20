@@ -40,11 +40,11 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         return PTNNCFTensor(torch.amin(x.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         return PTNNCFTensor(torch.amax(x.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod

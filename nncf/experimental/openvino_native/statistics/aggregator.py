@@ -59,7 +59,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
                              f' {target_point.type}')
 
             input_info = tensor_collector.get_output_info(stat_node_name, port_id)
-            target_inputs = TensorCollector.get_target_inputs(outputs, input_info)
+            target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, input_info)
             tensor_collector.register_inputs(target_inputs)
 
     def _get_transformation_layout_extra_outputs(self,

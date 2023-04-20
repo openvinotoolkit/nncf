@@ -28,7 +28,7 @@ InplaceInsertionFNType = TypeVar('InplaceInsertionFNType')
 
 class TensorReducerBase(ABC):
     """
-    Tensor reducer is a callable object that reduces given tensor according to
+    Tensor reducer is a callable object that reduces tensors according to
     the specified rule. Could handle tensors inplace or out of place.
     """
 
@@ -174,8 +174,8 @@ class TensorCollector:
     """
     Calculates statistics at given tensors according to registered statistic branches.
     Statistic branch consists of one reducer and one aggregator instance. TensorCollector
-    applies a reducer on a correspondent input and then passes the reduced tensor to
-    a correspondent aggregator for each registered statistic branch.
+    applies a reducer on a correspondent inputs and then passes the one of the reduced tensors
+    chosen by output port id to a correspondent aggregator for each registered statistic branch.
     Receives tesnors by `register_input` method. Aggregated values as a TensorStatistic instance or
     a dict could be collected by `get_statistics` call.
     """
@@ -223,6 +223,7 @@ class TensorCollector:
         :param container_key: Container key to pass aggregated statistic to.
         :param reducer: TensorReducer instance for the statistic collection branch.
         :param aggregator: TensorAggergator instance for the statistic collection branch.
+        :reducer_output_port_id: Reducer target output port id.
         """
         if container_key in self._stat_container_kwargs_map:
             raise RuntimeError(f'Two differend statistic branches for one'
@@ -333,12 +334,21 @@ class TensorCollector:
             aggregator.reset()
 
     @staticmethod
-    def get_target_inputs(inputs: Dict[str, NNCFTensor],
-                          input_info: List[Tuple[int, List[str]]]
+    def get_tensor_collector_inputs(outputs: Dict[str, NNCFTensor],
+                                    output_info: List[Tuple[int, List[str]]]
     ) -> Dict[int, List[NNCFTensor]]:
+        """
+        Static method that converts all model outputs and collected output_info
+        to a layout required for `register_input` method. This method is not a part of
+        `register_input` to avoid all inputs passing to `TensorCollector.register_input` method.
+
+        :param outputs: Target model outputs.
+        :param output_info: Output info collected by a `TensorCollector.get_output_info` method.
+        :returns: Model outputs in a format required by `TensorCollector.register_input` method.
+        """
         target_inputs = {}
-        for reducer, names in input_info:
-            target_inputs[reducer] = [inputs[name] for name in names]
+        for reducer, names in output_info:
+            target_inputs[reducer] = [outputs[name] for name in names]
         return target_inputs
 
 
@@ -535,7 +545,7 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase):
     def _aggregate(self, fn) -> List[NNCFTensor]:
         stacked_val = self._tensor_processor.stack(self._container)
         result = self._tensor_processor.no_outliers_map(stacked_val, fn,
-                                                        stack_axis=0, alpha=self._quantile)
+                                                        axis=0, alpha=self._quantile)
         return result.tensor
 
 
