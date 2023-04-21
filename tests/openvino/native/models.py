@@ -506,9 +506,13 @@ class SimpleSplitModel(OVReferenceModel):
         return model
 
 
+@SYNTHETIC_MODELS.register()
 class SharedConvModel(OVReferenceModel):
-    def _create_ov_model(self, input_name, input_shape, kernel) -> ov.Model:
+    def _create_ov_model(self, input_name='Input', input_shape=(1, 3, 3, 3), kernel=None) -> ov.Model:
         input_1 = opset.parameter(input_shape, name=input_name)
+        if kernel is None:
+            c_in = input_shape[1]
+            kernel = self._rng.random((3, c_in, 1, 1))
         const_kernel = opset.constant(kernel, np.float32, name='Shared_conv_w')
         strides = [1, 1]
         pads = [0, 0]

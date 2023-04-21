@@ -250,8 +250,16 @@ class OVModelTransformer(ModelTransformer):
                 input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_fp16(fq_params)
             name = 'fq_weights' if transform_type == TargetType.OPERATION_WITH_WEIGHTS else 'fq_input'
             fq_name = f'{node_name}/{name}_{port_id}'
-            fq = opset.fake_quantize(input_node_output, input_low, input_high,
-                                     output_low, output_high, levels, name=fq_name)
+
+            fq = None
+            if transform_type == TargetType.OPERATION_WITH_WEIGHTS:
+                # If the nodes share one weight tensor, we should have only one quantizer on that
+                for out in input_node_output.get_target_inputs():
+                    if out.get_node().get_type_name() == 'FakeQuantize':
+                        fq = out.get_node()
+            if fq is None:
+                fq = opset.fake_quantize(input_node_output, input_low, input_high,
+                                         output_low, output_high, levels, name=fq_name)
             inp_node.replace_source_output(fq.output(0))
         elif transform_type == TargetType.POST_LAYER_OPERATION:
             output = target_node.output(port_id)
