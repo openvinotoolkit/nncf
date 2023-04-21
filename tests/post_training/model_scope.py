@@ -55,3 +55,7 @@ def get_validation_scope() -> List[dict]:
 
 
 VALIDATION_SCOPE = get_validation_scope()
+
+
+def get_reported_name(model_args: dict):
+    return model_args.get("report_model_name", model_args["name"])

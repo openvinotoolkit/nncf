@@ -38,6 +38,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from tests.shared.command import Command
 from tests.post_training.conftest import PipelineType
 from tests.post_training.conftest import RunInfo
+from tests.post_training.model_scope import get_reported_name
 from tests.post_training.model_scope import VALIDATION_SCOPE
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
@@ -415,7 +416,7 @@ def run_ptq_timm(data, output, timm_model_name, backends,
         transform = get_model_transform(model)
 
         model_name = report_model_name
-        
+
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
         # benchmark original models (once)
         orig_perf, orig_acc = benchmark_torch_model(
@@ -467,11 +468,11 @@ def get_error_msg(traceback_path: PosixPath, backend_name: str) -> str:
 
 
 @pytest.mark.parametrize('model_args', VALIDATION_SCOPE,
-                         ids=[desk['name'] for desk in VALIDATION_SCOPE])
+                         ids=[get_reported_name(desk) for desk in VALIDATION_SCOPE])
 def test_ptq_timm(data, output, result, model_args, backends_list):  # pylint: disable=W0703
     backends = [PipelineType[backend] for backend in backends_list.split(',')]
     model_name = model_args['name']
-    report_model_name = model_args.get('report_model_name', model_name)
+    report_model_name = get_reported_name(model_args)
     quantization_params = model_args['quantization_params']
     main_connection, process_connection = Pipe()
     process = Process(target=run_ptq_timm,
