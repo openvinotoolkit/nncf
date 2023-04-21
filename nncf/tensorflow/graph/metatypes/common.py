@@ -42,7 +42,6 @@ ALL_LAYER_METATYPES_WITH_WEIGHTS = [
     # ALL_TF_OP_METATYPES_WITH_WEIGHTS
     op_metatypes.TFConv2DOpMetatype,
     op_metatypes.TFConv3DOpMetatype,
-    op_metatypes.TFMatMulOpMetatype,
     op_metatypes.TFDepthwiseConv2dNativeOpMetatype,
 ]
 
@@ -79,9 +78,7 @@ DECONV_LAYER_METATYPES = [
 ]
 
 LINEAR_LAYER_METATYPES = [
-    layer_metatypes.TFDenseLayerMetatype,
-    # LINEAR_TF_OP_METATYPES
-    op_metatypes.TFMatMulOpMetatype,
+    layer_metatypes.TFDenseLayerMetatype
 ]
 
 NORMALIZATION_LAYER_METATYPES = [

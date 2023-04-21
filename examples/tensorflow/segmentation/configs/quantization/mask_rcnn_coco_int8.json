@@ -1,11 +1,11 @@
 {
     "model": "MaskRCNN",
     "input_info": {
-        "sample_size": [1, 1024, 1024, 3]
+        "sample_size": [1, 512, 512, 3]
     },
 
     "epochs": 1,
-    "batch_size": 16,
+    "batch_size": 4,
     "weight_decay": 0.0001,
 
     "dataset": "coco/2017",
@@ -36,13 +36,11 @@
         "{re}.*tf.math.floor.*",
         "{re}.*tf.compat.v1.floor_div.*",
         "{re}.*tf.math.truediv.*",
-        "{re}.*tf.math.divide.*",
         "{re}.*tf.math.pow.*",
         "{re}.*tf.math.greater.*",
         "{re}.*tf.math.minimum.*",
         "{re}.*tf.math.maximum.*",
         "{re}.*tf.math.reduce_max.*",
-        "{re}.*tf.math.reduce_min.*",
         "{re}.*tf.nn.avg_pool.*",
         "mask_fcn_logits",
         "conv5-mask",
