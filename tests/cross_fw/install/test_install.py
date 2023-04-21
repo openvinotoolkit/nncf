@@ -23,6 +23,8 @@ from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
+from tests.shared.helpers import get_python_executable_with_venv
+from tests.shared.helpers import get_pip_executable_with_venv
 from tests.cross_fw.install.conftest import TESTED_BACKENDS
 from tests.shared.helpers import create_venv_with_nncf
 
@@ -30,13 +32,8 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
     if install_type.lower() not in ['cpu', 'gpu']:
         raise RuntimeError("Unknown installation mode - must be either 'cpu' or 'gpu'")
 
-    if is_linux():
-        python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
-        pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
-
-    if is_windows():
-        python_executable_with_venv = f' {venv_path}\\Scripts\\activate && python'
-        pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
+    python_executable_with_venv = python_executable_with_venv(venv_path)
+    pip_with_venv = get_pip_executable_with_venv(venv_path)
 
 
     if package_type in ['build_s', 'build_w']:

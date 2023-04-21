@@ -25,6 +25,8 @@ from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
 from tests.shared.paths import GITHUB_REPO_URL
 from tests.shared.paths import PROJECT_ROOT
+from tests.shared.helpers import get_python_executable_with_venv
+from tests.shared.helpers import get_pip_executable_with_venv
 
 TensorType = TypeVar('TensorType')
 
@@ -43,12 +45,8 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
-    if is_linux():
-        python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
-        pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
-    elif is_windows():
-        python_executable_with_venv = f' {venv_path}\\Scripts\\activate && python'
-        pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
+    python_executable_with_venv = python_executable_with_venv(venv_path)
+    pip_with_venv = get_pip_executable_with_venv(venv_path)
 
     version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'
 
@@ -185,3 +183,32 @@ def compare_stats(expected: Dict[str, np.ndarray],
         for param in param_names:
             ref_param, actual_param = ref_stats.get(param), stats.get(param)
             assert np.allclose(ref_param, actual_param, atol=1e-6)
+
+def get_export_env_variables_string(export_env_variables):
+    if is_windows():
+        return ' && '.join(["{0} \"{1}\"".format("set", env) for env in export_env_variables])
+    elif is_linux():
+        return ' && '.join(["{0} \"{1}\"".format("export", env) for env in export_env_variables])
+
+def get_python_executable_with_venv(venv_path : Path, export_env_variables=None):
+    if export_env_variables is not None:
+        variables = "&& {0} &&".format(get_export_env_variables_string(export_env_variables))
+    else:
+        variables = "&&"
+
+    if is_linux():
+        python_executable_with_venv = ". {0}/bin/activate {1} {0}/bin/python".format(venv_path, variables)
+        pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
+    elif is_windows():
+        python_executable_with_venv = ". {0}\\Scripts\\activate {1} python".format(venv_path, variables)
+        pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
+
+    return python_executable_with_venv
+
+
+def get_pip_executable_with_venv(venv_path):
+        if is_linux():
+            pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
+        elif is_windows():
+            pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
+        return pip_with_venv
