@@ -59,12 +59,16 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
         operator_metatypes.PTSigmoidMetatype,
-        operator_metatypes.PTExpMetatype,
         operator_metatypes.PTSoftmaxMetatype,
         operator_metatypes.PTRELUMetatype,
         operator_metatypes.PTDeformConv2dMetatype,
         operator_metatypes.PTModuleDeformConv2dMetatype,
-        UnknownMetatype
+        UnknownMetatype,
+        # Ticket: 108478
+        operator_metatypes.PTAbsMetatype,
+        operator_metatypes.PTExpMetatype,
+        operator_metatypes.PTLogMetatype,
+        operator_metatypes.PTSqrtMetatype,
     ],
     QuantizationTrait.CONCAT: [
         operator_metatypes.PTCatMetatype
