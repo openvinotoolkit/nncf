@@ -219,12 +219,12 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_node_names_for_input_output_statistics(node: NNCFNode, graph: NNCFGraph) -> Tuple[str, str]:
+    def get_node_names_for_input_output_statistics(node: NNCFNode, model: TModel) -> Tuple[str, str]:
         """
         Return name of nodes to collect statistics.
 
         :param node: NNCFNode to check.
-        :param nncf_graph: NNCFGraph instance.
+        :param model: Backend-specific model.
 
         :return:
             Name of node to collect input statistics
