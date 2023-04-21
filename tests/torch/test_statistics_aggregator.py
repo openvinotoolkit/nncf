@@ -16,6 +16,7 @@ import pytest
 import numpy as np
 import torch
 from torch import nn
+from typing import Type
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
@@ -48,8 +49,14 @@ class PTIdentityConvModel(nn.Module, ToNNCFNetworkInterface):
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    def get_algo_backend_cls(self) -> PTMinMaxAlgoBackend:
+    def get_min_max_algo_backend_cls(self) -> Type[PTMinMaxAlgoBackend]:
         return PTMinMaxAlgoBackend
+
+    def get_bias_correction_algo_backend_cls(self) -> None:
+        return None
+
+    def get_fast_bias_correction_algo_backend_cls(self) -> None:
+        return None
 
     def get_backend_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
@@ -105,4 +112,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     @pytest.mark.skip('Merging is not implemented yet')
     def test_statistic_merging(self, dataset_samples, inplace_statistics):
+        pass
+
+    @pytest.mark.skip('Bias correction and Fast bias correction is not implemented yet')
+    def test_statistics_aggregator_bias_correction(
+            self, dataset_samples, test_params,
+            is_stat_in_shape_of_scale, inplace_statistics):
         pass
