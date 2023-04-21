@@ -270,7 +270,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
         :param tensor: Given NNCFTensor.
         :params quantile: Percentile or sequence of percentiles to compute, which must be between
-            0 and 1. inclusive.
+            0 and 1 inclusive.
         :param axis: Axis or axes along which the percentiles are computed.
         :returns: List of the quantile-th percentile(s) of the tensor elements.
         """

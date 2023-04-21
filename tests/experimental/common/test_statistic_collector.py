@@ -54,8 +54,8 @@ def test_aggregator_enabled_and_reset():
     aggregator = DummyTensorAggregator(5)
     collector.register_statistic_branch('A', reducer, aggregator)
     input_name = 'input_name'
-    inputs = TensorCollector.get_tensor_collector_inputs({input_name: np.array(100)},
-                                                [(hash(reducer), [input_name])])
+    inputs = TensorCollector.get_tensor_collector_inputs(
+        {input_name: np.array(100)}, [(hash(reducer), [input_name])])
 
     for _ in range(3):
         collector.register_inputs(inputs)

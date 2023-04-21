@@ -116,6 +116,5 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     @pytest.mark.skip('Bias correction and Fast bias correction is not implemented yet')
     def test_statistics_aggregator_bias_correction(
-            self, dataset_samples, test_params,
-            is_stat_in_shape_of_scale, inplace_statistics):
+            self, dataset_samples, test_params, inplace_statistics, is_stat_in_shape_of_scale):
         pass
