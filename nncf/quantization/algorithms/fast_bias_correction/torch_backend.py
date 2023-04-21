@@ -26,12 +26,13 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
-from nncf.torch.graph.node_utils import get_bias_value
-from nncf.torch.graph.node_utils import is_node_with_bias
+from nncf.torch.graph.node_utils import get_fused_bias_value
+from nncf.torch.graph.node_utils import get_next_fused_bias_node
+from nncf.torch.graph.node_utils import is_node_with_fused_bias
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
-from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
+from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import NNCFNetwork
@@ -72,8 +73,8 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return create_bias_correction_command(node, bias_value)
 
     @staticmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> PTModelExtractionCommand:
-        return PTModelExtractionCommand(inputs[0])
+    def model_extraction_command(inputs: List[str], outputs: List[str]) -> PTModelExtractionWithFusedBiasCommand:
+        return PTModelExtractionWithFusedBiasCommand(inputs[0])
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
@@ -99,7 +100,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> np.ndarray:
-        return get_bias_value(node, model)
+        return get_fused_bias_value(node, model)
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
@@ -119,7 +120,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> bool:
-        return is_node_with_bias(node, model)
+        return is_node_with_fused_bias(node, model)
 
     @staticmethod
     def get_bias_shift_magnitude(current_bias_value: torch.Tensor, updated_bias_value: torch.Tensor) -> float:
@@ -135,3 +136,10 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def reshape_tensor(data: torch.Tensor, new_shape: List[int]) -> torch.Tensor:
         return data.reshape(new_shape)
+
+    @staticmethod
+    def get_node_names_for_input_output_statistics(node: NNCFNode, model: NNCFNetwork) -> Tuple[str, str]:
+        input_node_name = node.node_name
+        next_norm_node = get_next_fused_bias_node(node.node_name, model)
+        output_node_name = next_norm_node.node_name if next_norm_node else input_node_name
+        return input_node_name, output_node_name

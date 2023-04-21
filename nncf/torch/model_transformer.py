@@ -11,19 +11,17 @@
  limitations under the License.
 """
 import copy
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Tuple
+from typing import Callable, Dict, List, Tuple
 
 from torch import nn
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.torch.graph.node_utils import get_next_fused_bias_node
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
-from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
+from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.module_operations import UpdateWeight
@@ -50,7 +48,7 @@ class PTModelTransformer(ModelTransformer):
         for transformation in transformations:
             if isinstance(transformation, PTInsertionCommand):
                 insertion_transformations.append(transformation)
-            if isinstance(transformation, PTModelExtractionCommand):
+            if isinstance(transformation, PTModelExtractionWithFusedBiasCommand):
                 extraction_transformations = transformation
             if isinstance(transformation, PTBiasCorrectionCommand):
                 bias_correction_transformations.append(transformation)
@@ -87,13 +85,24 @@ class PTModelTransformer(ModelTransformer):
             fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
             self._model.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
 
-    def _apply_extraction_transformations(self, transformation: PTModelExtractionCommand) -> nn.Module:
-        extracted_module = self._model.get_containing_module(transformation.node_name)
-        extracted_module = copy.deepcopy(extracted_module)
-        return extracted_module
+    def _apply_extraction_transformations(self, transformation: PTModelExtractionWithFusedBiasCommand) -> nn.Module:
+        extracted_node_names = [transformation.node_name]
+
+        next_norm_node = get_next_fused_bias_node(transformation.node_name, self._model)
+        if next_norm_node:
+            extracted_node_names.append(next_norm_node.node_name)
+
+        extracted_modules = [
+            copy.deepcopy(self._model.get_containing_module(node_name)) for node_name in extracted_node_names
+        ]
+        return nn.Sequential(*extracted_modules)
 
     def _apply_bias_correction_transformations(self, transformations: List[PTBiasCorrectionCommand]) -> None:
         for transformation in transformations:
-            node_name = transformation.target_point.target_node_name
-            node = self._model.get_containing_module(node_name)
+            target_node_name = transformation.target_point.target_node_name
+            next_norm_node = get_next_fused_bias_node(target_node_name, self._model)
+            if next_norm_node:
+                target_node_name = next_norm_node.node_name
+
+            node = self._model.get_containing_module(target_node_name)
             node.bias.data = transformation.bias_value

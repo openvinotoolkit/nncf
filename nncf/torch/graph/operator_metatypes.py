@@ -1000,3 +1000,7 @@ OPERATORS_WITH_BIAS_METATYPES = [
     PTModuleConvTranspose2dMetatype,
     PTModuleConvTranspose3dMetatype,
 ]
+
+OPERATORS_FUSED_METATYPES = [
+    PTModuleBatchNormMetatype,
+]

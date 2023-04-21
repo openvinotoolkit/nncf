@@ -216,3 +216,17 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param data: Tensor.
         :param new_shape: New shape.
         """
+
+    @staticmethod
+    @abstractmethod
+    def get_node_names_for_input_output_statistics(node: NNCFNode, graph: NNCFGraph) -> Tuple[str, str]:
+        """
+        Return name of nodes to collect statistics.
+
+        :param node: NNCFNode to check.
+        :param nncf_graph: NNCFGraph instance.
+
+        :return:
+            Name of node to collect input statistics
+            Name of node to collect output statistics
+        """

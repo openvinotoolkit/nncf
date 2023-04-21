@@ -1,7 +1,4 @@
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
+from typing import Any, Callable, Dict, List
 
 import torch
 
@@ -96,9 +93,9 @@ class PTInsertionCommand(TransformationCommand):
         raise NotImplementedError()
 
 
-class PTModelExtractionCommand(Command):
+class PTModelExtractionWithFusedBiasCommand(Command):
     """
-    Extracts node by name.
+    Extracts sequence by name with node that contain fused bias.
     """
 
     def __init__(self, node_name: str):

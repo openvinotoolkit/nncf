@@ -10,15 +10,42 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Optional
+
 from torch import Tensor
+from torch import nn
+
 from nncf.common.graph.graph import NNCFNode
-from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.graph.operator_metatypes import OPERATORS_FUSED_METATYPES
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_BIAS_METATYPES
+from nncf.torch.nncf_network import NNCFNetwork
 
 
-def is_node_with_bias(node: NNCFNode, model: NNCFNetwork) -> bool:
+def get_next_fused_bias_node(node_name: NNCFNode, model: NNCFNetwork) -> Optional[NNCFNode]:
     """
-    Checks if the node has a bias or not.
+    Get next node that can contain fused bias in runtime.
+    Available only for Convolutional and MatMul layers.
+
+    :param node_name: The node name.
+    :param model: The model that contains this operation.
+
+    :return NNCFNode: The node that can be fused or None.
+    """
+    graph = model.nncf.get_original_graph()
+    target_node = graph.get_node_by_name(node_name)
+
+    # Check that node can has fused bias
+    if target_node.metatype in OPERATORS_WITH_BIAS_METATYPES:
+        next_nodes = graph.get_next_nodes(target_node)
+        for node in next_nodes:
+            if node.metatype in OPERATORS_FUSED_METATYPES:
+                return node
+    return None
+
+
+def is_node_with_fused_bias(node: NNCFNode, model: NNCFNetwork) -> bool:
+    """
+    Checks if the node has a fused bias.
 
     :param node: The node to check.
     :param model: The model that contains this operation.
@@ -26,19 +53,25 @@ def is_node_with_bias(node: NNCFNode, model: NNCFNetwork) -> bool:
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
+    next_norm_node = get_next_fused_bias_node(node.node_name, model)
     node_module = model.get_containing_module(node.node_name)
-    return node.metatype in OPERATORS_WITH_BIAS_METATYPES and node_module.bias is not None
+
+    return node.metatype in OPERATORS_WITH_BIAS_METATYPES and (
+        node_module.bias is not None or next_norm_node is not None
+    )
 
 
-def get_bias_value(node: NNCFNode, model: NNCFNetwork) -> Tensor:
+def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Tensor:
     """
-    Returns the bias tensor for the biased node.
+    Returns the fused bias tensor for the biased node.
 
     :param node: The node that corresponds to the operation with bias.
     :param model: The model that contains this operation.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
-    node_module = model.get_containing_module(node.node_name)
+    next_norm_node = get_next_fused_bias_node(node.node_name, model)
+    target_node_name = next_norm_node.node_name if next_norm_node else node.node_name
+    node_module = model.get_containing_module(target_node_name)
     if node_module.bias is None:
         return None
     return node_module.bias.data

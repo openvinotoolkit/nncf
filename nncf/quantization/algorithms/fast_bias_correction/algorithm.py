@@ -135,7 +135,6 @@ class FastBiasCorrection(Algorithm):
         for node in nncf_graph.get_all_nodes():
             if not self._backend_entity.is_node_with_bias(node, nncf_graph, model):
                 continue
-
             node_name = node.node_name
             bias_value = self._backend_entity.get_bias_value(node, nncf_graph, model)
 
@@ -143,8 +142,9 @@ class FastBiasCorrection(Algorithm):
                 nncf_logger.debug(f'Skipping node {node_name} because weights were not quantized')
                 continue
 
-            input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
-            output_fp = self._get_fp_outputs(statistic_points, node_name)
+            in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, model)
+            input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
+            output_fp = self._get_fp_outputs(statistic_points, out_node_name)
 
             extracted_model = self._extract_submodel(model_transformer, node_name)
 
@@ -328,11 +328,12 @@ class FastBiasCorrection(Algorithm):
         statistic_container = StatisticPointsContainer()
         for node in nodes_with_bias:
             input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
+            in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, model)
             pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
-                                                                          node.node_name,
+                                                                          in_node_name,
                                                                           input_port_id)
             post_layer_statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
-                                                                           node.node_name,
+                                                                           out_node_name,
                                                                            output_port_id)
             channel_axis = node.metatype.output_channel_axis
 
