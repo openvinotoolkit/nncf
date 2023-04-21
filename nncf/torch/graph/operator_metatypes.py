@@ -342,7 +342,7 @@ class PTModuleLinearMetatype(PTModuleOperatorSubtype):
         NamespaceTarget.TORCH: ["addmm"]
     }
     hw_config_names = [HWConfigOpName.MATMUL]
-
+    output_channel_axis = -1
 
 @PT_OPERATOR_METATYPES.register()
 class PTLinearMetatype(PTOperatorMetatype):
@@ -549,7 +549,6 @@ class PTMatMulMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH: ["matmul", "bmm", "mm", "baddbmm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]
-    output_channel_axis = -1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -999,8 +998,10 @@ OPERATORS_WITH_BIAS_METATYPES = [
     PTModuleConvTranspose1dMetatype,
     PTModuleConvTranspose2dMetatype,
     PTModuleConvTranspose3dMetatype,
+    PTModuleLinearMetatype,
 ]
 
 OPERATORS_FUSED_METATYPES = [
     PTModuleBatchNormMetatype,
+    PTBatchNormMetatype
 ]

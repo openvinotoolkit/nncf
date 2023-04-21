@@ -33,6 +33,7 @@ from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.models import NNCFGraphToTestSumAggregation
+from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_conv
 
 
@@ -115,3 +116,47 @@ class ConvTestModel(nn.Module):
 
     def forward(self, x):
         return self.conv(x)
+
+
+class ConvBNTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self, bias=True):
+        super().__init__()
+        self.conv = create_conv(1, 2, 2, -1, -2, bias=None)
+        self.bn = create_bn(2)
+        self.bn.bias.data = torch.Tensor([0.1, 0.1])
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        return x
+
+
+class ConvBNTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 2, 2, -1, -2, bias=None)
+        self.bn = create_bn(2)
+        self.bn.bias.data = torch.Tensor([0.1, 0.1])
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        return x
+
+
+class FCTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.fc = nn.Linear(4, 2)
+        self.fc.weight.data = torch.ones_like(self.fc.weight.data)
+        self.fc.bias.data = torch.Tensor([0.1, 0.1])
+
+    def forward(self, x):
+        x = self.fc(x)
+        return x
