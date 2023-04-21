@@ -129,6 +129,7 @@ def skip_non_api(app, what, name, obj, skip, options):
        skip = True
     else:
         print(f"skip_non_api: keeping API entity {name}")
+        return False
     return skip
 
 
