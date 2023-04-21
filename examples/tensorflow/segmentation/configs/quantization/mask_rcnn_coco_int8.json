@@ -1,11 +1,11 @@
 {
     "model": "MaskRCNN",
     "input_info": {
-        "sample_size": [1, 512, 512, 3]
+        "sample_size": [1, 1024, 1024, 3]
     },
 
     "epochs": 1,
-    "batch_size": 4,
+    "batch_size": 16,
     "weight_decay": 0.0001,
 
     "dataset": "coco/2017",
