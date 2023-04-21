@@ -483,13 +483,20 @@ class MinMaxQuantization(Algorithm):
         for q_p in quantization_points:
             target_node_names_to_qp[q_p.target_node_name].append(q_p)
         queue = collections.deque(nncf_graph.get_next_nodes(starting_node))
+
+        first_convs = []
+        visited = set()
         while queue:
             node = queue.popleft()
             node_name = node.node_name
+            if node_name in visited:
+                continue
+            visited.add(node_name)
             if node_name in target_node_names_to_qp:
-                return target_node_names_to_qp[node_name]
-            queue.extend(nncf_graph.get_next_nodes(node))
-        return []
+                first_convs.extend(target_node_names_to_qp[node_name])
+            else:
+                queue.extend(nncf_graph.get_next_nodes(node))
+        return first_convs
 
     def _get_quantization_points_overflow_fix(self, overflow_fix: OverflowFix,
                                               quantization_target_points: OrderedDict[TargetPoint, QuantizerConfig],
@@ -566,9 +573,8 @@ class MinMaxQuantization(Algorithm):
                     filter_func,
                     MinMaxQuantization):
                 if quantization_target_point.is_weight_target_point():
-                    # If the nodes share one weight tensor, we should have only one quantizer on that
                     weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
-                    if weights_name in weight_layer_names:
+                    if not self._backend_entity.should_quantize_weight(weights_name, weight_layer_names):
                         continue
                     weight_layer_names.add(weights_name)
                     quant_group = QuantizerGroup.WEIGHTS

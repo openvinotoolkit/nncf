@@ -198,13 +198,6 @@ def test_node_removing(target_layers):
     quantized_model = min_max_quantize_model(onnx_model)
 
     transformation_layout = TransformationLayout()
-
-    nncf_graph = GraphConverter.create_nncf_graph(onnx_model)
-    nncf_input_node_next_onnx_nodes = {}
-    for input_node in nncf_graph.get_input_nodes():
-        next_nodes = nncf_graph.get_next_nodes(input_node)
-        nncf_input_node_next_onnx_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
-
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.LAYER, target_layer, 0)
         command = ONNXQDQNodeRemovingCommand(target_point)

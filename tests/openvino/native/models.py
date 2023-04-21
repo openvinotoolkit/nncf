@@ -85,6 +85,7 @@ class ConvModel(OVReferenceModel):
 
         cat = opset.concat([relu, transpose], axis=0)
         result = opset.result(cat, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1, input_2])
         return model
 
@@ -101,6 +102,7 @@ class DepthwiseConv3DModel(OVReferenceModel):
         add = opset.add(conv, bias, name="Add")
 
         result = opset.result(add, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
 
@@ -118,6 +120,7 @@ class DepthwiseConv4DModel(OVReferenceModel):
         relu = opset.relu(add, name="Relu")
 
         result = opset.result(relu, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
 
@@ -134,6 +137,7 @@ class DepthwiseConv5DModel(OVReferenceModel):
         add = opset.add(conv, bias, name="Add")
 
         result = opset.result(add, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
 
@@ -189,6 +193,7 @@ class QuantizedModel(OVReferenceModel):
         matmul_constant = self._rng.random((100, 2352)).astype(np.float32)
         matmul = opset.matmul(reshape, matmul_constant, False, True)
         result = opset.result(matmul, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1, input_2])
         return model
 
@@ -216,6 +221,7 @@ class WeightsModel(OVReferenceModel):
 
         add = opset.add(matmul_const, matmul)
         result = opset.result(add, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
 
@@ -228,8 +234,9 @@ class MatMul2DModel(OVReferenceModel):
         data = self._rng.random((5, 2)).astype(np.float32)
         matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=False, name="MatMul")
         add = opset.add(matmul, self._rng.random((1, 2)).astype(np.float32), name="Add")
-        result_1 = opset.result(add, name="Result")
-        model = ov.Model([result_1], [input_1])
+        result = opset.result(add, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_1])
         return model
 
 
@@ -245,8 +252,9 @@ class ScaleShiftReluModel(OVReferenceModel):
         relu = opset.relu(add, name="Relu")
         data_2 = self._rng.random((2, 4)).astype(np.float32)
         matmul_2 = opset.matmul(relu, data_2, transpose_a=False, transpose_b=False, name="MatMul2")
-        result_1 = opset.result(matmul_2, name="Result")
-        model = ov.Model([result_1], [input_1])
+        result = opset.result(matmul_2, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_1])
         return model
 
 
@@ -267,8 +275,9 @@ class FPModel(OVReferenceModel):
         if self.const_dtype != self.input_dtype:
             bias = opset.convert(bias, self.input_dtype)
         add = opset.add(matmul, bias, name="Add")
-        r1 = opset.result(add, name="Result_Add")
-        model = ov.Model([r1], [input_1])
+        result = opset.result(add, name="Result_Add")
+        result.get_output_tensor(0).set_names(set(["Result_Add"]))
+        model = ov.Model([result], [input_1])
         return model
 
 
@@ -284,8 +293,9 @@ class ComparisonBinaryModel(OVReferenceModel):
         gather = opset.gather(input_1, indices, axis=0, batch_dims=0)
 
         add = opset.add(input_1, gather, name="Add")
-        r1 = opset.result(add, name="Result_Add")
-        model = ov.Model([r1], [input_1])
+        result = opset.result(add, name="Result_Add")
+        result.get_output_tensor(0).set_names(set(["Result_Add"]))
+        model = ov.Model([result], [input_1])
         return model
 
 
@@ -316,6 +326,7 @@ class DynamicModel(OVReferenceModel):
 
         cat = opset.concat([relu, transpose], axis=0)
         result = opset.result(cat, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1, input_2])
         return model
 
@@ -356,6 +367,7 @@ class ShapeOfModel(OVReferenceModel):
         conv_add_3 = opset.add(conv_3, bias_3, name="Conv_Add_3")
 
         result = opset.result(conv_add_3, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
 
@@ -377,6 +389,7 @@ class ConvNotBiasModel(OVReferenceModel):
         relu = opset.relu(conv_add, name="Relu")
 
         result = opset.result(relu, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
 
@@ -388,8 +401,9 @@ class MatMul2DNotBiasModel(OVReferenceModel):
         data = self._rng.random((3, 4)).astype(np.float32)
         matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=False, name="MatMul")
         add = opset.add(matmul, self._rng.random((1, 5, 4, 4)).astype(np.float32), name="Add")
-        result_1 = opset.result(add, name="Result")
-        model = ov.Model([result_1], [input_1])
+        result = opset.result(add, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_1])
         return model
 
 
@@ -432,6 +446,7 @@ class LSTMModel(OVReferenceModel):
         matmul_3 = opset.matmul(multiply_3, data, transpose_a=False, transpose_b=True, name="MatMul_3")
 
         result = opset.result(matmul_3, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model(results=[result], sinks=[assign_1], parameters=[input_1], name="LSTMModel")
         return model
 
@@ -454,6 +469,7 @@ class LSTMSequenceModel(OVReferenceModel):
         matmul = opset.matmul(lstm.output(0), data, transpose_a=False, transpose_b=False, name="MatMul")
 
         result = opset.result(matmul, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model(results=[result], parameters=[x, initial_hidden_state, initial_cell_state])
         return model
 
@@ -470,6 +486,7 @@ class MatmulSoftmaxMatmulBlock(OVReferenceModel):
         matmul_2 = opset.matmul(softmax_1, squeeze, transpose_a=False, transpose_b=True, name="MatMul_2")
 
         result = opset.result(matmul_2, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
 
@@ -489,9 +506,13 @@ class SimpleSplitModel(OVReferenceModel):
         return model
 
 
+@SYNTHETIC_MODELS.register()
 class SharedConvModel(OVReferenceModel):
-    def _create_ov_model(self, input_name, input_shape, kernel) -> ov.Model:
+    def _create_ov_model(self, input_name='Input', input_shape=(1, 3, 3, 3), kernel=None) -> ov.Model:
         input_1 = opset.parameter(input_shape, name=input_name)
+        if kernel is None:
+            c_in = input_shape[1]
+            kernel = self._rng.random((3, c_in, 1, 1))
         const_kernel = opset.constant(kernel, np.float32, name='Shared_conv_w')
         strides = [1, 1]
         pads = [0, 0]
@@ -580,5 +601,16 @@ class SeBlockModel(OVReferenceModel):
         data = self._rng.random((1, 3, 6, 5)).astype(np.float32)
         matmul = opset.matmul(multiply, data, transpose_a=False, transpose_b=False, name="MatMul")
         result_1 = opset.result(matmul, name="Result")
+        model = ov.Model([result_1], [input_1])
+        return model
+
+
+class ZeroRankEltwiseModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_shape = [1, 3, 5, 6]
+
+        input_1 = opset.parameter(input_shape, name="Input")
+        add = opset.add(input_1, np.array(1., dtype=np.float32), name="Add")
+        result_1 = opset.result(add, name="Result")
         model = ov.Model([result_1], [input_1])
         return model

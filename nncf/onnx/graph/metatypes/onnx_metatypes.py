@@ -332,8 +332,22 @@ class ONNXFloorMetatype(ONNXOpMetatype):
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXPowMetatype(ONNXOpMetatype):
+    name = 'PowOp'
+    op_names = ['Pow']
+    hw_config_names = [HWConfigOpName.POWER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSqrtMetatype(ONNXOpMetatype):
     name = 'SqrtOp'
-    op_names = ['Sqrt', 'Pow']
+    op_names = ['Sqrt']
+    hw_config_names = [HWConfigOpName.POWER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXReciprocalMetatype(ONNXOpMetatype):
+    name = 'ReciprocalOp'
+    op_names = ['Reciprocal']
     hw_config_names = [HWConfigOpName.POWER]
 
 
@@ -341,6 +355,12 @@ class ONNXPowMetatype(ONNXOpMetatype):
 class ONNXLogMetatype(ONNXOpMetatype):
     name = 'LogOp'
     op_names = ['Log']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXAbsMetatype(ONNXOpMetatype):
+    name = 'AbsOp'
+    op_names = ['Abs']
 
 
 @ONNX_OPERATION_METATYPES.register()

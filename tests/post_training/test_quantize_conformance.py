@@ -337,8 +337,8 @@ def ov_native_runner(model, calibration_dataset,
     core = ov.Core()
     ov_native_model = core.read_model(ov_native_model_path)
 
-    input_names = set(inp.get_friendly_name() for inp in ov_native_model.get_parameters())
-    if len(input_names) != 1:
+    input_names = set(inp.get_any_name() for inp in ov_native_model.inputs)
+    if len(ov_native_model.inputs) != 1:
         RuntimeError('Number of inputs != 1')
 
     def ov_native_transform_fn(data_item):
@@ -371,7 +371,6 @@ def ov_runner(model, calibration_dataset,
         return images.numpy()
 
     ov_calibration_dataset = nncf.Dataset(batch_one_dataloader, ov_transform_fn)
-
     ov_model_path = output_folder / (model_name + '.xml')
     core = ov.Core()
     ov_model = core.read_model(ov_model_path)

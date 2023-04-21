@@ -11,10 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import torch
@@ -57,6 +54,7 @@ from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
+#pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
@@ -183,6 +181,11 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
         return nncf_graph.get_node_by_name(target_point.target_node_name).layer_name
+
+    @staticmethod
+    def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
+        # If the nodes share one weight tensor, we should have only one quantizer on that
+        return weight_name not in quantized_weight_names
 
     @staticmethod
     def get_weight_config(config: QuantizerConfig, model: NNCFNetwork) -> QuantizerConfig:

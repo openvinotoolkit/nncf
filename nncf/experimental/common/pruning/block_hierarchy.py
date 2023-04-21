@@ -17,7 +17,7 @@ from typing import List
 
 import networkx as nx
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from nncf.experimental.common.pruning.nodes_grouping import PropagationGroup
+from nncf.experimental.common.pruning.propagation_data import PropagationGroup
 
 
 class BlockHierarchy:

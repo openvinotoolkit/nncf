@@ -26,6 +26,7 @@ from tests.torch.test_compressed_graph import check_graph
 from tests.torch.ptq.helpers import get_nncf_network
 from tests.torch.ptq.helpers import get_min_max_algo_for_test
 from tests.torch.ptq.helpers import mock_collect_statistics
+from tests.torch.quantization.test_algo_quantization import SharedLayersModel
 
 
 # Use the same graphs for min_max quantization as for symmetric quantization
@@ -47,6 +48,7 @@ def get_model_name(desc):
 
 
 TEST_MODELS_DESC = [
+    ModelDesc("shared_model", SharedLayersModel, [1, 1, 5, 6]),
     ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]),
     ModelDesc("lenet", test_models.LeNet, [1, 3, 32, 32]),
     ModelDesc("resnet18", test_models.ResNet18, [1, 3, 32, 32]),
@@ -89,4 +91,3 @@ def test_min_max_classification_quantized_graphs(desc: ModelDesc, graph_dir, moc
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=None)
 
     check_graph(quantized_model.nncf.get_graph(), desc.dot_filename, graph_dir)
-    return quantized_model

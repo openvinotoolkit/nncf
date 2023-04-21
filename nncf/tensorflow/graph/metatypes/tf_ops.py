@@ -298,7 +298,14 @@ class TFGatherOpMetatype(TFOpMetatype):
 @TF_OPERATION_METATYPES.register()
 class TFPowOpMetatype(TFOpMetatype):
     name = 'PowOp'
-    op_names = ['Pow', 'math.pow', 'Sqrt', 'math.sqrt']
+    op_names = ['Pow', 'math.pow']
+    hw_config_names = [HWConfigOpName.POWER]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFSqrtOpMetatype(TFOpMetatype):
+    name = 'SqrtOp'
+    op_names = ['Sqrt', 'math.sqrt']
     hw_config_names = [HWConfigOpName.POWER]
 
 
@@ -319,6 +326,12 @@ class TFLogOpMetatype(TFOpMetatype):
 class TFFloorOpMetatype(TFOpMetatype):
     name = 'FloorOp'
     op_names = ['Floor', 'math.floor']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFAbsOpMetatype(TFOpMetatype):
+    name = 'AbsOp'
+    op_names = ['Abs', 'math.abs']
 
 
 @TF_OPERATION_METATYPES.register()

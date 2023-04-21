@@ -21,15 +21,13 @@ from tests.onnx.quantization.common import ModelToTest
 import torch
 import onnx
 
-from tests.shared.paths import TEST_ROOT
 from tests.onnx.weightless_model import save_model_without_tensors
 
 
 @pytest.mark.parametrize(
     ('model_to_test', 'model'), [(ModelToTest('resnet18', [1, 3, 224, 224]), models.resnet18(pretrained=True))])
 def test_save_weightless_model(tmp_path, model_to_test, model):
-    onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name))
+    onnx_model_path = tmp_path / (model_to_test.model_name + '.onnx')
     x = torch.randn([1, 3, 224, 224], requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path)
     onnx_model = onnx.load_model(onnx_model_path)

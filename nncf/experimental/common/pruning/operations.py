@@ -35,10 +35,10 @@ from nncf.common.logging import nncf_logger
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import identity_mask_propagation
-from nncf.experimental.common.pruning.nodes_grouping import PropagationGroup
 from nncf.experimental.common.pruning.nodes_grouping import PruningBlock
 from nncf.experimental.common.pruning.nodes_grouping import PropagationMask
 from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
+from nncf.experimental.common.pruning.propagation_data import PropagationGroup
 
 
 class BasePruningOp:
