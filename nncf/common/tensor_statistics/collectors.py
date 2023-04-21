@@ -117,7 +117,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         """
          Computes minimum of elements across dimensions of NNCFTensor.
 
@@ -130,7 +130,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = True) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         """
         Computes maximum of elements across dimensions of NNCFTensor.
 
