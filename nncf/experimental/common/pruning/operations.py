@@ -229,11 +229,11 @@ class ElementwisePruningOp(BasePruningOp):
 
         output_mask = None
         if len(input_masks) == 1:
-            nncf_logger.warning(f"ElementWise with a single input is not properly supported. "
+            nncf_logger.warning("ElementWise with a single input is not properly supported. "
                                 "The second input might be a constant without node in the graph. "
                                 "The constant should be in the graph or in the node attributes. "
                                 "It's also should be pruned in accordance with an input mask. "
-                                "node_name={node.node_name}")
+                                f"node_name={node.node_name}")
             output_mask = input_masks[0]
         elif any(m is None for m in input_masks):
             # Need masks on all branches in order to properly propagate pruning mask, otherwise - invalidate masks
