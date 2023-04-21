@@ -10,7 +10,6 @@ from tests.shared.paths import TEST_ROOT
 from tests.shared.command import Command
 from tests.shared.helpers import create_venv_with_nncf
 from tests.shared.helpers import get_python_executable_with_venv
-from tests.shared.helpers import get_pip_executable_with_venv
 
 EXTENSIONS_BUILD_FILENAME = 'extensions_build_checks.py'
 
@@ -41,7 +40,7 @@ def test_force_cuda_build(tmp_path):
         "CUDA_VISIBLE_DEVICES=''",
         "TORCH_EXTENSIONS_DIR={}".format(torch_build_dir)
     ]
-    python_executable_with_venv = python_executable_with_venv(venv_path,export_env_variables)
+    python_executable_with_venv = get_python_executable_with_venv(venv_path,export_env_variables)
 
     run_path = tmp_path / 'run'
 
