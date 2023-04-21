@@ -312,12 +312,14 @@ def get_mean_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
     return collector
 
 
-def get_mean_stat_collector(num_samples, reduction_shape, window_size=None, inplace=True):
+def get_mean_stat_collector(num_samples, channel_axis, window_size=None, inplace=True):
     #TODO(dlyakhov): use inplace OVBatchMeanReducer and OVMeanPerChanelReducer
     # after migration on openvino-dev=2023.0
     inplace = False
-    reducer_cls = OVBatchMeanReducer if reduction_shape == 0 else OVMeanPerChanelReducer
-    reducer = reducer_cls(inplace=inplace)
+    if channel_axis == 0:
+        reducer= OVBatchMeanReducer(inplace)
+    else:
+        reducer = OVMeanPerChanelReducer(channel_axis, inplace)
     noop_reducer = OVNoopReducer()
 
     kwargs = {

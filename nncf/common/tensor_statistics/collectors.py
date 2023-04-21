@@ -14,7 +14,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Tuple, Optional, List, Union, Callable, Any
+from typing import Tuple, Optional, List, Union, Callable
 
 import numpy as np
 from nncf.common.tensor import NNCFTensor
