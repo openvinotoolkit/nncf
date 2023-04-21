@@ -25,8 +25,6 @@ from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
 from tests.shared.paths import GITHUB_REPO_URL
 from tests.shared.paths import PROJECT_ROOT
-from tests.shared.helpers import get_python_executable_with_venv
-from tests.shared.helpers import get_pip_executable_with_venv
 
 TensorType = TypeVar('TensorType')
 
