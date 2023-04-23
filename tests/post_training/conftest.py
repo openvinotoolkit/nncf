@@ -25,6 +25,12 @@ def pytest_addoption(parser):
     parser.addoption("--data", action="store")
     parser.addoption("--output", action="store", default="./tmp/")
     parser.addoption("--backends", action="store", default="TORCH,TORCH_PTQ,ONNX,OV_NATIVE,OV")
+    parser.addoption(
+        "--eval_fp32",
+        action="store_true",
+        help="Evaluation fp32 model, by defaults used cached metric in ./models_info.json."
+    )
+    parser.addoption("--no_bench", action="store_true", help="Dont store performance metrics.")
 
 
 def pytest_configure(config):
@@ -181,6 +187,14 @@ class StatusColumn(TableColumn):
 def backends_list(request):
     return request.config.getoption('--backends')
 
+@pytest.fixture
+def eval_fp32(request):
+    return request.config.getoption('--eval_fp32')
+
+@pytest.fixture
+def no_bench(request):
+    return request.config.getoption('--no_bench')
+
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
@@ -217,3 +231,4 @@ def pytest_runtest_makereport(item, call):
 
 PTQ_TEST_ROOT = TEST_ROOT / 'post_training'
 FQ_CALCULATED_PARAMETERS_PATH = PTQ_TEST_ROOT / 'data' / 'fq_params' / 'fq_params.json'
+MODELS_INFO_PATH = PTQ_TEST_ROOT / 'data' / 'models_info.json'

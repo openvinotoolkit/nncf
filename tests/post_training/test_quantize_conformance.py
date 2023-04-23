@@ -40,6 +40,8 @@ from tests.post_training.conftest import PipelineType
 from tests.post_training.conftest import RunInfo
 from tests.post_training.model_scope import get_reported_name
 from tests.post_training.model_scope import VALIDATION_SCOPE
+from tests.shared.helpers import load_json
+from tests.post_training.conftest import MODELS_INFO_PATH
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
 DEFAULT_VAL_THREADS = 4
@@ -163,7 +165,8 @@ def validate_accuracy(model_path, val_loader):
     return accuracy_score(predictions, references)
 
 
-def benchmark_torch_model(model, dataloader, model_name, output_path):
+def benchmark_torch_model(model, dataloader, model_name, output_path,
+                          report_model_name=None, metric_name=None, eval=True, no_bench=False):
     data_sample, _ = next(iter(dataloader))
     # Dump model
     onnx_path = Path(output_path) / (model_name + '.onnx')
@@ -172,9 +175,19 @@ def benchmark_torch_model(model, dataloader, model_name, output_path):
     export_to_ir(onnx_path, output_path, model_name)
 
     # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name)
+    performance = -1
+    if not no_bench:
+        performance = benchmark_performance(ov_path, model_name)
+
     # Validate accuracy
-    accuracy = validate_accuracy(ov_path, dataloader)
+    accuracy = -1
+    if eval:
+        accuracy = validate_accuracy(ov_path, dataloader)
+    else:
+        if report_model_name and metric_name:
+            models_info = load_json(MODELS_INFO_PATH)
+            performance = models_info[report_model_name][metric_name]
+
     return performance, accuracy
 
 
@@ -401,7 +414,8 @@ RUNNERS = {
 
 
 def run_ptq_timm(data, output, timm_model_name, backends,
-                 model_quantization_params, process_connection, report_model_name): # pylint: disable=W0703
+                 model_quantization_params, process_connection,
+                 report_model_name, force_eval, no_bench): # pylint: disable=W0703
     torch.multiprocessing.set_sharing_strategy(
         'file_system'
     )  # W/A to avoid RuntimeError
@@ -420,7 +434,8 @@ def run_ptq_timm(data, output, timm_model_name, backends,
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
         # benchmark original models (once)
         orig_perf, orig_acc = benchmark_torch_model(
-            model, batch_one_dataloader, model_name, output_folder
+            model, batch_one_dataloader, model_name, output_folder,
+            report_model_name, "FP32 top 1", force_eval, no_bench
         )
         runinfos[PipelineType.FP32] = RunInfo(orig_acc, orig_perf)
 
@@ -469,15 +484,20 @@ def get_error_msg(traceback_path: PosixPath, backend_name: str) -> str:
 
 @pytest.mark.parametrize('model_args', VALIDATION_SCOPE,
                          ids=[get_reported_name(desk) for desk in VALIDATION_SCOPE])
-def test_ptq_timm(data, output, result, model_args, backends_list):  # pylint: disable=W0703
+def test_ptq_timm(data, output, result, model_args, backends_list, eval_fp32, no_bench):  # pylint: disable=W0703
     backends = [PipelineType[backend] for backend in backends_list.split(',')]
     model_name = model_args['name']
     report_model_name = get_reported_name(model_args)
     quantization_params = model_args['quantization_params']
     main_connection, process_connection = Pipe()
-    process = Process(target=run_ptq_timm,
-                      args=(data, output, model_name, backends,
-                            quantization_params, process_connection, report_model_name))
+    process = Process(
+        target=run_ptq_timm,
+        args=(
+            data, output, model_name, backends,
+            quantization_params, process_connection,
+            report_model_name, eval_fp32, no_bench
+        )
+    )
     process.start()
     process.join()
     result[report_model_name] = main_connection.recv()
