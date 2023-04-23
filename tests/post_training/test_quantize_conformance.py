@@ -140,6 +140,12 @@ def validate_accuracy(model_path, val_loader):
     references = [-1] * dataset_size
 
     core = ov.Core()
+
+    if os.environ.get("CPU_THREADS_NUM"):
+        # Set CPU_THREADS_NUM for OpenVINO inference
+        cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
+        core.set_property("CPU", properties={"CPU_THREADS_NUM": str(cpu_threads_num)})
+
     ov_model = core.read_model(model_path)
     compiled_model = core.compile_model(ov_model)
 
