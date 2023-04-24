@@ -37,7 +37,7 @@ def test_force_cuda_build(tmp_path):
     torch_build_dir = tmp_path / 'extensions'
 
     env_variables = {
-        "CUDA_VISIBLE_DEVICES": ""
+        "CUDA_VISIBLE_DEVICES": "",
         "TORCH_EXTENSIONS_DIR": torch_build_dir
     }
 
