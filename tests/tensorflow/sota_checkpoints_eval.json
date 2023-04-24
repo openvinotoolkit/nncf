@@ -155,7 +155,8 @@
                     "model_description": "MobileNet V3 (Small)",
                     "compression_description": "INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)",
                     "reverse_input_channels": true,
-                    "diff_target_min": -0.2
+                    "diff_target_min": -0.2,
+                    "diff_fp32_min": -1.05
                 },
                 "mobilenet_v3_large_imagenet": {
                     "config": "examples/tensorflow/classification/configs/mobilenet_v3_large_imagenet.json",
