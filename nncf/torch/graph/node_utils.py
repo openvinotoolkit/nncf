@@ -13,11 +13,12 @@
 from typing import Optional
 
 from torch import Tensor
-from torch import nn
 
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.logging import nncf_logger
 from nncf.torch.graph.operator_metatypes import OPERATORS_FUSED_METATYPES
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_BIAS_METATYPES
+from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -34,11 +35,17 @@ def get_next_fused_bias_node(node_name: NNCFNode, model: NNCFNetwork) -> Optiona
     graph = model.nncf.get_original_graph()
     target_node = graph.get_node_by_name(node_name)
 
-    # Check that node can has fused bias
     if target_node.metatype in OPERATORS_WITH_BIAS_METATYPES:
         next_nodes = graph.get_next_nodes(target_node)
         for node in next_nodes:
             if node.metatype in OPERATORS_FUSED_METATYPES:
+                node_module = model.get_containing_module(node.node_name)
+                if not isinstance(node_module, _NNCFModuleMixin):
+                    # Disable detect fused bias in custom batch_norm modules, like BatchNormAct2d from timm.
+                    nncf_logger.debug(
+                        f"Module {node.node_name}({type(node_module)}) is not inherited from _NNCFModuleMixin"
+                    )
+                    return None
                 return node
     return None
 
