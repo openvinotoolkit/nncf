@@ -28,9 +28,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--eval_fp32",
         action="store_true",
-        help="Evaluation fp32 model, by defaults used cached metric in ./models_info.json."
+        help="Evaluation fp32 model, by defaults used cached metric."
     )
-    parser.addoption("--no_bench", action="store_true", help="Dont store performance metrics.")
+    parser.addoption("--no_bench", action="store_true", help="Skip the collection of performance statistics.")
 
 
 def pytest_configure(config):
