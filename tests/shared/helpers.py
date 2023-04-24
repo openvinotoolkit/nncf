@@ -43,7 +43,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
-    python_executable_with_venv = python_executable_with_venv(venv_path)
+    python_executable_with_venv = get_python_executable_with_venv(venv_path)
     pip_with_venv = get_pip_executable_with_venv(venv_path)
 
     version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'

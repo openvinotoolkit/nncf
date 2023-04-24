@@ -32,7 +32,7 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
     if install_type.lower() not in ['cpu', 'gpu']:
         raise RuntimeError("Unknown installation mode - must be either 'cpu' or 'gpu'")
 
-    python_executable_with_venv = python_executable_with_venv(venv_path)
+    python_executable_with_venv = get_python_executable_with_venv(venv_path)
     pip_with_venv = get_pip_executable_with_venv(venv_path)
 
 
