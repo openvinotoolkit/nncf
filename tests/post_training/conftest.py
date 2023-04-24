@@ -30,7 +30,7 @@ def pytest_addoption(parser):
         action="store_true",
         help="Evaluation fp32 model, by defaults used cached metric."
     )
-    parser.addoption("--no_bench", action="store_true", help="Skip the collection of performance statistics.")
+    parser.addoption("--skip_bench", action="store_true", help="Skip the collection of performance statistics.")
 
 
 def pytest_configure(config):
@@ -192,8 +192,8 @@ def eval_fp32(request):
     return request.config.getoption('--eval_fp32')
 
 @pytest.fixture
-def no_bench(request):
-    return request.config.getoption('--no_bench')
+def skip_bench(request):
+    return request.config.getoption('--skip_bench')
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)

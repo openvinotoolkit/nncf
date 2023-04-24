@@ -112,11 +112,13 @@ def run_benchmark(model_path):
     return None, cmd_output
 
 
-def benchmark_performance(model_path, model_name):
+def benchmark_performance(model_path, model_name, skip_bench=False):
     """
     Receives the OpenVINO IR model and runs benchmark tool for it
     """
     model_perf = NOT_AVAILABLE_MESSAGE
+    if skip_bench:
+        return model_perf
 
     try:
         model_perf, bench_output = run_benchmark(model_path)
@@ -168,8 +170,7 @@ def validate_accuracy(model_path, val_loader):
     return accuracy_score(predictions, references)
 
 
-def benchmark_torch_model(model, dataloader, model_name, output_path,
-                          report_model_name=None, metric_name=None, eval=True, no_bench=False):
+def benchmark_torch_model(model, dataloader, model_name, output_path, eval=True, skip_bench=False):
     data_sample, _ = next(iter(dataloader))
     # Dump model
     onnx_path = Path(output_path) / (model_name + '.onnx')
@@ -178,24 +179,17 @@ def benchmark_torch_model(model, dataloader, model_name, output_path,
     export_to_ir(onnx_path, output_path, model_name)
 
     # Benchmark performance
-    performance = -1
-    if not no_bench:
-        performance = benchmark_performance(ov_path, model_name)
+    performance = benchmark_performance(ov_path, model_name, skip_bench)
 
     # Validate accuracy
     accuracy = -1
     if eval:
         accuracy = validate_accuracy(ov_path, dataloader)
-    else:
-        if report_model_name and metric_name:
-            try:
-                performance = VALIDATION_SCOPE[report_model_name]['metrics'][metric_name]
-            except KeyError:
-                pass
+
     return performance, accuracy
 
 
-def benchmark_onnx_model(model, dataloader, model_name, output_path):
+def benchmark_onnx_model(model, dataloader, model_name, output_path, skip_bench=False):
     # Dump model
     onnx_path = Path(output_path) / (model_name + '.onnx')
     onnx.save(model, onnx_path)
@@ -203,19 +197,19 @@ def benchmark_onnx_model(model, dataloader, model_name, output_path):
     export_to_ir(onnx_path, output_path, model_name)
 
     # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name)
+    performance = benchmark_performance(ov_path, model_name, skip_bench)
     # Validate accuracy
     accuracy = validate_accuracy(ov_path, dataloader)
     return performance, accuracy
 
 
-def benchmark_ov_model(model, dataloader, model_name, output_path):
+def benchmark_ov_model(model, dataloader, model_name, output_path, skip_bench=False):
     # Dump model
     ov_path = Path(output_path) / (model_name + '.xml')
     ov.serialize(model, str(ov_path))
 
     # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name)
+    performance = benchmark_performance(ov_path, model_name, skip_bench)
     # Validate accuracy
     accuracy = validate_accuracy(ov_path, dataloader)
     return performance, accuracy
@@ -274,7 +268,7 @@ def quantize_torch_ptq(model: torch.nn.Module,
 
 def torch_runner(model, calibration_dataset,
                  model_quantization_params, output_folder,
-                 model_name, batch_one_dataloader) -> RunInfo:
+                 model_name, batch_one_dataloader, skip_bench) -> RunInfo:
     torch_quantized_model = nncf.quantize(
         model, calibration_dataset, **model_quantization_params
     )
@@ -287,13 +281,14 @@ def torch_runner(model, calibration_dataset,
         batch_one_dataloader,
         q_torch_model_name,
         torch_output_path,
+        skip_bench,
     )
     return RunInfo(q_torch_acc, q_torch_perf)
 
 
 def torch_ptq_runner(model, calibration_dataset,
                      model_quantization_params, output_folder,
-                     model_name, batch_one_dataloader) -> RunInfo:
+                     model_name, batch_one_dataloader, skip_bench) -> RunInfo:
     def transform_fn(data_item):
         images, _ = data_item
         return images
@@ -312,6 +307,7 @@ def torch_ptq_runner(model, calibration_dataset,
         batch_one_dataloader,
         q_torch_model_name,
         torch_output_path,
+        skip_bench,
     )
 
     return RunInfo(q_torch_ptq_acc, q_torch_ptq_perf)
@@ -319,7 +315,7 @@ def torch_ptq_runner(model, calibration_dataset,
 
 def onnx_runner(model, calibration_dataset,
                 model_quantization_params, output_folder,
-                model_name, batch_one_dataloader):
+                model_name, batch_one_dataloader, skip_bench):
     onnx_model_path = output_folder / (model_name + '.onnx')
     onnx_model = onnx.load(onnx_model_path)
     onnx_input_name = onnx_model.graph.input[0].name
@@ -344,13 +340,14 @@ def onnx_runner(model, calibration_dataset,
         batch_one_dataloader,
         q_onnx_model_name,
         onnx_output_path,
+        skip_bench,
     )
     return RunInfo(q_onnx_acc, q_onnx_perf)
 
 
 def ov_native_runner(model, calibration_dataset,
                      model_quantization_params, output_folder,
-                     model_name, batch_one_dataloader):
+                     model_name, batch_one_dataloader, skip_bench):
     ov_native_model_path = output_folder / (model_name + '.xml')
     core = ov.Core()
     ov_native_model = core.read_model(ov_native_model_path)
@@ -377,13 +374,14 @@ def ov_native_runner(model, calibration_dataset,
         batch_one_dataloader,
         q_ov_native_model_name,
         ov_native_output_path,
+        skip_bench,
     )
     return RunInfo(q_ov_native_acc, q_ov_native_perf)
 
 
 def ov_runner(model, calibration_dataset,
               model_quantization_params, output_folder,
-              model_name, batch_one_dataloader) -> RunInfo:
+              model_name, batch_one_dataloader, skip_bench) -> RunInfo:
     def ov_transform_fn(data_item):
         images, _ = data_item
         return images.numpy()
@@ -404,6 +402,7 @@ def ov_runner(model, calibration_dataset,
         batch_one_dataloader,
         q_ov_model_name,
         ov_output_path,
+        skip_bench,
     )
     return RunInfo(q_ov_acc, q_ov_perf)
 
@@ -419,7 +418,7 @@ RUNNERS = {
 
 def run_ptq_timm(data, output, timm_model_name, backends,
                  model_quantization_params, process_connection,
-                 report_model_name, force_eval, no_bench): # pylint: disable=W0703
+                 report_model_name, force_eval, skip_bench): # pylint: disable=W0703
     torch.multiprocessing.set_sharing_strategy(
         'file_system'
     )  # W/A to avoid RuntimeError
@@ -438,9 +437,15 @@ def run_ptq_timm(data, output, timm_model_name, backends,
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
         # benchmark original models (once)
         orig_perf, orig_acc = benchmark_torch_model(
-            model, batch_one_dataloader, model_name, output_folder,
-            report_model_name, "FP32 top 1", force_eval, no_bench
+            model, batch_one_dataloader, model_name, output_folder, force_eval, skip_bench
         )
+        # Get cached accuracy
+        if orig_acc is None or orig_acc < 0:
+            try:
+                orig_acc = VALIDATION_SCOPE[report_model_name]['metrics']["FP32 top 1"]
+            except KeyError:
+                pass
+
         runinfos[PipelineType.FP32] = RunInfo(orig_acc, orig_perf)
 
         val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
@@ -455,7 +460,7 @@ def run_ptq_timm(data, output, timm_model_name, backends,
             runner = RUNNERS[backend]
             try:
                 runinfo = runner(model, calibration_dataset, model_quantization_params,
-                                 output_folder, model_name, batch_one_dataloader)
+                                 output_folder, model_name, batch_one_dataloader, skip_bench)
             except Exception as error:
                 backend_dir = backend.value.replace(' ', '_')
                 traceback_path = Path.joinpath(output_folder, backend_dir, model_name + '_error_log.txt')
@@ -487,7 +492,7 @@ def get_error_msg(traceback_path: PosixPath, backend_name: str) -> str:
 
 
 @pytest.mark.parametrize('report_model_name,', VALIDATION_SCOPE.keys())
-def test_ptq_timm(data, output, result, report_model_name, backends_list, eval_fp32, no_bench):  # pylint: disable=W0703
+def test_ptq_timm(data, output, result, report_model_name, backends_list, eval_fp32, skip_bench):  # pylint: disable=W0703
     model_args = VALIDATION_SCOPE[report_model_name]
     backends = [PipelineType[backend] for backend in backends_list.split(',')]
     model_name = model_args['model_name']
@@ -498,7 +503,7 @@ def test_ptq_timm(data, output, result, report_model_name, backends_list, eval_f
         args=(
             data, output, model_name, backends,
             quantization_params, process_connection,
-            report_model_name, eval_fp32, no_bench
+            report_model_name, eval_fp32, skip_bench
         )
     )
     process.start()
