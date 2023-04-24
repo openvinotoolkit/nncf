@@ -38,10 +38,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from tests.shared.command import Command
 from tests.post_training.conftest import PipelineType
 from tests.post_training.conftest import RunInfo
-from tests.post_training.model_scope import get_reported_name
 from tests.post_training.model_scope import VALIDATION_SCOPE
-from tests.shared.helpers import load_json
-from tests.post_training.conftest import MODELS_INFO_PATH
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
 DEFAULT_VAL_THREADS = 4
@@ -191,9 +188,10 @@ def benchmark_torch_model(model, dataloader, model_name, output_path,
         accuracy = validate_accuracy(ov_path, dataloader)
     else:
         if report_model_name and metric_name:
-            models_info = load_json(MODELS_INFO_PATH)
-            performance = models_info[report_model_name][metric_name]
-
+            try:
+                performance = VALIDATION_SCOPE[report_model_name]['metrics'][metric_name]
+            except KeyError:
+                pass
     return performance, accuracy
 
 
@@ -488,12 +486,11 @@ def get_error_msg(traceback_path: PosixPath, backend_name: str) -> str:
     return f'{backend_name} traceback: {traceback_path}'
 
 
-@pytest.mark.parametrize('model_args', VALIDATION_SCOPE,
-                         ids=[get_reported_name(desk) for desk in VALIDATION_SCOPE])
-def test_ptq_timm(data, output, result, model_args, backends_list, eval_fp32, no_bench):  # pylint: disable=W0703
+@pytest.mark.parametrize('report_model_name,', VALIDATION_SCOPE.keys())
+def test_ptq_timm(data, output, result, report_model_name, backends_list, eval_fp32, no_bench):  # pylint: disable=W0703
+    model_args = VALIDATION_SCOPE[report_model_name]
     backends = [PipelineType[backend] for backend in backends_list.split(',')]
-    model_name = model_args['name']
-    report_model_name = get_reported_name(model_args)
+    model_name = model_args['model_name']
     quantization_params = model_args['quantization_params']
     main_connection, process_connection = Pipe()
     process = Process(

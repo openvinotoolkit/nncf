@@ -231,4 +231,4 @@ def pytest_runtest_makereport(item, call):
 
 PTQ_TEST_ROOT = TEST_ROOT / 'post_training'
 FQ_CALCULATED_PARAMETERS_PATH = PTQ_TEST_ROOT / 'data' / 'fq_params' / 'fq_params.json'
-MODELS_INFO_PATH = PTQ_TEST_ROOT / 'data' / 'models_info.json'
+MODELS_SCOPE_PATH = PTQ_TEST_ROOT / 'model_scope.json'
