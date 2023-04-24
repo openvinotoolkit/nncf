@@ -97,8 +97,7 @@ def test_meta_information(model_creator_func, ignored_options):
             if isinstance(value, IgnoredScope):
                 check_parameters(quantized_model, value.__dict__, rt_path)
                 continue
-            value = value if value else None
-            assert quantized_model.get_rt_info(rt_path) == value
+            assert quantized_model.get_rt_info(rt_path) == str(value)
 
     model = model_creator_func().ov_model
     dataset = get_dataset_for_test(model)
