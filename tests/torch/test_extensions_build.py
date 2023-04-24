@@ -36,11 +36,12 @@ def test_force_cuda_build(tmp_path):
 
     torch_build_dir = tmp_path / 'extensions'
 
-    export_env_variables = [
-        "CUDA_VISIBLE_DEVICES=''",
-        "TORCH_EXTENSIONS_DIR={}".format(torch_build_dir)
-    ]
-    python_executable_with_venv = get_python_executable_with_venv(venv_path,export_env_variables)
+    env_variables = {
+        "CUDA_VISIBLE_DEVICES": ""
+        "TORCH_EXTENSIONS_DIR": torch_build_dir
+    }
+
+    python_executable_with_venv = get_python_executable_with_venv(venv_path)
 
     run_path = tmp_path / 'run'
 
@@ -52,11 +53,11 @@ def test_force_cuda_build(tmp_path):
     mode = 'cpu'
 
     command = Command("{} {}/extensions_build_checks.py {}".format(python_executable_with_venv, run_path, mode),
-                      cwd=run_path)
+                      cwd=run_path, env=env_variables)
     command.run()
 
     version_command = Command('{} -c "import torch; print(torch.__version__)"'.format(python_executable_with_venv),
-                              cwd=run_path)
+                              cwd=run_path, env=env_variables)
     version_command.run()
     torch_version = version_command.output[0].replace('\n', '')
 
@@ -83,7 +84,7 @@ def test_force_cuda_build(tmp_path):
     mode = 'cuda'
 
     command = Command("{} {}/extensions_build_checks.py {}".format(python_executable_with_venv, run_path, mode),
-                      cwd=run_path)
+                      cwd=run_path, env=env_variables)
     command.run()
 
     cuda_ext_dir = (torch_ext_dir / 'nncf' / 'quantized_functions_cuda' / torch_version)
