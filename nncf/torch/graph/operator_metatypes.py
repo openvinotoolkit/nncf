@@ -743,7 +743,7 @@ class PTReshapeMetatype(PTOperatorMetatype):
 class PTSplitMetatype(PTOperatorMetatype):
     name = "SplitOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["split", "chunk"]
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["split", "chunk", "unbind"]
     }
     hw_config_names = [HWConfigOpName.SPLIT, HWConfigOpName.CHUNK]
 
