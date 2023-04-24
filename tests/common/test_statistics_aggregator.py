@@ -29,8 +29,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
-from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
-from nncf.common.tensor_statistics.statistics import BatchTensorStatistic
 
 
 class TemplateTestStatisticsAggregator:
@@ -144,7 +142,8 @@ class TemplateTestStatisticsAggregator:
                                                     np.array((1, 0.1, 128)), np.array((-10, -1, -128)))),
                              ))
     def test_statistics_aggregator_min_max(
-            self, test_parameters: MinMaxTestParameters, dataset_samples, is_stat_in_shape_of_scale, inplace_statistics):
+            self, test_parameters: MinMaxTestParameters, dataset_samples,
+            is_stat_in_shape_of_scale, inplace_statistics):
         algo_backend = self.get_min_max_algo_backend_cls()
         model = self.get_backend_model(dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
@@ -202,8 +201,8 @@ class TemplateTestStatisticsAggregator:
                 assert stat.max_values.shape == ref_max_val.shape
 
     class BiasCorrectionAlgos(Enum):
-            BIAS_CORRECTION = 'bias_correction'
-            FAST_BIAS_CORRECTION = 'fast_bias_correction'
+        BIAS_CORRECTION = 'bias_correction'
+        FAST_BIAS_CORRECTION = 'fast_bias_correction'
 
     class BCStatsCollectors(Enum):
         MEAN = 'mean'
