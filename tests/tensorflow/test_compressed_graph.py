@@ -276,7 +276,35 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('shared_layers_model', ())
         ),
         pytest.param(
-            ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3]),
+            ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3], ignored_scopes=[
+                'gt_boxes',
+                'gt_masks',
+                'image_info',
+                '{re}.*tf.math.subtract.*',
+                '{re}.*tf.math.multiply.*',
+                'tf.__operators__.add_19',
+                '{re}.*tf.__operators__.add_[2-9]\\d',
+                '{re}.*tf.__operators__.add_[1-9]\\d\\d',
+                '{re}.*tf.math.sqrt.*', '{re}.*tf.math.floor.*',
+                '{re}.*tf.compat.v1.floor_div.*',
+                '{re}.*tf.math.truediv.*',
+                '{re}.*tf.math.pow.*',
+                '{re}.*tf.math.greater.*',
+                '{re}.*tf.math.minimum.*',
+                '{re}.*tf.math.maximum.*',
+                '{re}.*tf.math.reduce_max.*',
+                '{re}.*tf.nn.avg_pool.*',
+                'mask_fcn_logits',
+                'conv5-mask',
+                'mask-conv-l3',
+                'mask-conv-l2',
+                'mask-conv-l1',
+                'mask-conv-l0',
+                'fc1',
+                'fc0',
+                'class-predict',
+                'box-predict'
+            ]),
             marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
         ),
         pytest.param(

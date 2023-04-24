@@ -25,6 +25,6 @@ def MaskRCNN(input_shape=None): # pylint: disable=W0613
     predefined_config.update(config_from_json)
 
     model_builder = get_model_builder(predefined_config)
-    model = model_builder.build_model(is_training=False)
+    model = model_builder.build_model(is_training=True)
 
     return model
