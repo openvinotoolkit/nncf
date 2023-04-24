@@ -148,6 +148,14 @@ def set_memory_growth(devices):
             default_logger.info('{}: {}'.format(device, e))
 
 
+def get_learning_rate(optimizer, step=0):
+    # Need to process two cases
+    # (1) tf.keras.optimizers.Adam has a new API in TF 2.11, where .lr returns a tensor with current learning rate
+    # (2) tfa.optimizers.SGDW has old API, where .lr() is a scheduler method accepting step
+    lr_tensor = optimizer.lr(step) if callable(optimizer.lr) else optimizer.lr
+    return lr_tensor.numpy()
+
+
 class SummaryWriter:
     """Simple SummaryWriter for writing dictionary of metrics
 
@@ -216,13 +224,6 @@ class Timer:
         self.start_time = 0.
         self.diff = 0.
         self.average_time = 0.
-
-
-def close_strategy_threadpool(strategy):
-    """Due to https://github.com/tensorflow/tensorflow/issues/50487"""
-    # pylint: disable=protected-access
-    if isinstance(strategy, MirroredStrategy):
-        atexit.register(strategy._extended._collective_ops._pool.close)
 
 
 def set_seed(config):

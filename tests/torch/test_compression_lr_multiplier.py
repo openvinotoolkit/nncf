@@ -49,9 +49,6 @@ def get_quantization_config() -> NNCFConfig:
     config['compression']['initializer'] = {
         'range': {
             'num_init_samples': 10
-        },
-        'batchnorm_adaptation': {
-            'num_bn_adaptation_samples': 0,
         }
     }
     return config

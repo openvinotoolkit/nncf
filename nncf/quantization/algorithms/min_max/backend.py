@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, List, Optional
+from typing import Dict, TypeVar, List, Optional, Set
 
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -205,6 +205,16 @@ class MinMaxAlgoBackend(ABC):
         :param nncf_graph: NNCFGraph instance.
         :param target_point: The TargetPoint instance that contains layer's information.
         :return: Weight name.
+        """
+
+    @staticmethod
+    def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
+        """
+        Return True if weight should be quantized.
+
+        :param weight_name: Weight name.
+        :param quantized_weight_names: Set containing already quantized weight names.
+        :return: A boolean value specifying whether a weight should be quantized.
         """
 
     @staticmethod

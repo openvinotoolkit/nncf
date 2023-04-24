@@ -265,5 +265,5 @@ class MagnitudeSparsityController(BaseSparsityController):
         if self._bn_adaptation is None:
             self._bn_adaptation = BatchnormAdaptationAlgorithm(
                 **extract_bn_adaptation_init_params(self._config,
-                                                    'magnitude_sparsity'))
+                                                    self.name))
         self._bn_adaptation.run(self.model)

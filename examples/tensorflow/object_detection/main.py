@@ -29,10 +29,10 @@ from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
-from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_saving_parameters
+from examples.tensorflow.common.utils import get_learning_rate
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import serialize_config
@@ -190,7 +190,7 @@ def train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_ep
         if np.isnan(train_metric_result['total_loss']):
             raise ValueError('total loss is NaN')
 
-        train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
+        train_metric_result.update({'learning_rate': get_learning_rate(optimizer, optimizer.iterations)})
 
         train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
 
@@ -391,8 +391,6 @@ def run(config):
         save_path, save_format = get_saving_parameters(config)
         export_model(compression_ctrl.strip(), save_path, save_format)
         logger.info('Saved to {}'.format(save_path))
-
-    close_strategy_threadpool(strategy)
 
 
 def export(config):

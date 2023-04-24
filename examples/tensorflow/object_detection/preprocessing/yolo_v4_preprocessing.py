@@ -75,7 +75,7 @@ class YOLOv4Preprocessor:
         image_np = image.numpy()
         image_pil = Image.fromarray(image_np)
 
-        image_shape = tf.shape(input=image)[0:2]
+        image_shape = image.shape[0:2]
         denormalized_boxes = box_utils.denormalize_boxes(groundtruth_boxes, image_shape)
 
         boxes = []

@@ -506,9 +506,13 @@ class SimpleSplitModel(OVReferenceModel):
         return model
 
 
+@SYNTHETIC_MODELS.register()
 class SharedConvModel(OVReferenceModel):
-    def _create_ov_model(self, input_name, input_shape, kernel) -> ov.Model:
+    def _create_ov_model(self, input_name='Input', input_shape=(1, 3, 3, 3), kernel=None) -> ov.Model:
         input_1 = opset.parameter(input_shape, name=input_name)
+        if kernel is None:
+            c_in = input_shape[1]
+            kernel = self._rng.random((3, c_in, 1, 1))
         const_kernel = opset.constant(kernel, np.float32, name='Shared_conv_w')
         strides = [1, 1]
         pads = [0, 0]
@@ -597,5 +601,16 @@ class SeBlockModel(OVReferenceModel):
         data = self._rng.random((1, 3, 6, 5)).astype(np.float32)
         matmul = opset.matmul(multiply, data, transpose_a=False, transpose_b=False, name="MatMul")
         result_1 = opset.result(matmul, name="Result")
+        model = ov.Model([result_1], [input_1])
+        return model
+
+
+class ZeroRankEltwiseModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_shape = [1, 3, 5, 6]
+
+        input_1 = opset.parameter(input_shape, name="Input")
+        add = opset.add(input_1, np.array(1., dtype=np.float32), name="Add")
+        result_1 = opset.result(add, name="Result")
         model = ov.Model([result_1], [input_1])
         return model

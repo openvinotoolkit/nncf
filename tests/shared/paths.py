@@ -1,3 +1,4 @@
+import os
 import site
 from pathlib import Path
 
@@ -14,3 +15,5 @@ def _get_site_packages_path() -> Path:
 
 
 DATASET_DEFINITIONS_PATH = _get_site_packages_path() / 'openvino' / 'model_zoo' / 'data' / 'dataset_definitions.yml'
+
+ROOT_PYTHONPATH_ENV = os.environ.copy().update({"PYTHONPATH": str(PROJECT_ROOT)})

@@ -598,6 +598,12 @@ class OVDeformableConvolutionMetatype(OVOpMetatype):
     op_names = ['DeformableConvolution']
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVAbsMetatype(OVOpMetatype):
+    name = 'AbsOp'
+    op_names = ['Abs']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [OVConvolutionMetatype,
                                   OVGroupConvolutionMetatype,
                                   OVDepthwiseConvolutionMetatype,

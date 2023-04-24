@@ -97,8 +97,6 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return np.sum(tensor.tensor)
 
 
-
-
 class OVNoopReducer(NoopReducer):
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
         return get_result_node_name(target_node_name, port_id)

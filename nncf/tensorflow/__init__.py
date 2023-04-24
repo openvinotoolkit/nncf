@@ -19,11 +19,13 @@ import tensorflow
 from pkg_resources import parse_version
 
 tensorflow_version = parse_version(tensorflow.__version__).base_version
+tensorflow_version_major, tensorflow_version_minor = tuple(map(int, tensorflow_version.split('.')))[:2]
 if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
     warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, tensorflow.__version__)
-elif not ('2.4' <= tensorflow_version[:3] <= '2.8'):
+elif not (tensorflow_version_major == 2 and 4 <= tensorflow_version_minor <= 11):
     raise RuntimeError(
-       f'NNCF only supports 2.4.0 <= tensorflow <= 2.8.*, while current tensorflow version is {tensorflow.__version__}')
+       f'NNCF only supports 2.4.0 <= tensorflow <= 2.11.*, '
+       f'while current tensorflow version is {tensorflow.__version__}')
 
 
 from nncf.tensorflow.helpers import create_compressed_model

@@ -167,9 +167,9 @@ class MovementTrainingValidator(BaseSampleValidator):
 
     def validate_sample(self, args, mocker):
         cmd = self._create_command_line(args)
-        runner = Command(cmd)
         env_with_cuda_reproducibility = os.environ.copy()
         env_with_cuda_reproducibility['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+        env_with_cuda_reproducibility['PYTHONPATH'] = str(PROJECT_ROOT)
         if not self._desc.cpu_only_:
             CUDA_ENV_KEY = 'CUDA_VISIBLE_DEVICES'
             n_card = self._desc.n_card
@@ -179,7 +179,7 @@ class MovementTrainingValidator(BaseSampleValidator):
                 all_dev_ids = os.environ[CUDA_ENV_KEY].split(',')
                 dev_ids = all_dev_ids[:n_card]
             env_with_cuda_reproducibility[CUDA_ENV_KEY] = ','.join(dev_ids)
-        runner.kwargs.update(env=env_with_cuda_reproducibility)
+        runner = Command(cmd, env=env_with_cuda_reproducibility)
         runner.run(timeout=self._desc.timeout_)
 
     def get_default_args(self):
@@ -205,7 +205,6 @@ class MovementTrainingValidator(BaseSampleValidator):
         return args
 
     def _create_command_line(self, args):
-        project_root = PROJECT_ROOT.as_posix()
         main_py = self._sample_handler.get_executable()
         cli_args_l = []
         for key, val in args.items():
@@ -218,7 +217,7 @@ class MovementTrainingValidator(BaseSampleValidator):
         extra_for_ddp = ''
         if self._desc.distributed_data_parallel_:
             extra_for_ddp = f'-m torch.distributed.run --nproc_per_node={self._desc.n_card}'
-        return f'PYTHONPATH={project_root} {sys.executable} {extra_for_ddp} {main_py} {cli_args}'
+        return f'{sys.executable} {extra_for_ddp} {main_py} {cli_args}'
 
     def setup_spy(self, mocker):
         pass

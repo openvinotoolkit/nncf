@@ -11,6 +11,7 @@
  limitations under the License.
 """
 import copy
+import logging
 import os
 from functools import reduce
 from typing import Dict
@@ -386,14 +387,14 @@ def test_compression_loss_gpu_device_compatibility(config):
     compression_ctrl.loss()
 
 
-NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation", "NoCompressionAlgorithm"]
+NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation"]
 @pytest.mark.parametrize("algo_name", PT_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
 def test_raise_runtimeerror_for_not_matched_scope_names(algo_name):
+    if algo_name == "NoCompressionAlgorithm":
+        pytest.skip()
     model = BasicLinearTestModel()
     config = ConfigCreator().add_algo(algo_name).create()
     config["compression"][0]["ignored_scopes"] = ["unknown"]
-    if algo_name == "quantization":
-        config["compression"][0]["initializer"] = {"batchnorm_adaptation": {"num_bn_adaptation_samples": 0}}
 
     with pytest.raises(RuntimeError) as exc_info:
         create_compressed_model_and_algo_for_test(model, config)
@@ -411,3 +412,18 @@ def test_compressed_model_has_controller_references(algos: List[str]):
     register_bn_adaptation_init_args(config)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert compression_ctrl is model.nncf.compression_controller
+ALGOS_SUPPORTING_SINGLE_LINE_CONFIGS = [x for x in PT_COMPRESSION_ALGORITHMS.registry_dict
+                                        if x not in ["knowledge_distillation", "movement_sparsity"]]
+
+
+@pytest.mark.parametrize("algo_name", ALGOS_SUPPORTING_SINGLE_LINE_CONFIGS)
+def test_can_apply_algo_with_single_line(algo_name, nncf_caplog):
+    model = BasicLinearTestModel()
+    if algo_name == "NoCompressionAlgorithm":
+        pytest.skip()
+    config = ConfigCreator().add_algo(algo_name).create()
+    with nncf_caplog.at_level(logging.INFO):
+        create_compressed_model_and_algo_for_test(model, config)
+
+    if algo_name == "quantization":
+        assert "will not perform batchnorm adaptation" in nncf_caplog.text

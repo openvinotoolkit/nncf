@@ -31,7 +31,6 @@ from examples.tensorflow.common.model_loader import get_model
 from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import SummaryWriter
-from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_saving_parameters
@@ -296,8 +295,6 @@ def run(config):
         save_path, save_format = get_saving_parameters(config)
         export_model(compression_ctrl.strip(), save_path, save_format)
         logger.info('Saved to {}'.format(save_path))
-
-    close_strategy_threadpool(strategy)
 
 
 def export(config):

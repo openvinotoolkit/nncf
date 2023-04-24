@@ -12,7 +12,7 @@
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Set
 
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -227,3 +227,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_weight_name(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> str:
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         return node.layer_attributes.const_attrs[target_point.port_id]['name']
+
+    @staticmethod
+    def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
+        return True

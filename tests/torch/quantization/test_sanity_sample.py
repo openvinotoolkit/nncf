@@ -314,7 +314,7 @@ def fixture_export_desc(request):
     ('extra_args', 'is_export_called'),
     (
         ({}, False),
-        ({"-m": 'export train'}, True)
+        ({"-m": ['export', 'train']}, True)
     ),
     ids=['train_with_onnx_path', 'export_after_train']
 )

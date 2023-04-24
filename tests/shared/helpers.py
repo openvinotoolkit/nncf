@@ -21,6 +21,8 @@ import json
 import numpy as np
 from pathlib import Path
 
+from nncf.common.utils.os import is_linux
+from nncf.common.utils.os import is_windows
 from tests.shared.paths import GITHUB_REPO_URL
 from tests.shared.paths import PROJECT_ROOT
 
@@ -41,11 +43,10 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
-    if "linux" in sys.platform:
+    if is_linux():
         python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
         pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
-
-    if "win32" in sys.platform:
+    elif is_windows():
         python_executable_with_venv = f' {venv_path}\\Scripts\\activate && python'
         pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
 

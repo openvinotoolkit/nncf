@@ -358,6 +358,12 @@ class ONNXLogMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXAbsMetatype(ONNXOpMetatype):
+    name = 'AbsOp'
+    op_names = ['Abs']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXScatterElementslMetatype(ONNXOpMetatype):
     name = 'ScatterElementsOp'
     op_names = ['ScatterElements']
