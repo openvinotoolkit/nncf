@@ -263,10 +263,12 @@ class TensorCollector:
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
-            reduced_inputs[reducer_hash] = reducer(input_)
+            if not input_.is_empty():
+                reduced_inputs[reducer_hash] = reducer(input_)
 
         for (reducer_hash, _), aggregator, in self._aggregators.items():
-            aggregator.register_reduced_input(reduced_inputs[reducer_hash])
+            if reducer_hash in reduced_inputs:
+                aggregator.register_reduced_input(reduced_inputs[reducer_hash])
 
     def _aggregate(self) -> None:
         result = {}

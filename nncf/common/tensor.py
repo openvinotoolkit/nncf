@@ -44,3 +44,6 @@ class NNCFTensor:
     @abstractmethod
     def device(self) -> DeviceType:
         pass
+
+    def is_empty(self) -> bool:
+        return False
