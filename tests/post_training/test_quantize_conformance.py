@@ -38,7 +38,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from tests.shared.command import Command
 from tests.post_training.conftest import PipelineType
 from tests.post_training.conftest import RunInfo
-from tests.post_training.model_scope import VALIDATION_SCOPE
+from tests.post_training.model_scope import VALIDATION_SCOPE, get_cached_metric
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
 DEFAULT_VAL_THREADS = 4
@@ -418,7 +418,7 @@ RUNNERS = {
 
 def run_ptq_timm(data, output, timm_model_name, backends,
                  model_quantization_params, process_connection,
-                 report_model_name, force_eval, skip_bench): # pylint: disable=W0703
+                 report_model_name, eval_fp32, skip_bench): # pylint: disable=W0703
     torch.multiprocessing.set_sharing_strategy(
         'file_system'
     )  # W/A to avoid RuntimeError
@@ -437,14 +437,11 @@ def run_ptq_timm(data, output, timm_model_name, backends,
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
         # benchmark original models (once)
         orig_perf, orig_acc = benchmark_torch_model(
-            model, batch_one_dataloader, model_name, output_folder, force_eval, skip_bench
+            model, batch_one_dataloader, model_name, output_folder, eval_fp32, skip_bench
         )
         # Get cached accuracy
-        if orig_acc is None or orig_acc < 0:
-            try:
-                orig_acc = VALIDATION_SCOPE[report_model_name]['metrics']["FP32 top 1"]
-            except KeyError:
-                pass
+        if not eval_fp32:
+            orig_perf = get_cached_metric(report_model_name, "FP32 top 1")
 
         runinfos[PipelineType.FP32] = RunInfo(orig_acc, orig_perf)
 

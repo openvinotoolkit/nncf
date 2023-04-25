@@ -156,7 +156,8 @@ class FPSSpeedupColumn(TableColumn):
     @TableColumn.assign_default_value
     def get_value(cls, info: Dict[PipelineType, RunInfo],
                   target_pipeline_type: PipelineType) -> str:
-        if info[PipelineType.FP32].FPS > 1e-5:
+        fps = info[PipelineType.FP32].FPS
+        if isinstance(fps, float) and fps > 1e-5:
             return info[target_pipeline_type].FPS / info[PipelineType.FP32].FPS
         return 'inf'
 
