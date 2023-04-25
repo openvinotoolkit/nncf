@@ -25,7 +25,8 @@ from examples.tensorflow.common.object_detection.checkpoint_utils import get_var
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
-from examples.tensorflow.common.utils import configure_paths
+from examples.common.paths import configure_paths
+from examples.tensorflow.common.utils import get_run_name
 from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import write_metrics
@@ -88,7 +89,7 @@ def get_config_from_argv(argv, parser):
 
     sample_config.update(predefined_config)
     sample_config.update(config_from_json)
-    configure_paths(sample_config)
+    configure_paths(sample_config, get_run_name(sample_config), with_intermediate_checkpoints_dir=True)
 
     return sample_config
 

@@ -44,7 +44,7 @@ from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
-from examples.torch.common.utils import get_name
+from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import log_common_mlflow_params
 from examples.torch.common.utils import make_additional_checkpoints
@@ -287,7 +287,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
         optimizer_scheduler.epoch_step()
 
         if is_main_process():
-            checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
+            checkpoint_path = osp.join(config.checkpoint_save_dir, get_run_name(config) + '_last.pth')
             checkpoint = {
                 'epoch': epoch + 1,
                 'arch': model_name,

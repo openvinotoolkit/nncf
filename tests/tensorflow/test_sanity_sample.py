@@ -19,6 +19,7 @@ import pytest
 import tensorflow as tf
 
 from tests.shared.config_factory import ConfigFactory
+from tests.shared.helpers import remove_line_breaks
 from tests.shared.paths import TEST_ROOT
 from tests.tensorflow.helpers import get_coco_dataset_builders
 from tests.tensorflow.helpers import get_cifar10_dataset_builders
@@ -471,4 +472,4 @@ def test_eval_only_config_fails_to_train(tmp_path, sample_type):
     main = get_sample_fn(sample_type, modes=['train'])
     with pytest.raises(RuntimeError) as e_info:
         main(convert_to_argv(args))
-    assert EVAL_ONLY_ERROR_TEXT in e_info.value.args[0]
+    assert remove_line_breaks(EVAL_ONLY_ERROR_TEXT) in remove_line_breaks(e_info.value.args[0])

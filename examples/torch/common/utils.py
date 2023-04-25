@@ -23,6 +23,7 @@ import os
 import tarfile
 from shutil import copyfile
 from typing import Tuple
+from urllib.request import url2pathname
 
 from PIL import Image
 from torch.utils import data
@@ -35,6 +36,7 @@ import mlflow
 import torch
 
 from examples.torch.common.example_logger import logger as default_logger
+from nncf.common.utils.os import is_linux
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.torch.utils import is_main_process
 
@@ -45,7 +47,7 @@ GENERAL_LOG_FILE_NAME = "output.log"
 NNCF_LOG_FILE_NAME = "nncf_output.log"
 
 
-def get_name(config):
+def get_run_name(config: SampleConfig) -> str:
     dataset = config.get('dataset', 'imagenet')
     if dataset is None:
         dataset = 'imagenet'
@@ -81,32 +83,15 @@ def write_metrics(acc, filename):
         json.dump(metrics, outfile)
 
 
-def configure_paths(config):
-    d = datetime.datetime.now()
-    run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
-    config.name = get_name(config)
-    config.log_dir = osp.join(config.log_dir, "{}/{}".format(config.name, run_id))
-    os.makedirs(config.log_dir)
-
-    if config.nncf_config is not None:
-        config.nncf_config["log_dir"] = config.log_dir
-
-    if config.checkpoint_save_dir is None:
-        config.checkpoint_save_dir = config.log_dir
-
-    # create aux dirs
-    config.intermediate_checkpoints_path = config.log_dir + '/intermediate_checkpoints'
-    os.makedirs(config.intermediate_checkpoints_path)
-    os.makedirs(config.checkpoint_save_dir, exist_ok=True)
-
 
 class SafeMLFLow:
     """ Wrapper to encapsulate safe access to mlflow methods without checking for None and with automatic closing """
 
     def __init__(self, config):
         self.is_suitable_mode = 'train' in config.mode
-        root_log_dir = osp.dirname(osp.dirname(config.log_dir))
-        self.safe_call('set_tracking_uri', osp.join(root_log_dir, 'mlruns'))
+        log_dir = Path(config.log_dir)
+        root_log_dir = log_dir.parent.parent
+        self.safe_call('set_tracking_uri', (root_log_dir / 'mlruns').as_uri())
 
         self.safe_call('get_experiment_by_name', config.name). \
             or_else_call(lambda: self.safe_call('create_experiment', config.name))
@@ -115,7 +100,10 @@ class SafeMLFLow:
         self.safe_call('start_run')
 
         def create_symlink_fn(mlflow_active_run: mlflow.ActiveRun):
-            os.symlink(config.log_dir, osp.join(mlflow_active_run.info.artifact_uri, osp.basename(config.log_dir)))
+            if is_linux():
+                artifact_path = Path(url2pathname(mlflow_active_run.info.artifact_uri.split('file:')[1]))
+                symlink_path = artifact_path / log_dir.name
+                symlink_path.symlink_to(config.log_dir, target_is_directory=True)
             return Nothing
 
         self.safe_call('active_run').bind(create_symlink_fn)
@@ -155,11 +143,13 @@ def configure_device(current_gpu, config: SampleConfig):
 def configure_logging(sample_logger, config):
     config.tb = SummaryWriter(config.log_dir)
 
-    training_pipeline_log_file_handler = logging.FileHandler(osp.join(config.log_dir, GENERAL_LOG_FILE_NAME))
+    training_pipeline_log_file_handler = logging.FileHandler(str(Path(config.log_dir) / GENERAL_LOG_FILE_NAME),
+                                                             encoding='utf-8')
     training_pipeline_log_file_handler.setFormatter(logging.Formatter("%(message)s"))
     sample_logger.addHandler(training_pipeline_log_file_handler)
 
-    nncf_log_file_handler = logging.FileHandler(osp.join(config.log_dir, NNCF_LOG_FILE_NAME))
+    nncf_log_file_handler = logging.FileHandler(str(Path(config.log_dir) / NNCF_LOG_FILE_NAME),
+                                                encoding='utf-8')
     nncf_log_file_handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
     from nncf.common.logging import nncf_logger
     nncf_logger.addHandler(nncf_log_file_handler)
