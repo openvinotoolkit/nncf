@@ -270,8 +270,7 @@ class TensorCollector:
             reduced_inputs[reducer_hash] = reducer(input_)
 
         for (reducer_hash, reducer_port_id, _), aggregator, in self._aggregators.items():
-            if reducer_hash in reduced_inputs:
-                aggregator.register_reduced_input(reduced_inputs[reducer_hash][reducer_port_id])
+            aggregator.register_reduced_input(reduced_inputs[reducer_hash][reducer_port_id])
 
     def _aggregate(self) -> None:
         result = {}
