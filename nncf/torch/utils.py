@@ -258,16 +258,17 @@ def training_mode_switcher(model: Module, is_training: bool = True):
 
 
 def compute_FLOPs_hook(module, input_, output, dict_to_save, module_node_name: NNCFNodeName):
+    # WARNING: numpy should be explicitly given np.int64 as dtype, since default integer type on Win is np.int32
     if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d, nn.Conv2d, nn.ConvTranspose2d, nn.Conv3d,
                            nn.ConvTranspose3d)):
         ks = module.weight.data.shape
-        mac_count = np.prod(ks) * np.prod(output.shape[2:])
+        mac_count = np.prod(ks, dtype=np.int64) * np.prod(output.shape[2:], dtype=np.int64)
     elif isinstance(module, nn.Linear):
         if len(input_[0].shape) == 1:
             # In some test cases input tensor could have dimension [N]
             mac_count = input_[0].shape[0] * output.shape[-1]
         else:
-            mac_count = np.prod(input_[0].shape[1:]) * output.shape[-1]
+            mac_count = np.prod(input_[0].shape[1:], dtype=np.int64) * output.shape[-1]
     else:
         return
     dict_to_save[module_node_name] = 2 * mac_count
