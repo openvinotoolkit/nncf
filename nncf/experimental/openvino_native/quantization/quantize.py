@@ -42,14 +42,17 @@ def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = No
     :param parameters: Incoming dictionary with parameters to save.
     :param path: Optional list of the paths.
     """
-    path = path if path else []
-    for key, value in parameters.items():
-        # Special condition for composed fields like IgnoredScope
-        if isinstance(value, IgnoredScope):
-            dump_parameters(model, value.__dict__, [key])
-            continue
-        rt_path = ['nncf', 'quantization'] + path + [key]
-        model.set_rt_info(str(value), rt_path)
+    try:
+        path = path if path else []
+        for key, value in parameters.items():
+            # Special condition for composed fields like IgnoredScope
+            if isinstance(value, IgnoredScope):
+                dump_parameters(model, value.__dict__, [key])
+                continue
+            rt_path = ['nncf', 'quantization'] + path + [key]
+            model.set_rt_info(str(value), rt_path)
+    except RuntimeError as e:
+        nncf_logger.debug(f'Unable to dump optimization parameters due to error: {e}')
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
