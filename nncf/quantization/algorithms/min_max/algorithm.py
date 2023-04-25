@@ -273,24 +273,10 @@ class MinMaxQuantization(Algorithm):
         range_estimator_params = self._get_range_estimator_parameters(
             target_point, quantizer_config)
 
-        if  (range_estimator_params.min.statistics_type == StatisticsType.MIN and
-             range_estimator_params.min.aggregator_type == AggregatorType.MIN and
-             range_estimator_params.max.statistics_type == StatisticsType.MAX and
-             range_estimator_params.max.aggregator_type == AggregatorType.MAX):
-            return self._backend_entity.minmax_statistic_collector(nncf_graph, target_point, quantizer_config,
-                                                                   num_samples=self._subset_size,
-                                                                   inplace=self._inplace_statistics)
-        if (range_estimator_params.min.statistics_type == StatisticsType.MIN and
-            range_estimator_params.min.aggregator_type == AggregatorType.MEAN and
-            range_estimator_params.max.statistics_type == StatisticsType.MAX and
-            range_estimator_params.max.aggregator_type == AggregatorType.MEAN):
-            return self._backend_entity.mean_minmax_statistic_collector(nncf_graph, target_point, quantizer_config,
-                                                                        use_per_sample_stats=False,
-                                                                        num_samples=self._subset_size,
-                                                                        inplace=self._inplace_statistics)
-        raise RuntimeError(
-            'The following range estimator parameters are not supported: '
-            f'{str(range_estimator_params)}')
+        return self._backend_entity.get_statistic_collector(range_estimator_params,
+                                                            nncf_graph, target_point, quantizer_config,
+                                                            inplace=self._inplace_statistics,
+                                                            num_samples=self._subset_size)
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
         """

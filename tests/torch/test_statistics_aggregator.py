@@ -63,6 +63,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         conv_w = self.dataset_samples_to_conv_w(np.array(sample))
         return PTIdentityConvModel(conv_w).get_nncf_network()
 
+    @pytest.fixture
+    def is_backend_support_custom_estimators(self) -> bool:
+        return False
+
     @pytest.fixture(scope='session')
     def test_params(self):
         return
