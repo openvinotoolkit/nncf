@@ -139,8 +139,9 @@ class TensorAggregatorBase:
         if self._num_samples is not None and \
             self._collected_samples >= self._num_samples:
             return
-        self._register_reduced_input_impl(x)
-        self._collected_samples += 1
+        if x:
+            self._register_reduced_input_impl(x)
+            self._collected_samples += 1
 
     @abstractmethod
     def _register_reduced_input_impl(self, x: TensorType) -> None:
@@ -266,8 +267,7 @@ class TensorCollector:
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
-            if not input_.is_empty():
-                reduced_inputs[reducer_hash] = reducer(input_)
+            reduced_inputs[reducer_hash] = reducer(input_)
 
         for (reducer_hash, reducer_port_id, _), aggregator, in self._aggregators.items():
             if reducer_hash in reduced_inputs:
@@ -404,23 +404,27 @@ class NoopReducer(TensorReducerBase):
 
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        return [self._tensor_processor.reduce_min(x[0], self._reduction_shape, keepdims=True)]
+        fn = self._tensor_processor.reduce_min
+        return [None if tensor.is_empty() else fn(tensor, self._reduction_shape, keepdims=True) for tensor in x]
 
 
 class MaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        return [self._tensor_processor.reduce_max(x[0], self._reduction_shape, keepdims=True)]
+        fn = self._tensor_processor.reduce_max
+        return [None if tensor.is_empty() else fn(tensor, self._reduction_shape, keepdims=True) for tensor in x]
 
 
 class AbsMaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        x = self._tensor_processor.abs(x[0])
-        return [self._tensor_processor.reduce_max(x, self._reduction_shape, keepdims=True)]
+        abs = self._tensor_processor.abs
+        fn = self._tensor_processor.reduce_max
+        return [None if tensor.is_empty() else abs(fn(tensor, self._reduction_shape, keepdims=True)) for tensor in x]
 
 
 class MeanReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        return [self._tensor_processor.mean(x[0], self._reduction_shape, keepdims=True)]
+        fn = self._tensor_processor.mean
+        return [None if tensor.is_empty() else fn(tensor, self._reduction_shape, keepdims=True) for tensor in x]
 
 
 class QuantileReducerBase(TensorReducerBase):
@@ -433,7 +437,8 @@ class QuantileReducerBase(TensorReducerBase):
 
 class QuantileReducer(QuantileReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        return self._tensor_processor.quantile(x[0], self._quantile, self._reduction_shape)
+        fn = self._tensor_processor.quantile
+        return [None if tensor.is_empty() else fn(tensor, self._quantile, self._reduction_shape) for tensor in x]
 
 
 class AbsQuantileReducer(QuantileReducerBase):
@@ -442,8 +447,9 @@ class AbsQuantileReducer(QuantileReducerBase):
         super().__init__(reduction_shape, quantile, inplace)
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        x = self._tensor_processor.abs(x[0])
-        return self._tensor_processor.quantile(x, [self._quantile], self._reduction_shape)
+        abs = self._tensor_processor.abs
+        fn = self._tensor_processor.quantile
+        return [None if tensor.is_empty() else abs(fn(tensor, [self._quantile], self._reduction_shape)) for tensor in x]
 
 
 class BatchMeanReducer(TensorReducerBase):
@@ -451,14 +457,16 @@ class BatchMeanReducer(TensorReducerBase):
         super().__init__(None, inplace)
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        return [self._tensor_processor.batch_mean(x[0])]
+        fn = self._tensor_processor.batch_mean
+        return [None if tensor.is_empty() else fn(tensor) for tensor in x]
 
 
 class MeanPerChReducer(TensorReducerBase):
     def __init__(self, channel_dim: int = 1, inplace: bool = False):
         super().__init__(channel_dim, inplace)
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
-        return [self._tensor_processor.mean_per_channel(x[0], self._reduction_shape)]
+        fn = self._tensor_processor.mean_per_channel
+        return [None if tensor.is_empty() else fn(tensor, self._reduction_shape) for tensor in x]
 
 
 ##################################################Aggregators##################################################
