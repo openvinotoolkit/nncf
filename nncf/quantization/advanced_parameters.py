@@ -19,7 +19,9 @@ import sys
 from typing import Any, ClassVar, Dict, Optional, Protocol
 
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.quantization.range_estimator import AggregatorType, RangeEstimatorParameters, StatisticsType
+from nncf.quantization.range_estimator import AggregatorType
+from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.range_estimator import StatisticsType
 
 
 class OverflowFix(Enum):
@@ -144,9 +146,9 @@ def convert_to_dict_recursively(params: IsDataclass) -> Dict[str, Any]:
 
 def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> Dict[str, Any]:
     """
-    Converts qunatization parameters to the dict in the legacy format
+    Converts quantization parameters to the dict in the legacy format
 
-    :param params: Qunatization parameters
+    :param params: Quantization parameters
     :return: Quantization parameters as dict in the legacy format
 
     """
@@ -161,7 +163,7 @@ def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> D
         result['per_channel'] = params.per_channel
     if params.narrow_range is not None:
         raise RuntimeError(
-            'narrow_range parameter does not support in the legacy format')
+            'narrow_range parameter is not supported in the legacy format')
     return result
 
 
@@ -175,7 +177,7 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     """
     if params.min.clipping_value is not None or params.max.clipping_value is not None:
         raise RuntimeError(
-            'clipping_value parameter does not support in the legacy format')
+            'clipping_value parameter is not supported in the legacy format')
 
     result = {}
     if (params.min.statistics_type == StatisticsType.MIN and
@@ -247,12 +249,12 @@ def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) 
 
     if params.bias_correction_params.apply_for_all_nodes:
         raise RuntimeError(
-            'apply_for_all_nodes parameter of the BiasCorrection algorithm does not '
-            'support in the legacy format')
+            'apply_for_all_nodes parameter of the BiasCorrection algorithm is not '
+            'supported in the legacy format')
 
     if params.bias_correction_params.threshold is not None:
         raise RuntimeError(
-            'threshold parameter of the BiasCorrection algorithm does not support in '
+            'threshold parameter of the BiasCorrection algorithm is not supported in '
             'the legacy format')
 
     return result

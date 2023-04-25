@@ -19,7 +19,7 @@ import numpy as np
 import onnx
 
 from nncf import Dataset
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_graph import ONNXGraph

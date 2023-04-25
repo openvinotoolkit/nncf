@@ -18,8 +18,8 @@ import pytest
 import torch
 
 import nncf
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanved_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch.model_creation import create_nncf_network

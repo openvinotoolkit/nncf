@@ -98,9 +98,7 @@ class BiasCorrection(Algorithm):
 
         if self.apply_for_all_nodes:
             raise RuntimeError(
-                'BiasCorrection algorithm from the OpenVINO backend does not support '
-                'apply_for_all_nodes=True yet')
-
+                'BiasCorrection algorithm does not support apply_for_all_nodes=True yet')
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:

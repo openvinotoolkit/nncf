@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.layers import NNCF_RNN

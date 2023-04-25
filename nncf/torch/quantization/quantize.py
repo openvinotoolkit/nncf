@@ -23,8 +23,8 @@ from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanved_parameters import convert_advanced_parameters_to_dict
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import convert_advanced_parameters_to_dict
 from nncf.scopes import convert_ignored_scope_to_list
 from nncf.scopes import IgnoredScope
 from nncf.torch.dynamic_graph.context import no_nncf_trace
@@ -82,6 +82,10 @@ class CalibrarionDataLoader(PTInitializingDataLoader):
 
 def _get_transformer_quantization_config(subset_size: int) -> Dict[str, Any]:
     """
+    Returns the quantization config for transformer-based models.
+
+    :param subset_size: Size of a subset to calculate activations
+        statistics used for quantization.
     :return: The quantization config for transformer-based models.
     """
     return {
@@ -107,6 +111,15 @@ def _get_transformer_quantization_config(subset_size: int) -> Dict[str, Any]:
 def _get_default_quantization_config(preset: QuantizationPreset,
                                      subset_size: int) -> Dict[str, Any]:
     """
+    Returns the default quantization config
+
+    :param preset: A preset that controls the quantization mode
+        (symmetric and asymmetric). It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric
+          quantization of activations.
+    :param subset_size: Size of a subset to calculate activations
+        statistics used for quantization.
     :return: The default quantization config.
     """
     return {
@@ -128,7 +141,25 @@ def _create_nncf_config(
     ignored_scope: Optional[IgnoredScope],
     advanced_parameters: Optional[AdvancedQuantizationParameters]) -> NNCFConfig:
     """
-    :return: The NNCFConfig for quantization method.
+    Creates the NNCFConfig for the quantization algorithm.
+
+    :param preset: A preset that controls the quantization mode
+        (symmetric and asymmetric). It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric
+          quantization of activations.
+    :param target_device: A target device the specificity of which will be taken
+        into account while compressing in order to obtain the best performance
+        for this type of device.
+    :param subset_size: Size of a subset to calculate activations
+        statistics used for quantization.
+    :param model_type: Model type is needed to specify additional patterns
+        in the model.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
+    :param advanced_parameters: Advanced quantization parameters for
+        fine-tuning the quantization algorithm.
+    :return: NNCFConfig for the quantization algorithm.
     """
     if model_type is None:
         compression_config = _get_default_quantization_config(preset, subset_size)

@@ -47,11 +47,11 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanved_parameters import AggregatorType
-from nncf.quantization.advanved_parameters import changes_asdict
-from nncf.quantization.advanved_parameters import OverflowFix
-from nncf.quantization.advanved_parameters import QuantizationParameters
-from nncf.quantization.advanved_parameters import StatisticsType
+from nncf.quantization.advanced_parameters import AggregatorType
+from nncf.quantization.advanced_parameters import changes_asdict
+from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import QuantizationParameters
+from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
@@ -230,11 +230,12 @@ class MinMaxQuantization(Algorithm):
     def _get_range_estimator_parameters(self,
                                         target_point: TargetPoint,
                                         quantizer_config: QuantizerConfig) -> RangeEstimatorParameters:
-        """_summary_
+        """
+        Returns range estimator parameters.
 
-        :param target_point: _description_
-        :param quantizer_config: _description_
-        :return: _description_
+        :param target_point: Quantizer target point.
+        :param quantizer_config: Quantizer config.
+        :return: Range estimator parameters.
         """
         quantizer_group = QuantizerGroup.ACTIVATIONS
         if target_point.is_weight_target_point():

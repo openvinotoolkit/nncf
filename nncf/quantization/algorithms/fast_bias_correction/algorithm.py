@@ -86,8 +86,7 @@ class FastBiasCorrection(Algorithm):
 
         if self.apply_for_all_nodes:
             raise RuntimeError(
-                'FastBiasCorrection algorithm from the OpenVINO backend does not '
-                'support apply_for_all_nodes=True yet')
+                'FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet')
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:

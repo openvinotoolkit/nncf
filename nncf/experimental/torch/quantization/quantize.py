@@ -20,7 +20,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
 from nncf.torch.dynamic_graph.context import no_nncf_trace

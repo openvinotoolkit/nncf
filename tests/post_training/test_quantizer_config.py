@@ -30,8 +30,8 @@ from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanved_parameters import QuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.post_training.models import NNCFGraphToTest

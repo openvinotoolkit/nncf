@@ -25,7 +25,7 @@ from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.bias_correction.algorithm import BIAS_CORRECTION_THRESHOLD
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
@@ -83,7 +83,7 @@ class PostTrainingQuantization(Algorithm):
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
 
-        min_max_qunatization = MinMaxQuantization(
+        min_max_quantization = MinMaxQuantization(
             preset=preset,
             target_device=target_device,
             subset_size=subset_size,
@@ -99,7 +99,7 @@ class PostTrainingQuantization(Algorithm):
             backend_params=advanced_parameters.backend_params
         )
 
-        self.algorithms.append(min_max_qunatization)
+        self.algorithms.append(min_max_quantization)
 
         if advanced_parameters.disable_bias_correction:
             return

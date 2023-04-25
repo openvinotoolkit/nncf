@@ -25,8 +25,8 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.parameters import ModelType
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanved_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet

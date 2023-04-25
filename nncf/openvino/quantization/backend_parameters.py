@@ -13,7 +13,7 @@
 
 from typing import Optional
 
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 
 
 class BackendParameters:

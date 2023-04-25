@@ -34,11 +34,11 @@ from nncf.experimental.openvino.quantization.quantize import \
     quantize_with_accuracy_control as pot_quantize_with_native_accuracy_control
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanved_parameters import AdvancedAccuracyRestorerParameters
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanved_parameters import AggregatorType
-from nncf.quantization.advanved_parameters import OverflowFix
-from nncf.quantization.advanved_parameters import StatisticsType
+from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AggregatorType
+from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar('TModel')
@@ -337,7 +337,7 @@ def map_range_estmator(range_estimator):
     return {advanced_parameter_name: advanced_parameters}
 
 
-def update_qunatization_parameters(quantization_params, pot_config):
+def update_quantization_parameters(quantization_params, pot_config):
     level_low = pot_config.get('level_low')
     if level_low is not None:
         raise ValueError('"level_low" parameter is not supported')
@@ -371,7 +371,7 @@ def map_weights(weights):
     advanced_parameters = ctx.params.get(
         advanced_parameter_name, AdvancedQuantizationParameters())
 
-    update_qunatization_parameters(
+    update_quantization_parameters(
         advanced_parameters.weights_quantization_params, weights)
 
     range_estimator = weights.get('range_estimator')
@@ -392,7 +392,7 @@ def map_activations(activations):
     advanced_parameters = ctx.params.get(
         advanced_parameter_name, AdvancedQuantizationParameters())
 
-    update_qunatization_parameters(
+    update_quantization_parameters(
         advanced_parameters.weights_quantization_params, activations)
 
     range_estimator = activations.get('range_estimator')
@@ -685,10 +685,10 @@ def quantize_model_with_accuracy_control(xml_path: str,
     }
 
     advanced_parameters = quantization_parameters.get(
-        'advanced_qunatization_parameters', AdvancedQuantizationParameters())
+        'advanced_quantization_parameters', AdvancedQuantizationParameters())
     if quantization_impl == 'native':
         advanced_parameters.backend_params['use_pot'] = False
-    quantization_parameters['advanced_qunatization_parameters'] = advanced_parameters
+    quantization_parameters['advanced_quantization_parameters'] = advanced_parameters
 
     quantization_impl_fn = name_to_quantization_impl_map.get(quantization_impl)
     if quantization_impl:

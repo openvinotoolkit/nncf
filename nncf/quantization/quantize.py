@@ -20,8 +20,8 @@ from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanved_parameters import AdvancedAccuracyRestorerParameters
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope
 
 
@@ -58,7 +58,7 @@ def quantize(model: TModel,
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
     :param advanced_parameters: Advanced quantization parameters for
-        fine-tuning the quantization algorithm
+        fine-tuning the quantization algorithm.
     :return: The quantized model.
     """
     backend = get_backend(model)

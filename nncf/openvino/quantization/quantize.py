@@ -20,14 +20,14 @@ from nncf.data import Dataset
 from nncf.experimental.openvino_native.quantization.quantize import quantize_impl as native_quantize_impl
 from nncf.experimental.openvino_native.quantization.quantize import \
     quantize_with_accuracy_control_impl as native_quantize_with_accuracy_control_impl
-from nncf.openvino.pot.qunatization.quantize import quantize_impl as pot_quantize_impl
-from nncf.openvino.pot.qunatization.quantize import \
+from nncf.openvino.pot.quantization.quantize import quantize_impl as pot_quantize_impl
+from nncf.openvino.pot.quantization.quantize import \
     quantize_with_accuracy_control_impl as pot_quantize_with_accuracy_control_impl
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanved_parameters import AdvancedAccuracyRestorerParameters
-from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope
 
 USE_POT_AS_DEFAULT = True
