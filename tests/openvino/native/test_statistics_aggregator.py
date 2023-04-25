@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
+from typing import Type
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
@@ -23,6 +24,10 @@ from nncf.experimental.openvino_native.statistics.aggregator import OVStatistics
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import\
     OVMinMaxAlgoBackend
+from nncf.experimental.openvino_native.quantization.algorithms.bias_correction.openvino_backend import\
+    OVBiasCorrectionAlgoBackend
+from nncf.experimental.openvino_native.quantization.algorithms.fast_bias_correction.openvino_backend import\
+    OVFastBiasCorrectionAlgoBackend
 
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
 from tests.openvino.native.models import SplitConcatModel
@@ -48,8 +53,14 @@ def get_StatisticAgregatorTestModel(input_shape, kernel):
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    def get_algo_backend_cls(self) -> OVMinMaxAlgoBackend:
+    def get_min_max_algo_backend_cls(self) -> Type[OVMinMaxAlgoBackend]:
         return OVMinMaxAlgoBackend
+
+    def get_bias_correction_algo_backend_cls(self) -> Type[OVBiasCorrectionAlgoBackend]:
+        return OVBiasCorrectionAlgoBackend
+
+    def get_fast_bias_correction_algo_backend_cls(self) -> Type[OVFastBiasCorrectionAlgoBackend]:
+        return OVFastBiasCorrectionAlgoBackend
 
     def get_backend_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])

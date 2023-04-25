@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Union, Deque, List
+from typing import Union, Deque, List, Callable, Optional, Any
 
 import numpy as np
 import tensorflow as tf
@@ -39,12 +39,12 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
-        return TFNNCFTensor(tf.reduce_min(x.tensor, axis=axis))
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+        return TFNNCFTensor(tf.reduce_min(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
-        return TFNNCFTensor(tf.reduce_max(x.tensor, axis=axis))
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+        return TFNNCFTensor(tf.reduce_max(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def abs(x: NNCFTensor) -> NNCFTensor:
@@ -59,8 +59,20 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return TFNNCFTensor(tf.math.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
-        return TFNNCFTensor(tf.math.reduce_mean(x.tensor, axis=axis))
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.reduce_mean(x.tensor, axis=axis, keepdims=keepdims))
+
+    @staticmethod
+    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
 
     @staticmethod
     def stack(x: Union[List[tf.Tensor], Deque[tf.Tensor]], axis: int = 0) -> NNCFTensor:
@@ -78,6 +90,22 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return tf.reduce_sum(tensor.tensor).numpy()
+
+    @staticmethod
+    def quantile(tensor: NNCFTensor,
+                 quantile: Union[float, List[float]],
+                 axis: Union[int, tuple, list]) -> List[NNCFTensor]:
+        raise NotImplementedError()
+
+    @staticmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @classmethod
+    def no_outliers_map(cls, x: NNCFTensor,
+                        fn: Callable[[NNCFTensor, Optional[int]], Any],
+                        axis: int = 0, alpha: float = 0.01):
+        raise NotImplementedError()
 
 
 class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
