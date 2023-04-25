@@ -39,6 +39,9 @@ class ProducerInfo:
     def __str__(self) -> str:
         return str(self.node_id)
 
+    def __lt__(self, other: 'ProducerInfo'):
+        return self.node_id < other.node_id
+
 @dataclass
 class ConsumerInfo:
     """
@@ -59,6 +62,9 @@ class ConsumerInfo:
 
     def __str__(self) -> str:
         return str(self.node_id)
+
+    def __lt__(self, other: 'ConsumerInfo'):
+        return self.node_id < other.node_id
 
 @dataclass
 class PruningBlock:
@@ -154,8 +160,8 @@ class PropagationGroup:
 
 
     def __str__(self) -> str:
-        producers = ','.join(map(str, self._producers))
-        consumers = ','.join(map(str, self._consumers))
+        producers = ','.join(map(str, sorted(self._producers)))
+        consumers = ','.join(map(str, sorted(self._consumers)))
         return f'Block: {self.block}\n'\
                f'Producers: {producers}\n'\
                f'Consumers: {consumers}'

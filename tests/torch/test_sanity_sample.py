@@ -585,6 +585,10 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
     assert compression_stage in allowed_compression_stages
 
 
+def remove_line_breaks(s: str) -> str:
+    return s.replace('\r\n', '').replace('\n', '')
+
+
 @pytest.mark.parametrize("sample_type", SAMPLE_TYPES)
 def test_eval_only_config_fails_to_train(tmp_path, sample_type):
     config_factory = ConfigFactory({"model": "mock",
@@ -598,4 +602,4 @@ def test_eval_only_config_fails_to_train(tmp_path, sample_type):
     runner = Command(create_command_line(args, sample_type), env=ROOT_PYTHONPATH_ENV)
     return_code = runner.run(assert_returncode_zero=False)
     assert return_code != 0
-    assert EVAL_ONLY_ERROR_TEXT in "".join(runner.output)
+    assert remove_line_breaks(EVAL_ONLY_ERROR_TEXT) in remove_line_breaks("".join(runner.output))
