@@ -52,7 +52,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return PTMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> None:
-        pytest.skip(f"PTBiasCorrectionAlgoBackend is not implemented")
+        pytest.skip("PTBiasCorrectionAlgoBackend is not implemented")
 
     def get_fast_bias_correction_algo_backend_cls(self) -> Type[PTFastBiasCorrectionAlgoBackend]:
         return PTFastBiasCorrectionAlgoBackend

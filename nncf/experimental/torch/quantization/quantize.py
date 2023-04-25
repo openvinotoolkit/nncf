@@ -42,7 +42,6 @@ def quantize_impl(
     """
     if fast_bias_correction is False:
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not supported')
-    nncf_logger.warning('Bias correction algorithm are not supported by Torch backend by now.')
 
     dataset_iter = iter(calibration_dataset.get_inference_data())
     input_shape = tuple(next(dataset_iter).shape)

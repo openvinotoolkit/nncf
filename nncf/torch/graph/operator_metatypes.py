@@ -1025,10 +1025,8 @@ OPERATORS_WITH_BIAS_METATYPES = [
     PTModuleConvTranspose1dMetatype,
     PTModuleConvTranspose2dMetatype,
     PTModuleConvTranspose3dMetatype,
-    PTModuleLinearMetatype,
 ]
 
 OPERATORS_FUSED_METATYPES = [
     PTModuleBatchNormMetatype,
-    PTBatchNormMetatype
 ]

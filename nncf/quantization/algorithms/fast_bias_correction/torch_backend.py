@@ -15,7 +15,6 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
-from torch.quantization.fake_quantize import FakeQuantize
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -27,16 +26,15 @@ from nncf.common.utils.registry import Registry
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.torch.graph.node_utils import get_fused_bias_value
-from nncf.torch.graph.node_utils import get_next_fused_bias_node
+from nncf.torch.graph.node_utils import get_potential_fused_node
 from nncf.torch.graph.node_utils import is_node_with_fused_bias
+from nncf.torch.graph.node_utils import is_quantized_weights
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.collectors import PTMeanStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
@@ -112,11 +110,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> bool:
-        node_module = model.get_containing_module(node.node_name)
-        for pre_op in node_module.pre_ops.values():
-            if isinstance(pre_op, UpdateWeight) and isinstance(pre_op.op, (BaseQuantizer, FakeQuantize)):
-                return True
-        return False
+        return is_quantized_weights(node, model)
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> bool:
@@ -140,6 +134,6 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, model: NNCFNetwork) -> Tuple[str, str]:
         input_node_name = node.node_name
-        next_norm_node = get_next_fused_bias_node(node.node_name, model)
+        next_norm_node = get_potential_fused_node(node.node_name, model)
         output_node_name = next_norm_node.node_name if next_norm_node else input_node_name
         return input_node_name, output_node_name

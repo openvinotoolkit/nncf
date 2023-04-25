@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import copy
 from typing import Callable, Dict, List, Tuple
 
 from torch import nn
@@ -18,7 +17,8 @@ from torch import nn
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.torch.graph.node_utils import get_next_fused_bias_node
+from nncf.torch.graph.node_utils import extraction_potential_fused_modules
+from nncf.torch.graph.node_utils import update_fused_bias
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
@@ -86,23 +86,12 @@ class PTModelTransformer(ModelTransformer):
             self._model.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
 
     def _apply_extraction_transformations(self, transformation: PTModelExtractionWithFusedBiasCommand) -> nn.Module:
-        extracted_node_names = [transformation.node_name]
-
-        next_norm_node = get_next_fused_bias_node(transformation.node_name, self._model)
-        if next_norm_node:
-            extracted_node_names.append(next_norm_node.node_name)
-
-        extracted_modules = [
-            copy.deepcopy(self._model.get_containing_module(node_name)) for node_name in extracted_node_names
-        ]
-        return nn.Sequential(*extracted_modules)
+        return extraction_potential_fused_modules(transformation.node_name, self._model)
 
     def _apply_bias_correction_transformations(self, transformations: List[PTBiasCorrectionCommand]) -> None:
         for transformation in transformations:
-            target_node_name = transformation.target_point.target_node_name
-            next_norm_node = get_next_fused_bias_node(target_node_name, self._model)
-            if next_norm_node:
-                target_node_name = next_norm_node.node_name
-
-            node = self._model.get_containing_module(target_node_name)
-            node.bias.data = transformation.bias_value
+            update_fused_bias(
+                target_node_name=transformation.target_point.target_node_name,
+                new_bias=transformation.bias_value,
+                model=self._model
+            )

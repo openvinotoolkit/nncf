@@ -10,22 +10,24 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import copy
 from typing import Optional
 
-from torch import Tensor
+import torch
+from torch import nn
+from torch.quantization.fake_quantize import FakeQuantize
 
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.logging import nncf_logger
 from nncf.torch.graph.operator_metatypes import OPERATORS_FUSED_METATYPES
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_BIAS_METATYPES
-from nncf.torch.layer_utils import _NNCFModuleMixin
+from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.layers import BaseQuantizer
 
 
-def get_next_fused_bias_node(node_name: NNCFNode, model: NNCFNetwork) -> Optional[NNCFNode]:
+def get_potential_fused_node(node_name: NNCFNode, model: NNCFNetwork) -> Optional[NNCFNode]:
     """
     Get next node that can contain fused bias in runtime.
-    Available only for Convolutional and MatMul layers.
 
     :param node_name: The node name.
     :param model: The model that contains this operation.
@@ -39,13 +41,6 @@ def get_next_fused_bias_node(node_name: NNCFNode, model: NNCFNetwork) -> Optiona
         next_nodes = graph.get_next_nodes(target_node)
         for node in next_nodes:
             if node.metatype in OPERATORS_FUSED_METATYPES:
-                node_module = model.get_containing_module(node.node_name)
-                if not isinstance(node_module, _NNCFModuleMixin):
-                    # Disable detect fused bias in custom batch_norm modules, like BatchNormAct2d from timm.
-                    nncf_logger.debug(
-                        f"Module {node.node_name}({type(node_module)}) is not inherited from _NNCFModuleMixin"
-                    )
-                    return None
                 return node
     return None
 
@@ -60,25 +55,90 @@ def is_node_with_fused_bias(node: NNCFNode, model: NNCFNetwork) -> bool:
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
-    next_norm_node = get_next_fused_bias_node(node.node_name, model)
+    fused_node = get_potential_fused_node(node.node_name, model)
     node_module = model.get_containing_module(node.node_name)
 
     return node.metatype in OPERATORS_WITH_BIAS_METATYPES and (
-        node_module.bias is not None or next_norm_node is not None
+        node_module.bias is not None or fused_node is not None
     )
 
 
-def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Tensor:
+def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
     """
-    Returns the fused bias tensor for the biased node.
+    Returns the bias tensor for the node or potential fused node.
 
     :param node: The node that corresponds to the operation with bias.
     :param model: The model that contains this operation.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
-    next_norm_node = get_next_fused_bias_node(node.node_name, model)
-    target_node_name = next_norm_node.node_name if next_norm_node else node.node_name
+    fused_node = get_potential_fused_node(node.node_name, model)
+    target_node_name = fused_node.node_name if fused_node else node.node_name
     node_module = model.get_containing_module(target_node_name)
     if node_module.bias is None:
         return None
     return node_module.bias.data
+
+
+def find_fake_quantizer_for_wight(module: nn.Module) -> Optional[nn.Module]:
+    """
+    Return quantizer operator for weight of module if exists, otherwise return None.
+
+    :param module: The target module.
+
+    :return nn.Module: Quantizer module.
+    """
+    for pre_op in module.pre_ops.values():
+        if isinstance(pre_op, UpdateWeight) and isinstance(pre_op.op, (BaseQuantizer, FakeQuantize)):
+            return pre_op.op
+    return None
+
+
+def is_quantized_weights(node: NNCFNode, model: NNCFNetwork) -> bool:
+    """
+    Check that module have fake_quantizer for weight.
+
+    :param node: The target node.
+    :param model: he model.
+
+    :return bool: return `True` if module have FQ pre_ops for weight.
+    """
+    node_module = model.get_containing_module(node.node_name)
+    fq_module = find_fake_quantizer_for_wight(node_module)
+    return fq_module is not None
+
+
+def update_fused_bias(target_node_name: str, new_bias: torch.Tensor, model: NNCFNetwork):
+    """
+    Update bias for target module or potential fused module.
+
+    :param target_node_name: The target node name.
+    :param new_bias: New bias value.
+    :param model: The model.
+    """
+    fused_node = get_potential_fused_node(target_node_name, model)
+    if fused_node:
+        target_node_name = fused_node.node_name
+
+    node = model.get_containing_module(target_node_name)
+    node.bias.data = new_bias
+
+
+def extraction_potential_fused_modules(node_name: str, model: NNCFNetwork) -> nn.Sequential:
+    """
+    Return Sequential from the copy of module by node_name and potential fused node if exists.
+
+    :param node_name: The node name.
+    :param model: The model.
+
+    :return nn.Sequential: Copy of the modules.
+    """
+    extracted_node_names = [node_name]
+
+    fused_node = get_potential_fused_node(node_name, model)
+    if fused_node:
+        extracted_node_names.append(fused_node.node_name)
+
+    extracted_modules = [
+        copy.deepcopy(model.get_containing_module(node_name)) for node_name in extracted_node_names
+    ]
+    return nn.Sequential(*extracted_modules)
