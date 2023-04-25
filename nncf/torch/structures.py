@@ -17,7 +17,7 @@ from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.config.structures import NNCFExtraConfigStruct
 
 

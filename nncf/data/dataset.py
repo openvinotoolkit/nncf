@@ -18,7 +18,7 @@ from typing import List
 from typing import Generic
 from typing import TypeVar
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 
 DataItem = TypeVar('DataItem')
 ModelInput = TypeVar('ModelInput')

@@ -13,7 +13,7 @@
 
 from typing import Optional, Callable
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.initialization.dataloader import NNCFDataLoader
 
 

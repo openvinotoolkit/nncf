@@ -16,9 +16,10 @@ from typing import Dict, List, Set, Tuple
 
 import torch
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.logging import nncf_logger
 from nncf.common.deprecation import warning_deprecated
+
 
 @api(canonical_alias="nncf.torch.load_state")
 def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False,

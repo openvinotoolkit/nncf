@@ -13,7 +13,7 @@
 
 from abc import ABC, abstractmethod
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 
 
 @api()

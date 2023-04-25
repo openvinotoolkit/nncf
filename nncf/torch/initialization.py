@@ -11,7 +11,7 @@ from functools import partial
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.progress_bar import ProgressBar

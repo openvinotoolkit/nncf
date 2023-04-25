@@ -17,7 +17,7 @@ import torch
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType

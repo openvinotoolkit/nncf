@@ -14,10 +14,10 @@
 from typing import Any, Callable, Iterable, Optional
 
 from nncf.api.compression import TModel
-from nncf.common.api_marker import api
-from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -40,16 +40,20 @@ def quantize(model: TModel,
     Applies post-training quantization algorithm to provided model.
 
     :param model: A model to be quantized.
+    :type  model: TModel
     :param calibration_dataset: A representative dataset for the
         calibration process.
+    :type  calibration_dataset: nncf.Dataset
     :param preset: A preset that controls the quantization mode
         (symmetric and asymmetric). It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
         - `mixed`: Symmetric quantization of weights and asymmetric
           quantization of activations.
+    :type  preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
+    :type  target_device: nncf.TargetDevice
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :param fast_bias_correction: Setting this option to `False` enables a different
@@ -57,30 +61,33 @@ def quantize(model: TModel,
         more time but requires less memory.
     :param model_type: Model type is needed to specify additional patterns
         in the model. Supported only `transformer` now.
+    :type  model_type: Optional[nncf.ModelType]
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
+    :type  ignored_scope: Optional[nncf.IgnoredScope]
     :param advanced_parameters: Advanced quantization parameters for
         fine-tuning the quantization algorithm.
     :return: The quantized model.
+    :rtype: TModel
     """
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
-        from nncf.openvino.quantization.quantize import quantize_impl
+        from nncf.openvino.quantization.quantize_model import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                              fast_bias_correction, model_type, ignored_scope, advanced_parameters)
 
     if backend == BackendType.ONNX:
-        from nncf.onnx.quantization.quantize import quantize_impl
+        from nncf.onnx.quantization.quantize_model import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                              fast_bias_correction, model_type, ignored_scope, advanced_parameters)
 
     if backend == BackendType.TENSORFLOW:
-        from nncf.tensorflow.quantization.quantize import quantize_impl
+        from nncf.tensorflow.quantization.quantize_model import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                              fast_bias_correction, model_type, ignored_scope, advanced_parameters)
 
     if backend == BackendType.TORCH:
-        from nncf.torch.quantization.quantize import quantize_impl
+        from nncf.torch.quantization.quantize_model import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                              fast_bias_correction, model_type, ignored_scope, advanced_parameters)
 
@@ -106,8 +113,11 @@ def quantize_with_accuracy_control(
     Applies post-training quantization algorithm with accuracy control to provided model.
 
     :param model: A model to be quantized.
+    :type model: TModel
     :param calibration_dataset: A representative dataset for the calibration process.
+    :type calibration_dataset: nncf.Dataset
     :param validation_dataset: A dataset for the validation process.
+    :type validation_dataset: nncf.Dataset
     :param validation_fn: A validation function to validate the model. It should take
         two argumets:
         - `model`: model to be validate.
@@ -117,9 +127,11 @@ def quantize_with_accuracy_control(
         A higher value corresponds to better performance of the model.
     :param max_drop: The maximum absolute accuracy drop that should be achieved after the quantization.
     :param preset: A preset that controls the quantization mode.
+    :type preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
+    :type target_device: nncf.TargetDevice
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :param fast_bias_correction: Setting this option to `False` enables a different
@@ -127,17 +139,20 @@ def quantize_with_accuracy_control(
         more time but requires less memory.
     :param model_type: Model type is needed to specify additional patterns
         in the model. Supported only `transformer` now.
+    :type model_type: nncf.ModelType
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
+    :type ignored_scope: nncf.IgnoredScope
     :param advanced_quantization_parameters: Advanced quantization parameters for
         fine-tuning the quantization algorithm.
     :param advanced_accuracy_restorer_parameters: Advanced parameters for fine-tuning
         the accuracy restorer algorithm.
     :return: The quantized model.
+    :rtype: TModel
     """
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
-        from nncf.openvino.quantization.quantize import quantize_with_accuracy_control_impl
+        from nncf.openvino.quantization.quantize_model import quantize_with_accuracy_control_impl
         return quantize_with_accuracy_control_impl(
             model, calibration_dataset, validation_dataset, validation_fn, max_drop,
             preset, target_device, subset_size, fast_bias_correction, model_type,

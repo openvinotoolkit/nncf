@@ -17,7 +17,7 @@ import torch
 import torch.distributed as dist
 
 from nncf import NNCFConfig
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import SPARSITY_INIT
 from nncf.config.schemata.defaults import SPARSITY_LEVEL_SETTING_MODE

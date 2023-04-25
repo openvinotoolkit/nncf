@@ -16,8 +16,14 @@ copyright = '2023, Intel Corporation'
 author = 'Intel Corporation'
 release = 'v2.4.0'
 
-
-extensions = ['autoapi.extension']
+extensions = ['autoapi.extension', 'sphinx.ext.autodoc']
+# The below line in conjunction with specifying the 'sphinx.ext.autodoc' as extension
+# makes the type hints from the function signature disappear from the signature in the HTML and instead
+# show up in the function's documentation body. We use this to make the argument types in the documentation
+# that are NNCF-defined types refer to the canonical API names instead of the actual fully-qualified names as defined by
+# the position of the corresponding type - this is done by overriding the documented type directly in the docstring
+# using :type: syntax.
+autodoc_typehints = 'description'
 
 autoapi_dirs = ['../../../nncf']
 autoapi_options = ['members', 'show-inheritance',
@@ -51,7 +57,7 @@ def collect_api_entities() -> List[str]:
         except Exception as e:
             skipped_modules[modname] = str(e)
 
-    from nncf.common.api_marker import api
+    from nncf.common.utils.api_marker import api
     api_fqns = dict()
     aliased_fqns = {}  # type: Dict[str, str]
     canonical_imports_seen = set()
@@ -79,7 +85,7 @@ def collect_api_entities() -> List[str]:
                                 print(f"\t{obj_name}")
                             else:
                                 print(f"\t{obj_name} -> {canonical_import_name}")
-                        api_fqns[fqn] = True
+                        api_fqns[fqn] = obj
 
     print()
     skipped_str = '\n'.join([f"{k}: {v}" for k, v in skipped_modules.items()])
@@ -93,8 +99,7 @@ def collect_api_entities() -> List[str]:
                 f"API entity with canonical_alias={canonical_alias} not available for import as specified!\n"
                 f"Adjust the __init__.py files so that the symbol is available for import as {canonical_alias}.")
             raise e
-        api_fqns.pop(fqn)
-        api_fqns[canonical_alias] = True
+        api_fqns[canonical_alias] = api_fqns.pop(fqn)
 
     print("API entities:")
     for api_fqn in api_fqns:

@@ -22,7 +22,7 @@ from typing import Optional
 
 import torch
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.graph import DynamicGraph

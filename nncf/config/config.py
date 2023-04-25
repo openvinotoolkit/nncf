@@ -20,7 +20,7 @@ from typing import Type
 import jsonschema
 import jstyleson as json
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config.definitions import SCHEMA_VISUALIZATION_URL

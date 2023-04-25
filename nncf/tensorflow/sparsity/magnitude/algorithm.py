@@ -20,7 +20,7 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm

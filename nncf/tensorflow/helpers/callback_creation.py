@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from nncf.tensorflow.pruning.callbacks import PruningStatisticsCallback

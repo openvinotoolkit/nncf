@@ -16,7 +16,7 @@ from dataclasses import field
 import re
 from typing import List, Optional
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.logging import nncf_logger
 from nncf.common.graph.graph import NNCFGraph
 

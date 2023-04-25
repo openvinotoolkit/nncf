@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 
 from torch.utils.cpp_extension import _get_build_directory
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.logging.logger import extension_is_loading_info_log
 from nncf.common.utils.registry import Registry
 from nncf.common.logging import nncf_logger

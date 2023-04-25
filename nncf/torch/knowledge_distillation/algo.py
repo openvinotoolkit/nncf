@@ -15,7 +15,7 @@ from copy import deepcopy
 
 from torch import nn
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.config.schemata.defaults import KNOWLEDGE_DISTILLATION_SCALE

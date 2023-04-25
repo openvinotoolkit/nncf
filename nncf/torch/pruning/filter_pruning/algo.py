@@ -26,7 +26,7 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm

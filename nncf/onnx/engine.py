@@ -18,6 +18,7 @@ import onnxruntime as rt
 
 from nncf.common.engine import Engine
 
+
 class ONNXEngine(Engine):
     """
     Engine for ONNX backend using ONNXRuntime to infer the model.

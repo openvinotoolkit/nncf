@@ -25,7 +25,7 @@ from torch.nn.utils.rnn import PackedSequence
 from torch.nn.utils.weight_norm import WeightNorm
 
 from nncf import nncf_logger
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
 from nncf.torch.utils import no_jit_trace
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY

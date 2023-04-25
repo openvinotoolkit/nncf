@@ -5,7 +5,7 @@ from typing import List
 
 import torch
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator

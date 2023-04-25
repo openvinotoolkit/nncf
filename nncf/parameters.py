@@ -13,7 +13,7 @@
 
 from enum import Enum
 
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 
 
 @api(canonical_alias="nncf.TargetDevice")

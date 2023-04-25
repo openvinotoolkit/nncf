@@ -32,6 +32,8 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.scopes import IgnoredScope
+from nncf.openvino.quantization.quantize_model import quantize_impl
+from nncf.common.utils.timer import timer
 
 
 def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model) -> None:

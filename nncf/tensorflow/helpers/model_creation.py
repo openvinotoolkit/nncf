@@ -21,7 +21,7 @@ import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
@@ -59,6 +59,7 @@ def create_compression_algorithm_builder(config: NNCFConfig,
 
     return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 
+
 @api(canonical_alias="nncf.tensorflow.create_compressed_model")
 @tracked_function(NNCF_TF_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
 def create_compressed_model(model: tf.keras.Model,
@@ -73,6 +74,7 @@ def create_compressed_model(model: tf.keras.Model,
         from a checkpoint or another source.
     :param config: A configuration object used to determine the exact compression
         modifications to be applied to the model.
+    :type config: nncf.NNCFConfig
     :param compression_state: compression state to unambiguously restore the compressed model.
         Includes builder and controller states. If it is specified, trainable parameter initialization will be skipped
         during building.

@@ -22,7 +22,7 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.common.api_marker import api
+from nncf.common.utils.api_marker import api
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
