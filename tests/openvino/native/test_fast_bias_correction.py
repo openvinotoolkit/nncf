@@ -13,21 +13,17 @@
 from typing import List
 
 import numpy as np
-import onnx
+import openvino.runtime as ov
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.onnx.graph.node_utils import get_bias_value
-from nncf.onnx.graph.node_utils import is_node_with_bias
-from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
+from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
+from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
+from nncf.experimental.openvino_native.quantization.algorithms.fast_bias_correction.openvino_backend import (
+    OVFastBiasCorrectionAlgoBackend,
+)
 from tests.post_training.test_fast_bias_correction import TemplateTestFBCAlgorithm
-
-
-def get_data_from_node(model: onnx.ModelProto, node_name: str):
-    data = [t for t in model.graph.initializer if t.name == node_name]
-    if data:
-        return onnx.numpy_helper.to_array(data[0])
-    return None
+from tests.shared.command import Command
 
 
 class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
@@ -36,15 +32,19 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
         return np.array(data)
 
     @staticmethod
-    def get_backend() -> ONNXFastBiasCorrectionAlgoBackend:
-        return ONNXFastBiasCorrectionAlgoBackend
+    def get_backend() -> OVFastBiasCorrectionAlgoBackend:
+        return OVFastBiasCorrectionAlgoBackend
 
     @staticmethod
-    def backend_specific_model(model, tmp_dir: str):
+    def backend_specific_model(model: bool, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=['input.1'])
-        onnx_model = onnx.load(onnx_path)
-        return onnx_model
+        ov_path = f"{tmp_dir}/model.xml"
+        runner = Command(f'mo -m {onnx_path} -o {tmp_dir} -n model')
+        runner.run()
+        core = ov.Core()
+        ov_model = core.read_model(ov_path)
+        return ov_model
 
     @staticmethod
     def fn_to_type(tensor):
@@ -57,14 +57,16 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
             return {'input.1': tensor}
         return transform_fn
 
-
     @staticmethod
-    def check_bias(model: onnx.ModelProto, ref_bias: list):
+    def check_bias(model: ov.Model, ref_bias: list):
+        ref_bias = np.array(ref_bias)
         nncf_graph = NNCFGraphFactory.create(model)
         for node in nncf_graph.get_all_nodes():
-            if not is_node_with_bias(node):
+            if not is_node_with_bias(node, nncf_graph):
                 continue
-            bias_value = get_bias_value(node, model)
-            assert np.all(np.isclose(bias_value, np.array(ref_bias), atol=0.0001)), f"{bias_value} != {ref_bias}"
+            bias_value = get_bias_value(node, nncf_graph, model)
+            bias_value = bias_value.reshape(ref_bias.shape)
+            assert np.all(np.isclose(bias_value, ref_bias, atol=0.0001)), f"{bias_value} != {ref_bias}"
+
             return
         raise ValueError("Not found node with bias")

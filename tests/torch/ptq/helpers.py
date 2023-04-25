@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from ast import Tuple
 from typing import List
 
 import torch
@@ -19,6 +20,7 @@ from torch import nn
 from nncf import NNCFConfig
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
+from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
@@ -88,14 +90,6 @@ def get_min_max_algo_for_test():
     params.algorithms = {MinMaxQuantization: min_max_params}
     return PostTrainingQuantization(params)
 
-def get_min_max_and_fbc_algo_for_test():
-    params = PostTrainingQuantizationParameters()
-    params.algorithms = {
-        MinMaxQuantization: params.algorithms[MinMaxQuantization],
-        FastBiasCorrection: params.algorithms[FastBiasCorrection]
-    }
-    return PostTrainingQuantization(params)
-
 
 def mock_collect_statistics(mocker):
     _ = mocker.patch(
@@ -105,58 +99,3 @@ def mock_collect_statistics(mocker):
     _ = mocker.patch(
         'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics',
         return_value=PTMinMaxTensorStatistic(min_, max_))
-
-
-class ConvTestModel(nn.Module):
-    INPUT_SIZE = [1, 1, 4, 4]
-
-    def __init__(self, bias=True):
-        super().__init__()
-        self.conv = create_conv(1, 2, 2, -1, -2, bias=bias)
-
-    def forward(self, x):
-        return self.conv(x)
-
-
-class ConvBNTestModel(nn.Module):
-    INPUT_SIZE = [1, 1, 4, 4]
-
-    def __init__(self, bias=True):
-        super().__init__()
-        self.conv = create_conv(1, 2, 2, -1, -2, bias=None)
-        self.bn = create_bn(2)
-        self.bn.bias.data = torch.Tensor([0.1, 0.1])
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.bn(x)
-        return x
-
-
-class ConvBNTestModel(nn.Module):
-    INPUT_SIZE = [1, 1, 4, 4]
-
-    def __init__(self):
-        super().__init__()
-        self.conv = create_conv(1, 2, 2, -1, -2, bias=None)
-        self.bn = create_bn(2)
-        self.bn.bias.data = torch.Tensor([0.1, 0.1])
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.bn(x)
-        return x
-
-
-class FCTestModel(nn.Module):
-    INPUT_SIZE = [1, 1, 4, 4]
-
-    def __init__(self):
-        super().__init__()
-        self.fc = nn.Linear(4, 2)
-        self.fc.weight.data = torch.ones_like(self.fc.weight.data)
-        self.fc.bias.data = torch.Tensor([0.1, 0.1])
-
-    def forward(self, x):
-        x = self.fc(x)
-        return x

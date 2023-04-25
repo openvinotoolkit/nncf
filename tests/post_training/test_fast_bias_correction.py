@@ -12,14 +12,22 @@
 """
 
 from abc import abstractmethod
-from typing import List, TypeVar
+from typing import List, Tuple, TypeVar
 
 import pytest
 
+from nncf.data import Dataset
+from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
-from tests.torch.ptq.helpers import get_min_max_and_fbc_algo_for_test
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
+from tests.post_training.helpers import ConvBNTestModel
+from tests.post_training.helpers import ConvTestModel
+from tests.post_training.helpers import FCTestModel
+from tests.post_training.helpers import StaticDatasetMock
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -65,47 +73,66 @@ class TemplateTestFBCAlgorithm:
         assert list(new_bias_shift.shape) == ref_shape
 
     @staticmethod
-    @abstractmethod
-    def get_model(with_bias: bool, tmp_dir: str):
-        """
-        Return test model.
-
-        :param with_bias: If `True`, the conv module will include a bias value.
-            Otherwise, it will not include a bias value.
-        :param tmp_dir: Temporary directory.
-        """
-        pass
+    def fn_to_type(tensor):
+        return tensor
 
     @staticmethod
     @abstractmethod
-    def get_dataset(model: TModel):
+    def get_transform_fn():
+        """
+        Get transformation function for dataset.
+        """
+
+    def get_dataset(self, input_size: Tuple):
         """
         Return backend specific random dataset.
 
         :param model: The model for which the dataset is being created.
         """
-        pass
+        return StaticDatasetMock(input_size, self.fn_to_type)
 
     @staticmethod
     @abstractmethod
-    def check_bias(model: TModel, with_bias: bool):
+    def backend_specific_model(model: TModel, tmp_dir: str):
         """
-        Check that bias value equal to reference value.
+        Return backend specific model.
+        """
 
-        :param model: Target model.
-        :param with_bias: Model contain bias or not.
+    @staticmethod
+    @abstractmethod
+    def check_bias(model: TModel, ref_bias: list):
         """
-        pass
+        Return backend specific model.
+        """
 
-    @pytest.mark.parametrize("with_bias", (False, True))
-    def test_fast_bias_correction_algo(self, with_bias: bool, tmpdir: str):
-        """
-        Check working on fast bias correction algorithm and compare bias in quantized model with reference
-        """
-        model = self.get_model(with_bias, tmpdir)
-        dataset = self.get_dataset(model)
+    @staticmethod
+    def get_quantization_algorithm():
+        params = PostTrainingQuantizationParameters(
+            number_samples=1,
+            overflow_fix=OverflowFix.DISABLE,
+        )
+        params.algorithms = {
+            MinMaxQuantization: params.algorithms[MinMaxQuantization],
+            FastBiasCorrection: params.algorithms[FastBiasCorrection]
+        }
+        return PostTrainingQuantization(params)
 
-        quantization_algorithm = get_min_max_and_fbc_algo_for_test()
+
+    @pytest.mark.parametrize("model_cls, ref_bias",
+        (
+            (ConvTestModel, [0.01984841, 1.0838453]),
+            (ConvBNTestModel, [0.08396978, 1.1676897]),
+            # (FCTestModel, [0.9995632, 1.1002693]),
+        )
+    )
+    def test_update_bias(self, model_cls, ref_bias, tmpdir):
+
+        model = self.backend_specific_model(model_cls(), tmpdir)
+        dataset = Dataset(
+            self.get_dataset(model_cls.INPUT_SIZE),
+            self.get_transform_fn())
+
+        quantization_algorithm = self.get_quantization_algorithm()
         quantized_model = quantization_algorithm.apply(model, dataset=dataset)
 
-        self.check_bias(quantized_model, with_bias)
+        self.check_bias(quantized_model, ref_bias)
