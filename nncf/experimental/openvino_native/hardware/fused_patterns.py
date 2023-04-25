@@ -403,6 +403,24 @@ def create_hswish_without_denominator():
     return pattern
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SWISH_WITH_HARD_SIGMOID)
+def create_swish_with_hardsigmoid():
+    pattern = GraphPattern()
+    linear_node = pattern.add_node(**LINEAR_OPERATIONS)
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD_BIAS',
+                                   GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    hard_sigmoid_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'HARDSIGMOID',
+                                            GraphPattern.METATYPE_ATTR: om.OVHardSigmoidMetatype})
+    multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
+                                        GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype})
+
+    pattern.add_edge(linear_node, add_node)
+    pattern.add_edge(add_node, hard_sigmoid_node)
+    pattern.add_edge(add_node, multiply_node)
+    pattern.add_edge(hard_sigmoid_node, multiply_node)
+    return pattern
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SOFTMAX)
 def create_softmax():
     pattern = GraphPattern()

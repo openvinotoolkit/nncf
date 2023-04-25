@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, Callable, Tuple, Type
+from typing import Optional, Callable, Tuple, List, Type
 
 import numpy as np
 import openvino.runtime as ov
@@ -193,6 +193,16 @@ def get_inplace_max_op(node_type: str, reduction_shape: Tuple[int, ...], use_abs
     return get_inplace_reduce_op(opset.reduce_max, node_type, reduction_shape, use_abs_max)
 
 
+def get_inplace_mean_op(node_type: str, reduction_shape: Tuple[int, ...]) -> InplaceInsertionFnType:
+    """
+    Returns inplace mean function that adds reduce mean node to a passed node.
+
+    :param node_type: String that describes reduce node type.
+    :returns: Inplace insertion function to use in ModelTransformer.
+    """
+    return get_inplace_reduce_op(opset.reduce_mean, node_type, reduction_shape, False)
+
+
 def get_inplace_batch_mean_op(node_type: str) -> InplaceInsertionFnType:
     """
     Returns inplace batch mean function that adds reduce batch mean node to a passed node.
@@ -260,9 +270,9 @@ def get_partial_shape_safe(node, port_id) -> int:
     return partial_shape
 
 
-def get_reducer_output_node_name(
+def get_reducer_output_node_names(
         node_type, target_node_name: str,
-        port_id: int, fn_output_port_id: int, inplace: bool) -> str:
+        port_id: int, fn_output_port_id: int, inplace: bool) -> List[str]:
     """
     Returns output name to feed to a reducer node.
 
@@ -272,9 +282,9 @@ def get_reducer_output_node_name(
     :param port_id: Target port id of the target node.
     :param fn_output_port_id: Port id of the reducer subgraph.
     :param inplace: Wheather reducer calculated inplace or not.
-    :return: Output name to feed to a reducer node.
+    :return: Output names to feed to a reducer node.
     """
     if inplace:
         target_node_name = get_reduce_node_name(target_node_name, node_type, port_id)
-        return get_result_node_name(target_node_name, fn_output_port_id)
-    return get_result_node_name(target_node_name, port_id)
+        return [get_result_node_name(target_node_name, fn_output_port_id)]
+    return [get_result_node_name(target_node_name, port_id)]

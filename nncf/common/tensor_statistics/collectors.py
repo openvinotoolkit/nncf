@@ -14,7 +14,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Tuple, Optional, List, Union
+from typing import Tuple, Optional, List, Union, Callable
 
 import numpy as np
 from nncf.common.tensor import NNCFTensor
@@ -23,6 +23,7 @@ from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
 ReductionShape = Tuple[int]
+MaskedReduceFN = Callable[[NNCFTensor,  Union[int, tuple, list], NNCFTensor, bool], NNCFTensor]
 
 
 class TensorStatisticCollectorBase(ABC):
@@ -116,23 +117,27 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         """
          Computes minimum of elements across dimensions of NNCFTensor.
 
          :param x: NNCFTensor to reduce
          :param axis: The dimensions to reduce.
+         :param keepdims: If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one.
          :return: Reduced NNCFTensor.
          """
 
     @staticmethod
     @abstractmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         """
         Computes maximum of elements across dimensions of NNCFTensor.
 
         :param x: NNCFTensor to reduce
         :param axis: The dimensions to reduce.
+        :param keepdims: If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one.
         :return: Reduced NNCFTensor.
         """
 
@@ -170,18 +175,63 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
         """
         Computes the mean of elements across given dimensions of NNCFTensor.
 
         :param x: NNCFTensor to reduce.
         :param axis: The dimensions to reduce.
+        :param keepdims: If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one.
         :return: Reduced NNCFTensor.
         """
 
     @staticmethod
     @abstractmethod
-    def stack(x: NNCFTensor) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        """
+        Computes the median of elements across given dimensions of NNCFTensor.
+
+        :param x: NNCFTensor to reduce.
+        :param axis: The dimensions to reduce.
+        :param keepdims: If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one.
+        :return: Reduced NNCFTensor.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        """
+        Computes the masked mean of elements across given dimensions of NNCFTensor.
+
+        :param x: NNCFTensor to reduce.
+        :param axis: The dimensions to reduce.
+        :param maks: Boolean tensor that have the same shape as x. If an element in mask is True -
+            it is skipped during the aggregation.
+        :param keepdims: If True, the axes which are reduced are left in the result
+            as dimensions with size one.
+        :return: Reduced NNCFTensor.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        """
+        Computes the masked median of elements across given dimensions of NNCFTensor.
+
+        :param x: NNCFTensor to reduce.
+        :param axis: The dimensions to reduce.
+        :param maks: Boolean tensor that have the same shape as x. If an element in mask is True -
+            it is skipped during the aggregation.
+        :param keepdims: If True, the axes which are reduced are left in the result
+            as dimensions with size one.
+        :return: Reduced NNCFTensor.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def stack(x: NNCFTensor, axis: int = 0) -> NNCFTensor:
         """
         Stacks a list or deque of NNCFTensors rank-R tensors into one NNCFTensor rank-(R+1) tensor.
 
@@ -192,7 +242,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def unstack(x: NNCFTensor) -> List[NNCFTensor]:
+    def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         """
         Unstack a NNCFTensor into list.
 
@@ -209,6 +259,48 @@ class NNCFCollectorTensorProcessor(ABC):
 
         :param tensor: Given NNCFTensor.
         :returns: Sum of each elements of the given NNCFTensor.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]],
+                 axis: Union[int, tuple, list]) -> List[TensorElementsType]:
+        """
+        Compute the quantile-th percentile(s) of the data along the specified axis.
+
+        :param tensor: Given NNCFTensor.
+        :params quantile: Percentile or sequence of percentiles to compute, which must be between
+            0 and 1 inclusive.
+        :param axis: Axis or axes along which the percentiles are computed.
+        :returns: List of the quantile-th percentile(s) of the tensor elements.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        """
+        Computes the mean of elements across given channel dimension of NNCFTensor.
+
+        :param x: NNCFTensor to reduce.
+        :param axis: The channel dimensions to reduce.
+        :return: Reduced NNCFTensor.
+        """
+
+    @classmethod
+    @abstractmethod
+    def no_outliers_map(cls, x: NNCFTensor, fn: MaskedReduceFN,
+                        axis: int = 0, alpha: float = 0.01) -> NNCFTensor:
+        """
+        Computes quantiles [alpha, 1 - alpha] on given tensor, masks all elements that
+        are smaller that alpha and bigger than 1 - alpha quantile and applies
+        given masked reduction function fn.
+
+        :param tensor: Given NNCFTensor.
+        :param fn: Masked reduce operation from the same NNCFCollectorTensorProcessor class.
+        :param axis: Axis along which the reduction function is computed.
+        :params alpha: Minimal percentile to filter outliers outside the range
+            [quantile(alpha), quantile(1 - alpha)]. Must be between 0 and 1. inclusive.
+        :returns: Result of given masked reduction function on filtered from outliers NNCFTensor.
         """
 
 

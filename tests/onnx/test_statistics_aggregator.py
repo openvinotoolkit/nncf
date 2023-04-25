@@ -13,10 +13,13 @@
 
 import pytest
 import numpy as np
+from typing import Type
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
+from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
+from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
 
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
@@ -32,8 +35,14 @@ INPUT_SHAPE = [3, 3, 3]
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    def get_algo_backend_cls(self) -> ONNXMinMaxAlgoBackend:
+    def get_min_max_algo_backend_cls(self) -> Type[ONNXMinMaxAlgoBackend]:
         return ONNXMinMaxAlgoBackend
+
+    def get_bias_correction_algo_backend_cls(self) -> Type[ONNXBiasCorrectionAlgoBackend]:
+        return ONNXBiasCorrectionAlgoBackend
+
+    def get_fast_bias_correction_algo_backend_cls(self) -> Type[ONNXFastBiasCorrectionAlgoBackend]:
+        return ONNXFastBiasCorrectionAlgoBackend
 
     def get_backend_model(self, dataset_samples):
         conv_w = self.dataset_samples_to_conv_w(dataset_samples[0])

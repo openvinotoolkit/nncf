@@ -20,9 +20,9 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSumMetatype
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import OnlineMinAggregator
-from nncf.experimental.common.tensor_statistics.collectors import OnlineMaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import OfflineMeanAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 
 from tests.post_training.test_quantizer_config import TemplateTestQuantizerConfig
 from tests.post_training.models import NNCFGraphToTest
@@ -38,13 +38,13 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
         aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
         assert len(aggrs) == 2
-        assert OnlineMinAggregator in aggrs
-        assert OnlineMaxAggregator in aggrs
+        assert MinAggregator in aggrs
+        assert MaxAggregator in aggrs
 
     def check_is_mean_min_max_statistic_collector(self, tensor_collector: TensorCollector):
         aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
         assert len(aggrs) == 2
-        assert OfflineMeanAggregator in aggrs
+        assert MeanAggregator in aggrs
         assert aggrs[0].__class__ == aggrs[1].__class__
 
     @pytest.fixture(params=[pytest.param((TargetType.PRE_LAYER_OPERATION, '/Sum_1_0', (0, 2), (0, 1, 2)),

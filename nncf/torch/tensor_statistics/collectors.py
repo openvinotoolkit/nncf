@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Union, List, Deque
+from typing import Union, List, Deque, Optional, Callable, Any
 
 import torch
 
@@ -40,12 +40,12 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return PTNNCFTensor(torch.amin(x.tensor, dim=axis))
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+        return PTNNCFTensor(torch.amin(x.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return PTNNCFTensor(torch.amax(x.tensor, dim=axis))
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+        return PTNNCFTensor(torch.amax(x.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
     def abs(x: NNCFTensor) -> NNCFTensor:
@@ -60,8 +60,20 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return PTNNCFTensor(torch.max(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return PTNNCFTensor(x.tensor.mean(dim=axis))
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        return PTNNCFTensor(x.tensor.mean(dim=axis, keepdim=keepdims))
+
+    @staticmethod
+    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        return PTNNCFTensor(x.tensor.median(dim=axis, keepdim=keepdims))
+
+    @staticmethod
+    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
 
     @staticmethod
     def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
@@ -79,6 +91,22 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return torch.sum(tensor.tensor).item()
+
+    @staticmethod
+    def quantile(tensor: NNCFTensor,
+                 quantile: Union[float, List[float]],
+                 axis: Union[int, tuple, list]) -> List[NNCFTensor]:
+        raise NotImplementedError()
+
+    @staticmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @classmethod
+    def no_outliers_map(cls, x: NNCFTensor,
+                        fn: Callable[[NNCFTensor, Optional[int]], Any],
+                        axis: int = 0, alpha: float = 0.01):
+        raise NotImplementedError()
 
 
 class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
