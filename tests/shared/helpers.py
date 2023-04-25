@@ -43,12 +43,8 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
-    if is_linux():
-        python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
-        pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
-    elif is_windows():
-        python_executable_with_venv = f' {venv_path}\\Scripts\\activate && python'
-        pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
+    python_executable_with_venv = get_python_executable_with_venv(venv_path)
+    pip_with_venv = get_pip_executable_with_venv(venv_path)
 
     version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'
 
@@ -185,3 +181,19 @@ def compare_stats(expected: Dict[str, np.ndarray],
         for param in param_names:
             ref_param, actual_param = ref_stats.get(param), stats.get(param)
             assert np.allclose(ref_param, actual_param, atol=1e-6)
+
+def get_python_executable_with_venv(venv_path : Path) -> str:
+    if is_linux():
+        python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
+    elif is_windows():
+        python_executable_with_venv = f' {venv_path}\\Scripts\\activate && python'
+
+    return python_executable_with_venv
+
+
+def get_pip_executable_with_venv(venv_path : Path) -> str:
+        if is_linux():
+            pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
+        elif is_windows():
+            pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
+        return pip_with_venv

@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import openvino.runtime as ov
 
+from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
@@ -75,3 +76,41 @@ def test_overflow_fix_applied(model_creator_func, ref_nodes):
             vector = node.get_vector()
             assert np.min(vector) >= -64
             assert np.max(vector) <= 64
+
+
+IGNORED_OPTIONS = [
+    IgnoredScope(names=['MatMul']),
+    IgnoredScope(names=['Conv'], types=['Add']),
+    IgnoredScope()
+]
+
+
+@pytest.mark.parametrize('model_creator_func, ignored_options',
+                         zip([LinearModel, ConvModel, MatMul2DModel], IGNORED_OPTIONS))
+def test_meta_information(model_creator_func, ignored_options):
+
+    def check_parameters(quantized_model, parameters, path):
+        for key, value in parameters.items():
+            rt_path = path + [key]
+            if isinstance(value, (QuantizationPreset, TargetDevice)):
+                value = value.value
+            if isinstance(value, IgnoredScope):
+                check_parameters(quantized_model, value.__dict__, rt_path)
+                continue
+            assert quantized_model.get_rt_info(rt_path) == str(value)
+
+    model = model_creator_func().ov_model
+    dataset = get_dataset_for_test(model)
+    quantize_parameters = {
+        'preset': QuantizationPreset.PERFORMANCE,
+        'target_device': TargetDevice.CPU,
+        'subset_size': 1,
+        'fast_bias_correction': True,
+        'ignored_scope': ignored_options
+    }
+    quantized_model = quantize_impl(model, dataset, **quantize_parameters)
+
+    base_path = ['nncf', 'quantization']
+    assert quantized_model.has_rt_info(base_path)
+
+    check_parameters(quantized_model, quantize_parameters, base_path)

@@ -12,7 +12,7 @@
 """
 
 import sys
-from typing import Optional, Callable, Any, Iterable
+from typing import Optional, Callable, Any, Iterable, Dict, List
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -25,13 +25,34 @@ from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.common.utils.timer import timer
+
+
+def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = None) -> None:
+    """
+    Dumps input parameters into Model's meta section.
+
+    :param model: ov.Model instance.
+    :param parameters: Incoming dictionary with parameters to save.
+    :param path: Optional list of the paths.
+    """
+    try:
+        path = path if path else []
+        for key, value in parameters.items():
+            # Special condition for composed fields like IgnoredScope
+            if isinstance(value, IgnoredScope):
+                dump_parameters(model, value.__dict__, [key])
+                continue
+            rt_path = ['nncf', 'quantization'] + path + [key]
+            model.set_rt_info(str(value), rt_path)
+    except RuntimeError as e:
+        nncf_logger.debug(f'Unable to dump optimization parameters due to error: {e}')
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -63,6 +84,17 @@ def quantize_impl(model: ov.Model,
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
+    dump_parameters(
+        quantized_model,
+        {
+            'preset': preset.value,
+            'target_device': target_device.value,
+            'subset_size': subset_size,
+            'fast_bias_correction': fast_bias_correction,
+            'model_type': model_type,
+            'ignored_scope': ignored_scope,
+            'compress_weights': compress_weights
+        })
     return quantized_model
 
 
@@ -82,6 +114,7 @@ def quantize_with_accuracy_control(model: ov.Model,
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via the
     OpenVINO Runtime API.
     """
+
     quantized_model = quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                                     fast_bias_correction, model_type, ignored_scope, compress_weights=False)
 
@@ -108,4 +141,16 @@ def quantize_with_accuracy_control(model: ov.Model,
                                                            validation_dataset, validation_fn)
     compress_quantize_weights_transformation(quantized_model)
 
+    dump_parameters(
+        quantized_model,
+        {
+            'preset': preset.value,
+            'target_device': target_device.value,
+            'subset_size': subset_size,
+            'fast_bias_correction': fast_bias_correction,
+            'model_type': model_type,
+            'ignored_scope': ignored_scope,
+            'max_drop': max_drop,
+            'max_num_iterations': max_num_iterations
+        })
     return quantized_model
