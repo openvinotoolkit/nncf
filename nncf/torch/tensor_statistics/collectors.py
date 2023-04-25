@@ -112,10 +112,6 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
                  axis: Union[int, tuple, list]) -> List[NNCFTensor]:
         raise NotImplementedError()
 
-    @staticmethod
-    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
-        raise NotImplementedError()
-
     @classmethod
     def no_outliers_map(cls, x: NNCFTensor,
                         fn: Callable[[NNCFTensor, Optional[int]], Any],

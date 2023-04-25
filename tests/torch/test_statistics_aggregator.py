@@ -12,23 +12,22 @@
  limitations under the License.
 """
 
-import pytest
+from typing import Type
+
 import numpy as np
+import pytest
 import torch
 from torch import nn
-from typing import Type
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
-from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from nncf.torch.graph.graph import PTTargetPoint
-
+from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
 from tests.torch.ptq.helpers import get_nncf_network
 from tests.torch.ptq.test_ptq_params import ToNNCFNetworkInterface
-
-
 
 IDENTITY_NODE_NAME = 'PTIdentityConvModel/__add___0'
 CONV_NODE_NAME = 'PTIdentityConvModel/NNCFConv2d[conv]/conv2d_0'
@@ -53,10 +52,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return PTMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> None:
-        return None
+        pytest.skip(f"PTBiasCorrectionAlgoBackend is not implemented")
 
-    def get_fast_bias_correction_algo_backend_cls(self) -> None:
-        return None
+    def get_fast_bias_correction_algo_backend_cls(self) -> Type[PTFastBiasCorrectionAlgoBackend]:
+        return PTFastBiasCorrectionAlgoBackend
 
     def get_backend_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
@@ -112,9 +111,4 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     @pytest.mark.skip('Merging is not implemented yet')
     def test_statistic_merging(self, dataset_samples, inplace_statistics):
-        pass
-
-    @pytest.mark.skip('Bias correction and Fast bias correction is not implemented yet')
-    def test_statistics_aggregator_bias_correction(
-            self, dataset_samples, test_params, inplace_statistics, is_stat_in_shape_of_scale):
         pass
