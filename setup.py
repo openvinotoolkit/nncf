@@ -101,7 +101,7 @@ def find_version(*file_paths):
 
 INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "texttable>=1.6.3",
-                    "scipy>=1.3.2, <=1.10.0",
+                    "scipy>=1.3.2, <1.11",
                     "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
                     "numpy>=1.19.1, <1.24",
 
