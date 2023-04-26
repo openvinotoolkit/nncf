@@ -1,7 +1,21 @@
+"""
+ Copyright (c) 2023 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
 import pytest
 from typing import Optional, List
 import numpy as np
 
+from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import TensorType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
@@ -55,7 +69,7 @@ def test_aggregator_enabled_and_reset():
     collector.register_statistic_branch('A', reducer, aggregator)
     input_name = 'input_name'
     inputs = TensorCollector.get_tensor_collector_inputs(
-        {input_name: np.array(100)}, [(hash(reducer), [input_name])])
+        {input_name: NNCFTensor(np.array(100))}, [(hash(reducer), [input_name])])
 
     for _ in range(3):
         collector.register_inputs(inputs)
@@ -109,7 +123,9 @@ def test_duplicated_statistics_are_merged():
     assert sorted(output_info) == sorted([(hash(reducer_inplace), ['Dummy_inplace']),
                                          (hash(reducer_a), ['A']), (hash(reducer), ['Dummy'])])
 
-    outputs = {'Dummy': np.array(5), 'A': np.array(0), 'Dummy_inplace': np.array(6)}
+    outputs = {'Dummy': NNCFTensor(np.array(5)),
+               'A': NNCFTensor(np.array(0)),
+               'Dummy_inplace': NNCFTensor(np.array(6))}
     target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     collector.register_inputs(target_inputs)
 
@@ -126,10 +142,10 @@ def test_duplicated_statistics_are_merged():
     # Check aggregators recieved correct inputs
     assert len(statistics) == 6
     for k in 'ABC':
-        assert statistics[k] == np.array(5)
-    assert statistics['D'] == np.array(5)
-    assert statistics['E'] == np.array(0)
-    assert statistics['F'] == np.array(6)
+        assert statistics[k] == NNCFTensor(np.array(5))
+    assert statistics['D'] == NNCFTensor(np.array(5))
+    assert statistics['E'] == NNCFTensor(np.array(0))
+    assert statistics['F'] == NNCFTensor(np.array(6))
 
 
 def test_inplace_param():
@@ -178,8 +194,8 @@ def test_merged_tensor_collector():
         assert collector.aggregators[common_branch_key] is common_aggregator
 
     output_info = merged_collector.get_output_info(None, None)
-    outputs = {'common_input': np.array(0)}
-    outputs.update({f'input_{idx + 1}': np.array(idx + 1) for idx, _ in enumerate(collectors[:-1])})
+    outputs = {'common_input': NNCFTensor(np.array(0))}
+    outputs.update({f'input_{idx + 1}': NNCFTensor(np.array(idx + 1)) for idx, _ in enumerate(collectors[:-1])})
     target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     merged_collector.register_inputs(target_inputs)
 
@@ -190,8 +206,8 @@ def test_merged_tensor_collector():
 
         statistic = collector.get_statistics()
         assert len(statistic) == 2
-        assert statistic['common'] == np.array(0)
-        assert statistic['unique'] == np.array(idx + 1)
+        assert statistic['common'] == NNCFTensor(np.array(0))
+        assert statistic['unique'] == NNCFTensor(np.array(idx + 1))
 
 
 def test_ambigous_container_key():
@@ -236,7 +252,7 @@ def test_multiple_branch_reducer():
                          ['target_node_name_0_reducer_output_name_0',
                           'target_node_name_0_reducer_output_name_1',
                           'target_node_name_0_reducer_output_name_2'])]
-    inputs = {name: np.array(i) for i, name in enumerate(ref_output_info[0][1])}
+    inputs = {name: NNCFTensor(np.array(i)) for i, name in enumerate(ref_output_info[0][1])}
 
     output_info = collector.get_output_info(target_node_name, 0)
     assert output_info == ref_output_info
@@ -244,7 +260,7 @@ def test_multiple_branch_reducer():
     target_inputs = collector.get_tensor_collector_inputs(inputs, output_info)
     collector.register_inputs(target_inputs)
 
-    ref_stats = {'0': np.array(0), '1': np.array(1)}
+    ref_stats = {'0': NNCFTensor(np.array(0)), '1': NNCFTensor(np.array(1))}
     stats = collector.get_statistics()
     assert len(ref_stats) == len(stats)
     for key in ref_stats:
