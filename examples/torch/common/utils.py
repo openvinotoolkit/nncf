@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import datetime
 import json
 import logging
 import pdb
@@ -91,7 +90,7 @@ class SafeMLFLow:
         self.is_suitable_mode = 'train' in config.mode
         log_dir = Path(config.log_dir)
         root_log_dir = log_dir.parent.parent
-        self.safe_call('set_tracking_uri', (root_log_dir / 'mlruns').as_uri())
+        self.safe_call('set_tracking_uri', (root_log_dir / 'mlruns').resolve().as_uri())
 
         self.safe_call('get_experiment_by_name', config.name). \
             or_else_call(lambda: self.safe_call('create_experiment', config.name))
@@ -113,7 +112,7 @@ class SafeMLFLow:
 
     def safe_call(self, func: str, *args, **kwargs) -> Maybe:
         """ Calls mlflow method, if it's enabled and safely does nothing in the opposite case"""
-        return Maybe.from_value(self._get_mlflow()).bind(
+        return Maybe.from_optional(self._get_mlflow()).bind(
             lambda obj: Maybe.from_value(getattr(obj, func)(*args, **kwargs)))
 
     def end_run(self):
@@ -196,14 +195,13 @@ def make_link(src, dst, exists_ok=True):
         os.link(src, dst)
 
 
-def make_additional_checkpoints(checkpoint_path, is_best, epoch, config):
+def make_additional_checkpoints(checkpoint_path: str, is_best: bool, epoch: int, config: SampleConfig):
     if is_best:
-        best_path = osp.join(config.checkpoint_save_dir, '{}_best.pth'.format(config.name))
-        copyfile(checkpoint_path, best_path)
+        best_path = Path(config.checkpoint_save_dir) / f'{config.name}_best.pth'
+        copyfile(checkpoint_path, str(best_path))
     if epoch % config.save_freq == 0:
-        intermediate_checkpoint = osp.join(config.intermediate_checkpoints_path,
-                                           'epoch_{}.pth'.format(epoch))
-        copyfile(checkpoint_path, intermediate_checkpoint)
+        intermediate_checkpoint = Path(config.intermediate_checkpoints_path) / f'epoch_{epoch}.pth'
+        copyfile(checkpoint_path, str(intermediate_checkpoint))
 
 
 # pylint:disable=no-member

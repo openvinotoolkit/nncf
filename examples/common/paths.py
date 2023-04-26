@@ -17,8 +17,7 @@ from examples.common.sample_config import SampleConfig
 
 
 def configure_paths(config: SampleConfig,
-                    run_name: str,
-                    with_intermediate_checkpoints_dir=False):
+                    run_name: str):
     config.name = run_name
     d = datetime.datetime.now()
     run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
@@ -35,7 +34,6 @@ def configure_paths(config: SampleConfig,
     checkpoint_save_dir.mkdir(parents=True, exist_ok=True)
 
     # create aux dirs
-    if with_intermediate_checkpoints_dir:
-        intermediate_checkpoints_path = log_dir / 'intermediate_checkpoints'
-        intermediate_checkpoints_path.mkdir(parents=True, exist_ok=True)
-        config.intermediate_checkpoints_path = str(intermediate_checkpoints_path)
+    intermediate_checkpoints_path = log_dir / 'intermediate_checkpoints'
+    intermediate_checkpoints_path.mkdir(parents=True, exist_ok=True)
+    config.intermediate_checkpoints_path = str(intermediate_checkpoints_path)

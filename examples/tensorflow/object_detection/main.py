@@ -71,7 +71,7 @@ def get_config_from_argv(argv, parser):
     predefined_config = get_predefined_config(config_from_json.model)
 
     predefined_config.update(config_from_json)
-    configure_paths(predefined_config, get_run_name(predefined_config), with_intermediate_checkpoints_dir=True)
+    configure_paths(predefined_config, get_run_name(predefined_config))
 
     return predefined_config
 

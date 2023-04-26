@@ -74,7 +74,7 @@ def get_argument_parser():
 def get_config_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
     config = create_sample_config(args, parser)
-    configure_paths(config, get_run_name(config), with_intermediate_checkpoints_dir=True)
+    configure_paths(config, get_run_name(config))
     return config
 
 

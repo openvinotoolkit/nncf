@@ -89,7 +89,7 @@ def get_config_from_argv(argv, parser):
 
     sample_config.update(predefined_config)
     sample_config.update(config_from_json)
-    configure_paths(sample_config, get_run_name(sample_config), with_intermediate_checkpoints_dir=True)
+    configure_paths(sample_config, get_run_name(sample_config))
 
     return sample_config
 
