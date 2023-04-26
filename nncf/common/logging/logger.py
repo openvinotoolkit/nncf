@@ -47,7 +47,7 @@ def set_log_file(filename: str):
 
     :param filename: Path to the file to save the log.
     """
-    file_handler = logging.FileHandler(filename)
+    file_handler = logging.FileHandler(filename, encoding='utf-8')
     file_handler.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
     nncf_logger.addHandler(file_handler)
 

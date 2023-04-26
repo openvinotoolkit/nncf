@@ -20,6 +20,7 @@ import tensorflow as tf
 
 from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
+from examples.tensorflow.common.utils import get_run_name
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.initialization import register_default_init_args
@@ -36,7 +37,7 @@ from examples.tensorflow.common.optimizer import build_optimizer
 from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
 from examples.common.sample_config import SampleConfig
 from examples.tensorflow.common.scheduler import build_scheduler
-from examples.tensorflow.common.utils import configure_paths
+from examples.common.paths import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_learning_rate
 from examples.tensorflow.common.utils import print_args
@@ -87,7 +88,7 @@ def get_config_from_argv(argv, parser):
 
     sample_config.update(predefined_config)
     sample_config.update(config_from_json)
-    configure_paths(sample_config)
+    configure_paths(sample_config, get_run_name(sample_config))
 
     return sample_config
 

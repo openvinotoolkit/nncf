@@ -27,7 +27,7 @@ from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.optimizer import get_default_weight_decay
 from examples.common.sample_config import SampleConfig
-from examples.torch.common.utils import get_name
+from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
@@ -36,6 +36,7 @@ from nncf.common.hardware.config import HWConfigType
 from nncf.config import NNCFConfig
 from tests.shared.command import arg_list_from_arg_dict
 from tests.shared.config_factory import ConfigFactory
+from tests.shared.helpers import remove_line_breaks
 from tests.shared.paths import ROOT_PYTHONPATH_ENV
 from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
@@ -236,7 +237,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
     runner.run()
-    last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
+    last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     if 'compression' in config["sample_config"]:
         allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
@@ -269,7 +270,7 @@ def test_trained_model_eval(request, config, tmp_path, multiprocessing_distribut
 
     ckpt_path = os.path.join(case_common_dirs["checkpoint_save_dir"],
                              "distributed" if multiprocessing_distributed else "data_parallel",
-                             get_name(config_factory.config) + "_last.pth")
+                             get_run_name(config_factory.config) + "_last.pth")
     args = {
         "--mode": "test",
         "--data": config["dataset_path"],
@@ -293,7 +294,7 @@ def test_trained_model_eval(request, config, tmp_path, multiprocessing_distribut
 def get_resuming_checkpoint_path(config_factory, multiprocessing_distributed, checkpoint_save_dir):
     return os.path.join(checkpoint_save_dir,
                         "distributed" if multiprocessing_distributed else "data_parallel",
-                        get_name(config_factory.config) + "_last.pth")
+                        get_run_name(config_factory.config) + "_last.pth")
 
 
 @pytest.mark.dependency()
@@ -332,7 +333,7 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
     runner.run()
-    last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
+    last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     if 'compression' in config["sample_config"]:
         allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
@@ -569,10 +570,10 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
     runner.run()
 
     from glob import glob
-    time_dir_1 = glob(os.path.join(log_dir, get_name(config_factory.config), '*/'))[0].split('/')[-2]
-    time_dir_2 = glob(os.path.join(log_dir, get_name(config_factory.config), time_dir_1,
+    time_dir_1 = glob(os.path.join(log_dir, get_run_name(config_factory.config), '*/'))[0].split('/')[-2]
+    time_dir_2 = glob(os.path.join(log_dir, get_run_name(config_factory.config), time_dir_1,
                                    'accuracy_aware_training', '*/'))[0].split('/')[-2]
-    last_checkpoint_path = os.path.join(log_dir, get_name(config_factory.config), time_dir_1,
+    last_checkpoint_path = os.path.join(log_dir, get_run_name(config_factory.config), time_dir_1,
                                         'accuracy_aware_training',
                                         time_dir_2, 'acc_aware_checkpoint_last.pth')
 
@@ -598,4 +599,4 @@ def test_eval_only_config_fails_to_train(tmp_path, sample_type):
     runner = Command(create_command_line(args, sample_type), env=ROOT_PYTHONPATH_ENV)
     return_code = runner.run(assert_returncode_zero=False)
     assert return_code != 0
-    assert EVAL_ONLY_ERROR_TEXT in "".join(runner.output)
+    assert remove_line_breaks(EVAL_ONLY_ERROR_TEXT) in remove_line_breaks("".join(runner.output))

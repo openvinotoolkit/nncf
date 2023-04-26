@@ -41,9 +41,9 @@ from examples.torch.common.optimizer import make_optimizer
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
-from examples.torch.common.utils import configure_paths
+from examples.common.paths import configure_paths
 from examples.torch.common.utils import create_code_snapshot
-from examples.torch.common.utils import get_name
+from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_on_first_rank
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import log_common_mlflow_params
@@ -94,7 +94,7 @@ def main(argv):
     args = parse_args(parser, argv)
     config = create_sample_config(args, parser)
 
-    configure_paths(config)
+    configure_paths(config, get_run_name(config))
     source_root = Path(__file__).absolute().parents[2]  # nncf root
     create_code_snapshot(source_root, osp.join(config.log_dir, "snapshot.tar.gz"))
 
@@ -420,7 +420,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
         if is_on_first_rank(config):
             logger.info('Saving state, epoch: {}'.format(epoch))
 
-            checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_name(config)))
+            checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_run_name(config)))
             torch.save({
                 MODEL_STATE_ATTR: net.state_dict(),
                 COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
