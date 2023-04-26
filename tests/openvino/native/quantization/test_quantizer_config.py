@@ -14,11 +14,11 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
-from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSumMetatype
+from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
+from nncf.openvino.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator

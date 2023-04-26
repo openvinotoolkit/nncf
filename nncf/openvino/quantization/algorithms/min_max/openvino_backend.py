@@ -11,55 +11,55 @@
  limitations under the License.
 """
 
-import numpy as np
-from typing import Dict, List, Tuple, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
-from nncf.parameters import ModelType
-from nncf.parameters import TargetDevice
-from nncf.scopes import IgnoredScope
+import numpy as np
+
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTopKMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVNonMaxSuppressionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReadValueMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVPowerMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSqueezeMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubtractMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSquaredDifferenceMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMVNMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
-from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.hardware.config import OVHWConfig
-from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
-from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.experimental.openvino_native.statistics.collectors import OV_REDUCERS_MAP
-from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
-from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMVNMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVNonMaxSuppressionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVPowerMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVReadValueMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSquaredDifferenceMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSqueezeMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVTopKMetatype
+from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
+from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.hardware.config import OVHWConfig
+from nncf.openvino.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
+from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
+from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
+from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
-from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.quantization.range_estimator import StatisticsType
+from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.advanced_parameters import RangeEstimatorParameters
+from nncf.quantization.advanced_parameters import StatisticsType
+from nncf.scopes import IgnoredScope
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)

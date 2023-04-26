@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import sys
 from copy import deepcopy
 from typing import Any, Callable, Iterable, Optional
 

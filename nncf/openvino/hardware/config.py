@@ -11,12 +11,11 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Type
+from typing import List, Type
 
 from nncf.common.graph import OperatorMetatype
 from nncf.common.hardware.config import HWConfig
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import get_operator_metatypes
+from nncf.openvino.graph.metatypes.openvino_metatypes import get_operator_metatypes
 
 
 class OVHWConfig(HWConfig):

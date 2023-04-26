@@ -11,16 +11,16 @@
  limitations under the License.
 """
 
-import pytest
 import numpy as np
+import pytest
 
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.openvino_native.graph.node_utils import get_weight_value
-from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
 from nncf.common.factory import NNCFGraphFactory
-from tests.openvino.native.models import FPModel
-from tests.openvino.native.models import ConvNotBiasModel
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.node_utils import get_weight_value
+from nncf.openvino.graph.node_utils import is_node_with_bias
 from tests.openvino.native.models import ConvModel
+from tests.openvino.native.models import ConvNotBiasModel
+from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import MatMul2DNotBiasModel
 

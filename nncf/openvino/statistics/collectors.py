@@ -11,37 +11,37 @@
  limitations under the License.
 """
 
-from typing import Optional, Union, List, Deque, Callable, Any
+from typing import Any, Callable, Deque, List, Optional, Union
 
 import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
-from nncf.experimental.openvino_native.tensor import OVNNCFTensor
-from nncf.experimental.common.tensor_statistics.collectors import InplaceInsertionFNType
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
-from nncf.experimental.common.tensor_statistics.collectors import MinReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.experimental.common.tensor_statistics.collectors import InplaceInsertionFNType
+from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.openvino_native.statistics.statistics import OVMeanTensorStatistic
-from nncf.experimental.openvino_native.statistics.statistics import OVBatchTensorStatistic
-from nncf.experimental.openvino_native.graph.node_utils import get_reducer_output_node_names
-from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_max_op
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_min_op
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_op
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_batch_mean_op
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_per_ch
+from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
+from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
+from nncf.openvino.graph.node_utils import get_inplace_max_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
+from nncf.openvino.graph.node_utils import get_inplace_min_op
+from nncf.openvino.graph.node_utils import get_reducer_output_node_names
+from nncf.openvino.graph.node_utils import get_result_node_name
+from nncf.openvino.statistics.statistics import OVBatchTensorStatistic
+from nncf.openvino.statistics.statistics import OVMeanTensorStatistic
+from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.advanced_parameters import StatisticsType
 
 

@@ -11,21 +11,20 @@
  limitations under the License.
 """
 
-import pytest
 import numpy as np
+import pytest
 
-from nncf.experimental.openvino_native.tensor import OVNNCFTensor
-from nncf.experimental.openvino_native.statistics.collectors import OVNoopReducer
-from nncf.experimental.openvino_native.statistics.collectors import OVMinReducer
-from nncf.experimental.openvino_native.statistics.collectors import OVMaxReducer
-from nncf.experimental.openvino_native.statistics.collectors import OVAbsMaxReducer
-from nncf.experimental.openvino_native.statistics.collectors import OVMeanReducer
-from nncf.experimental.openvino_native.statistics.collectors import OVQuantileReducer
-from nncf.experimental.openvino_native.statistics.collectors import OVAbsQuantileReducer
-from nncf.experimental.openvino_native.statistics.collectors import OVBatchMeanReducer
-from nncf.experimental.openvino_native.statistics.collectors import OVMeanPerChanelReducer
-from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
-
+from nncf.openvino.statistics.collectors import OVAbsMaxReducer
+from nncf.openvino.statistics.collectors import OVAbsQuantileReducer
+from nncf.openvino.statistics.collectors import OVBatchMeanReducer
+from nncf.openvino.statistics.collectors import OVMaxReducer
+from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
+from nncf.openvino.statistics.collectors import OVMeanReducer
+from nncf.openvino.statistics.collectors import OVMinReducer
+from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
+from nncf.openvino.statistics.collectors import OVNoopReducer
+from nncf.openvino.statistics.collectors import OVQuantileReducer
+from nncf.openvino.tensor import OVNNCFTensor
 from tests.experimental.common.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 

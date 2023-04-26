@@ -11,40 +11,39 @@
  limitations under the License.
 """
 
-import pytest
-import numpy as np
-import openvino.runtime as ov
-from openvino.runtime import opset9 as opset
 from dataclasses import dataclass
-from typing import Tuple, List, Callable
+from typing import Callable, List, Tuple
+
+import numpy as np
+from openvino.runtime import opset9 as opset
+import openvino.runtime as ov
+import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.openvino.graph.model_transformer import OVModelTransformer
+from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
+from nncf.openvino.graph.node_utils import get_inplace_max_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
+from nncf.openvino.graph.node_utils import get_inplace_min_op
+from nncf.openvino.graph.node_utils import get_reduce_node_name
+from nncf.openvino.graph.node_utils import get_result_node_name
+from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
+from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
+from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_max_op
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_min_op
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_op
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_batch_mean_op
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_per_ch
-from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
-from nncf.experimental.openvino_native.graph.node_utils import get_reduce_node_name
-
-
-from tests.openvino.native.models import LinearModel
+from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
+from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import FPModel
+from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import QuantizedModel
 from tests.openvino.native.models import SimpleSplitModel
 from tests.openvino.native.models import ZeroRankEltwiseModel
-from tests.openvino.native.common import compare_nncf_graphs
-from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 
 REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
