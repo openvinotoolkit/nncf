@@ -187,8 +187,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
 
         collector = TensorCollector(OVMinMaxTensorStatistic)
-        container_keys = [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]
-        for i, params in enumerate([range_estimator_params.min, range_estimator_params.max]):
+        for params, container_key in zip([range_estimator_params.min, range_estimator_params.max],
+                                         [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
             if not params.statistics_type in OV_REDUCERS_MAP:
                 raise RuntimeError(f'Statistic type: {params.statistics_type}'
                                    ' is not supported for OpenVino PTQ backend yet.')
@@ -203,7 +203,11 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             }
             if params.statistics_type in [StatisticsType.QUANTILE,
                                           StatisticsType.ABS_QUANTILE]:
-                kwargs.update({'quantile': [i + (1 - 2 * i) * params.quantile_outlier_prob]})
+                if container_key == OVMinMaxTensorStatistic.MIN_STAT:
+                    quantile = params.quantile_outlier_prob
+                else:
+                    quantile = 1 - params.quantile_outlier_prob
+                kwargs.update({'quantile': [quantile]})
             # TODO(dlyakhov): merge two quantile aggregators in one
             statistic_type = params.statistics_type
             if use_abs_max and statistic_type == StatisticsType.MAX:
@@ -216,7 +220,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             }
             aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
-            collector.register_statistic_branch(container_keys[i], reducer, aggregator)
+            collector.register_statistic_branch(container_key, reducer, aggregator)
         return collector
 
     @staticmethod
