@@ -20,11 +20,9 @@ from openvino._offline_transformations import compress_quantize_weights_transfor
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import get_backend
-from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
-from nncf.openvino.quantization.quantize import quantize_impl
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
