@@ -18,6 +18,17 @@ from typing import Optional
 
 
 class StatisticsType(Enum):
+    """
+    Enumeration of different types of statistics that are used to collect per sample
+    statistics for activations and weights of the model.
+
+    :param MAX: The maximum value in a tensor.
+    :param MIN: The minimum value in a tensor.
+    :param ABS_MAX: The maximum absolute value in a tensor.
+    :param QUANTILE: A specific quantile value in a tensor.
+    :param ABS_QUANTILE: A specific quantile value in the absolute tensor.
+    :param MEAN: The mean value of a tensor.
+    """
     MAX = 'max'
     MIN = 'min'
     ABS_MAX = 'abs_max'
@@ -27,6 +38,17 @@ class StatisticsType(Enum):
 
 
 class AggregatorType(Enum):
+    """
+    Enumeration of different types of aggregators that are used to aggregate per sample
+    statistics for activations and weights of the model.
+
+    :param MEAN: The mean value of a set of tensors.
+    :param MAX: The maximum value of a set of tensors.
+    :param MIN: The minimum value of a set of tensors.
+    :param MEDIAN: The median value of a set of tensors.
+    :param MEAN_NO_OUTLIERS: The mean value of a set of tensors with outliers removed.
+    :param MEDIAN_NO_OUTLIERS: The median value of a set of tensors with outliers removed.
+    """
     MEAN = 'mean'
     MAX = 'max'
     MIN = 'min'
@@ -37,6 +59,16 @@ class AggregatorType(Enum):
 
 @dataclass
 class StatisticsCollectorParameters:
+    """
+    Contains parameters for collecting statistics for activations and weights of
+    the model.
+
+    :param statistics_type: The type of per sample statistics to collect.
+    :param aggregator_type: The type of aggregator of per sample statistics.
+    :param clipping_value: The value to use for clipping the input tensors before
+        collecting statistics.
+    :param quantile_outlier_prob: The outlier probability for quantile statistics.
+    """
     statistics_type: Optional[StatisticsType] = None
     aggregator_type: Optional[AggregatorType] = None
     clipping_value: Optional[float] = None
@@ -45,6 +77,13 @@ class StatisticsCollectorParameters:
 
 @dataclass
 class RangeEstimatorParameters:
+    """
+    Contains parameters for estimating the range of activations and weights of
+    the model.
+
+    :param min: The parameters for estimating the lower bound of the range.
+    :param max: The Parameters for estimating the upper bound of the range.
+    """
     min: StatisticsCollectorParameters = field(
         default_factory=StatisticsCollectorParameters)
     max: StatisticsCollectorParameters = field(
@@ -52,6 +91,16 @@ class RangeEstimatorParameters:
 
 
 class RangeEstimatorParametersSet:
+    """
+    A class for specifying different sets of range estimator parameters.
+
+    :param MINMAX: The range estimator parameters where the low bound of the range is
+        calculated as global minimum of values of input tensors, the upper bound of
+        the range as global maxima of the same values.
+    :param MEAN_MINMAX: The range estimator parameters where the low bound of the range
+        is calculated as average (across every sample) of minima of input tensors,
+        the upper bound of the range as average of maxima of the same values.
+    """
     MINMAX = RangeEstimatorParameters(
         min=StatisticsCollectorParameters(
             statistics_type=StatisticsType.MIN,

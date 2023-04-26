@@ -110,39 +110,41 @@ class TemplateTestStatisticsAggregator:
         in_ch = d.shape[0]
         return np.stack([np.stack([d[i]] * in_ch, axis=0) for i in range(in_ch)], axis=0)
 
-    @pytest.mark.parametrize('test_parameters, ',
-                              # Activation collectors
-                             (
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
-                                           QuantizationMode.ASYMMETRIC, False, 64.5, -63.5)),
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.ASYMMETRIC, True,
-                                              np.array((1, 0.55, 64.5)), np.array((-4.5, 0, -63.5)))),
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.SYMMETRIC, True,
-                                              np.array((5.5, 1, 64.5)), np.array((-4.5, 0, -63.5)))),
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.ASYMMETRIC, False, 128, -128)),
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.SYMMETRIC, False, 128, -128)),
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.ASYMMETRIC, True,
-                                              np.array((1, 1, 128)), np.array((-10, -1, -128)))),
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.SYMMETRIC, True,
-                                              np.array((10, 1, 128)), np.array((-10, -1, -128)))),
-                              # Weight collectors
-                              ((MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                                              QuantizationMode.SYMMETRIC, False, 128, -128))),
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                                              QuantizationMode.ASYMMETRIC, False, 128, -128)),
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                                              QuantizationMode.SYMMETRIC, True,
-                                              np.array((10, 1, 128)), np.array((-10, -1, -128)))),
-                              (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                                              QuantizationMode.ASYMMETRIC, True,
-                                              np.array((1, 0.1, 128)), np.array((-10, -1, -128)))),
-                             ))
+    @pytest.mark.parametrize(
+        'test_parameters, ',
+        # Activation collectors
+        (
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
+                              QuantizationMode.ASYMMETRIC, False, 64.5, -63.5)),
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
+                              QuantizationMode.ASYMMETRIC, True,
+                              np.array((1, 0.55, 64.5)), np.array((-4.5, 0, -63.5)))),
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
+                              QuantizationMode.SYMMETRIC, True,
+                              np.array((5.5, 1, 64.5)), np.array((-4.5, 0, -63.5)))),
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
+                              QuantizationMode.ASYMMETRIC, False, 128, -128)),
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
+                              QuantizationMode.SYMMETRIC, False, 128, -128)),
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
+                              QuantizationMode.ASYMMETRIC, True,
+                              np.array((1, 1, 128)), np.array((-10, -1, -128)))),
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
+                              QuantizationMode.SYMMETRIC, True,
+                              np.array((10, 1, 128)), np.array((-10, -1, -128)))),
+        # Weight collectors
+        ((MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
+                               QuantizationMode.SYMMETRIC, False, 128, -128))),
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
+                              QuantizationMode.ASYMMETRIC, False, 128, -128)),
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
+                              QuantizationMode.SYMMETRIC, True,
+                              np.array((10, 1, 128)), np.array((-10, -1, -128)))),
+        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
+                              QuantizationMode.ASYMMETRIC, True,
+                              np.array((1, 0.1, 128)), np.array((-10, -1, -128)))),
+        )
+    )
     def test_statistics_aggregator_min_max(
             self, test_parameters: MinMaxTestParameters, dataset_samples,
             is_stat_in_shape_of_scale, inplace_statistics):

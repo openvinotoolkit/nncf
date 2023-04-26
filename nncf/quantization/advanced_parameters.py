@@ -11,9 +11,10 @@
  limitations under the License.
 """
 
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
+from dataclasses import is_dataclass
 from enum import Enum
 import sys
 from typing import Any, ClassVar, Dict, Optional, Protocol
@@ -26,17 +27,20 @@ from nncf.quantization.range_estimator import StatisticsType
 
 class OverflowFix(Enum):
     """
-    This option controls whether to apply the overflow issue fix for the 8-bit quantization.
+    This option controls whether to apply the overflow issue fix for the 8-bit
+    quantization.
 
-    8-bit instructions of older Intel CPU generations (based on SSE, AVX-2, and AVX-512 instruction sets)
-    suffer from the so-called saturation (overflow) issue: in some configurations,
-    the output does not fit into an intermediate buffer and has to be clamped.
-    This can lead to an accuracy drop on the aforementioned architectures.
-    The fix set to use only half a quantization range to avoid overflow for specific operations.
+    8-bit instructions of older Intel CPU generations (based on SSE, AVX-2, and AVX-512
+    instruction sets) suffer from the so-called saturation (overflow) issue: in some
+    configurations, the output does not fit into an intermediate buffer and has to be
+    clamped. This can lead to an accuracy drop on the aforementioned architectures.
+    The fix set to use only half a quantization range to avoid overflow for specific
+    operations.
 
-    If you are going to infer the quantized model on the architectures with AVX-2, and AVX-512 instruction sets,
-    we recommend using FIRST_LAYER option as lower aggressive fix of the overflow issue.
-    If you still face significant accuracy drop, try using ENABLE, but this may get worse the accuracy.
+    If you are going to infer the quantized model on the architectures with AVX-2, and
+    AVX-512 instruction sets, we recommend using FIRST_LAYER option as lower aggressive
+    fix of the overflow issue. If you still face significant accuracy drop, try using
+    ENABLE, but this may get worse the accuracy.
 
     :param ENABLE: All weights of all types of Convolutions and MatMul operations
         are be quantized using a half of the 8-bit quantization range.
@@ -51,6 +55,23 @@ class OverflowFix(Enum):
 
 @dataclass
 class QuantizationParameters:
+    """
+    Contains quantization parameters for weights or activations.
+
+    :param num_bits: The number of bits to use for quantization.
+    :param mode: The quantization mode to use, such as 'symmetric', 'asymmetric', etc.
+    :param signedness_to_force: Whether to force the weights or activations to be
+        signed (True), unsigned (False)
+    :param per_channel: True if per-channel quantization is used, and False if
+        per-tensor quantization is used.
+    :param narrow_range: Whether to use a narrow quantization range. If narrow range is
+        False then the input will be quantized into quantizaiton range
+        [0; 2^num_bits - 1] for unsigned qunatization and
+        [-2^(num_bits - 1); 2^(num_bits - 1) - 1] for signed quantization, otherwise
+        [0; 2^num_bits - 2] for unsigned qunatization and
+        [-2^(num_bits - 1) + 1; 2^(num_bits - 1) - 1] for signed quantization
+        when it is True.
+    """
     num_bits: Optional[int] = None
     mode: Optional[QuantizationMode] = None
     signedness_to_force: Optional[bool] = None
@@ -60,12 +81,38 @@ class QuantizationParameters:
 
 @dataclass
 class AdvancedBiasCorrectionParameters:
+    """
+    Contains advanced parameters for fine-tuning bias correction algorithm.
+
+    :param apply_for_all_nodes: Whether to apply the correction to all nodes in the
+        model, or only to nodes that have a bias.
+    :param threshold: The threshold value determines the maximum bias correction value.
+        The bias correction are skipped If the value is higher than threshold.
+    """
     apply_for_all_nodes: bool = False
     threshold: Optional[float] = None
 
 
 @dataclass
 class AdvancedQuantizationParameters:
+    """
+    Contains advanced parameters for fine-tuning qunatization algorithm.
+
+    :param overflow_fix: This option controls whether to apply the overflow issue fix
+        for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
+    :param quantize_outputs: Whether to insert additional quantizers right before each
+        of the model outputs.
+    :param inplace_statistics: Defines wheather to calculate quantizers statistics by
+        backend graph operations or by default Python implementation, defaults to True.
+    :param disable_bias_correction: Whether to disable the bias correction.
+    :param activations_quantization_params: Quantization parameters for activations.
+    :param weights_quantization_params: Quantization parameters for weights.
+    :param activations_range_estimator_params: Range estimator parameters for
+        activations.
+    :param weights_range_estimator_params: Range estimator parameters for weights.
+    :param bias_correction_params: Advanced bias correction paramters.
+    :param backend_params: Backend-specific parameters.
+    """
     # General parameters
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
     quantize_outputs: bool = False
@@ -94,6 +141,23 @@ class AdvancedQuantizationParameters:
 
 @dataclass
 class AdvancedAccuracyRestorerParameters:
+    """
+    Contains advanced parameters for fine-tuning the accuracy restorer algorithm.
+
+    :param max_num_iterations: The maximum number of iterations of the algorithm.
+        In other words, the maximum number of layers that may be reverted back to
+        floating-point precision. By default, it is limited by the overall number of
+        quantized layers.
+    :param tune_hyperparams: Whether to tune of quantization parameters as a
+        preliminary step before reverting layers back to the floating-point precision.
+        It can bring an additional boost in performance and accuracy, at the cost of
+        increased overall quantization time. The default value is `False`.
+    :param convert_to_mixed_preset: Whether to convert the model to mixed mode if
+        the accuracy criteria of the symmetrically quantized model are not satisfied.
+        The default value is `False`.
+    :param ranking_subset_size: Size of a subset that is used to rank layers by their
+        contribution to the accuracy drop.
+    """
     max_num_iterations: int = sys.maxsize
     tune_hyperparams: bool = False
     convert_to_mixed_preset: bool = False
@@ -131,16 +195,16 @@ def convert_to_dict_recursively(params: IsDataclass) -> Dict[str, Any]:
     """
     if params is None:
         return {}
-    
+
     result = {}
     for f in fields(params):
         value = getattr(params, f.name)
         if is_dataclass(value):
-            result[f.name] = asdict(value)
+            result[f.name] = convert_to_dict_recursively(value)
         if isinstance(value, Enum):
             result[f.name] = value.value
         result[f.name] = value
-        
+
     return result
 
 
@@ -150,7 +214,6 @@ def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> D
 
     :param params: Quantization parameters
     :return: Quantization parameters as dict in the legacy format
-
     """
     result = {}
     if params.num_bits is not None:
@@ -173,7 +236,6 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
 
     :param params: Range estimator parameters
     :return: range estimator parameters as dict in the legacy format
-
     """
     if params.min.clipping_value is not None or params.max.clipping_value is not None:
         raise RuntimeError(
