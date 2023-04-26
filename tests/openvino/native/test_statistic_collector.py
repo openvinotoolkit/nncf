@@ -13,7 +13,7 @@
 
 import numpy as np
 
-from nncf.experimental.openvino_native.tensor import OVNNCFTensor
+from nncf.openvino.tensor import OVNNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from tests.experimental.common.test_statistic_collector import DummyTensorReducer
 from tests.experimental.common.test_statistic_collector import DummyTensorAggregator
