@@ -16,8 +16,8 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 
 def get_conv(input_1, node_name, input_shape, kernel=None):

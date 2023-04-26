@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, Callable, Tuple, List, Type
+from typing import Callable, List, Optional, Tuple, Type
 
 import numpy as np
 import openvino.runtime as ov
@@ -19,10 +19,10 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
+from nncf.openvino.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 

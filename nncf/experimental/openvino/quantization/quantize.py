@@ -11,23 +11,27 @@
  limitations under the License.
 """
 
-import sys
-from typing import Callable, Any, Iterable, Optional
+from copy import deepcopy
+from typing import Any, Callable, Iterable, Optional
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
-from nncf.data.dataset import Dataset
 from nncf.common.logging import nncf_logger
-from nncf.common.utils.backend import get_backend
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.scopes import IgnoredScope
+from nncf.common.utils.backend import get_backend
+from nncf.common.utils.timer import timer
+from nncf.data.dataset import Dataset
+from nncf.openvino.quantization.backend_parameters import BackendParameters
+from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
+from nncf.openvino.quantization.quantize import quantize_impl
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
+from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
-from nncf.openvino.quantization.quantize import quantize_impl
-from nncf.common.utils.timer import timer
+from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
+from nncf.scopes import IgnoredScope
 
 
 def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model) -> None:
@@ -62,23 +66,45 @@ def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model)
                                f'num_matches: {num_matches}, name: {initial_name}')
 
 
-def quantize_with_accuracy_control(model: ov.Model,
-                                   calibration_dataset: Dataset,
-                                   validation_dataset: Dataset,
-                                   validation_fn: Callable[[Any, Iterable[Any]], float],
-                                   max_drop: float = 0.01,
-                                   preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                                   target_device: TargetDevice = TargetDevice.ANY,
-                                   subset_size: int = 300,
-                                   fast_bias_correction: bool = True,
-                                   model_type: Optional[ModelType] = None,
-                                   ignored_scope: Optional[IgnoredScope] = None,
-                                   max_num_iterations: int = sys.maxsize) -> ov.Model:
+def quantize_with_accuracy_control(
+    model: ov.Model,
+    calibration_dataset: Dataset,
+    validation_dataset: Dataset,
+    validation_fn: Callable[[Any, Iterable[Any]], float],
+    max_drop: float = 0.01,
+    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
+    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via POT.
     """
-    quantized_model = quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                                    fast_bias_correction, model_type, ignored_scope, compress_weights=False)
+    if advanced_accuracy_restorer_parameters is None:
+        advanced_accuracy_restorer_parameters = AdvancedAccuracyRestorerParameters()
+
+    if advanced_accuracy_restorer_parameters.tune_hyperparams:
+        raise RuntimeError('Quantization algorithm with accuracy control from the '
+                           'OpenVINO backend does not support tuning hyperparams yet')
+    if advanced_accuracy_restorer_parameters.convert_to_mixed_preset:
+        raise RuntimeError('Quantization algorithm with accuracy control from the '
+                           'OpenVINO backend does not support the option to convert '
+                           'to the mixed preset yet')
+
+    compress_weights = is_weight_compression_needed(advanced_quantization_parameters)
+
+    if advanced_quantization_parameters is None:
+        copied_parameters = AdvancedQuantizationParameters()
+    else:
+        copied_parameters = deepcopy(advanced_quantization_parameters)
+    copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
+
+    quantized_model = quantize_impl(
+        model, calibration_dataset, preset, target_device, subset_size,
+        fast_bias_correction, model_type, ignored_scope, copied_parameters)
 
     # We need to match constant names when the
     # quantized model was got using POT. For example, we have the
@@ -103,11 +129,19 @@ def quantize_with_accuracy_control(model: ov.Model,
                                          validation_dataset.get_data())
     nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
 
-    accuracy_aware_loop = QuantizationAccuracyRestorer(max_num_iterations=max_num_iterations,
-                                                       max_drop=max_drop)
+    ranking_subset_size = subset_size
+    if advanced_accuracy_restorer_parameters.ranking_subset_size is not None:
+        ranking_subset_size = advanced_accuracy_restorer_parameters.ranking_subset_size
+
+    accuracy_aware_loop = QuantizationAccuracyRestorer(
+        ranking_subset_size=ranking_subset_size,
+        max_num_iterations=advanced_accuracy_restorer_parameters.max_num_iterations,
+        max_drop=max_drop
+    )
     quantized_model = accuracy_aware_loop.restore_accuracy(model, initial_metric,
                                                            quantized_model, quantized_metric,
                                                            validation_dataset, validation_fn)
-    compress_quantize_weights_transformation(quantized_model)
+    if compress_weights:
+        compress_quantize_weights_transformation(quantized_model)
 
     return quantized_model

@@ -21,7 +21,7 @@ from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.experimental.openvino_native.graph.node_utils import InplaceInsertionFnType
+from nncf.openvino.graph.node_utils import InplaceInsertionFnType
 
 
 class OVTargetPoint(TargetPoint):

@@ -19,7 +19,6 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
@@ -42,10 +41,10 @@ from tests.common.quantization.metatypes import SoftmaxTestMetatype
 
 @pytest.mark.parametrize('target_device', TargetDevice)
 def test_target_device(target_device):
-    algo = PostTrainingQuantization(PostTrainingQuantizationParameters(target_device=target_device))
+    algo = PostTrainingQuantization(target_device=target_device)
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
-    assert min_max_algo._parameters.target_device == target_device
+    assert min_max_algo._target_device == target_device
 
 
 class TestPTQParams(TemplateTestPTQParams):
@@ -78,10 +77,10 @@ class TestPTQParams(TemplateTestPTQParams):
     @pytest.fixture(scope='session')
     def test_params(self):
         return {
-            'test_range_type_per_tensor':
+            'test_range_estimator_per_tensor':
                 {'model': LinearModel().onnx_model,
                  'stat_points_num': 5},
-            'test_range_type_per_channel':
+            'test_range_estimator_per_channel':
                 {'model': OneDepthwiseConvolutionalModel().onnx_model,
                  'stat_points_num': 2},
             'test_quantize_outputs':

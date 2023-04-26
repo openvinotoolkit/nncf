@@ -17,9 +17,7 @@ import datetime
 import json
 import os
 import tarfile
-
 import numpy as np
-import resource
 from os import path as osp
 from pathlib import Path
 import atexit
@@ -30,6 +28,7 @@ from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
 from examples.tensorflow.common.logger import logger as default_logger
 from examples.common.sample_config import CustomArgumentParser
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
+from nncf.common.utils.os import is_linux
 
 GENERAL_LOG_FILE_NAME = "output.log"
 NNCF_LOG_FILE_NAME = "nncf_output.log"
@@ -136,8 +135,10 @@ def get_saving_parameters(config):
 
 
 def set_hard_limit_num_open_files():
-    _, high = resource.getrlimit(resource.RLIMIT_NOFILE)
-    resource.setrlimit(resource.RLIMIT_NOFILE, (high, high))
+    if is_linux():
+        import resource
+        _, high = resource.getrlimit(resource.RLIMIT_NOFILE)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (high, high))
 
 
 def set_memory_growth(devices):

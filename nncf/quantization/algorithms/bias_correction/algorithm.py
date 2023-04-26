@@ -11,63 +11,32 @@
  limitations under the License.
 """
 
-from typing import Dict, List, TypeVar, Union, Optional
 from collections import deque
+from typing import Any, Dict, List, Optional, TypeVar
 
 import numpy as np
 
 from nncf import Dataset
 from nncf import nncf_logger
+from nncf.common.factory import EngineFactory
+from nncf.common.factory import ModelTransformerFactory
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.utils.backend import copy_model
-from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import get_backend
-from nncf.quantization.algorithms.algorithm import AlgorithmParameters
-from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
-from nncf.common.factory import NNCFGraphFactory
-from nncf.common.factory import EngineFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.factory import ModelTransformerFactory
-
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
+from nncf.common.utils.backend import get_backend
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 
 TModel = TypeVar('TModel')
 
-
-class BiasCorrectionParameters(AlgorithmParameters):
-    """
-    Parameters of BiasCorrection algorithm
-
-    :param number_samples: Number of samples for statistics collection.
-    :param threshold: Magnitude threshold that regulates application of shift.
-    """
-
-    def __init__(self, number_samples: int = 100, threshold: float = 1000,
-                 inplace_statistics: bool = True) -> None:
-        """
-        :param number_samples: The number of samples for the statistics collection.
-            This statistic uses for the further calculation of the bias shift.
-        :param threshold: The magnitude threshold regulates the application of the shift.
-            Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
-            If the calculated value is less than the threshold, the shift will apply to the bias.
-        :param inplace_statistics: Appliclable only for OpenVINO backend.
-            Will be available for ONNX backend in future. Defines wheather to calculate quantizers statistics
-            by backend graph operations or by default Python implementation.
-            Statistics computated inplace tend to be calculated faster and with lower memory stamp.
-        """
-        self.number_samples = number_samples
-        self.threshold = threshold
-        self.inplace_statistics = inplace_statistics
-
-    def to_json(self) -> Dict[str, Union[str, float, int]]:
-        """
-        Serialize all BiasCorrection parameters to JSON.
-        """
+BIAS_CORRECTION_THRESHOLD = 1000
 
 
 class BiasCorrection(Algorithm):
@@ -92,24 +61,44 @@ class BiasCorrection(Algorithm):
         the sub-graph with the updated bias value on the current step;
         - after the new statistics were collected, we drops the unnecessary statistics to reduce memory consumption;
         - in the end, we correct all needed biases in the original model.
-
-    :param number_samples: The number of the samples for the statistics collection.
-    :param threshold: The magnitude threshold that regulates the application of the shift.
-    :param nncf_graph: NNCFGraph class for the algorithm.
     """
 
-    def __init__(self, parameters: BiasCorrectionParameters) -> None:
+    def __init__(self,
+                 subset_size: int = 100,
+                 threshold: float = BIAS_CORRECTION_THRESHOLD,
+                 apply_for_all_nodes: bool = False,
+                 inplace_statistics: bool = True,
+                 backend_params: Optional[Dict[str, Any]] = None):
         """
-        :param parameters: The instance of the BiasCorrectionParameters.
+        :param subset_size: Size of a subset for the statistics collection,
+            defaults to 100.
+        :param threshold: The magnitude threshold that regulates the application of the
+            shift. Magnitude calculates as the maximum of the absolute ratio of the
+            shift to the original bias value. If the calculated value is less than the
+            threshold, the shift will apply to the bias, defaults to 1000.
+        :param apply_for_all_nodes: If True, then the bias correction be applied to all
+            quantized nodes, if the node has no bias then a bias node will be inserted,
+            and if False, then the bias correction will only be applied to quantized
+            nodes that have a bias.
+        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+            by backend graph operations or by default Python implementation, defaults
+            to True.
+        :param backend_params: Backend specific parameters.
         """
         super().__init__()
-        self.number_samples = max(np.int(parameters.number_samples * 0.2), 1)
-        self.threshold = parameters.threshold
-        self.inplace_statistics = parameters.inplace_statistics
+        self.subset_size = subset_size
+        self.threshold = threshold
+        self.apply_for_all_nodes = apply_for_all_nodes
+        self.inplace_statistics = inplace_statistics
+        self.backend_params = backend_params
         self.nncf_graph = None
         self._backend_entity = None
         self._collected_stat_inputs = set()
         self._fp_inputs = {}
+
+        if self.apply_for_all_nodes:
+            raise RuntimeError(
+                'BiasCorrection algorithm does not support apply_for_all_nodes=True yet')
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -127,7 +116,7 @@ class BiasCorrection(Algorithm):
                 ONNXBiasCorrectionAlgoBackend
             self._backend_entity = ONNXBiasCorrectionAlgoBackend()
         elif model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.quantization.algorithms.bias_correction.openvino_backend import \
+            from nncf.openvino.quantization.algorithms.bias_correction.openvino_backend import \
                 OVBiasCorrectionAlgoBackend
             self._backend_entity = OVBiasCorrectionAlgoBackend()
         else:
@@ -309,7 +298,7 @@ class BiasCorrection(Algorithm):
         :return: List of the dictionaries with the input data.
         """
         feed_dicts = []
-        for stat_id in range(self.number_samples):
+        for stat_id in range(self.subset_size):
             feed_dict = {}
             for input_node_name in subgraph_data['input_node_names']:
                 input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
@@ -473,7 +462,7 @@ class BiasCorrection(Algorithm):
                 statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                     node_name,
                                                                     input_port_id)
-                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples,
+                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.subset_size,
                                                                                 inplace=self.inplace_statistics)
                 statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                        tensor_collector=stat_collector,
@@ -482,7 +471,7 @@ class BiasCorrection(Algorithm):
                                                                 node_name,
                                                                 output_port_id)
             stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=channel_axis,
-                                                                           num_samples=self.number_samples,
+                                                                           num_samples=self.subset_size,
                                                                            inplace=self.inplace_statistics)
             statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                    tensor_collector=stat_collector,
@@ -494,7 +483,7 @@ class BiasCorrection(Algorithm):
                 statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                     next_input_node.node_name,
                                                                     port_id=0)
-                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples,
+                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.subset_size,
                                                                                 inplace=self.inplace_statistics)
                 statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                        tensor_collector=stat_collector,

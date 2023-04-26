@@ -12,7 +12,7 @@
 """
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as ov_metatypes
+from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVConvolutionMetatype,
                                                   ov_metatypes.OVGroupConvolutionMetatype,

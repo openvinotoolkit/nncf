@@ -11,56 +11,30 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple, List, TypeVar, Optional
+from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
+
 from nncf import Dataset
-from nncf.common.tensor import NNCFTensor
-from nncf.common.logging import nncf_logger
+from nncf.common.factory import EngineFactory
+from nncf.common.factory import ModelTransformerFactory
+from nncf.common.factory import NNCFGraphFactory
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import get_backend
-from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.quantization.algorithms.algorithm import AlgorithmParameters
-from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
-from nncf.common.factory import NNCFGraphFactory
-from nncf.common.factory import EngineFactory
+from nncf.common.logging import nncf_logger
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.factory import ModelTransformerFactory
-from nncf.common.graph.model_transformer import ModelTransformer
-
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 
 TModel = TypeVar('TModel')
 
-
-class FastBiasCorrectionParameters(AlgorithmParameters):
-    """
-    Parameters of FastBiasCorrection algorithm
-
-    :param number_samples: The number of the samples for the statistics collection.
-    :param threshold: The magnitude threshold that regulates the application of the shift.
-    """
-
-    def __init__(self,  number_samples: int = 100, threshold: float = 2.0,
-                 inplace_statistics: bool = True) -> None:
-        """
-        :param number_samples: The number of the samples for the statistics collection.
-            This statistics uses for the further calculation of the bias shift.
-        :param threshold: The magnitude threshold that regulates the application of the shift.
-            Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
-            If the calculated value less than threshold, shift will apply to the bias.
-        :param inplace_statistics: Appliclable only for OpenVINO backend.
-            Will be available for ONNX backend in future. Defines wheather to calculate quantizers statistics
-            by backend graph operations or by default Python implementation.
-            Statistics computated inplace tend to be calculated faster and with lower memory stamp.
-        """
-        self.number_samples = number_samples
-        self.threshold = threshold
-        self.inplace_statistics = inplace_statistics
-
+FAST_BIAS_CORRECTION_THRESHOLD = 2
 
 class FastBiasCorrection(Algorithm):
     """
@@ -77,22 +51,42 @@ class FastBiasCorrection(Algorithm):
         the sub-graph and further quantization output calculation;
         - in the end we corrects the original bias by the difference (shift)
         between floating-point and quantized outputs.
-
-    :param number_samples: The number of the samples for the statistics collection.
-    :param threshold: The magnitude threshold that regulates the application of the shift.
-    :param nncf_graph: NNCFGraph class for the algorithm.
     """
 
-    def __init__(self, parameters: FastBiasCorrectionParameters) -> None:
+    def __init__(self,
+                 subset_size: int = 100,
+                 threshold: float = FAST_BIAS_CORRECTION_THRESHOLD,
+                 apply_for_all_nodes: bool = False,
+                 inplace_statistics: bool = True,
+                 backend_params: Optional[Dict[str, Any]] = None):
         """
-        :param parameters: The instance of the FastBiasCorrectionParameters.
+        :param subset_size: Size of a subset for the statistics collection,
+            defaults to 100.
+        :param threshold: The magnitude threshold that regulates the application of the
+            shift. Magnitude calculates as the maximum of the absolute ratio of the
+            shift to the original bias value. If the calculated value is less than the
+            threshold, the shift will apply to the bias, defaults to 2.
+        :param apply_for_all_nodes: If True, then the bias correction be applied to all
+            quantized nodes, if the node has no bias then a bias node will be inserted,
+            and if False, then the bias correction will only be applied to quantized
+            nodes that have a bias.
+        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+            by backend graph operations or by default Python implementation, defaults
+            to True.
+        :param backend_params: Backend specific parameters.
         """
         super().__init__()
-        self.number_samples = parameters.number_samples
-        self.threshold = parameters.threshold
-        self.inplace_statistics = parameters.inplace_statistics
+        self.subset_size = subset_size
+        self.threshold = threshold
+        self.apply_for_all_nodes = apply_for_all_nodes
+        self.inplace_statistics = inplace_statistics
+        self.backend_params = backend_params
         self.nncf_graph = None
         self._backend_entity = None
+
+        if self.apply_for_all_nodes:
+            raise RuntimeError(
+                'FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet')
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -106,12 +100,11 @@ class FastBiasCorrection(Algorithm):
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import \
-                ONNXFastBiasCorrectionAlgoBackend
+            from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
             self._backend_entity = ONNXFastBiasCorrectionAlgoBackend()
         elif model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.quantization.algorithms.fast_bias_correction.openvino_backend import\
-                OVFastBiasCorrectionAlgoBackend
+            from nncf.openvino.quantization.algorithms.fast_bias_correction.openvino_backend \
+                import OVFastBiasCorrectionAlgoBackend
             self._backend_entity = OVFastBiasCorrectionAlgoBackend()
         else:
             raise RuntimeError('Cannot return backend-specific entity '
@@ -256,9 +249,9 @@ class FastBiasCorrection(Algorithm):
         :param point: TargetPoint for statistic collection.
         :param axis: Channel axis for the statistics calculation.
         """
-        stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=axis,
-                                                                       num_samples=self.number_samples,
-                                                                       inplace=self.inplace_statistics)
+        stat_collector = self._backend_entity.mean_statistic_collector(
+            reduction_shape=axis, num_samples=self.subset_size,
+            inplace=self.inplace_statistics)
         container.add_statistic_point(StatisticPoint(target_point=point,
                                                      tensor_collector=stat_collector,
                                                      algorithm=FastBiasCorrection))

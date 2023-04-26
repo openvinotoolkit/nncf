@@ -55,5 +55,5 @@ def test_min_max_quantization_graph(tmp_path, mocker, model_to_test):
              'copy__43/Postprocessor/BatchMultiClassNonMaxSuppression/map/while/Less', 'add'])
 
     quantized_model = min_max_quantize_model(original_model, convert_model_opset=convert_opset_version,
-                                             quantization_params={'ignored_scopes': ignored_scopes})
+                                             quantization_params={'ignored_scope': ignored_scopes})
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)

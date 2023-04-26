@@ -15,15 +15,18 @@ from copy import deepcopy
 from typing import Any, Dict, Optional, Tuple
 
 import torch
+
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
-from nncf.scopes import convert_ignored_scope_to_list
-from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import convert_advanced_parameters_to_dict
+from nncf.scopes import convert_ignored_scope_to_list
+from nncf.scopes import IgnoredScope
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
@@ -33,6 +36,8 @@ from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
+
+DEFAULT_RANGE_TYPE = 'mean_min_max'
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
@@ -75,15 +80,19 @@ class CalibrarionDataLoader(PTInitializingDataLoader):
         return length
 
 
-def _get_transformer_quantization_config(subset_size: int) -> Dict:
+def _get_transformer_quantization_config(subset_size: int) -> Dict[str, Any]:
     """
+    Returns the quantization config for transformer-based models.
+
+    :param subset_size: Size of a subset to calculate activations
+        statistics used for quantization.
     :return: The quantization config for transformer-based models.
     """
     return {
         'algorithm': 'quantization',
         'preset': 'mixed',
         'initializer': {
-            'range': {'num_init_samples': subset_size, 'type': 'mean_min_max'},
+            'range': {'num_init_samples': subset_size, 'type': DEFAULT_RANGE_TYPE},
             'batchnorm_adaptation': {'num_bn_adaptation_samples': 0},
         },
         'scope_overrides': {
@@ -95,33 +104,62 @@ def _get_transformer_quantization_config(subset_size: int) -> Dict:
             '{re}.*matmul_1',
             '{re}.*__truediv__*',
         ],
-        'overflow_fix': 'disable',
+        'overflow_fix': 'first_layer_only',
     }
 
 
 def _get_default_quantization_config(preset: QuantizationPreset,
-                                     subset_size: int) -> Dict:
+                                     subset_size: int) -> Dict[str, Any]:
     """
+    Returns the default quantization config
+
+    :param preset: A preset that controls the quantization mode
+        (symmetric and asymmetric). It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric
+          quantization of activations.
+    :param subset_size: Size of a subset to calculate activations
+        statistics used for quantization.
     :return: The default quantization config.
     """
     return {
         'algorithm': 'quantization',
         'preset': preset.value,
         'initializer': {
-            'range': {'num_init_samples': subset_size},
-            'batchnorm_adaptation': {'num_bn_adaptation_samples': 0}
+            'range': {'num_init_samples': subset_size, 'type': DEFAULT_RANGE_TYPE},
+            'batchnorm_adaptation': {'num_bn_adaptation_samples': subset_size}
         },
         'overflow_fix': 'first_layer_only'
     }
 
 
-def _create_nncf_config(preset: QuantizationPreset,
-                        target_device: TargetDevice,
-                        subset_size: int,
-                        model_type: Optional[ModelType],
-                        ignored_scope: Optional[IgnoredScope]) -> NNCFConfig:
+def _create_nncf_config(
+    preset: QuantizationPreset,
+    target_device: TargetDevice,
+    subset_size: int,
+    model_type: Optional[ModelType],
+    ignored_scope: Optional[IgnoredScope],
+    advanced_parameters: Optional[AdvancedQuantizationParameters]) -> NNCFConfig:
     """
-    :return: The NNCFConfig for quantization method.
+    Creates the NNCFConfig for the quantization algorithm.
+
+    :param preset: A preset that controls the quantization mode
+        (symmetric and asymmetric). It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric
+          quantization of activations.
+    :param target_device: A target device the specificity of which will be taken
+        into account while compressing in order to obtain the best performance
+        for this type of device.
+    :param subset_size: Size of a subset to calculate activations
+        statistics used for quantization.
+    :param model_type: Model type is needed to specify additional patterns
+        in the model.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
+    :param advanced_parameters: Advanced quantization parameters for
+        fine-tuning the quantization algorithm.
+    :return: NNCFConfig for the quantization algorithm.
     """
     if model_type is None:
         compression_config = _get_default_quantization_config(preset, subset_size)
@@ -134,6 +172,18 @@ def _create_nncf_config(preset: QuantizationPreset,
             compression_config['ignored_scopes'].extend(_ignored_scope)
         else:
             compression_config['ignored_scopes'] = _ignored_scope
+
+    if advanced_parameters is not None:
+        advanced_config = convert_advanced_parameters_to_dict(advanced_parameters)
+
+        ranges = advanced_config.get('initializer', {}).get('range')
+        if ranges is not None:
+            for rconfig in ranges:
+                rconfig['num_init_samples'] = subset_size
+                if 'type' not in rconfig:
+                    rconfig['type'] = DEFAULT_RANGE_TYPE
+
+        compression_config.update(advanced_config)
 
     return NNCFConfig({
         'target_device': target_device.value,
@@ -148,7 +198,8 @@ def quantize_impl(model: torch.nn.Module,
                   subset_size: int,
                   fast_bias_correction: bool,
                   model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None) -> torch.nn.Module:
+                  ignored_scope: Optional[IgnoredScope] = None,
+                  advanced_parameters: Optional[AdvancedQuantizationParameters] = None) -> torch.nn.Module:
     """
     Implementation of the `quantize()` method for the PyTorch backend.
     """
@@ -157,13 +208,13 @@ def quantize_impl(model: torch.nn.Module,
                           'supported')
     if ignored_scope is not None and ignored_scope.types is not None:
         raise RuntimeError('Quantization algorithm from the PyTorch backend '
-                            'does not support operation types in the ignored '
-                            'scopes yet')
+                           'does not support operation types in the ignored '
+                           'scopes yet')
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError('target_device == CPU_SPR is not supported')
 
     nncf_config = _create_nncf_config(preset, target_device, subset_size,
-                                      model_type, ignored_scope)
+                                      model_type, ignored_scope, advanced_parameters)
 
     calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(

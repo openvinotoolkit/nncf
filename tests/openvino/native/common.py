@@ -17,7 +17,7 @@ import numpy as np
 import openvino.runtime as ov
 
 from nncf import Dataset
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 

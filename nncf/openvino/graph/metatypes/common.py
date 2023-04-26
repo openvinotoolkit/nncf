@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as ov_metatypes
+from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 
 
 QUANTIZE_AGNOSTIC_OPERATIONS = [

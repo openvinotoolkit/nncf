@@ -15,18 +15,17 @@ from typing import Optional
 
 import onnx
 
+from nncf.common.logging.logger import nncf_logger
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
-from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
-from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.common.quantization.structs import QuantizationPreset
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-from nncf.quantization.algorithms.definitions import Granularity
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
+from nncf.scopes import IgnoredScope
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_ONNX_CATEGORY
-from nncf.common.logging.logger import nncf_logger
 
 
 @tracked_function(NNCF_ONNX_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -37,11 +36,11 @@ def quantize_impl(model: onnx.ModelProto,
                   subset_size: int,
                   fast_bias_correction: bool,
                   model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None) -> onnx.ModelProto:
+                  ignored_scope: Optional[IgnoredScope] = None,
+                  advanced_parameters: Optional[AdvancedQuantizationParameters] = None) -> onnx.ModelProto:
     """
     Implementation of the `quantize()` method for the ONNX backend.
     """
-    additional_params = {}
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError('target_device == CPU_SPR is not supported.')
     if model.opset_import[0].version < 10:
@@ -49,20 +48,20 @@ def quantize_impl(model: onnx.ModelProto,
     if model.opset_import[0].version < 13:
         nncf_logger.warning('ONNX models with 10 < opset version < 13 do not support per-channel quantization.'
                             ' Per-tensor quantization will be applied.')
-        additional_params = {'weight_granularity': Granularity.PERTENSOR,
-                             'activation_granularity': Granularity.PERTENSOR}
+        if advanced_parameters is None:
+            advanced_parameters = AdvancedQuantizationParameters()
+        advanced_parameters.weights_quantization_params.per_channel = False
+        advanced_parameters.activations_quantization_params.per_channel = False
 
-    quantization_parameters = PostTrainingQuantizationParameters(
+    quantization_algorithm = PostTrainingQuantization(
         preset=preset,
         target_device=target_device,
-        number_samples=subset_size,
-        ignored_scopes=ignored_scope,
+        subset_size=subset_size,
+        ignored_scope=ignored_scope,
         fast_bias_correction=fast_bias_correction,
         model_type=model_type,
-        **additional_params
-    )
+        advanced_parameters=advanced_parameters)
 
-    quantization_algorithm = PostTrainingQuantization(quantization_parameters)
     quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
 
     return quantized_model

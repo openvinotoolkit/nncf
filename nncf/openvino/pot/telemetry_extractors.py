@@ -10,11 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
-from tests.post_training.test_calculate_quantizer_parameters import TemplateTestFQParams
+
+from typing import Any
+
+from nncf.telemetry.extractors import CollectedEvent
+from nncf.telemetry.extractors import TelemetryExtractor
 
 
-class TestFQParams(TemplateTestFQParams):
-    @property
-    def tensor_statistic(self):
-        return OVMinMaxTensorStatistic
+class POTImplementation(TelemetryExtractor):
+    def extract(self, _: Any) -> CollectedEvent:
+        return CollectedEvent(name="pot implementation")

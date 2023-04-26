@@ -12,33 +12,34 @@
 """
 import copy
 import logging
+from multiprocessing import Pipe
+from multiprocessing import Process
 import os
-import re
-import traceback
 from pathlib import Path
 from pathlib import PosixPath
+import re
+import traceback
 from typing import Optional
-from multiprocessing import Process
-from multiprocessing import Pipe
 
 import numpy as np
 import onnx
 import openvino.runtime as ov
 import pytest
+from sklearn.metrics import accuracy_score
 import timm
 import torch
-from sklearn.metrics import accuracy_score
-from torchvision import datasets, transforms
+from torchvision import datasets
+from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
 import nncf
-from nncf.experimental.openvino_native.quantization.quantize import quantize_impl as ov_quantize_impl
 from nncf.experimental.torch.quantization.quantize import quantize_impl as pt_impl_experimental
+from nncf.openvino.quantization.quantize import quantize_impl as ov_quantize_impl
 from nncf.torch.nncf_network import NNCFNetwork
-from tests.shared.command import Command
 from tests.post_training.conftest import PipelineType
 from tests.post_training.conftest import RunInfo
 from tests.post_training.model_scope import VALIDATION_SCOPE
+from tests.shared.command import Command
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
 DEFAULT_VAL_THREADS = 4

@@ -18,13 +18,7 @@ class TargetDevice(Enum):
     Describes the target device the specificity of which will be taken
     into account while compressing in order to obtain the best performance
     for this type of device.
-
-    :param ANY:
-    :param CPU:
-    :param GPU:
-    :param VPU:
     """
-
     ANY = 'ANY'
     CPU = 'CPU'
     GPU = 'GPU'
@@ -40,5 +34,4 @@ class ModelType(Enum):
     :param TRANSFORMER: Transformer-based models
         (https://arxiv.org/pdf/1706.03762.pdf)
     """
-
     TRANSFORMER = 'transformer'

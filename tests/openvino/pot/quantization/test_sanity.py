@@ -15,6 +15,7 @@ import pytest
 import os
 import nncf
 import openvino.runtime as ov
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 
 from tests.openvino.conftest import AC_CONFIGS_DIR
 from tests.openvino.datasets_helpers import get_dataset_for_test
@@ -25,7 +26,7 @@ from tests.openvino.omz_helpers import download_model
 
 OMZ_MODELS = [
     ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': 0.777, 'accuracy@top5': 0.949}),
-    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': 0.737, 'accuracy@top5': 0.923}),
+    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': 0.744, 'accuracy@top5': 0.922}),
     ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': 0.91, 'accuracy@top5': 0.994}),
     ('mobilefacedet-v1-mxnet', 'wider', {'map': 0.7750216770678978}),
     ('retinaface-resnet50-pytorch', 'wider', {'map': 0.91875950512032}),
@@ -48,7 +49,11 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
     calibration_dataset = get_nncf_dataset_from_ac_config(model_path, config_path, extracted_data_dir)
 
     ov_model = ov.Core().read_model(str(model_path))
-    quantized_model = nncf.quantize(ov_model, calibration_dataset)
+    quantized_model = nncf.quantize(
+        ov_model,
+        calibration_dataset,
+        advanced_parameters=AdvancedQuantizationParameters(backend_params={'use_pot': True})
+    )
     ov.serialize(quantized_model, int8_ir_path)
 
     report_path = tmp_path / f'{model}.csv'

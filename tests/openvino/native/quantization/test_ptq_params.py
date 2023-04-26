@@ -21,13 +21,12 @@ from nncf.parameters import TargetDevice
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
@@ -52,10 +51,10 @@ def get_patterns_setup() -> GraphPattern:
 # pylint: disable=protected-access
 @pytest.mark.parametrize('target_device', [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
 def test_target_device(target_device):
-    algo = PostTrainingQuantization(PostTrainingQuantizationParameters(target_device=target_device))
+    algo = PostTrainingQuantization(target_device=target_device)
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()
-    assert min_max_algo._parameters.target_device.value == HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value]
+    assert min_max_algo._target_device.value == HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value]
 
 
 class TestPTQParams(TemplateTestPTQParams):
@@ -94,10 +93,10 @@ class TestPTQParams(TemplateTestPTQParams):
     @pytest.fixture(scope='session')
     def test_params(self):
         return {
-        'test_range_type_per_tensor':
+        'test_range_estimator_per_tensor':
             {'model': LinearModel().ov_model,
              'stat_points_num': 2},
-        'test_range_type_per_channel':
+        'test_range_estimator_per_channel':
             {'model': DepthwiseConv4DModel().ov_model,
              'stat_points_num': 2},
         'test_quantize_outputs':

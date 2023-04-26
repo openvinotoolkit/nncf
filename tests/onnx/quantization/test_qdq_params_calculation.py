@@ -15,13 +15,15 @@ from typing import Dict
 import numpy as np
 import onnx
 import pytest
+
+from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import OverflowFix
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import LinearModel
 from tests.onnx.quantization.common import min_max_quantize_model
-from tests.shared.helpers import compare_stats, load_json
-
-from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.quantization.algorithms.definitions import OverflowFix
+from tests.shared.helpers import compare_stats
+from tests.shared.helpers import load_json
 
 REFERENCE_SCALES_DIR = ONNX_TEST_ROOT / 'data' / 'reference_scales'
 
@@ -44,7 +46,8 @@ def get_q_nodes_params(model: onnx.ModelProto) -> Dict[str, np.ndarray]:
 )
 def test_overflow_fix_scales(overflow_fix):
     model = LinearModel()
-    quantized_model = min_max_quantize_model(model.onnx_model, quantization_params={'overflow_fix': overflow_fix})
+    quantized_model = min_max_quantize_model(model.onnx_model, quantization_params={
+        'advanced_parameters': AdvancedQuantizationParameters(overflow_fix=overflow_fix)})
     q_nodes_params = get_q_nodes_params(quantized_model)
 
     ref_stats_name = model.path_ref_graph.split(".")[0] + f'_overflow_fix_{overflow_fix.value}.json'

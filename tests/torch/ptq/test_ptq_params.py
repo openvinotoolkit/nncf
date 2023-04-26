@@ -15,28 +15,28 @@
 import pytest
 from torch import nn
 
-from nncf.scopes import IgnoredScope
-from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
+from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
-from tests.post_training.test_ptq_params import TemplateTestPTQParams
-from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
-
-from tests.torch.helpers import create_bn, create_conv, create_depthwise_conv
-from tests.torch.ptq.helpers import get_single_conv_nncf_graph
-from tests.torch.ptq.helpers import get_single_no_weigth_matmul_nncf_graph
-from tests.torch.ptq.helpers import get_nncf_network
+from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
+from tests.post_training.test_ptq_params import TemplateTestPTQParams
+from tests.torch.helpers import create_bn
+from tests.torch.helpers import create_conv
+from tests.torch.helpers import create_depthwise_conv
+from tests.torch.ptq.helpers import get_nncf_network
+from tests.torch.ptq.helpers import get_single_conv_nncf_graph
+from tests.torch.ptq.helpers import get_single_no_weigth_matmul_nncf_graph
 
 # pylint: disable=protected-access
 
@@ -78,10 +78,10 @@ class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
 
 @pytest.mark.parametrize('target_device', TargetDevice)
 def test_target_device(target_device):
-    algo = PostTrainingQuantization(PostTrainingQuantizationParameters(target_device=target_device))
+    algo = PostTrainingQuantization(target_device=target_device)
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = PTMinMaxAlgoBackend()
-    assert min_max_algo._parameters.target_device == target_device
+    assert min_max_algo._target_device == target_device
 
 
 class TestPTQParams(TemplateTestPTQParams):
@@ -114,10 +114,10 @@ class TestPTQParams(TemplateTestPTQParams):
     @pytest.fixture(scope='session')
     def test_params(self):
         return {
-        'test_range_type_per_tensor':
+        'test_range_estimator_per_tensor':
             {'model': LinearTestModel().get_nncf_network(),
              'stat_points_num': 5},
-        'test_range_type_per_channel':
+        'test_range_estimator_per_channel':
             {'model': OneDepthwiseConvModel().get_nncf_network(),
              'stat_points_num': 2},
         'test_quantize_outputs':
