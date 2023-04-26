@@ -14,24 +14,11 @@
 from typing import Any
 
 import torch
-from torch import _C  # pylint:disable=protected-access
+from torch.onnx.symbolic_helper import _is_constant  # pylint:disable=protected-access
 
 from nncf.common.logging import nncf_logger
 from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
 from nncf.torch.utils import add_domain
-
-
-def _is_value(x: Any) -> bool:
-    return isinstance(x, _C.Value)
-
-
-# Implementation is copy-pasted from torch.onnx.symbolic_helper.
-# It's need to support torch < 1.9, since there's no such function in such versions of torch.
-def _is_constant(value: Any) -> bool:
-    return not _is_value(value) or value.node().kind() in {
-        "onnx::Constant",
-        "prim::Constant",
-    }
 
 
 def _unsqueeze_helper(g, input_, axes_i):

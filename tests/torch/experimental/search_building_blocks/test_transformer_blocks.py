@@ -18,7 +18,6 @@ from typing import Callable, Dict, List, Optional, Set, Union
 import numpy as np
 import pytest
 import torch
-from pkg_resources import parse_version
 from torch import nn
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
@@ -123,10 +122,6 @@ def fixture_transformer_search_params_desc(request):
     return request.param
 
 
-@pytest.mark.skipif(
-    parse_version(torch.__version__) < parse_version("1.9"),
-    reason=f"torch {torch.__version__} is not compatible with installed transformers package",
-)
 def test_transformer_building_blocks(desc: TransformerSearchBBlockParamsCase):
     model = desc.model_creator()
     move_model_to_cuda_if_available(model)
