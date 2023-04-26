@@ -15,6 +15,7 @@ import pytest
 import os
 import nncf
 import openvino.runtime as ov
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 
 from tests.openvino.conftest import AC_CONFIGS_DIR
 from tests.openvino.datasets_helpers import get_dataset_for_test
@@ -48,7 +49,11 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
     calibration_dataset = get_nncf_dataset_from_ac_config(model_path, config_path, extracted_data_dir)
 
     ov_model = ov.Core().read_model(str(model_path))
-    quantized_model = nncf.quantize(ov_model, calibration_dataset)
+    quantized_model = nncf.quantize(
+        ov_model,
+        calibration_dataset,
+        advanced_parameters=AdvancedQuantizationParameters(backend_params={'use_pot': True})
+    )
     ov.serialize(quantized_model, int8_ir_path)
 
     report_path = tmp_path / f'{model}.csv'

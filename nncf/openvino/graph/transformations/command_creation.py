@@ -17,10 +17,10 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.command_creation import CommandCreator
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
+from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
+from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 
 
 class OVCommandCreator(CommandCreator):

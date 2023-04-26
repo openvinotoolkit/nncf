@@ -55,7 +55,7 @@ test-openvino:
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
 		nncf/openvino/                      \
-		nncf/experimental/openvino_native/  \
+		nncf/experimental/openvino/  \
 		tests/openvino/                     \
 		examples/experimental/openvino/
 

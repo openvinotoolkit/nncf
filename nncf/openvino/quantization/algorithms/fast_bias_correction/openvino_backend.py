@@ -11,29 +11,29 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
 
-from nncf.common.graph import NNCFGraph, NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
-
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
-from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.statistics.collectors import get_mean_stat_collector
-from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.experimental.openvino_native.tensor import OVNNCFTensor
-from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
-from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
-from nncf.experimental.openvino_native.graph.transformations.command_creation import OVCommandCreator
+from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
+from nncf.openvino.graph.node_utils import get_bias_value
+from nncf.openvino.graph.node_utils import is_node_with_bias
+from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
+from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
+from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.statistics.collectors import get_mean_stat_collector
+from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
+from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 

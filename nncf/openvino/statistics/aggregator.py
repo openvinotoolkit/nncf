@@ -11,24 +11,23 @@
  limitations under the License.
 """
 
+from collections import defaultdict
 from typing import Dict
 
 import numpy as np
 import openvino.runtime as ov
-from collections import defaultdict
 
-from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-
-from nncf.experimental.openvino_native.tensor import OVNNCFTensor
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
-from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.openvino.tensor import OVNNCFTensor
 
 
 class OVStatisticsAggregator(StatisticsAggregator):
