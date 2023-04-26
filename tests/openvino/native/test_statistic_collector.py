@@ -19,6 +19,7 @@ from tests.experimental.common.test_statistic_collector import DummyTensorReduce
 from tests.experimental.common.test_statistic_collector import DummyTensorAggregator
 
 
+#pylint:disable=protected-access
 def test_empty_tensors_register():
     collector = TensorCollector()
     reducer = DummyTensorReducer('Dummy')
@@ -36,6 +37,7 @@ def test_empty_tensors_register():
     assert aggregator._collected_samples == 2
 
 
+#pylint:disable=protected-access
 def test_empty_inplace_tensors_register():
     collector = TensorCollector()
     inplace_reducer = DummyTensorReducer('Dummy', True)
