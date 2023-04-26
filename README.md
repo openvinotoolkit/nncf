@@ -60,7 +60,7 @@ _Preview means that this is a work in progress and NNCF does not guarantee the f
 
 ### Post-Training Quantization
 
-To run the algorithm you only need your model and the validation part of the dataset without labels. The basic workflow steps:
+The NNCF PTQ is the simplest way to apply 8-bit quantization. To run the algorithm you only need your model and the validation part of the dataset without labels. The basic workflow steps:
 1) Load a model and a data source.
 2) Create an instance of `nncf.Dataset` class by passing two parameters:
    * `data_source` — Iterable object containing data items for model calibration.
