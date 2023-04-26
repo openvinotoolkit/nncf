@@ -30,12 +30,9 @@ from nncf.experimental.common.tensor_statistics.collectors import QuantileReduce
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.experimental.openvino_native.statistics.statistics import OVMeanTensorStatistic
 from nncf.experimental.openvino_native.statistics.statistics import OVBatchTensorStatistic
 from nncf.experimental.openvino_native.graph.node_utils import get_reducer_output_node_names
@@ -46,6 +43,7 @@ from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_batch_mean_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_per_ch
 from nncf.quantization.advanced_parameters import StatisticsType
+
 
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """

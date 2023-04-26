@@ -517,7 +517,7 @@ class MaxAggregator(TensorAggregatorBase):
 
 
 class OfflineAggregatorBase(TensorAggregatorBase):
-    def __init__(self, tensor_processor, use_per_sample_stats: bool,
+    def __init__(self, tensor_processor, use_per_sample_stats: bool = False,
                  num_samples: Optional[int] = None, window_size=None):
         super().__init__(tensor_processor, num_samples)
         self._window_size = window_size

@@ -47,11 +47,9 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import changes_asdict
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
-from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters

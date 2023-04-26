@@ -29,7 +29,6 @@ from nncf.common.utils.backend import BackendType
 
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import OfflineAggregatorBase
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTopKMetatype
@@ -204,26 +203,26 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                     statistic_type = StatisticsType.ABS_MAX
 
                 reducers.append(OV_REDUCERS_MAP[statistic_type](**kwargs))
-        except:
-            raise KeyError(f'Could not build statistic functions:'
-                           f' {range_estimator_params.min.statistics_type},'
-                           f' {range_estimator_params.max.statistics_type}')
+        except Exception as e:
+            raise Exception(
+                f'Could not build statistic functions:'
+                f' {range_estimator_params.min.statistics_type},'
+                f' {range_estimator_params.max.statistics_type}') from e
 
         try:
-            kwargs_base = {
+            kwargs = {
                 'num_samples': _num_samples,
                 'tensor_processor': OVNNCFCollectorTensorProcessor
             }
             aggregators = []
             for params in [range_estimator_params.min, range_estimator_params.max]:
                 aggregator_cls = AGGREGATORS_MAP[params.aggregator_type]
-                kwargs = kwargs_base.copy()
-                if issubclass(aggregator_cls, OfflineAggregatorBase):
-                    kwargs.update({'use_per_sample_stats': False})
                 aggregators.append(aggregator_cls(**kwargs))
-        except:
-            raise KeyError(f'Could not build statistic aggregators:'
-                           f' {range_estimator_params.min.aggregator_type, range_estimator_params.max.aggregator_type}')
+        except Exception as e:
+            raise Exception(
+                f'Could not build statistic aggregators:'
+                f' {range_estimator_params.min.aggregator_type},'
+                f' {range_estimator_params.max.aggregator_type}') from e
 
         collector = TensorCollector(OVMinMaxTensorStatistic)
         collector.register_statistic_branch(OVMinMaxTensorStatistic.MIN_STAT, reducers[0], aggregators[0])
