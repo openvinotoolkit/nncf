@@ -30,7 +30,7 @@ class IgnoredScope:
 
     Examples:
 
-    ```
+    ``
     import nncf
 
     # Exclude by node name:
@@ -53,7 +53,7 @@ class IgnoredScope:
 
     ...
 
-    ```
+    ``
 
     **Note** Operation types must be specified according to the model framework.
 

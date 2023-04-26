@@ -21,8 +21,8 @@ import openvino.runtime as ov
 from openvino.tools import pot
 
 from nncf.data.dataset import Dataset
-from nncf.openvino.engine import OVEngine
-from nncf.openvino.engine import calc_per_sample_metrics
+from nncf.openvino.pot.engine import OVEngine
+from nncf.openvino.pot.engine import calc_per_sample_metrics
 from tests.openvino.pot.utils import convert_openvino_model_to_compressed_model
 from tests.openvino.native.models import LinearModel
 

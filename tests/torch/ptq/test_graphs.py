@@ -12,22 +12,21 @@
  limitations under the License.
 """
 
+from functools import partial
 from pathlib import Path
 
 import pytest
-from functools import partial
 
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.layers import NNCF_RNN
-
 from tests.torch import test_models
-from tests.torch.test_compressed_graph import ModelDesc
-from tests.torch.test_compressed_graph import check_graph
 from tests.torch.ptq.helpers import get_nncf_network
-from tests.torch.ptq.helpers import get_min_max_algo_for_test
 from tests.torch.ptq.helpers import mock_collect_statistics
 from tests.torch.quantization.test_algo_quantization import SharedLayersModel
-
+from tests.torch.test_compressed_graph import check_graph
+from tests.torch.test_compressed_graph import ModelDesc
 
 # Use the same graphs for min_max quantization as for symmetric quantization
 ALGOS = ['symmetric']
@@ -86,7 +85,9 @@ def test_min_max_classification_quantized_graphs(desc: ModelDesc, graph_dir, moc
     model = desc.model_builder()
 
     nncf_network = get_nncf_network(model, desc.input_sample_sizes)
-    quantization_algorithm = get_min_max_algo_for_test()
+    quantization_algorithm = PostTrainingQuantization(
+        advanced_parameters=AdvancedQuantizationParameters(
+            disable_bias_correction=True))
 
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=None)
 

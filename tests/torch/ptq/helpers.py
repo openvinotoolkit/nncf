@@ -12,20 +12,18 @@
 """
 
 from typing import List
+
 import torch
 
 from nncf import NNCFConfig
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.model_creation import create_nncf_network
-from nncf.torch.graph.operator_metatypes import PTSumMetatype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTSumMetatype
+from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
@@ -75,13 +73,6 @@ def get_nncf_network(model: torch.nn.Module,
         config=nncf_config,
     )
     return nncf_network
-
-
-def get_min_max_algo_for_test():
-    params = PostTrainingQuantizationParameters()
-    min_max_params = params.algorithms[MinMaxQuantization]
-    params.algorithms = {MinMaxQuantization: min_max_params}
-    return PostTrainingQuantization(params)
 
 
 def mock_collect_statistics(mocker):

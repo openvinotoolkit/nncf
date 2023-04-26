@@ -190,7 +190,7 @@ class NNCFNetworkInterface(torch.nn.Module):
 
     def __init__(self,
                  model: torch.nn.Module,
-                 input_infos: List[ModelInputInfo],
+                 input_infos: List[ModelInputInfo] = None,
                  dummy_forward_fn: Callable = None,
                  wrap_inputs_fn: Callable = None,
                  scopes_without_shape_matching: List[str] = None,
@@ -229,11 +229,13 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
-        else:
+        elif self._input_infos is not None:
             self.__input_infos_based_input_wrapper = InputInfoWrapManager(self._input_infos,
                                                                           self._forward_signature,
                                                                           module_ref_for_device=model)
             self._wrap_inputs_fn = self.__input_infos_based_input_wrapper.wrap_inputs
+        else:
+            raise ValueError('wrap_inputs_fn or input_infos should be passed.')
 
         if wrap_outputs_fn is not None:
             self._wrap_outputs_fn = wrap_outputs_fn
@@ -711,7 +713,7 @@ class NNCFNetworkMeta(type):
     """
     def __call__(cls,
                  original_model: torch.nn.Module,
-                 input_infos: List[ModelInputInfo],
+                 input_infos: List[ModelInputInfo] = None,
                  dummy_forward_fn: Callable = None,
                  wrap_inputs_fn: Callable[..., None] = None,
                  scopes_without_shape_matching: List[str] = None,
