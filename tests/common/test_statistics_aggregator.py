@@ -125,7 +125,7 @@ class TemplateTestStatisticsAggregator:
     QUANTILE_MEAN =\
         RangeEstimatorParameters(
             min=StatisticsCollectorParameters(StatisticsType.QUANTILE, AggregatorType.MEAN,
-                                              quantile_outlier_prob=0.99),
+                                              quantile_outlier_prob=0.01),
             max=StatisticsCollectorParameters(StatisticsType.QUANTILE, AggregatorType.MEAN,
                                               quantile_outlier_prob=0.01))
 

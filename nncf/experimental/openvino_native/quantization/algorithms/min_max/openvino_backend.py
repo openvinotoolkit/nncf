@@ -192,11 +192,11 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 'inplace': inplace
             }
             reducers = []
-            for params in [range_estimator_params.min, range_estimator_params.max]:
+            for i, params in enumerate([range_estimator_params.min, range_estimator_params.max]):
                 kwargs = base_kwargs.copy()
                 if params.statistics_type in [StatisticsType.QUANTILE,
                                               StatisticsType.ABS_QUANTILE]:
-                    kwargs.update({'quantile': [1 - params.quantile_outlier_prob]})
+                    kwargs.update({'quantile': [i + (1 - 2 * i) * params.quantile_outlier_prob]})
                 # TODO(dlyakhov): merge two quantile aggregators in one
                 statistic_type = params.statistics_type
                 if use_abs_max and statistic_type == StatisticsType.MAX:

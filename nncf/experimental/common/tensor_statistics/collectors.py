@@ -546,7 +546,7 @@ class MedianAggregator(OfflineAggregatorBase):
 
 
 class NoOutliersAggregatorBase(OfflineAggregatorBase):
-    def __init__(self, tensor_processor, use_per_sample_stats: bool,
+    def __init__(self, tensor_processor, use_per_sample_stats: bool = False,
                  num_samples: Optional[int] = None,
                  window_size=None, quantile: float = 0.01):
         super().__init__(tensor_processor, use_per_sample_stats, num_samples, window_size)
