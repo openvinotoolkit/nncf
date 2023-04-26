@@ -122,3 +122,27 @@ class RangeEstimatorParametersSet:
             aggregator_type=AggregatorType.MEAN
         )
     )
+
+    MEDIAN_MINMAX = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.MIN,
+            aggregator_type=AggregatorType.MEDIAN),
+        max=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.MAX,
+            aggregator_type=AggregatorType.MEDIAN))
+
+    MEAN_NO_OUTLIERS_MINMAX = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.MIN,
+            aggregator_type=AggregatorType.MEAN_NO_OUTLIERS),
+        max=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.MAX,
+            aggregator_type=AggregatorType.MEAN_NO_OUTLIERS))
+
+    MEAN_QUANTILE = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.QUANTILE,
+            aggregator_type=AggregatorType.MEAN),
+        max=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.QUANTILE,
+            aggregator_type=AggregatorType.MEAN))

@@ -112,22 +112,13 @@ class TemplateTestStatisticsAggregator:
         ref_max_val: Union[np.ndarray, float]
         ref_min_val: Union[np.ndarray, float]
 
-    MEDIAN_MINMAX =\
-        RangeEstimatorParameters(
-            min=StatisticsCollectorParameters(StatisticsType.MIN, AggregatorType.MEDIAN),
-            max=StatisticsCollectorParameters(StatisticsType.MAX, AggregatorType.MEDIAN))
-
-    MEAN_NO_OUTLIERS_MINMAX =\
-        RangeEstimatorParameters(
-            min=StatisticsCollectorParameters(StatisticsType.MIN, AggregatorType.MEAN_NO_OUTLIERS),
-            max=StatisticsCollectorParameters(StatisticsType.MAX, AggregatorType.MEAN_NO_OUTLIERS))
-
-    QUANTILE_MEAN =\
-        RangeEstimatorParameters(
-            min=StatisticsCollectorParameters(StatisticsType.QUANTILE, AggregatorType.MEAN,
-                                              quantile_outlier_prob=0.01),
-            max=StatisticsCollectorParameters(StatisticsType.QUANTILE, AggregatorType.MEAN,
-                                              quantile_outlier_prob=0.01))
+    TEST_MEAN_QUANTILE = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(
+            StatisticsType.QUANTILE, AggregatorType.MEAN,
+            quantile_outlier_prob=0.01),
+        max=StatisticsCollectorParameters(
+            StatisticsType.QUANTILE, AggregatorType.MEAN,
+            quantile_outlier_prob=0.01))
 
     def dataset_samples_to_conv_w(self, dataset_sample):
         # Layout: [O, I, K, K]
@@ -169,48 +160,56 @@ class TemplateTestStatisticsAggregator:
         np.array((10, 1, 128)), np.array((-10, -1, -128)))),
 
     (MinMaxTestParameters(
-        MEDIAN_MINMAX, TargetType.POST_LAYER_OPERATION,
+        RangeEstimatorParametersSet.MEDIAN_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
         QuantizationMode.ASYMMETRIC, False, 64.5, -63.5)),
     (MinMaxTestParameters(
-        MEDIAN_MINMAX, TargetType.POST_LAYER_OPERATION,
+        RangeEstimatorParametersSet.MEDIAN_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
         QuantizationMode.SYMMETRIC, False, 64.5, -63.5)),
     (MinMaxTestParameters(
-        MEDIAN_MINMAX, TargetType.POST_LAYER_OPERATION,
+        RangeEstimatorParametersSet.MEDIAN_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
         QuantizationMode.ASYMMETRIC, True,
         np.array((1, 0.55, 64.5)), np.array((-4.5, 0., -63.5)))),
     (MinMaxTestParameters(
-        MEDIAN_MINMAX, TargetType.POST_LAYER_OPERATION,
+        RangeEstimatorParametersSet.MEDIAN_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
         QuantizationMode.SYMMETRIC, True,
         np.array((5.5, 1., 64.5)), np.array((-4.5, 0., -63.5)))),
 
     (MinMaxTestParameters(
-        MEAN_NO_OUTLIERS_MINMAX, TargetType.POST_LAYER_OPERATION,
+        RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
         QuantizationMode.ASYMMETRIC, False, 0, 0)),
     (MinMaxTestParameters(
-        MEAN_NO_OUTLIERS_MINMAX, TargetType.POST_LAYER_OPERATION,
+        RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
         QuantizationMode.SYMMETRIC, False, 0, 0)),
     (MinMaxTestParameters(
-        MEAN_NO_OUTLIERS_MINMAX, TargetType.POST_LAYER_OPERATION,
+        RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
         QuantizationMode.ASYMMETRIC, True,
         np.array((1, 0, 0)), np.array((0, 0, 0)))),
     (MinMaxTestParameters(
-        MEAN_NO_OUTLIERS_MINMAX, TargetType.POST_LAYER_OPERATION,
+        RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
         QuantizationMode.SYMMETRIC, True,
         np.array((0, 1, 0)), np.array((0, 0, 0)))),
 
     (MinMaxTestParameters(
-        QUANTILE_MEAN, TargetType.POST_LAYER_OPERATION,
+        TEST_MEAN_QUANTILE, TargetType.POST_LAYER_OPERATION,
         QuantizationMode.ASYMMETRIC, False, 47.9899999999999, -48.15999999999998)),
     (MinMaxTestParameters(
-        QUANTILE_MEAN, TargetType.POST_LAYER_OPERATION,
+        TEST_MEAN_QUANTILE, TargetType.POST_LAYER_OPERATION,
         QuantizationMode.SYMMETRIC, False, 47.9899999999999, -48.15999999999998)),
     (MinMaxTestParameters(
-        QUANTILE_MEAN, TargetType.POST_LAYER_OPERATION,
+        TEST_MEAN_QUANTILE, TargetType.POST_LAYER_OPERATION,
         QuantizationMode.ASYMMETRIC, True,
         np.array((0.96, 0.546, 59.38)),
         np.array((-4.100e+00, 4.000e-02, -5.838e+01)))),
     (MinMaxTestParameters(
-        QUANTILE_MEAN, TargetType.POST_LAYER_OPERATION,
+        TEST_MEAN_QUANTILE, TargetType.POST_LAYER_OPERATION,
         QuantizationMode.SYMMETRIC, True,
         np.array((0.96, 0.546, 59.38)),
         np.array((-4.100e+00, 4.000e-02, -5.838e+01)))),

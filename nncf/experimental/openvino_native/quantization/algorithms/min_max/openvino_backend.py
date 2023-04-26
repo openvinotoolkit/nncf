@@ -186,47 +186,37 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                                      quantizer_config)
         _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
 
-        try:
-            base_kwargs = {
+        collector = TensorCollector(OVMinMaxTensorStatistic)
+        container_keys = [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]
+        for i, params in enumerate([range_estimator_params.min, range_estimator_params.max]):
+            if not params.statistics_type in OV_REDUCERS_MAP:
+                raise RuntimeError(f'Statistic type: {params.statistics_type}'
+                                   ' is not supported for OpenVino PTQ backend yet.')
+
+            if not params.aggregator_type in AGGREGATORS_MAP:
+                raise RuntimeError(f'Aggregator type: {params.aggregator_type}'
+                                   ' is not supported for OpenVino PTQ backend yet.')
+
+            kwargs = {
                 'reduction_shape': reduction_shape,
                 'inplace': inplace
             }
-            reducers = []
-            for i, params in enumerate([range_estimator_params.min, range_estimator_params.max]):
-                kwargs = base_kwargs.copy()
-                if params.statistics_type in [StatisticsType.QUANTILE,
-                                              StatisticsType.ABS_QUANTILE]:
-                    kwargs.update({'quantile': [i + (1 - 2 * i) * params.quantile_outlier_prob]})
-                # TODO(dlyakhov): merge two quantile aggregators in one
-                statistic_type = params.statistics_type
-                if use_abs_max and statistic_type == StatisticsType.MAX:
-                    statistic_type = StatisticsType.ABS_MAX
+            if params.statistics_type in [StatisticsType.QUANTILE,
+                                          StatisticsType.ABS_QUANTILE]:
+                kwargs.update({'quantile': [i + (1 - 2 * i) * params.quantile_outlier_prob]})
+            # TODO(dlyakhov): merge two quantile aggregators in one
+            statistic_type = params.statistics_type
+            if use_abs_max and statistic_type == StatisticsType.MAX:
+                statistic_type = StatisticsType.ABS_MAX
+            reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 
-                reducers.append(OV_REDUCERS_MAP[statistic_type](**kwargs))
-        except Exception as e:
-            raise Exception(
-                f'Could not build statistic functions:'
-                f' {range_estimator_params.min.statistics_type},'
-                f' {range_estimator_params.max.statistics_type}') from e
-
-        try:
             kwargs = {
                 'num_samples': _num_samples,
                 'tensor_processor': OVNNCFCollectorTensorProcessor
             }
-            aggregators = []
-            for params in [range_estimator_params.min, range_estimator_params.max]:
-                aggregator_cls = AGGREGATORS_MAP[params.aggregator_type]
-                aggregators.append(aggregator_cls(**kwargs))
-        except Exception as e:
-            raise Exception(
-                f'Could not build statistic aggregators:'
-                f' {range_estimator_params.min.aggregator_type},'
-                f' {range_estimator_params.max.aggregator_type}') from e
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
-        collector = TensorCollector(OVMinMaxTensorStatistic)
-        collector.register_statistic_branch(OVMinMaxTensorStatistic.MIN_STAT, reducers[0], aggregators[0])
-        collector.register_statistic_branch(OVMinMaxTensorStatistic.MAX_STAT, reducers[1], aggregators[1])
+            collector.register_statistic_branch(container_keys[i], reducer, aggregator)
         return collector
 
     @staticmethod
