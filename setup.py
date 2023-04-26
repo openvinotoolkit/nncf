@@ -117,7 +117,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "jstyleson>=0.0.2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
-                    "pandas>=1.1.5,<=2.0",
+                    "pandas>=1.1.5,<2.1",
                     "scikit-learn>=0.24.0",
                     "openvino-telemetry"]
 
