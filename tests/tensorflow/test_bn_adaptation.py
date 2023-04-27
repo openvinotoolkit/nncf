@@ -37,22 +37,21 @@ def get_dataset_for_test(batch_size=10, shape=None):
 
 def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100):
     config = NNCFConfig()
-    config.update({
-        "compression":
-            {
+    config.update(
+        {
+            "compression": {
                 "algorithm": "quantization",
                 "initializer": {
                     "batchnorm_adaptation": {
                         "num_bn_adaptation_samples": num_bn_adaptation_samples,
                     }
-                }
+                },
             }
-    })
+        }
+    )
 
     dataset = get_dataset_for_test()
-    config = register_default_init_args(config,
-                                        dataset,
-                                        batch_size)
+    config = register_default_init_args(config, dataset, batch_size)
 
     return config
 
@@ -63,7 +62,7 @@ def get_model_for_test():
             tf.keras.layers.Input(shape=(5, 5, 1)),
             tf.keras.layers.Conv2D(2, 3, name="layer1"),
             tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Dense(4, name="layer2")
+            tf.keras.layers.Dense(4, name="layer2"),
         ]
     )
     return model
@@ -92,8 +91,7 @@ def test_parameter_update():
 
     config = get_config_for_test()
 
-    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config,
-                                                                                     "quantization"))
+    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config, "quantization"))
     bn_adaptation.run(model)
 
     for layer in model.layers:
@@ -112,10 +110,7 @@ def test_all_parameter_are_unchanged_for_zero_bn_adapt_samples():
     for layer in model.layers:
         original_all_param_values[layer] = deepcopy(layer.weights)
 
-    bn_adaptation = BatchnormAdaptationAlgorithm(TFInitializingDataLoader(get_dataset_for_test(),
-                                                                          2),
-                                                 0,
-                                                 None)
+    bn_adaptation = BatchnormAdaptationAlgorithm(TFInitializingDataLoader(get_dataset_for_test(), 2), 0, None)
     bn_adaptation.run(model)
 
     for layer in model.layers:

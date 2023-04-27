@@ -10,9 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+# isort: off
+# pylint: skip-file
+
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
-# pylint: skip-file
+
 from nncf.version import BKC_TORCH_VERSION
 
 import torch
@@ -23,7 +26,7 @@ try:
     torch_version = parse_version(_torch_version).base_version
 except:
     nncf_logger.debug("Could not parse torch version")
-    _torch_version = '0.0.0'
+    _torch_version = "0.0.0"
     torch_version = parse_version(_torch_version).base_version
 
 if parse_version(BKC_TORCH_VERSION).base_version != torch_version:

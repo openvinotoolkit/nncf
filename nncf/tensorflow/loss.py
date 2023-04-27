@@ -20,7 +20,7 @@ from nncf.api.compression import CompressionLoss
 
 class TFZeroCompressionLoss(CompressionLoss):
     def calculate(self, *args, **kwargs) -> Any:
-        return tf.constant(0.)
+        return tf.constant(0.0)
 
     def load_state(self, state: Dict[str, Any]) -> None:
         pass

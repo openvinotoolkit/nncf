@@ -10,11 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
@@ -23,8 +19,8 @@ from nncf.common.composite_compression import CompositeCompressionAlgorithmContr
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.statistics import NNCFStatistics
 
-STATE_ATTR = 'state'
-DIFF_STATE_ATTR = STATE_ATTR + '__'
+STATE_ATTR = "state"
+DIFF_STATE_ATTR = STATE_ATTR + "__"
 
 
 class ALoss(CompressionLoss):
@@ -75,7 +71,7 @@ class BScheduler(AScheduler):
 
 
 class A(BaseCompressionAlgorithmController):
-    def __init__(self, target_model, state_value: int, name: str = 'A'):
+    def __init__(self, target_model, state_value: int, name: str = "A"):
         super().__init__(target_model)
         self._state_value = state_value
         self._loss = ALoss(self._state_value)
@@ -99,7 +95,7 @@ class A(BaseCompressionAlgorithmController):
 
 class B(A):
     def __init__(self, target_model, state_value: int):
-        super().__init__(target_model, state_value, name='B')
+        super().__init__(target_model, state_value, name="B")
         self._loss = BLoss(self._state_value)
         self._scheduler = BScheduler(self._state_value)
 
@@ -119,9 +115,16 @@ class CA(CompositeCompressionAlgorithmController):
     def get_compression_state(self) -> Dict[str, Any]:
         pass
 
-    def export_model(self, save_path: str, save_format: Optional[str] = None, input_names: Optional[List[str]] = None,
-                     output_names: Optional[List[str]] = None, model_args: Optional[Tuple[Any, ...]] = None) -> None:
+    def export_model(
+        self,
+        save_path: str,
+        save_format: Optional[str] = None,
+        input_names: Optional[List[str]] = None,
+        output_names: Optional[List[str]] = None,
+        model_args: Optional[Tuple[Any, ...]] = None,
+    ) -> None:
         pass
+
 
 def test_ctrl_state_load(mocker):
     model = mocker.stub
@@ -171,7 +174,7 @@ def test_advanced_composite_ctrl_load(mocker):
     model = mocker.stub
     composite_ctrl = CA(model)
     ctrl1 = A(model, 1)
-    ctrl2 = A(model, 2, name='A2')
+    ctrl2 = A(model, 2, name="A2")
     composite_ctrl.add(ctrl1)
     composite_ctrl.add(ctrl2)
 

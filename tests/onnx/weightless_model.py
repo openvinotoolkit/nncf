@@ -11,16 +11,17 @@
  limitations under the License.
 """
 
-from typing import Union
+import tempfile
 from copy import deepcopy
+from pathlib import Path
+from typing import Union
+
+import numpy as np
 import onnx
 from onnx import TensorProto  # pylint:disable=no-name-in-module
 from onnx.external_data_helper import uses_external_data
-from nncf.onnx.graph.onnx_graph import ONNXGraph
-import numpy as np
-import tempfile
 
-from pathlib import Path
+from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 # pylint: disable=no-member
 
@@ -53,7 +54,7 @@ def save_model_without_tensors(model: onnx.ModelProto, model_path: Path) -> None
     :param model_path: Path to save the onnx model.
     :return: None.
     """
-    tensors_location = Path('tensors')
+    tensors_location = Path("tensors")
     copy_model = deepcopy(model)
     with tempfile.TemporaryDirectory() as tmpfile:
         onnx.save_model(copy_model, model_path, save_as_external_data=True, location=Path(tmpfile) / tensors_location)

@@ -16,23 +16,21 @@ from itertools import islice
 import numpy as np
 import tensorflow as tf
 
+from nncf.common.logging.progress_bar import ProgressBar
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.logging.progress_bar import ProgressBar
-from nncf.tensorflow.quantization.init_range import TFRangeInitParams
-from nncf.tensorflow.quantization.init_range import RangeInitializer
-from nncf.tensorflow.tensor_statistics.reduction import get_axes
-from nncf.experimental.tensorflow.quantization.quantizers import InputType
-from nncf.experimental.tensorflow.quantization.quantizers import NNCF_QUANTIZATION_OPERATIONS_V2
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
+from nncf.experimental.tensorflow.quantization.quantizers import NNCF_QUANTIZATION_OPERATIONS_V2
+from nncf.experimental.tensorflow.quantization.quantizers import InputType
+from nncf.tensorflow.quantization.init_range import RangeInitializer
+from nncf.tensorflow.quantization.init_range import TFRangeInitParams
+from nncf.tensorflow.tensor_statistics.reduction import get_axes
 from nncf.tensorflow.tensor_statistics.statistics import tf_convert_stat_to_min_max_tensor_stat
 
 
 class TFRangeInitParamsV2(TFRangeInitParams):
-    def get_init_config_for_quantization_point_v2(self,
-                                                  node_name: str,
-                                                  input_type: str) -> RangeInitConfig:
+    def get_init_config_for_quantization_point_v2(self, node_name: str, input_type: str) -> RangeInitConfig:
         group = QuantizerGroup.WEIGHTS if input_type == InputType.WEIGHTS else QuantizerGroup.ACTIVATIONS
         return self.get_init_config_for_scope_and_group(node_name, group)
 
@@ -50,11 +48,8 @@ class RangeInitializerV2(RangeInitializer):
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATIONS_V2.registry_dict.values()
 
     def _register_op_collector(self, op, collectors, handles, op_weights):
-        node_name = ''  # TODO(andrey-churkin): Use correct node_name
-        init_config = self.range_init_params.get_init_config_for_quantization_point_v2(
-            node_name,
-            op.input_type
-        )
+        node_name = ""  # TODO(andrey-churkin): Use correct node_name
+        init_config = self.range_init_params.get_init_config_for_quantization_point_v2(node_name, op.input_type)
 
         is_weights = op.input_type == InputType.WEIGHTS
         collector_params = RangeInitCollectorParams(is_weights, op.mode, op.per_channel)
@@ -65,15 +60,12 @@ class RangeInitializerV2(RangeInitializer):
         else:
             num_batches = int(np.ceil(init_config.num_init_samples / self.dataset.batch_size))
 
-            per_sample_stats = init_config.init_type in ['mixed_min_max', 'mean_min_max']
+            per_sample_stats = init_config.init_type in ["mixed_min_max", "mean_min_max"]
             if collector_params.use_per_sample_stats(per_sample_stats):
                 reduction_shape = reduction_shape[1:]
 
         collector = RangeInitializerV2.generate_stat_collector(
-            reduction_shape,
-            collector_params,
-            init_config,
-            num_batches
+            reduction_shape, collector_params, init_config, num_batches
         )
         handles.append(op.register_hook_pre_call(collector.register_input))
         op.enabled = False
@@ -87,10 +79,8 @@ class RangeInitializerV2(RangeInitializer):
                 continue
             self._register_op_collector(op, collectors, handles, op_weights)
 
-        for (x, _) in ProgressBar(
-                islice(self.dataset, self.num_steps),
-                total=self.num_steps,
-                desc='Collecting tensor statistics/data'
+        for x, _ in ProgressBar(
+            islice(self.dataset, self.num_steps), total=self.num_steps, desc="Collecting tensor statistics/data"
         ):
             model(x, training=False)
 

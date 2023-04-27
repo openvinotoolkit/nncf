@@ -34,7 +34,7 @@ from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBias
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.scopes import IgnoredScope
 
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
 class PostTrainingQuantization(Algorithm):
@@ -48,14 +48,16 @@ class PostTrainingQuantization(Algorithm):
     ChannelAlignment will be added soon.
     """
 
-    def __init__(self,
-                 preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                 target_device: TargetDevice = TargetDevice.ANY,
-                 subset_size: int = 300,
-                 fast_bias_correction: bool = True,
-                 model_type: Optional[ModelType] = None,
-                 ignored_scope: Optional[IgnoredScope] = None,
-                 advanced_parameters: Optional[AdvancedQuantizationParameters] = None):
+    def __init__(
+        self,
+        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+        target_device: TargetDevice = TargetDevice.ANY,
+        subset_size: int = 300,
+        fast_bias_correction: bool = True,
+        model_type: Optional[ModelType] = None,
+        ignored_scope: Optional[IgnoredScope] = None,
+        advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    ):
         """
         :param preset: A preset that controls the quantization mode
             (symmetric and asymmetric). It can take the following values:
@@ -96,7 +98,7 @@ class PostTrainingQuantization(Algorithm):
             weights_quantization_params=advanced_parameters.weights_quantization_params,
             activations_range_estimator_params=advanced_parameters.activations_range_estimator_params,
             weights_range_estimator_params=advanced_parameters.weights_range_estimator_params,
-            backend_params=advanced_parameters.backend_params
+            backend_params=advanced_parameters.backend_params,
         )
 
         self.algorithms.append(min_max_quantization)
@@ -114,7 +116,7 @@ class PostTrainingQuantization(Algorithm):
                 threshold=threshold,
                 apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
                 inplace_statistics=advanced_parameters.inplace_statistics,
-                backend_params=advanced_parameters.backend_params
+                backend_params=advanced_parameters.backend_params,
             )
         else:
             threshold = BIAS_CORRECTION_THRESHOLD
@@ -126,7 +128,7 @@ class PostTrainingQuantization(Algorithm):
                 threshold=threshold,
                 apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
                 inplace_statistics=advanced_parameters.inplace_statistics,
-                backend_params=advanced_parameters.backend_params
+                backend_params=advanced_parameters.backend_params,
             )
 
         self.algorithms.append(bias_correction)
@@ -143,9 +145,7 @@ class PostTrainingQuantization(Algorithm):
                     output.add_statistic_point(statistic_point)
         return output
 
-    def _create_statistics_aggregator(self,
-                                      dataset: Dataset,
-                                      backend: BackendType) -> StatisticsAggregator:
+    def _create_statistics_aggregator(self, dataset: Dataset, backend: BackendType) -> StatisticsAggregator:
         """
         Creates backend-specific StatisticsAggregator.
 
@@ -157,25 +157,30 @@ class PostTrainingQuantization(Algorithm):
         """
         if backend == BackendType.ONNX:
             from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
+
             return ONNXStatisticsAggregator(dataset)
         if backend == BackendType.OPENVINO:
             from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+
             return OVStatisticsAggregator(dataset)
         if backend == BackendType.TORCH:
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
+
             return PTStatisticsAggregator(dataset)
         return None
 
-    def _apply(self,
-               model: TModel,
-               statistic_points: Optional[StatisticPointsContainer] = None,
-               dataset: Optional[Dataset] = None) -> TModel:
+    def _apply(
+        self,
+        model: TModel,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+        dataset: Optional[Dataset] = None,
+    ) -> TModel:
         modified_model = copy_model(model)
         if statistic_points is None:
             backend = get_backend(modified_model)
             # TODO (l-bat): Remove after OpenVINO Native is removed from experimental
             if backend == BackendType.OPENVINO:
-                nncf_logger.warning('You are using experimental OpenVINO backend for the Post-training quantization.')
+                nncf_logger.warning("You are using experimental OpenVINO backend for the Post-training quantization.")
 
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:

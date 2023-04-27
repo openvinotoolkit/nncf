@@ -12,24 +12,22 @@
 """
 import pytest
 
-from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
-from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_last_nodes_of_type
+from nncf.common.pruning.utils import get_rounded_pruned_element_number
+from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
 from nncf.torch.pruning.utils import get_bn_for_conv_node_by_name
-from tests.torch.pruning.helpers import get_basic_pruning_config, BigPruningTestModel, \
-    BranchingModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.pruning.helpers import BigPruningTestModel
+from tests.torch.pruning.helpers import BranchingModel
+from tests.torch.pruning.helpers import get_basic_pruning_config
 
 
 # pylint: disable=protected-access
-@pytest.mark.parametrize("total,sparsity_rate,multiple_of,ref",
-                         [(20, 0.2, None, 4),
-                          (20, 0.2, 8, 4),
-                          (20, 0.1, 2, 2),
-                          (20, 0.1, 5, 0),
-                          (20, 0.5, None, 4)
-                          ])
+@pytest.mark.parametrize(
+    "total,sparsity_rate,multiple_of,ref",
+    [(20, 0.2, None, 4), (20, 0.2, 8, 4), (20, 0.1, 2, 2), (20, 0.1, 5, 0), (20, 0.5, None, 4)],
+)
 def test_get_rounded_pruned_element_number(total, sparsity_rate, multiple_of, ref):
     if multiple_of is not None:
         result = get_rounded_pruned_element_number(total, sparsity_rate, multiple_of)
@@ -43,58 +41,61 @@ def test_get_rounded_pruned_element_number(total, sparsity_rate, multiple_of, re
 
 def test_get_bn_for_conv_node():
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
-    config['compression']['algorithm'] = 'filter_pruning'
+    config["compression"]["algorithm"] = "filter_pruning"
     pruned_model, _ = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
 
-    conv1_name = 'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0'
+    conv1_name = "BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0"
     bn = get_bn_for_conv_node_by_name(pruned_model, conv1_name)
     assert bn == pruned_model.bn1
 
-    conv2_name = 'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0'
+    conv2_name = "BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0"
     bn = get_bn_for_conv_node_by_name(pruned_model, conv2_name)
     assert bn == pruned_model.bn2
 
-    up_name = 'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0'
+    up_name = "BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0"
     bn = get_bn_for_conv_node_by_name(pruned_model, up_name)
     assert bn is None
 
-    conv3_name = 'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0'
+    conv3_name = "BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0"
     bn = get_bn_for_conv_node_by_name(pruned_model, conv3_name)
     assert bn is None
 
 
-@pytest.mark.parametrize(('model', 'ref_first_module_names'),
-                         [(BigPruningTestModel, ['conv1']),
-                          (BranchingModel, ['conv1', 'conv2', 'conv3']),
-                          ],
-                         )
+@pytest.mark.parametrize(
+    ("model", "ref_first_module_names"),
+    [
+        (BigPruningTestModel, ["conv1"]),
+        (BranchingModel, ["conv1", "conv2", "conv3"]),
+    ],
+)
 def test_get_first_pruned_layers(model, ref_first_module_names):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
-    config['compression']['algorithm'] = 'filter_pruning'
+    config["compression"]["algorithm"] = "filter_pruning"
     pruned_model, _ = create_compressed_model_and_algo_for_test(model(), config)
 
-    first_pruned_nodes = get_first_nodes_of_type(pruned_model.nncf.get_original_graph(),
-                                                 FilterPruningBuilder(config).get_op_types_of_pruned_modules())
-    first_pruned_modules = [pruned_model.nncf.get_containing_module(n.node_name)
-                            for n in first_pruned_nodes]
+    first_pruned_nodes = get_first_nodes_of_type(
+        pruned_model.nncf.get_original_graph(), FilterPruningBuilder(config).get_op_types_of_pruned_modules()
+    )
+    first_pruned_modules = [pruned_model.nncf.get_containing_module(n.node_name) for n in first_pruned_nodes]
     ref_first_modules = [getattr(pruned_model, module_name) for module_name in ref_first_module_names]
     assert set(first_pruned_modules) == set(ref_first_modules)
 
 
-@pytest.mark.parametrize(('model', 'ref_last_module_names'),
-                         [(BigPruningTestModel, ['conv3']),
-                          (BranchingModel, ['conv4', 'conv5']
-                           ),
-                          ],
-                         )
+@pytest.mark.parametrize(
+    ("model", "ref_last_module_names"),
+    [
+        (BigPruningTestModel, ["conv3"]),
+        (BranchingModel, ["conv4", "conv5"]),
+    ],
+)
 def test_get_last_pruned_layers(model, ref_last_module_names):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
-    config['compression']['algorithm'] = 'filter_pruning'
+    config["compression"]["algorithm"] = "filter_pruning"
     pruned_model, _ = create_compressed_model_and_algo_for_test(model(), config)
 
-    last_pruned_nodes = get_last_nodes_of_type(pruned_model.nncf.get_original_graph(),
-                                               FilterPruningBuilder(config).get_op_types_of_pruned_modules())
-    last_pruned_modules = [pruned_model.nncf.get_containing_module(n.node_name)
-                           for n in last_pruned_nodes]
+    last_pruned_nodes = get_last_nodes_of_type(
+        pruned_model.nncf.get_original_graph(), FilterPruningBuilder(config).get_op_types_of_pruned_modules()
+    )
+    last_pruned_modules = [pruned_model.nncf.get_containing_module(n.node_name) for n in last_pruned_nodes]
     ref_last_modules = [getattr(pruned_model, module_name) for module_name in ref_last_module_names]
     assert set(last_pruned_modules) == set(ref_last_modules)

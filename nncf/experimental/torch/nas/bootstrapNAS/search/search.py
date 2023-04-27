@@ -14,14 +14,7 @@ import csv
 from abc import abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import NoReturn
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
+from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, TypeVar
 
 import numpy as np
 import torch
@@ -50,28 +43,33 @@ from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import Ba
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import EfficiencyEvaluatorHandler
 from nncf.torch.nncf_network import NNCFNetwork
 
-DataLoaderType = TypeVar('DataLoaderType')
-TModel = TypeVar('TModel')
-ValFnType = Callable[
-    [
-        TModel,
-        DataLoaderType
-    ],
-    float
-]
+DataLoaderType = TypeVar("DataLoaderType")
+TModel = TypeVar("TModel")
+ValFnType = Callable[[TModel, DataLoaderType], float]
 
 
 class EvolutionaryAlgorithms(Enum):
-    NSGA2 = 'NSGA2'
+    NSGA2 = "NSGA2"
 
 
 class SearchParams:
     """
     Storage class for search parameters.
     """
-    def __init__(self, num_evals: float, num_constraints: float, population: float,
-                 seed: float, crossover_prob: float, crossover_eta: float,
-                 mutation_prob: float, mutation_eta: float, acc_delta: float, ref_acc: float):
+
+    def __init__(
+        self,
+        num_evals: float,
+        num_constraints: float,
+        population: float,
+        seed: float,
+        crossover_prob: float,
+        crossover_eta: float,
+        mutation_prob: float,
+        mutation_eta: float,
+        acc_delta: float,
+        ref_acc: float,
+    ):
         """
         Initializes storage class for search parameters.
 
@@ -100,33 +98,43 @@ class SearchParams:
         self.ref_acc = ref_acc
 
     @classmethod
-    def from_dict(cls, search_config: Dict[str, Any]) -> 'SearchParams':
+    def from_dict(cls, search_config: Dict[str, Any]) -> "SearchParams":
         """
         Initializes search params storage class from Dict.
 
         :param search_config: Dictionary with search configuration.
         :return: Instance of the storage class
         """
-        num_evals = search_config.get('num_evals', 3000)
-        num_constraints = search_config.get('num_constraints', 0)
-        population = search_config.get('population', 40)
-        seed = search_config.get('seed', 0)
-        crossover_prob = search_config.get('crossover_prob', 0.9)
-        crossover_eta = search_config.get('crossover_eta', 10.0)
-        mutation_prob = search_config.get('mutation_prob', 0.02)
-        mutation_eta = search_config.get('mutation_eta', 3.0)
-        acc_delta = search_config.get('acc_delta', 1)
-        ref_acc = search_config.get('ref_acc', -1)
+        num_evals = search_config.get("num_evals", 3000)
+        num_constraints = search_config.get("num_constraints", 0)
+        population = search_config.get("population", 40)
+        seed = search_config.get("seed", 0)
+        crossover_prob = search_config.get("crossover_prob", 0.9)
+        crossover_eta = search_config.get("crossover_eta", 10.0)
+        mutation_prob = search_config.get("mutation_prob", 0.02)
+        mutation_eta = search_config.get("mutation_eta", 3.0)
+        acc_delta = search_config.get("acc_delta", 1)
+        ref_acc = search_config.get("ref_acc", -1)
 
-        return cls(num_evals, num_constraints, population,
-                   seed, crossover_prob, crossover_eta,
-                   mutation_prob, mutation_eta, acc_delta, ref_acc)
+        return cls(
+            num_evals,
+            num_constraints,
+            population,
+            seed,
+            crossover_prob,
+            crossover_eta,
+            mutation_prob,
+            mutation_eta,
+            acc_delta,
+            ref_acc,
+        )
 
 
 class BaseSearchAlgorithm:
     """
     Base class for search algorithms. It contains the evaluators used by search approches.
     """
+
     def __init__(self):
         """
         Initialize BaseSearchAlgorithm class.
@@ -141,7 +149,7 @@ class BaseSearchAlgorithm:
         self.bad_requests = []
         self.best_config = None
         self.best_vals = None
-        self.best_pair_objective = float('inf')
+        self.best_pair_objective = float("inf")
         self._tb = None
 
     @property
@@ -149,31 +157,34 @@ class BaseSearchAlgorithm:
         return self._search_records
 
     @abstractmethod
-    def run(self, validate_fn: Callable, val_loader: DataLoader, checkpoint_save_dir: str,
-            efficiency_evaluator: Optional[BaseEvaluator] = None, ref_acc: Optional[float] = 100,
-            tensorboard_writer: Optional[SummaryWriter] = None) -> Tuple[ElasticityController,
-                                                                         SubnetConfig, Tuple[float, ...]]:
+    def run(
+        self,
+        validate_fn: Callable,
+        val_loader: DataLoader,
+        checkpoint_save_dir: str,
+        efficiency_evaluator: Optional[BaseEvaluator] = None,
+        ref_acc: Optional[float] = 100,
+        tensorboard_writer: Optional[SummaryWriter] = None,
+    ) -> Tuple[ElasticityController, SubnetConfig, Tuple[float, ...]]:
         """This method should implement how to run the search algorithm."""
 
-    def search_progression_to_csv(self, filename='search_progression.csv') -> NoReturn:
+    def search_progression_to_csv(self, filename="search_progression.csv") -> NoReturn:
         """
         Exports search progression to CSV file
 
         :param filename: path to save the CSV file.
         :return:
         """
-        with safe_open(Path(self._log_dir) / filename, 'w', encoding='utf8') as progression:
+        with safe_open(Path(self._log_dir) / filename, "w", encoding="utf8") as progression:
             writer = csv.writer(progression)
             for record in self.search_records:
                 writer.writerow(record)
 
 
 class SearchAlgorithm(BaseSearchAlgorithm):
-    def __init__(self,
-                 model: NNCFNetwork,
-                 elasticity_ctrl: ElasticityController,
-                 nncf_config: NNCFConfig,
-                 verbose=True):
+    def __init__(
+        self, model: NNCFNetwork, elasticity_ctrl: ElasticityController, nncf_config: NNCFConfig, verbose=True
+    ):
         """
         Initializes search algorithm
 
@@ -185,24 +196,27 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         super().__init__()
         self._model = model
         self._elasticity_ctrl = elasticity_ctrl
-        search_config = nncf_config.get('bootstrapNAS', {}).get('search', {})
+        search_config = nncf_config.get("bootstrapNAS", {}).get("search", {})
         self.num_obj = None
         self.search_params = SearchParams.from_dict(search_config)
         self._log_dir = nncf_config.get("log_dir", ".")
         self._verbose = verbose
         self._top1_accuracy_validation_fn = None
         self._val_loader = None
-        evo_algo = search_config['algorithm']
+        evo_algo = search_config["algorithm"]
         if evo_algo == EvolutionaryAlgorithms.NSGA2.value:
-            self._algorithm = NSGA2(pop_size=self.search_params.population,
-                                    sampling=get_sampling("int_lhs"),
-                                    crossover=get_crossover("int_sbx", prob=self.search_params.crossover_prob,
-                                                            eta=self.search_params.crossover_eta),
-                                    mutation=get_mutation("int_pm", prob=self.search_params.mutation_prob,
-                                                          eta=self.search_params.mutation_eta),
-                                    eliminate_duplicates=True,
-                                    save_history=True,
-                                    )
+            self._algorithm = NSGA2(
+                pop_size=self.search_params.population,
+                sampling=get_sampling("int_lhs"),
+                crossover=get_crossover(
+                    "int_sbx", prob=self.search_params.crossover_prob, eta=self.search_params.crossover_eta
+                ),
+                mutation=get_mutation(
+                    "int_pm", prob=self.search_params.mutation_prob, eta=self.search_params.mutation_eta
+                ),
+                eliminate_duplicates=True,
+                save_history=True,
+            )
         else:
             raise NotImplementedError(f"Evolutionary Search Algorithm {evo_algo} not implemented")
         self._num_vars = 0
@@ -214,7 +228,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
             raise RuntimeError("Search space is empty")
 
         self._result = None
-        bn_adapt_params = search_config.get('batchnorm_adaptation', {})
+        bn_adapt_params = search_config.get("batchnorm_adaptation", {})
         bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(nncf_config, bn_adapt_params)
         self.bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs) if bn_adapt_algo_kwargs else None
 
@@ -287,14 +301,21 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         return cls(model, elasticity_ctrl, nncf_config)
 
     @classmethod
-    def from_checkpoint(cls, model: NNCFNetwork, elasticity_ctrl: ElasticityController, bn_adapt_args,
-                        resuming_checkpoint_path: str) -> 'SearchAlgorithm':
+    def from_checkpoint(
+        cls, model: NNCFNetwork, elasticity_ctrl: ElasticityController, bn_adapt_args, resuming_checkpoint_path: str
+    ) -> "SearchAlgorithm":
         raise NotImplementedError
 
-    def run(self, validate_fn: ValFnType, val_loader: DataLoaderType, checkpoint_save_dir: str,
-            efficiency_evaluator: Optional[BaseEvaluator] = None, ref_acc: Optional[float] = 100,
-            tensorboard_writer: Optional[SummaryWriter] = None, evaluator_checkpoint = None) \
-            -> Tuple[ElasticityController, SubnetConfig, Tuple[float, ...]]:
+    def run(
+        self,
+        validate_fn: ValFnType,
+        val_loader: DataLoaderType,
+        checkpoint_save_dir: str,
+        efficiency_evaluator: Optional[BaseEvaluator] = None,
+        ref_acc: Optional[float] = 100,
+        tensorboard_writer: Optional[SummaryWriter] = None,
+        evaluator_checkpoint=None,
+    ) -> Tuple[ElasticityController, SubnetConfig, Tuple[float, ...]]:
         """
         Runs the search algorithm
 
@@ -314,9 +335,9 @@ class SearchAlgorithm(BaseSearchAlgorithm):
             self.search_params.ref_acc = ref_acc
         self._tb = tensorboard_writer
         self.checkpoint_save_dir = checkpoint_save_dir
-        self._accuracy_evaluator_handler = AccuracyEvaluatorHandler(AccuracyEvaluator(
-                                                                    self._model, validate_fn, val_loader),
-                                                                    self._elasticity_ctrl)
+        self._accuracy_evaluator_handler = AccuracyEvaluatorHandler(
+            AccuracyEvaluator(self._model, validate_fn, val_loader), self._elasticity_ctrl
+        )
         self._accuracy_evaluator_handler.update_reference_accuracy(self.search_params)
         self.num_obj = 2
         if efficiency_evaluator is not None:
@@ -328,19 +349,23 @@ class SearchAlgorithm(BaseSearchAlgorithm):
             def get_macs_for_active_subnet() -> float:
                 flops, _ = self._elasticity_ctrl.multi_elasticity_handler.count_flops_and_weights_for_active_subnet()
                 return flops / 2000000  # MACs
-            self._efficiency_evaluator_handler = EfficiencyEvaluatorHandler(MACsEvaluator(get_macs_for_active_subnet),
-                                                                            self._elasticity_ctrl)
+
+            self._efficiency_evaluator_handler = EfficiencyEvaluatorHandler(
+                MACsEvaluator(get_macs_for_active_subnet), self._elasticity_ctrl
+            )
         self._evaluator_handlers.append(self._efficiency_evaluator_handler)
         self._evaluator_handlers.append(self._accuracy_evaluator_handler)
-        self.maximal_vals = [evaluator_handler.current_value for evaluator_handler
-                                  in self._evaluator_handlers]
+        self.maximal_vals = [evaluator_handler.current_value for evaluator_handler in self._evaluator_handlers]
 
         self._problem = SearchProblem(self)
-        self._result = minimize(self._problem, self._algorithm,
-                                ('n_gen', int(self.search_params.num_evals / self.search_params.population)),
-                                seed=self.search_params.seed,
-                                # save_history=True,
-                                verbose=self._verbose)
+        self._result = minimize(
+            self._problem,
+            self._algorithm,
+            ("n_gen", int(self.search_params.num_evals / self.search_params.population)),
+            seed=self.search_params.seed,
+            # save_history=True,
+            verbose=self._verbose,
+        )
 
         if self.best_config is not None:
             self._elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(self.best_config)
@@ -358,8 +383,8 @@ class SearchAlgorithm(BaseSearchAlgorithm):
 
         return self._elasticity_ctrl, self.best_config, [abs(elem) for elem in ret_vals if elem is not None]
 
-    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
-    def visualize_search_progression(self, filename='search_progression') -> NoReturn:
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
+    def visualize_search_progression(self, filename="search_progression") -> NoReturn:
         """
         Visualizes search progression and saves the resulting figure.
 
@@ -367,26 +392,46 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         :return:
         """
         import matplotlib.pyplot as plt
+
         plt.figure()
-        colormap = plt.cm.get_cmap('viridis')
+        colormap = plt.cm.get_cmap("viridis")
         col = range(int(self.search_params.num_evals / self.search_params.population))
         for i in range(0, len(self.search_records), self.search_params.population):
-            c = [col[int(i/self.search_params.population)]]*len(self.search_records[i:i+self.search_params.population])
-            plt.scatter([abs(row[2]) for row in self.search_records][i:i+self.search_params.population],
-                        [abs(row[4]) for row in self.search_records][i:i+self.search_params.population],
-                        s=9, c=c, alpha=0.5,
-                        marker='D', cmap=colormap)
-        plt.scatter(*tuple(abs(ev.input_model_value) for ev in self.evaluator_handlers),
-                    marker='s', s=120, color='blue', label='Input Model', edgecolors='black')
+            c = [col[int(i / self.search_params.population)]] * len(
+                self.search_records[i : i + self.search_params.population]
+            )
+            plt.scatter(
+                [abs(row[2]) for row in self.search_records][i : i + self.search_params.population],
+                [abs(row[4]) for row in self.search_records][i : i + self.search_params.population],
+                s=9,
+                c=c,
+                alpha=0.5,
+                marker="D",
+                cmap=colormap,
+            )
+        plt.scatter(
+            *tuple(abs(ev.input_model_value) for ev in self.evaluator_handlers),
+            marker="s",
+            s=120,
+            color="blue",
+            label="Input Model",
+            edgecolors="black",
+        )
         if None not in self.best_vals:
-            plt.scatter(*tuple(abs(val) for val in self.best_vals),
-                        marker='o', s=120,color='yellow', label='BootstrapNAS A',
-                        edgecolors='black', linewidth=2.5)
+            plt.scatter(
+                *tuple(abs(val) for val in self.best_vals),
+                marker="o",
+                s=120,
+                color="yellow",
+                label="BootstrapNAS A",
+                edgecolors="black",
+                linewidth=2.5,
+            )
         plt.legend()
-        plt.title('Search Progression')
+        plt.title("Search Progression")
         plt.xlabel(self.efficiency_evaluator_handler.name)
         plt.ylabel(self.accuracy_evaluator_handler.name)
-        plt.savefig(f'{self._log_dir}/{filename}.png')
+        plt.savefig(f"{self._log_dir}/{filename}.png")
 
     def save_evaluators_state(self) -> NoReturn:
         """
@@ -397,7 +442,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         for evaluator_handler in self._evaluator_handlers:
             eval_state = evaluator_handler.evaluator.get_state()
             evaluator_handlers_state.append(eval_state)
-        torch.save(evaluator_handlers_state, Path(self.checkpoint_save_dir, 'evaluators_state.pth'))
+        torch.save(evaluator_handlers_state, Path(self.checkpoint_save_dir, "evaluators_state.pth"))
 
     def evaluators_to_csv(self) -> NoReturn:
         """
@@ -427,12 +472,14 @@ class SearchProblem(Problem):
 
         :param search: search algorithm.
         """
-        super().__init__(n_var=search.num_vars,
-                         n_obj=search.num_obj,
-                         n_constr=search.search_params.num_constraints,
-                         xl=search.vars_lower,
-                         xu=search.vars_upper,
-                         type_var=search.type_var)
+        super().__init__(
+            n_var=search.num_vars,
+            n_obj=search.num_obj,
+            n_constr=search.search_params.num_constraints,
+            xl=search.vars_lower,
+            xu=search.vars_upper,
+            type_var=search.type_var,
+        )
         self._search = search
         self._search_records = search.search_records
         self._elasticity_handler = self._search._elasticity_ctrl.multi_elasticity_handler
@@ -501,12 +548,13 @@ class SearchProblem(Problem):
             if pair_objective < self._search.best_pair_objective:
                 self._search.best_pair_objective = pair_objective
                 self._search.best_config = config
-                self._search.best_vals = [evaluator_handler.current_value for evaluator_handler
-                                          in self._evaluator_handlers]
-                checkpoint_path = Path(self._search.checkpoint_save_dir, 'subnetwork_best.pth')
+                self._search.best_vals = [
+                    evaluator_handler.current_value for evaluator_handler in self._evaluator_handlers
+                ]
+                checkpoint_path = Path(self._search.checkpoint_save_dir, "subnetwork_best.pth")
                 checkpoint = {
-                    'best_acc1': acc_within_tolerance * -1.0,
-                    'best_efficiency': pair_objective,
-                    'subnet_config': config
+                    "best_acc1": acc_within_tolerance * -1.0,
+                    "best_efficiency": pair_objective,
+                    "subnet_config": config,
                 }
                 torch.save(checkpoint, checkpoint_path)

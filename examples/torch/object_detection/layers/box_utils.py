@@ -19,31 +19,29 @@ from .extensions import EXTENSIONS
 
 
 def point_form(boxes):
-    """ Convert prior_boxes to (xmin, ymin, xmax, ymax)
+    """Convert prior_boxes to (xmin, ymin, xmax, ymax)
     representation for comparison to point form ground truth data.
     Args:
         boxes: (tensor) center-size default boxes from priorbox layers.
     Return:
         boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
     """
-    return torch.cat((boxes[:, :2] - boxes[:, 2:] / 2,  # xmin, ymin
-                      boxes[:, :2] + boxes[:, 2:] / 2), 1)  # xmax, ymax
+    return torch.cat((boxes[:, :2] - boxes[:, 2:] / 2, boxes[:, :2] + boxes[:, 2:] / 2), 1)  # xmin, ymin  # xmax, ymax
 
 
 def center_size(boxes):
-    """ Convert prior_boxes to (cx, cy, w, h)
+    """Convert prior_boxes to (cx, cy, w, h)
     representation for comparison to center-size form ground truth data.
     Args:
         boxes: (tensor) point_form boxes
     Return:
         boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
     """
-    return torch.cat((boxes[:, 2:] + boxes[:, :2]) / 2,  # cx, cy
-                     boxes[:, 2:] - boxes[:, :2], 1)  # w, h
+    return torch.cat((boxes[:, 2:] + boxes[:, :2]) / 2, boxes[:, 2:] - boxes[:, :2], 1)  # cx, cy  # w, h
 
 
 def intersect(box_a, box_b):
-    """ We resize both tensors to [A,B,2] without new malloc:
+    """We resize both tensors to [A,B,2] without new malloc:
     [A,2] -> [A,1,2] -> [A,B,2]
     [B,2] -> [1,B,2] -> [A,B,2]
     Then we compute the area of intersect between box_a and box_b.
@@ -55,10 +53,8 @@ def intersect(box_a, box_b):
     """
     A = box_a.size(0)
     B = box_b.size(0)
-    max_xy = torch.min(box_a[:, 2:].unsqueeze(1).expand(A, B, 2),
-                       box_b[:, 2:].unsqueeze(0).expand(A, B, 2))
-    min_xy = torch.max(box_a[:, :2].unsqueeze(1).expand(A, B, 2),
-                       box_b[:, :2].unsqueeze(0).expand(A, B, 2))
+    max_xy = torch.min(box_a[:, 2:].unsqueeze(1).expand(A, B, 2), box_b[:, 2:].unsqueeze(0).expand(A, B, 2))
+    min_xy = torch.max(box_a[:, :2].unsqueeze(1).expand(A, B, 2), box_b[:, :2].unsqueeze(0).expand(A, B, 2))
     inter = torch.clamp((max_xy - min_xy), min=0)
     return inter[:, :, 0] * inter[:, :, 1]
 
@@ -76,10 +72,8 @@ def jaccard(box_a, box_b):
         jaccard overlap: (tensor) Shape: [box_a.size(0), box_b.size(0)]
     """
     inter = intersect(box_a, box_b)
-    area_a = ((box_a[:, 2] - box_a[:, 0]) *
-              (box_a[:, 3] - box_a[:, 1])).unsqueeze(1).expand_as(inter)  # [A,B]
-    area_b = ((box_b[:, 2] - box_b[:, 0]) *
-              (box_b[:, 3] - box_b[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
+    area_a = ((box_a[:, 2] - box_a[:, 0]) * (box_a[:, 3] - box_a[:, 1])).unsqueeze(1).expand_as(inter)  # [A,B]
+    area_b = ((box_b[:, 2] - box_b[:, 0]) * (box_b[:, 3] - box_b[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
     union = area_a + area_b - inter
     return inter / union  # [A,B]
 
@@ -100,10 +94,7 @@ def match(threshold, truths, priors, labels, loc_t, conf_t, idx):
         The matched indices corresponding to 1)location and 2)confidence preds.
     """
     # jaccard index
-    overlaps = jaccard(
-        truths,
-        priors[0]
-    )
+    overlaps = jaccard(truths, priors[0])
     # (Bipartite Matching)
     # [1,num_objects] best prior for each ground truth
     best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
@@ -140,7 +131,8 @@ def encode(matched, priors):
     variances = priors[1]
     priors = priors[0]
     g_cxcy = ((matched[:, :2] + matched[:, 2:]) / 2 - (priors[:, :2] + priors[:, 2:]) / 2) / (
-                (priors[:, 2:] - priors[:, :2]) * variances[:, :2])
+        (priors[:, 2:] - priors[:, :2]) * variances[:, :2]
+    )
     g_wh = torch.log((matched[:, 2:] - matched[:, :2]) / (priors[:, 2:] - priors[:, :2])) / variances[:, 2:]
     # return target for smooth_l1_loss
     return torch.cat([g_cxcy, g_wh], 1)  # [num_priors,4]
@@ -162,7 +154,8 @@ def decode(loc, priors):
     variances = priors[1].squeeze(0)
     priors = priors[0].squeeze(0)
     decoded_boxes_cx_cy = variances[:, :2] * loc[:, :2] * (priors[:, 2:] - priors[:, :2]) + (
-                (priors[:, :2] + priors[:, 2:]) / 2)
+        (priors[:, :2] + priors[:, 2:]) / 2
+    )
     decoded_boxes_w_h = torch.exp(variances[:, 2:] * loc[:, 2:]) * (priors[:, 2:] - priors[:, :2])
     decoded_boxes_xmin_ymin = decoded_boxes_cx_cy - (decoded_boxes_w_h / 2)
     decoded_boxes_xmax_ymax = decoded_boxes_cx_cy + (decoded_boxes_w_h / 2)

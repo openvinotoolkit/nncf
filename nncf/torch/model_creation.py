@@ -11,50 +11,52 @@
  limitations under the License.
 """
 from os import path as osp
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
 from torch.distributed import barrier
 from torch.nn import Module
 
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.utils.api_marker import api
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
-from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.nncf_network import NNCFNetwork
+
+# pylint:disable=too-many-branches
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
-# pylint:disable=too-many-branches
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
 from nncf.torch.utils import training_mode_switcher
 
 
 @api(canonical_alias="nncf.torch.create_compressed_model")
-@tracked_function(NNCF_PT_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
-def create_compressed_model(model: Module,
-                            config: NNCFConfig,
-                            compression_state: Optional[Dict[str, Any]] = None,
-                            dummy_forward_fn: Callable[[Module], Any] = None,
-                            wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                            wrap_outputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                            dump_graphs=True) \
-    -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        CompressionStartedFromConfig(argname="config"),
+    ],
+)
+def create_compressed_model(
+    model: Module,
+    config: NNCFConfig,
+    compression_state: Optional[Dict[str, Any]] = None,
+    dummy_forward_fn: Callable[[Module], Any] = None,
+    wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
+    wrap_outputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
+    dump_graphs=True,
+) -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
     model and a configuration object.
@@ -94,9 +96,11 @@ def create_compressed_model(model: Module,
 
     set_debug_log_dir(config.get("log_dir", "."))
 
-    is_legacy_model_state_dict = compression_state is not None and \
-                                 BaseController.BUILDER_STATE not in compression_state and \
-                                 BaseController.CONTROLLER_STATE not in compression_state
+    is_legacy_model_state_dict = (
+        compression_state is not None
+        and BaseController.BUILDER_STATE not in compression_state
+        and BaseController.CONTROLLER_STATE not in compression_state
+    )
     maybe_convert_legacy_names_in_compress_state(compression_state)
 
     should_init = compression_state is None
@@ -125,7 +129,8 @@ def create_compressed_model(model: Module,
     try:
         if is_legacy_model_state_dict:
             from nncf.torch import load_state  # pylint: disable=cyclic-import
-            state_dict_to_load = compression_state.get('state_dict', compression_state)
+
+            state_dict_to_load = compression_state.get("state_dict", compression_state)
             load_state(compressed_model, state_dict_to_load, is_resume=True)
     finally:
         if dump_graphs and is_main_process():
@@ -136,11 +141,13 @@ def create_compressed_model(model: Module,
     return compression_ctrl, compressed_model
 
 
-def create_nncf_network(model: torch.nn.Module,
-                        config: NNCFConfig,
-                        dummy_forward_fn: Callable[[Module], Any] = None,
-                        wrap_inputs_fn: Callable = None,
-                        wrap_outputs_fn: Callable = None) -> NNCFNetwork:
+def create_nncf_network(
+    model: torch.nn.Module,
+    config: NNCFConfig,
+    dummy_forward_fn: Callable[[Module], Any] = None,
+    wrap_inputs_fn: Callable = None,
+    wrap_outputs_fn: Callable = None,
+) -> NNCFNetwork:
     """
     The main function used to produce a model ready for adding compression from an original PyTorch
     model and a configuration object.
@@ -170,14 +177,15 @@ def create_nncf_network(model: torch.nn.Module,
         the same as were supplied in input, but each tensor in the original input. Must be specified if
         dummy_forward_fn is specified.
     :param wrap_outputs_fn: if supplied, will be used on the module's output during a regular, non-dummy forward call.
-    :return: A model wrapped by NNCFNetwork, which is ready for adding compression. """
+    :return: A model wrapped by NNCFNetwork, which is ready for adding compression."""
 
     if dummy_forward_fn is not None and wrap_inputs_fn is None:
         raise ValueError(
             "A custom dummy forward function was specified, but the corresponding input wrapping function "
             "was not. In case a custom dummy forward function is specified for purposes of NNCF graph "
             "building, then the wrap_inputs_fn parameter MUST also be specified and be consistent with "
-            "the input wrapping done in dummy_forward_fn.")
+            "the input wrapping done in dummy_forward_fn."
+        )
 
     # Preserve `.training`/`.requires_grad` state since we will be building NNCFNetwork in `.eval` mode
     with training_mode_switcher(model, is_training=False):
@@ -186,17 +194,20 @@ def create_nncf_network(model: torch.nn.Module,
         # weights. As a consequence, no need to care about spoiling BN statistics, as they're disabled in eval mode.
 
         input_info_list = create_input_infos(config)
-        scopes_without_shape_matching = config.get('scopes_without_shape_matching', [])
-        ignored_scopes = config.get('ignored_scopes')
-        target_scopes = config.get('target_scopes')
+        scopes_without_shape_matching = config.get("scopes_without_shape_matching", [])
+        ignored_scopes = config.get("ignored_scopes")
+        target_scopes = config.get("target_scopes")
 
-        nncf_network = NNCFNetwork(model, input_infos=input_info_list,
-                                   dummy_forward_fn=dummy_forward_fn,
-                                   wrap_inputs_fn=wrap_inputs_fn,
-                                   wrap_outputs_fn=wrap_outputs_fn,
-                                   ignored_scopes=ignored_scopes,
-                                   target_scopes=target_scopes,
-                                   scopes_without_shape_matching=scopes_without_shape_matching)
+        nncf_network = NNCFNetwork(
+            model,
+            input_infos=input_info_list,
+            dummy_forward_fn=dummy_forward_fn,
+            wrap_inputs_fn=wrap_inputs_fn,
+            wrap_outputs_fn=wrap_outputs_fn,
+            ignored_scopes=ignored_scopes,
+            target_scopes=target_scopes,
+            scopes_without_shape_matching=scopes_without_shape_matching,
+        )
 
         nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
 
@@ -211,8 +222,9 @@ def synchronize_all_processes_in_distributed_mode():
         # Exception can be raised during running barrier
         # if the backend not in the supported list https://pytorch.org/docs/stable/distributed.html
         except RuntimeError as err:
-            nncf_logger.warning("Training pipeline spawned an error while "
-                                "synchronizing distributed training processes:")
+            nncf_logger.warning(
+                "Training pipeline spawned an error while synchronizing distributed training processes:"
+            )
             nncf_logger.warning(err)
             nncf_logger.warning("Desynchronization of distributed processes may occur.")
 
@@ -231,9 +243,9 @@ def create_compression_algorithm_builder(config: NNCFConfig, should_init=True) -
     return create_compression_algorithm_builder_from_algo_names(algo_names, config, should_init)
 
 
-def create_compression_algorithm_builder_from_algo_names(algo_names: List[str],
-                                                         config: NNCFConfig,
-                                                         should_init: bool) -> PTCompressionAlgorithmBuilder:
+def create_compression_algorithm_builder_from_algo_names(
+    algo_names: List[str], config: NNCFConfig, should_init: bool
+) -> PTCompressionAlgorithmBuilder:
     """
     Create compression algorithm builders by a given list of algorithm names.
 

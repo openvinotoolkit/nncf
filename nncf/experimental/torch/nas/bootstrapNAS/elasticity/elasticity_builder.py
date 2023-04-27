@@ -11,9 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Any
-from typing import Dict
-from typing import List
+from typing import Any, Dict, List
 
 from nncf import NNCFConfig
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
@@ -28,16 +26,17 @@ from nncf.torch.nncf_network import NNCFNetwork
 
 
 class EBuilderStateNames:
-    AVAILABLE_ELASTICITY_DIMS = 'available_elasticity_dims'
-    BUILDER_STATES = 'builder_states'
+    AVAILABLE_ELASTICITY_DIMS = "available_elasticity_dims"
+    BUILDER_STATES = "builder_states"
 
 
-@PT_COMPRESSION_ALGORITHMS.register('elasticity')
+@PT_COMPRESSION_ALGORITHMS.register("elasticity")
 class ElasticityBuilder(PTCompressionAlgorithmBuilder):
     """
     Determines which modifications should be made to the original FP32 model in order to introduce elasticity
     to the model.
     """
+
     _state_names = EBuilderStateNames
 
     # NOTE: This is the order of activation elasticity dimensions when multiple of them are enabled.
@@ -60,12 +59,12 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         super().__init__(nncf_config, should_init)
         self._multi_elasticity_handler = None
         # TODO(nlyalyus): ignored/target scope is not supported (ticket 68052)
-        self._ignored_scopes = self.config.get('ignored_scopes', None)
-        self._target_scopes = self.config.get('target_scopes', None)
+        self._ignored_scopes = self.config.get("ignored_scopes", None)
+        self._target_scopes = self.config.get("target_scopes", None)
         self._multi_elasticity_handler_state = None
 
         all_elasticity_dims = {e.value for e in ElasticityDim}
-        available_elasticity_dims_str = self._algo_config.get('available_elasticity_dims', all_elasticity_dims)
+        available_elasticity_dims_str = self._algo_config.get("available_elasticity_dims", all_elasticity_dims)
         self._available_elasticity_dims = list(map(ElasticityDim, available_elasticity_dims_str))
         self._elasticity_builders = OrderedDict()  # type: Dict[ElasticityDim, SingleElasticityBuilder]
         self._builder_states = None
@@ -85,9 +84,9 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         return self._available_elasticity_dims
 
     def _get_algo_specific_config_section(self) -> Dict:
-        return self.config.get('bootstrapNAS', {}).get('training', {}).get('elasticity', {})
+        return self.config.get("bootstrapNAS", {}).get("training", {}).get("elasticity", {})
 
-    def _build_controller(self, model: NNCFNetwork) -> 'ElasticityController':
+    def _build_controller(self, model: NNCFNetwork) -> "ElasticityController":
         """
         Simple implementation of building controller without setting builder state and loading controller's one.
 
@@ -99,16 +98,16 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         sorted_elasticity_dims = list(
-            filter(lambda x: x in self._available_elasticity_dims, self.ALL_DIMS_IN_EXECUTION_ORDER))
+            filter(lambda x: x in self._available_elasticity_dims, self.ALL_DIMS_IN_EXECUTION_ORDER)
+        )
         ignored_scopes = self._ignored_scopes
         target_scopes = self._target_scopes
 
         for elasticity_dim in sorted_elasticity_dims:
             elasticity_config = self._algo_config.get(elasticity_dim.value, {})
-            elasticity_builder = create_elasticity_builder_from_config(elasticity_config,
-                                                                       elasticity_dim,
-                                                                       ignored_scopes,
-                                                                       target_scopes)
+            elasticity_builder = create_elasticity_builder_from_config(
+                elasticity_config, elasticity_dim, ignored_scopes, target_scopes
+            )
             self._elasticity_builders[elasticity_dim] = elasticity_builder
 
         if self._builder_states is not None:
@@ -141,7 +140,7 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         available_elasticity_dims_state = list(map(lambda x: x.value, self.get_available_elasticity_dims()))
         return {
             self._state_names.BUILDER_STATES: builder_states,
-            self._state_names.AVAILABLE_ELASTICITY_DIMS: available_elasticity_dims_state
+            self._state_names.AVAILABLE_ELASTICITY_DIMS: available_elasticity_dims_state,
         }
 
     def _load_state_without_name(self, state_without_name: Dict[str, Any]):

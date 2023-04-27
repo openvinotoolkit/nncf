@@ -12,15 +12,12 @@
 """
 import inspect
 from collections import OrderedDict
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from typing import OrderedDict as OrderedDictType
 from typing import Tuple
 
-from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.logging import nncf_logger
+from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
@@ -31,14 +28,14 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import E
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthSearchSpace
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv3dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose3dMetatype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.utils import collect_output_shapes
@@ -47,11 +44,11 @@ SubnetConfig = OrderedDictType[ElasticityDim, ElasticityConfig]
 
 
 class MEHandlerStateNames:
-    IS_HANDLER_ENABLED_MAP = 'is_handler_enabled_map'
-    STATES_OF_HANDLERS = 'states_of_handlers'
+    IS_HANDLER_ENABLED_MAP = "is_handler_enabled_map"
+    STATES_OF_HANDLERS = "states_of_handlers"
 
 
-#pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods
 class MultiElasticityHandler(ElasticityHandler):
     """
     An interface for handling multiple elasticity in the network. The elasticity defines variable values in properties
@@ -60,11 +57,10 @@ class MultiElasticityHandler(ElasticityHandler):
     common with the original model.
     The interface defines methods for activation Subnets.
     """
+
     _state_names = MEHandlerStateNames
 
-    def __init__(self,
-                 handlers: OrderedDictType[ElasticityDim, SingleElasticityHandler],
-                 target_model: NNCFNetwork):
+    def __init__(self, handlers: OrderedDictType[ElasticityDim, SingleElasticityHandler], target_model: NNCFNetwork):
         GENERAL_CONV_LAYER_METATYPES = [
             PTModuleConv1dMetatype,
             PTDepthwiseConv1dSubtype,
@@ -75,15 +71,13 @@ class MultiElasticityHandler(ElasticityHandler):
             PTModuleConvTranspose2dMetatype,
             PTModuleConvTranspose3dMetatype,
         ]
-        LINEAR_LAYER_METATYPES = [
-            PTModuleLinearMetatype
-        ]
+        LINEAR_LAYER_METATYPES = [PTModuleLinearMetatype]
         self._handlers = handlers
         self._target_model = target_model
         self._is_handler_enabled_map = {elasticity_dim: True for elasticity_dim in handlers}
         self._weights_calc = WeightsFlopsCalculator(
-            conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-            linear_op_metatypes=LINEAR_LAYER_METATYPES)
+            conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES, linear_op_metatypes=LINEAR_LAYER_METATYPES
+        )
         self.activate_supernet()
 
     @property
@@ -162,9 +156,7 @@ class MultiElasticityHandler(ElasticityHandler):
 
         :param config: elasticity configuration
         """
-        active_handlers = {
-            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
-        }
+        active_handlers = {dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]}
         for handler_id, handler in self._handlers.items():
             if handler_id in config:
                 sub_config = config[handler_id]
@@ -173,7 +165,8 @@ class MultiElasticityHandler(ElasticityHandler):
                 handler.activate_subnet_for_config(resolved_config)
                 if sub_config != resolved_config:
                     nncf_logger.warning(
-                        f'Config for {handler_id} mismatch. Requested: {sub_config}. Resolved: {resolved_config}')
+                        f"Config for {handler_id} mismatch. Requested: {sub_config}. Resolved: {resolved_config}"
+                    )
 
     def load_state(self, state: Dict[str, Any]) -> None:
         """
@@ -204,7 +197,7 @@ class MultiElasticityHandler(ElasticityHandler):
         is_handler_enabled_map = {dim.value: is_enabled for dim, is_enabled in self._is_handler_enabled_map.items()}
         return {
             self._state_names.STATES_OF_HANDLERS: states_of_handlers,
-            self._state_names.IS_HANDLER_ENABLED_MAP: is_handler_enabled_map
+            self._state_names.IS_HANDLER_ENABLED_MAP: is_handler_enabled_map,
         }
 
     def enable_all(self) -> None:
@@ -247,7 +240,6 @@ class MultiElasticityHandler(ElasticityHandler):
         if self.width_handler is not None:
             input_width_values, output_width_values = self.width_handler.get_active_in_out_width_values()
 
-
         graph = self._target_model.nncf.get_graph()
         output_shapes = collect_output_shapes(graph)
 
@@ -282,9 +274,7 @@ class MultiElasticityHandler(ElasticityHandler):
         return inspect.stack()[1].function
 
     def get_design_vars_info(self) -> float:
-        active_handlers = {
-            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
-        }
+        active_handlers = {dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]}
         num_vars = 0
         vars_upper = []
         for handler_id, handler in active_handlers.items():
@@ -293,24 +283,25 @@ class MultiElasticityHandler(ElasticityHandler):
                 vars_upper.append(len(handler.get_search_space()) - 1)
             else:
                 num_vars += len(handler.get_search_space())
-                vars_upper += [len(handler.get_search_space()[i]) - 1 for i in
-                                     range(len(handler.get_search_space()))]
+                vars_upper += [len(handler.get_search_space()[i]) - 1 for i in range(len(handler.get_search_space()))]
         return num_vars, vars_upper
 
-    def get_config_from_pymoo(self, x : List) -> SubnetConfig:
-        active_handlers = {
-            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
-        }
+    def get_config_from_pymoo(self, x: List) -> SubnetConfig:
+        active_handlers = {dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]}
         index_pos = 0
         sample = SubnetConfig()
         for handler_id, _ in active_handlers.items():
             if handler_id is ElasticityDim.KERNEL:
-                sample[handler_id] = [self.kernel_search_space[j - index_pos][x[j]] for j in
-                               range(index_pos, index_pos + len(self.kernel_search_space))]
+                sample[handler_id] = [
+                    self.kernel_search_space[j - index_pos][x[j]]
+                    for j in range(index_pos, index_pos + len(self.kernel_search_space))
+                ]
                 index_pos += len(self.kernel_search_space)
             elif handler_id is ElasticityDim.WIDTH:
-                sample[handler_id] = {key - index_pos: self.width_search_space[key - index_pos][x[key]] for
-                               key in range(index_pos, index_pos + len(self.width_search_space))}
+                sample[handler_id] = {
+                    key - index_pos: self.width_search_space[key - index_pos][x[key]]
+                    for key in range(index_pos, index_pos + len(self.width_search_space))
+                }
                 index_pos += len(self.width_search_space)
             elif handler_id is ElasticityDim.DEPTH:
                 sample[handler_id] = self.depth_search_space[x[index_pos]]

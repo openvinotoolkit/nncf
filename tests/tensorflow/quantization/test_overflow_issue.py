@@ -11,18 +11,17 @@
  limitations under the License.
 """
 
-import pytest
 import numpy as np
+import pytest
 import tensorflow as tf
 
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
-from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from nncf.tensorflow.quantization.quantizers import QuantizerConfig
-from nncf.tensorflow.quantization.quantizers import Quantizer
-from nncf.tensorflow.quantization.utils import apply_overflow_fix_to_layer
 from nncf.common.quantization.structs import QuantizationMode
-
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
+from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.tensorflow.quantization.quantizers import Quantizer
+from nncf.tensorflow.quantization.quantizers import QuantizerConfig
+from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.tensorflow.quantization.utils import apply_overflow_fix_to_layer
 
 DIM_SPLIT = 1000
 EPS = 1e-6
@@ -35,17 +34,21 @@ def check_quantized_values_equals(y_train, y_val, eps, range_len, narrow_range):
         # it can changes its quant due to rounding error
         outlayers = diff[diff > eps]
         quant_len = range_len / (128 - (2 if narrow_range else 1))
-        assert (np.abs(outlayers - quant_len) < eps).all(), 'Quants are completely different'
-        assert False, 'Some values moved to the neighbor quant, possibly due to this values gets in ' \
-                      'really close to the middle of the quant. ' \
-                      f'Position of values: {np.where(diff > eps)[0].tolist()}'
+        assert (np.abs(outlayers - quant_len) < eps).all(), "Quants are completely different"
+        assert False, (
+            "Some values moved to the neighbor quant, possibly due to this values gets in "
+            "really close to the middle of the quant. "
+            f"Position of values: {np.where(diff > eps)[0].tolist()}"
+        )
 
 
-@pytest.mark.parametrize('bits,low,range_,narrow_range,ref',
-                         [(7, -1, 2, False, -128 / 127),
-                          (7, -2, 2, True, -2)], ids=['full_range', 'narrow_range'])
+@pytest.mark.parametrize(
+    "bits,low,range_,narrow_range,ref",
+    [(7, -1, 2, False, -128 / 127), (7, -2, 2, True, -2)],
+    ids=["full_range", "narrow_range"],
+)
 def test_min_adj(bits, low, range_, narrow_range, ref):
-    res = Quantizer._min_adj(bits, low, range_, narrow_range).numpy() # pylint: disable=protected-access
+    res = Quantizer._min_adj(bits, low, range_, narrow_range).numpy()  # pylint: disable=protected-access
     assert abs(res - ref) < EPS
 
 
@@ -60,37 +63,33 @@ def get_weights_for_overflow_issue_test(low, range_len, narrow_range, init_w_as_
             mid_points = [-(i + 1 / 2) * quant_len for i in range(127)]
         else:
             # Range with zero
-            min_adj = Quantizer._min_adj(7, low, range_len, narrow_range).numpy() # pylint: disable=protected-access
+            min_adj = Quantizer._min_adj(7, low, range_len, narrow_range).numpy()  # pylint: disable=protected-access
             mid_points = [min_adj + (i + 1 / 2) * quant_len for i in range(127)]
 
         new_w = mid_points * int(np.round(0.5 + DIM_SPLIT / 128))
         new_w = tf.reshape(tf.constant(new_w[:DIM_SPLIT], dtype=tf.float32), (1, -1))
     else:
-        new_w = tf.reshape(tf.constant(
-                    np.linspace(low - 0.5, low + range_len + 0.5, DIM_SPLIT),
-                    dtype=tf.float32), (1, -1))
+        new_w = tf.reshape(
+            tf.constant(np.linspace(low - 0.5, low + range_len + 0.5, DIM_SPLIT), dtype=tf.float32), (1, -1)
+        )
 
     return new_w
 
 
-@pytest.mark.parametrize('per_ch', [False, True], ids=['per_tensor', 'per_channel'])
-@pytest.mark.parametrize('init_w_as_middle_points', [False, True], ids=['', 'middle_points'])
-@pytest.mark.parametrize('narrow_range', [False, True], ids=['full_range', 'narrow_range'])
+@pytest.mark.parametrize("per_ch", [False, True], ids=["per_tensor", "per_channel"])
+@pytest.mark.parametrize("init_w_as_middle_points", [False, True], ids=["", "middle_points"])
+@pytest.mark.parametrize("narrow_range", [False, True], ids=["full_range", "narrow_range"])
 class TestQuantizedWeightsEqualAfterFixApplied:
-    @pytest.mark.parametrize('signedness_to_force', [True, False], ids=['signed', 'unsigned'])
-    def test_symmetric_quantized_weights_equal_after_fix_applied(self, per_ch, signedness_to_force,
-                                                                 init_w_as_middle_points, narrow_range):
+    @pytest.mark.parametrize("signedness_to_force", [True, False], ids=["signed", "unsigned"])
+    def test_symmetric_quantized_weights_equal_after_fix_applied(
+        self, per_ch, signedness_to_force, init_w_as_middle_points, narrow_range
+    ):
         qconfig = QuantizerConfig(
-            num_bits=8,
-            mode=QuantizationMode.SYMMETRIC,
-            signedness_to_force=signedness_to_force,
-            per_channel=per_ch)
-        qspec = TFQuantizerSpec.from_config(
-            qconfig,
-            narrow_range=narrow_range,
-            half_range=True)
-        op_name = 'quantizer'
-        weight_attr = 'kernel'
+            num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=signedness_to_force, per_channel=per_ch
+        )
+        qspec = TFQuantizerSpec.from_config(qconfig, narrow_range=narrow_range, half_range=True)
+        op_name = "quantizer"
+        weight_attr = "kernel"
 
         layer = tf.keras.layers.Dense(DIM_SPLIT)
         layer = NNCFWrapper(layer)
@@ -109,34 +108,32 @@ class TestQuantizedWeightsEqualAfterFixApplied:
 
         # Check quantizer weights
         ops_weights = layer.ops_weights[op_name]
-        assert (ops_weights['scale_var'].numpy() == ref_scale).all()
-        assert (ops_weights['signed_var'].numpy() == ref_signed_var).all()
+        assert (ops_weights["scale_var"].numpy() == ref_scale).all()
+        assert (ops_weights["signed_var"].numpy() == ref_signed_var).all()
 
         w_int7 = layer(tf.ones((1, 1))).numpy()
         if init_w_as_middle_points:
             quant_len = range_len / (128 - (2 if narrow_range else 1))
-            assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < 1e-6).all(), 'Middle points calculated incorrectly'
+            assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < 1e-6).all(), "Middle points calculated incorrectly"
 
-        apply_overflow_fix_to_layer(layer, 'kernel', quantizer)
-        assert not quantizer._half_range # pylint: disable=protected-access
+        apply_overflow_fix_to_layer(layer, "kernel", quantizer)
+        assert not quantizer._half_range  # pylint: disable=protected-access
         w_int8 = layer(tf.ones((1, 1))).numpy()
 
         check_quantized_values_equals(w_int7, w_int8, EPS, range_len, narrow_range)
 
-    @pytest.mark.parametrize('low,range_len', [(-1, 2), (-5, 4), (3, 2)],
-                             ids=['zero_in_range', 'max_less_than_zero', 'low_greater_than_zero'])
-    def test_asymmetric_quantized_weights_equal_after_fix_applied(self, low, range_len, per_ch,
-                                                                  init_w_as_middle_points, narrow_range):
-        qconfig = QuantizerConfig(
-            num_bits=8,
-            mode=QuantizationMode.ASYMMETRIC,
-            per_channel=per_ch)
-        qspec = TFQuantizerSpec.from_config(
-            qconfig,
-            narrow_range=narrow_range,
-            half_range=True)
-        op_name = 'quantizer'
-        weight_attr = 'kernel'
+    @pytest.mark.parametrize(
+        "low,range_len",
+        [(-1, 2), (-5, 4), (3, 2)],
+        ids=["zero_in_range", "max_less_than_zero", "low_greater_than_zero"],
+    )
+    def test_asymmetric_quantized_weights_equal_after_fix_applied(
+        self, low, range_len, per_ch, init_w_as_middle_points, narrow_range
+    ):
+        qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=per_ch)
+        qspec = TFQuantizerSpec.from_config(qconfig, narrow_range=narrow_range, half_range=True)
+        op_name = "quantizer"
+        weight_attr = "kernel"
 
         layer = tf.keras.layers.Dense(DIM_SPLIT)
         layer = NNCFWrapper(layer)
@@ -155,16 +152,16 @@ class TestQuantizedWeightsEqualAfterFixApplied:
             range_len = tf.repeat(tf.constant([range_len], dtype=tf.float32), repeats=[DIM_SPLIT])
 
         ops_weights = layer.ops_weights[op_name]
-        ops_weights['input_low_var'].assign(low)
-        ops_weights['input_range_var'].assign(range_len)
+        ops_weights["input_low_var"].assign(low)
+        ops_weights["input_range_var"].assign(range_len)
 
         w_int7 = layer(tf.ones((1, 1))).numpy()
         if init_w_as_middle_points:
             quant_len = range_len / (128 - (2 if narrow_range else 1))
-            assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < EPS).all(), 'Middle points calculated incorrectly'
+            assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < EPS).all(), "Middle points calculated incorrectly"
 
-        apply_overflow_fix_to_layer(layer, 'kernel', quantizer)
-        assert not quantizer._half_range # pylint: disable=protected-access
+        apply_overflow_fix_to_layer(layer, "kernel", quantizer)
+        assert not quantizer._half_range  # pylint: disable=protected-access
         w_int8 = layer(tf.ones((1, 1))).numpy()
 
         check_quantized_values_equals(w_int7, w_int8, EPS, range_len, narrow_range)

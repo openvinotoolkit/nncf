@@ -12,18 +12,13 @@
 """
 
 from functools import partial
-from typing import Callable, Mapping, Sequence, Set, List, Type, Any, Dict
-from typing import Tuple
-from typing import Union
-
+from typing import Any, Callable, Dict, List, Mapping, Sequence, Set, Tuple, Type, Union
 
 string_types = (str, bytes)
-iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
+iteritems = lambda mapping: getattr(mapping, "iteritems", mapping.items)()
 
 
-def to_tuple(lst: List,
-             named_tuple_class: Type = None,
-             named_tuple_fields: List[str] = None) -> Tuple:
+def to_tuple(lst: List, named_tuple_class: Type = None, named_tuple_fields: List[str] = None) -> Tuple:
     # Able to produce namedtuples if a corresponding parameter is given
     if named_tuple_fields is None:
         return tuple(lst)
@@ -40,7 +35,7 @@ def is_named_tuple(obj) -> bool:
 
 def maybe_get_iterator(obj):
     it = None
-        # pylint:disable=isinstance-second-argument-not-valid-type
+    # pylint:disable=isinstance-second-argument-not-valid-type
     if isinstance(obj, Mapping):
         it = iteritems
         # pylint:disable=isinstance-second-argument-not-valid-type
@@ -90,7 +85,7 @@ class NestedObjectIndex:
                     current_level_getters.append(partial(obj.__getitem__, path_component))
                     if not isinstance(obj, tuple):
                         # `range` objects, for instance, have no __setitem__ and should be disregarded
-                        if hasattr(obj, '__setitem__'):
+                        if hasattr(obj, "__setitem__"):
                             current_level_setters.append(partial(obj.__setitem__, path_component))
                         else:
                             current_level_setters.append(None)
@@ -99,9 +94,9 @@ class NestedObjectIndex:
 
                 for idx, iterval in enumerate(iterator(obj)):
                     path_component, value = iterval
-                    retval = NestedObjectIndex._nested_object_paths_generator(value, out_entries_list,
-                                                                         path + (path_component,), memo,
-                                                                         current_level_setters[idx])
+                    retval = NestedObjectIndex._nested_object_paths_generator(
+                        value, out_entries_list, path + (path_component,), memo, current_level_setters[idx]
+                    )
                     was_leaf = retval[1]
                     if was_leaf:
                         leaf_entry_path = retval
@@ -109,9 +104,7 @@ class NestedObjectIndex:
                         getter = current_level_getters[idx]
                         setter = current_level_setters[idx]
                         if setter is not None:  # see note above about non-settable objects
-                            out_entries_list.append(InputIndexEntry(leaf_entry_path,
-                                                                    getter,
-                                                                    setter))
+                            out_entries_list.append(InputIndexEntry(leaf_entry_path, getter, setter))
 
                 memo.remove(id(obj))
             is_leaf = False
@@ -129,8 +122,8 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
     with the result of a given function application.
     """
-    #pylint:disable=too-many-nested-blocks
-    #pylint:disable=too-many-branches
+    # pylint:disable=too-many-nested-blocks
+    # pylint:disable=too-many-branches
     if memo is None:
         memo = set()
 
@@ -138,7 +131,7 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     named_tuple_fields = None
     if is_named_tuple(obj):
         named_tuple_class = obj.__class__
-        #pylint:disable=protected-access
+        # pylint:disable=protected-access
         named_tuple_fields = obj._fields
 
     was_tuple = is_tuple(obj)

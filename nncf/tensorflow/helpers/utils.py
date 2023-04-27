@@ -14,13 +14,13 @@
 
 def get_built_model(model, config):
     if not model.built:
-        input_info = config.get('input_info', {})
+        input_info = config.get("input_info", {})
         if isinstance(input_info, dict):
-            sample_size = input_info.get('sample_size', None)
+            sample_size = input_info.get("sample_size", None)
         else:
-            sample_size = input_info[0].get('sample_size', None) if input_info else None
+            sample_size = input_info[0].get("sample_size", None) if input_info else None
         if not sample_size:
-            raise RuntimeError('sample_size must be provided in configuration file')
+            raise RuntimeError("sample_size must be provided in configuration file")
         model.build([None] + list(sample_size[1:]))
 
     return model

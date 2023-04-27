@@ -16,10 +16,10 @@ from examples.torch.object_detection.models.ssd_vgg import build_ssd_vgg
 
 
 def build_ssd(net_name, cfg, ssd_dim, num_classes, config):
-    assert net_name in ['ssd_vgg', 'ssd_mobilenet']
-    if net_name == 'ssd_vgg':
+    assert net_name in ["ssd_vgg", "ssd_mobilenet"]
+    if net_name == "ssd_vgg":
         model = build_ssd_vgg(cfg, ssd_dim, num_classes, config)
-    if net_name == 'ssd_mobilenet':
+    if net_name == "ssd_mobilenet":
         model = build_ssd_mobilenet(cfg, ssd_dim, num_classes, config)
 
     return model

@@ -16,12 +16,6 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-
-from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.compression import BaseCompressionAlgorithmController
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.torch.nncf_network import NNCFNetwork
-
 from datasets import Dataset  # pylint: disable=no-name-in-module
 from transformers import TrainingArguments
 from transformers.trainer import Trainer
@@ -30,16 +24,23 @@ from transformers.trainer_callback import TrainerControl
 from transformers.trainer_callback import TrainerState
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.compression import BaseCompressionAlgorithmController
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.torch.nncf_network import NNCFNetwork
+
 CTRL_STATE_NAME = BaseCompressionAlgorithmController.CONTROLLER_STATE
-NNCF_COMPRESSION_STATE_NAME = 'nncf_compression_state.pt'
+NNCF_COMPRESSION_STATE_NAME = "nncf_compression_state.pt"
 
 
 class CompressionTrainer(Trainer):
-    def __init__(self,
-                 compression_ctrl: Optional[CompressionAlgorithmController],
-                 *args,
-                 callbacks: Optional[List[TrainerCallback]] = None,
-                 **kwargs):
+    def __init__(
+        self,
+        compression_ctrl: Optional[CompressionAlgorithmController],
+        *args,
+        callbacks: Optional[List[TrainerCallback]] = None,
+        **kwargs,
+    ):
         self.compression_ctrl = compression_ctrl
         if compression_ctrl is not None:
             if not callbacks:
@@ -95,8 +96,7 @@ class CompressionCallback(TrainerCallback):
 
     def on_save(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         compression_state = self.compression_ctrl.get_compression_state()
-        save_path = Path(args.output_dir, f'{PREFIX_CHECKPOINT_DIR}-{state.global_step}',
-                         NNCF_COMPRESSION_STATE_NAME)
+        save_path = Path(args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{state.global_step}", NNCF_COMPRESSION_STATE_NAME)
         save_path.parent.mkdir(exist_ok=True, parents=True)
         torch.save(compression_state, save_path)
 
@@ -115,34 +115,36 @@ class CompressionCallback(TrainerCallback):
         self._skip_next_epoch_step = True
 
 
-def build_compression_trainer(output_dir,
-                              compression_ctrl: CompressionAlgorithmController,
-                              compressed_model: NNCFNetwork,
-                              train_dataset: Optional[Dataset] = None,
-                              eval_dataset: Optional[Dataset] = None,
-                              callback: Optional[CompressionCallback] = None,
-                              batch_size: int = 1,
-                              num_train_epochs: int = 6,
-                              **training_kwargs) -> CompressionTrainer:
-    evaluation_strategy = 'no' if eval_dataset is None else 'epoch'
+def build_compression_trainer(
+    output_dir,
+    compression_ctrl: CompressionAlgorithmController,
+    compressed_model: NNCFNetwork,
+    train_dataset: Optional[Dataset] = None,
+    eval_dataset: Optional[Dataset] = None,
+    callback: Optional[CompressionCallback] = None,
+    batch_size: int = 1,
+    num_train_epochs: int = 6,
+    **training_kwargs,
+) -> CompressionTrainer:
+    evaluation_strategy = "no" if eval_dataset is None else "epoch"
     training_args = dict(
         output_dir=Path(output_dir),
-        label_names=['labels'],
+        label_names=["labels"],
         evaluation_strategy=evaluation_strategy,
-        save_strategy='steps',
-        logging_strategy='steps',
+        save_strategy="steps",
+        logging_strategy="steps",
         save_steps=500,
         logging_steps=1,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         num_train_epochs=num_train_epochs,
         learning_rate=1e-3,
-        optim='adamw_torch',
+        optim="adamw_torch",
         remove_unused_columns=False,
         seed=42,
         data_seed=42,
         full_determinism=True,
-        report_to='none',
+        report_to="none",
         disable_tqdm=True,
         no_cuda=True,
     )

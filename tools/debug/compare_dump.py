@@ -13,19 +13,29 @@
 
 import argparse
 import os
-from os.path import join, isdir, isfile
+from os.path import isdir
+from os.path import isfile
+from os.path import join
 
 import torch
 
 from tools.debug.common import print_args
 
 argparser = argparse.ArgumentParser()
-argparser.add_argument("-r", "--ref-dir",
-                       help="Path to ref folder. Treated whether ref experiment, or dir to compare GPU dumps",
-                       required=True)
-argparser.add_argument("-c", "--cmp-dirs",
-                       help="List of path to dirs with experiments for comparison with ref folder 0,1,2...", nargs='+')
-argparser.add_argument("--range", type=int, help="Right border of range, starting from ref dir number", )
+argparser.add_argument(
+    "-r",
+    "--ref-dir",
+    help="Path to ref folder. Treated whether ref experiment, or dir to compare GPU dumps",
+    required=True,
+)
+argparser.add_argument(
+    "-c", "--cmp-dirs", help="List of path to dirs with experiments for comparison with ref folder 0,1,2...", nargs="+"
+)
+argparser.add_argument(
+    "--range",
+    type=int,
+    help="Right border of range, starting from ref dir number",
+)
 argparser.add_argument("--eps", help="Torelance for maximum of absolute difference", default=None, type=float)
 
 args = argparser.parse_args()
@@ -58,7 +68,7 @@ def compare_dump_in_dir_pairs(pairs, eps=None):
             global_count_diff += 1
         if max_diff > global_max_diff:
             global_max_diff = max_diff
-    print('\n\nGlobal MAX abs diff: {}\n{}/{} is different'.format(global_max_diff, global_count_diff, len(pairs)))
+    print("\n\nGlobal MAX abs diff: {}\n{}/{} is different".format(global_max_diff, global_count_diff, len(pairs)))
 
 
 def compare_dump_in_file_pairs(ref_dir, cmp_dir, eps):
@@ -66,7 +76,7 @@ def compare_dump_in_file_pairs(ref_dir, cmp_dir, eps):
     cmp_files = get_files(cmp_dir)
     max_diff = 0
     count_diff = 0
-    print('\n\nCompare {} vs {}'.format(ref_dir, cmp_dir))
+    print("\n\nCompare {} vs {}".format(ref_dir, cmp_dir))
     for rf in ref_files:
         rt = torch.load(os.path.join(ref_dir, rf))
         if rf in cmp_files:
@@ -79,14 +89,14 @@ def compare_dump_in_file_pairs(ref_dir, cmp_dir, eps):
                 max_diff = diff
             if eps is not None:
                 if diff >= eps:
-                    if 'scale' in rf:
-                        print('____{} vs {}_____, diff={} for {}'.format(rt.item(), ct.item(), diff, rn))
+                    if "scale" in rf:
+                        print("____{} vs {}_____, diff={} for {}".format(rt.item(), ct.item(), diff, rn))
                     else:
-                        print('diff={} for {}'.format(diff, rn))
+                        print("diff={} for {}".format(diff, rn))
 
         else:
-            print('not matched file {}'.format(rf))
-    print('Max abs diff: {}\n{}/{} is different'.format(max_diff, count_diff, len(ref_files)))
+            print("not matched file {}".format(rf))
+    print("Max abs diff: {}\n{}/{} is different".format(max_diff, count_diff, len(ref_files)))
     return max_diff
 
 
@@ -110,5 +120,5 @@ def main():
     compare_dump_in_dir_pairs(dir_pairs, args.eps)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

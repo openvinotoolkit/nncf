@@ -12,7 +12,9 @@
 """
 
 import onnx
-from onnx.version_converter import convert_version, ConvertError  # pylint: disable=no-name-in-module
+from onnx.version_converter import ConvertError  # pylint: disable=no-name-in-module
+from onnx.version_converter import convert_version
+
 from nncf.common.logging import nncf_logger
 
 TARGET_OPSET_VERSION = 13
@@ -33,9 +35,11 @@ def convert_opset_version(model: onnx.ModelProto, opset_version: int = TARGET_OP
         modified_model = convert_version(model, opset_version)
         onnx.checker.check_model(modified_model)
         nncf_logger.info(
-            f'The model was successfully converted to the opset version = {modified_model.opset_import[0].version}')
+            f"The model was successfully converted to the opset version = {modified_model.opset_import[0].version}"
+        )
         return modified_model
     except (RuntimeError, ConvertError):
         nncf_logger.error(
-            f"Couldn't convert target model to the opset version {opset_version}. Using the copy of the original model")
+            f"Couldn't convert target model to the opset version {opset_version}. Using the copy of the original model"
+        )
         return model

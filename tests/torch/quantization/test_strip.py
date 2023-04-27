@@ -167,7 +167,6 @@ def test_converting_symmetric_quantizer(
     check_outputs(x_nncf.detach().numpy(), x_torch.detach().numpy(), np_is_near_mid_point, quant_lens)
 
 
-
 @pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)
 @pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
 def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, is_weights, is_half_range, use_cuda):

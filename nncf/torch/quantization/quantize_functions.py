@@ -216,6 +216,7 @@ class TuneRange(torch.autograd.Function):
     floating point zeroes even if we don't use rounding.
     See [docs](../../../docs/compression_algorithms/Quantization.md#asymmetric-quantization) for details.
     """
+
     @staticmethod
     def forward(ctx, input_low, input_range, levels):
         input_high = input_range + input_low
@@ -228,7 +229,7 @@ class TuneRange(torch.autograd.Function):
         zp = torch.round(-input_low_copy * scale)
 
         new_input_low = torch.where(zp < n, zp / (zp - n) * input_high, input_low_copy)
-        new_input_high = torch.where(zp > 0., (zp - n) / zp * input_low_copy, input_high)
+        new_input_high = torch.where(zp > 0.0, (zp - n) / zp * input_low_copy, input_high)
 
         range_1 = input_high - new_input_low
         range_2 = new_input_high - input_low_copy

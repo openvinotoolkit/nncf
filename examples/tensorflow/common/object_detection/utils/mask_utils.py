@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-import numpy as np
 import cv2
+import numpy as np
 
 
 def paste_instance_masks(masks, detected_boxes, image_height, image_width):
@@ -36,8 +36,8 @@ def paste_instance_masks(masks, detected_boxes, image_height, image_width):
         # Reference: https://github.com/facebookresearch/Detectron/blob/master/detectron/utils/boxes.py#L227
         # The `boxes` in the reference implementation is in [x1, y1, x2, y2] form,
         # whereas `boxes` here is in [x1, y1, w, h] form
-        w_half = boxes[:, 2] * .5
-        h_half = boxes[:, 3] * .5
+        w_half = boxes[:, 2] * 0.5
+        h_half = boxes[:, 3] * 0.5
         x_c = boxes[:, 0] + w_half
         y_c = boxes[:, 1] + h_half
 
@@ -78,7 +78,7 @@ def paste_instance_masks(masks, detected_boxes, image_height, image_width):
         w = np.maximum(w, 1)
         h = np.maximum(h, 1)
 
-        mask = cv2.resize(padded_mask, (w, h)) # pylint: disable=E1101
+        mask = cv2.resize(padded_mask, (w, h))  # pylint: disable=E1101
         mask = np.array(mask > 0.5, dtype=np.uint8)
 
         x_0 = min(max(ref_box[0], 0), image_width)
@@ -86,8 +86,9 @@ def paste_instance_masks(masks, detected_boxes, image_height, image_width):
         y_0 = min(max(ref_box[1], 0), image_height)
         y_1 = min(max(ref_box[3] + 1, 0), image_height)
 
-        im_mask[y_0:y_1, x_0:x_1] = mask[(y_0 - ref_box[1]):(y_1 - ref_box[1]),
-                                         (x_0 - ref_box[0]):(x_1 - ref_box[0])]
+        im_mask[y_0:y_1, x_0:x_1] = mask[
+            (y_0 - ref_box[1]) : (y_1 - ref_box[1]), (x_0 - ref_box[0]) : (x_1 - ref_box[0])
+        ]
         segms.append(im_mask)
 
     segms = np.array(segms)

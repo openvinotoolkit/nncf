@@ -12,8 +12,9 @@
 """
 
 import numpy as np
-from .metric import Metric
+
 from .confusionmatrix import ConfusionMatrix
+from .metric import Metric
 
 
 class IoU(Metric):
@@ -64,12 +65,11 @@ class IoU(Metric):
 
         """
         # Dimensions check
-        assert predicted.size(0) == target.size(0), \
-            'number of targets and predicted outputs do not match'
-        assert predicted.dim() == 3 or predicted.dim() == 4, \
-            "predictions must be of dimension (N, H, W) or (N, K, H, W)"
-        assert target.dim() == 3 or target.dim() == 4, \
-            "targets must be of dimension (N, H, W) or (N, K, H, W)"
+        assert predicted.size(0) == target.size(0), "number of targets and predicted outputs do not match"
+        assert (
+            predicted.dim() == 3 or predicted.dim() == 4
+        ), "predictions must be of dimension (N, H, W) or (N, K, H, W)"
+        assert target.dim() == 3 or target.dim() == 4, "targets must be of dimension (N, H, W) or (N, K, H, W)"
 
         # If the tensor is in categorical format convert it to integer format
         if predicted.dim() == 4:
@@ -99,7 +99,7 @@ class IoU(Metric):
         false_negative = np.sum(conf_matrix, 1) - true_positive
 
         # Just in case we get a division by 0, ignore/hide the error
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             iou = true_positive / (true_positive + false_positive + false_negative)
 
         if self.ignore_index is not None:

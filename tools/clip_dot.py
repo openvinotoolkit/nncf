@@ -1,4 +1,4 @@
-#pylint:skip-file
+# pylint:skip-file
 import sys
 from argparse import ArgumentParser
 
@@ -10,12 +10,10 @@ from nncf.common.utils.dot_file_rw import write_dot_graph
 
 def main(argv):
     parser = ArgumentParser()
-    parser.add_argument('-i', '--input_file', help='Input .dot file',
-                        required=True)
-    parser.add_argument('-s', '--start_id', help='Start ID (inclusive)',
-                        required=True)
-    parser.add_argument('-f', '--finish_id', help='Finish ID (inclusive)', required=True)
-    parser.add_argument('-o', '--output_file', help='Output .dot file', required=True)
+    parser.add_argument("-i", "--input_file", help="Input .dot file", required=True)
+    parser.add_argument("-s", "--start_id", help="Start ID (inclusive)", required=True)
+    parser.add_argument("-f", "--finish_id", help="Finish ID (inclusive)", required=True)
+    parser.add_argument("-o", "--output_file", help="Output .dot file", required=True)
     args = parser.parse_args(args=argv)
 
     graph = nx.DiGraph(read_dot_graph(args.input_file))
@@ -35,7 +33,7 @@ def main(argv):
     if start_key is None:
         raise RuntimeError("Could not find the node with ID {} to start from!".format(args.start_id))
 
-    for edge in nx.edge_bfs(graph, start_key, orientation='ignore'):
+    for edge in nx.edge_bfs(graph, start_key, orientation="ignore"):
         from_key, to_key, _ = edge
         id_portion = from_key.split()[0]
         has_id = id_portion.isdigit()
@@ -61,5 +59,5 @@ def main(argv):
     write_dot_graph(new_graph, args.output_file)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv[1:])

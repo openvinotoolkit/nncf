@@ -11,30 +11,29 @@
  limitations under the License.
 """
 
+from collections import Counter
+
 import pytest
 
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
 from nncf.common.quantization.quantizer_propagation.solver import PostprocessingNodeLocator
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.utils.registry import Registry
-
+from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import IdentityTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
-from tests.common.quantization.metatypes import TopKTestMetatype
 from tests.common.quantization.metatypes import NMSTestMetatype
-from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
+from tests.common.quantization.metatypes import TopKTestMetatype
 from tests.common.quantization.mock_graphs import NodeWithType
 from tests.common.quantization.mock_graphs import create_mock_graph
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 
-from collections import Counter
-
-ALL_SYNTHETIC_NNCF_GRAPH = Registry('SYNTHETIC_MODELS')
+ALL_SYNTHETIC_NNCF_GRAPH = Registry("SYNTHETIC_MODELS")
 
 
 @ALL_SYNTHETIC_NNCF_GRAPH.register()
@@ -56,28 +55,40 @@ class ModelToTest1:
     #                Output_1    Output_2
     #
     def __init__(self):
-        nodes = [NodeWithType('Input_1', InputNoopMetatype),
-                 NodeWithType('Conv_1', Conv2dTestMetatype),
-                 NodeWithType('Identity_1', IdentityTestMetatype),
-                 NodeWithType('NMS_1', NMSTestMetatype),
-                 NodeWithType('Identity_2', IdentityTestMetatype),
-                 NodeWithType('TopK_1', TopKTestMetatype),
-                 NodeWithType('Output_1', OutputNoopMetatype),
-                 NodeWithType('Input_2', InputNoopMetatype),
-                 NodeWithType('Identity_3', IdentityTestMetatype),
-                 NodeWithType('FC_1', LinearTestMetatype),
-                 NodeWithType('Identity_4', IdentityTestMetatype),
-                 NodeWithType('NMS_2', NMSTestMetatype),
-                 NodeWithType('Identity_5', IdentityTestMetatype),
-                 NodeWithType('Output_2', OutputNoopMetatype),
-                 ]
-        node_edges = [('Input_1', 'Conv_1'), ('Conv_1', 'Identity_1'), ('Identity_1', 'NMS_1'), ('NMS_1', 'Identity_2'),
-                      ('Identity_2', 'TopK_1'), ('TopK_1', 'Output_1'), ('Input_2', 'Identity_3'),
-                      ('Identity_3', 'NMS_1'), ('Identity_3', 'FC_1'), ('FC_1', 'Identity_4'), ('Identity_4', 'NMS_2'),
-                      ('NMS_2', 'Identity_5'), ('Identity_5', 'Output_2')]
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv_1", Conv2dTestMetatype),
+            NodeWithType("Identity_1", IdentityTestMetatype),
+            NodeWithType("NMS_1", NMSTestMetatype),
+            NodeWithType("Identity_2", IdentityTestMetatype),
+            NodeWithType("TopK_1", TopKTestMetatype),
+            NodeWithType("Output_1", OutputNoopMetatype),
+            NodeWithType("Input_2", InputNoopMetatype),
+            NodeWithType("Identity_3", IdentityTestMetatype),
+            NodeWithType("FC_1", LinearTestMetatype),
+            NodeWithType("Identity_4", IdentityTestMetatype),
+            NodeWithType("NMS_2", NMSTestMetatype),
+            NodeWithType("Identity_5", IdentityTestMetatype),
+            NodeWithType("Output_2", OutputNoopMetatype),
+        ]
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Conv_1", "Identity_1"),
+            ("Identity_1", "NMS_1"),
+            ("NMS_1", "Identity_2"),
+            ("Identity_2", "TopK_1"),
+            ("TopK_1", "Output_1"),
+            ("Input_2", "Identity_3"),
+            ("Identity_3", "NMS_1"),
+            ("Identity_3", "FC_1"),
+            ("FC_1", "Identity_4"),
+            ("Identity_4", "NMS_2"),
+            ("NMS_2", "Identity_5"),
+            ("Identity_5", "Output_2"),
+        ]
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
-        self.reference_ignored_scopes = ['Identity_2', 'Identity_1', 'Identity_4', 'Identity_5']
+        self.reference_ignored_scopes = ["Identity_2", "Identity_1", "Identity_4", "Identity_5"]
 
 
 @ALL_SYNTHETIC_NNCF_GRAPH.register()
@@ -99,21 +110,28 @@ class ModelToTest2:
     #           Output_1
 
     def __init__(self):
-        nodes = [NodeWithType('Input_1', InputNoopMetatype),
-                 NodeWithType('Conv_1', Conv2dTestMetatype),
-                 NodeWithType('Identity_1', IdentityTestMetatype),
-                 NodeWithType('TopK_1', TopKTestMetatype),
-                 NodeWithType('Identity_2', IdentityTestMetatype),
-                 NodeWithType('TopK_2', TopKTestMetatype),
-                 NodeWithType('Identity_3', IdentityTestMetatype),
-                 NodeWithType('Output_1', OutputNoopMetatype)
-                 ]
-        node_edges = [('Input_1', 'Conv_1'), ('Conv_1', 'Identity_1'), ('Identity_1', 'TopK_1'),
-                      ('TopK_1', 'Identity_2'),
-                      ('Identity_2', 'TopK_2'), ('TopK_2', 'Identity_3'), ('Identity_3', 'Output_1')]
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv_1", Conv2dTestMetatype),
+            NodeWithType("Identity_1", IdentityTestMetatype),
+            NodeWithType("TopK_1", TopKTestMetatype),
+            NodeWithType("Identity_2", IdentityTestMetatype),
+            NodeWithType("TopK_2", TopKTestMetatype),
+            NodeWithType("Identity_3", IdentityTestMetatype),
+            NodeWithType("Output_1", OutputNoopMetatype),
+        ]
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Conv_1", "Identity_1"),
+            ("Identity_1", "TopK_1"),
+            ("TopK_1", "Identity_2"),
+            ("Identity_2", "TopK_2"),
+            ("TopK_2", "Identity_3"),
+            ("Identity_3", "Output_1"),
+        ]
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
-        self.reference_ignored_scopes = ['Identity_3', 'Identity_2', 'Identity_1']
+        self.reference_ignored_scopes = ["Identity_3", "Identity_2", "Identity_1"]
 
 
 @ALL_SYNTHETIC_NNCF_GRAPH.register()
@@ -135,24 +153,32 @@ class ModelToTest3:
     #           Output_1
 
     def __init__(self):
-        nodes = [NodeWithType('Input_1', InputNoopMetatype),
-                 NodeWithType('Conv_1', Conv2dTestMetatype),
-                 NodeWithType('Identity_1', IdentityTestMetatype),
-                 NodeWithType('TopK_1', TopKTestMetatype),
-                 NodeWithType('Identity_2', IdentityTestMetatype),
-                 NodeWithType('NMS_1', NMSTestMetatype),
-                 NodeWithType('Identity_3', IdentityTestMetatype),
-                 NodeWithType('Output_1', OutputNoopMetatype),
-                 NodeWithType('Conv_2', Conv2dTestMetatype),
-                 NodeWithType('Output_2', OutputNoopMetatype)
-                 ]
-        node_edges = [('Input_1', 'Conv_1'), ('Conv_1', 'Identity_1'), ('Identity_1', 'TopK_1'),
-                      ('TopK_1', 'Identity_2'),
-                      ('Identity_2', 'NMS_1'), ('Identity_2', 'Conv_2'), ('NMS_1', 'Identity_3'),
-                      ('Identity_3', 'Output_1'), ('Conv_2', 'Output_2')]
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv_1", Conv2dTestMetatype),
+            NodeWithType("Identity_1", IdentityTestMetatype),
+            NodeWithType("TopK_1", TopKTestMetatype),
+            NodeWithType("Identity_2", IdentityTestMetatype),
+            NodeWithType("NMS_1", NMSTestMetatype),
+            NodeWithType("Identity_3", IdentityTestMetatype),
+            NodeWithType("Output_1", OutputNoopMetatype),
+            NodeWithType("Conv_2", Conv2dTestMetatype),
+            NodeWithType("Output_2", OutputNoopMetatype),
+        ]
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Conv_1", "Identity_1"),
+            ("Identity_1", "TopK_1"),
+            ("TopK_1", "Identity_2"),
+            ("Identity_2", "NMS_1"),
+            ("Identity_2", "Conv_2"),
+            ("NMS_1", "Identity_3"),
+            ("Identity_3", "Output_1"),
+            ("Conv_2", "Output_2"),
+        ]
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
-        self.reference_ignored_scopes = ['Identity_3']
+        self.reference_ignored_scopes = ["Identity_3"]
 
 
 @ALL_SYNTHETIC_NNCF_GRAPH.register()
@@ -175,25 +201,34 @@ class ModelToTest4:
     #                  Output_1
 
     def __init__(self):
-        nodes = [NodeWithType('Input_1', InputNoopMetatype),
-                 NodeWithType('Conv_1', Conv2dTestMetatype),
-                 NodeWithType('Identity_1', IdentityTestMetatype),
-                 NodeWithType('TopK_1', TopKTestMetatype),
-                 NodeWithType('Identity_2', IdentityTestMetatype),
-                 NodeWithType('NMS_1', NMSTestMetatype),
-                 NodeWithType('Identity_3', IdentityTestMetatype),
-                 NodeWithType('Output_1', OutputNoopMetatype),
-                 NodeWithType('Identity_4', IdentityTestMetatype),
-                 NodeWithType('Identity_5', IdentityTestMetatype)
-                 ]
-        node_edges = [('Input_1', 'Conv_1'), ('Conv_1', 'Identity_1'), ('Identity_1', 'TopK_1'),
-                      ('Identity_1', 'Identity_4'),
-                      ('TopK_1', 'Identity_2'),
-                      ('Identity_2', 'NMS_1'), ('NMS_1', 'Identity_3'), ('Identity_3', 'Output_1'),
-                      ('Identity_4', 'Identity_2'), ('Identity_4', 'Identity_5'), ('Identity_5', 'NMS_1')]
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv_1", Conv2dTestMetatype),
+            NodeWithType("Identity_1", IdentityTestMetatype),
+            NodeWithType("TopK_1", TopKTestMetatype),
+            NodeWithType("Identity_2", IdentityTestMetatype),
+            NodeWithType("NMS_1", NMSTestMetatype),
+            NodeWithType("Identity_3", IdentityTestMetatype),
+            NodeWithType("Output_1", OutputNoopMetatype),
+            NodeWithType("Identity_4", IdentityTestMetatype),
+            NodeWithType("Identity_5", IdentityTestMetatype),
+        ]
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Conv_1", "Identity_1"),
+            ("Identity_1", "TopK_1"),
+            ("Identity_1", "Identity_4"),
+            ("TopK_1", "Identity_2"),
+            ("Identity_2", "NMS_1"),
+            ("NMS_1", "Identity_3"),
+            ("Identity_3", "Output_1"),
+            ("Identity_4", "Identity_2"),
+            ("Identity_4", "Identity_5"),
+            ("Identity_5", "NMS_1"),
+        ]
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
-        self.reference_ignored_scopes = ['Identity_3', 'Identity_2', 'Identity_5', 'Identity_4', 'Identity_1']
+        self.reference_ignored_scopes = ["Identity_3", "Identity_2", "Identity_5", "Identity_4", "Identity_1"]
 
 
 @ALL_SYNTHETIC_NNCF_GRAPH.register()
@@ -216,27 +251,37 @@ class ModelToTest5:
     #                  Output_1
 
     def __init__(self):
-        nodes = [NodeWithType('Input_1', InputNoopMetatype),
-                 NodeWithType('Conv_1', Conv2dTestMetatype),
-                 NodeWithType('Identity_1', IdentityTestMetatype),
-                 NodeWithType('Identity_2', IdentityTestMetatype),
-                 NodeWithType('Identity_3', IdentityTestMetatype),
-                 NodeWithType('Identity_4', IdentityTestMetatype),
-                 NodeWithType('Identity_5', IdentityTestMetatype),
-                 NodeWithType('Output_1', OutputNoopMetatype),
-                 NodeWithType('Identity_6', IdentityTestMetatype),
-                 NodeWithType('Identity_7', IdentityTestMetatype)
-                 ]
-        node_edges = [('Input_1', 'Conv_1'), ('Conv_1', 'Identity_1'), ('Identity_1', 'Identity_2'),
-                      ('Identity_1', 'Identity_3'), ('Identity_2', 'Identity_4'), ('Identity_3', 'Identity_5'),
-                      ('Identity_3', 'Identity_4'), ('Identity_4', 'Identity_6'), ('Identity_5', 'Identity_6'),
-                      ('Identity_6', 'Identity_7'), ('Identity_7', 'Output_1')]
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv_1", Conv2dTestMetatype),
+            NodeWithType("Identity_1", IdentityTestMetatype),
+            NodeWithType("Identity_2", IdentityTestMetatype),
+            NodeWithType("Identity_3", IdentityTestMetatype),
+            NodeWithType("Identity_4", IdentityTestMetatype),
+            NodeWithType("Identity_5", IdentityTestMetatype),
+            NodeWithType("Output_1", OutputNoopMetatype),
+            NodeWithType("Identity_6", IdentityTestMetatype),
+            NodeWithType("Identity_7", IdentityTestMetatype),
+        ]
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Conv_1", "Identity_1"),
+            ("Identity_1", "Identity_2"),
+            ("Identity_1", "Identity_3"),
+            ("Identity_2", "Identity_4"),
+            ("Identity_3", "Identity_5"),
+            ("Identity_3", "Identity_4"),
+            ("Identity_4", "Identity_6"),
+            ("Identity_5", "Identity_6"),
+            ("Identity_6", "Identity_7"),
+            ("Identity_7", "Output_1"),
+        ]
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
         self.reference_ignored_scopes = []
 
 
-@pytest.mark.parametrize('model_to_test', ALL_SYNTHETIC_NNCF_GRAPH.values())
+@pytest.mark.parametrize("model_to_test", ALL_SYNTHETIC_NNCF_GRAPH.values())
 def test_node_locator_finds_postprocessing_nodes(model_to_test):
     model_to_test = model_to_test()
     nncf_graph = model_to_test.nncf_graph
@@ -244,14 +289,17 @@ def test_node_locator_finds_postprocessing_nodes(model_to_test):
     ip_graph = InsertionPointGraph(nncf_graph)
 
     weight_nodes = nncf_graph.get_nodes_by_metatypes(WEIGHT_LAYER_METATYPES)
-    quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
-                               weight_nodes]
+    quantizable_layer_nodes = [
+        QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in weight_nodes
+    ]
 
     quant_prop_graph = QuantizerPropagationStateGraph(ip_graph)
-    post_processing_node_locator = PostprocessingNodeLocator(quant_prop_graph, quantizable_layer_nodes,
-                                                             [TopKTestMetatype, NMSTestMetatype])
+    post_processing_node_locator = PostprocessingNodeLocator(
+        quant_prop_graph, quantizable_layer_nodes, [TopKTestMetatype, NMSTestMetatype]
+    )
     ignored_node_keys = post_processing_node_locator.get_post_processing_node_keys()
 
-    ignored_node_names = [nncf_graph.get_node_by_key(ignored_node_key).node_type for ignored_node_key in
-                          ignored_node_keys]
+    ignored_node_names = [
+        nncf_graph.get_node_by_key(ignored_node_key).node_type for ignored_node_key in ignored_node_keys
+    ]
     assert Counter(ignored_node_names) == Counter(model_to_test.reference_ignored_scopes)

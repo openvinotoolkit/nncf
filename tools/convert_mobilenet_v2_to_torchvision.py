@@ -13,19 +13,22 @@
 
 import sys
 from argparse import ArgumentParser
+from os import listdir
+from os import makedirs
+from os.path import exists
+from os.path import isfile
+from os.path import join
 
 import torch
-from os import listdir, makedirs
-from os.path import isfile, join, exists
 
 
 def main(argv):
     parser = ArgumentParser()
-    parser.add_argument('-i', '--input-folder', help='Path to directory with given checkpoints to modify',
-                        required=True)
-    parser.add_argument('-r', '--ref-folder', help='Path to directory with reference (new) checkpoints',
-                        required=True)
-    parser.add_argument('-o', '--output-folder', help='Path to directory to save modified checkpoints', required=True)
+    parser.add_argument(
+        "-i", "--input-folder", help="Path to directory with given checkpoints to modify", required=True
+    )
+    parser.add_argument("-r", "--ref-folder", help="Path to directory with reference (new) checkpoints", required=True)
+    parser.add_argument("-o", "--output-folder", help="Path to directory to save modified checkpoints", required=True)
     args = parser.parse_args(args=argv)
 
     src_dir = args.input_folder
@@ -34,18 +37,20 @@ def main(argv):
     if not exists(dst_dir):
         makedirs(dst_dir)
 
-    pth_files = [(join(src_dir, f), join(dst_dir, f), join(ref_dir, f)) for f in listdir(src_dir) if
-                 isfile(join(src_dir, f)) and ('.pth' in f or '.sd' in f)]
+    pth_files = [
+        (join(src_dir, f), join(dst_dir, f), join(ref_dir, f))
+        for f in listdir(src_dir)
+        if isfile(join(src_dir, f)) and (".pth" in f or ".sd" in f)
+    ]
 
     for src_file, dst_file, ref_file in pth_files:
         ref_sd = torch.load(ref_file)
-        if 'state_dict' in ref_sd:
-            ref_sd = ref_sd['state_dict']
-
+        if "state_dict" in ref_sd:
+            ref_sd = ref_sd["state_dict"]
 
         sd = pth = torch.load(src_file)
-        if 'state_dict' in pth:
-            sd = pth['state_dict']
+        if "state_dict" in pth:
+            sd = pth["state_dict"]
 
         ref_keys = list(sorted(list(ref_sd.keys())))
         old_keys = list(sorted(list(sd.keys())))
@@ -93,8 +98,9 @@ def main(argv):
         for old_key, ref_key in old_to_ref_map.items():
             new_sd[ref_key] = sd[old_key]
 
-        pth['state_dict'] = new_sd
+        pth["state_dict"] = new_sd
         torch.save(pth, dst_file)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main(sys.argv[1:])

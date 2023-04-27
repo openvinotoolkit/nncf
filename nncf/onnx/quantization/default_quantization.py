@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.onnx.graph.metatypes import onnx_metatypes
 
 DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
@@ -48,5 +48,5 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         onnx_metatypes.ONNXSqrtMetatype,
     ],
     QuantizationTrait.CONCAT: [onnx_metatypes.ONNXConcatLayerMetatype],
-    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: []
+    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [],
 }

@@ -116,6 +116,7 @@ def test_corruption_binary_masks():
     assert torch.equal(ref_mask_1, after_mask_1)
     assert torch.equal(ref_mask_2, after_mask_2)
 
+
 def tests_weights_after_onnx_export(tmp_path):
     config = get_basic_magnitude_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)

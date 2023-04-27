@@ -13,11 +13,8 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, List, Optional, Set
+from typing import Dict, List, Optional, Set, TypeVar
 
-from nncf.parameters import ModelType
-from nncf.parameters import TargetDevice
-from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -25,19 +22,21 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
-from nncf.common.quantization.structs import QuantizerConfig
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.scopes import IgnoredScope
 
-TModel = TypeVar('TModel')
-ALGO_BACKENDS = Registry('algo_backends')
+TModel = TypeVar("TModel")
+ALGO_BACKENDS = Registry("algo_backends")
 
 
 class MinMaxAlgoBackend(ABC):
-
     @property
     @abstractmethod
     def mat_mul_metatype(self) -> OperatorMetatype:
@@ -108,10 +107,12 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                      target_point: TargetPoint,
-                                                      quantizer_config: QuantizerConfig,
-                                                      parameters: FakeQuantizeParameters) -> TransformationCommand:
+    def create_activation_quantizer_insertion_command(
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
@@ -124,10 +125,12 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                  target_point: TargetPoint,
-                                                  quantizer_config: QuantizerConfig,
-                                                  parameters: FakeQuantizeParameters) -> TransformationCommand:
+    def create_weight_quantizer_insertion_command(
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
@@ -150,12 +153,14 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_statistic_collector(range_estimator_params: RangeEstimatorParameters,
-                                nncf_graph: NNCFGraph,
-                                target_point: TargetPoint,
-                                quantizer_config: QuantizerConfig,
-                                inplace: bool,
-                                num_samples: int = None) -> TensorStatisticCollectorBase:
+    def get_statistic_collector(
+        range_estimator_params: RangeEstimatorParameters,
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        inplace: bool,
+        num_samples: int = None,
+    ) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific statistic collector.
 

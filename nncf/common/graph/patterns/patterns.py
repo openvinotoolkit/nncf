@@ -36,7 +36,7 @@ class HWFusedPatterns:
         self._patterns_dict = {}
         self._full_pattern_graph = GraphPattern()
 
-    def register(self, pattern: 'GraphPattern', name: str, match: bool = True) -> None:
+    def register(self, pattern: "GraphPattern", name: str, match: bool = True) -> None:
         """
         Registers new pattern.
 
@@ -45,12 +45,12 @@ class HWFusedPatterns:
         :param match: whether should the pattern used as fussing pattern
         """
         if name in self._patterns_dict:
-            raise KeyError('{} is already registered'.format(name))
+            raise KeyError("{} is already registered".format(name))
         self._patterns_dict[name] = pattern
         if match:
             self._full_pattern_graph.add_pattern_alternative(pattern)
 
-    def get_full_pattern_graph(self) -> 'GraphPattern':
+    def get_full_pattern_graph(self) -> "GraphPattern":
         return self._full_pattern_graph
 
     def visualize_full_pattern_graph(self, path: str) -> None:
@@ -61,7 +61,7 @@ class HWFusedPatterns:
         Dump graphs of all registered patterns to dir_path
         """
         for patten_name, pattern in self._patterns_dict.items():
-            pattern.dump_graph(os.path.join(dir_path, patten_name + '.dot'))
+            pattern.dump_graph(os.path.join(dir_path, patten_name + ".dot"))
 
     def visualize_pattern(self, pattern_name: str, path: str) -> None:
         self._patterns_dict[pattern_name].dump_graph(os.path.join(path))
@@ -75,16 +75,17 @@ class GraphPattern:
     :param ANY_PATTERN_NODE_TYPE: Special node type, meaning any type inside the pattern.
     :param NON_PATTERN_NODE_TYPE: Special node type, meaning any type outside the pattern.
     """
-    LABEL_ATTR = 'label'
-    METATYPE_ATTR = 'type'
-    ANY_PATTERN_NODE_TYPE = 'ANY_PATTERN_NODE'
-    NON_PATTERN_NODE_TYPE = 'NON_PATTERN_NODE'
+
+    LABEL_ATTR = "label"
+    METATYPE_ATTR = "type"
+    ANY_PATTERN_NODE_TYPE = "ANY_PATTERN_NODE"
+    NON_PATTERN_NODE_TYPE = "NON_PATTERN_NODE"
 
     def __init__(self):
         self._graph = nx.DiGraph()
         self._node_counter = 0
 
-    def __add__(self, other: 'GraphPattern') -> 'GraphPattern':
+    def __add__(self, other: "GraphPattern") -> "GraphPattern":
         """
         Add DiGraph nodes of other to self and add edge between
         last node of self's graph and first node of other's graph.
@@ -115,7 +116,7 @@ class GraphPattern:
 
         return final_pattern
 
-    def __or__(self, other: 'GraphPattern') -> 'GraphPattern':
+    def __or__(self, other: "GraphPattern") -> "GraphPattern":
         """
         Add other's DiGraph nodes to self's DiGraph as a new weakly connected components.
         It is a syntax sugar of 'add_pattern_alternative()'
@@ -127,7 +128,7 @@ class GraphPattern:
         new_pattern._unite_with_copy_of_graph(other.graph)
         return new_pattern
 
-    def __eq__(self, other: 'GraphPattern') -> bool:
+    def __eq__(self, other: "GraphPattern") -> bool:
         return ism.is_isomorphic(self._graph, other.graph)
 
     @property
@@ -151,9 +152,7 @@ class GraphPattern:
         self._graph = nx.union(self._graph, other_graph_copy)
         return other_graph_copy
 
-    def _add_edge_connected_subgraphs(self,
-                                      first_graph: nx.DiGraph,
-                                      second_graph: nx.DiGraph) -> None:
+    def _add_edge_connected_subgraphs(self, first_graph: nx.DiGraph, second_graph: nx.DiGraph) -> None:
         """
         Adds an edge between last node of 'first_graph' and first node of 'second_graph',
         which are found by nx.lexicographical_topological_sort().
@@ -168,10 +167,12 @@ class GraphPattern:
         assert second_graph.in_degree(first_node_second_graph) == 0
 
         # Special case when first node is ANY_PATTERN_NODE_TYPE or NON_PATTERN_NODE_TYPE
-        if GraphPattern.ANY_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph][
-            GraphPattern.METATYPE_ATTR] or \
-                GraphPattern.NON_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph][
-            GraphPattern.METATYPE_ATTR]:
+        if (
+            GraphPattern.ANY_PATTERN_NODE_TYPE
+            in second_graph.nodes[first_node_second_graph][GraphPattern.METATYPE_ATTR]
+            or GraphPattern.NON_PATTERN_NODE_TYPE
+            in second_graph.nodes[first_node_second_graph][GraphPattern.METATYPE_ATTR]
+        ):
             successors = self_graph.successors(first_node_second_graph)
             new_edges = list(it.product([last_node_first_graph], successors))
             self_graph.add_edges_from(new_edges)
@@ -179,7 +180,7 @@ class GraphPattern:
         else:
             self_graph.add_edge(last_node_first_graph, first_node_second_graph)
 
-    def add_pattern_alternative(self, other: 'GraphPattern') -> None:
+    def add_pattern_alternative(self, other: "GraphPattern") -> None:
         """
         Adds 'other' pattern as a weakly connected component to 'self' pattern.
 
@@ -187,8 +188,7 @@ class GraphPattern:
         """
         self._unite_with_copy_of_graph(other.graph)
 
-    def join_patterns(self, other: 'GraphPattern',
-                      edges: Optional[List[Tuple[Hashable, Hashable]]] = None) -> None:
+    def join_patterns(self, other: "GraphPattern", edges: Optional[List[Tuple[Hashable, Hashable]]] = None) -> None:
         """
         Adds 'other' pattern to 'self' pattern and connect nodes from self to other specified by 'edges'.
 
@@ -257,7 +257,7 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
         res[GraphPattern.METATYPE_ATTR].extend(second_op[GraphPattern.METATYPE_ATTR])
         res[GraphPattern.LABEL_ATTR] = label
         return res
-    raise RuntimeError('Incorrect dicts of operations')
+    raise RuntimeError("Incorrect dicts of operations")
 
 
 @dataclass
@@ -282,111 +282,102 @@ class PatternNames(Enum):
     """
 
     # ATOMIC OPERATIONS
-    L2_NORM = PatternDesc('l2_norm')
+    L2_NORM = PatternDesc("l2_norm")
 
     # BLOCK PATTERNS
-    ADD_SCALE_SHIFT_OUTPUT = PatternDesc('add_scale_shift_output')
-    BATCH_INDEX = PatternDesc('batch_index')
-    EQUAL_LOGICALNOT = PatternDesc('equal_logicalnot')
-    FC_BN_HSWISH_ACTIVATION = PatternDesc('fc_bn_hswish_activation')
-    LINEAR_WITH_BIAS = PatternDesc('linear_with_bias')
-    MVN_SCALE_SHIFT = PatternDesc('mvn_scale_shift')
-    NORMALIZE_L2_MULTIPLY = PatternDesc('normalize_l2_multiply')
-    SCALE_SHIFT = PatternDesc('scale_shift')
-    SE_BLOCK = PatternDesc('se_block')
-    SOFTMAX_DIV = PatternDesc('softmax_div')
-    SOFTMAX_RESHAPE_MATMUL = PatternDesc('softmax_reshape_matmul')
-    SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL = PatternDesc('softmax_reshape_transpose_gather_matmul')
-    SOFTMAX_RESHAPE_TRANSPOSE_MATMUL = PatternDesc('softmax_reshape_transpose_matmul')
-    STABLE_DIFFUSION = PatternDesc('stable_diffusion')
+    ADD_SCALE_SHIFT_OUTPUT = PatternDesc("add_scale_shift_output")
+    BATCH_INDEX = PatternDesc("batch_index")
+    EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")
+    FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
+    LINEAR_WITH_BIAS = PatternDesc("linear_with_bias")
+    MVN_SCALE_SHIFT = PatternDesc("mvn_scale_shift")
+    NORMALIZE_L2_MULTIPLY = PatternDesc("normalize_l2_multiply")
+    SCALE_SHIFT = PatternDesc("scale_shift")
+    SE_BLOCK = PatternDesc("se_block")
+    SOFTMAX_DIV = PatternDesc("softmax_div")
+    SOFTMAX_RESHAPE_MATMUL = PatternDesc("softmax_reshape_matmul")
+    SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL = PatternDesc("softmax_reshape_transpose_gather_matmul")
+    SOFTMAX_RESHAPE_TRANSPOSE_MATMUL = PatternDesc("softmax_reshape_transpose_matmul")
+    STABLE_DIFFUSION = PatternDesc("stable_diffusion")
 
     # ACTIVATIONS
-    HSWISH_ACTIVATION = PatternDesc('hswish_activation')
-    HSWISH_ACTIVATION_V2 = PatternDesc('hswish_activation_v2')
-    HSWISH_ACTIVATION_WITHOUT_DENOMINATOR = PatternDesc('hswish_activation_without_denominator')
-    SOFTMAX = PatternDesc('softmax')
-    SWISH_WITH_HARD_SIGMOID = PatternDesc('swish_with_hard_sigmoid')
-    SWISH_WITH_SIGMOID = PatternDesc('swish_with_sigmoid')
+    HSWISH_ACTIVATION = PatternDesc("hswish_activation")
+    HSWISH_ACTIVATION_V2 = PatternDesc("hswish_activation_v2")
+    HSWISH_ACTIVATION_WITHOUT_DENOMINATOR = PatternDesc("hswish_activation_without_denominator")
+    SOFTMAX = PatternDesc("softmax")
+    SWISH_WITH_HARD_SIGMOID = PatternDesc("swish_with_hard_sigmoid")
+    SWISH_WITH_SIGMOID = PatternDesc("swish_with_sigmoid")
 
     # INPUT PROCESSING
-    INPUT_CONVERT_TRANSPOSE_PROCESSING = PatternDesc('input_convert_transpose_processing')
-    INPUT_CONVERT_TRANSPOSE_REVERSE_ADD = PatternDesc('input_convert_transpose_reverse_add')
-    INPUT_CONVERT_TRANSPOSE_REVERSE_SCALE_SHIFT = PatternDesc('input_convert_transpose_reverse_scale_shift')
-    INPUT_CONVERT_TRANSPOSE_SCALE_SHIFT = PatternDesc('input_convert_transpose_scale_shift')
-    INPUT_PROCESSING = PatternDesc('input_processing')
-    INPUT_REVERSE_ADD = PatternDesc('input_reverse_add')
-    INPUT_REVERSE_SCALE_SHIFT = PatternDesc('input_reverse_scale_shift')
-    INPUT_SCALE_SHIFT = PatternDesc('input_scale_shift')
-    INPUT_SHIFT_SCALE = PatternDesc('input_shift_scale')
-    INPUT_TRANSPOSE_PROCESSING = PatternDesc('input_transpose_processing')
-    INPUT_TRANSPOSE_REVERSE_ADD = PatternDesc('input_transpose_reverse_add')
-    INPUT_TRANSPOSE_SCALE_SHIFT = PatternDesc('input_transpose_scale_shift')
+    INPUT_CONVERT_TRANSPOSE_PROCESSING = PatternDesc("input_convert_transpose_processing")
+    INPUT_CONVERT_TRANSPOSE_REVERSE_ADD = PatternDesc("input_convert_transpose_reverse_add")
+    INPUT_CONVERT_TRANSPOSE_REVERSE_SCALE_SHIFT = PatternDesc("input_convert_transpose_reverse_scale_shift")
+    INPUT_CONVERT_TRANSPOSE_SCALE_SHIFT = PatternDesc("input_convert_transpose_scale_shift")
+    INPUT_PROCESSING = PatternDesc("input_processing")
+    INPUT_REVERSE_ADD = PatternDesc("input_reverse_add")
+    INPUT_REVERSE_SCALE_SHIFT = PatternDesc("input_reverse_scale_shift")
+    INPUT_SCALE_SHIFT = PatternDesc("input_scale_shift")
+    INPUT_SHIFT_SCALE = PatternDesc("input_shift_scale")
+    INPUT_TRANSPOSE_PROCESSING = PatternDesc("input_transpose_processing")
+    INPUT_TRANSPOSE_REVERSE_ADD = PatternDesc("input_transpose_reverse_add")
+    INPUT_TRANSPOSE_SCALE_SHIFT = PatternDesc("input_transpose_scale_shift")
 
     # COMBINATIONS
-    ACTIVATIONS_BATCH_NORM = PatternDesc('activations_batch_norm')
-    ACTIVATIONS_SCALE_SHIFT = PatternDesc('activations_scale_shift')
-    ARITHMETIC_ACTIVATIONS = PatternDesc('arithmetic_activations')
-    ARITHMETIC_ACTIVATIONS_BATCH_NORM = PatternDesc('arithmetic_activations_batch_norm')
-    ARITHMETIC_ACTIVATIONS_SCALE_SHIFT = PatternDesc('arithmetic_activations_scale_shift')
-    ARITHMETIC_BATCH_NORM = PatternDesc('arithmetic_batch_norm')
-    ARITHMETIC_BATCH_NORM_ACTIVATIONS = PatternDesc('arithmetic_batch_norm_activations')
-    ARITHMETIC_SCALE_SHIFT = PatternDesc('arithmetic_scale_shift')
-    ARITHMETIC_SCALE_SHIFT_ACTIVATIONS = PatternDesc('arithmetic_scale_shift_activations')
-    BATCH_NORM_ACTIVATIONS = PatternDesc('batch_norm_activations')
-    BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('batch_norm_scale_shift_activations')
-    GROUP_NORM_RELU = PatternDesc('group_norm_relu')
-    LINEAR_ACTIVATIONS = PatternDesc('linear_activations')
-    LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc('linear_activations_batch_norm')
-    LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc('linear_activations_scale_shift')
-    LINEAR_ARITHMETIC = PatternDesc('linear_arithmetic')
-    LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc('linear_arithmetic_activations')
-    LINEAR_BATCH_NORM = PatternDesc('linear_batch_norm')
-    LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc('linear_batch_norm_activations')
-    LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_batch_norm_scale_shift_activations')
-    LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_scale_shift_activations')
-    LINEAR_CONST_MULTIPLY = PatternDesc('linear_const_multiply')
-    LINEAR_SQUEEZE_ACTIVATIONS = PatternDesc('linear_squeeze_activations')
-    SCALE_SHIFT_ACTIVATIONS = PatternDesc('scale_shift_activations')
-    MVN_SCALE_SHIFT_ACTIVATIONS = PatternDesc('mvn_scale_shift_activations')
+    ACTIVATIONS_BATCH_NORM = PatternDesc("activations_batch_norm")
+    ACTIVATIONS_SCALE_SHIFT = PatternDesc("activations_scale_shift")
+    ARITHMETIC_ACTIVATIONS = PatternDesc("arithmetic_activations")
+    ARITHMETIC_ACTIVATIONS_BATCH_NORM = PatternDesc("arithmetic_activations_batch_norm")
+    ARITHMETIC_ACTIVATIONS_SCALE_SHIFT = PatternDesc("arithmetic_activations_scale_shift")
+    ARITHMETIC_BATCH_NORM = PatternDesc("arithmetic_batch_norm")
+    ARITHMETIC_BATCH_NORM_ACTIVATIONS = PatternDesc("arithmetic_batch_norm_activations")
+    ARITHMETIC_SCALE_SHIFT = PatternDesc("arithmetic_scale_shift")
+    ARITHMETIC_SCALE_SHIFT_ACTIVATIONS = PatternDesc("arithmetic_scale_shift_activations")
+    BATCH_NORM_ACTIVATIONS = PatternDesc("batch_norm_activations")
+    BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc("batch_norm_scale_shift_activations")
+    GROUP_NORM_RELU = PatternDesc("group_norm_relu")
+    LINEAR_ACTIVATIONS = PatternDesc("linear_activations")
+    LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc("linear_activations_batch_norm")
+    LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc("linear_activations_scale_shift")
+    LINEAR_ARITHMETIC = PatternDesc("linear_arithmetic")
+    LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc("linear_arithmetic_activations")
+    LINEAR_BATCH_NORM = PatternDesc("linear_batch_norm")
+    LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc("linear_batch_norm_activations")
+    LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_batch_norm_scale_shift_activations")
+    LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_scale_shift_activations")
+    LINEAR_CONST_MULTIPLY = PatternDesc("linear_const_multiply")
+    LINEAR_SQUEEZE_ACTIVATIONS = PatternDesc("linear_squeeze_activations")
+    SCALE_SHIFT_ACTIVATIONS = PatternDesc("scale_shift_activations")
+    MVN_SCALE_SHIFT_ACTIVATIONS = PatternDesc("mvn_scale_shift_activations")
 
     # DEVICE PATTERNS
-    HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc('hswish_activation_clamp_multiply',
-                                                   devices=[TargetDevice.ANY,
-                                                            TargetDevice.CPU,
-                                                            TargetDevice.GPU,
-                                                            TargetDevice.VPU])
-    LINEAR_SCALE_SHIFT = PatternDesc('linear_scale_shift',
-                                     devices=[TargetDevice.ANY,
-                                              TargetDevice.CPU,
-                                              TargetDevice.GPU])
-    LINEAR_BIASED_SCALE_SHIFT = PatternDesc('linear_biased_scale_shift',
-                                            devices=[TargetDevice.ANY,
-                                                     TargetDevice.CPU,
-                                                     TargetDevice.GPU])
-    LINEAR_ACTIVATION_SCALE_SHIFT = PatternDesc('linear_activation_scale_shift',
-                                                devices=[TargetDevice.ANY,
-                                                         TargetDevice.CPU,
-                                                         TargetDevice.GPU])
-    LINEAR_BIASED_ACTIVATION_SCALE_SHIFT = PatternDesc('linear_biased_activation_scale_shift',
-                                                       devices=[TargetDevice.ANY,
-                                                                TargetDevice.CPU,
-                                                                TargetDevice.GPU])
-    LINEAR_ELEMENTWISE = PatternDesc('linear_elementwise',
-                                     devices=[TargetDevice.ANY,
-                                              TargetDevice.CPU,
-                                              TargetDevice.GPU])
-    LINEAR_BIASED_ELEMENTWISE = PatternDesc('linear_biased_elementwise',
-                                            devices=[TargetDevice.ANY,
-                                                     TargetDevice.CPU,
-                                                     TargetDevice.GPU])
-    LINEAR_ACTIVATION_ELEMENTWISE = PatternDesc('linear_activation_elementwise',
-                                                devices=[TargetDevice.ANY,
-                                                         TargetDevice.CPU,
-                                                         TargetDevice.GPU])
-    LINEAR_BIASED_ACTIVATION_ELEMENTWISE = PatternDesc('linear_biased_activation_elementwise',
-                                                       devices=[TargetDevice.ANY,
-                                                                TargetDevice.CPU,
-                                                                TargetDevice.GPU])
+    HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc(
+        "hswish_activation_clamp_multiply",
+        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
+    )
+    LINEAR_SCALE_SHIFT = PatternDesc(
+        "linear_scale_shift", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
+    )
+    LINEAR_BIASED_SCALE_SHIFT = PatternDesc(
+        "linear_biased_scale_shift", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
+    )
+    LINEAR_ACTIVATION_SCALE_SHIFT = PatternDesc(
+        "linear_activation_scale_shift", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
+    )
+    LINEAR_BIASED_ACTIVATION_SCALE_SHIFT = PatternDesc(
+        "linear_biased_activation_scale_shift", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
+    )
+    LINEAR_ELEMENTWISE = PatternDesc(
+        "linear_elementwise", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
+    )
+    LINEAR_BIASED_ELEMENTWISE = PatternDesc(
+        "linear_biased_elementwise", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
+    )
+    LINEAR_ACTIVATION_ELEMENTWISE = PatternDesc(
+        "linear_activation_elementwise", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
+    )
+    LINEAR_BIASED_ACTIVATION_ELEMENTWISE = PatternDesc(
+        "linear_biased_activation_elementwise", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
+    )
 
     # TRANSFORMERS
-    MATMUL_SOFTMAX_MATMUL = PatternDesc('matmul_softmax_matmul')
+    MATMUL_SOFTMAX_MATMUL = PatternDesc("matmul_softmax_matmul")

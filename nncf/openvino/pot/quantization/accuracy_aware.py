@@ -10,11 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List
 from functools import partial
+from typing import List
 
 import numpy as np
-
 from openvino.tools import pot
 
 
@@ -33,27 +32,28 @@ class NMSEBasedAccuracyAware(pot.AccuracyAwareCommon):
     def __init__(self, config, engine):
         super().__init__(config, engine)
         if not engine.use_original_metric:
-            self._metrics_config['original_metric'].persample.clear()
-            self._metrics_config['original_metric'].persample.update(
-                {
-                    "name": 'nmse',
-                    "type": 'nmse',
-                    "is_special": True,
-                    "comparator": lambda a: -a,
-                    "sort_fn": partial(
-                        pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance,
-                        distance='nmse')
-                }
-            )
-            self._metrics_config['original_metric'].ranking.clear()
-            self._metrics_config['original_metric'].ranking.update(
+            self._metrics_config["original_metric"].persample.clear()
+            self._metrics_config["original_metric"].persample.update(
                 {
                     "name": "nmse",
                     "type": "nmse",
                     "is_special": True,
                     "comparator": lambda a: -a,
-                    "sort_fn": partial(pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance,
-                                       distance='nmse')
+                    "sort_fn": partial(
+                        pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance, distance="nmse"
+                    ),
+                }
+            )
+            self._metrics_config["original_metric"].ranking.clear()
+            self._metrics_config["original_metric"].ranking.update(
+                {
+                    "name": "nmse",
+                    "type": "nmse",
+                    "is_special": True,
+                    "comparator": lambda a: -a,
+                    "sort_fn": partial(
+                        pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance, distance="nmse"
+                    ),
                 }
             )
         self._need_intermediate_model = False
@@ -63,14 +63,12 @@ class NMSEBasedAccuracyAware(pot.AccuracyAwareCommon):
             score = super()._get_score(model, ranking_subset, metric_name)
         else:
             ranking_metric = self._metrics_config[metric_name].ranking
-            original_outputs = [
-                (i, self._original_per_sample_metrics[ranking_metric.name][i]) for i in ranking_subset
-            ]
+            original_outputs = [(i, self._original_per_sample_metrics[ranking_metric.name][i]) for i in ranking_subset]
             _, original_outputs = zip(*sorted(original_outputs, key=lambda x: x[0]))
 
             self._engine.set_model(model)
             per_sample_metrics = self._engine.calculate_per_sample_metrics(ranking_subset)
-            quantized_outputs = [y['result'] for y in per_sample_metrics]
+            quantized_outputs = [y["result"] for y in per_sample_metrics]
 
             nmse_distance = lambda u, v: np.dot(u - v, u - v) / np.dot(u, u)
             distance_between_samples = [

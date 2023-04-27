@@ -17,9 +17,11 @@
 
 
 import pytest
+
 from nncf.torch.automl.agent.ddpg.memory import RingBuffer
 
 MAX_LEN = 3
+
 
 def assert_elements(b: RingBuffer, ref: list):
     assert len(b) == len(ref)

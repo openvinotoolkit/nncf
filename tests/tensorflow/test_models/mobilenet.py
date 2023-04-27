@@ -11,12 +11,12 @@
  limitations under the License.
 """
 
-from packaging import version
 import tensorflow as tf
+from packaging import version
 
 from nncf.tensorflow.tf_internals import backend
-from nncf.tensorflow.tf_internals import layers
 from nncf.tensorflow.tf_internals import imagenet_utils
+from nncf.tensorflow.tf_internals import layers
 
 NUM_CLASSES = 1000
 
@@ -25,7 +25,7 @@ def MobileNet(input_shape=None, alpha=1.0, depth_multiplier=1, dropout=1e-3):
     if input_shape is None:
         default_size = 224
     else:
-        if backend.image_data_format() == 'channels_first':
+        if backend.image_data_format() == "channels_first":
             rows = input_shape[1]
             cols = input_shape[2]
         else:
@@ -42,9 +42,10 @@ def MobileNet(input_shape=None, alpha=1.0, depth_multiplier=1, dropout=1e-3):
         default_size=default_size,
         min_size=32,
         data_format=backend.image_data_format(),
-        require_flatten=True)
+        require_flatten=True,
+    )
 
-    row_axis = 0 if backend.image_data_format() == 'channels_last' else 0
+    row_axis = 0 if backend.image_data_format() == "channels_last" else 0
 
     rows = input_shape[row_axis]
     img_input = layers.Input(shape=input_shape)
@@ -52,98 +53,74 @@ def MobileNet(input_shape=None, alpha=1.0, depth_multiplier=1, dropout=1e-3):
     x = _conv_block(img_input, 32, alpha, strides=(2, 2))
     x = _depthwise_conv_block(x, 64, alpha, depth_multiplier, block_id=1)
 
-    x = _depthwise_conv_block(
-        x, 128, alpha, depth_multiplier, strides=(2, 2), block_id=2)
+    x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, strides=(2, 2), block_id=2)
     x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=3)
 
-    x = _depthwise_conv_block(
-        x, 256, alpha, depth_multiplier, strides=(2, 2), block_id=4)
+    x = _depthwise_conv_block(x, 256, alpha, depth_multiplier, strides=(2, 2), block_id=4)
     x = _depthwise_conv_block(x, 256, alpha, depth_multiplier, block_id=5)
 
-    x = _depthwise_conv_block(
-        x, 512, alpha, depth_multiplier, strides=(2, 2), block_id=6)
+    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, strides=(2, 2), block_id=6)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=7)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=8)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=9)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=10)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=11)
 
-    x = _depthwise_conv_block(
-        x, 1024, alpha, depth_multiplier, strides=(2, 2), block_id=12)
+    x = _depthwise_conv_block(x, 1024, alpha, depth_multiplier, strides=(2, 2), block_id=12)
     x = _depthwise_conv_block(x, 1024, alpha, depth_multiplier, block_id=13)
 
-    if version.parse(tf.__version__) < version.parse('2.6'):
-        if backend.image_data_format() == 'channels_first':
+    if version.parse(tf.__version__) < version.parse("2.6"):
+        if backend.image_data_format() == "channels_first":
             shape = (int(1024 * alpha), 1, 1)
         else:
             shape = (1, 1, int(1024 * alpha))
 
         x = layers.GlobalAveragePooling2D()(x)
-        x = layers.Reshape(shape, name='reshape_1')(x)
+        x = layers.Reshape(shape, name="reshape_1")(x)
     else:
         x = layers.GlobalAveragePooling2D(keepdims=True)(x)
 
-    x = layers.Dropout(dropout, name='dropout')(x)
-    x = layers.Conv2D(NUM_CLASSES, (1, 1), padding='same', name='conv_preds')(x)
-    x = layers.Reshape((NUM_CLASSES,), name='reshape_2')(x)
-    imagenet_utils.validate_activation('softmax', None)
-    x = layers.Activation(activation='softmax',
-                          name='predictions')(x)
+    x = layers.Dropout(dropout, name="dropout")(x)
+    x = layers.Conv2D(NUM_CLASSES, (1, 1), padding="same", name="conv_preds")(x)
+    x = layers.Reshape((NUM_CLASSES,), name="reshape_2")(x)
+    imagenet_utils.validate_activation("softmax", None)
+    x = layers.Activation(activation="softmax", name="predictions")(x)
 
     # Create model.
-    model = tf.keras.Model(img_input, x, name='mobilenet_%0.2f_%s' % (alpha, rows))
+    model = tf.keras.Model(img_input, x, name="mobilenet_%0.2f_%s" % (alpha, rows))
 
     return model
 
 
 def _conv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1)):
-    channel_axis = 1 if backend.image_data_format() == 'channels_first' else -1
+    channel_axis = 1 if backend.image_data_format() == "channels_first" else -1
     filters = int(filters * alpha)
-    x = layers.Conv2D(
-        filters,
-        kernel,
-        padding='same',
-        use_bias=False,
-        strides=strides,
-        name='conv1')(inputs)
-    x = layers.BatchNormalization(axis=channel_axis, name='conv1_bn')(x)
-    return layers.ReLU(6., name='conv1_relu')(x)
+    x = layers.Conv2D(filters, kernel, padding="same", use_bias=False, strides=strides, name="conv1")(inputs)
+    x = layers.BatchNormalization(axis=channel_axis, name="conv1_bn")(x)
+    return layers.ReLU(6.0, name="conv1_relu")(x)
 
 
-def _depthwise_conv_block(inputs,
-                          pointwise_conv_filters,
-                          alpha,
-                          depth_multiplier=1,
-                          strides=(1, 1),
-                          block_id=1):
-    channel_axis = 1 if backend.image_data_format() == 'channels_first' else -1
+def _depthwise_conv_block(inputs, pointwise_conv_filters, alpha, depth_multiplier=1, strides=(1, 1), block_id=1):
+    channel_axis = 1 if backend.image_data_format() == "channels_first" else -1
     pointwise_conv_filters = int(pointwise_conv_filters * alpha)
 
     if strides == (1, 1):
         x = inputs
     else:
-        x = layers.ZeroPadding2D(((0, 1), (0, 1)), name='conv_pad_%d' % block_id)(
-            inputs)
-    x = layers.DepthwiseConv2D((3, 3),
-                               padding='same' if strides == (1, 1) else 'valid',
-                               depth_multiplier=depth_multiplier,
-                               strides=strides,
-                               use_bias=False,
-                               name='conv_dw_%d' % block_id)(
-        x)
-    x = layers.BatchNormalization(
-        axis=channel_axis, name='conv_dw_%d_bn' % block_id)(
-        x)
-    x = layers.ReLU(6., name='conv_dw_%d_relu' % block_id)(x)
+        x = layers.ZeroPadding2D(((0, 1), (0, 1)), name="conv_pad_%d" % block_id)(inputs)
+    x = layers.DepthwiseConv2D(
+        (3, 3),
+        padding="same" if strides == (1, 1) else "valid",
+        depth_multiplier=depth_multiplier,
+        strides=strides,
+        use_bias=False,
+        name="conv_dw_%d" % block_id,
+    )(x)
+    x = layers.BatchNormalization(axis=channel_axis, name="conv_dw_%d_bn" % block_id)(x)
+    x = layers.ReLU(6.0, name="conv_dw_%d_relu" % block_id)(x)
 
     x = layers.Conv2D(
-        pointwise_conv_filters, (1, 1),
-        padding='same',
-        use_bias=False,
-        strides=(1, 1),
-        name='conv_pw_%d' % block_id)(
-        x)
-    x = layers.BatchNormalization(
-        axis=channel_axis, name='conv_pw_%d_bn' % block_id)(
-        x)
-    return layers.ReLU(6., name='conv_pw_%d_relu' % block_id)(x)
+        pointwise_conv_filters, (1, 1), padding="same", use_bias=False, strides=(1, 1), name="conv_pw_%d" % block_id
+    )(x)
+    x = layers.BatchNormalization(axis=channel_axis, name="conv_pw_%d_bn" % block_id)(x)
+    return layers.ReLU(6.0, name="conv_pw_%d_relu" % block_id)(x)

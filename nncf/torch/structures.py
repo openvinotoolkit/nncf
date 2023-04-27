@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Callable, Any, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 import torch
 from torch import nn
@@ -45,8 +45,13 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
                    use the device of the model's parameters.
     """
 
-    def __init__(self, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
-                 data_loader: DataLoader, device: str = None):
+    def __init__(
+        self,
+        criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor],
+        criterion: _Loss,
+        data_loader: DataLoader,
+        device: str = None,
+    ):
         self.criterion_fn = criterion_fn
         self.criterion = criterion
         self.data_loader = data_loader
@@ -70,9 +75,13 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
                 create different compressed model objects for each distributed process and the distributed training
                 will fail.
     """
-    def __init__(self, data_loader: DataLoader,
-                 eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float],
-                 nncf_config: 'NNCFConfig'):
+
+    def __init__(
+        self,
+        data_loader: DataLoader,
+        eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float],
+        nncf_config: "NNCFConfig",
+    ):
         self.data_loader = data_loader
         self.eval_fn = eval_fn
         self.config = nncf_config
@@ -94,16 +103,25 @@ class LeGRInitArgs(NNCFExtraConfigStruct):
     :param train_optimizer: optional, optimizer for model training.
     :param nncf_config: NNCF config for compression.
     """
-    def __init__(self,
-                 train_loader: torch.utils.data.DataLoader,
-                 train_fn: Callable[[torch.utils.data.DataLoader, torch.nn.Module,
-                                     torch.optim.Optimizer, 'CompressionAlgorithmController',
-                                     Optional[int]], type(None)],
-                 val_loader: torch.utils.data.DataLoader,
-                 val_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader],
-                                  Tuple[float, float]],
-                 train_optimizer: Optional[torch.optim.Optimizer],
-                 nncf_config: 'NNCFConfig'):
+
+    def __init__(
+        self,
+        train_loader: torch.utils.data.DataLoader,
+        train_fn: Callable[
+            [
+                torch.utils.data.DataLoader,
+                torch.nn.Module,
+                torch.optim.Optimizer,
+                "CompressionAlgorithmController",
+                Optional[int],
+            ],
+            type(None),
+        ],
+        val_loader: torch.utils.data.DataLoader,
+        val_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], Tuple[float, float]],
+        train_optimizer: Optional[torch.optim.Optimizer],
+        nncf_config: "NNCFConfig",
+    ):
         self.train_loader = train_loader
         self.train_steps_fn = train_fn
         self.val_loader = val_loader
@@ -126,9 +144,10 @@ class DistributedCallbacksArgs(NNCFExtraConfigStruct):
     example, torch.nn.DataParallel or any custom class), returns wrapped model ready for distributed training
     :param unwrapping_callback: Callback for unwrapping the model wrapped with wrapping_callback, returns original model
     """
-    def __init__(self,
-                 wrapping_callback: Callable[[nn.Module], nn.Module],
-                 unwrapping_callback: Callable[[nn.Module], nn.Module]):
+
+    def __init__(
+        self, wrapping_callback: Callable[[nn.Module], nn.Module], unwrapping_callback: Callable[[nn.Module], nn.Module]
+    ):
         self.wrap_model = wrapping_callback
         self.unwrap_model = unwrapping_callback
 
@@ -144,6 +163,7 @@ class ExecutionParameters:
     :param cpu_only: whether cpu-only mode is using for training
     :param current_gpu: id of GPU that should be used for training (if only one of all is used)
     """
+
     def __init__(self, cpu_only: bool, current_gpu: Optional[int]):
         self.cpu_only = cpu_only
         self.current_gpu = current_gpu

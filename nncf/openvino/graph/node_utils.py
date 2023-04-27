@@ -85,7 +85,7 @@ def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) 
     :param port_id: The input port ID to get weight input.
     :return: The weight value.
     """
-    const_op_friendly_name = node_with_weight.layer_attributes.const_attrs[port_id]['name']
+    const_op_friendly_name = node_with_weight.layer_attributes.const_attrs[port_id]["name"]
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[const_op_friendly_name]
     weight_tensor = get_const_value(const_op)
@@ -123,7 +123,7 @@ def get_result_node_name(output_name: str, port_id: int) -> str:
     :return: Name of result.
     """
 
-    return f'Result_{output_name}.{port_id}'
+    return f"Result_{output_name}.{port_id}"
 
 
 def get_reduce_node_name(output_name: str, node_type: str, port_id: int) -> str:
@@ -135,11 +135,12 @@ def get_reduce_node_name(output_name: str, node_type: str, port_id: int) -> str:
     :param port_id: Target port id of the target node.
     :return: Reduce node name.
     """
-    return f'{output_name}_{node_type}.{port_id}'
+    return f"{output_name}_{node_type}.{port_id}"
 
 
-def get_inplace_reduce_op(op: Type[ov.Node], node_type: str, reduction_axes: Optional[Tuple[int, ...]],
-                          use_abs: bool) -> InplaceInsertionFnType:
+def get_inplace_reduce_op(
+    op: Type[ov.Node], node_type: str, reduction_axes: Optional[Tuple[int, ...]], use_abs: bool
+) -> InplaceInsertionFnType:
     """
     Returns inplace insertion function that adds reduce node to a passed node.
 
@@ -149,6 +150,7 @@ def get_inplace_reduce_op(op: Type[ov.Node], node_type: str, reduction_axes: Opt
     :param use_abs: Wheather reduce absolute values of input tensors or not.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
+
     def get_reduce_op(node: ov.Node, output_port_id: int) -> ov.Node:
         output_name = node.get_friendly_name()
         reduction_axes_ = reduction_axes
@@ -158,14 +160,20 @@ def get_inplace_reduce_op(op: Type[ov.Node], node_type: str, reduction_axes: Opt
             reduction_axes_ = np.arange(partial_shape.rank.get_length()).astype(np.int64)
 
         if use_abs:
-            op_input = opset.abs(node.output(output_port_id),
-                                 name=get_reduce_node_name(output_name, 'abs', name_output_port_id))
+            op_input = opset.abs(
+                node.output(output_port_id), name=get_reduce_node_name(output_name, "abs", name_output_port_id)
+            )
             output_port_id = 0
         else:
             op_input = node
 
-        return op(op_input.output(output_port_id), reduction_axes=reduction_axes_,
-                  keep_dims=True, name=get_reduce_node_name(output_name, node_type, name_output_port_id))
+        return op(
+            op_input.output(output_port_id),
+            reduction_axes=reduction_axes_,
+            keep_dims=True,
+            name=get_reduce_node_name(output_name, node_type, name_output_port_id),
+        )
+
     return get_reduce_op
 
 
@@ -180,8 +188,7 @@ def get_inplace_min_op(node_type: str, reduction_shape: Tuple[int, ...]) -> Inpl
     return get_inplace_reduce_op(opset.reduce_min, node_type, reduction_shape, False)
 
 
-def get_inplace_max_op(node_type: str, reduction_shape: Tuple[int, ...], use_abs_max: bool) ->\
-        InplaceInsertionFnType:
+def get_inplace_max_op(node_type: str, reduction_shape: Tuple[int, ...], use_abs_max: bool) -> InplaceInsertionFnType:
     """
     Returns inplace max function that adds reduce max node to a passed node.
 
@@ -222,16 +229,19 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
     :param axis: Channel axis.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
+
     def get_reduce_op(node: ov.Node, output_port_id: int) -> ov.Node:
         output_name = node.get_friendly_name()
         input_shape = get_partial_shape_safe(node, output_port_id)
         input_shape = [dim.get_length() if dim.is_static else -1 for dim in input_shape]
         name_output_port_id = output_port_id
         if len(input_shape) < 3:
-            return opset.reduce_mean(node.output(output_port_id),
-                                     reduction_axes=0,
-                                     keep_dims=False,
-                                     name=get_reduce_node_name(output_name, op_type, name_output_port_id))
+            return opset.reduce_mean(
+                node.output(output_port_id),
+                reduction_axes=0,
+                keep_dims=False,
+                name=get_reduce_node_name(output_name, op_type, name_output_port_id),
+            )
 
         ch_dim = 1
         if axis != ch_dim:
@@ -239,7 +249,7 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
             transpose_dims[axis], transpose_dims[ch_dim] = transpose_dims[ch_dim], transpose_dims[axis]
             transposed_shape = [input_shape[dim] for dim in transpose_dims]
 
-            reshape_input_node  = opset.transpose(node.output(output_port_id), transpose_dims)
+            reshape_input_node = opset.transpose(node.output(output_port_id), transpose_dims)
             output_port_id = 0
         else:
             reshape_input_node = node
@@ -248,31 +258,39 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
         keeped_dims = transposed_shape[:2]
         squized_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
         if (-1 in keeped_dims and squized_dims == -1) or keeped_dims.count(-1) > 1:
-            raise RuntimeError(f'Could not insert mean_per_ch operation inplace'
-                               f' for the node {node} because of'
-                               f' input_shape: {input_shape} -> transposed_shape: {transposed_shape}')
+            raise RuntimeError(
+                f"Could not insert mean_per_ch operation inplace"
+                f" for the node {node} because of"
+                f" input_shape: {input_shape} -> transposed_shape: {transposed_shape}"
+            )
 
-        reshape_op = opset.reshape(reshape_input_node.output(output_port_id),
-                                   output_shape=np.array((keeped_dims[0], keeped_dims[1], squized_dims)),
-                                   special_zero=False)
-        return opset.reduce_mean(reshape_op,
-                                 reduction_axes=np.array((0, 2)),
-                                 keep_dims=False,
-                                 name=get_reduce_node_name(output_name, op_type, name_output_port_id))
+        reshape_op = opset.reshape(
+            reshape_input_node.output(output_port_id),
+            output_shape=np.array((keeped_dims[0], keeped_dims[1], squized_dims)),
+            special_zero=False,
+        )
+        return opset.reduce_mean(
+            reshape_op,
+            reduction_axes=np.array((0, 2)),
+            keep_dims=False,
+            name=get_reduce_node_name(output_name, op_type, name_output_port_id),
+        )
+
     return get_reduce_op
 
 
 def get_partial_shape_safe(node, port_id) -> int:
     partial_shape = node.get_output_partial_shape(port_id)
     if partial_shape.rank.is_dynamic or not partial_shape.all_non_negative:
-        raise RuntimeError(f'Could not collect statistics for the node {node}'
-                           f'because its output shape rank is dynamic or negative')
+        raise RuntimeError(
+            f"Could not collect statistics for the node {node}" f"because its output shape rank is dynamic or negative"
+        )
     return partial_shape
 
 
 def get_reducer_output_node_names(
-        node_type, target_node_name: str,
-        port_id: int, fn_output_port_id: int, inplace: bool) -> List[str]:
+    node_type, target_node_name: str, port_id: int, fn_output_port_id: int, inplace: bool
+) -> List[str]:
     """
     Returns output name to feed to a reducer node.
 

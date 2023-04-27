@@ -12,23 +12,22 @@
 """
 
 import os
+from functools import partial
 from typing import List, Optional
-import nncf
-from nncf.scopes import IgnoredScope
 
 import numpy as np
 import onnx
-from functools import partial
-
-from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.argparser import build_arguments_parser
+from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
+
+import nncf
+from nncf.scopes import IgnoredScope
+from tests.onnx.opset_converter import convert_opset_version
 
 # pylint: disable=unused-import
 # This import need to register custom Conerter
 from tests.onnx.quantization.common import find_ignored_scopes
-from tests.onnx.opset_converter import convert_opset_version
-
 
 # pylint: disable=redefined-outer-name,protected-access
 
@@ -38,17 +37,20 @@ def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Option
     filled_inputs, _, _ = model_evaluator._get_batch_input(batch_annotation, batch_input)
 
     if len(filled_inputs) == 1:
-        return {k: np.squeeze(v, axis=0)
-        if has_batch_dim else v for k, v in filled_inputs[0].items()}
+        return {k: np.squeeze(v, axis=0) if has_batch_dim else v for k, v in filled_inputs[0].items()}
 
     raise Exception("len(filled_inputs) should be one.")
 
 
-def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
-        num_init_samples: int,
-        ignored_scopes: Optional[List[str]] = None,
-        disallowed_op_types: Optional[List[str]] = None,
-        convert_model_opset: bool = True):
+def run(
+    onnx_model_path: str,
+    output_model_path: str,
+    dataset: nncf.Dataset,
+    num_init_samples: int,
+    ignored_scopes: Optional[List[str]] = None,
+    disallowed_op_types: Optional[List[str]] = None,
+    convert_model_opset: bool = True,
+):
     print("Post-Training Quantization Parameters:")
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
@@ -64,27 +66,28 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
     # Convert the model opset if needed.
     model = convert_opset_version(original_model) if convert_model_opset else original_model
     # Execute the pipeline.
-    quantized_model = nncf.quantize(model, dataset, subset_size=num_init_samples,
-                                    ignored_scope=IgnoredScope(names=ignored_scopes))
+    quantized_model = nncf.quantize(
+        model, dataset, subset_size=num_init_samples, ignored_scope=IgnoredScope(names=ignored_scopes)
+    )
     # Save the quantized model.
     onnx.save(quantized_model, output_model_path)
     print("The quantized model is saved to: {}".format(output_model_path))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = build_arguments_parser()
-    parser.add_argument("--output-model-dir", "-o", required=True,
-                        help="Directory path to save output quantized ONNX model", type=str)
+    parser.add_argument(
+        "--output-model-dir", "-o", required=True, help="Directory path to save output quantized ONNX model", type=str
+    )
     args = parser.parse_args()
-    args.target_framework = 'onnx_runtime'
+    args.target_framework = "onnx_runtime"
     config, mode = ConfigReader.merge(args)
 
     assert mode == "models"
     for config_entry in config[mode]:
         model_evaluator = ModelEvaluator.from_configs(config_entry)
         assert "datasets" in config_entry
-        assert len(config_entry["datasets"]
-                   ) == 1, "Config should have one dataset."
+        assert len(config_entry["datasets"]) == 1, "Config should have one dataset."
 
         if config_entry.get("no_ptq", False):
             continue
@@ -95,10 +98,7 @@ if __name__ == '__main__':
         convert_model_opset = config_entry.get("convert_opset_version", True)
 
         dataset_config = config_entry["datasets"][0]
-        options = {
-            'model_evaluator': model_evaluator,
-            'has_batch_dim': has_batch_dim
-        }
+        options = {"model_evaluator": model_evaluator, "has_batch_dim": has_batch_dim}
         transform_fn = partial(process_fn, **options)
         dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
 
@@ -108,17 +108,18 @@ if __name__ == '__main__':
         onnx_model_path = config_entry["launchers"][0]["model"]
 
         fname = onnx_model_path.stem
-        output_model_path = os.path.join(
-            args.output_model_dir, fname + "-quantized.onnx")
+        output_model_path = os.path.join(args.output_model_dir, fname + "-quantized.onnx")
 
         onnx_model_path = str(onnx_model_path)
 
         num_init_samples = len(model_evaluator.dataset)
 
-        run(onnx_model_path,
+        run(
+            onnx_model_path,
             output_model_path,
             dataset,
             num_init_samples,
             ignored_scopes,
             disallowed_op_types,
-            convert_model_opset)
+            convert_model_opset,
+        )

@@ -30,7 +30,7 @@ class ImportanceLoss(PTCompressionLoss):
         :param operands: List of movement sparsity operands for each layer to sparsify.
         """
         super().__init__()
-        assert len(operands) > 0, 'No sparse layers to calculate importance loss.'
+        assert len(operands) > 0, "No sparse layers to calculate importance loss."
         self.operands = operands
         self._disabled = False
 
@@ -38,7 +38,7 @@ class ImportanceLoss(PTCompressionLoss):
         self._disabled = True
 
     def calculate(self) -> torch.Tensor:
-        loss = torch.tensor(0., device=self._get_device())
+        loss = torch.tensor(0.0, device=self._get_device())
         if not self._disabled:
             for n, operand in enumerate(self.operands):
                 loss = loss * (n / (n + 1)) + operand.loss() / (n + 1)  # avoid overflow

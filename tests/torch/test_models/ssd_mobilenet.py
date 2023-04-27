@@ -13,17 +13,16 @@
 
 import torch
 from torch import nn
-from examples.common.sample_config import SampleConfig
 
-from examples.torch.object_detection.layers.modules.ssd_head import MultiOutputSequential, SSDDetectionOutput
+from examples.common.sample_config import SampleConfig
+from examples.torch.object_detection.layers.modules.ssd_head import MultiOutputSequential
+from examples.torch.object_detection.layers.modules.ssd_head import SSDDetectionOutput
 from nncf.torch.checkpoint_loading import load_state
 
 
 def conv_bn(inp, oup, kernel, stride, padding):
     return nn.Sequential(
-        nn.Conv2d(inp, oup, kernel, stride, padding, bias=False),
-        nn.BatchNorm2d(oup),
-        nn.ReLU(inplace=True)
+        nn.Conv2d(inp, oup, kernel, stride, padding, bias=False), nn.BatchNorm2d(oup), nn.ReLU(inplace=True)
     )
 
 
@@ -32,7 +31,6 @@ def conv_dw(inp, oup, stride):
         nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
         nn.BatchNorm2d(inp),
         nn.ReLU(inplace=True),
-
         nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
         nn.BatchNorm2d(oup),
         nn.ReLU(inplace=True),
@@ -56,8 +54,8 @@ def mobilenet(start_input_channels=3):
             conv_dw(512, 512, 1),
             conv_dw(512, 512, 1),
             conv_dw(512, 1024, 2),
-            conv_dw(1024, 1024, 1)
-        ]
+            conv_dw(1024, 1024, 1),
+        ],
     )
     return model
 
@@ -73,8 +71,8 @@ def extra_layers(start_input_channels):
             conv_bn(256, 128, 1, 1, 0),
             conv_bn(128, 256, 3, 2, 1),
             conv_bn(256, 64, 1, 1, 0),
-            conv_bn(64, 128, 3, 2, 1)
-        ]
+            conv_bn(64, 128, 3, 2, 1),
+        ],
     )
 
 
@@ -105,11 +103,11 @@ def build_ssd_mobilenet(cfg, size, num_classes, config):
     mobilenet_ssd = MobileNetSSD(num_classes, cfg)
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
-        print('Loading base network...')
-        basenet_weights = torch.load(config.basenet)['state_dict']
+        print("Loading base network...")
+        basenet_weights = torch.load(config.basenet)["state_dict"]
         new_weights = {}
         for wn, wv in basenet_weights.items():
-            wn = wn.replace('model.', '')
+            wn = wn.replace("model.", "")
             new_weights[wn] = wv
 
         load_state(mobilenet_ssd.basenet, new_weights, is_resume=False)
@@ -117,15 +115,17 @@ def build_ssd_mobilenet(cfg, size, num_classes, config):
 
 
 def ssd_mobilenet():
-    ssd_params = SampleConfig({
-        "variance": [0.1, 0.1, 0.2, 0.2],
-        "max_sizes": [60, 111, 162, 213, 264, 315],
-        "min_sizes": [30, 60, 111, 162, 213, 264],
-        "steps": [16, 32, 64, 100, 150, 300],
-        "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
-        "clip": False,
-        "flip": True,
-        "top_k": 200
-    })
+    ssd_params = SampleConfig(
+        {
+            "variance": [0.1, 0.1, 0.2, 0.2],
+            "max_sizes": [60, 111, 162, 213, 264, 315],
+            "min_sizes": [30, 60, 111, 162, 213, 264],
+            "steps": [16, 32, 64, 100, 150, 300],
+            "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
+            "clip": False,
+            "flip": True,
+            "top_k": 200,
+        }
+    )
 
     return MobileNetSSD(21, ssd_params)

@@ -11,15 +11,14 @@
  limitations under the License.
 """
 
-import random
 import math
+import random
 
 import numpy as np
 import torch
 from torchvision import transforms as T
 from torchvision.transforms import InterpolationMode
 from torchvision.transforms import functional as F
-
 
 
 def pad_if_smaller(img, size, fill=0):
@@ -87,7 +86,7 @@ class RandomHorizontalFlip:
         self.flip_prob = flip_prob
 
     def __call__(self, image, target):
-        if random.random() < self.flip_prob:   # nosec
+        if random.random() < self.flip_prob:  # nosec
             image = F.hflip(image)
             target = F.hflip(target)
         return image, target
@@ -122,6 +121,7 @@ class RandomSizedCrop:
         image = F.crop(image, *crop_params)
         target = F.crop(target, *crop_params)
         return image, target
+
 
 class CenterCrop:
     def __init__(self, size):

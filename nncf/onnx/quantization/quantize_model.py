@@ -29,25 +29,29 @@ from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 
 
 @tracked_function(NNCF_ONNX_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
-def quantize_impl(model: onnx.ModelProto,
-                  calibration_dataset: Dataset,
-                  preset: QuantizationPreset,
-                  target_device: TargetDevice,
-                  subset_size: int,
-                  fast_bias_correction: bool,
-                  model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None,
-                  advanced_parameters: Optional[AdvancedQuantizationParameters] = None) -> onnx.ModelProto:
+def quantize_impl(
+    model: onnx.ModelProto,
+    calibration_dataset: Dataset,
+    preset: QuantizationPreset,
+    target_device: TargetDevice,
+    subset_size: int,
+    fast_bias_correction: bool,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+) -> onnx.ModelProto:
     """
     Implementation of the `quantize()` method for the ONNX backend.
     """
     if target_device == TargetDevice.CPU_SPR:
-        raise RuntimeError('target_device == CPU_SPR is not supported.')
+        raise RuntimeError("target_device == CPU_SPR is not supported.")
     if model.opset_import[0].version < 10:
-        raise RuntimeError('ONNX models with opset version < 10 do not support quantization.')
+        raise RuntimeError("ONNX models with opset version < 10 do not support quantization.")
     if model.opset_import[0].version < 13:
-        nncf_logger.warning('ONNX models with 10 < opset version < 13 do not support per-channel quantization.'
-                            ' Per-tensor quantization will be applied.')
+        nncf_logger.warning(
+            "ONNX models with 10 < opset version < 13 do not support per-channel quantization."
+            " Per-tensor quantization will be applied."
+        )
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
         advanced_parameters.weights_quantization_params.per_channel = False
@@ -60,7 +64,8 @@ def quantize_impl(model: onnx.ModelProto,
         ignored_scope=ignored_scope,
         fast_bias_correction=fast_bias_correction,
         model_type=model_type,
-        advanced_parameters=advanced_parameters)
+        advanced_parameters=advanced_parameters,
+    )
 
     quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
 

@@ -11,26 +11,22 @@
  limitations under the License.
 """
 
-from typing import Optional
-from typing import Dict
-from typing import Any
-from typing import List
-from typing import Tuple
 from collections import deque
+from typing import Any, Dict, List, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.python.keras.saving import saving_utils as _saving_utils
 from tensorflow.lite.python.util import get_grappler_config as _get_grappler_config
 from tensorflow.lite.python.util import run_graph_optimizations as _run_graph_optimizations
 from tensorflow.python.framework import convert_to_constants as _convert_to_constants
+from tensorflow.python.keras.saving import saving_utils as _saving_utils
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.tensorflow.graph.converter import TFModelConverter
-from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
-from nncf.tensorflow.graph.metatypes.common import ALL_LAYER_METATYPES_WITH_WEIGHTS
 from nncf.experimental.tensorflow.graph.node_attributes import TFNodeAttributes
 from nncf.experimental.tensorflow.graph.node_attributes import TFWeightedNodeAttributes
+from nncf.tensorflow.graph.converter import TFModelConverter
+from nncf.tensorflow.graph.metatypes.common import ALL_LAYER_METATYPES_WITH_WEIGHTS
+from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
 
 
 class TensorFlowGraphBuilder:
@@ -66,8 +62,9 @@ class TensorFlowGraphBuilder:
 
         func = _saving_utils.trace_model_call(self._model, self._input_signature)
         concrete_func = func.get_concrete_function()
-        frozen_func, graph_def = \
-            _convert_to_constants.convert_variables_to_constants_v2_as_graph(concrete_func, lower_control_flow=False)
+        frozen_func, graph_def = _convert_to_constants.convert_variables_to_constants_v2_as_graph(
+            concrete_func, lower_control_flow=False
+        )
         # List of input tensors
         input_tensors = [tensor for tensor in frozen_func.inputs if tensor.dtype != tf.dtypes.resource]
         # List of output tensors
@@ -82,16 +79,12 @@ class TensorFlowGraphBuilder:
         # causing an unexpected behavior.
         if grappler_config.graph_options.rewrite_options.optimizers:
             graph_def = _run_graph_optimizations(
-                graph_def,
-                input_tensors,
-                output_tensors,
-                config=grappler_config,
-                graph=frozen_func.graph
+                graph_def, input_tensors, output_tensors, config=grappler_config, graph=frozen_func.graph
             )
 
         # Step 3: Convert the GraphDef to a tf.Graph
         with tf.Graph().as_default() as graph:  # pylint:disable=not-context-manager
-            tf.graph_util.import_graph_def(graph_def, name='')
+            tf.graph_util.import_graph_def(graph_def, name="")
 
         return graph, input_tensors, output_tensors
 
@@ -102,13 +95,15 @@ class NodeDesc:
     This information is required for `NNCFNode` creation.
     """
 
-    def __init__(self,
-                 op_name: str,
-                 op_type_name: str,
-                 metatype,
-                 is_shared: bool,
-                 resource_name: Optional[str] = None,
-                 attrs: Optional[Any] = None):
+    def __init__(
+        self,
+        op_name: str,
+        op_type_name: str,
+        metatype,
+        is_shared: bool,
+        resource_name: Optional[str] = None,
+        attrs: Optional[Any] = None,
+    ):
         """
         Initializes description of a node.
 
@@ -133,13 +128,15 @@ class EdgeDesc:
     This information is required for `NNCFGraphEdge` creation.
     """
 
-    def __init__(self,
-                 producer_op_name: str,
-                 output_port_id: int,
-                 consumer_op_name: str,
-                 input_port_id: int,
-                 tensor_shape: List[int],
-                 tensor_dtype: Dtype):
+    def __init__(
+        self,
+        producer_op_name: str,
+        output_port_id: int,
+        consumer_op_name: str,
+        input_port_id: int,
+        tensor_shape: List[int],
+        tensor_dtype: Dtype,
+    ):
         """
         Initializes description of an edge.
 
@@ -167,11 +164,13 @@ class SubclassedConverter(TFModelConverter):
     graph optimizers to create `NNCFGraph`
     """
 
-    def __init__(self,
-                 model: tf.keras.Model,
-                 input_signature: List[tf.TensorSpec],
-                 training: bool = False,
-                 graph_optimizers: Optional[List[str]] = None):
+    def __init__(
+        self,
+        model: tf.keras.Model,
+        input_signature: List[tf.TensorSpec],
+        training: bool = False,
+        graph_optimizers: Optional[List[str]] = None,
+    ):
         """
         Initializes the subclassed converter.
 
@@ -195,7 +194,7 @@ class SubclassedConverter(TFModelConverter):
         self._training = training
 
         if graph_optimizers is None:
-            graph_optimizers = ['dependency']
+            graph_optimizers = ["dependency"]
         self._graph_optimizers = graph_optimizers
 
         self._tfgraph_builder = TensorFlowGraphBuilder(self._model, self._input_signature)
@@ -217,8 +216,7 @@ class SubclassedConverter(TFModelConverter):
         return nncf_graph
 
     @staticmethod
-    def _create_nncf_graph_from_descs(node_descs: List[NodeDesc],
-                                      edge_descs: List[EdgeDesc]) -> NNCFGraph:
+    def _create_nncf_graph_from_descs(node_descs: List[NodeDesc], edge_descs: List[EdgeDesc]) -> NNCFGraph:
         """
         Creates the NNCF graph from the provided nodes and edges descriptions.
 
@@ -235,7 +233,7 @@ class SubclassedConverter(TFModelConverter):
                 node_metatype=desc.metatype,
                 layer_attributes=desc.attrs,
                 layer_name=desc.resource_name if desc.resource_name else desc.op_name,
-                is_shared=desc.is_shared
+                is_shared=desc.is_shared,
             )
             op_name_to_node_id_map[desc.op_name] = nncf_node.node_id
 
@@ -249,7 +247,7 @@ class SubclassedConverter(TFModelConverter):
                 tensor_shape=desc.tensor_shape,
                 input_port_id=desc.input_port_id,
                 output_port_id=desc.output_port_id,
-                dtype=desc.tensor_dtype
+                dtype=desc.tensor_dtype,
             )
 
         return nncf_graph
@@ -264,24 +262,23 @@ class SubclassedConverter(TFModelConverter):
         :return: String `channels_last` or `channels_first`.
         """
         try:
-            data_format = op.get_attr('data_format')
+            data_format = op.get_attr("data_format")
         except ValueError:
             data_format = None
 
         if data_format:
             to_keras_data_format = {
-                'NHWC': 'channels_last',
-                'NCHW': 'channels_first',
-                'NDHWC': 'channels_last',
-                'NCDHW': 'channels_first',
+                "NHWC": "channels_last",
+                "NCHW": "channels_first",
+                "NDHWC": "channels_last",
+                "NCDHW": "channels_first",
             }
-            return to_keras_data_format[data_format.decode('utf-8')]
+            return to_keras_data_format[data_format.decode("utf-8")]
 
         return tf.keras.backend.image_data_format()
 
     @staticmethod
-    def _collect_tfgraph_descs(graph: tf.Graph,
-                               op_names: List[str]) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
+    def _collect_tfgraph_descs(graph: tf.Graph, op_names: List[str]) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
         """
         Traverses the TF graph and collects information about nodes and edges
         which should be included to the NNCF graph.
@@ -320,9 +317,7 @@ class SubclassedConverter(TFModelConverter):
         edge_descs = []
         for op in visited_ops.values():
             metatype = get_op_metatype(op.type)
-            node_attributes = TFNodeAttributes(
-                SubclassedConverter._get_data_format(op)
-            )
+            node_attributes = TFNodeAttributes(SubclassedConverter._get_data_format(op))
 
             is_shared = False
             const_op_name = None
@@ -340,10 +335,7 @@ class SubclassedConverter(TFModelConverter):
                     port_id = metatype.weight_definitions[0].port_id
                     weight_shape = op.inputs[port_id].shape.as_list()
 
-                    node_attributes = TFWeightedNodeAttributes(
-                        node_attributes.get_data_format(),
-                        weight_shape
-                    )
+                    node_attributes = TFWeightedNodeAttributes(node_attributes.get_data_format(), weight_shape)
 
             node_descs.append(
                 NodeDesc(
@@ -352,7 +344,7 @@ class SubclassedConverter(TFModelConverter):
                     metatype=metatype,
                     is_shared=is_shared,
                     resource_name=const_op_name,
-                    attrs=node_attributes
+                    attrs=node_attributes,
                 )
             )
 
@@ -368,7 +360,7 @@ class SubclassedConverter(TFModelConverter):
                         consumer_op_name=op.name,
                         input_port_id=input_port_id,
                         tensor_shape=tensor.shape.as_list(),
-                        tensor_dtype=SubclassedConverter._convert_dtype_to_nncf_format(tensor.dtype)
+                        tensor_dtype=SubclassedConverter._convert_dtype_to_nncf_format(tensor.dtype),
                     )
                 )
 
@@ -387,13 +379,14 @@ class SubclassedConverter(TFModelConverter):
         elif dtype.is_integer:
             tensor_dtype = Dtype.INTEGER
         else:
-            raise RuntimeError(f'Unexpected dtype of tensor: {dtype}')
+            raise RuntimeError(f"Unexpected dtype of tensor: {dtype}")
 
         return tensor_dtype
 
     @staticmethod
-    def _get_op_name_to_const_op_names_map(graph,
-                                           marked_ops: Dict[str, tf.Operation]) -> Dict[str, List[Tuple[str, bool]]]:
+    def _get_op_name_to_const_op_names_map(
+        graph, marked_ops: Dict[str, tf.Operation]
+    ) -> Dict[str, List[Tuple[str, bool]]]:
         """
         Returns information about constant operations for the `marked_ops`.
 
@@ -405,9 +398,7 @@ class SubclassedConverter(TFModelConverter):
             - `is_shared` is the boolean flag. Takes one of the following values:
             `True` if the number of operations that use it is greater than 1, `False` otherwise.
         """
-        const_ops = [
-            op for op in graph.get_operations() if op.type == 'Const'
-        ]
+        const_ops = [op for op in graph.get_operations() if op.type == "Const"]
 
         const_op_name_to_op_names_map = {}  # type: Dict[str, List[str]]
         for const_op in const_ops:

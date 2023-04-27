@@ -13,7 +13,7 @@
 
 from torch import nn
 
-__all__ = ['AlexNet']
+__all__ = ["AlexNet"]
 
 
 class AlexNet(nn.Module):

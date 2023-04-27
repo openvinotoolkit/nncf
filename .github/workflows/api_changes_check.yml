@@ -1,6 +1,6 @@
 name: API changes check
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - develop
 
@@ -14,9 +14,13 @@ concurrency:
 jobs:
   call-build-api-doc:
     uses: ./.github/workflows/build_html_doc.yml
+    with:
+      ref: "refs/pull/${{ github.event.number }}/merge"
   compare-api-doc-with-develop:
     needs: call-build-api-doc
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - name: Download built HTML doc as artifact from previous step
         uses: alehechka/download-tartifact@v2
@@ -35,11 +39,25 @@ jobs:
           echo ${CHANGED_FILES}
           CHANGED_FILES=$(echo $CHANGED_FILES | tr '\n' ' ')
           echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
-      - uses: actions-ecosystem/action-remove-labels@v1
+      - uses: actions/github-script@v6
         if: ${{ !contains(steps.diff.outputs.changed_files, 'differ') }}
         with:
-          labels: API
-      - uses: actions-ecosystem/action-add-labels@v1
+          github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
+          script: |
+            github.rest.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "API"
+            })
+      - uses: actions/github-script@v6
         if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}
         with:
-          labels: API
+          github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ["API"]
+            })

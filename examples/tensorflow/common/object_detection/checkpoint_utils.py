@@ -12,12 +12,13 @@
 """
 
 import re
+
 import tensorflow as tf
 
 from examples.tensorflow.common.logger import logger
 
 
-def _build_assignment_map(keras_model, prefix='', skip_variables_regex=None, var_to_shape_map=None):
+def _build_assignment_map(keras_model, prefix="", skip_variables_regex=None, var_to_shape_map=None):
     """Compute an assignment mapping for loading older checkpoints into a Keras
 
     model. Variable names are remapped from the original TPUEstimator model to
@@ -38,7 +39,7 @@ def _build_assignment_map(keras_model, prefix='', skip_variables_regex=None, var
 
     checkpoint_names = None
     if var_to_shape_map:
-        predicate = lambda x: not x.endswith('Momentum') and not x.endswith('global_step')
+        predicate = lambda x: not x.endswith("Momentum") and not x.endswith("global_step")
         checkpoint_names = list(filter(predicate, var_to_shape_map.keys()))
 
     for var in keras_model.variables:
@@ -48,10 +49,10 @@ def _build_assignment_map(keras_model, prefix='', skip_variables_regex=None, var
             continue
 
         # Trim the index of the variable.
-        if ':' in var_name:
-            var_name = var_name[:var_name.rindex(':')]
+        if ":" in var_name:
+            var_name = var_name[: var_name.rindex(":")]
         if var_name.startswith(prefix):
-            var_name = var_name[len(prefix):]
+            var_name = var_name[len(prefix) :]
 
         if not var_to_shape_map:
             assignment_map[var_name] = var
@@ -65,17 +66,17 @@ def _build_assignment_map(keras_model, prefix='', skip_variables_regex=None, var
 
         try:
             if match_names:
-                assert len(match_names) == 1, 'more then on matches for {}: {}'.format(var_name, match_names)
+                assert len(match_names) == 1, "more then on matches for {}: {}".format(var_name, match_names)
                 checkpoint_names.remove(match_names[0])
                 assignment_map[match_names[0]] = var
             else:
-                logger.info('Error not found var name: %s', var_name)
+                logger.info("Error not found var name: %s", var_name)
         except Exception as ex:
-            logger.info('Error removing the match_name: %s', match_names)
-            logger.info('Exception: %s', ex)
+            logger.info("Error removing the match_name: %s", match_names)
+            logger.info("Exception: %s", ex)
             raise
 
-    logger.info('Found variable in checkpoint: %d', len(assignment_map))
+    logger.info("Found variable in checkpoint: %d", len(assignment_map))
 
     return assignment_map
 
@@ -85,7 +86,7 @@ def _get_checkpoint_map(checkpoint_path):
     return reader.get_variable_to_shape_map()
 
 
-def make_restore_checkpoint_fn(checkpoint_path, prefix='', skip_regex=None):
+def make_restore_checkpoint_fn(checkpoint_path, prefix="", skip_regex=None):
     """Returns scaffold function to restore parameters from v1 checkpoint.
 
     Args:
@@ -104,24 +105,23 @@ def make_restore_checkpoint_fn(checkpoint_path, prefix='', skip_regex=None):
     def _restore_checkpoint_fn(keras_model):
         """Loads pretrained model through scaffold function."""
         if not checkpoint_path:
-            logger.info('checkpoint_path is empty')
+            logger.info("checkpoint_path is empty")
             return
 
         var_prefix = prefix
 
-        if prefix and not prefix.endswith('/'):
-            var_prefix += '/'
+        if prefix and not prefix.endswith("/"):
+            var_prefix += "/"
 
         var_to_shape_map = _get_checkpoint_map(checkpoint_path)
-        assert var_to_shape_map, 'var_to_shape_map should not be empty'
+        assert var_to_shape_map, "var_to_shape_map should not be empty"
 
-        vars_to_load = _build_assignment_map(keras_model,
-                                             prefix=var_prefix,
-                                             skip_variables_regex=skip_regex,
-                                             var_to_shape_map=var_to_shape_map)
+        vars_to_load = _build_assignment_map(
+            keras_model, prefix=var_prefix, skip_variables_regex=skip_regex, var_to_shape_map=var_to_shape_map
+        )
 
         if not vars_to_load:
-            raise ValueError('Variables to load is empty.')
+            raise ValueError("Variables to load is empty.")
 
         tf.compat.v1.train.init_from_checkpoint(checkpoint_path, vars_to_load)
 

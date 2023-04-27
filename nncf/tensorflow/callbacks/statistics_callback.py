@@ -15,8 +15,8 @@ from typing import Callable
 
 import tensorflow as tf
 
-from nncf.common.statistics import NNCFStatistics
 from nncf.common.logging import nncf_logger
+from nncf.common.statistics import NNCFStatistics
 
 
 class StatisticsCallback(tf.keras.callbacks.Callback):
@@ -24,11 +24,13 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
     Callback for logging compression statistics to tensorboard and stdout.
     """
 
-    def __init__(self,
-                 statistics_fn: Callable[[], NNCFStatistics],
-                 log_tensorboard: bool = True,
-                 log_text: bool = True,
-                 log_dir: str = None):
+    def __init__(
+        self,
+        statistics_fn: Callable[[], NNCFStatistics],
+        log_tensorboard: bool = True,
+        log_text: bool = True,
+        log_dir: str = None,
+    ):
         """
         Initializes compression statistics callback.
 
@@ -44,28 +46,30 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
         self._file_writer = None
         if log_tensorboard:
             if log_dir is None:
-                raise ValueError('log_dir must be specified if log_tensorboard is true.')
+                raise ValueError("log_dir must be specified if log_tensorboard is true.")
             # pylint: disable=no-member
-            self._file_writer = tf.summary.create_file_writer(log_dir + '/compression')
+            self._file_writer = tf.summary.create_file_writer(log_dir + "/compression")
 
     def _dump_to_tensorboard(self, logs: dict, step: int):
-        with self._file_writer.as_default(): # pylint: disable=E1129
+        with self._file_writer.as_default():  # pylint: disable=E1129
             for name, value in logs.items():
                 tf.summary.scalar(name, value, step=step)
 
     def on_epoch_end(self, epoch: int, logs: dict = None):
         nncf_stats = self._statistics_fn()
         if self._log_tensorboard:
-            self._dump_to_tensorboard(self._prepare_for_tensorboard(nncf_stats),
-                                      self.model.optimizer.iterations.numpy())
+            self._dump_to_tensorboard(
+                self._prepare_for_tensorboard(nncf_stats), self.model.optimizer.iterations.numpy()
+            )
         if self._log_text:
             nncf_logger.info(nncf_stats.to_str())
 
     def on_train_begin(self, logs: dict = None):
         nncf_stats = self._statistics_fn()
         if self._log_tensorboard:
-            self._dump_to_tensorboard(self._prepare_for_tensorboard(nncf_stats),
-                                      self.model.optimizer.iterations.numpy())
+            self._dump_to_tensorboard(
+                self._prepare_for_tensorboard(nncf_stats), self.model.optimizer.iterations.numpy()
+            )
         if self._log_text:
             nncf_logger.info(nncf_stats.to_str())
 
@@ -75,4 +79,5 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
 
     def _prepare_for_tensorboard(self, stats: NNCFStatistics):
         raise NotImplementedError(
-            'StatisticsCallback class implementation must override the _prepare_for_tensorboard method.')
+            "StatisticsCallback class implementation must override the _prepare_for_tensorboard method."
+        )

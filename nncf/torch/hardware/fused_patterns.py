@@ -11,9 +11,9 @@
  limitations under the License.
 """
 
-from nncf.common.utils.registry import Registry
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import PatternNames
+from nncf.common.utils.registry import Registry
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
@@ -21,8 +21,7 @@ from nncf.torch.graph.pattern_operations import GROUP_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 from nncf.torch.graph.pattern_operations import RELU_OPERATIONS
 
-
-PT_HW_FUSED_PATTERNS = Registry('torch')
+PT_HW_FUSED_PATTERNS = Registry("torch")
 
 # ATOMIC OPERATIONS
 
@@ -31,14 +30,13 @@ PT_HW_FUSED_PATTERNS = Registry('torch')
 def create_l2_norm_operations():
     pattern = GraphPattern()
 
-    outside_pattern_node = pattern.add_node(label='*OUTSIDE_PATTERN_NODE*',
-                                            type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    pow_node = pattern.add_node(label='POW', type='pow')
-    sum_node = pattern.add_node(label='SUM', type='sum')
-    sqrt_node = pattern.add_node(label='SQRT', type='sqrt')
-    add_node = pattern.add_node(label='ADD', type='__add__')
-    div_node = pattern.add_node(label='DIV', type='div')
-    mul_node = pattern.add_node(label='MUL', type='__rmul__')
+    outside_pattern_node = pattern.add_node(label="*OUTSIDE_PATTERN_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    pow_node = pattern.add_node(label="POW", type="pow")
+    sum_node = pattern.add_node(label="SUM", type="sum")
+    sqrt_node = pattern.add_node(label="SQRT", type="sqrt")
+    add_node = pattern.add_node(label="ADD", type="__add__")
+    div_node = pattern.add_node(label="DIV", type="div")
+    mul_node = pattern.add_node(label="MUL", type="__rmul__")
 
     pattern.add_edge(outside_pattern_node, pow_node)
     pattern.add_edge(pow_node, sum_node)
@@ -52,24 +50,24 @@ def create_l2_norm_operations():
 
 @PT_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
 def create_matmul_softmax_matmul():
-    matmul_aliases = ['linear', 'addmm', 'matmul', 'bmm', 'mm', 'baddbmm']
+    matmul_aliases = ["linear", "addmm", "matmul", "bmm", "mm", "baddbmm"]
     pattern = GraphPattern()
-    softmax_1 = pattern.add_node(label='SOFTMAX', type='softmax')
-    mat_mul_1_1 = pattern.add_node(label='MATMUL_1', type=matmul_aliases)
-    mat_mul_2_1 = pattern.add_node(label='MATMUL_2', type=matmul_aliases)
+    softmax_1 = pattern.add_node(label="SOFTMAX", type="softmax")
+    mat_mul_1_1 = pattern.add_node(label="MATMUL_1", type=matmul_aliases)
+    mat_mul_2_1 = pattern.add_node(label="MATMUL_2", type=matmul_aliases)
 
-    any_1 = pattern.add_node(label='ANY', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    any_1 = pattern.add_node(label="ANY", type=GraphPattern.NON_PATTERN_NODE_TYPE)
 
     pattern.add_edge(mat_mul_1_1, softmax_1)
     pattern.add_edge(softmax_1, mat_mul_2_1)
     pattern.add_edge(any_1, mat_mul_2_1)
 
-    softmax_2 = pattern.add_node(label='SOFTMAX', type='softmax')
-    add_2 = pattern.add_node(label='ADD', type=["add", "__add__", "__iadd__", "__radd__"])
-    mat_mul_1_2 = pattern.add_node(label='MATMUL_1', type=matmul_aliases)
-    mat_mul_2_2 = pattern.add_node(label='MATMUL_2', type=matmul_aliases)
+    softmax_2 = pattern.add_node(label="SOFTMAX", type="softmax")
+    add_2 = pattern.add_node(label="ADD", type=["add", "__add__", "__iadd__", "__radd__"])
+    mat_mul_1_2 = pattern.add_node(label="MATMUL_1", type=matmul_aliases)
+    mat_mul_2_2 = pattern.add_node(label="MATMUL_2", type=matmul_aliases)
 
-    any_2 = pattern.add_node(label='ANY', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    any_2 = pattern.add_node(label="ANY", type=GraphPattern.NON_PATTERN_NODE_TYPE)
 
     pattern.add_edge(mat_mul_1_2, add_2)
     pattern.add_edge(add_2, softmax_2)
@@ -77,6 +75,7 @@ def create_matmul_softmax_matmul():
     pattern.add_edge(any_2, mat_mul_2_2)
 
     return pattern
+
 
 # COMBINATIONS
 
@@ -182,8 +181,8 @@ def create_group_norm_relu_operations():
 @PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_CONST_MULTIPLY)
 def create_linear_const_multiply():
     pattern = GraphPattern()
-    linear_node = pattern.add_node(label='linear', type='linear')
-    mul_node = pattern.add_node(label='MUL', type='__mul__')
+    linear_node = pattern.add_node(label="linear", type="linear")
+    mul_node = pattern.add_node(label="MUL", type="__mul__")
     pattern.add_edge(linear_node, mul_node)
 
     return pattern
@@ -193,6 +192,7 @@ def linear_operations():
     pattern = GraphPattern()
     pattern.add_node(**LINEAR_OPERATIONS)
     return pattern
+
 
 def arithmetic_operations():
     pattern = GraphPattern()
@@ -223,9 +223,9 @@ def activation_operations():
 
 def create_swish_act() -> GraphPattern:
     pattern = GraphPattern()
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    sigmoid_node = pattern.add_node(label='SIGMOID', type='sigmoid')
-    mul_node = pattern.add_node(label='MUL', type='__mul__')
+    input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    sigmoid_node = pattern.add_node(label="SIGMOID", type="sigmoid")
+    mul_node = pattern.add_node(label="MUL", type="__mul__")
 
     pattern.add_edge(input_pattern_node, sigmoid_node)
     pattern.add_edge(sigmoid_node, mul_node)
@@ -238,11 +238,11 @@ def create_h_swish_act() -> GraphPattern:
 
     # Mul -> Div version
     pattern = GraphPattern()
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label='ADD', type='__add__')
-    hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
-    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
-    mul_node = pattern.add_node(label='MUL', type='__mul__')
+    input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label="ADD", type="__add__")
+    hardtanh_node = pattern.add_node(label="HARDTANH", type="hardtanh")
+    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
+    mul_node = pattern.add_node(label="MUL", type="__mul__")
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(input_pattern_node, mul_node)
@@ -253,11 +253,11 @@ def create_h_swish_act() -> GraphPattern:
 
     # Div -> Mul version
     pattern = GraphPattern()
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label='ADD', type='__add__')
-    hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
-    mul_node = pattern.add_node(label='MUL', type='__mul__')
-    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+    input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label="ADD", type="__add__")
+    hardtanh_node = pattern.add_node(label="HARDTANH", type="hardtanh")
+    mul_node = pattern.add_node(label="MUL", type="__mul__")
+    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(input_pattern_node, mul_node)
@@ -268,11 +268,11 @@ def create_h_swish_act() -> GraphPattern:
 
     # ReLU6 version - Mul -> Div
     pattern = GraphPattern()
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label='ADD', type='__add__')
-    relu6_node = pattern.add_node(label='RELU6', type='relu6')
-    mul_node = pattern.add_node(label='MUL', type='__mul__')
-    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+    input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label="ADD", type="__add__")
+    relu6_node = pattern.add_node(label="RELU6", type="relu6")
+    mul_node = pattern.add_node(label="MUL", type="__mul__")
+    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(input_pattern_node, mul_node)
@@ -283,11 +283,11 @@ def create_h_swish_act() -> GraphPattern:
 
     # ReLU6 version - Div -> Mul
     pattern = GraphPattern()
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label='ADD', type='__add__')
-    relu6_node = pattern.add_node(label='RELU6', type='relu6')
-    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
-    mul_node = pattern.add_node(label='MUL', type='__mul__')
+    input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label="ADD", type="__add__")
+    relu6_node = pattern.add_node(label="RELU6", type="relu6")
+    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
+    mul_node = pattern.add_node(label="MUL", type="__mul__")
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(input_pattern_node, mul_node)
@@ -306,10 +306,10 @@ def create_h_sigmoid_act() -> GraphPattern:
     # ReLU version:
     pattern = GraphPattern()
 
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label='ADD', type='__add__')
-    hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
-    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+    input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label="ADD", type="__add__")
+    hardtanh_node = pattern.add_node(label="HARDTANH", type="hardtanh")
+    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(add_node, hardtanh_node)
@@ -320,10 +320,10 @@ def create_h_sigmoid_act() -> GraphPattern:
     # ReLU6 version
     pattern = GraphPattern()
 
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label='ADD', type='__add__')
-    relu6_node = pattern.add_node(label='RELU6', type='relu6')
-    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+    input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label="ADD", type="__add__")
+    relu6_node = pattern.add_node(label="RELU6", type="relu6")
+    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(add_node, relu6_node)

@@ -12,29 +12,31 @@
 """
 
 import os
+
 import tensorflow as tf
 
 from examples.tensorflow.common.utils import set_memory_growth
 
 
 def get_distribution_strategy(config):
-    if config.get('cpu_only', False):
-        os.environ['CUDA_VISIBLE_DEVICES'] = ''
-        return tf.distribute.OneDeviceStrategy('device:CPU:0')
+    if config.get("cpu_only", False):
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        return tf.distribute.OneDeviceStrategy("device:CPU:0")
 
-    gpu_id = config.get('gpu_id', None)
+    gpu_id = config.get("gpu_id", None)
     if gpu_id is not None:
         _gpu_id = str(gpu_id)
-        if 'CUDA_VISIBLE_DEVICES' not in os.environ \
-                or _gpu_id in os.environ['CUDA_VISIBLE_DEVICES'].split(','):
-            os.environ['CUDA_VISIBLE_DEVICES'] = _gpu_id
+        if "CUDA_VISIBLE_DEVICES" not in os.environ or _gpu_id in os.environ["CUDA_VISIBLE_DEVICES"].split(","):
+            os.environ["CUDA_VISIBLE_DEVICES"] = _gpu_id
         else:
-            raise RuntimeError('GPU with id = {id} was not found in the specified '
-                               'CUDA_VISIBLE_DEVICES environment variable. '
-                               'Please do not export the CUDA_VISIBLE_DEVICES environment variable '
-                               'or specify GPU with id = {id} in it'.format(id=_gpu_id))
+            raise RuntimeError(
+                "GPU with id = {id} was not found in the specified "
+                "CUDA_VISIBLE_DEVICES environment variable. "
+                "Please do not export the CUDA_VISIBLE_DEVICES environment variable "
+                "or specify GPU with id = {id} in it".format(id=_gpu_id)
+            )
 
-    gpus = tf.config.list_physical_devices('GPU')
+    gpus = tf.config.list_physical_devices("GPU")
 
     # Workaround for https://github.com/tensorflow/tensorflow/issues/33916
     set_memory_growth(gpus)

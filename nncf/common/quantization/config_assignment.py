@@ -11,8 +11,7 @@
  limitations under the License.
 """
 from copy import deepcopy
-from typing import Dict
-from typing import List
+from typing import Dict, List
 
 from nncf.common.graph import NNCFNode
 from nncf.common.hardware.config import HWConfig
@@ -21,9 +20,9 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.scopes import matches_any
 
 
-def get_scoped_quantizer_config(base_config: QuantizerConfig,
-                                scope_str: str,
-                                scope_overrides: Dict = None) -> QuantizerConfig:
+def get_scoped_quantizer_config(
+    base_config: QuantizerConfig, scope_str: str, scope_overrides: Dict = None
+) -> QuantizerConfig:
     """
     Returns a QuantizerConfig which is based on a given config, which will have overrides
     applied on top of it according to the dictionary of per-scope overrides.
@@ -53,12 +52,13 @@ def get_scoped_quantizer_config(base_config: QuantizerConfig,
     return qconfig
 
 
-def assign_qconfig_lists_to_modules(nodes_with_weights: List[NNCFNode],
-                                    default_weight_qconfig: QuantizerConfig,
-                                    global_weight_constraints: QuantizationConstraints = None,
-                                    scope_overrides_dict: Dict = None,
-                                    hw_config: HWConfig = None) -> Dict[NNCFNode,
-                                                                        List[QuantizerConfig]]:
+def assign_qconfig_lists_to_modules(
+    nodes_with_weights: List[NNCFNode],
+    default_weight_qconfig: QuantizerConfig,
+    global_weight_constraints: QuantizationConstraints = None,
+    scope_overrides_dict: Dict = None,
+    hw_config: HWConfig = None,
+) -> Dict[NNCFNode, List[QuantizerConfig]]:
     """
     Assigns a list of possible quantizer configurations (as determined by HW config, defaults and overrides)
     to each weighted node that was passed.
@@ -84,9 +84,9 @@ def assign_qconfig_lists_to_modules(nodes_with_weights: List[NNCFNode],
     if hw_config is not None:
         meta_vs_qconfig_map = hw_config.get_metatype_vs_quantizer_configs_map(for_weights=True)
     for node in nodes_with_weights:
-        qconfig_for_current_scope = get_scoped_quantizer_config(default_qconfig,
-                                                                node.node_name,
-                                                                weight_scope_overrides_dict)
+        qconfig_for_current_scope = get_scoped_quantizer_config(
+            default_qconfig, node.node_name, weight_scope_overrides_dict
+        )
         if hw_config is None:
             qconfig_list = [qconfig_for_current_scope]
         else:

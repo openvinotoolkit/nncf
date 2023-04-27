@@ -10,8 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from enum import IntEnum
 import math
+from enum import IntEnum
 from typing import Any, Dict, Optional
 
 import torch
@@ -28,6 +28,7 @@ class MovementSchedulerStage(IntEnum):
     """
     Describes the current stage of training with movement sparsity.
     """
+
     PRE_WARMUP = 0
     IN_WARMUP = 1
     POST_WARMUP = 2
@@ -38,16 +39,17 @@ class MovementSchedulerParams:
     Stores the params to initialize the scheduler of movement sparsity.
     """
 
-    def __init__(self,
-                 warmup_start_epoch: int,
-                 warmup_end_epoch: int,
-                 importance_regularization_factor: float,
-                 enable_structured_masking: bool = MOVEMENT_ENABLE_STRUCTURED_MASKING,
-                 init_importance_threshold: Optional[float] = None,
-                 final_importance_threshold: float = MOVEMENT_FINAL_IMPORTANCE_THRESHOLD,
-                 power: float = MOVEMENT_POWER,
-                 steps_per_epoch: Optional[int] = None,
-                 ):
+    def __init__(
+        self,
+        warmup_start_epoch: int,
+        warmup_end_epoch: int,
+        importance_regularization_factor: float,
+        enable_structured_masking: bool = MOVEMENT_ENABLE_STRUCTURED_MASKING,
+        init_importance_threshold: Optional[float] = None,
+        final_importance_threshold: float = MOVEMENT_FINAL_IMPORTANCE_THRESHOLD,
+        power: float = MOVEMENT_POWER,
+        steps_per_epoch: Optional[int] = None,
+    ):
         """
         Initializes and validates the params for scheduler.
 
@@ -62,20 +64,23 @@ class MovementSchedulerParams:
         """
 
         if steps_per_epoch is None and warmup_start_epoch < 1:
-            raise ValueError('`warmup_start_epoch` must be >= 1 to enable the auto calculation of '
-                             '`steps_per_epoch`. Please either change `warmup_start_epoch` to a larger '
-                             'number or specify `steps_per_epoch` in the config.')
+            raise ValueError(
+                "`warmup_start_epoch` must be >= 1 to enable the auto calculation of "
+                "`steps_per_epoch`. Please either change `warmup_start_epoch` to a larger "
+                "number or specify `steps_per_epoch` in the config."
+            )
 
         if warmup_start_epoch < 0 or warmup_end_epoch <= warmup_start_epoch:
-            raise ValueError('Movement sparsity requires 0 <= warmup_start_epoch < warmup_end_epoch.')
+            raise ValueError("Movement sparsity requires 0 <= warmup_start_epoch < warmup_end_epoch.")
 
         if importance_regularization_factor < 0:
-            raise ValueError('`importance_regularization_factor` should not be a negative number.')
+            raise ValueError("`importance_regularization_factor` should not be a negative number.")
 
-        if init_importance_threshold is not None and \
-                init_importance_threshold >= final_importance_threshold:
-            nncf_logger.warning('`init_importance_threshold` is equal to or greater than '
-                                '`final_importance_threshold`. Movement sparsity may not work as expected.')
+        if init_importance_threshold is not None and init_importance_threshold >= final_importance_threshold:
+            nncf_logger.warning(
+                "`init_importance_threshold` is equal to or greater than "
+                "`final_importance_threshold`. Movement sparsity may not work as expected."
+            )
 
         self.warmup_start_epoch = warmup_start_epoch
         self.warmup_end_epoch = warmup_end_epoch
@@ -87,27 +92,29 @@ class MovementSchedulerParams:
         self.steps_per_epoch = steps_per_epoch
 
     @classmethod
-    def from_dict(cls, params: Dict[str, Any]) -> 'MovementSchedulerParams':
+    def from_dict(cls, params: Dict[str, Any]) -> "MovementSchedulerParams":
         """
         Initialize `MovementSchedulerParams` object from the config in dict format.
 
         :param params: A dict that specifies the parameters of movement sparsity scheduler.
         :return: A `MovementSchedulerParams` object that stores the parameters from `params`.
         """
-        warmup_start_epoch: int = params.get('warmup_start_epoch', None)
-        warmup_end_epoch: int = params.get('warmup_end_epoch', None)
-        importance_regularization_factor: float = params.get('importance_regularization_factor', None)
-        enable_structured_masking: bool = params.get('enable_structured_masking',
-                                                     MOVEMENT_ENABLE_STRUCTURED_MASKING)
-        init_importance_threshold: Optional[float] = params.get('init_importance_threshold', None)
-        final_importance_threshold: float = params.get('final_importance_threshold',
-                                                       MOVEMENT_FINAL_IMPORTANCE_THRESHOLD)
-        power: float = params.get('power', MOVEMENT_POWER)
-        steps_per_epoch: Optional[int] = params.get('steps_per_epoch', None)
+        warmup_start_epoch: int = params.get("warmup_start_epoch", None)
+        warmup_end_epoch: int = params.get("warmup_end_epoch", None)
+        importance_regularization_factor: float = params.get("importance_regularization_factor", None)
+        enable_structured_masking: bool = params.get("enable_structured_masking", MOVEMENT_ENABLE_STRUCTURED_MASKING)
+        init_importance_threshold: Optional[float] = params.get("init_importance_threshold", None)
+        final_importance_threshold: float = params.get(
+            "final_importance_threshold", MOVEMENT_FINAL_IMPORTANCE_THRESHOLD
+        )
+        power: float = params.get("power", MOVEMENT_POWER)
+        steps_per_epoch: Optional[int] = params.get("steps_per_epoch", None)
 
         if None in [warmup_start_epoch, warmup_end_epoch, importance_regularization_factor]:
-            raise ValueError('`warmup_start_epoch`, `warmup_start_epoch` and `importance_regularization_factor` '
-                             'are required in config for Movement Sparsity.')
+            raise ValueError(
+                "`warmup_start_epoch`, `warmup_start_epoch` and `importance_regularization_factor` "
+                "are required in config for Movement Sparsity."
+            )
 
         return cls(
             warmup_start_epoch=warmup_start_epoch,
@@ -134,7 +141,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     scheduler will start calculation only after `steps_per_epoch` is calculated.
     """
 
-    def __init__(self, controller: 'MovementSparsityController', params: MovementSchedulerParams):
+    def __init__(self, controller: "MovementSparsityController", params: MovementSchedulerParams):
         """
         Initializes a movement sparsity scheduler with a polynomial decay schedule.
 
@@ -145,10 +152,11 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         self._controller = controller
         self._params = params
         self._schedule = PolynomialDecaySchedule(
-            initial_value=0., target_value=1.,
+            initial_value=0.0,
+            target_value=1.0,
             target_epoch=(self._params.warmup_end_epoch - self._params.warmup_start_epoch),
             power=self._params.power,
-            concave=True
+            concave=True,
         )
         self._steps_per_epoch = self._params.steps_per_epoch
         self._init_importance_threshold = self._params.init_importance_threshold
@@ -159,8 +167,9 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
     @property
     def current_stage(self) -> MovementSchedulerStage:
-        if self._steps_per_epoch is None or \
-                self.current_step < int(self._params.warmup_start_epoch * self._steps_per_epoch):
+        if self._steps_per_epoch is None or self.current_step < int(
+            self._params.warmup_start_epoch * self._steps_per_epoch
+        ):
             return MovementSchedulerStage.PRE_WARMUP
         if self.current_step < int(self._params.warmup_end_epoch * self._steps_per_epoch):
             return MovementSchedulerStage.IN_WARMUP
@@ -177,9 +186,9 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         """
         current_stage = self.current_stage
         if current_stage == MovementSchedulerStage.PRE_WARMUP:
-            return 0.
+            return 0.0
         if current_stage == MovementSchedulerStage.IN_WARMUP:
-            return self._calc_current_scheduled_value(0., self._params.importance_regularization_factor)
+            return self._calc_current_scheduled_value(0.0, self._params.importance_regularization_factor)
         return self._params.importance_regularization_factor
 
     @property
@@ -196,8 +205,9 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
             return -math.inf
         if current_stage == MovementSchedulerStage.IN_WARMUP:
             assert self._init_importance_threshold is not None
-            return self._calc_current_scheduled_value(self._init_importance_threshold,
-                                                      self._params.final_importance_threshold)
+            return self._calc_current_scheduled_value(
+                self._init_importance_threshold, self._params.final_importance_threshold
+            )
         return self._params.final_importance_threshold
 
     @property
@@ -218,14 +228,14 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
     def get_state(self) -> Dict[str, Any]:
         state = super().get_state()
-        state['_init_importance_threshold'] = self._init_importance_threshold
-        state['_steps_per_epoch'] = self._steps_per_epoch
+        state["_init_importance_threshold"] = self._init_importance_threshold
+        state["_steps_per_epoch"] = self._steps_per_epoch
         return state
 
     def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
-        self._init_importance_threshold = state['_init_importance_threshold']
-        self._steps_per_epoch = state['_steps_per_epoch']
+        self._init_importance_threshold = state["_init_importance_threshold"]
+        self._steps_per_epoch = state["_steps_per_epoch"]
         if self._steps_per_epoch is None:  # It is the first epoch and `steps_per_epoch` not specified
             self._steps_in_current_epoch = self._current_step + 1
             self._should_skip = True
@@ -239,14 +249,17 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         after warmup; (3) calculates the initial importance threshold if unspecified; (4) conducts
         structured masking if supported.
         """
-        if self._init_importance_threshold is None and \
-                self.current_stage == MovementSchedulerStage.IN_WARMUP:
+        if self._init_importance_threshold is None and self.current_stage == MovementSchedulerStage.IN_WARMUP:
             adaptive_init_threshold = self._calc_init_threshold_from_controller(target_sparsity=0.001)
-            nncf_logger.info('Movement sparsity automatically calculates `init_importance_threshold` as '
-                             f'{adaptive_init_threshold} so that warmup starts from ~0.1% linear layer sparsity.')
+            nncf_logger.info(
+                "Movement sparsity automatically calculates `init_importance_threshold` as "
+                f"{adaptive_init_threshold} so that warmup starts from ~0.1% linear layer sparsity."
+            )
             if adaptive_init_threshold >= self._params.final_importance_threshold:
-                nncf_logger.warning('The auto-calculated `init_importance_threshold` is equal to or greater than '
-                                    '`final_importance_threshold`. Movement sparsity may not work as expected.')
+                nncf_logger.warning(
+                    "The auto-calculated `init_importance_threshold` is equal to or greater than "
+                    "`final_importance_threshold`. Movement sparsity may not work as expected."
+                )
             self._init_importance_threshold = adaptive_init_threshold
         if self.current_stage == MovementSchedulerStage.POST_WARMUP and (not self._is_controller_frozen):
             if self._params.enable_structured_masking:
@@ -272,7 +285,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         # so that roughly k weight elements are masked and thus target sparsity is achieved. We conduct this on
         # CPU to (1) limit GPU memory usage; (2) avoid the non-deterministic behavior of `torch.Tensor.kthvalue`
         # on CUDA.
-        assert 0. <= target_sparsity < 1.
+        assert 0.0 <= target_sparsity < 1.0
         importance_tensors = []
         for minfo in self._controller.sparsified_module_info:
             operand = minfo.operand
@@ -306,11 +319,15 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
         if self._steps_per_epoch is not None and self._steps_in_current_epoch > 0:
             if self._steps_per_epoch != self._steps_in_current_epoch:
-                raise Exception('Actual steps per epoch and steps per epoch from the scheduler '
-                                'parameters are different. Scheduling may be incorrect.')
+                raise Exception(
+                    "Actual steps per epoch and steps per epoch from the scheduler "
+                    "parameters are different. Scheduling may be incorrect."
+                )
 
         if self._steps_per_epoch is None:
             self._should_skip = True
-            nncf_logger.info('Movement sparsity scheduler updates importance threshold and regularization'
-                             'factor per optimizer step, but steps_per_epoch was not set in config. Will '
-                             'measure the actual steps per epoch as signaled by a .epoch_step() call.')
+            nncf_logger.info(
+                "Movement sparsity scheduler updates importance threshold and regularization"
+                "factor per optimizer step, but steps_per_epoch was not set in config. Will "
+                "measure the actual steps per epoch as signaled by a .epoch_step() call."
+            )

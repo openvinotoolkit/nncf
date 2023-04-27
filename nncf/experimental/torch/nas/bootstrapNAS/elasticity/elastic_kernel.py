@@ -11,11 +11,7 @@
  limitations under the License.
 """
 import random
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import torch
 import torch.nn.functional as F
@@ -29,10 +25,10 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.logging import nncf_logger
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_PARAMS
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -52,15 +48,14 @@ ElasticKernelSearchSpace = List[List[KernelSizeType]]
 
 
 class EKParamsStateNames:
-    MAX_NUM_KERNELS = 'max_num_kernels'
+    MAX_NUM_KERNELS = "max_num_kernels"
 
 
 @ELASTICITY_PARAMS.register(ElasticityDim.KERNEL)
 class ElasticKernelParams(BaseElasticityParams):
     _state_names = EKParamsStateNames
 
-    def __init__(self,
-                 max_num_kernels: int = -1):
+    def __init__(self, max_num_kernels: int = -1):
         """
         Constructor
 
@@ -70,7 +65,7 @@ class ElasticKernelParams(BaseElasticityParams):
         self.max_num_kernels = max_num_kernels
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> 'ElasticKernelParams':
+    def from_config(cls, config: Dict[str, Any]) -> "ElasticKernelParams":
         """
         Creates the object from its config.
         """
@@ -80,7 +75,7 @@ class ElasticKernelParams(BaseElasticityParams):
         return cls(**kwargs)
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'ElasticKernelParams':
+    def from_state(cls, state: Dict[str, Any]) -> "ElasticKernelParams":
         """
         Creates the object from its state.
 
@@ -98,7 +93,7 @@ class ElasticKernelParams(BaseElasticityParams):
             self._state_names.MAX_NUM_KERNELS: self.max_num_kernels,
         }
 
-    def __eq__(self, other: 'ElasticKernelParams') -> bool:
+    def __eq__(self, other: "ElasticKernelParams") -> bool:
         return self.__dict__ == other.__dict__
 
 
@@ -136,8 +131,11 @@ class ElasticKernelOp:
         :param kernel_size: kernel size value
         """
         if kernel_size is None or kernel_size > self.max_kernel_size or kernel_size < 1:
-            raise AttributeError('Invalid kernel size={} in scope={}.\nIt should be within the range: [1, {}]'.format(
-                kernel_size, self.node_name, self.max_kernel_size))
+            raise AttributeError(
+                "Invalid kernel size={} in scope={}.\nIt should be within the range: [1, {}]".format(
+                    kernel_size, self.node_name, self.max_kernel_size
+                )
+            )
 
         self._active_kernel_size = kernel_size
 
@@ -172,9 +170,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
     and modifies in the way that kernel size is changing to a given value.
     """
 
-    def __init__(self, max_kernel_size: KernelSizeType,
-                 node_name: NNCFNodeName,
-                 params: ElasticKernelParams):
+    def __init__(self, max_kernel_size: KernelSizeType, node_name: NNCFNodeName, params: ElasticKernelParams):
         """
         Constructor.
 
@@ -193,9 +189,9 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         for i in range(len(self._ks_set) - 1):
             ks_small = self._ks_set[i]
             ks_larger = self._ks_set[i + 1]
-            param_name = '%dto%d' % (ks_larger, ks_small)
+            param_name = "%dto%d" % (ks_larger, ks_small)
             # noinspection PyArgumentList
-            scale_params['%s_matrix' % param_name] = Parameter(torch.eye(ks_small ** 2))
+            scale_params["%s_matrix" % param_name] = Parameter(torch.eye(ks_small**2))
         for name, param in scale_params.items():
             self.register_parameter(name, param)
 
@@ -207,7 +203,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         :return: list of kernel size values.
         """
         DEFAULT_KERNEL_SIZE_STEP = 2
-        assert max_kernel_size % 2 > 0, 'kernel size should be odd number'
+        assert max_kernel_size % 2 > 0, "kernel size should be odd number"
         if max_kernel_size == 1:
             return [1]
         kernel = max_kernel_size
@@ -227,7 +223,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         :return: modified weight
         """
         kernel_size = self.get_active_kernel_size()
-        nncf_logger.debug(f'Conv2d with active kernel size={kernel_size} in scope={self.node_name}')
+        nncf_logger.debug(f"Conv2d with active kernel size={kernel_size} in scope={self.node_name}")
 
         result = weight
         if is_tracing_state():
@@ -247,11 +243,10 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
 
         :param kernel_size: kernel size value
         """
-        nncf_logger.debug(f'set active elastic_kernel={kernel_size} in scope={self.node_name}')
-        assert kernel_size % 2 > 0, 'kernel size should be odd number'
+        nncf_logger.debug(f"set active elastic_kernel={kernel_size} in scope={self.node_name}")
+        assert kernel_size % 2 > 0, "kernel size should be odd number"
         if kernel_size not in self.kernel_size_list and kernel_size != self.max_kernel_size:
-            raise ValueError(
-                'invalid kernel size to set. Should be a number in {}'.format(self.kernel_size_list))
+            raise ValueError("invalid kernel size to set. Should be a number in {}".format(self.kernel_size_list))
         super().set_active_kernel_size(kernel_size)
 
     @staticmethod
@@ -279,9 +274,10 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
                 _input_filter = _input_filter.view(_input_filter.size(0), _input_filter.size(1), -1)
                 _input_filter = _input_filter.view(-1, _input_filter.size(2))
                 _input_filter = F.linear(
-                    _input_filter, self.__getattr__('%dto%d_matrix' % (src_ks, target_ks)),
+                    _input_filter,
+                    self.__getattr__("%dto%d_matrix" % (src_ks, target_ks)),
                 )
-                _input_filter = _input_filter.view(filters.size(0), filters.size(1), target_ks ** 2)
+                _input_filter = _input_filter.view(filters.size(0), filters.size(1), target_ks**2)
                 _input_filter = _input_filter.view(filters.size(0), filters.size(1), target_ks, target_ks)
                 start_filter = _input_filter
             filters = start_filter
@@ -319,7 +315,7 @@ class ElasticKernelInputForExternalPadding:
         diff = (self._max_kernel_size - active_kernel_size) // 2
         h = x.size(2)
         w = x.size(3)
-        new_x = x[:, :, diff:h - diff, diff:w - diff]
+        new_x = x[:, :, diff : h - diff, diff : w - diff]
         return new_x
 
 
@@ -328,9 +324,7 @@ class ElasticKernelHandler(SingleElasticityHandler):
     An interface for handling elastic kernel dimension in the network, i.e. define size of kernels in the conv layers.
     """
 
-    def __init__(self,
-                 elastic_kernel_ops: List[ElasticKernelOp],
-                 transformation_commands: List[TransformationCommand]):
+    def __init__(self, elastic_kernel_ops: List[ElasticKernelOp], transformation_commands: List[TransformationCommand]):
         super().__init__()
         self._elastic_kernel_ops = elastic_kernel_ops
         self._transformation_commands = transformation_commands
@@ -408,9 +402,9 @@ class ElasticKernelHandler(SingleElasticityHandler):
             active_kernel_sizes[elastic_kernel_op.node_name] = (active_kernel_size, active_kernel_size)
         return active_kernel_sizes
 
-    def resolve_conflicts_with_other_elasticities(self,
-                                                  config: ElasticKernelConfig,
-                                                  elasticity_handlers: ELASTICITY_HANDLERS_MAP) -> ElasticKernelConfig:
+    def resolve_conflicts_with_other_elasticities(
+        self, config: ElasticKernelConfig, elasticity_handlers: ELASTICITY_HANDLERS_MAP
+    ) -> ElasticKernelConfig:
         """
         Resolves a conflict between the given elasticity config and active elasticity configs of the given handlers.
         For example, elastic width configuration may contradict to elastic depth one. When we activate some
@@ -429,16 +423,19 @@ class ElasticKernelHandler(SingleElasticityHandler):
 
 
 class EKBuilderStateNames:
-    NODE_NAMES_TO_MAKE_ELASTIC = 'node_names_to_make_elastic'
+    NODE_NAMES_TO_MAKE_ELASTIC = "node_names_to_make_elastic"
 
 
 @ELASTICITY_BUILDERS.register(ElasticityDim.KERNEL)
 class ElasticKernelBuilder(SingleElasticityBuilder):
     _state_names = EKBuilderStateNames
 
-    def __init__(self, params: ElasticKernelParams,
-                 ignored_scopes: Optional[List[str]] = None,
-                 target_scopes: Optional[List[str]] = None):
+    def __init__(
+        self,
+        params: ElasticKernelParams,
+        ignored_scopes: Optional[List[str]] = None,
+        target_scopes: Optional[List[str]] = None,
+    ):
         super().__init__(ignored_scopes, target_scopes)
         self._node_names_to_make_elastic = []  # type: List[NNCFNodeName]
         self._params = params
@@ -467,19 +464,16 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
             nncf_logger.debug(f"Adding Elastic Kernel op for Conv2D in scope: {node_name}")
             node = graph.get_node_by_name(node_name)
             layer_attrs = node.layer_attributes
-            assert isinstance(layer_attrs, ConvolutionLayerAttributes), 'Conv2D can have elastic kernel only'
+            assert isinstance(layer_attrs, ConvolutionLayerAttributes), "Conv2D can have elastic kernel only"
             max_kernel_size = layer_attrs.kernel_size[0]
             elastic_kernel_op = ElasticKernelConv2DOp(max_kernel_size, node_name, self._params)
             elastic_kernel_op.to(device)
             update_conv_params_op = UpdateWeight(elastic_kernel_op)
             transformation_commands.append(
                 PTInsertionCommand(
-                    PTTargetPoint(
-                        TargetType.PRE_LAYER_OPERATION,
-                        target_node_name=node_name
-                    ),
+                    PTTargetPoint(TargetType.PRE_LAYER_OPERATION, target_node_name=node_name),
                     update_conv_params_op,
-                    TransformationPriority.PRUNING_PRIORITY
+                    TransformationPriority.PRUNING_PRIORITY,
                 )
             )
             # TODO(nlyalyus): ticket 71613: remove hardcode for EfficientNet
@@ -492,34 +486,28 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
             #       5) built-in conv padding
             #   output
             #       how to change padded input (e.g. center crop)
-            if 'NNCFUserConv2dStaticSamePadding' in node.node_name:
+            if "NNCFUserConv2dStaticSamePadding" in node.node_name:
                 if max_kernel_size >= 3:
                     crop_op = ElasticKernelInputForExternalPadding(elastic_kernel_op, max_kernel_size)
                     op = UpdateInputs(crop_op).to(device)
-                    nncf_logger.debug(f'Padded input will be cropped for {node_name}')
+                    nncf_logger.debug(f"Padded input will be cropped for {node_name}")
                     pad_commands.append(
                         PTInsertionCommand(
-                            PTTargetPoint(
-                                target_type=TargetType.PRE_LAYER_OPERATION,
-                                target_node_name=node_name
-                            ),
+                            PTTargetPoint(target_type=TargetType.PRE_LAYER_OPERATION, target_node_name=node_name),
                             op,
-                            TransformationPriority.DEFAULT_PRIORITY
+                            TransformationPriority.DEFAULT_PRIORITY,
                         )
                     )
             else:
                 # Padding
                 ap = ElasticKernelPaddingAdjustment(elastic_kernel_op)
                 pad_op = UpdatePadding(ap).to(device)
-                nncf_logger.debug(f'Padding will be adjusted for {node_name}')
+                nncf_logger.debug(f"Padding will be adjusted for {node_name}")
                 pad_commands.append(
                     PTInsertionCommand(
-                        PTTargetPoint(
-                            target_type=TargetType.PRE_LAYER_OPERATION,
-                            target_node_name=node_name
-                        ),
+                        PTTargetPoint(target_type=TargetType.PRE_LAYER_OPERATION, target_node_name=node_name),
                         pad_op,
-                        TransformationPriority.DEFAULT_PRIORITY
+                        TransformationPriority.DEFAULT_PRIORITY,
                     )
                 )
             elastic_kernel_ops.append(elastic_kernel_op)
@@ -537,8 +525,10 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         params_from_state = state[SingleElasticityBuilder._state_names.ELASTICITY_PARAMS]
         params = ElasticKernelParams.from_state(params_from_state)
         if self._params and self._params != params:
-            nncf_logger.warning('Different elasticity parameters were provided in two places: on init and on loading '
-                                'state. The one from state is taken by ignoring the ones from init.')
+            nncf_logger.warning(
+                "Different elasticity parameters were provided in two places: on init and on loading "
+                "state. The one from state is taken by ignoring the ones from init."
+            )
         self._params = params
         self._node_names_to_make_elastic = state[self._state_names.NODE_NAMES_TO_MAKE_ELASTIC]
 
@@ -551,5 +541,5 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         """
         return {
             SingleElasticityBuilder._state_names.ELASTICITY_PARAMS: self._params.get_state(),
-            self._state_names.NODE_NAMES_TO_MAKE_ELASTIC: self._node_names_to_make_elastic
+            self._state_names.NODE_NAMES_TO_MAKE_ELASTIC: self._node_names_to_make_elastic,
         }

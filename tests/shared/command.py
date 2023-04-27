@@ -10,16 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import os
 import signal
 import subprocess
 import sys
 import threading
 import time
-import os
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import List
+from typing import Any, Dict, List
 
 from nncf.common.utils.os import is_windows
 
@@ -49,23 +47,32 @@ class Command:
             if is_windows():
                 os.killpg(pid, signal.SIGKILL)
             else:
-                subprocess.call(['taskkill', '/F', '/T', '/PID', str(pid)])
+                subprocess.call(["taskkill", "/F", "/T", "/PID", str(pid)])
         except OSError as err:
             print(err)
 
     def run(self, timeout=3600, assert_returncode_zero=True):
         print(f"Running command: {self.cmd}")
+
         def target():
             try:
                 start_time = time.time()
-                with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                                                bufsize=1, cwd=self.cwd, env=self.env, **self.kwargs) as p:
+                with subprocess.Popen(
+                    self.cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    shell=True,
+                    bufsize=1,
+                    cwd=self.cwd,
+                    env=self.env,
+                    **self.kwargs,
+                ) as p:
                     self.process = p
                     self.timeout = False
 
                     self.output = []
                     for line in self.process.stdout:
-                        line = line.decode('utf-8')
+                        line = line.decode("utf-8")
                         self.output.append(line)
                         sys.stdout.write(line)
 
@@ -99,8 +106,8 @@ class Command:
         print("Process returncode = " + str(returncode))
         if assert_returncode_zero:
             assert returncode == 0, "Process exited with a non-zero exit code {}; output:{}".format(
-                returncode,
-                "".join(self.output))
+                returncode, "".join(self.output)
+            )
         return returncode
 
     def get_execution_time(self):
@@ -112,7 +119,9 @@ def arg_list_from_arg_dict(dct: Dict[str, Any]) -> List[str]:
     for key, val in dct.items():
         retval.append(key)
         if not isinstance(val, list):
-            val_list = [val,]
+            val_list = [
+                val,
+            ]
         else:
             val_list = val
         for v in val_list:
