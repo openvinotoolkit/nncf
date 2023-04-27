@@ -17,6 +17,8 @@ import numpy as np
 import pytest
 
 from nncf.common.tensor import NNCFTensor
+from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import TensorAggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorType
