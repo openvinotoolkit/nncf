@@ -37,7 +37,7 @@ def quantize(model: TModel,
              ignored_scope: Optional[IgnoredScope] = None,
              advanced_parameters: Optional[AdvancedQuantizationParameters] = None) -> TModel:
     """
-    Applies post-training quantization algorithm to provided model.
+    test
 
     :param model: A model to be quantized.
     :type  model: TModel
