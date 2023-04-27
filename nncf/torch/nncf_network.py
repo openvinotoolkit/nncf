@@ -246,7 +246,6 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._scopes_without_shape_matching = scopes_without_shape_matching
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
         self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
-        # pylint:disable=line-too-long
         self._insertions_into_original_graph = (
             {}
         )  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]

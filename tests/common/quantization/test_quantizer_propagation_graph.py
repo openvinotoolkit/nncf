@@ -813,7 +813,6 @@ class TestQuantizerPropagationStateGraph:
                 from_node = final_quant_prop_graph.nodes[from_node_key]
                 from_node_type = from_node[QPSG.NODE_TYPE_NODE_ATTR]
                 if QPSG.is_insertion_point(from_node_type):
-                    # pylint:disable=line-too-long
                     assert (
                         quantizer
                         in final_quant_prop_graph.nodes[from_node_key][QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]

@@ -35,11 +35,12 @@ def accuracy_aware_fit(
     validation_data=None,
     validation_steps=None,
     result_dict_to_val_metric_fn=None,
-    **kwargs
+    **kwargs,
 ):
     if result_dict_to_val_metric_fn is None:
         result_dict_to_val_metric_fn = lambda metric: metric
 
+    # pylint:disable=line-too-long
     with cls_instance.distribute_strategy.scope(), tf_internals.keras_engine.training_utils.RespectCompiledTrainableState(
         cls_instance
     ):

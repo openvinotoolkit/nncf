@@ -123,7 +123,6 @@ class TestInitialization(RunTest):
         assert is_accuracy_within_thresholds
 
 
-# pylint:disable=line-too-long
 @pytest.fixture(autouse=True, scope="class")
 def make_metrics_dump_path(metrics_dump_dir):
     if pytest.metrics_dump_path is None:

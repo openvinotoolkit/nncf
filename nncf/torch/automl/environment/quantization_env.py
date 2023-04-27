@@ -178,7 +178,6 @@ class QuantizationEnv:
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 
         # Create mapping of QuantizerId to the space of the corresponding quantizer's allowed qconfigs
-        # pylint:disable=line-too-long
         self.qconfig_space_map = OrderedDict.fromkeys(
             self.qctrl.all_quantizations.keys()
         )  # type: Dict[QuantizerId, List[QuantizerConfig]]

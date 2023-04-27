@@ -1309,7 +1309,6 @@ class TestQuantizerPropagationSolver:
         return request.param
 
     def test_check_transition_via_path(self, path_transition_test_struct: PathTransitionTestStruct):
-        # pylint:disable=line-too-long
         init_node_to_trait_configs_and_target_node_dict = (
             path_transition_test_struct.init_node_to_trait_configs_and_target_node_dict
         )
@@ -1410,7 +1409,6 @@ class TestQuantizerPropagationSolver:
         return request.param
 
     def test_propagation_step(self, propagation_step_test_struct: PropagationStepTestStruct):
-        # pylint:disable=line-too-long
         init_node_to_trait_configs_and_target_node_dict = (
             propagation_step_test_struct.init_node_to_trait_configs_and_target_node_dict
         )
@@ -1422,7 +1420,6 @@ class TestQuantizerPropagationSolver:
         mock_graph = get_branching_model_graph()
         ip_graph = get_ip_graph_for_test(mock_graph)
         quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
-        # pylint:disable=line-too-long
         prop_quantizers, quant_prop_graph = self.prepare_propagation_graph_state(
             ip_graph, init_node_to_trait_configs_and_target_node_dict
         )

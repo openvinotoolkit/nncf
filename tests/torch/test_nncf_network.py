@@ -240,10 +240,18 @@ def test_custom_module_registering():
     nodes_dict = {
         "TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/rand_like_0": UnknownMetatype,
         "TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/conv2d_0": PTConv2dMetatype,
-        "TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/NNCFConv2d[conv]/conv2d_0": PTModuleConv2dMetatype,
-        "TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/rand_like_0": UnknownMetatype,
-        "TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/conv2d_0": PTModuleConv2dMetatype,
-        "TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/Conv2d[conv]/conv2d_0": PTConv2dMetatype,
+        "TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/NNCFConv2d[conv]/conv2d_0": (
+            PTModuleConv2dMetatype
+        ),
+        "TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/rand_like_0": (
+            UnknownMetatype
+        ),
+        "TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/conv2d_0": (
+            PTModuleConv2dMetatype
+        ),
+        "TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/Conv2d[conv]/conv2d_0": (
+            PTConv2dMetatype
+        ),
     }
     for node_name, ref_metatype in nodes_dict.items():
         assert graph.get_node_by_name(node_name).metatype is ref_metatype
@@ -606,7 +614,9 @@ class TestInsertionPointGraph:
             "ModelForMetatypeTesting/relu_0": PTRELUMetatype,
             "ModelForMetatypeTesting/transpose__0": PTTransposeMetatype,
             "ModelForMetatypeTesting/MaxPool2d[max_pool2d]/max_pool2d_0": PTMaxPool2dMetatype,
-            "ModelForMetatypeTesting/NNCFConvTranspose2d[conv_transpose]/conv_transpose2d_0": PTModuleConvTranspose2dMetatype,
+            "ModelForMetatypeTesting/NNCFConvTranspose2d[conv_transpose]/conv_transpose2d_0": (
+                PTModuleConvTranspose2dMetatype
+            ),
             "ModelForMetatypeTesting/conv_transpose2d_0": PTConvTranspose2dMetatype,
             "ModelForMetatypeTesting/__add___0": PTAddMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0": PTDepthwiseConv2dSubtype,

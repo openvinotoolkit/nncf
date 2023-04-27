@@ -810,7 +810,6 @@ class QuantizerPropagationSolver:
                         branching_node_key = path[0][0]
                         break
                 assert branching_node_key is not None
-                # pylint:disable=line-too-long
                 self._quantizers_waiting_for_branch_merge.add_propagating_quantizer_to_wait_on_node_key(
                     prop_quantizer, branching_node_key
                 )

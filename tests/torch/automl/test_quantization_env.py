@@ -57,7 +57,6 @@ def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cf
         qp.possible_qconfigs = qconf_constraint_list
     experimental_builder = ExperimentalQuantizationBuilder(dummy_multi_setup, setup, {}, hw_config)
     experimental_builder.apply_to(nncf_network)
-    # pylint:disable=line-too-long
     experimental_ctrl = experimental_builder.build_controller(nncf_network)
     data_loader = create_ones_mock_dataloader(input_info_cfg)
     constraints = HardwareQuantizationConstraints()
