@@ -16,6 +16,8 @@ permissions:
 jobs:
   call-build-html-doc:
     uses: ./.github/workflows/build_html_doc.yml
+    with:
+      ref: ${{ github.ref }}
   call-build-schema-page:
     uses: ./.github/workflows/build_schema_page.yml
   publish:

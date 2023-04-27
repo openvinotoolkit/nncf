@@ -1,6 +1,6 @@
 name: API changes check
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - develop
 
@@ -14,6 +14,8 @@ concurrency:
 jobs:
   call-build-api-doc:
     uses: ./.github/workflows/build_html_doc.yml
+    with:
+      ref: "refs/pull/${{ github.event.number }}/merge"
   compare-api-doc-with-develop:
     needs: call-build-api-doc
     runs-on: ubuntu-latest
@@ -29,7 +31,6 @@ jobs:
         with:
           ref: doc_pages
           path: previous_doc_state
-          token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
       - name: Get changed file names in API doc path
         id: diff
         run: |
