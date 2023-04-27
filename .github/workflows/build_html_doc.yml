@@ -15,8 +15,6 @@ jobs:
           ref: ${{ inputs.ref }}
       - name: Install NNCF and doc requirements
         run: |
-          pip install -U pip
-          pip install setuptools>=62.0.0
           pip install -e .
           pip install -r docs/api/requirements.txt
       - name: Build API docs
