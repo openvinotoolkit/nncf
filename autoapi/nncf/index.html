@@ -345,12 +345,12 @@ document.write(`
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.Dataset.get_inference_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_inference_data()</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.ModelType"><code class="docutils literal notranslate"><span class="pre">ModelType</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.QuantizationPreset"><code class="docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.quantize_with_accuracy_control"><code class="docutils literal notranslate"><span class="pre">quantize_with_accuracy_control()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -454,17 +454,17 @@ limitations under the License.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dataset</span></code></a></p></td>
 <td><p>The <cite>nncf.Dataset</cite> class defines the interface by which compression algorithms</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
-<td><p>Dataclass that contains description of the ignored scope.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ModelType</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ModelType</span></code></a></p></td>
 <td><p>Describes the model type the specificity of which will be taken into</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
 <td><p>Describes the target device the specificity of which will be taken</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
 <td><p>Generic enumeration.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
+<td><p>Dataclass that contains description of the ignored scope.</p></td>
 </tr>
 </tbody>
 </table>
@@ -583,43 +583,6 @@ the transformation function was applied.</p>
 </dl>
 </dd></dl>
 
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="nncf.IgnoredScope">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">IgnoredScope</span></span><a class="headerlink" href="#nncf.IgnoredScope" title="Permalink to this definition">#</a></dt>
-<dd><p>Dataclass that contains description of the ignored scope.</p>
-<p>The ignored scope defines model sub-graphs that should be excluded from
-the compression process such as quantization, pruning and etc.</p>
-<p>Examples:</p>
-<p>``
-import nncf</p>
-<p># Exclude by node name:
-node_names = [‘node_1’, ‘node_2’, ‘node_3’]
-ignored_scope = nncf.IgnoredScope(names=node_names)</p>
-<p># Exclude using regular expressions:
-patterns = [’<a href="#id3"><span class="problematic" id="id4">node_</span></a>d’]
-ignored_scope = nncf.IgnoredScope(patterns=patterns)</p>
-<p># Exclude by operation type:</p>
-<p># OpenVINO opset <a class="reference external" href="https://docs.openvino.ai/latest/openvino_docs_ops_opset.html">https://docs.openvino.ai/latest/openvino_docs_ops_opset.html</a>
-operation_types = [‘Multiply’, ‘GroupConvolution’, ‘Interpolate’]
-ignored_scope = nncf.IgnoredScope(types=operation_types)</p>
-<p># ONNX opset <a class="github reference external" href="https://github.com/onnx/onnx/blob/main/docs/Operators.md">onnx/onnx</a>
-operation_types = [‘Mul’, ‘Conv’, ‘Resize’]
-ignored_scope = nncf.IgnoredScope(types=operation_types)</p>
-<p>…</p>
-<p><a href="#id1"><span class="problematic" id="id2">``</span></a></p>
-<p><strong>Note</strong> Operation types must be specified according to the model framework.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>names</strong> – List of ignored node names.</p></li>
-<li><p><strong>patterns</strong> – List of regular expressions that define patterns for names of
-ignored nodes.</p></li>
-<li><p><strong>types</strong> – List of ignored operation types.</p></li>
-</ul>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py class">
@@ -745,6 +708,43 @@ the accuracy restorer algorithm.</p></li>
 </dl>
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="nncf.IgnoredScope">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">IgnoredScope</span></span><a class="headerlink" href="#nncf.IgnoredScope" title="Permalink to this definition">#</a></dt>
+<dd><p>Dataclass that contains description of the ignored scope.</p>
+<p>The ignored scope defines model sub-graphs that should be excluded from
+the compression process such as quantization, pruning and etc.</p>
+<p>Examples:</p>
+<p>``
+import nncf</p>
+<p># Exclude by node name:
+node_names = [‘node_1’, ‘node_2’, ‘node_3’]
+ignored_scope = nncf.IgnoredScope(names=node_names)</p>
+<p># Exclude using regular expressions:
+patterns = [’<a href="#id3"><span class="problematic" id="id4">node_</span></a>d’]
+ignored_scope = nncf.IgnoredScope(patterns=patterns)</p>
+<p># Exclude by operation type:</p>
+<p># OpenVINO opset <a class="reference external" href="https://docs.openvino.ai/latest/openvino_docs_ops_opset.html">https://docs.openvino.ai/latest/openvino_docs_ops_opset.html</a>
+operation_types = [‘Multiply’, ‘GroupConvolution’, ‘Interpolate’]
+ignored_scope = nncf.IgnoredScope(types=operation_types)</p>
+<p># ONNX opset <a class="github reference external" href="https://github.com/onnx/onnx/blob/main/docs/Operators.md">onnx/onnx</a>
+operation_types = [‘Mul’, ‘Conv’, ‘Resize’]
+ignored_scope = nncf.IgnoredScope(types=operation_types)</p>
+<p>…</p>
+<p><a href="#id1"><span class="problematic" id="id2">``</span></a></p>
+<p><strong>Note</strong> Operation types must be specified according to the model framework.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>names</strong> – List of ignored node names.</p></li>
+<li><p><strong>patterns</strong> – List of regular expressions that define patterns for names of
+ignored nodes.</p></li>
+<li><p><strong>types</strong> – List of ignored operation types.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
 </section>
@@ -810,12 +810,12 @@ the accuracy restorer algorithm.</p></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.Dataset.get_inference_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_inference_data()</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.ModelType"><code class="docutils literal notranslate"><span class="pre">ModelType</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.QuantizationPreset"><code class="docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.quantize_with_accuracy_control"><code class="docutils literal notranslate"><span class="pre">quantize_with_accuracy_control()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
 </ul>
 </li>
 </ul>
