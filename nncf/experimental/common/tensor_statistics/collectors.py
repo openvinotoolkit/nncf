@@ -446,7 +446,7 @@ class QuantileReducerBase(TensorReducerBase):
 
 
 class QuantileReducer(QuantileReducerBase):
-    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[TensorType]:
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         return self._tensor_processor.quantile(x[0], self._quantile, self._reduction_shape, keepdims=True)
 
 
