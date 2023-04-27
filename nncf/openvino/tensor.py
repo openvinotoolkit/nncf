@@ -28,3 +28,6 @@ class OVNNCFTensor(NNCFTensor):
     @property
     def device(self):
         return TargetDevice.CPU.value
+
+    def is_empty(self) -> bool:
+        return self.tensor.size == 0
