@@ -711,7 +711,7 @@ def _get_layer_attributes(layer_metatype: Type[OperatorMetatype],
     elif layer_metatype in GENERAL_CONV_LAYER_METATYPES:
         layer_attributes = _get_conv_layer_attributes(model_layer, is_depthwise=False)
     elif layer_metatype in LINEAR_LAYER_METATYPES:
-        layer_attributes = _get_linear_layer_attributes(model_layer, layer_metatype)
+        layer_attributes = _get_linear_layer_attributes(model_layer)
     elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS:
         layer_attributes = _get_multiple_input_layer_attributes(model_layer)
     elif layer_metatype in RESHAPE_METATYPES:
@@ -761,12 +761,11 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
                                       padding_values=([0, 0, 0, 0]))
 
 
-def _get_linear_layer_attributes(layer: tf.keras.layers.Layer, layer_metatype: Type[OperatorMetatype]) -> \
-        LinearLayerAttributes:
+def _get_linear_layer_attributes(layer: tf.keras.layers.Layer) -> LinearLayerAttributes:
     channel_axis = get_input_channel_axis(layer)
     in_features = layer.get_input_shape_at(0)[channel_axis]
     out_features = layer.get_output_shape_at(0)[channel_axis]
-    bias = False if layer_metatype is op_metatypes.TFMatMulOpMetatype else layer.use_bias
+    bias = getattr(layer, 'use_bias', False)
     return LinearLayerAttributes(layer.trainable,
                                  in_features,
                                  out_features,
