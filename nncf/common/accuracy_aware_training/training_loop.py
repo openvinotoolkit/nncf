@@ -373,9 +373,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                         f"{self.runner.compression_rate_step:.3f}"
                     )
                 if self.runner.compression_rate_target < self.runner.minimal_compression_rate:
-                    nncf_logger.warning(
-                        "Cannot produce a compressed model with a specified minimal tolerable accuracy"
-                    )
+                    nncf_logger.warning("Cannot produce a compressed model with a specified minimal tolerable accuracy")
                     break
                 if self.runner.compression_rate_target > self.runner.maximal_compression_rate:
                     self.runner.compression_rate_target = self.runner.maximal_compression_rate

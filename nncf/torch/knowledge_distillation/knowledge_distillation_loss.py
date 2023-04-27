@@ -131,9 +131,7 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
             nncf_logger.warning("KD: no loss outputs detected in original model, knowledge distillation not possible")
             return None
         if not compressed_model_loss_outputs:
-            nncf_logger.warning(
-                "KD: no loss outputs detected in compressed model, knowledge distillation not possible"
-            )
+            nncf_logger.warning("KD: no loss outputs detected in compressed model, knowledge distillation not possible")
             return None
         return reduce(
             lambda kd_loss, loss_tensors: kd_loss + kd_loss_fn(loss_tensors[0], loss_tensors[1]),

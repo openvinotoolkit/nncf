@@ -336,9 +336,7 @@ def train(
         start_epoch = resuming_checkpoint["epoch"]
         best_miou = resuming_checkpoint["miou"]
 
-        logger.info(
-            "Resuming from model: Start epoch = {0} | Best mean IoU = {1:.4f}".format(start_epoch, best_miou)
-        )
+        logger.info("Resuming from model: Start epoch = {0} | Best mean IoU = {1:.4f}".format(start_epoch, best_miou))
         config.start_epoch = start_epoch
 
     # Start Training

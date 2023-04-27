@@ -202,9 +202,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         :param child_ctrl: A `CompressionAlgorithmController` instance.
         """
         if child_ctrl.model is not self.model:
-            raise RuntimeError(
-                "Cannot create a composite controller from controllers belonging to different models!"
-            )
+            raise RuntimeError("Cannot create a composite controller from controllers belonging to different models!")
 
         self._child_ctrls.append(child_ctrl)
         self._loss.add(child_ctrl.loss)
