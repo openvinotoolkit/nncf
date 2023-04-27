@@ -76,7 +76,7 @@ class TFCompressionStateLoader(tf.train.experimental.PythonState):
 
     def serialize(self) -> str:
         raise NotImplementedError(
-            "Use an instance of the `TFCompressionState` class to " "serialize the compression state."
+            "Use an instance of the `TFCompressionState` class to serialize the compression state."
         )
 
     def deserialize(self, string_value: str) -> None:

@@ -156,7 +156,7 @@ class TFModelTransformer(ModelTransformer):
                 target_point.layer_name, target_point.instance_idx, target_point.output_port_id, insertion_objects
             )
         else:
-            raise TypeError("Insertion transform does not support {} " "target point type".format(target_point.type))
+            raise TypeError("Insertion transform does not support {} target point type".format(target_point.type))
 
     # pylint:disable=too-many-branches
     def _shared_insert_layers(self, target_points: List[TargetPoint], layers_to_insert: List[Callable]):
@@ -213,7 +213,7 @@ class TFModelTransformer(ModelTransformer):
                     )
                     if len(layer_out_ports) > 1:
                         raise RuntimeError(
-                            "Insertion after layer ({}) with multiple ports " "is not supported".format(tp.layer_name)
+                            "Insertion after layer ({}) with multiple ports is not supported".format(tp.layer_name)
                         )
 
             layer_name = target_points[0].layer_name
@@ -222,7 +222,7 @@ class TFModelTransformer(ModelTransformer):
     def _multi_insertion(self, target_point: TargetPoint, commands: List[TransformationCommand]):
         if not isinstance(target_point, TFLayer):
             raise TypeError(
-                "Multiple insertion transform does not support " "{} target point type".format(target_point.type)
+                "Multiple insertion transform does not support {} target point type".format(target_point.type)
             )
 
         weight_operations = []
@@ -410,7 +410,7 @@ class TFModelTransformer(ModelTransformer):
 
         self._insert_after_model_outputs(layer_name, instance_idx, layer_out_ports, replace_layer_name)
         if len(layer_out_ports) > 1:
-            raise RuntimeError("Insertion after layer ({}) with multiple ports " "is not supported".format(layer_name))
+            raise RuntimeError("Insertion after layer ({}) with multiple ports is not supported".format(layer_name))
         self._insert_layer_after_sequential(layer_name, layer_to_insert_config)
 
     def _insert_layer_after_sequential(self, layer_name: str, layer_configs):

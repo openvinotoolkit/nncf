@@ -113,7 +113,7 @@ class FastBiasCorrection(Algorithm):
             self._backend_entity = OVFastBiasCorrectionAlgoBackend()
         else:
             raise RuntimeError(
-                "Cannot return backend-specific entity " "because {} is not supported!".format(model_backend)
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
             )
 
     def _apply(

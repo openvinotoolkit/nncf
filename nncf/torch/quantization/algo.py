@@ -1097,7 +1097,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         linked_qspecs = [quantizer_setup.quantization_points[qp_id].qspec for qp_id in linked_qp_ids]
         for linked_qspec in linked_qspecs:
             if not qspec == linked_qspec:
-                raise RuntimeError("The qspecs for unified scale quantization points should" "be identical!")
+                raise RuntimeError("The qspecs for unified scale quantization points should be identical!")
 
         range_init_minmax_values = None
         if minmax_values_for_range_init:

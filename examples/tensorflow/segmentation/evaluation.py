@@ -286,7 +286,7 @@ def main(argv):
     patch_if_experimental_quantization(config.nncf_config)
 
     if config.dataset_type != "tfrecords":
-        raise RuntimeError("The train.py does not support TensorFlow Datasets (TFDS). " "Please use TFRecords.")
+        raise RuntimeError("The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords.")
 
     if "train" in config.mode or "test" in config.mode:
         run_evaluation(config)

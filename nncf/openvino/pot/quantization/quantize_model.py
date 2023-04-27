@@ -268,7 +268,7 @@ def _create_quantization_config(
 
     if advanced_parameters.quantize_outputs:
         raise RuntimeError(
-            "Quantization algorithm from the OpenVINO backend does not support " "output quantization yet"
+            "Quantization algorithm from the OpenVINO backend does not support output quantization yet"
         )
 
     bias_correction_params = advanced_parameters.bias_correction_params

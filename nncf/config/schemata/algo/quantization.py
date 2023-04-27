@@ -240,12 +240,12 @@ PRECISION_INITIALIZER_SCHEMA = {
         ),
         "num_data_points": with_attributes(
             NUMBER,
-            description="Number of data points to iteratively estimate " "Hessian trace.",
+            description="Number of data points to iteratively estimate Hessian trace.",
             default=HAWQ_NUM_DATA_POINTS,
         ),
         "iter_number": with_attributes(
             NUMBER,
-            description="Maximum number of iterations of Hutchinson algorithm " "to Estimate Hessian trace.",
+            description="Maximum number of iterations of Hutchinson algorithm to Estimate Hessian trace.",
             default=HAWQ_ITER_NUMBER,
         ),
         "tolerance": with_attributes(
@@ -298,7 +298,7 @@ PRECISION_INITIALIZER_SCHEMA = {
             "items": {
                 "type": "array",
                 "items": [NUMBER, STRING],
-                "description": "A tuple of a bitwidth and a scope of the quantizer to assign the " "bitwidth to.",
+                "description": "A tuple of a bitwidth and a scope of the quantizer to assign the bitwidth to.",
             },
             "description": "Manual settings for the quantizer bitwidths. Scopes are used to identify "
             "the quantizers.",
@@ -368,7 +368,7 @@ STAGED_QUANTIZATION_PARAMS = {
             ),
             "weights_quant_start_epoch": with_attributes(
                 NUMBER,
-                description="Epoch index upon which the weights will start " "to be quantized.",
+                description="Epoch index upon which the weights will start to be quantized.",
                 default=WEIGHTS_QUANT_START_EPOCH,
             ),
             "lr_poly_drop_start_epoch": with_attributes(
@@ -379,7 +379,7 @@ STAGED_QUANTIZATION_PARAMS = {
             ),
             "lr_poly_drop_duration_epochs": with_attributes(
                 NUMBER,
-                description="Duration, in epochs, of the learning " "rate dropping process.",
+                description="Duration, in epochs, of the learning rate dropping process.",
                 default=LR_POLY_DURATION_EPOCHS,
             ),
             "disable_wd_start_epoch": with_attributes(

@@ -384,7 +384,7 @@ class ElasticInputWidthLinearOp(ElasticWidthOp, nn.Module):
 
         :param weight: weight tensor to be trimmed
         :return: trimmed weight
-        """ ""
+        """
         return weight[:, : self._active_width]
 
 
@@ -399,7 +399,7 @@ class ElasticInputWidthConvOp(ElasticWidthOp, nn.Module):
 
         :param weight: weight tensor to be trimmed
         :return: trimmed weight
-        """ ""
+        """
         return weight[:, : self._active_width, :, :]
 
 
@@ -429,7 +429,7 @@ class ElasticInputWidthBatchNormOp(ElasticWidthOp, nn.Module):
 
         :param bn_params: map of name and tensor to be trimmed
         :return: trimmed batchnorm parameters
-        """ ""
+        """
         return [param[: self._active_width] for param in bn_params.values()]
 
 
@@ -445,7 +445,7 @@ class ElasticInputWidthLayerNormOp(ElasticWidthOp, nn.Module):
         :param bias: bias tensor to be trimmed
         :param normalized_shape: normalized_shape to be trimmed
         :return: list of trimmed layernorm parameters
-        """ ""
+        """
         assert len(normalized_shape) == 1, "Currently only 1-dimensional shape is supported."
         return [weight[: self._active_width], bias[: self._active_width], (self._active_width,)]
 

@@ -33,7 +33,7 @@ RB_SPARSITY_SCHEMA = {
     "properties": {
         "algorithm": {"const": RB_SPARSITY_ALGO_NAME_IN_CONFIG},
         "sparsity_init": with_attributes(
-            NUMBER, description="Initial value of the sparsity level applied to the " "model", default=SPARSITY_INIT
+            NUMBER, description="Initial value of the sparsity level applied to the model", default=SPARSITY_INIT
         ),
         "params": {"type": "object", "properties": COMMON_SPARSITY_PARAM_PROPERTIES, "additionalProperties": False},
         **SCOPING_PROPERTIES,

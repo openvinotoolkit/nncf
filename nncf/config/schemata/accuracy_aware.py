@@ -69,7 +69,7 @@ ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA = {
                 ),
                 "lr_reduction_factor": with_attributes(
                     NUMBER,
-                    description="Factor used to reduce the learning rate after compression rate step " "is reduced",
+                    description="Factor used to reduce the learning rate after compression rate step is reduced",
                     default=AA_LR_REDUCTION_FACTOR,
                 ),
                 "minimal_compression_rate_step": with_attributes(

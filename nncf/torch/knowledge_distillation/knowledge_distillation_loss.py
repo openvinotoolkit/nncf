@@ -132,7 +132,7 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
             return None
         if not compressed_model_loss_outputs:
             nncf_logger.warning(
-                "KD: no loss outputs detected in compressed model, " "knowledge distillation not possible"
+                "KD: no loss outputs detected in compressed model, knowledge distillation not possible"
             )
             return None
         return reduce(

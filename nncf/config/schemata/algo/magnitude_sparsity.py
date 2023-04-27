@@ -35,7 +35,7 @@ MAGNITUDE_SPARSITY_SCHEMA = {
     "properties": {
         "algorithm": {"const": MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG},
         "sparsity_init": with_attributes(
-            NUMBER, description="Initial value of the sparsity level applied to the " "model.", default=SPARSITY_INIT
+            NUMBER, description="Initial value of the sparsity level applied to the model.", default=SPARSITY_INIT
         ),
         "initializer": GENERIC_INITIALIZER_SCHEMA,
         "params": {

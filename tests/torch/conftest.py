@@ -59,7 +59,7 @@ def pytest_addoption(parser):
         "--mixed-precision",
         action="store_true",
         default=False,
-        help="Enable mixed precision for the" " nncf weekly test",
+        help="Enable mixed precision for the nncf weekly test",
     )
     parser.addoption(
         "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
@@ -85,7 +85,7 @@ def pytest_addoption(parser):
         "--backward-compat-models",
         type=str,
         default=None,
-        help="Path to NNCF-traned model checkpoints that are tested" "to be strictly loadable",
+        help="Path to NNCF-traned model checkpoints that are tested to be strictly loadable",
     )
     parser.addoption(
         "--third-party-sanity", action="store_true", default=False, help="To run third party sanity test cases"

@@ -154,7 +154,7 @@ class BitwidthGraph:
                         target_node = prev_node
                         break
 
-                assert target_node is not None, "Could not find a pre-hook quantizer node for a specific " "input port!"
+                assert target_node is not None, "Could not find a pre-hook quantizer node for a specific input port!"
                 target_nncf_node_id = target_node.node_id
                 target_nncf_node_key = nncf_graph.get_node_key_by_id(target_nncf_node_id)
 

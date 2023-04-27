@@ -104,7 +104,7 @@ def create_grouped_conv(
 ):
     if in_channels % groups != 0 or out_channels % groups != 0:
         raise RuntimeError(
-            "Cannot create grouped convolution. " "Either `in_channels` or `out_channels` are not divisible by `groups`"
+            "Cannot create grouped convolution. Either `in_channels` or `out_channels` are not divisible by `groups`"
         )
     conv = nn.Conv2d(in_channels, out_channels, kernel_size, groups=groups, padding=padding, stride=stride)
     fill_conv_weight(conv, weight_init)

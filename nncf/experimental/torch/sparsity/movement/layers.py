@@ -58,16 +58,16 @@ class SparseConfig:
                 or sparse_factors is None
             ):
                 raise ValueError(
-                    f"{error_prefix} Fine sparse structure expects `sparse_factors` " "to be [1, 1] or unspecified."
+                    f"{error_prefix} Fine sparse structure expects `sparse_factors` to be [1, 1] or unspecified."
                 )
             if sparse_axis is not None:
-                raise ValueError(f"{error_prefix} Fine sparse structure does not expect " "specified `axis`.")
+                raise ValueError(f"{error_prefix} Fine sparse structure does not expect specified `axis`.")
             self.sparse_factors = (1, 1)
 
         if self.mode == SparseStructure.BLOCK:
             if sparse_factors is None:
                 raise ValueError(
-                    f"{error_prefix} Missing `sparse_factors`. Block sparsity " "structure expects it specified."
+                    f"{error_prefix} Missing `sparse_factors`. Block sparsity structure expects it specified."
                 )
             if not (isinstance(sparse_factors, (tuple, list)) and len(sparse_factors) == 2):
                 raise ValueError(
@@ -75,17 +75,17 @@ class SparseConfig:
                     "Block sparsity structure expects tuple of two numbers."
                 )
             if sparse_axis is not None:
-                raise ValueError(f"{error_prefix} Block sparse structure does not expect " "specified `axis`.")
+                raise ValueError(f"{error_prefix} Block sparse structure does not expect specified `axis`.")
             self.sparse_factors = tuple(sparse_factors)
 
         if self.mode == SparseStructure.PER_DIM:
             if sparse_axis is None:
                 raise ValueError(
-                    f"{error_prefix} Missing `axis`. Per-dim sparsity structure " "expects it to be specified."
+                    f"{error_prefix} Missing `axis`. Per-dim sparsity structure expects it to be specified."
                 )
             if sparse_factors is not None:
                 raise ValueError(
-                    f"{error_prefix} Per-dim sparsity structure does not expect " "specified `sparse_factors`."
+                    f"{error_prefix} Per-dim sparsity structure does not expect specified `sparse_factors`."
                 )
             self.sparse_axis = int(sparse_axis)
 

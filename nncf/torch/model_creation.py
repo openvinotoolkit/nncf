@@ -223,7 +223,7 @@ def synchronize_all_processes_in_distributed_mode():
         # if the backend not in the supported list https://pytorch.org/docs/stable/distributed.html
         except RuntimeError as err:
             nncf_logger.warning(
-                "Training pipeline spawned an error while " "synchronizing distributed training processes:"
+                "Training pipeline spawned an error while synchronizing distributed training processes:"
             )
             nncf_logger.warning(err)
             nncf_logger.warning("Desynchronization of distributed processes may occur.")

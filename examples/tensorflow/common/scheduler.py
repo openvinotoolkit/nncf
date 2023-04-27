@@ -78,7 +78,7 @@ def schedule_base_lr_check(schedule_type, base_lr):
     schedules_with_base_lr = ["exponential", "multistep", "step", "cosine"]
     if schedule_type in schedules_with_base_lr:
         if base_lr is None:
-            raise ValueError("`base_lr` parameter must be specified " "for the %s scheduler" % schedule_type)
+            raise ValueError("`base_lr` parameter must be specified for the %s scheduler" % schedule_type)
 
 
 def build_scheduler(config, steps_per_epoch):
@@ -95,7 +95,7 @@ def build_scheduler(config, steps_per_epoch):
         decay_steps = step * steps_per_epoch
 
         logger.info(
-            "Using exponential learning rate with: " "initial lr: %f, decay steps: %d, " "decay rate: %f",
+            "Using exponential learning rate with: initial lr: %f, decay steps: %d, decay rate: %f",
             base_lr,
             decay_steps,
             gamma,
@@ -107,14 +107,14 @@ def build_scheduler(config, steps_per_epoch):
     elif schedule_type == "piecewise_constant":
         boundaries = schedule_params.get("boundaries", optimizer_config.get("boundaries", None))
         if boundaries is None:
-            raise ValueError("`boundaries` parameter must be specified " "for the `piecewise_constant` scheduler")
+            raise ValueError("`boundaries` parameter must be specified for the `piecewise_constant` scheduler")
 
         values = schedule_params.get("values", optimizer_config.get("values", None))
         if values is None:
-            raise ValueError("`values` parameter must be specified " "for the `piecewise_constant` scheduler")
+            raise ValueError("`values` parameter must be specified for the `piecewise_constant` scheduler")
 
         logger.info(
-            "Using Piecewise constant decay with warmup. " "Parameters: boundaries: %s, values: %s", boundaries, values
+            "Using Piecewise constant decay with warmup. Parameters: boundaries: %s, values: %s", boundaries, values
         )
         boundaries = [steps_per_epoch * x for x in boundaries]
         lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay(boundaries, values)
@@ -123,7 +123,7 @@ def build_scheduler(config, steps_per_epoch):
         logger.info("Using MultiStep learning rate.")
         steps = schedule_params.get("steps", optimizer_config.get("steps", None))
         if steps is None:
-            raise ValueError("`steps` parameter must be specified " "for the `multistep` scheduler")
+            raise ValueError("`steps` parameter must be specified for the `multistep` scheduler")
         steps = [steps_per_epoch * x for x in steps]
         lr = MultiStepLearningRate(base_lr, steps, gamma=gamma)
 
@@ -132,7 +132,7 @@ def build_scheduler(config, steps_per_epoch):
         decay_steps = step * steps_per_epoch
 
         logger.info(
-            "Using Step learning rate with: " "base_lr: %f, decay steps: %d, " "gamma: %f", base_lr, decay_steps, gamma
+            "Using Step learning rate with: base_lr: %f, decay steps: %d, gamma: %f", base_lr, decay_steps, gamma
         )
         lr = tf.keras.optimizers.schedules.ExponentialDecay(
             initial_learning_rate=base_lr, decay_steps=decay_steps, decay_rate=gamma, staircase=True
@@ -143,7 +143,7 @@ def build_scheduler(config, steps_per_epoch):
 
     elif schedule_type == "cosine":
         decay_steps = steps_per_epoch * config.epochs
-        logger.info("Using Cosine learning rate with: " "base_lr: %f, decay steps: %d, ", base_lr, decay_steps)
+        logger.info("Using Cosine learning rate with: base_lr: %f, decay steps: %d, ", base_lr, decay_steps)
         lr = tf.keras.experimental.CosineDecay(initial_learning_rate=base_lr, decay_steps=decay_steps)
 
     else:

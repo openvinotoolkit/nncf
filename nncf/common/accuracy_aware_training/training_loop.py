@@ -301,7 +301,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 return compression_controller
 
         raise RuntimeError(
-            "No compression algorithm that supports adaptive compression " "accuracy-aware training was specified"
+            "No compression algorithm that supports adaptive compression accuracy-aware training was specified"
         )
 
     def run(
@@ -374,7 +374,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                     )
                 if self.runner.compression_rate_target < self.runner.minimal_compression_rate:
                     nncf_logger.warning(
-                        "Cannot produce a compressed model with a specified " "minimal tolerable accuracy"
+                        "Cannot produce a compressed model with a specified minimal tolerable accuracy"
                     )
                     break
                 if self.runner.compression_rate_target > self.runner.maximal_compression_rate:

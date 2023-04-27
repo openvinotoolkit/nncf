@@ -157,7 +157,7 @@ def quantize_impl(
     if model_type is not None:
         raise ValueError(f"model_type={model_type} is not supported")
     if fast_bias_correction is False:
-        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not " "supported")
+        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if ignored_scope is not None and ignored_scope.types is not None:
         raise RuntimeError(
             "Quantization algorithm form the TensorFlow backend "

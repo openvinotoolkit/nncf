@@ -203,7 +203,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         """
         if child_ctrl.model is not self.model:
             raise RuntimeError(
-                "Cannot create a composite controller " "from controllers belonging to different models!"
+                "Cannot create a composite controller from controllers belonging to different models!"
             )
 
         self._child_ctrls.append(child_ctrl)

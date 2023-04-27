@@ -96,7 +96,7 @@ def get_argument_parser():
     parser.add_argument(
         "--mixed-precision",
         dest="mixed_precision",
-        help="Enables torch.cuda.amp autocasting during training and" " validation steps",
+        help="Enables torch.cuda.amp autocasting during training and validation steps",
         action="store_true",
     )
     return parser

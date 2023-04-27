@@ -55,7 +55,7 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
     ),
     "sparsity_target": with_attributes(
         NUMBER,
-        description="Target sparsity level for the model, to be reached at the end of " "the compression schedule.",
+        description="Target sparsity level for the model, to be reached at the end of the compression schedule.",
         default=SPARSITY_TARGET,
     ),
     "sparsity_target_epoch": with_attributes(
@@ -67,7 +67,7 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
     ),
     "sparsity_freeze_epoch": with_attributes(
         NUMBER,
-        description="Index of the epoch upon which the sparsity mask will " "be frozen and no longer trained.",
+        description="Index of the epoch upon which the sparsity mask will be frozen and no longer trained.",
         default=SPARSITY_FREEZE_EPOCH,
     ),
     "update_per_optimizer_step": with_attributes(

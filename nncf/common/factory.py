@@ -43,7 +43,7 @@ class NNCFGraphFactory:
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.TORCH:
             return model.nncf.get_original_graph()
-        raise RuntimeError("Cannot create backend-specific graph" "because {} is not supported!".format(model_backend))
+        raise RuntimeError("Cannot create backend-specific graph because {} is not supported!".format(model_backend))
 
 
 class ModelTransformerFactory:
@@ -69,7 +69,7 @@ class ModelTransformerFactory:
 
             return PTModelTransformer(model)
         raise RuntimeError(
-            "Cannot create backend-specific model transformer" "because {} is not supported!".format(model_backend)
+            "Cannot create backend-specific model transformer because {} is not supported!".format(model_backend)
         )
 
 
@@ -95,7 +95,7 @@ class EngineFactory:
             from nncf.torch.engine import PTEngine
 
             return PTEngine(model)
-        raise RuntimeError("Cannot create backend-specific engine" "because {} is not supported!".format(model_backend))
+        raise RuntimeError("Cannot create backend-specific engine because {} is not supported!".format(model_backend))
 
 
 class CommandCreatorFactory:
@@ -113,5 +113,5 @@ class CommandCreatorFactory:
 
             return OVCommandCreator()
         raise RuntimeError(
-            "Cannot create backend-specific command creator" "because {} is not supported!".format(model_backend)
+            "Cannot create backend-specific command creator because {} is not supported!".format(model_backend)
         )

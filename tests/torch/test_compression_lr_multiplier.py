@@ -122,7 +122,7 @@ def merge_configs(configs: List[NNCFConfig], use_algo_list: bool = True) -> NNCF
 
     if not use_algo_list:
         if len(algorithms) > 1:
-            raise Exception("If there is more than one algorithm " "you could use only use_algo_list=True")
+            raise Exception("If there is more than one algorithm you could use only use_algo_list=True")
         res_config["compression"] = algorithms[0]
     else:
         res_config["compression"] = algorithms

@@ -72,7 +72,7 @@ SINGLE_INPUT_INFO_SCHEMA = {
             " during tracing and exporting.",
         ),
         "keyword": with_attributes(
-            STRING, description="Keyword to be used when passing the tensor to the model's " "'forward' method."
+            STRING, description="Keyword to be used when passing the tensor to the model's 'forward' method."
         ),
     },
     "additionalProperties": False,

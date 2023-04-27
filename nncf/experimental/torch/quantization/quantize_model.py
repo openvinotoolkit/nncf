@@ -95,7 +95,7 @@ def quantize_impl(
     Experimental implementation of the `quantize()` method for the PyTorch backend.
     """
     if fast_bias_correction is False:
-        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not " "supported")
+        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported")
 
@@ -103,7 +103,7 @@ def quantize_impl(
         advanced_parameters = AdvancedQuantizationParameters()
     if not advanced_parameters.disable_bias_correction:
         nncf_logger.warning(
-            "Bias correction and fast bias correction algorithms" " are not supported by Torch backend yet."
+            "Bias correction and fast bias correction algorithms are not supported by Torch backend yet."
         )
         advanced_parameters.disable_bias_correction = True
 

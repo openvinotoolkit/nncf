@@ -437,7 +437,7 @@ class TFRemovalCommand(TransformationCommand):
         super().__init__(TransformationType.REMOVE, target_point)
 
     def union(self, other: TransformationCommand) -> "TFRemovalCommand":
-        raise NotImplementedError("A command of TFRemovalCommand type " "could not be united with another command")
+        raise NotImplementedError("A command of TFRemovalCommand type could not be united with another command")
 
 
 class TFMultipleInsertionCommands(TransformationCommand):

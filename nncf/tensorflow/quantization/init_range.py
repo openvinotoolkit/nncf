@@ -87,7 +87,7 @@ class TFRangeInitParams(RangeInitParams):
             return deepcopy(self.global_init_config)
 
         raise ValueError(
-            "Location {} does not match any per-layer initialization parameter " "definition!".format(str(node_name))
+            "Location {} does not match any per-layer initialization parameter definition!".format(str(node_name))
         )
 
 

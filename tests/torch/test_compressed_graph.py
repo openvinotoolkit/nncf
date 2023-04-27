@@ -352,7 +352,7 @@ def test_gnmt_quantization(_case_config):
         dummy_forward_fn=forward_fn_,
         wrap_inputs_fn=gnmt_wrap_inputs_fn,
         scopes_without_shape_matching=[
-            "GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/" "BahdanauAttention[attn]"
+            "GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/BahdanauAttention[attn]"
         ],
     )
 

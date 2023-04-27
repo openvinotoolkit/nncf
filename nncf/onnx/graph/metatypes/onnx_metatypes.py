@@ -46,7 +46,7 @@ class ONNXOpMetatype(OperatorMetatype):
             if subtype.matches(model, node):
                 matches.append(subtype)
         if len(matches) > 1:
-            raise RuntimeError("Multiple subtypes match operator call - " "cannot determine single subtype.")
+            raise RuntimeError("Multiple subtypes match operator call - cannot determine single subtype.")
         if not matches:
             return None
         return matches[0]

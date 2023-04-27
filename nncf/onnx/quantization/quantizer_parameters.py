@@ -59,7 +59,7 @@ def convert_fq_params_to_onnx_params(
     output_low, output_high = parameters.output_low, parameters.output_high
     if not np.allclose(input_high, output_high) or not np.allclose(input_low, output_low):
         raise ValueError(
-            "ONNX Quantize/Dequantize pairs only support" " input_high == output_high and input_low == output_low."
+            "ONNX Quantize/Dequantize pairs only support input_high == output_high and input_low == output_low."
         )
 
     level_low, level_high = get_level_low_level_high(tensor_type)

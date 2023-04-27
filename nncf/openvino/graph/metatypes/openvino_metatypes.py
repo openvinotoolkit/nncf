@@ -47,7 +47,7 @@ class OVOpMetatype(OperatorMetatype):
             if subtype.matches(node):
                 matches.append(subtype)
         if len(matches) > 1:
-            raise RuntimeError("Multiple subtypes match operator call - " "can not determine single subtype.")
+            raise RuntimeError("Multiple subtypes match operator call - can not determine single subtype.")
         if not matches:
             return None
         return matches[0]

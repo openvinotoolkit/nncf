@@ -84,7 +84,7 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type="large", *
     # Create model.
     model = tf.keras.Model(img_input, x, name="MobilenetV3{}".format(model_type))
 
-    BASE_WEIGHT_PATH = "https://storage.googleapis.com/tensorflow/" "keras-applications/mobilenet_v3/"
+    BASE_WEIGHT_PATH = "https://storage.googleapis.com/tensorflow/keras-applications/mobilenet_v3/"
     WEIGHTS_HASHES = {
         "large": "59e551e166be033d707958cf9e29a6a7",
         "small": "8768d4c2e7dee89b9d02b2d03d65d862",

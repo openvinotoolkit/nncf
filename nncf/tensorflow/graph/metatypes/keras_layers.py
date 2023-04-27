@@ -67,7 +67,7 @@ class TFLayerMetatype(OperatorMetatype):
                 else:
                     matches.append(subtype)
         if len(matches) > 1:
-            raise RuntimeError("Multiple subtypes match operator call - " "cannot determine single subtype.")
+            raise RuntimeError("Multiple subtypes match operator call - cannot determine single subtype.")
         if not matches:
             return None
         return matches[0]
@@ -636,7 +636,7 @@ def _is_depthwise_conv(layer: tf.keras.layers.Layer, wrapper: Optional[tf.keras.
     )
 
     if channels is None:
-        raise ValueError("The channel dimension of the inputs " "should be defined. Found `None`.")
+        raise ValueError("The channel dimension of the inputs should be defined. Found `None`.")
 
     input_channels = int(channels)
 

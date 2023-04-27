@@ -97,7 +97,7 @@ def get_common_argument_parser():
         "multi-node data parallel training",
     )
     execution_type.add_argument(
-        "--cpu-only", action="store_true", help="Specifies that the computation should be performed" "using CPU only"
+        "--cpu-only", action="store_true", help="Specifies that the computation should be performed using CPU only"
     )
 
     parser.add_argument(
@@ -137,7 +137,7 @@ def get_common_argument_parser():
         help="Set starting epoch number manually (useful on restarts)",
     )
     parser.add_argument(
-        "--seed", default=None, type=int, help="Specific seed for initializing pseudo-random number" "generators."
+        "--seed", default=None, type=int, help="Specific seed for initializing pseudo-random number generators."
     )
 
     # Dataset
@@ -158,7 +158,7 @@ def get_common_argument_parser():
     parser.add_argument(
         "--imshow-batch",
         action="store_true",
-        help=("Displays batch images when loading the dataset and making " "predictions."),
+        help=("Displays batch images when loading the dataset and making predictions."),
     )
 
     # Storage settings
@@ -166,7 +166,7 @@ def get_common_argument_parser():
         "--log-dir",
         type=str,
         default="runs",
-        help="The directory where models and Tensorboard summaries" " are saved. Default: runs",
+        help="The directory where models and Tensorboard summaries are saved. Default: runs",
     )
 
     parser.add_argument("--save-freq", default=5, type=int, help="Checkpoint save frequency (epochs). Default: 5")
@@ -180,7 +180,7 @@ def get_common_argument_parser():
         default=10,
         type=int,
         metavar="N",
-        help="Print frequency (batch iterations). " "Default: 10)",
+        help="Print frequency (batch iterations). Default: 10)",
     )
     parser.add_argument(
         "--disable-compression",

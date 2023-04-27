@@ -326,7 +326,7 @@ def main(argv):
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))
 
     if config.dataset_type != "tfrecords":
-        raise RuntimeError("The train.py does not support TensorFlow Datasets (TFDS). " "Please use TFRecords.")
+        raise RuntimeError("The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords.")
 
     run_train(config)
 

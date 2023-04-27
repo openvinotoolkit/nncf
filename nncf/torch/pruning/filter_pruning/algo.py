@@ -392,7 +392,7 @@ class FilterPruningController(BasePruningAlgoController):
                         group_ids = [group.id for group in self.pruned_module_groups_info.get_all_clusters()]
                         if set(pruning_level.keys()) != set(group_ids):
                             raise RuntimeError(
-                                "Groupwise pruning level dict keys do not correspond to " "layer group ids"
+                                "Groupwise pruning level dict keys do not correspond to layer group ids"
                             )
                     else:
                         # Pruning uniformly with the same pruning level across layers

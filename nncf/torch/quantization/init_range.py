@@ -80,7 +80,7 @@ class PTRangeInitParams(RangeInitParams):
                     )
         if len(matches) > 1:
             raise ValueError(
-                "Location {} matches more than one per-layer initialization parameter " "definition!".format(str(qid))
+                "Location {} matches more than one per-layer initialization parameter definition!".format(str(qid))
             )
         if len(matches) == 1:
             return matches[0]
@@ -88,7 +88,7 @@ class PTRangeInitParams(RangeInitParams):
             return deepcopy(self.global_init_config)
 
         raise ValueError(
-            "Location {} does not match any per-layer initialization parameter " "definition!".format(str(qid))
+            "Location {} does not match any per-layer initialization parameter definition!".format(str(qid))
         )
 
 

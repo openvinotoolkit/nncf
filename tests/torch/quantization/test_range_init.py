@@ -373,21 +373,21 @@ class TestRangeInit:
                 ),
                 (
                     generate_qp(
-                        "TwoConvTestModel/" "Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+                        "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
                         QuantizerGroup.ACTIVATIONS,
                     ),
                     RangeInitConfig(init_type="min_max", num_init_samples=1),
                 ),
                 (
                     generate_qp(
-                        "TwoConvTestModel/" "Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+                        "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
                         QuantizerGroup.WEIGHTS,
                     ),
                     RangeInitConfig(init_type="min_max", num_init_samples=1),
                 ),
                 (
                     generate_qp(
-                        "TwoConvTestModel/" "Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
+                        "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
                         QuantizerGroup.ACTIVATIONS,
                     ),
                     RangeInitConfig(init_type="min_max", num_init_samples=1),
@@ -430,14 +430,14 @@ class TestRangeInit:
                 ),
                 (
                     generate_qp(
-                        "TwoConvTestModel/" "Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+                        "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
                         QuantizerGroup.WEIGHTS,
                     ),
                     RangeInitConfig(init_type="min_max", num_init_samples=1),
                 ),
                 (
                     generate_qp(
-                        "TwoConvTestModel/" "Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
+                        "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
                         QuantizerGroup.ACTIVATIONS,
                     ),
                     RangeInitConfig(

@@ -53,7 +53,7 @@ FILTER_PRUNING_SCHEMA = {
         "initializer": GENERIC_INITIALIZER_SCHEMA,
         "pruning_init": with_attributes(
             NUMBER,
-            description="Initial value of the pruning level applied to the " "prunable operations.",
+            description="Initial value of the pruning level applied to the prunable operations.",
             default=PRUNING_INIT,
         ),
         "params": {
@@ -81,22 +81,22 @@ FILTER_PRUNING_SCHEMA = {
                     default=PRUNING_STEPS,
                 ),
                 "pruning_flops_target": with_attributes(
-                    NUMBER, description="Target value of the pruning level for model " "FLOPs."
+                    NUMBER, description="Target value of the pruning level for model FLOPs."
                 ),
                 "schedule": with_attributes(
                     STRING,
-                    description="The type of scheduling to use for adjusting the target " "pruning level.",
+                    description="The type of scheduling to use for adjusting the target pruning level.",
                     enum=FILTER_PRUNING_SCHEDULE_OPTIONS,
                     default=PRUNING_SCHEDULE,
                 ),
                 "num_init_steps": with_attributes(
                     NUMBER,
-                    description="Number of epochs for model pretraining before " "starting filter pruning.",
+                    description="Number of epochs for model pretraining before starting filter pruning.",
                     default=PRUNING_NUM_INIT_STEPS,
                 ),
                 "interlayer_ranking_type": with_attributes(
                     STRING,
-                    description="The type of filter ranking across the " "layers.",
+                    description="The type of filter ranking across the layers.",
                     enum=INTERLAYER_RANKING_TYPE_OPTIONS,
                     default=PRUNING_INTERLAYER_RANKING_TYPE,
                 ),
@@ -118,7 +118,7 @@ FILTER_PRUNING_SCHEMA = {
                 ),
                 "prune_downsample_convs": with_attributes(
                     BOOLEAN,
-                    description="Whether to prune downsampling " "convolutional layers (with stride > 1) " "or not.",
+                    description="Whether to prune downsampling convolutional layers (with stride > 1) or not.",
                     default=PRUNE_DOWNSAMPLE_CONVS,
                 ),
                 "prune_batch_norms": with_attributes(
@@ -139,12 +139,12 @@ FILTER_PRUNING_SCHEMA = {
                     "properties": {
                         "generations": with_attributes(
                             NUMBER,
-                            description="Number of generations for the evolution " "algorithm.",
+                            description="Number of generations for the evolution algorithm.",
                             default=PRUNING_LEGR_GENERATIONS,
                         ),
                         "train_steps": with_attributes(
                             NUMBER,
-                            description="Number of training steps to estimate " "pruned model accuracy.",
+                            description="Number of training steps to estimate pruned model accuracy.",
                             default=PRUNING_LEGR_TRAIN_STEPS,
                         ),
                         "max_pruning": with_attributes(
@@ -160,7 +160,7 @@ FILTER_PRUNING_SCHEMA = {
                         ),
                         "random_seed": with_attributes(
                             NUMBER,
-                            description="Random seed for LeGR coefficients " "generation.",
+                            description="Random seed for LeGR coefficients generation.",
                             default=PRUNING_LEGR_RANDOM_SEED,
                         ),
                     },

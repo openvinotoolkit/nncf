@@ -195,12 +195,12 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         ):
             if not params.statistics_type in OV_REDUCERS_MAP:
                 raise RuntimeError(
-                    f"Statistic type: {params.statistics_type}" " is not supported for OpenVino PTQ backend yet."
+                    f"Statistic type: {params.statistics_type} is not supported for OpenVino PTQ backend yet."
                 )
 
             if not params.aggregator_type in AGGREGATORS_MAP:
                 raise RuntimeError(
-                    f"Aggregator type: {params.aggregator_type}" " is not supported for OpenVino PTQ backend yet."
+                    f"Aggregator type: {params.aggregator_type} is not supported for OpenVino PTQ backend yet."
                 )
 
             kwargs = {"reduction_shape": reduction_shape, "inplace": inplace}

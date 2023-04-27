@@ -218,7 +218,7 @@ def map_model_type(model_type):
 
 def map_ignored_scope(ignored):
     if ignored.get("skip_model") is not None:
-        raise ValueError("skip_model attribute in the ignored tag is not " "supported")
+        raise ValueError("skip_model attribute in the ignored tag is not supported")
 
     operations = ignored.get("operations")
     ignored_operations = []
@@ -688,7 +688,7 @@ def main():
             keys = ["xml_path", "quantization_impl", "quantization_parameters"]
             dump_to_json(path, quantize_model_arguments, keys)
         else:
-            raise RuntimeError(f"Support for {algo_name} is not implemented " "in the optimize tool.")
+            raise RuntimeError(f"Support for {algo_name} is not implemented in the optimize tool.")
 
     model_name = config.model.model_name
     output_model_path = os.path.join(output_dir, f"{model_name}.xml")

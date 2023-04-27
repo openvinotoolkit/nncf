@@ -464,7 +464,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
                 break
         if best_checkpoint_compression_rate is None:
             nncf_logger.error(
-                "Could not load the model - no models with positive accuracy budget in " "compression training history."
+                "Could not load the model - no models with positive accuracy budget in compression training history."
             )
             return self.compression_rate_target
 

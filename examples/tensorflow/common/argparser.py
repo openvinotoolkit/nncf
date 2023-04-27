@@ -159,7 +159,7 @@ def get_common_argument_parser(**flags):
             "--log-dir",
             type=str,
             default="runs",
-            help="The directory where models and TensorboardX summaries are saved. " "Default: runs",
+            help="The directory where models and TensorboardX summaries are saved. Default: runs",
         ),
     )
 
@@ -194,7 +194,7 @@ def get_common_argument_parser(**flags):
                 type=str,
                 metavar="PATH",
                 default=None,
-                help="Export the compressed model to the TensorFlow SavedModel format " "by given path.",
+                help="Export the compressed model to the TensorFlow SavedModel format by given path.",
             ),
         )
 

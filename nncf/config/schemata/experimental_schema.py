@@ -208,7 +208,7 @@ STAGE_DESCRIPTOR_SCHEMA = {
             NUMBER, description="Number of epochs to compute the adjustment of the learning rate."
         ),
         "sample_rate": with_attributes(
-            NUMBER, description="Number of iterations to activate the random subnet." "Default value is 1."
+            NUMBER, description="Number of iterations to activate the random subnet. Default value is 1."
         ),
     },
     "description": "Defines a supernet training stage: how many epochs it takes, which elasticities with which "
@@ -250,11 +250,11 @@ BOOTSTRAP_NAS_TRAINING_SCHEMA = {
     "properties": {
         "algorithm": with_attributes(
             TRAINING_ALGORITHMS_SCHEMA,
-            description="Defines training strategy for tuning supernet. By default, " "progressive shrinking",
+            description="Defines training strategy for tuning supernet. By default, progressive shrinking",
         ),
         "progressivity_of_elasticity": with_attributes(
             ARRAY_OF_STRINGS,
-            description="Defines the order of adding a new elasticity " "dimension from stage to stage",
+            description="Defines the order of adding a new elasticity dimension from stage to stage",
             examples=[["width", "depth", "kernel"]],
         ),
         "batchnorm_adaptation": BATCHNORM_ADAPTATION_SCHEMA,

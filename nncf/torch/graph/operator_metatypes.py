@@ -84,7 +84,7 @@ class PTOperatorMetatype(OperatorMetatype):
         for subtype in cls.get_subtypes():
             if subtype.matches(layer_attributes, function_args, functions_kwargs):
                 matches.append(subtype)
-        assert len(matches) <= 1, "Multiple subtypes match operator call " "- cannot determine single subtype."
+        assert len(matches) <= 1, "Multiple subtypes match operator call - cannot determine single subtype."
         if not matches:
             return None
 

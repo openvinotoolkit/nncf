@@ -311,12 +311,12 @@ def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) 
 
     if params.bias_correction_params.apply_for_all_nodes:
         raise RuntimeError(
-            "apply_for_all_nodes parameter of the BiasCorrection algorithm is not " "supported in the legacy format"
+            "apply_for_all_nodes parameter of the BiasCorrection algorithm is not supported in the legacy format"
         )
 
     if params.bias_correction_params.threshold is not None:
         raise RuntimeError(
-            "threshold parameter of the BiasCorrection algorithm is not supported in " "the legacy format"
+            "threshold parameter of the BiasCorrection algorithm is not supported in the legacy format"
         )
 
     return result

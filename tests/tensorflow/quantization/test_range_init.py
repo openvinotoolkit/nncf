@@ -109,7 +109,7 @@ class TestPerLayerRangeInitTest:
                 (
                     (
                         tf.keras.layers.Layer(
-                            name="TwoConvTestModel/" "Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0"
+                            name="TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0"
                         ),
                         InputType.WEIGHTS,
                     ),
@@ -118,7 +118,7 @@ class TestPerLayerRangeInitTest:
                 (
                     (
                         tf.keras.layers.Layer(
-                            name="TwoConvTestModel/" "Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0"
+                            name="TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0"
                         ),
                         InputType.INPUTS,
                     ),
