@@ -443,6 +443,8 @@ class TestImportanceLoss:
             assert torch.allclose(output, torch.tensor(desc['ref_output']))
 
     def test_importance_loss_adapts_to_device_change(self):
+        if not torch.cuda.is_available():
+            pytest.skip("requires GPU")
         sparsifier = MovementSparsifier(mock_linear_nncf_node(), frozen=False)
         loss_module = ImportanceLoss([sparsifier])
         loss_cpu = loss_module()

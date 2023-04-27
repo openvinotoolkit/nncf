@@ -22,12 +22,10 @@ from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import InplaceInsertionFNType
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
@@ -43,8 +41,8 @@ from nncf.openvino.graph.node_utils import get_reducer_output_node_names
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.statistics.statistics import OVBatchTensorStatistic
 from nncf.openvino.statistics.statistics import OVMeanTensorStatistic
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.openvino.tensor import OVNNCFTensor
+from nncf.quantization.advanced_parameters import StatisticsType
 
 
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -144,8 +142,8 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]],
-                 axis: Union[int, tuple, list]) -> List[NNCFTensor]:
-        result = np.quantile(tensor.tensor, quantile, axis, keepdims=False)
+                 axis: Union[int, tuple, list], keepdims: bool = False) -> List[NNCFTensor]:
+        result = np.quantile(tensor.tensor, quantile, axis, keepdims=keepdims)
         return [OVNNCFTensor(x) for x in result]
 
 
@@ -269,49 +267,6 @@ class OVAbsQuantileReducer(AbsQuantileReducer):
                                              self.output_port_id, self.inplace)
 
 
-def get_min_max_stat_collector(num_samples, reduction_shape, use_abs_max, inplace):
-    reduce_min = OVMinReducer(reduction_shape, inplace)
-    if use_abs_max:
-        reduce_max = OVAbsMaxReducer(reduction_shape, inplace)
-    else:
-        reduce_max = OVMaxReducer(reduction_shape, inplace)
-
-    kwargs = {
-        'num_samples': num_samples,
-        'tensor_processor': OVNNCFCollectorTensorProcessor
-    }
-    aggregate_min = MinAggregator(**kwargs)
-    aggregate_max = MaxAggregator(**kwargs)
-
-    collector = TensorCollector(OVMinMaxTensorStatistic)
-    collector.register_statistic_branch(OVMinMaxTensorStatistic.MIN_STAT, reduce_min, aggregate_min)
-    collector.register_statistic_branch(OVMinMaxTensorStatistic.MAX_STAT, reduce_max, aggregate_max)
-    return collector
-
-
-def get_mean_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
-                                    use_per_sample_stats, inplace, window_size=None):
-    reduce_min = OVMinReducer(reduction_shape, inplace)
-    if use_abs_max:
-        reduce_max = OVAbsMaxReducer(reduction_shape, inplace)
-    else:
-        reduce_max = OVMaxReducer(reduction_shape, inplace)
-
-    kwargs = {
-        'tensor_processor': OVNNCFCollectorTensorProcessor,
-        'use_per_sample_stats': use_per_sample_stats,
-        'num_samples': num_samples,
-        'window_size': window_size
-    }
-    aggregate_min = MeanAggregator(**kwargs)
-    aggregate_max = MeanAggregator(**kwargs)
-
-    collector = TensorCollector(OVMinMaxTensorStatistic)
-    collector.register_statistic_branch(OVMinMaxTensorStatistic.MIN_STAT, reduce_min, aggregate_min)
-    collector.register_statistic_branch(OVMinMaxTensorStatistic.MAX_STAT, reduce_max, aggregate_max)
-    return collector
-
-
 def get_mean_stat_collector(num_samples, channel_axis, window_size=None, inplace=True):
     #TODO(dlyakhov): use inplace OVBatchMeanReducer and OVMeanPerChanelReducer
     # after migration on openvino-dev=2023.0
@@ -347,3 +302,13 @@ def get_mean_batch_stat_collector(num_samples, inplace=True):
     collector = TensorCollector(OVBatchTensorStatistic)
     collector.register_statistic_branch(OVBatchTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
+
+
+OV_REDUCERS_MAP = {
+    StatisticsType.MIN: OVMinReducer,
+    StatisticsType.MAX: OVMaxReducer,
+    StatisticsType.ABS_MAX: OVAbsMaxReducer,
+    StatisticsType.MEAN: OVMeanReducer,
+    StatisticsType.QUANTILE: OVQuantileReducer,
+    StatisticsType.ABS_QUANTILE: OVAbsQuantileReducer
+}

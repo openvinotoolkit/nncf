@@ -197,3 +197,7 @@ def get_pip_executable_with_venv(venv_path : Path) -> str:
         elif is_windows():
             pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
         return pip_with_venv
+
+
+def remove_line_breaks(s: str) -> str:
+    return s.replace('\r\n', '').replace('\n', '')

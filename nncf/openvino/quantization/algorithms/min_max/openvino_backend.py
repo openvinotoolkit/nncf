@@ -25,6 +25,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
@@ -48,14 +49,16 @@ from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCom
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.hardware.config import OVHWConfig
 from nncf.openvino.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
-from nncf.openvino.statistics.collectors import get_mean_min_max_stat_collector
-from nncf.openvino.statistics.collectors import get_min_max_stat_collector
+from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
+from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.advanced_parameters import RangeEstimatorParameters
+from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.scopes import IgnoredScope
 
 
@@ -172,32 +175,53 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return num_samples
 
     @staticmethod
-    def minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                   target_point: OVTargetPoint,
-                                   quantizer_config: QuantizerConfig,
-                                   inplace: bool,
-                                   num_samples: int = None,
-                                   ) -> TensorCollector:
+    def get_statistic_collector(range_estimator_params: RangeEstimatorParameters,
+                                nncf_graph: NNCFGraph,
+                                target_point: OVTargetPoint,
+                                quantizer_config: QuantizerConfig,
+                                inplace: bool,
+                                num_samples: int = None) -> TensorCollector:
         reduction_shape, use_abs_max =\
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
         _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
-        return get_min_max_stat_collector(_num_samples, reduction_shape, use_abs_max, inplace)
 
-    @staticmethod
-    def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                        target_point: OVTargetPoint,
-                                        quantizer_config: QuantizerConfig,
-                                        use_per_sample_stats: bool,
-                                        inplace: bool,
-                                        num_samples: int = None,
-                                        ) -> TensorCollector:
-        reduction_shape, use_abs_max = \
-            OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
-                                                                     quantizer_config)
-        _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
-        return get_mean_min_max_stat_collector(_num_samples, reduction_shape,
-                                               use_abs_max, use_per_sample_stats, inplace)
+        collector = TensorCollector(OVMinMaxTensorStatistic)
+        for params, container_key in zip([range_estimator_params.min, range_estimator_params.max],
+                                         [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
+            if not params.statistics_type in OV_REDUCERS_MAP:
+                raise RuntimeError(f'Statistic type: {params.statistics_type}'
+                                   ' is not supported for OpenVino PTQ backend yet.')
+
+            if not params.aggregator_type in AGGREGATORS_MAP:
+                raise RuntimeError(f'Aggregator type: {params.aggregator_type}'
+                                   ' is not supported for OpenVino PTQ backend yet.')
+
+            kwargs = {
+                'reduction_shape': reduction_shape,
+                'inplace': inplace
+            }
+            if params.statistics_type in [StatisticsType.QUANTILE,
+                                          StatisticsType.ABS_QUANTILE]:
+                if container_key == OVMinMaxTensorStatistic.MIN_STAT:
+                    quantile = params.quantile_outlier_prob
+                else:
+                    quantile = 1 - params.quantile_outlier_prob
+                kwargs.update({'quantile': [quantile]})
+            # TODO(dlyakhov): merge two quantile aggregators in one
+            statistic_type = params.statistics_type
+            if use_abs_max and statistic_type == StatisticsType.MAX:
+                statistic_type = StatisticsType.ABS_MAX
+            reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
+
+            kwargs = {
+                'num_samples': _num_samples,
+                'tensor_processor': OVNNCFCollectorTensorProcessor
+            }
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
+
+            collector.register_statistic_branch(container_key, reducer, aggregator)
+        return collector
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:

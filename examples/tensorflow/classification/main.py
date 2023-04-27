@@ -31,8 +31,9 @@ from examples.tensorflow.common.model_loader import get_model
 from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import SummaryWriter
-from examples.tensorflow.common.utils import configure_paths
+from examples.common.paths import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
+from examples.tensorflow.common.utils import get_run_name
 from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_cli_args
@@ -73,7 +74,7 @@ def get_argument_parser():
 def get_config_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
     config = create_sample_config(args, parser)
-    configure_paths(config)
+    configure_paths(config, get_run_name(config))
     return config
 
 

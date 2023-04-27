@@ -24,6 +24,7 @@ from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
 from nncf import nncf_logger
+from nncf.common.utils.api_marker import api
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
@@ -96,6 +97,7 @@ class MagicFunctionsToPatch:
     }
 
 
+@api(canonical_alias="nncf.torch.register_operator")
 def register_operator(name=None):
     def wrap(operator):
         op_name = name

@@ -22,6 +22,7 @@ from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor import TensorType
+from nncf.quantization.advanced_parameters import AggregatorType
 
 InplaceInsertionFNType = TypeVar('InplaceInsertionFNType')
 
@@ -431,10 +432,18 @@ class QuantileReducerBase(TensorReducerBase):
         super().__init__(reduction_shape, inplace)
         self._quantile = quantile
 
+    def __eq__(self, __o: object) -> bool:
+        return super().__eq__(__o) and\
+            self._quantile == __o._quantile
+
+    def __hash__(self) -> int:
+        return hash((self.name(), self._inplace, tuple(self._quantile)))
+
 
 class QuantileReducer(QuantileReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
-        return self._tensor_processor.quantile(x[0], self._quantile, self._reduction_shape)
+        return self._tensor_processor.quantile(x[0], self._quantile, self._reduction_shape,
+                                               keepdims=True)
 
 
 class AbsQuantileReducer(QuantileReducerBase):
@@ -444,7 +453,8 @@ class AbsQuantileReducer(QuantileReducerBase):
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = self._tensor_processor.abs(x[0])
-        return self._tensor_processor.quantile(x, [self._quantile], self._reduction_shape)
+        return self._tensor_processor.quantile(x, [self._quantile], self._reduction_shape,
+                                               keepdims=True)
 
 
 class BatchMeanReducer(TensorReducerBase):
@@ -510,7 +520,7 @@ class MaxAggregator(TensorAggregatorBase):
 
 
 class OfflineAggregatorBase(TensorAggregatorBase):
-    def __init__(self, tensor_processor, use_per_sample_stats: bool,
+    def __init__(self, tensor_processor, use_per_sample_stats: bool = False,
                  num_samples: Optional[int] = None, window_size=None):
         super().__init__(tensor_processor, num_samples)
         self._window_size = window_size
@@ -539,7 +549,7 @@ class MedianAggregator(OfflineAggregatorBase):
 
 
 class NoOutliersAggregatorBase(OfflineAggregatorBase):
-    def __init__(self, tensor_processor, use_per_sample_stats: bool,
+    def __init__(self, tensor_processor, use_per_sample_stats: bool = False,
                  num_samples: Optional[int] = None,
                  window_size=None, quantile: float = 0.01):
         super().__init__(tensor_processor, use_per_sample_stats, num_samples, window_size)
@@ -551,6 +561,13 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase):
                                                         axis=0, alpha=self._quantile)
         return result.tensor
 
+    def __eq__(self, __o: object) -> bool:
+        return super().__eq__(__o) and\
+            self._quantile == __o._quantile
+
+    def __hash__(self) -> int:
+        return hash((self.name(), self._quantile))
+
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
     def aggregate(self) -> Any:
@@ -560,3 +577,13 @@ class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
 class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
     def aggregate(self) -> Any:
         return self._aggregate(self._tensor_processor.masked_median)
+
+
+AGGREGATORS_MAP = {
+    AggregatorType.MIN: MinAggregator,
+    AggregatorType.MAX: MaxAggregator,
+    AggregatorType.MEAN: MeanAggregator,
+    AggregatorType.MEAN_NO_OUTLIERS: MeanNoOutliersAggregator,
+    AggregatorType.MEDIAN: MedianAggregator,
+    AggregatorType.MEAN_NO_OUTLIERS: MedianNoOutliersAggregator,
+}

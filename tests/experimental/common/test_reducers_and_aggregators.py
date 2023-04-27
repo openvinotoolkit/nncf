@@ -104,8 +104,8 @@ class TemplateTestReducersAggreagtors:
             assert self.all_close(val[0].tensor, ref[i])
 
     @pytest.mark.parametrize('reducer_name,ref',
-        [('quantile', ([-20000], [10000])),
-         ('abs_quantile', ([20000],))])
+        [('quantile', ([[[[-20000]]]], [[[[10000]]]])),
+         ('abs_quantile', ([[[[20000]]]],))])
     def test_quantile_reducers(self, reducer_name, ref, reducers):
         reduction_shape = (1, 2, 3)
         input_ = np.arange(-26, 10).reshape((1, 4, 3, 3))

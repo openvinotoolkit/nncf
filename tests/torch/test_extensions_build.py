@@ -38,7 +38,7 @@ def test_force_cuda_build(tmp_path):
 
     env_variables = {
         "CUDA_VISIBLE_DEVICES": "",
-        "TORCH_EXTENSIONS_DIR": torch_build_dir
+        "TORCH_EXTENSIONS_DIR": str(torch_build_dir)
     }
 
     python_executable_with_venv = get_python_executable_with_venv(venv_path)

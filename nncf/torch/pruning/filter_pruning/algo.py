@@ -26,6 +26,7 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.utils.api_marker import api
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -122,6 +123,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return PTElementwisePruningOp.get_all_op_aliases()
 
 
+@api()
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_filter_pruning')
 class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,

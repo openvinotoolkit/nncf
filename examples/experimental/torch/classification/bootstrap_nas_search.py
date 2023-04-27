@@ -34,8 +34,9 @@ from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
-from examples.torch.common.utils import configure_paths
+from examples.common.paths import configure_paths
 from examples.torch.common.utils import create_code_snapshot
+from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import print_args
 from nncf.config.structures import BNAdaptationInitArgs
@@ -74,7 +75,7 @@ def main(argv):
     if config.dist_url == "env://":
         config.update_from_env()
 
-    configure_paths(config)
+    configure_paths(config, get_run_name(config))
     copyfile(args.config, osp.join(config.log_dir, 'config.json'))
     source_root = Path(__file__).absolute().parents[2]  # nncf root
     create_code_snapshot(source_root, osp.join(config.log_dir, "snapshot.tar.gz"))

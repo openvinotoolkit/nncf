@@ -15,6 +15,7 @@ from copy import deepcopy
 from enum import Enum
 from typing import Dict, List, Optional, Any
 
+from nncf.common.utils.api_marker import api
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
@@ -308,6 +309,7 @@ class UnifiedScaleType(Enum):
     UNIFY_ALWAYS = 1
 
 
+@api(canonical_alias="nncf.QuantizationPreset")
 class QuantizationPreset(Enum):
     PERFORMANCE = 'performance'
     MIXED = 'mixed'

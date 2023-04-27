@@ -30,6 +30,7 @@ from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 TModel = TypeVar('TModel')
 ALGO_BACKENDS = Registry('algo_backends')
@@ -149,39 +150,19 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                   target_point: TargetPoint,
-                                   quantizer_config: QuantizerConfig,
-                                   inplace: bool,
-                                   num_samples: int = None,
-                                   ) -> TensorStatisticCollectorBase:
+    def get_statistic_collector(range_estimator_params: RangeEstimatorParameters,
+                                nncf_graph: NNCFGraph,
+                                target_point: TargetPoint,
+                                quantizer_config: QuantizerConfig,
+                                inplace: bool,
+                                num_samples: int = None) -> TensorStatisticCollectorBase:
         """
-        Returns backend-specific min max statistic collector.
+        Returns backend-specific statistic collector.
 
+        :param range_estimator_params: Parameters that specify estimators types.
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param inplace: Whether to calculate statistic inplace or not.
-        :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                        target_point: TargetPoint,
-                                        quantizer_config: QuantizerConfig,
-                                        use_per_sample_stats: bool,
-                                        inplace: bool,
-                                        num_samples: int = None,
-                                        ) -> TensorStatisticCollectorBase:
-        """
-        Returns backend-specific min max statistic collector.
-
-        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
-        :param target_point: Target location for the correction.
-        :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param use_per_sample_stats: Whether to collect statistics in per sample mode or not.
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
