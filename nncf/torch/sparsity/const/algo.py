@@ -12,6 +12,7 @@
 """
 from typing import Tuple
 
+from nncf.common.utils.api_marker import api
 from nncf.common.graph import NNCFNode
 from nncf.common.sparsity.statistics import ConstSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
@@ -35,6 +36,7 @@ class ConstSparsityBuilder(BaseSparsityAlgoBuilder):
         return True, 'Frozen layers are allowed for const sparsity'
 
 
+@api()
 class ConstSparsityController(BaseSparsityAlgoController):
     def freeze(self):
         pass

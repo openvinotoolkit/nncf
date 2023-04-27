@@ -18,7 +18,7 @@ import openvino.runtime as ov
 from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.openvino.quantization.quantize import quantize_impl
+from nncf.openvino.quantization.quantize_model import quantize_impl
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import MatMul2DModel

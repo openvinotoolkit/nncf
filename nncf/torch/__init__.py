@@ -17,7 +17,15 @@ from nncf.version import BKC_TORCH_VERSION
 
 import torch
 from pkg_resources import parse_version
-torch_version = parse_version(torch.__version__).base_version
+
+try:
+    _torch_version = torch.__version__
+    torch_version = parse_version(_torch_version).base_version
+except:
+    nncf_logger.debug("Could not parse torch version")
+    _torch_version = '0.0.0'
+    torch_version = parse_version(_torch_version).base_version
+
 if parse_version(BKC_TORCH_VERSION).base_version != torch_version:
     warn_bkc_version_mismatch("torch", BKC_TORCH_VERSION, torch.__version__)
 

@@ -30,7 +30,7 @@ import nncf
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.experimental.openvino.quantization.quantize import \
+from nncf.experimental.openvino.quantization.quantize_model import \
     quantize_with_accuracy_control as pot_quantize_with_native_accuracy_control
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
