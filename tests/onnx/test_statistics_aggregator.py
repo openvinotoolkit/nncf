@@ -55,6 +55,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_statistics_aggregator(self, dataset):
         return ONNXStatisticsAggregator(dataset)
 
+    @pytest.fixture
+    def is_backend_support_custom_estimators(self) -> bool:
+        return False
+
     @pytest.fixture(scope='session')
     def test_params(self):
         return

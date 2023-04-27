@@ -109,6 +109,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def is_stat_in_shape_of_scale(self) -> bool:
         return True
 
+    @pytest.fixture
+    def is_backend_support_custom_estimators(self) -> bool:
+        return True
+
     @pytest.fixture(params=[True, False],
                     ids=['inplace', 'out_of_place'])
     def inplace_statistics(self, request) -> bool:

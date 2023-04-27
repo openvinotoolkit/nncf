@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set, Union
 import torch
 import numpy as np
 
@@ -52,6 +52,9 @@ from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollect
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
+from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.advanced_parameters import StatisticsType
+from nncf.quantization.advanced_parameters import AggregatorType
 
 import nncf.torch.graph.operator_metatypes as om
 
@@ -151,31 +154,33 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                   target_point: PTTargetPoint,
-                                   quantizer_config: QuantizerConfig,
-                                   inplace: bool,
-                                   num_samples: int = None,
-                                   ) -> PTMinMaxStatisticCollector:
-        return PTMinMaxAlgoBackend._statistic_collector_builder("min_max",
-                                                                nncf_graph,
-                                                                target_point,
-                                                                quantizer_config,
-                                                                num_samples)
+    def get_statistic_collector(
+        range_estimator_params: RangeEstimatorParameters,
+        nncf_graph: NNCFGraph,
+        target_point: PTTargetPoint,
+        quantizer_config: QuantizerConfig,
+        inplace: bool,
+        num_samples: int = None) -> Union[PTMinMaxStatisticCollector, PTMeanMinMaxStatisticCollector]:
 
-    @staticmethod
-    def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                        target_point: PTTargetPoint,
-                                        quantizer_config: QuantizerConfig,
-                                        use_per_sample_stats: bool,
-                                        inplace: bool,
-                                        num_samples: int = None,
-                                        ) -> PTMeanMinMaxStatisticCollector:
-        return PTMinMaxAlgoBackend._statistic_collector_builder("mean_min_max",
-                                                                nncf_graph,
-                                                                target_point,
-                                                                quantizer_config,
-                                                                num_samples)
+        if (range_estimator_params.min.statistics_type == StatisticsType.MIN and
+            range_estimator_params.min.aggregator_type == AggregatorType.MIN and
+            range_estimator_params.max.statistics_type == StatisticsType.MAX and
+            range_estimator_params.max.aggregator_type == AggregatorType.MAX):
+            collector_name = 'min_max'
+
+        elif (range_estimator_params.min.statistics_type == StatisticsType.MIN and
+              range_estimator_params.min.aggregator_type == AggregatorType.MEAN and
+              range_estimator_params.max.statistics_type == StatisticsType.MAX and
+              range_estimator_params.max.aggregator_type == AggregatorType.MEAN):
+            collector_name = 'mean_min_max'
+
+        else:
+            raise RuntimeError(
+                'The following range estimator parameters are not supported by PyTorch backend by now: '
+                f'{str(range_estimator_params)}')
+
+        return PTMinMaxAlgoBackend._statistic_collector_builder(collector_name, nncf_graph, target_point,
+                                                                quantizer_config, num_samples)
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:

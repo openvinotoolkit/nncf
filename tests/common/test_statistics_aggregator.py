@@ -30,6 +30,9 @@ from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionA
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.range_estimator import StatisticsCollectorParameters
+from nncf.quantization.range_estimator import StatisticsType
+from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 
 
@@ -89,6 +92,11 @@ class TemplateTestStatisticsAggregator:
     def inplace_statistics(self) -> bool:
         pass
 
+    @abstractmethod
+    @pytest.fixture
+    def is_backend_support_custom_estimators(self) -> bool:
+        pass
+
     @pytest.fixture
     def dataset_values(self):
         return [{'max': 1, 'min': -10},
@@ -104,50 +112,127 @@ class TemplateTestStatisticsAggregator:
         ref_max_val: Union[np.ndarray, float]
         ref_min_val: Union[np.ndarray, float]
 
+    TEST_MEAN_QUANTILE = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(
+            StatisticsType.QUANTILE, AggregatorType.MEAN,
+            quantile_outlier_prob=0.01),
+        max=StatisticsCollectorParameters(
+            StatisticsType.QUANTILE, AggregatorType.MEAN,
+            quantile_outlier_prob=0.01))
+
     def dataset_samples_to_conv_w(self, dataset_sample):
         # Layout: [O, I, K, K]
         d = dataset_sample
         in_ch = d.shape[0]
         return np.stack([np.stack([d[i]] * in_ch, axis=0) for i in range(in_ch)], axis=0)
 
-    @pytest.mark.parametrize(
-        'test_parameters, ',
-        # Activation collectors
-        (
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
-                              QuantizationMode.ASYMMETRIC, False, 64.5, -63.5)),
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
-                              QuantizationMode.ASYMMETRIC, True,
-                              np.array((1, 0.55, 64.5)), np.array((-4.5, 0, -63.5)))),
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
-                              QuantizationMode.SYMMETRIC, True,
-                              np.array((5.5, 1, 64.5)), np.array((-4.5, 0, -63.5)))),
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
-                              QuantizationMode.ASYMMETRIC, False, 128, -128)),
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
-                              QuantizationMode.SYMMETRIC, False, 128, -128)),
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
-                              QuantizationMode.ASYMMETRIC, True,
-                              np.array((1, 1, 128)), np.array((-10, -1, -128)))),
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
-                              QuantizationMode.SYMMETRIC, True,
-                              np.array((10, 1, 128)), np.array((-10, -1, -128)))),
-        # Weight collectors
-        ((MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                               QuantizationMode.SYMMETRIC, False, 128, -128))),
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                              QuantizationMode.ASYMMETRIC, False, 128, -128)),
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                              QuantizationMode.SYMMETRIC, True,
-                              np.array((10, 1, 128)), np.array((-10, -1, -128)))),
-        (MinMaxTestParameters(RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                              QuantizationMode.ASYMMETRIC, True,
-                              np.array((1, 0.1, 128)), np.array((-10, -1, -128)))),
-        )
-    )
+    @pytest.mark.parametrize('test_parameters, ',
+                              # Activation collectors
+    (
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEAN_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, False, 64.5, -63.5)),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, True,
+        np.array((1, 0.55, 64.5)), np.array((-4.5, 0, -63.5)))),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.SYMMETRIC, True,
+        np.array((5.5, 1, 64.5)), np.array((-4.5, 0, -63.5)))),
+
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, False, 128, -128)),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.SYMMETRIC, False, 128, -128)),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, True,
+        np.array((1, 1, 128)), np.array((-10, -1, -128)))),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.SYMMETRIC, True,
+        np.array((10, 1, 128)), np.array((-10, -1, -128)))),
+
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEDIAN_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, False, 64.5, -63.5)),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEDIAN_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.SYMMETRIC, False, 64.5, -63.5)),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEDIAN_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, True,
+        np.array((1, 0.55, 64.5)), np.array((-4.5, 0., -63.5)))),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEDIAN_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.SYMMETRIC, True,
+        np.array((5.5, 1., 64.5)), np.array((-4.5, 0., -63.5)))),
+
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, False, 0, 0)),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.SYMMETRIC, False, 0, 0)),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, True,
+        np.array((1, 0, 0)), np.array((0, 0, 0)))),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
+        TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.SYMMETRIC, True,
+        np.array((0, 1, 0)), np.array((0, 0, 0)))),
+
+    (MinMaxTestParameters(
+        TEST_MEAN_QUANTILE, TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, False, 47.9899999999999, -48.15999999999998)),
+    (MinMaxTestParameters(
+        TEST_MEAN_QUANTILE, TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.SYMMETRIC, False, 47.9899999999999, -48.15999999999998)),
+    (MinMaxTestParameters(
+        TEST_MEAN_QUANTILE, TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.ASYMMETRIC, True,
+        np.array((0.96, 0.546, 59.38)),
+        np.array((-4.100e+00, 4.000e-02, -5.838e+01)))),
+    (MinMaxTestParameters(
+        TEST_MEAN_QUANTILE, TargetType.POST_LAYER_OPERATION,
+        QuantizationMode.SYMMETRIC, True,
+        np.array((0.96, 0.546, 59.38)),
+        np.array((-4.100e+00, 4.000e-02, -5.838e+01)))),
+
+    # Weight collectors
+    ((MinMaxTestParameters(
+        RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
+        QuantizationMode.SYMMETRIC, False, 128, -128))),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
+        QuantizationMode.ASYMMETRIC, False, 128, -128)),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
+        QuantizationMode.SYMMETRIC, True,
+        np.array((10, 1, 128)), np.array((-10, -1, -128)))),
+    (MinMaxTestParameters(
+        RangeEstimatorParametersSet.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
+        QuantizationMode.ASYMMETRIC, True,
+        np.array((1, 0.1, 128)), np.array((-10, -1, -128)))),
+                             ))
     def test_statistics_aggregator_min_max(
             self, test_parameters: MinMaxTestParameters, dataset_samples,
-            is_stat_in_shape_of_scale, inplace_statistics):
+            is_stat_in_shape_of_scale, inplace_statistics, is_backend_support_custom_estimators):
         algo_backend = self.get_min_max_algo_backend_cls()
         model = self.get_backend_model(dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
@@ -155,19 +240,20 @@ class TemplateTestStatisticsAggregator:
         quantizer_config = QuantizerConfig(mode=test_parameters.quantization_mode,
                                            per_channel=test_parameters.per_channel)
         target_point = self.get_target_point(test_parameters.target_type)
-        if test_parameters.range_estimator_params == RangeEstimatorParametersSet.MINMAX:
-            tensor_collector = algo_backend.minmax_statistic_collector(nncf_graph=nncf_graph,
-                                                                       target_point=target_point,
-                                                                       quantizer_config=quantizer_config,
-                                                                       num_samples=len(dataset_samples),
-                                                                       inplace=inplace_statistics)
-        if test_parameters.range_estimator_params == RangeEstimatorParametersSet.MEAN_MINMAX:
-            tensor_collector = algo_backend.mean_minmax_statistic_collector(nncf_graph=nncf_graph,
-                                                                            target_point=target_point,
-                                                                            quantizer_config=quantizer_config,
-                                                                            use_per_sample_stats=False,
-                                                                            num_samples=len(dataset_samples),
-                                                                            inplace=inplace_statistics)
+
+        is_standart_estimator = test_parameters.range_estimator_params in\
+            [RangeEstimatorParametersSet.MINMAX, RangeEstimatorParametersSet.MEAN_MINMAX]
+        if not is_standart_estimator and not is_backend_support_custom_estimators:
+            pytest.skip('Custom estimators are not supported for this backend yet')
+
+        tensor_collector = algo_backend.get_statistic_collector(
+            test_parameters.range_estimator_params,
+            nncf_graph=nncf_graph,
+            target_point=target_point,
+            quantizer_config=quantizer_config,
+            num_samples=len(dataset_samples),
+            inplace=inplace_statistics)
+
         statistics_points = StatisticPointsContainer()
         algorithm_name = 'TestAlgo'
         statistics_points.add_statistic_point(StatisticPoint(target_point=target_point,
@@ -355,7 +441,8 @@ class TemplateTestStatisticsAggregator:
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
                                            per_channel=False)
         pre_layer_target_point = self.get_target_point(TargetType.PRE_LAYER_OPERATION)
-        pre_tensor_collector = algo_backend.minmax_statistic_collector(
+        pre_tensor_collector = algo_backend.get_statistic_collector(
+            RangeEstimatorParametersSet.MINMAX,
             nncf_graph=nncf_graph,
             target_point=pre_layer_target_point,
             quantizer_config=quantizer_config,
@@ -363,17 +450,18 @@ class TemplateTestStatisticsAggregator:
             inplace=inplace_statistics)
 
         post_layer_target_point = self.get_target_point(TargetType.POST_LAYER_OPERATION)
-        post_tensor_collector = algo_backend.minmax_statistic_collector(
+        post_tensor_collector = algo_backend.get_statistic_collector(
+            RangeEstimatorParametersSet.MINMAX,
             nncf_graph=nncf_graph,
             target_point=post_layer_target_point,
             quantizer_config=quantizer_config,
             num_samples=len(dataset_samples),
             inplace=inplace_statistics)
-        unique_post_tensor_collector = algo_backend.mean_minmax_statistic_collector(
+        unique_post_tensor_collector = algo_backend.get_statistic_collector(
+            RangeEstimatorParametersSet.MEAN_MINMAX,
             nncf_graph=nncf_graph,
             target_point=post_layer_target_point,
             quantizer_config=quantizer_config,
-            use_per_sample_stats=False,
             num_samples=len(dataset_samples),
             inplace=inplace_statistics)
 
@@ -498,17 +586,18 @@ class TemplateTestStatisticsAggregator:
         target_point_cls = self.get_target_point_cls()
         for target_point_args, ref in self.MERGED_TARGET_POINT_AND_REFS[key]:
             target_point = target_point_cls(*target_point_args)
-            min_max_tensor_collector = algo_backend.minmax_statistic_collector(
+            min_max_tensor_collector = algo_backend.get_statistic_collector(
+                RangeEstimatorParametersSet.MINMAX,
                 nncf_graph=nncf_graph,
                 target_point=target_point,
                 quantizer_config=quantizer_config,
                 num_samples=len(dataset_samples),
                 inplace=inplace_statistics)
-            mean_min_max_tensor_collector = algo_backend.mean_minmax_statistic_collector(
+            mean_min_max_tensor_collector = algo_backend.get_statistic_collector(
+                RangeEstimatorParametersSet.MEAN_MINMAX,
                 nncf_graph=nncf_graph,
                 target_point=target_point,
                 quantizer_config=quantizer_config,
-                use_per_sample_stats=False,
                 num_samples=len(dataset_samples),
                 inplace=inplace_statistics)
 
