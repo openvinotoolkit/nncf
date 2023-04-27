@@ -115,8 +115,8 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def quantile(tensor: NNCFTensor,
                  quantile: Union[float, List[float]],
-                 axis: Union[int, tuple, list]) -> List[TensorElementsType]:
-        result = np.quantile(tensor.tensor, quantile, axis, keepdims=False)
+                 axis: Union[int, tuple, list], keepdims: bool = False) -> List[TensorElementsType]:
+        result = np.quantile(tensor.tensor, quantile, axis, keepdims=keepdims)
         return [ONNXNNCFTensor(x) for x in result]
 
     @staticmethod

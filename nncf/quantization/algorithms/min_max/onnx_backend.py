@@ -12,7 +12,7 @@
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Set
+from typing import Dict, List, Tuple, Optional, Set, Union
 
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -51,6 +51,9 @@ from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
+from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.advanced_parameters import StatisticsType
+from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onnx_params
 
 
@@ -176,32 +179,36 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return tuple(reduction_shape), use_abs_max
 
     @staticmethod
-    def minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                   target_point: ONNXTargetPoint,
-                                   quantizer_config: QuantizerConfig,
-                                   inplace: bool,
-                                   num_samples: int = None,
-                                   ) -> ONNXMinMaxStatisticCollector:
+    def get_statistic_collector(
+        range_estimator_params: RangeEstimatorParameters,
+        nncf_graph: NNCFGraph,
+        target_point: ONNXTargetPoint,
+        quantizer_config: QuantizerConfig,
+        inplace: bool,
+        num_samples: int = None) -> Union[ONNXMinMaxStatisticCollector, ONNXMeanMinMaxStatisticCollector]:
+
         reduction_shape, use_abs_max = \
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config)
-        return ONNXMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
 
-    @staticmethod
-    def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                        target_point: ONNXTargetPoint,
-                                        quantizer_config: QuantizerConfig,
-                                        use_per_sample_stats: bool,
-                                        inplace: bool,
-                                        num_samples: int = None,
-                                        ) -> ONNXMeanMinMaxStatisticCollector:
-        reduction_shape, use_abs_max = \
-            ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
-                                                                       quantizer_config)
-        return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats,
-                                                use_abs_max, reduction_shape,
-                                                num_samples, window_size=None)
+        if (range_estimator_params.min.statistics_type == StatisticsType.MIN and
+            range_estimator_params.min.aggregator_type == AggregatorType.MIN and
+            range_estimator_params.max.statistics_type == StatisticsType.MAX and
+            range_estimator_params.max.aggregator_type == AggregatorType.MAX):
+            return ONNXMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
+
+        if (range_estimator_params.min.statistics_type == StatisticsType.MIN and
+            range_estimator_params.min.aggregator_type == AggregatorType.MEAN and
+            range_estimator_params.max.statistics_type == StatisticsType.MAX and
+            range_estimator_params.max.aggregator_type == AggregatorType.MEAN):
+            return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats=False,
+                                                    use_abs_max=use_abs_max,
+                                                    reduction_shape=reduction_shape,
+                                                    num_samples=num_samples, window_size=None)
+        raise RuntimeError(
+            'The following range estimator parameters are not supported by ONNX backend by now: '
+            f'{str(range_estimator_params)}')
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:

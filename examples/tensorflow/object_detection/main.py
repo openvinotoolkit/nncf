@@ -29,8 +29,9 @@ from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
-from examples.tensorflow.common.utils import configure_paths
+from examples.common.paths import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
+from examples.tensorflow.common.utils import get_run_name
 from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import get_learning_rate
 from examples.tensorflow.common.utils import print_args
@@ -70,7 +71,7 @@ def get_config_from_argv(argv, parser):
     predefined_config = get_predefined_config(config_from_json.model)
 
     predefined_config.update(config_from_json)
-    configure_paths(predefined_config)
+    configure_paths(predefined_config, get_run_name(predefined_config))
 
     return predefined_config
 

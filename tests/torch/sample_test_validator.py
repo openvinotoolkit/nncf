@@ -26,7 +26,7 @@ from typing import Type
 
 import torch
 
-from examples.torch.common.utils import get_name
+from examples.torch.common.utils import get_run_name
 from nncf import NNCFConfig
 from nncf.common.utils.registry import Registry
 from tests.shared.command import arg_list_from_arg_dict
@@ -98,7 +98,7 @@ class BaseSampleHandler(ABC):
                             config_path: Optional[Path] = None):
         if checkpoint_name is None:
             jconfig = NNCFConfig.from_json(config_path)
-            checkpoint_name = get_name(jconfig)
+            checkpoint_name = get_run_name(jconfig)
         return os.path.join(checkpoint_save_dir, checkpoint_name + '_best.pth')
 
     def _get_main_filename(self) -> str:

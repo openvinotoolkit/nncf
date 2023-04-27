@@ -42,7 +42,8 @@ from examples.torch.common.optimizer import make_optimizer
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
-from examples.torch.common.utils import configure_paths
+from examples.common.paths import configure_paths
+from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import log_common_mlflow_params
 from examples.torch.common.utils import make_additional_checkpoints
@@ -611,7 +612,7 @@ def main(argv):
         os.makedirs(config.log_dir)
 
     config.log_dir = str(config.log_dir)
-    configure_paths(config)
+    configure_paths(config, get_run_name(config))
     logger.info("Save directory: {}".format(config.log_dir))
 
     config.execution_mode = get_execution_mode(config)

@@ -100,6 +100,15 @@ class RangeEstimatorParametersSet:
     :param MEAN_MINMAX: The range estimator parameters where the low bound of the range
         is calculated as average (across every sample) of minima of input tensors,
         the upper bound of the range as average of maxima of the same values.
+    :param MEDIAN_MINMAX: The range estimator parameters where the low bound of the range
+        is calculated as median (across every sample) of minima of input tensors,
+        the upper bound of the range as median of maxima of the same values.
+    :param MEAN_NO_OUTLIERS_MINMAX : The range estimator parameters where the low bound of the range
+        is calculated as average (across all samples in range [min quantile, max quantile])
+        of minima of input tensors, the upper bound of the range as average of maxima of the same values.
+    :param MEAN_QUANTILE : The range estimator parameters where the low bound of the range
+        is calculated as average (across every sample) of (quantile outlier probability)-quantiles,
+        the upper bound of the range as average of (1 - quantile outlier probability)-quantiles of the same values.
     """
     MINMAX = RangeEstimatorParameters(
         min=StatisticsCollectorParameters(
@@ -122,3 +131,27 @@ class RangeEstimatorParametersSet:
             aggregator_type=AggregatorType.MEAN
         )
     )
+
+    MEDIAN_MINMAX = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.MIN,
+            aggregator_type=AggregatorType.MEDIAN),
+        max=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.MAX,
+            aggregator_type=AggregatorType.MEDIAN))
+
+    MEAN_NO_OUTLIERS_MINMAX = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.MIN,
+            aggregator_type=AggregatorType.MEAN_NO_OUTLIERS),
+        max=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.MAX,
+            aggregator_type=AggregatorType.MEAN_NO_OUTLIERS))
+
+    MEAN_QUANTILE = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.QUANTILE,
+            aggregator_type=AggregatorType.MEAN),
+        max=StatisticsCollectorParameters(
+            statistics_type=StatisticsType.QUANTILE,
+            aggregator_type=AggregatorType.MEAN))

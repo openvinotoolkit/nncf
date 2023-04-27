@@ -5,6 +5,7 @@ from typing import List
 
 import torch
 
+from nncf.common.utils.api_marker import api
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
@@ -16,11 +17,13 @@ from nncf.common.logging import nncf_logger
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
 
 
+@api(canonical_alias="nncf.torch.nncf_model_input")
 @register_operator(name=MODEL_INPUT_OP_NAME)
 def nncf_model_input(tensor: 'torch.Tensor'):
     return tensor
 
 
+@api(canonical_alias="nncf.torch.nncf_model_output")
 @register_operator(name=MODEL_OUTPUT_OP_NAME)
 def nncf_model_output(tensor: 'torch.Tensor'):
     return tensor

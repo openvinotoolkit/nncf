@@ -20,6 +20,7 @@ from typing import Type
 import jsonschema
 import jstyleson as json
 
+from nncf.common.utils.api_marker import api
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
@@ -29,6 +30,7 @@ from nncf.config.schema import validate_single_compression_algo_schema
 from nncf.config.structures import NNCFExtraConfigStruct
 
 
+@api(canonical_alias="nncf.NNCFConfig")
 class NNCFConfig(dict):
     """A regular dictionary object extended with some utility functions."""
 

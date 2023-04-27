@@ -12,5 +12,5 @@
 """
 
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.quantization.quantize import quantize
-from nncf.quantization.quantize import quantize_with_accuracy_control
+from nncf.quantization.quantize_model import quantize
+from nncf.quantization.quantize_model import quantize_with_accuracy_control

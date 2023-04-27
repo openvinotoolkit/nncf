@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 
 from torch.utils.cpp_extension import _get_build_directory
 
+from nncf.common.utils.api_marker import api
 from nncf.common.logging.logger import extension_is_loading_info_log
 from nncf.common.utils.registry import Registry
 from nncf.common.logging import nncf_logger
@@ -80,10 +81,12 @@ def _force_build_extensions(ext_type: ExtensionsType):
         class_type.load()
 
 
+@api(canonical_alias="nncf.torch.force_build_cpu_extensions")
 def force_build_cpu_extensions():
     _force_build_extensions(ExtensionsType.CPU)
 
 
+@api(canonical_alias="nncf.torch.force_build_cuda_extensions")
 def force_build_cuda_extensions():
     _force_build_extensions(ExtensionsType.CUDA)
 

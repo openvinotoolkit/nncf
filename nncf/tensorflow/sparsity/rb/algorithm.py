@@ -19,6 +19,7 @@ import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.utils.api_marker import api
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.scopes import check_scopes_in_graph
@@ -107,6 +108,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         pass
 
 
+@api()
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_rb_sparsity')
 class RBSparsityController(BaseSparsityController):
     def __init__(self, target_model, config: NNCFConfig, op_names: List[str]):

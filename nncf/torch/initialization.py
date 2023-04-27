@@ -11,6 +11,7 @@ from functools import partial
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
+from nncf.common.utils.api_marker import api
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.progress_bar import ProgressBar
@@ -224,6 +225,7 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
     return criterion(outputs, target)
 
 
+@api(canonical_alias="nncf.torch.register_default_init_args")
 def register_default_init_args(nncf_config: 'NNCFConfig',
                                train_loader: torch.utils.data.DataLoader,
                                criterion: _Loss = None,

@@ -7,7 +7,7 @@ Producers: 1
 Consumers: 5", style=filled];
 2 [color=green, label="Block: S:2__O:0
 Producers: 1
-Consumers: 7,5", style=filled];
+Consumers: 5,7", style=filled];
 3 [color=red, label="Block: S:1__O:2
 Producers: 1
 Consumers: 5", style=filled];

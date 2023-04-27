@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from nncf.common.utils.api_marker import api
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from nncf.tensorflow.pruning.callbacks import PruningStatisticsCallback
@@ -19,6 +19,7 @@ from nncf.tensorflow.sparsity.callbacks import UpdateMask
 from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 
 
+@api(canonical_alias="nncf.tensorflow.create_compression_callbacks")
 def create_compression_callbacks(compression_ctrl, log_tensorboard=True, log_text=True, log_dir=None):
     compression_controllers = compression_ctrl.child_ctrls \
         if isinstance(compression_ctrl, CompositeCompressionAlgorithmController) \

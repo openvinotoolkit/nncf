@@ -12,6 +12,7 @@
 """
 
 # Implementation is taken from https://github.com/microsoft/Swin-Transformer/blob/main/models/swin_transformer.py
+# and https://github.com/rwightman/pytorch-image-models
 
 import torch
 from torch import nn

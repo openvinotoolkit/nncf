@@ -15,10 +15,13 @@ import json
 import os
 import tempfile
 from functools import partial
+from pathlib import Path
+
 import pytest
 import tensorflow as tf
 
 from tests.shared.config_factory import ConfigFactory
+from tests.shared.helpers import remove_line_breaks
 from tests.shared.paths import TEST_ROOT
 from tests.tensorflow.helpers import get_coco_dataset_builders
 from tests.tensorflow.helpers import get_cifar10_dataset_builders
@@ -436,7 +439,7 @@ def _accuracy_aware_config(request, dataset_dir):
 
 @pytest.mark.dependency(name='tf_test_model_train')
 def test_model_accuracy_aware_train(_accuracy_aware_config, tmp_path):
-    checkpoint_save_dir = tmp_path
+    checkpoint_save_dir = Path(tmp_path)
     config_factory = ConfigFactory(_accuracy_aware_config['nncf_config'], tmp_path / 'config.json')
     args = {
         '--data': _accuracy_aware_config['dataset_path'],
@@ -450,13 +453,14 @@ def test_model_accuracy_aware_train(_accuracy_aware_config, tmp_path):
     main = get_sample_fn(_accuracy_aware_config['sample_type'], modes=['train'])
     main(convert_to_argv(args))
 
-    assert tf.io.gfile.isdir(checkpoint_save_dir)
-    from glob import glob
-    time_dir_1 = os.path.join(checkpoint_save_dir, glob(os.path.join(checkpoint_save_dir, '*/'))[0].split('/')[-2])
-    time_dir_1 = os.path.join(time_dir_1, glob(os.path.join(time_dir_1, '*/'))[0].split('/')[-2],
-                              'accuracy_aware_training')
-    time_dir_2 = os.path.join(time_dir_1, glob(os.path.join(time_dir_1, '*/'))[0].split('/')[-2])
-    assert tf.train.latest_checkpoint(time_dir_2)
+    assert checkpoint_save_dir.is_dir()
+    model_dirs = [x for x in checkpoint_save_dir.glob('*/') if x.is_dir()]
+    assert len(model_dirs) == 1
+    time_dirs = [x for x in model_dirs[0].glob('*/') if x.is_dir()]
+    assert len(time_dirs) == 1
+    time_dirs_aa = [x for x in (time_dirs[0] / 'accuracy_aware_training').glob('*/') if x.is_dir()]
+    assert len(time_dirs_aa) == 1
+    assert tf.train.latest_checkpoint(str(time_dirs_aa[0]))
 
 
 @pytest.mark.parametrize("sample_type", SAMPLE_TYPES)
@@ -471,4 +475,4 @@ def test_eval_only_config_fails_to_train(tmp_path, sample_type):
     main = get_sample_fn(sample_type, modes=['train'])
     with pytest.raises(RuntimeError) as e_info:
         main(convert_to_argv(args))
-    assert EVAL_ONLY_ERROR_TEXT in e_info.value.args[0]
+    assert remove_line_breaks(EVAL_ONLY_ERROR_TEXT) in remove_line_breaks(e_info.value.args[0])

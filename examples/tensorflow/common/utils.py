@@ -25,6 +25,7 @@ import atexit
 import tensorflow as tf
 from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
 
+from examples.common.sample_config import SampleConfig
 from examples.tensorflow.common.logger import logger as default_logger
 from examples.common.sample_config import CustomArgumentParser
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
@@ -38,7 +39,7 @@ KERAS_H5_FORMAT = 'h5'
 FROZEN_GRAPH_FORMAT = 'frozen_graph'
 
 
-def get_name(config):
+def get_run_name(config: SampleConfig) -> str:
     dataset = config.get('dataset', 'imagenet2012')
     retval = config["model"] + "_" + dataset
     compression_config = config.get('compression', [])
@@ -70,26 +71,6 @@ def write_metrics(acc, filename):
     metrics = {"Accuracy": avg}
     with open(filename, 'w', encoding='utf8') as outfile:
         json.dump(metrics, outfile)
-
-
-def configure_paths(config):
-    d = datetime.datetime.now()
-    run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
-    config.name = get_name(config)
-    config.log_dir = osp.join(config.log_dir, "{}/{}".format(config.name, run_id))
-    os.makedirs(config.log_dir)
-
-    compression_config = config.get('compression', [])
-    if not isinstance(compression_config, list):
-        compression_config = [compression_config, ]
-    if config.nncf_config is not None:
-        config.nncf_config["log_dir"] = config.log_dir
-
-    if config.checkpoint_save_dir is None:
-        config.checkpoint_save_dir = config.log_dir
-
-    # create aux dirs
-    os.makedirs(config.checkpoint_save_dir, exist_ok=True)
 
 
 def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".cu", "h", ".cuh")):

@@ -18,7 +18,7 @@ import openvino.runtime as ov
 import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
+from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT

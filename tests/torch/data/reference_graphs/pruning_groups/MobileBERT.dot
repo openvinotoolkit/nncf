@@ -6,20 +6,20 @@ Consumers: ", style=filled];
 Producers: 19
 Consumers: ", style=filled];
 2 [color=grey, label="Block: S:1__O:0
-Producers: 44,19
+Producers: 19,44
 Consumers: 48", style=filled];
 3 [color=grey, label="Block: S:1__O:0
-Producers: 44,50,19
+Producers: 19,44,50
 Consumers: 48,54", style=filled];
 4 [color=grey, label="Block: S:1__O:0
-Producers: 44,50,56,19
-Consumers: 60,48,54", style=filled];
+Producers: 19,44,50,56
+Consumers: 48,54,60", style=filled];
 5 [color=grey, label="Block: S:1__O:0
-Producers: 44,50,56,62,19
-Consumers: 60,66,48,54", style=filled];
+Producers: 19,44,50,56,62
+Consumers: 48,54,60,66", style=filled];
 6 [color=green, label="Block: S:1__O:0
 Producers: 19,44,50,56,62,68
-Consumers: 66,48,60,72,54", style=filled];
+Consumers: 48,54,60,66,72", style=filled];
 7 [color=green, label="Block: S:1__O:0
 Producers: 22
 Consumers: 25,26", style=filled];

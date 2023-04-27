@@ -264,7 +264,7 @@ class NNCFCollectorTensorProcessor(ABC):
     @staticmethod
     @abstractmethod
     def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]],
-                 axis: Union[int, tuple, list]) -> List[TensorElementsType]:
+                 axis: Union[int, tuple, list], keepdims: bool = False) -> List[TensorElementsType]:
         """
         Compute the quantile-th percentile(s) of the data along the specified axis.
 
@@ -272,6 +272,8 @@ class NNCFCollectorTensorProcessor(ABC):
         :params quantile: Percentile or sequence of percentiles to compute, which must be between
             0 and 1 inclusive.
         :param axis: Axis or axes along which the percentiles are computed.
+        :param keepdims: If True, the axes which are reduced are left in the result
+            as dimensions with size one.
         :returns: List of the quantile-th percentile(s) of the tensor elements.
         """
 

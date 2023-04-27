@@ -95,7 +95,7 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def quantile(tensor: NNCFTensor,
                  quantile: Union[float, List[float]],
-                 axis: Union[int, tuple, list]) -> List[NNCFTensor]:
+                 axis: Union[int, tuple, list], keepdims: bool = False) -> List[NNCFTensor]:
         raise NotImplementedError()
 
     @staticmethod

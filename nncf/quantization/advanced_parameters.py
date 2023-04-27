@@ -20,6 +20,7 @@ import sys
 from typing import Any, ClassVar, Dict, Optional, Protocol
 
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.utils.api_marker import api
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
@@ -93,6 +94,7 @@ class AdvancedBiasCorrectionParameters:
     threshold: Optional[float] = None
 
 
+@api()
 @dataclass
 class AdvancedQuantizationParameters:
     """
