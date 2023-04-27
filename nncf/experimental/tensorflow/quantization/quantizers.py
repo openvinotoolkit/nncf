@@ -11,29 +11,25 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import Optional
-from typing import List
+from typing import Dict, List, Optional
 
 import tensorflow as tf
 
-from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.utils.registry import Registry
 from nncf.tensorflow.layers.operation import InputType
-from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from nncf.tensorflow.quantization.quantizers import SymmetricQuantizer
 from nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer
+from nncf.tensorflow.quantization.quantizers import SymmetricQuantizer
+from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 
-
-NNCF_QUANTIZATION_OPERATIONS_V2 = Registry('nncf_quantization_operations_v2')
+NNCF_QUANTIZATION_OPERATIONS_V2 = Registry("nncf_quantization_operations_v2")
 
 
 @NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizerV2(SymmetricQuantizer):
-    def set_input_spec(self,
-                       input_type: str,
-                       input_shape: Optional[List[int]] = None,
-                       channel_axes: Optional[List[int]] = None):
+    def set_input_spec(
+        self, input_type: str, input_shape: Optional[List[int]] = None, channel_axes: Optional[List[int]] = None
+    ):
         """
         Sets input tensor specification for the quantizer.
 
@@ -57,18 +53,18 @@ class SymmetricQuantizerV2(SymmetricQuantizer):
         :return: Quantizer variables.
         """
         if self.per_channel and (self.input_shape is None or self.channel_axes is None):
-            raise ValueError('The `input_shape` and `channel_axes` arguments are required when'
-                             'using per-channel quantization.')
+            raise ValueError(
+                "The `input_shape` and `channel_axes` arguments are required when" "using per-channel quantization."
+            )
         prefix = self.name
         return self._create_variables(layer, self.input_shape, self.channel_axes, prefix)
 
 
 @NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizerV2(AsymmetricQuantizer):
-    def set_input_spec(self,
-                       input_type: str,
-                       input_shape: Optional[List[int]] = None,
-                       channel_axes: Optional[List[int]] = None):
+    def set_input_spec(
+        self, input_type: str, input_shape: Optional[List[int]] = None, channel_axes: Optional[List[int]] = None
+    ):
         """
         Sets input tensor specification for the quantizer.
 
@@ -92,17 +88,20 @@ class AsymmetricQuantizerV2(AsymmetricQuantizer):
         :return: Quantizer variables.
         """
         if self.per_channel and (self.input_shape is None or self.channel_axes is None):
-            raise ValueError('The `input_shape` and `channel_axes` arguments are required when'
-                             'using per-channel quantization.')
+            raise ValueError(
+                "The `input_shape` and `channel_axes` arguments are required when" "using per-channel quantization."
+            )
         prefix = self.name
         return self._create_variables(layer, self.input_shape, self.channel_axes, prefix)
 
 
-def create_quantizer(name: str,
-                     qspec: TFQuantizerSpec,
-                     is_weight_quantization: bool,
-                     input_shape: Optional[List[int]] = None,
-                     channel_axes: Optional[List[int]] = None):
+def create_quantizer(
+    name: str,
+    qspec: TFQuantizerSpec,
+    is_weight_quantization: bool,
+    input_shape: Optional[List[int]] = None,
+    channel_axes: Optional[List[int]] = None,
+):
     """
     Factory method to create quantizer.
 

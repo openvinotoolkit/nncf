@@ -11,14 +11,13 @@
  limitations under the License.
 """
 
-from typing import Optional
 from contextlib import contextmanager
+from typing import Optional
 
-
-NNCF_TF_CATEGORY = 'nncf_tf'
-NNCF_PT_CATEGORY = 'nncf_pt'
-NNCF_ONNX_CATEGORY = 'nncf_onnx'
-NNCF_OV_CATEGORY = 'nncf_ov'
+NNCF_TF_CATEGORY = "nncf_tf"
+NNCF_PT_CATEGORY = "nncf_pt"
+NNCF_ONNX_CATEGORY = "nncf_onnx"
+NNCF_OV_CATEGORY = "nncf_ov"
 
 CURRENT_CATEGORY = None
 

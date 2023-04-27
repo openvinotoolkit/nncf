@@ -11,11 +11,11 @@
  limitations under the License.
 """
 
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
 
 
@@ -46,13 +46,11 @@ class RangeInitConfig:
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_dict(cls, dct: Dict) -> 'RangeInitConfig':
-        num_init_samples = dct.get('num_init_samples', NUM_INIT_SAMPLES)
+    def from_dict(cls, dct: Dict) -> "RangeInitConfig":
+        num_init_samples = dct.get("num_init_samples", NUM_INIT_SAMPLES)
         if num_init_samples < 0:
-            raise ValueError('Number of initialization samples must be >= 0')
-        return cls(dct.get('type', 'mixed_min_max'),
-                   num_init_samples,
-                   dct.get('params'))
+            raise ValueError("Number of initialization samples must be >= 0")
+        return cls(dct.get("type", "mixed_min_max"), num_init_samples, dct.get("params"))
 
 
 class PerLayerRangeInitConfig(RangeInitConfig):
@@ -62,10 +60,13 @@ class PerLayerRangeInitConfig(RangeInitConfig):
     and ignored scopes and the target group of quantizers.
     """
 
-    def __init__(self, range_init_config: RangeInitConfig,
-                 target_scopes: Optional[List[str]],
-                 ignored_scopes: Optional[List[str]],
-                 target_quantizer_group: QuantizerGroup = None):
+    def __init__(
+        self,
+        range_init_config: RangeInitConfig,
+        target_scopes: Optional[List[str]],
+        ignored_scopes: Optional[List[str]],
+        target_quantizer_group: QuantizerGroup = None,
+    ):
         """
         Initializes the quantization range initialization parameters.
 
@@ -79,17 +80,20 @@ class PerLayerRangeInitConfig(RangeInitConfig):
             quantizers group for activations or weights.
         """
 
-        super().__init__(range_init_config.init_type, range_init_config.num_init_samples,
-                         range_init_config.init_type_specific_params)
+        super().__init__(
+            range_init_config.init_type, range_init_config.num_init_samples, range_init_config.init_type_specific_params
+        )
         if target_scopes is None and ignored_scopes is None:
-            raise ValueError('At least one of the (target_scopes, ignored_scopes) should be specified'
-                             ' for a per-layer range init config!')
+            raise ValueError(
+                "At least one of the (target_scopes, ignored_scopes) should be specified"
+                " for a per-layer range init config!"
+            )
         self.target_scopes = target_scopes
         self.ignored_scopes = ignored_scopes
         self.target_group = target_quantizer_group
 
     @classmethod
-    def from_dict(cls, dct: Dict) -> 'PerLayerRangeInitConfig':
+    def from_dict(cls, dct: Dict) -> "PerLayerRangeInitConfig":
         base_config = RangeInitConfig.from_dict(dct)
 
         def get_list(dct: Dict, attr_name: str) -> Optional[List[str]]:
@@ -101,9 +105,10 @@ class PerLayerRangeInitConfig(RangeInitConfig):
             else:
                 retval_list = str_or_list
             return retval_list
-        target_scopes, ignored_scopes = get_list(dct, 'target_scopes'), get_list(dct, 'ignored_scopes')
 
-        target_group_str = dct.get('target_quantizer_group')
+        target_scopes, ignored_scopes = get_list(dct, "target_scopes"), get_list(dct, "ignored_scopes")
+
+        target_group_str = dct.get("target_quantizer_group")
         target_group = None
         if target_group_str is not None:
             target_group = QuantizerGroup(target_group_str)
@@ -117,10 +122,13 @@ class RangeInitParams:
     quantization range initialization parameters for all model layers.
     """
 
-    def __init__(self, init_range_data_loader: NNCFDataLoader,
-                 device: str,
-                 global_init_config: Optional[RangeInitConfig],
-                 per_layer_range_init_configs: List[PerLayerRangeInitConfig]):
+    def __init__(
+        self,
+        init_range_data_loader: NNCFDataLoader,
+        device: str,
+        global_init_config: Optional[RangeInitConfig],
+        per_layer_range_init_configs: List[PerLayerRangeInitConfig],
+    ):
         """
 
         :param init_range_data_loader: Provides an iterable over the given dataset.
@@ -171,7 +179,7 @@ class RangeInitCollectorParams:
 
     @property
     def use_means_of_mins(self) -> bool:
-        return not self._is_weights and not self._per_channel and self._mode == 'asymmetric'
+        return not self._is_weights and not self._per_channel and self._mode == "asymmetric"
 
     @property
     def use_means_of_maxs(self) -> bool:

@@ -16,84 +16,76 @@ from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 
-LINEAR_OPERATIONS = {'type': list(
-    {
-        *{layer_name for m in GENERAL_CONV_LAYER_METATYPES for layer_name in m.get_all_aliases()},
-        *{layer_name for m in LINEAR_LAYER_METATYPES for layer_name in m.get_all_aliases()},
-
-    }
-),
-    'label': 'LINEAR'
+LINEAR_OPERATIONS = {
+    "type": list(
+        {
+            *{layer_name for m in GENERAL_CONV_LAYER_METATYPES for layer_name in m.get_all_aliases()},
+            *{layer_name for m in LINEAR_LAYER_METATYPES for layer_name in m.get_all_aliases()},
+        }
+    ),
+    "label": "LINEAR",
 }
 
-ELEMENTWISE_OPERATIONS = {'type': list(set(
-    layer_name for m in ELEMENTWISE_LAYER_METATYPES for layer_name in m.get_all_aliases()
-)),
-    'label': 'ELEMENTWISE'
+ELEMENTWISE_OPERATIONS = {
+    "type": list(set(layer_name for m in ELEMENTWISE_LAYER_METATYPES for layer_name in m.get_all_aliases())),
+    "label": "ELEMENTWISE",
 }
 
 QUANTIZATION_AGNOSTIC_OPERATIONS = {
-'type': list(set(
-    layer_name for m in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT for layer_name in m.get_all_aliases()
-)),
-    'label': 'ELEMENTWISE'
+    "type": list(
+        set(
+            layer_name
+            for m in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
+            for layer_name in m.get_all_aliases()
+        )
+    ),
+    "label": "ELEMENTWISE",
 }
 
-BATCH_NORMALIZATION_OPERATIONS = {'type': ['BatchNormalization',
-                                           'SyncBatchNormalization',
-                                           'FusedBatchNormV3'],
-                                  'label': 'BATCH_NORMALIZATION'
-                                  }
+BATCH_NORMALIZATION_OPERATIONS = {
+    "type": ["BatchNormalization", "SyncBatchNormalization", "FusedBatchNormV3"],
+    "label": "BATCH_NORMALIZATION",
+}
 
 KERAS_ACTIVATIONS_OPERATIONS = {
-    'type': ['ReLU',
-             'ThresholdedReLU',
-             'ELU',
-             'PReLU',
-             'LeakyReLU',
-             'Activation'],
-    'label': 'KERAS_ACTIVATIONS'
+    "type": ["ReLU", "ThresholdedReLU", "ELU", "PReLU", "LeakyReLU", "Activation"],
+    "label": "KERAS_ACTIVATIONS",
 }
 
 
 TF_ACTIVATIONS_OPERATIONS = {
-    'type': [
-        'Relu',
-        'nn.relu',
-        'Elu',
-        'LeakyRelu',
-        'Relu6',
-        'Selu',
-        'Sigmoid',
-        'Tanh',
+    "type": [
+        "Relu",
+        "nn.relu",
+        "Elu",
+        "LeakyRelu",
+        "Relu6",
+        "Selu",
+        "Sigmoid",
+        "Tanh",
     ],
-    'label': 'TF_ACTIVATIONS'
+    "label": "TF_ACTIVATIONS",
 }
 
-ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(KERAS_ACTIVATIONS_OPERATIONS,
-                                                              TF_ACTIVATIONS_OPERATIONS,
-                                                              'ATOMIC_ACTIVATIONS')
+ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(
+    KERAS_ACTIVATIONS_OPERATIONS, TF_ACTIVATIONS_OPERATIONS, "ATOMIC_ACTIVATIONS"
+)
 
-POOLING_OPERATIONS = {'type': ['AveragePooling2D',
-                               'AveragePooling3D',
-                               'GlobalAveragePooling2D',
-                               'GlobalAveragePooling3D',
-                               'AvgPool',
-                               'AvgPool3D',
-                               'Mean',],
-                      'label': 'POOLING'}
+POOLING_OPERATIONS = {
+    "type": [
+        "AveragePooling2D",
+        "AveragePooling3D",
+        "GlobalAveragePooling2D",
+        "GlobalAveragePooling3D",
+        "AvgPool",
+        "AvgPool3D",
+        "Mean",
+    ],
+    "label": "POOLING",
+}
 
-SINGLE_OPS = merge_two_types_of_operations(POOLING_OPERATIONS,
-                                           {
-                                               'type': [
-                                                   'Average',
-                                                   'LayerNormalization',
-                                                   'UpSampling2D'
-                                               ]
-                                           }, label='SINGLE_OPS')
+SINGLE_OPS = merge_two_types_of_operations(
+    POOLING_OPERATIONS, {"type": ["Average", "LayerNormalization", "UpSampling2D"]}, label="SINGLE_OPS"
+)
 
-ARITHMETIC_OPERATIONS = {'type': ['__iadd__',
-                                  '__add__',
-                                  '__mul__',
-                                  '__rmul__'],
-                         'label': 'ARITHMETIC'}
+ARITHMETIC_OPERATIONS = {"type": ["__iadd__", "__add__", "__mul__", "__rmul__"], "label": "ARITHMETIC"}

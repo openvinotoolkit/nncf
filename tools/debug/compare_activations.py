@@ -13,18 +13,21 @@
 
 import argparse
 
-from tools.debug.common import compare_activations, print_args
+from tools.debug.common import compare_activations
+from tools.debug.common import print_args
 
 argparser = argparse.ArgumentParser()
-argparser.add_argument("-i", "--ir-dump-txt", help="IE dump file in text format (ieb from mkldnn_graph.cpp)",
-                       required=True)
+argparser.add_argument(
+    "-i", "--ir-dump-txt", help="IE dump file in text format (ieb from mkldnn_graph.cpp)", required=True
+)
 argparser.add_argument("-p", "--torch-dump-npy", help="PyTorch dump file in npy format", required=True)
 args = argparser.parse_args()
 print_args(args)
+
 
 def main():
     compare_activations(args.ir_dump_txt, args.torch_dump_npy)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -11,15 +11,10 @@
  limitations under the License.
 """
 
-from typing import Optional
-from typing import Callable
-from typing import Iterable
-from typing import Any
-from typing import List
-from typing import Dict
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
-from openvino.tools import pot
 import openvino.runtime as ov
+from openvino.tools import pot
 
 from nncf.api.compression import TModel
 from nncf.data import Dataset
@@ -37,7 +32,7 @@ class DummyMetric:
 
     def __init__(self):
         self._avg_value = None
-        self.name = 'original_metric'
+        self.name = "original_metric"
 
     @property
     def avg_value(self):
@@ -50,8 +45,8 @@ class DummyMetric:
     def get_attributes(self):
         attributes = {
             self.name: {
-                'direction': 'higher-better',
-                'type': self.name,
+                "direction": "higher-better",
+                "type": self.name,
             }
         }
         return attributes
@@ -99,18 +94,18 @@ class DatasetWrapper:
         return length
 
 
-def calc_per_sample_metrics(compiled_model: ov.CompiledModel,
-                            val_func: Callable[[ov.CompiledModel, Iterable[Any]], float],
-                            dataset: Dataset,
-                            subset_indices: List[int]) -> List[Dict[str, Any]]:
+def calc_per_sample_metrics(
+    compiled_model: ov.CompiledModel,
+    val_func: Callable[[ov.CompiledModel, Iterable[Any]], float],
+    dataset: Dataset,
+    subset_indices: List[int],
+) -> List[Dict[str, Any]]:
     per_sample_metrics = []
     for inputs in dataset.get_data(subset_indices):
         value = val_func(compiled_model, [inputs])
-        per_sample_metrics.append({
-            'sample_id': len(per_sample_metrics),
-            'metric_name': 'original_metric',
-            'result': value
-        })
+        per_sample_metrics.append(
+            {"sample_id": len(per_sample_metrics), "metric_name": "original_metric", "result": value}
+        )
     return per_sample_metrics
 
 
@@ -124,12 +119,14 @@ class OVEngine(pot.IEEngine):
     [here](https://docs.openvino.ai/latest/pot_compression_api_README.html#engine).
     """
 
-    def __init__(self,
-                 config,
-                 calibration_dataset: Dataset,
-                 validation_dataset: Dataset,
-                 validation_fn: Optional[Callable[[TModel, Iterable[Any]], float]] = None,
-                 use_original_metric: bool = False):
+    def __init__(
+        self,
+        config,
+        calibration_dataset: Dataset,
+        validation_dataset: Dataset,
+        validation_fn: Optional[Callable[[TModel, Iterable[Any]], float]] = None,
+        use_original_metric: bool = False,
+    ):
         metric = DummyMetric() if validation_fn else None
         super().__init__(config, DatasetWrapper(validation_dataset.get_inference_data()), metric)
         self._calibration_dataset = calibration_dataset  # TODO(andrey-churkin): Not used now.
@@ -138,25 +135,22 @@ class OVEngine(pot.IEEngine):
         self.use_original_metric = use_original_metric
         self.statistics_collection = False
 
-    def predict(self,
-                stats_layout=None,
-                sampler=None,
-                stat_aliases=None,
-                metric_per_sample=False,
-                print_progress=False):
-
+    def predict(
+        self, stats_layout=None, sampler=None, stat_aliases=None, metric_per_sample=False, print_progress=False
+    ):
         if self._model is None:
-            raise Exception('Model was not set in Engine class')
+            raise Exception("Model was not set in Engine class")
 
         subset_indices = None
         if sampler:
-            subset_indices = sorted(getattr(sampler, '_subset_indices'))
+            subset_indices = sorted(getattr(sampler, "_subset_indices"))
 
         is_full_dataset = subset_indices is None or len(subset_indices) == len(self.data_loader)
         if self._validation_fn and (is_full_dataset or self.use_original_metric) and not self.statistics_collection:
             compiled_model = self._ie.compile_model(model=self._model, device_name=self._device)
-            self._metric.avg_value = self._validation_fn(compiled_model,
-                                                         self._validation_dataset.get_data(subset_indices))
+            self._metric.avg_value = self._validation_fn(
+                compiled_model, self._validation_dataset.get_data(subset_indices)
+            )
             if not metric_per_sample and stats_layout is None:
                 metrics = self._metric.avg_value
                 self._reset()
@@ -166,7 +160,7 @@ class OVEngine(pot.IEEngine):
             self._per_sample_metrics = self.calculate_per_sample_metrics(subset_indices)
             if stats_layout is None:
                 metrics = self._metric.avg_value
-                metrics = (sorted(self._per_sample_metrics, key=lambda i: i['sample_id']), metrics)
+                metrics = (sorted(self._per_sample_metrics, key=lambda i: i["sample_id"]), metrics)
                 self._reset()
                 return metrics, {}
 
@@ -179,24 +173,19 @@ class OVEngine(pot.IEEngine):
 
         if self.use_original_metric:
             compiled_model = self._ie.compile_model(model=self._model, device_name=self._device)
-            per_sample_metrics = calc_per_sample_metrics(compiled_model,
-                                                         self._validation_fn,
-                                                         self._validation_dataset,
-                                                         subset_indices)
+            per_sample_metrics = calc_per_sample_metrics(
+                compiled_model, self._validation_fn, self._validation_dataset, subset_indices
+            )
         else:
             dataset_wrapper = DatasetWrapper(self._validation_dataset.get_inference_data(subset_indices))
             ans = super().predict(None, dataset_wrapper, None, True, None)
-            (per_sample_metrics, _), *_  = ans
+            (per_sample_metrics, _), *_ = ans
         return per_sample_metrics
 
     def _update_metrics(self, output, annotations, need_metrics_per_sample: bool = False):
         if need_metrics_per_sample and not self.use_original_metric:
             sample_id, _ = annotations[0]
-            self._per_sample_metrics.append({
-                    'sample_id': sample_id,
-                    'result': output[0],
-                    'metric_name': 'nmse'
-            })
+            self._per_sample_metrics.append({"sample_id": sample_id, "result": output[0], "metric_name": "nmse"})
 
     @staticmethod
     def _process_batch(batch):

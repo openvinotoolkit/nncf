@@ -10,8 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List
-from typing import Optional
+from typing import List, Optional
 
 import pytest
 import torch
@@ -32,24 +31,25 @@ from tests.torch.helpers import fill_params_of_model_by_normal
 from tests.torch.helpers import get_empty_config
 
 
-@pytest.mark.parametrize('algo',
-                         ('magnitude_sparsity', 'rb_sparsity'))
-@pytest.mark.parametrize(('schedule_type', 'scheduler_class'),
-                         (
-                             ('polynomial', PolynomialSparsityScheduler),
-                             ('exponential', ExponentialSparsityScheduler),
-                             ('multistep', MultiStepSparsityScheduler)
-                         ))
+@pytest.mark.parametrize("algo", ("magnitude_sparsity", "rb_sparsity"))
+@pytest.mark.parametrize(
+    ("schedule_type", "scheduler_class"),
+    (
+        ("polynomial", PolynomialSparsityScheduler),
+        ("exponential", ExponentialSparsityScheduler),
+        ("multistep", MultiStepSparsityScheduler),
+    ),
+)
 def test_can_choose_scheduler(algo, schedule_type, scheduler_class):
     config = get_empty_config()
-    config['compression'] = {'algorithm': algo, "params": {"schedule": schedule_type}}
+    config["compression"] = {"algorithm": algo, "params": {"schedule": schedule_type}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
     assert isinstance(compression_ctrl.scheduler, scheduler_class)
 
 
 def test_can_create_rb_algo__with_adaptive_scheduler():
     config = get_empty_config()
-    config['compression'] = {'algorithm': 'rb_sparsity', "params": {"schedule": 'adaptive'}}
+    config["compression"] = {"algorithm": "rb_sparsity", "params": {"schedule": "adaptive"}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
     assert isinstance(compression_ctrl.scheduler, AdaptiveSparsityScheduler)
 
@@ -57,32 +57,24 @@ def test_can_create_rb_algo__with_adaptive_scheduler():
 @pytest.mark.skip()
 def test_can_not_create_magnitude_algo__with_adaptive_scheduler():
     config = get_empty_config()
-    config['compression'] = {'algorithm': 'magnitude_sparsity', "params": {"schedule": 'adaptive'}}
+    config["compression"] = {"algorithm": "magnitude_sparsity", "params": {"schedule": "adaptive"}}
     with pytest.raises(TypeError):
         _, _ = create_compressed_model_and_algo_for_test(MockModel(), config)
 
 
 def get_poly_params():
-    return {
-        'power': 1, 'sparsity_target_epoch': 2, 'sparsity_target': 0.6,
-        'sparsity_freeze_epoch': 4
-    }
+    return {"power": 1, "sparsity_target_epoch": 2, "sparsity_target": 0.6, "sparsity_freeze_epoch": 4}
 
 
 def get_multistep_params():
-    return {
-        'multistep_steps': [2, 3, 4],
-        'multistep_sparsity_levels': [0.2, 0.4, 0.5, 0.6],
-        'sparsity_freeze_epoch': 4
-    }
+    return {"multistep_steps": [2, 3, 4], "multistep_sparsity_levels": [0.2, 0.4, 0.5, 0.6], "sparsity_freeze_epoch": 4}
 
 
-@pytest.mark.parametrize('algo',
-                         ('magnitude_sparsity', 'rb_sparsity'))
+@pytest.mark.parametrize("algo", ("magnitude_sparsity", "rb_sparsity"))
 class TestSparseModules:
     def test_can_create_sparse_scheduler__with_defaults(self, algo):
         config = get_empty_config()
-        config['compression'] = {'algorithm': algo, "params": {"schedule": 'polynomial'}}
+        config["compression"] = {"algorithm": algo, "params": {"schedule": "polynomial"}}
         _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
         scheduler = compression_ctrl.scheduler
         assert scheduler.initial_level == 0
@@ -92,27 +84,28 @@ class TestSparseModules:
 
     def test_compression_ctrl_state(self, algo):
         config = get_empty_config()
-        config['compression'] = {'algorithm': algo, "params": {"schedule": 'polynomial'}}
+        config["compression"] = {"algorithm": algo, "params": {"schedule": "polynomial"}}
         _, ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
 
         assert ctrl.scheduler.current_step == -1
         assert ctrl.scheduler.current_epoch == -1
 
         # Test get state
-        ctrl.scheduler.load_state({'current_step': 100, 'current_epoch': 5})
+        ctrl.scheduler.load_state({"current_step": 100, "current_epoch": 5})
         compression_state = ctrl.get_compression_state()
         saved_ctrl_state = compression_state[BaseController.CONTROLLER_STATE]
         assert saved_ctrl_state == ctrl.get_state()
         algo_state = next(iter(saved_ctrl_state.values()))
         assert algo_state == {
             BaseControllerStateNames.COMPRESSION_STAGE: CompressionStage.PARTIALLY_COMPRESSED,
-            BaseControllerStateNames.SCHEDULER: {'current_step': 100, 'current_epoch': 5},
-            BaseControllerStateNames.LOSS: None
+            BaseControllerStateNames.SCHEDULER: {"current_step": 100, "current_epoch": 5},
+            BaseControllerStateNames.LOSS: None,
         }
 
         # Test load state
-        _, ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config,
-                                                            compression_state=compression_state)
+        _, ctrl = create_compressed_model_and_algo_for_test(
+            BasicConvTestModel(), config, compression_state=compression_state
+        )
         assert ctrl.scheduler.current_step == 100
         assert ctrl.scheduler.current_epoch == 5
         compression_state = ctrl.get_compression_state()
@@ -120,15 +113,22 @@ class TestSparseModules:
         assert loaded_ctrl_state == ctrl.get_state()
         assert loaded_ctrl_state == saved_ctrl_state
 
-    @pytest.mark.parametrize(('schedule', 'get_params', 'ref_levels'),
-                             (('polynomial', get_poly_params, [0.2, 0.4, 0.6, 0.6, 0.6, 0.6]),
-                              ('exponential', get_poly_params, [0.2, 0.4343145, 0.6, 0.6, 0.6, 0.6]),
-                              ('multistep', get_multistep_params, [0.2, 0.2, 0.4, 0.5, 0.6, 0.6])))
+    @pytest.mark.parametrize(
+        ("schedule", "get_params", "ref_levels"),
+        (
+            ("polynomial", get_poly_params, [0.2, 0.4, 0.6, 0.6, 0.6, 0.6]),
+            ("exponential", get_poly_params, [0.2, 0.4343145, 0.6, 0.6, 0.6, 0.6]),
+            ("multistep", get_multistep_params, [0.2, 0.2, 0.4, 0.5, 0.6, 0.6]),
+        ),
+    )
     def test_scheduler_can_do_epoch_step(self, algo, schedule, get_params, ref_levels):
         model = BasicConvTestModel()
         config = get_empty_config()
-        config['compression'] = {'algorithm': algo,
-                                 "sparsity_init": 0.2, "params": {**get_params(), "schedule": schedule}}
+        config["compression"] = {
+            "algorithm": algo,
+            "sparsity_init": 0.2,
+            "params": {**get_params(), "schedule": schedule},
+        }
 
         _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -163,9 +163,9 @@ class TestPolynomialSparsityScheduler:
             scheduler.step()
 
     @staticmethod
-    def run_epoch_with_per_step_sparsity_check(steps_per_epoch: int, scheduler: PolynomialSparsityScheduler,
-                                               set_sparsity_mock,
-                                               ref_vals: List[Optional[float]]):
+    def run_epoch_with_per_step_sparsity_check(
+        steps_per_epoch: int, scheduler: PolynomialSparsityScheduler, set_sparsity_mock, ref_vals: List[Optional[float]]
+    ):
         assert len(ref_vals) == steps_per_epoch + 1
         scheduler.epoch_step()
         set_sparsity_mock.assert_not_called()
@@ -178,18 +178,22 @@ class TestPolynomialSparsityScheduler:
                 set_sparsity_mock.assert_not_called()
             set_sparsity_mock.reset_mock()
 
-    @pytest.mark.parametrize("concavity_and_ref_sparsity_levels", [
-        (False, [0.1, pytest.approx(13 / 90), pytest.approx(25 / 90), 0.5, 0.5]),
-        (True, [pytest.approx(0.1), pytest.approx(29 / 90), pytest.approx(41 / 90), 0.5, 0.5])],
-                             ids=["concave", "convex"])
+    @pytest.mark.parametrize(
+        "concavity_and_ref_sparsity_levels",
+        [
+            (False, [0.1, pytest.approx(13 / 90), pytest.approx(25 / 90), 0.5, 0.5]),
+            (True, [pytest.approx(0.1), pytest.approx(29 / 90), pytest.approx(41 / 90), 0.5, 0.5]),
+        ],
+        ids=["concave", "convex"],
+    )
     def test_polynomial_schedule_per_epoch_step(self, magnitude_algo_mock, concavity_and_ref_sparsity_levels):
         concave = concavity_and_ref_sparsity_levels[0]
         ref_sparsity_levels = concavity_and_ref_sparsity_levels[1]
 
         params = {
             "power": 2,
-            'sparsity_init': 0.1,
-            'sparsity_target': 0.5,
+            "sparsity_init": 0.1,
+            "sparsity_target": 0.5,
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 4,
             "concave": concave,
@@ -234,12 +238,12 @@ class TestPolynomialSparsityScheduler:
         steps_per_epoch = 3
         params = {
             "power": 2,
-            'sparsity_init': 0.1,
-            'sparsity_target': 0.5,
+            "sparsity_init": 0.1,
+            "sparsity_target": 0.5,
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 4,
             "update_per_optimizer_step": True,
-            "concave": False
+            "concave": False,
         }
 
         if specify_steps_per_epoch_in_config:
@@ -258,9 +262,7 @@ class TestPolynomialSparsityScheduler:
             per_epoch_ref_level_sequences = [no_update_ref_sparsity_level_sequence, first_sparsity_level_sequence]
 
         for ref_level_sequence in per_epoch_ref_level_sequences:
-            self.run_epoch_with_per_step_sparsity_check(steps_per_epoch,
-                                                        scheduler, mock,
-                                                        ref_level_sequence)
+            self.run_epoch_with_per_step_sparsity_check(steps_per_epoch, scheduler, mock, ref_level_sequence)
 
 
 @pytest.fixture(name="rb_algo_mock")
@@ -270,6 +272,7 @@ def rb_algo_mock_(mocker):
             self.set_sparsity_level = mocker.stub()
             self.freeze = mocker.stub()
             from nncf.torch.sparsity.rb.loss import SparseLoss
+
             self.loss = SparseLoss()
             self.loss.current_sparsity = 0.3
 
@@ -286,12 +289,7 @@ class TestAdaptiveSparsityScheduler:
 
     @pytest.mark.parametrize("ref_sparsity_levels", [([0.25, 0.25, 0.3, 0.35, 0.4, 0.4, 0.4])])
     def test_adaptive_scheduler_per_epoch_step(self, rb_algo_mock, ref_sparsity_levels):
-        params = {
-            'sparsity_init': 0.2,
-            'sparsity_target': 0.4,
-            "sparsity_target_epoch": 3,
-            "sparsity_freeze_epoch": 7
-        }
+        params = {"sparsity_init": 0.2, "sparsity_target": 0.4, "sparsity_target_epoch": 3, "sparsity_freeze_epoch": 7}
 
         scheduler = AdaptiveSparsityScheduler(rb_algo_mock, params=params)
         mock = rb_algo_mock.set_sparsity_level
@@ -307,11 +305,15 @@ class TestAdaptiveSparsityScheduler:
 
 
 REF_DEFAULT_STATE = {
-    PolynomialSparsityScheduler: {'current_step': -1, 'current_epoch': -1, '_steps_per_epoch': None},
-    ExponentialSparsityScheduler: {'current_step': -1, 'current_epoch': -1},
-    MultiStepSparsityScheduler: {'current_step': -1, 'current_epoch': -1},
-    AdaptiveSparsityScheduler: {'current_step': -1, 'current_epoch': -1,
-                                'num_bad_epochs': 0, 'current_sparsity_level': 0.3}
+    PolynomialSparsityScheduler: {"current_step": -1, "current_epoch": -1, "_steps_per_epoch": None},
+    ExponentialSparsityScheduler: {"current_step": -1, "current_epoch": -1},
+    MultiStepSparsityScheduler: {"current_step": -1, "current_epoch": -1},
+    AdaptiveSparsityScheduler: {
+        "current_step": -1,
+        "current_epoch": -1,
+        "num_bad_epochs": 0,
+        "current_sparsity_level": 0.3,
+    },
 }
 
 
@@ -328,11 +330,13 @@ class MockCompressionController:
         pass
 
 
-@pytest.mark.parametrize('scheduler_cls', [PolynomialSparsityScheduler, ExponentialSparsityScheduler,
-                                           MultiStepSparsityScheduler, AdaptiveSparsityScheduler],
-                         ids=['Polynomial', 'Exponential', 'Multistep', 'Adaptive'])
+@pytest.mark.parametrize(
+    "scheduler_cls",
+    [PolynomialSparsityScheduler, ExponentialSparsityScheduler, MultiStepSparsityScheduler, AdaptiveSparsityScheduler],
+    ids=["Polynomial", "Exponential", "Multistep", "Adaptive"],
+)
 def test_scheduler_get_state(scheduler_cls):
-    args = (MockCompressionController(), {'sparsity_init': 0.3, 'update_per_optimizer_step': True, 'patience': 2})
+    args = (MockCompressionController(), {"sparsity_init": 0.3, "update_per_optimizer_step": True, "patience": 2})
     scheduler = scheduler_cls(*args)
 
     # Test init state
@@ -344,12 +348,12 @@ def test_scheduler_get_state(scheduler_cls):
 
     # Test get state
     state = scheduler.get_state()
-    assert state['current_step'] == 4
-    assert state['current_epoch'] == 0
+    assert state["current_step"] == 4
+    assert state["current_epoch"] == 0
     if scheduler_cls == PolynomialSparsityScheduler:
-        assert state['_steps_per_epoch'] == 5
+        assert state["_steps_per_epoch"] == 5
     if scheduler_cls == AdaptiveSparsityScheduler:
-        assert state['num_bad_epochs'] == 1
+        assert state["num_bad_epochs"] == 1
 
     # Test load state
     new_scheduler = scheduler_cls(*args)
@@ -365,24 +369,27 @@ def test_scheduler_get_state(scheduler_cls):
         assert new_scheduler.current_sparsity_level == pytest.approx(0.3)
 
 
-@pytest.mark.parametrize('algo',
-                         ('magnitude_sparsity', 'rb_sparsity'))
+@pytest.mark.parametrize("algo", ("magnitude_sparsity", "rb_sparsity"))
 def test_sparsity_statistics_add_module(algo):
     config = get_empty_config()
     sparsity_init = 0.5
-    config['compression'] = {'algorithm': algo, 'sparsity_init': sparsity_init}
+    config["compression"] = {"algorithm": algo, "sparsity_init": sparsity_init}
     model = TwoConvTestModel()
     fill_params_of_model_by_normal(model)
     submodule = TwoConvTestModel()
     fill_params_of_model_by_normal(submodule)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     statistics_before = compression_ctrl.statistics()
-    model.nncf.add_module('submodule', submodule)
+    model.nncf.add_module("submodule", submodule)
     statistics_after = compression_ctrl.statistics()
-    assert getattr(statistics_before, algo).model_statistics.sparsity_level == \
-           getattr(statistics_after, algo).model_statistics.sparsity_level
-    assert getattr(statistics_before, algo).model_statistics.sparsity_level_for_layers == \
-           getattr(statistics_after, algo).model_statistics.sparsity_level_for_layers
+    assert (
+        getattr(statistics_before, algo).model_statistics.sparsity_level
+        == getattr(statistics_after, algo).model_statistics.sparsity_level
+    )
+    assert (
+        getattr(statistics_before, algo).model_statistics.sparsity_level_for_layers
+        == getattr(statistics_after, algo).model_statistics.sparsity_level_for_layers
+    )
 
 
 class EmbeddingOnlyModel(torch.nn.Module):
@@ -393,17 +400,12 @@ class EmbeddingOnlyModel(torch.nn.Module):
     def forward(self, x):
         return self.embedding(x)
 
-@pytest.mark.parametrize('algo',
-                         ('magnitude_sparsity', 'rb_sparsity'))
+
+@pytest.mark.parametrize("algo", ("magnitude_sparsity", "rb_sparsity"))
 def test_can_sparsify_embedding(algo):
-    config = {
-        "input_info": {
-            "sample_size": [1, 10],
-            "type": "long"
-        }
-    }
+    config = {"input_info": {"sample_size": [1, 10], "type": "long"}}
     sparsity_init = 0.5
-    config['compression'] = {'algorithm': algo, 'sparsity_init': sparsity_init}
+    config["compression"] = {"algorithm": algo, "sparsity_init": sparsity_init}
     nncf_config = NNCFConfig.from_dict(config)
     model = EmbeddingOnlyModel()
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)

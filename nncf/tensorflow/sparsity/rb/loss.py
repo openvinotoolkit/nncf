@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 import tensorflow as tf
 
@@ -27,9 +27,7 @@ class SparseLoss(CompressionLoss):
         self.disabled = tf.Variable(False, trainable=False)
 
     def disable(self):
-        tf.cond(tf.cast(self.disabled, tf.bool),
-                lambda: None,
-                self._disable)
+        tf.cond(tf.cast(self.disabled, tf.bool), lambda: None, self._disable)
 
     def _disable(self):
         self.disabled.assign(True)
@@ -38,17 +36,17 @@ class SparseLoss(CompressionLoss):
             op.freeze(op_weights)
 
     def calculate(self, *args, **kwargs):
-        return tf.cond(tf.cast(self.disabled, tf.bool),
-                       lambda: tf.constant(0.),
-                       self._calculate)
+        return tf.cond(tf.cast(self.disabled, tf.bool), lambda: tf.constant(0.0), self._calculate)
 
     def _calculate(self):
         params = tf.constant(0)
-        loss = tf.constant(0.)
+        loss = tf.constant(0.0)
         for op, op_weights in self._target_ops:
             tf.debugging.assert_equal(
-                op.get_trainable_weight(op_weights), tf.constant(True),
-                'Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss')
+                op.get_trainable_weight(op_weights),
+                tf.constant(True),
+                "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss",
+            )
             mask = op.get_mask(op_weights)
             params = params + tf.size(mask)
             loss = loss + op.loss(op_weights)
@@ -59,22 +57,22 @@ class SparseLoss(CompressionLoss):
     @property
     def target_sparsity_rate(self):
         eager_target = tf.keras.backend.eval(self.target)
-        rate = 1. - eager_target
+        rate = 1.0 - eager_target
         if rate < 0 or rate > 1:
-            raise ValueError('Target is not within range [0, 1]')
+            raise ValueError("Target is not within range [0, 1]")
         return rate
 
     def set_target_sparsity_loss(self, sparsity_level):
         self.target.assign(1 - sparsity_level)
 
     def load_state(self, state: Dict[str, Any]) -> None:
-        self.target.assign(state['target'])
-        self.disabled.assign(state['disabled'])
-        self.p = state['p']
+        self.target.assign(state["target"])
+        self.disabled.assign(state["disabled"])
+        self.p = state["p"]
 
     def get_state(self) -> Dict[str, Any]:
         return {
-            'target': float(tf.keras.backend.eval(self.target)),
-            'disabled': bool(tf.keras.backend.eval(tf.cast(self.disabled, tf.bool))),
-            'p': self.p
+            "target": float(tf.keras.backend.eval(self.target)),
+            "disabled": bool(tf.keras.backend.eval(tf.cast(self.disabled, tf.bool))),
+            "p": self.p,
         }

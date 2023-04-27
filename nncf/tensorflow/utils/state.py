@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from typing import Dict, Any
 import json
+from typing import Any, Dict
 
 import tensorflow as tf
 
@@ -75,8 +75,9 @@ class TFCompressionStateLoader(tf.train.experimental.PythonState):
         return self._state
 
     def serialize(self) -> str:
-        raise NotImplementedError('Use an instance of the `TFCompressionState` class to '
-                                  'serialize the compression state.')
+        raise NotImplementedError(
+            "Use an instance of the `TFCompressionState` class to " "serialize the compression state."
+        )
 
     def deserialize(self, string_value: str) -> None:
         """

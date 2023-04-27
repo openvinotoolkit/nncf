@@ -14,8 +14,8 @@
 import math
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class Bottleneck(nn.Module):
@@ -121,5 +121,6 @@ def test():
     x = torch.randn(1, 3, 32, 32)
     y = net(x)
     print(y)
+
 
 # test()

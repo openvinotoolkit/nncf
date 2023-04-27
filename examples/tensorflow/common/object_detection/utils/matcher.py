@@ -38,10 +38,9 @@ class Match:
             integer int32 scalar tensor
         """
         if match_results.shape.ndims != 1:
-            raise ValueError('match_results should have rank 1')
+            raise ValueError("match_results should have rank 1")
         if match_results.dtype != tf.int32:
-            raise ValueError('match_results should be an int32 or int64 scalar '
-                          'tensor')
+            raise ValueError("match_results should be an int32 or int64 scalar " "tensor")
         self._match_results = match_results
 
     @property
@@ -142,8 +141,7 @@ class Match:
         Returns:
           row_indices: int32 tensor of shape [K] with row indices.
         """
-        return self._reshape_and_cast(
-            tf.gather(self._match_results, self.matched_column_indices(), axis=None))
+        return self._reshape_and_cast(tf.gather(self._match_results, self.matched_column_indices(), axis=None))
 
     def _reshape_and_cast(self, t):
         return tf.cast(tf.reshape(t, [-1]), tf.int32)
@@ -169,8 +167,7 @@ class Match:
             The shape of the gathered tensor is [match_results.shape[0]] +
             input_tensor.shape[1:].
         """
-        input_tensor = tf.concat(
-            [tf.stack([ignored_value, unmatched_value]), input_tensor], 0)
+        input_tensor = tf.concat([tf.stack([ignored_value, unmatched_value]), input_tensor], 0)
         gather_indices = tf.maximum(self.match_results + 2, 0)
         gathered_tensor = tf.gather(input_tensor, gather_indices, axis=None)
         return gathered_tensor
@@ -178,6 +175,7 @@ class Match:
 
 class Matcher:
     """Abstract base class for matcher."""
+
     __metaclass__ = ABCMeta
 
     def match(self, similarity_matrix, scope=None, **params):
@@ -197,7 +195,7 @@ class Matcher:
           A Match object with the results of matching.
         """
         if not scope:
-            scope = 'Match'
+            scope = "Match"
         with tf.name_scope(scope):
             return Match(self._match(similarity_matrix, **params))
 

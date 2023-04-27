@@ -11,13 +11,13 @@
  limitations under the License.
 """
 
-import pytest
 import numpy as np
 import onnx
+import pytest
 
-from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
-from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 from tests.onnx.models import OPSET_VERSION
 from tests.onnx.models import create_initializer_tensor
 
@@ -47,23 +47,18 @@ class ONNXConvCreator(ONNXNodeCreator):
 
         conv1_W_initializer_tensor_name = "Conv1_W"
         conv1_W_initializer_tensor = create_initializer_tensor(
-            name=conv1_W_initializer_tensor_name,
-            tensor_array=conv1_W,
-            data_type=onnx.TensorProto.FLOAT)
+            name=conv1_W_initializer_tensor_name, tensor_array=conv1_W, data_type=onnx.TensorProto.FLOAT
+        )
         conv1_B_initializer_tensor_name = "Conv1_B"
         conv1_B_initializer_tensor = create_initializer_tensor(
-            name=conv1_B_initializer_tensor_name,
-            tensor_array=conv1_B,
-            data_type=onnx.TensorProto.FLOAT)
+            name=conv1_B_initializer_tensor_name, tensor_array=conv1_B, data_type=onnx.TensorProto.FLOAT
+        )
         self._initializers = [conv1_W_initializer_tensor, conv1_B_initializer_tensor]
 
         self._node = onnx.helper.make_node(
             name=node_name,
             op_type="Conv",
-            inputs=[
-                input_name, conv1_W_initializer_tensor_name,
-                conv1_B_initializer_tensor_name
-            ],
+            inputs=[input_name, conv1_W_initializer_tensor_name, conv1_B_initializer_tensor_name],
             outputs=[output_name],
             kernel_shape=conv1_kernel_shape,
         )
@@ -73,26 +68,18 @@ class ONNXIdentityCreator(ONNXNodeCreator):
     def __init__(self, node_name, input_name, output_name, input_shape):
         super().__init__()
         self._node = onnx.helper.make_node(
-            name=node_name,
-            op_type="Identity",
-            inputs=[input_name],
-            outputs=[output_name]
+            name=node_name, op_type="Identity", inputs=[input_name], outputs=[output_name]
         )
 
 
 def get_one_layer_model(op_name: str, node_creator: ONNXNodeCreator, input_shape):
     model_input_name = "X"
     model_output_name = "Y"
-    X = onnx.helper.make_tensor_value_info(model_input_name,
-                                           onnx.TensorProto.FLOAT,
-                                           input_shape)
+    X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
 
-    Y = onnx.helper.make_tensor_value_info(model_output_name,
-                                           onnx.TensorProto.FLOAT,
-                                           input_shape)
+    Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, input_shape)
 
-    node_desc = node_creator(op_name, model_input_name,
-                             model_output_name, input_shape)
+    node_desc = node_creator(op_name, model_input_name, model_output_name, input_shape)
     graph_def = onnx.helper.make_graph(
         nodes=[node_desc.node],
         name="ConvNet",
@@ -108,13 +95,16 @@ def get_one_layer_model(op_name: str, node_creator: ONNXNodeCreator, input_shape
     return model
 
 
-@pytest.mark.parametrize('node_creator, ref_layer_attrs',
-                         [(ONNXIdentityCreator, None),
-                          (ONNXConvCreator, ONNXExtendedLayerAttributes(['X', 'Conv1_W', 'Conv1_B'],
-                                                                        ['Y'], [3, 3, 1, 1]))])
+@pytest.mark.parametrize(
+    "node_creator, ref_layer_attrs",
+    [
+        (ONNXIdentityCreator, None),
+        (ONNXConvCreator, ONNXExtendedLayerAttributes(["X", "Conv1_W", "Conv1_B"], ["Y"], [3, 3, 1, 1])),
+    ],
+)
 def test_layer_attributes(node_creator, ref_layer_attrs):
     input_shape = [3, 3, 3]
-    op_name = 'test_node'
+    op_name = "test_node"
     onnx_model = get_one_layer_model(op_name, node_creator, input_shape)
     nncf_graph = GraphConverter.create_nncf_graph(onnx_model)
     node = nncf_graph.get_node_by_name(op_name)

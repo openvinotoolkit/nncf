@@ -11,17 +11,17 @@
  limitations under the License.
 """
 
-from typing import List, Dict
+from typing import Dict, List
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.operations import BasePruningOp
-from nncf.common.pruning.utils import find_next_nodes_not_of_types
-from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 
 
@@ -59,8 +59,9 @@ def merge_clusters_for_nodes(nodes_to_merge: List[NNCFNode], clusterization: Clu
                 clusterization.merge_clusters(max_importance_cluster_id, current_node_cluster_id)
 
 
-def cluster_special_ops(graph: NNCFGraph, special_types: List[str],
-                        identity_types: List[str]) -> Clusterization[NNCFNode]:
+def cluster_special_ops(
+    graph: NNCFGraph, special_types: List[str], identity_types: List[str]
+) -> Clusterization[NNCFNode]:
     """
     This model will cluster all operations with type from special_types. Connected nodes is nodes that:
         1. Have path between nodes with only identity type nodes on it
@@ -71,8 +72,7 @@ def cluster_special_ops(graph: NNCFGraph, special_types: List[str],
     :return: Clusterization of `special_types` nodes to the dependent groups.
     """
     topologically_sorted_nodes = graph.topological_sort()
-    all_special_nodes = [node for node in graph.get_all_nodes()
-                         if node.node_type in special_types]
+    all_special_nodes = [node for node in graph.get_all_nodes() if node.node_type in special_types]
 
     # 0. Initially all nodes is a separate clusters
     clusterization = Clusterization[NNCFNode](lambda x: x.node_id)
@@ -85,8 +85,7 @@ def cluster_special_ops(graph: NNCFGraph, special_types: List[str],
             continue
 
         all_outputs = find_next_nodes_not_of_types(graph, node, identity_types)
-        all_output_special_nodes = [node for node in all_outputs
-                                    if node.node_type in special_types]
+        all_output_special_nodes = [node for node in all_outputs if node.node_type in special_types]
         if node.node_type in special_types:
             all_output_special_nodes.append(node)
         merge_clusters_for_nodes(all_output_special_nodes, clusterization)
@@ -110,9 +109,12 @@ class ModelAnalyzer:
     As a result, all nodes are marked by the `can_prune` attribute as potentially prunable or not.
     """
 
-    def __init__(self, graph: NNCFGraph,
-                 pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-                 prune_operations_types: List[str]):
+    def __init__(
+        self,
+        graph: NNCFGraph,
+        pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
+        prune_operations_types: List[str],
+    ):
         """
         :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
         metatypes describing operations with common pruning mask application and propagation properties, e.g.
@@ -125,8 +127,8 @@ class ModelAnalyzer:
         self._pruning_operator_metatypes = pruning_operator_metatypes
         self._prune_operations_types = prune_operations_types
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
-        self._stop_propagation_op_metatype = pruning_op_metatypes_dict['stop_propagation_ops']
-        self._concat_op_metatype = pruning_op_metatypes_dict['concat']
+        self._stop_propagation_op_metatype = pruning_op_metatypes_dict["stop_propagation_ops"]
+        self._concat_op_metatype = pruning_op_metatypes_dict["concat"]
 
         self.can_prune = {idx: True for idx in self.graph.get_all_node_ids()}
         self.accept_pruned_input = {idx: True for idx in self.graph.get_all_node_ids()}
@@ -176,8 +178,9 @@ class ModelAnalyzer:
             outputs_accept_pruned_input = all(self.accept_pruned_input[node.node_id] for node in out_nodes)
 
             # Check all output nodes can_prune attribute
-            outputs_will_be_pruned = all(self.can_prune[node.node_id]
-                                         for node in out_nodes if self.node_propagate_can_prune_attr(node))
+            outputs_will_be_pruned = all(
+                self.can_prune[node.node_id] for node in out_nodes if self.node_propagate_can_prune_attr(node)
+            )
             self.can_prune[node.node_id] = outputs_accept_pruned_input and outputs_will_be_pruned
 
     def propagate_can_prune_attr_down(self):
@@ -193,8 +196,9 @@ class ModelAnalyzer:
                 can_prune = all(self.can_prune[node.node_id] for node in in_nodes)
                 can_prune_any = any(self.can_prune[node.node_id] for node in in_nodes)
 
-                if (not self.node_accept_different_inputs(node) and not can_prune) or \
-                        (self.node_accept_different_inputs(node) and not can_prune_any):
+                if (not self.node_accept_different_inputs(node) and not can_prune) or (
+                    self.node_accept_different_inputs(node) and not can_prune_any
+                ):
                     self.can_prune[node.node_id] = can_prune
 
     def set_accept_pruned_input_attr(self):
@@ -206,5 +210,4 @@ class ModelAnalyzer:
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-        return {k: PruningAnalysisDecision(v, PruningAnalysisReason.MODEL_ANALYSIS)
-                for k, v in self.can_prune.items()}
+        return {k: PruningAnalysisDecision(v, PruningAnalysisReason.MODEL_ANALYSIS) for k, v in self.can_prune.items()}

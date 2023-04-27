@@ -14,38 +14,38 @@
 from copy import deepcopy
 from functools import partial
 
+import numpy as np
 import pytest
 import torch
-import numpy as np
 
+from nncf.common.pruning.schedulers import ExponentialPruningScheduler
+from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
+from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
+from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.module_operations import UpdateWeightAndBias
+from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
+from nncf.torch.pruning.filter_pruning.algo import LINEAR_LAYER_METATYPES
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
-from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
-from nncf.common.pruning.schedulers import ExponentialPruningScheduler
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.utils import _calculate_output_shape
 from nncf.torch.pruning.utils import collect_output_shapes
-from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
-from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
-from nncf.torch.pruning.filter_pruning.algo import LINEAR_LAYER_METATYPES
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import check_correct_nncf_modules_replacement
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.pruning.helpers import BigPruningTestModel
+from tests.torch.pruning.helpers import DisconectedGraphModel
+from tests.torch.pruning.helpers import MultipleForwardModel
+from tests.torch.pruning.helpers import PruningTestBatchedLinear
+from tests.torch.pruning.helpers import PruningTestModel
+from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinear
+from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinearWithConcat
+from tests.torch.pruning.helpers import PruningTestModelConcatBN
+from tests.torch.pruning.helpers import PruningTestModelConcatWithLinear
+from tests.torch.pruning.helpers import PruningTestModelDiffChInPruningCluster
 from tests.torch.pruning.helpers import gen_ref_masks
 from tests.torch.pruning.helpers import get_basic_pruning_config
-from tests.torch.pruning.helpers import PruningTestModel
-from tests.torch.pruning.helpers import BigPruningTestModel
-from tests.torch.pruning.helpers import PruningTestModelDiffChInPruningCluster
-from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinearWithConcat
-from tests.torch.pruning.helpers import PruningTestBatchedLinear
-from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinear
-from tests.torch.pruning.helpers import PruningTestModelConcatWithLinear
-from tests.torch.pruning.helpers import MultipleForwardModel
-from tests.torch.pruning.helpers import PruningTestModelConcatBN
-from tests.torch.pruning.helpers import DisconectedGraphModel
 
 
 def create_pruning_algo_with_config(config, dim=2):
@@ -54,7 +54,7 @@ def create_pruning_algo_with_config(config, dim=2):
     :param config: config for the algorithm
     :return pruned model, pruning_algo, nncf_modules
     """
-    config['compression']['algorithm'] = 'filter_pruning'
+    config["compression"]["algorithm"] = "filter_pruning"
     model = BigPruningTestModel(dim)
     pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(BigPruningTestModel(dim), config)
 
@@ -70,7 +70,7 @@ def test_check_default_algo_params():
     """
     # Creating algorithm with empty config
     config = get_basic_pruning_config()
-    config['compression']['algorithm'] = 'filter_pruning'
+    config["compression"]["algorithm"] = "filter_pruning"
     model = PruningTestModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -81,7 +81,7 @@ def test_check_default_algo_params():
     assert compression_ctrl.prune_batch_norms is True
     assert compression_ctrl.prune_downsample_convs is False
     assert compression_ctrl.filter_importance is l2_filter_norm
-    assert compression_ctrl.ranking_type == 'unweighted_ranking'
+    assert compression_ctrl.ranking_type == "unweighted_ranking"
     assert compression_ctrl.pruning_quota == 0.9
 
     assert compression_ctrl.all_weights is False
@@ -90,8 +90,8 @@ def test_check_default_algo_params():
     assert isinstance(scheduler, ExponentialPruningScheduler)
 
 
-@pytest.mark.parametrize('prune_first', [False, True])
-@pytest.mark.parametrize('prune_batch_norms', [True, False])
+@pytest.mark.parametrize("prune_first", [False, True])
+@pytest.mark.parametrize("prune_batch_norms", [True, False])
 def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
     """
     Test that checks that all conv modules in model was replaced by nncf modules and
@@ -112,8 +112,8 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
         assert len(module.post_ops) == 0
 
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
-    config['compression']['params']['prune_first_conv'] = prune_first
-    config['compression']['params']['prune_batch_norms'] = prune_batch_norms
+    config["compression"]["params"]["prune_first_conv"] = prune_first
+    config["compression"]["params"]["prune_batch_norms"] = prune_batch_norms
 
     pruned_model, pruning_algo, nncf_modules = create_pruning_algo_with_config(config)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
@@ -166,7 +166,7 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
     check_that_module_is_not_pruned(conv3)
 
 
-BIG_PRUNING_MODEL_TEST_PARAMS = ('all_weights', 'prune_by_flops', 'pruning_init', 'prune_first', 'ref_masks')
+BIG_PRUNING_MODEL_TEST_PARAMS = ("all_weights", "prune_by_flops", "pruning_init", "prune_first", "ref_masks")
 BIG_PRUNING_MODEL_TEST_PARAMS_VALUES = \
 [
     (False, False, 0.5, True, {1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
@@ -198,8 +198,8 @@ BIG_PRUNING_MODEL_TEST_PARAMS_VALUES = \
 ]  # fmt: skip
 
 
-@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES )
-@pytest.mark.parametrize('dim', [1, 2, 3])
+@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES)
+@pytest.mark.parametrize("dim", [1, 2, 3])
 def test_pruning_masks_correctness(all_weights, prune_by_flops, pruning_init, prune_first, ref_masks, dim):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
@@ -212,20 +212,20 @@ def test_pruning_masks_correctness(all_weights, prune_by_flops, pruning_init, pr
 
     def check_mask(module, num):
         pruning_op = list(module.pre_ops.values())[0].operand
-        assert hasattr(pruning_op, 'binary_filter_pruning_mask')
-        #x = torch.sum((pruning_op.binary_filter_pruning_mask == 0.).int())
-        #y = pruning_op.binary_filter_pruning_mask.shape[0]
-        #y_minus_x = y - x
-        #print(x, y)
+        assert hasattr(pruning_op, "binary_filter_pruning_mask")
+        # x = torch.sum((pruning_op.binary_filter_pruning_mask == 0.).int())
+        # y = pruning_op.binary_filter_pruning_mask.shape[0]
+        # y_minus_x = y - x
+        # print(x, y)
         assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[dim][num])
 
     config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
-    config['compression']['params']['all_weights'] = all_weights
-    config['compression']['params']['prune_first_conv'] = prune_first
+    config["compression"]["params"]["all_weights"] = all_weights
+    config["compression"]["params"]["prune_first_conv"] = prune_first
 
-    config['compression']['pruning_init'] = pruning_init
+    config["compression"]["pruning_init"] = pruning_init
     if prune_by_flops:
-        config['compression']['params']['pruning_flops_target'] = pruning_init
+        config["compression"]["params"]["pruning_flops_target"] = pruning_init
 
     pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config, dim)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
@@ -264,7 +264,7 @@ def test_pruning_masks_correctness(all_weights, prune_by_flops, pruning_init, pr
 
 
 @pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES)
-@pytest.mark.parametrize('dim', [1, 2, 3])
+@pytest.mark.parametrize("dim", [1, 2, 3])
 def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning_init, prune_first, ref_masks, dim):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
@@ -273,19 +273,21 @@ def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning
     :param prune_first: whether to prune first convolution or not.
     :param ref_masks: reference masks values.
     """
-    input_shapes = {'conv1': [1, 1] + [8] * dim,
-                    'conv_depthwise': [1, 16] + [7] * dim,
-                    'conv2': [1, 16] + [8] * dim,
-                    'bn1': [1, 16] + [8] * dim,
-                    'bn2': [1, 32] + [8] * dim,
-                    'up': [1, 32] + [8] * dim,
-                    'linear': [1, 448 * 7**(dim - 1)],
-                    'layernorm': [1, 128]}
+    input_shapes = {
+        "conv1": [1, 1] + [8] * dim,
+        "conv_depthwise": [1, 16] + [7] * dim,
+        "conv2": [1, 16] + [8] * dim,
+        "bn1": [1, 16] + [8] * dim,
+        "bn2": [1, 32] + [8] * dim,
+        "up": [1, 32] + [8] * dim,
+        "linear": [1, 448 * 7 ** (dim - 1)],
+        "layernorm": [1, 128],
+    }
 
     def check_mask(module, num):
         # Mask for weights
         pruning_op = list(module.pre_ops.values())[0].operand
-        assert hasattr(pruning_op, 'binary_filter_pruning_mask')
+        assert hasattr(pruning_op, "binary_filter_pruning_mask")
         assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[dim][num])
 
         # Mask for bias
@@ -308,12 +310,12 @@ def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning
             assert torch.allclose(model_state_dict[key], ref_state_dict[key])
 
     config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
-    config['compression']['algorithm'] = 'filter_pruning'
-    config['compression']['params']['all_weights'] = all_weights
-    config['compression']['params']['prune_first_conv'] = prune_first
-    config['compression']['pruning_init'] = pruning_init
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["params"]["all_weights"] = all_weights
+    config["compression"]["params"]["prune_first_conv"] = prune_first
+    config["compression"]["pruning_init"] = pruning_init
     if prune_by_flops:
-        config['compression']['params']['pruning_flops_target'] = pruning_init
+        config["compression"]["params"]["pruning_flops_target"] = pruning_init
 
     model = BigPruningTestModel(dim)
     ref_state_dict = deepcopy(model.state_dict())
@@ -338,55 +340,53 @@ def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning
         check_mask(conv1, i)
         check_mask(conv_depthwise, i)
 
-        check_module_output(conv1, 'conv1', i)
-        check_module_output(conv_depthwise, 'conv_depthwise', i)
+        check_module_output(conv1, "conv1", i)
+        check_module_output(conv_depthwise, "conv_depthwise", i)
 
     # Check for bn1
     bn1 = pruned_model.bn1
     if prune_first:
         check_mask(bn1, i)
-        check_module_output(bn1, 'bn1', i)
+        check_module_output(bn1, "bn1", i)
         i += 1
 
     # Check for conv2
     conv2 = pruned_model.conv2
     assert conv2 in pruned_modules
     check_mask(conv2, i)
-    check_module_output(conv2, 'conv2', i)
+    check_module_output(conv2, "conv2", i)
 
     # Check for bn2
     bn2 = pruned_model.bn2
     check_mask(bn2, i)
-    check_module_output(bn2, 'bn2', i)
+    check_module_output(bn2, "bn2", i)
     i += 1
 
     # Check for up conv
     up = pruned_model.up
     assert up in pruned_modules
     check_mask(up, i)
-    check_module_output(up, 'up', i)
+    check_module_output(up, "up", i)
     i += 1
 
     # Check for linear
     linear = pruned_model.linear
     assert linear in pruned_modules
     check_mask(linear, i)
-    check_module_output(linear, 'linear', i)
+    check_module_output(linear, "linear", i)
 
     # Check for layernorm
     check_mask(pruned_model.layernorm, i)
-    check_module_output(pruned_model.layernorm, 'layernorm', i)
+    check_module_output(pruned_model.layernorm, "layernorm", i)
 
-@pytest.mark.parametrize('prune_bn',
-                         (False,
-                          True)
-                         )
+
+@pytest.mark.parametrize("prune_bn", (False, True))
 def test_valid_masks_for_bn_after_concat(prune_bn):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
-    config['compression']['algorithm'] = 'filter_pruning'
-    config['compression']['params']['prune_batch_norms'] = prune_bn
-    config['compression']['params']['prune_first_conv'] = True
-    config['compression']['pruning_init'] = 0.5
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["params"]["prune_batch_norms"] = prune_bn
+    config["compression"]["params"]["prune_first_conv"] = True
+    config["compression"]["pruning_init"] = 0.5
     model = PruningTestModelConcatBN()
     pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
@@ -394,20 +394,17 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
     for bn_module in bn_modules:
         if prune_bn:
             # Check that mask was applied for batch_norm module
-            mask = bn_module.pre_ops['0'].op.binary_filter_pruning_mask
+            mask = bn_module.pre_ops["0"].op.binary_filter_pruning_mask
             assert sum(mask) == len(mask) * 0.5
         else:
             # Check that no mask was added to the layer
             assert len(bn_module.pre_ops) == 0
 
     # Check output mask of concat layers
-    ref_concat_masks = [
-        [0] * 8 + [1] * 8 + [0] * 8 + [1] * 8,
-        [1] * 8 + [0] * 16 + [1] * 8 + [0] * 8 + [1] * 8
-    ]
+    ref_concat_masks = [[0] * 8 + [1] * 8 + [0] * 8 + [1] * 8, [1] * 8 + [0] * 16 + [1] * 8 + [0] * 8 + [1] * 8]
     graph = pruned_model.nncf.get_original_graph()
-    for i, node in enumerate(graph.get_nodes_by_types(['cat'])):
-        assert np.allclose(node.data['output_mask'].tensor.numpy(), ref_concat_masks[i])
+    for i, node in enumerate(graph.get_nodes_by_types(["cat"])):
+        assert np.allclose(node.data["output_mask"].tensor.numpy(), ref_concat_masks[i])
 
 
 @pytest.mark.parametrize('model,ref_output_shapes',
@@ -446,14 +443,15 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
      ])  # fmt: skip
 def test_collect_output_shapes(model, ref_output_shapes):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
-    config['compression']['algorithm'] = 'filter_pruning'
-    config['compression']['pruning_init'] = 0.0
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["pruning_init"] = 0.0
     model = model()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     # pylint:disable=protected-access
     graph = compression_ctrl._model.nncf.get_original_graph()
     output_shapes = collect_output_shapes(graph)
     assert output_shapes == ref_output_shapes
+
 
 # fmt: off
 BigPruningTestModelNextNodesRef = {
@@ -688,7 +686,9 @@ PruningTestModelDiffChInPruningClusterRef = {
                            'PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0': 32,
                            'PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0': 1152,
                            'PruningTestModelDiffChInPruningCluster/NNCFLinear[last_linear]/linear_0': 1}
-}  # fmt: on
+}
+# fmt: on
+
 
 @pytest.mark.parametrize(
     ('model_module', 'all_weights', 'pruning_flops_target', 'ref_flops',
@@ -709,12 +709,12 @@ PruningTestModelDiffChInPruningClusterRef = {
      ])  # fmt: skip
 def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_flops, ref_params_num, refs):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
-    config['compression']['algorithm'] = 'filter_pruning'
-    config['compression']['params']['all_weights'] = all_weights
-    config['compression']['params']['prune_first_conv'] = True
-    config['compression']['pruning_init'] = 0.5 if not pruning_flops_target else pruning_flops_target
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["params"]["all_weights"] = all_weights
+    config["compression"]["params"]["prune_first_conv"] = True
+    config["compression"]["pruning_init"] = 0.5 if not pruning_flops_target else pruning_flops_target
     if pruning_flops_target:
-        config['compression']['params']['pruning_flops_target'] = pruning_flops_target
+        config["compression"]["params"]["pruning_flops_target"] = pruning_flops_target
 
     model = model_module()
     pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(model_module(), config)
@@ -729,67 +729,66 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
     # pylint:disable=protected-access
     num_of_sparse_by_node = pruning_algo._calculate_num_of_sparse_elements_by_node()
 
-    assert len(num_of_sparse_by_node) == len(refs['num_of_sparse_by_node'])
+    assert len(num_of_sparse_by_node) == len(refs["num_of_sparse_by_node"])
     for node_name in num_of_sparse_by_node:
-        assert num_of_sparse_by_node[node_name] == refs['num_of_sparse_by_node'][node_name]
+        assert num_of_sparse_by_node[node_name] == refs["num_of_sparse_by_node"][node_name]
 
     graph = pruning_algo._model.nncf.get_original_graph()
     pruning_groups = pruning_algo.pruned_module_groups_info
 
     shape_pruning_processor = ShapePruningProcessor(
         pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
-        prunable_types=[v.op_func_name for v in NNCF_PRUNING_MODULES_DICT])
+        prunable_types=[v.op_func_name for v in NNCF_PRUNING_MODULES_DICT],
+    )
 
     pruning_groups_next_nodes = shape_pruning_processor.get_next_nodes(graph, pruning_groups)
     # Check output_shapes are empty in graph
     for node in graph.get_all_nodes():
-        assert node.data['output_shape'] is None
+        assert node.data["output_shape"] is None
 
     # Next nodes cluster check
-    assert len(pruning_groups_next_nodes) == len(refs['next_nodes'])
+    assert len(pruning_groups_next_nodes) == len(refs["next_nodes"])
     for idx, next_nodes in pruning_groups_next_nodes.items():
-        next_nodes_ref = refs['next_nodes'][idx]
-        next_nodes_ref_names = [node['node_name'] for node in next_nodes_ref]
+        next_nodes_ref = refs["next_nodes"][idx]
+        next_nodes_ref_names = [node["node_name"] for node in next_nodes_ref]
         for next_node in next_nodes:
-            idx = next_nodes_ref_names.index(next_node['node_name'])
+            idx = next_nodes_ref_names.index(next_node["node_name"])
             next_node_ref = next_nodes_ref[idx]
-            assert next_node['sparse_multiplier'] == next_node_ref['sparse_multiplier']
+            assert next_node["sparse_multiplier"] == next_node_ref["sparse_multiplier"]
 
     tmp_in_channels, tmp_out_channels = shape_pruning_processor.calculate_in_out_channels_by_masks(
         graph=graph,
         pruning_groups=pruning_groups,
         pruning_groups_next_nodes=pruning_groups_next_nodes,
-        num_of_sparse_elements_by_node=refs['num_of_sparse_by_node'])
+        num_of_sparse_elements_by_node=refs["num_of_sparse_by_node"],
+    )
 
-    assert len(tmp_in_channels) == len(tmp_out_channels) == len(refs['pruned_in_channels'])
+    assert len(tmp_in_channels) == len(tmp_out_channels) == len(refs["pruned_in_channels"])
     for node_name in tmp_in_channels:
-        assert tmp_in_channels[node_name] == refs['pruned_in_channels'][node_name]
-        assert tmp_out_channels[node_name] == refs['pruned_out_channels'][node_name]
+        assert tmp_in_channels[node_name] == refs["pruned_in_channels"][node_name]
+        assert tmp_out_channels[node_name] == refs["pruned_out_channels"][node_name]
 
     output_shapes = collect_output_shapes(graph)
-    weights_flops_calc = WeightsFlopsCalculator(conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                                linear_op_metatypes=LINEAR_LAYER_METATYPES)
+    weights_flops_calc = WeightsFlopsCalculator(
+        conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES, linear_op_metatypes=LINEAR_LAYER_METATYPES
+    )
 
-    cur_flops, cur_params_num = \
-        weights_flops_calc.count_flops_and_weights(
-        graph=graph,
-        output_shapes=output_shapes,
-        input_channels=tmp_in_channels,
-        output_channels=tmp_out_channels)
+    cur_flops, cur_params_num = weights_flops_calc.count_flops_and_weights(
+        graph=graph, output_shapes=output_shapes, input_channels=tmp_in_channels, output_channels=tmp_out_channels
+    )
     assert (cur_flops, cur_params_num) == (ref_flops, ref_params_num)
 
 
-@pytest.mark.parametrize('repeat_seq_of_shared_convs,ref_second_cluster', [(True, [4, 5, 6, 7, 8, 9]),
-                                                                           (False, [4, 5, 6])])
-@pytest.mark.parametrize('additional_last_shared_layers', [True, False])
-def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs,
-                                       ref_second_cluster,
-                                       additional_last_shared_layers):
+@pytest.mark.parametrize(
+    "repeat_seq_of_shared_convs,ref_second_cluster", [(True, [4, 5, 6, 7, 8, 9]), (False, [4, 5, 6])]
+)
+@pytest.mark.parametrize("additional_last_shared_layers", [True, False])
+def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs, ref_second_cluster, additional_last_shared_layers):
     config = get_basic_pruning_config(input_sample_size=[1, 2, 8, 8])
-    config['compression']['algorithm'] = 'filter_pruning'
-    config['compression']['params']['all_weights'] = False
-    config['compression']['params']['prune_first_conv'] = True
-    config['compression']['pruning_init'] = 0.5
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["params"]["all_weights"] = False
+    config["compression"]["params"]["prune_first_conv"] = True
+    config["compression"]["pruning_init"] = 0.5
     model = MultipleForwardModel(repeat_seq_of_shared_convs, additional_last_shared_layers)
     _, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
 
@@ -810,14 +809,14 @@ def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs,
         BigPruningTestModel,
         PruningTestModelConcatBN,
         PruningTestBatchedLinear,
-    )
+    ),
 )
 def test_func_calculation_flops_for_conv(model):
     # Check _calculate_output_shape that used for disconnected graph
     config = get_basic_pruning_config([1, 1, 8, 8])
-    config['compression']['algorithm'] = 'filter_pruning'
-    config['compression']['pruning_init'] = 0.0
-    config['compression']['params']['pruning_flops_target'] = 0.0
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["pruning_init"] = 0.0
+    config["compression"]["params"]["pruning_flops_target"] = 0.0
     model = model()
     pruned_model, compression_controller = create_compressed_model_and_algo_for_test(model, config)
 
@@ -833,10 +832,10 @@ def test_func_calculation_flops_for_conv(model):
 
 def test_disconnected_graph():
     config = get_basic_pruning_config([1, 1, 8, 8])
-    config['compression']['algorithm'] = 'filter_pruning'
-    config['compression']['pruning_init'] = 0.5
-    config['compression']['params']['pruning_target'] = 0.5
-    config['compression']['params']['prune_first_conv'] = True
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["pruning_init"] = 0.5
+    config["compression"]["params"]["pruning_target"] = 0.5
+    config["compression"]["params"]["prune_first_conv"] = True
     model = DisconectedGraphModel()
     pruned_model, compression_controller = create_compressed_model_and_algo_for_test(model, config)
     graph = pruned_model.nncf.get_original_graph()
@@ -852,7 +851,7 @@ def test_disconnected_graph():
     for name, (shape, mask_sum) in nodes_output_mask_map.items():
         node = graph.get_node_by_name(name)
         if mask_sum is None:
-            assert node.data['output_mask'] is None
+            assert node.data["output_mask"] is None
         else:
-            assert sum(node.data['output_mask'].tensor) == mask_sum
+            assert sum(node.data["output_mask"].tensor) == mask_sum
         assert collected_shapes[name] == shape

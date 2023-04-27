@@ -36,11 +36,22 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
     def get_nncf_tensor(self, x: np.array):
         return OVNNCFTensor(x)
 
-    @pytest.fixture(scope='module')
+    @pytest.fixture(scope="module")
     def reducers(self):
-        return {reducer.NAME: reducer for reducer in\
-            [OVNoopReducer, OVMinReducer, OVMaxReducer, OVAbsMaxReducer, OVMeanReducer,
-             OVQuantileReducer, OVAbsQuantileReducer, OVBatchMeanReducer, OVMeanPerChanelReducer]}
+        return {
+            reducer.NAME: reducer
+            for reducer in [
+                OVNoopReducer,
+                OVMinReducer,
+                OVMaxReducer,
+                OVAbsMaxReducer,
+                OVMeanReducer,
+                OVQuantileReducer,
+                OVAbsQuantileReducer,
+                OVBatchMeanReducer,
+                OVMeanPerChanelReducer,
+            ]
+        }
 
     def all_close(self, val, ref) -> bool:
         val_ = np.array(val)

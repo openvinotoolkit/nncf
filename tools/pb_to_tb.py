@@ -1,12 +1,13 @@
-#pylint:skip-file
+# pylint:skip-file
 import shutil
 from pathlib import Path
 
 import tensorflow as tf
 from tensorflow.python.platform import gfile
+
 graph_paths = [
-    '../tests/tensorflow/data/reference_graphs/quantized/symmetric/per_tensor/retinanet_quantize_outputs.old.pb',
-    '../tests/tensorflow/data/reference_graphs/quantized/symmetric/per_tensor/retinanet_quantize_outputs.pb'
+    "../tests/tensorflow/data/reference_graphs/quantized/symmetric/per_tensor/retinanet_quantize_outputs.old.pb",
+    "../tests/tensorflow/data/reference_graphs/quantized/symmetric/per_tensor/retinanet_quantize_outputs.pb",
 ]
 
 graphs = {}
@@ -17,7 +18,7 @@ if tb_log_path.exists():
 for pb_path in graph_paths:
     with tf.compat.v1.Session() as sess:
         model_filename = pb_path
-        with gfile.FastGFile(model_filename, 'rb') as f:
+        with gfile.FastGFile(model_filename, "rb") as f:
             graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
             g_in = tf.import_graph_def(graph_def)

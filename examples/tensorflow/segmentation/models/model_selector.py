@@ -13,15 +13,15 @@
 
 import copy
 
-from examples.tensorflow.segmentation.models.maskrcnn_model import MaskrcnnModel
 from examples.tensorflow.segmentation.models.maskrcnn_config import MASKRCNN_CONFIG
+from examples.tensorflow.segmentation.models.maskrcnn_model import MaskrcnnModel
 
 
 def get_predefined_config(model_name):
-    if model_name == 'MaskRCNN':
+    if model_name == "MaskRCNN":
         predefined_config = MASKRCNN_CONFIG
     else:
-        raise ValueError('Model {} is not supported.'.format(model_name))
+        raise ValueError("Model {} is not supported.".format(model_name))
 
     return copy.deepcopy(predefined_config)
 
@@ -29,9 +29,9 @@ def get_predefined_config(model_name):
 def get_model_builder(config):
     model_name = config.model
 
-    if model_name == 'MaskRCNN':
+    if model_name == "MaskRCNN":
         model_builder = MaskrcnnModel(config)
     else:
-        raise ValueError('Model {} is not supported.'.format(model_name))
+        raise ValueError("Model {} is not supported.".format(model_name))
 
     return model_builder

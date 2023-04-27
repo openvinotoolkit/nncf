@@ -16,12 +16,12 @@ from typing import TypeVar
 import numpy as np
 import torch
 
-GeneralizedTensor = TypeVar('GeneralizedTensor', torch.Tensor, np.ndarray)
+GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
 
 
 class ReferenceBackendType(Enum):
-    NUMPY = 'numpy'
-    TORCH = 'torch'
+    NUMPY = "numpy"
+    TORCH = "torch"
 
 
 class ReferenceBase:
@@ -37,7 +37,7 @@ class ReferenceBase:
 class ReferenceXNORBinarize(ReferenceBase):
     def forward(self, x: GeneralizedTensor) -> GeneralizedTensor:
         norm = self.backend.abs(x).mean((1, 2, 3), keepdims=True)
-        sign = ((x > 0).astype(x.dtype) * 2 - 1)
+        sign = (x > 0).astype(x.dtype) * 2 - 1
         output = sign * norm
         return output
 
@@ -49,7 +49,7 @@ class ReferenceXNORBinarize(ReferenceBase):
 class ReferenceDOREFABinarize(ReferenceBase):
     def forward(self, x: GeneralizedTensor) -> GeneralizedTensor:
         norm = self.backend.abs(x).mean()
-        sign = ((x > 0).astype(x.dtype) * 2 - 1)
+        sign = (x > 0).astype(x.dtype) * 2 - 1
         return sign * norm
 
     @staticmethod
@@ -68,7 +68,6 @@ class ReferenceActivationBinarize(ReferenceBase):
 
     @staticmethod
     def backward(grad_output, x, scale, output):
-
         # calc gradient for input
         mask_lower = (x <= scale).astype(x.dtype)
         grad_input = grad_output * (x >= 0).astype(x.dtype) * mask_lower

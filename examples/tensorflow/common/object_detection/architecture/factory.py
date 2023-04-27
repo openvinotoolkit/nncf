@@ -11,46 +11,49 @@
  limitations under the License.
 """
 
+from examples.tensorflow.common.object_detection.architecture import darknet
 from examples.tensorflow.common.object_detection.architecture import fpn
 from examples.tensorflow.common.object_detection.architecture import heads
 from examples.tensorflow.common.object_detection.architecture import nn_ops
 from examples.tensorflow.common.object_detection.architecture import resnet
-from examples.tensorflow.common.object_detection.architecture import darknet
 
 
 def norm_activation_generator(params):
-    return nn_ops.norm_activation_builder(momentum=params.batch_norm_momentum,
-                                          epsilon=params.batch_norm_epsilon,
-                                          trainable=True,
-                                          activation=params.activation)
+    return nn_ops.norm_activation_builder(
+        momentum=params.batch_norm_momentum,
+        epsilon=params.batch_norm_epsilon,
+        trainable=True,
+        activation=params.activation,
+    )
 
 
 def backbone_generator(params):
     """Generator function for various backbone models."""
     backbone_name = params.model_params.architecture.backbone.name
-    if params.model in ('RetinaNet', 'MaskRCNN'):
-        if backbone_name == 'resnet':
+    if params.model in ("RetinaNet", "MaskRCNN"):
+        if backbone_name == "resnet":
             resnet_params = params.model_params.architecture.backbone.params
-            backbone_fn = resnet.Resnet(resnet_depth=resnet_params.depth,
-                                        activation=params.model_params.norm_activation.activation,
-                                        norm_activation=norm_activation_generator(
-                                          params.model_params.norm_activation))
+            backbone_fn = resnet.Resnet(
+                resnet_depth=resnet_params.depth,
+                activation=params.model_params.norm_activation.activation,
+                norm_activation=norm_activation_generator(params.model_params.norm_activation),
+            )
         else:
-            raise ValueError('Backbone {} is not supported for {} model.'.format(backbone_name, params.model))
-    elif params.model == 'YOLOv4':
-        if backbone_name == 'darknet':
+            raise ValueError("Backbone {} is not supported for {} model.".format(backbone_name, params.model))
+    elif params.model == "YOLOv4":
+        if backbone_name == "darknet":
             backbone_fn = darknet.CSPDarknet53()
         else:
-            raise ValueError('Backbone {} is not supported for {} model.'.format(backbone_name, params.model))
+            raise ValueError("Backbone {} is not supported for {} model.".format(backbone_name, params.model))
     else:
-        raise ValueError('Model {} is not supported.'.format(params.model))
+        raise ValueError("Model {} is not supported.".format(params.model))
 
     return backbone_fn
 
 
 def multilevel_features_generator(params):
     """Generator function for various FPN models."""
-    assert params.model_params.architecture.multilevel_features == 'fpn'
+    assert params.model_params.architecture.multilevel_features == "fpn"
     fpn_params = params.model_params.architecture.fpn_params
     fpn_fn = fpn.Fpn(
         min_level=params.model_params.architecture.min_level,
@@ -59,7 +62,8 @@ def multilevel_features_generator(params):
         use_separable_conv=fpn_params.use_separable_conv,
         activation=params.model_params.norm_activation.activation,
         use_batch_norm=fpn_params.use_batch_norm,
-        norm_activation=norm_activation_generator(params.model_params.norm_activation))
+        norm_activation=norm_activation_generator(params.model_params.norm_activation),
+    )
 
     return fpn_fn
 
@@ -76,7 +80,8 @@ def retinanet_head_generator(params):
         head_params.num_convs,
         head_params.num_filters,
         head_params.use_separable_conv,
-        norm_activation=norm_activation_generator(params.model_params.norm_activation))
+        norm_activation=norm_activation_generator(params.model_params.norm_activation),
+    )
 
 
 def rpn_head_generator(params):
@@ -92,7 +97,8 @@ def rpn_head_generator(params):
         head_params.use_separable_conv,
         params.model_params.norm_activation.activation,
         head_params.use_batch_norm,
-        norm_activation=norm_activation_generator(params.model_params.norm_activation))
+        norm_activation=norm_activation_generator(params.model_params.norm_activation),
+    )
 
 
 def fast_rcnn_head_generator(params):
@@ -107,7 +113,8 @@ def fast_rcnn_head_generator(params):
         head_params.fc_dims,
         params.model_params.norm_activation.activation,
         head_params.use_batch_norm,
-        norm_activation=norm_activation_generator(params.model_params.norm_activation))
+        norm_activation=norm_activation_generator(params.model_params.norm_activation),
+    )
 
 
 def mask_rcnn_head_generator(params):
@@ -121,7 +128,8 @@ def mask_rcnn_head_generator(params):
         head_params.use_separable_conv,
         params.model_params.norm_activation.activation,
         head_params.use_batch_norm,
-        norm_activation=norm_activation_generator(params.model_params.norm_activation))
+        norm_activation=norm_activation_generator(params.model_params.norm_activation),
+    )
 
 
 def yolo_v4_head_generator():

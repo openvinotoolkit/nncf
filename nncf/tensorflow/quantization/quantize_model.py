@@ -26,11 +26,11 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import convert_advanced_parameters_to_dict
-from nncf.scopes import convert_ignored_scope_to_list
 from nncf.scopes import IgnoredScope
+from nncf.scopes import convert_ignored_scope_to_list
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
-DEFAULT_RANGE_TYPE = 'mean_min_max'
+DEFAULT_RANGE_TYPE = "mean_min_max"
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
@@ -46,16 +46,16 @@ class CalibrarionDataLoader(NNCFDataLoader):
 
     @property
     def batch_size(self) -> int:
-        data_source = getattr(self._dataset, '_data_source')
+        data_source = getattr(self._dataset, "_data_source")
 
-        if not hasattr(data_source, '_batch_size'):
+        if not hasattr(data_source, "_batch_size"):
             return 1
-        batch_size = getattr(data_source, '_batch_size')
+        batch_size = getattr(data_source, "_batch_size")
         try:
             if isinstance(batch_size, tf.Tensor):
                 batch_size = batch_size.numpy()
             batch_size = int(batch_size)
-        except: # pylint: disable=W0702
+        except:  # pylint: disable=W0702
             batch_size = 1
         return batch_size
 
@@ -66,8 +66,7 @@ class CalibrarionDataLoader(NNCFDataLoader):
         return iter(DataProvider(self._dataset.get_inference_data(), transform_fn))
 
 
-def _get_default_quantization_config(preset: QuantizationPreset,
-                                     subset_size: int) -> Dict[str, Any]:
+def _get_default_quantization_config(preset: QuantizationPreset, subset_size: int) -> Dict[str, Any]:
     """
     Returns the default quantization config
 
@@ -81,13 +80,13 @@ def _get_default_quantization_config(preset: QuantizationPreset,
     :return: The default quantization config.
     """
     return {
-        'algorithm': 'quantization',
-        'preset': preset.value,
-        'initializer': {
-            'range': {'num_init_samples': subset_size, 'type': DEFAULT_RANGE_TYPE},
-            'batchnorm_adaptation': {'num_bn_adaptation_samples': subset_size}
+        "algorithm": "quantization",
+        "preset": preset.value,
+        "initializer": {
+            "range": {"num_init_samples": subset_size, "type": DEFAULT_RANGE_TYPE},
+            "batchnorm_adaptation": {"num_bn_adaptation_samples": subset_size},
         },
-        'overflow_fix': 'first_layer_only'
+        "overflow_fix": "first_layer_only",
     }
 
 
@@ -96,7 +95,8 @@ def _create_nncf_config(
     target_device: TargetDevice,
     subset_size: int,
     ignored_scope: Optional[IgnoredScope],
-    advanced_parameters: Optional[AdvancedQuantizationParameters]) -> NNCFConfig:
+    advanced_parameters: Optional[AdvancedQuantizationParameters],
+) -> NNCFConfig:
     """
     Creates the NNCFConfig for the quantization algorithm.
 
@@ -120,68 +120,64 @@ def _create_nncf_config(
 
     if ignored_scope is not None:
         _ignored_scope = convert_ignored_scope_to_list(ignored_scope)
-        if 'ignored_scopes' in compression_config:
-            compression_config['ignored_scopes'].extend(_ignored_scope)
+        if "ignored_scopes" in compression_config:
+            compression_config["ignored_scopes"].extend(_ignored_scope)
         else:
-            compression_config['ignored_scopes'] = _ignored_scope
+            compression_config["ignored_scopes"] = _ignored_scope
 
     if advanced_parameters is not None:
         advanced_config = convert_advanced_parameters_to_dict(advanced_parameters)
 
-        ranges = advanced_config.get('initializer', {}).get('range')
+        ranges = advanced_config.get("initializer", {}).get("range")
         if ranges is not None:
             for rconfig in ranges:
-                rconfig['num_init_samples'] = subset_size
-                if 'type' not in rconfig:
-                    rconfig['type'] = DEFAULT_RANGE_TYPE
+                rconfig["num_init_samples"] = subset_size
+                if "type" not in rconfig:
+                    rconfig["type"] = DEFAULT_RANGE_TYPE
 
         compression_config.update(advanced_config)
 
-    return NNCFConfig({
-        'target_device': target_device.value,
-        'compression': compression_config
-    })
+    return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 
 
-def quantize_impl(model: tf.Module,
-                  calibration_dataset: Dataset,
-                  preset: QuantizationPreset,
-                  target_device: TargetDevice,
-                  subset_size: int,
-                  fast_bias_correction: bool,
-                  model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None,
-                  advanced_parameters: Optional[AdvancedQuantizationParameters] = None) -> tf.Module:
+def quantize_impl(
+    model: tf.Module,
+    calibration_dataset: Dataset,
+    preset: QuantizationPreset,
+    target_device: TargetDevice,
+    subset_size: int,
+    fast_bias_correction: bool,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+) -> tf.Module:
     """
     Implementation of the `quantize()` method for the TensorFlow backend.
     """
     if model_type is not None:
-        raise ValueError(f'model_type={model_type} is not supported')
+        raise ValueError(f"model_type={model_type} is not supported")
     if fast_bias_correction is False:
-        raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
-                          'supported')
+        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not " "supported")
     if ignored_scope is not None and ignored_scope.types is not None:
-        raise RuntimeError('Quantization algorithm form the TensorFlow backend '
-                            'does not support operation types in the ignored '
-                            'scopes yet')
+        raise RuntimeError(
+            "Quantization algorithm form the TensorFlow backend "
+            "does not support operation types in the ignored "
+            "scopes yet"
+        )
     if target_device == TargetDevice.CPU_SPR:
-        raise RuntimeError('target_device == CPU_SPR is not supported.')
+        raise RuntimeError("target_device == CPU_SPR is not supported.")
 
-    nncf_config = _create_nncf_config(
-        preset, target_device, subset_size, ignored_scope, advanced_parameters)
+    nncf_config = _create_nncf_config(preset, target_device, subset_size, ignored_scope, advanced_parameters)
 
     calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(
         [
             QuantizationRangeInitArgs(data_loader=calibration_data_loader),
-            BNAdaptationInitArgs(data_loader=calibration_data_loader)
+            BNAdaptationInitArgs(data_loader=calibration_data_loader),
         ]
     )
 
-    compression_ctrl, compressed_model = create_compressed_model(
-        model=model,
-        config=nncf_config
-    )
+    compression_ctrl, compressed_model = create_compressed_model(model=model, config=nncf_config)
     stripped_model = compression_ctrl.strip_model(compressed_model)
 
     return stripped_model

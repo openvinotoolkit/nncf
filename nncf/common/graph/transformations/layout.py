@@ -44,7 +44,7 @@ class TransformationLayout:
         """
         self.transformations.append(transformation)
 
-    def update(self, other: 'TransformationLayout') -> None:
+    def update(self, other: "TransformationLayout") -> None:
         """
         D.update(other), updates D from other.
 

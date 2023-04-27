@@ -11,9 +11,10 @@
  limitations under the License.
 """
 
+from copy import deepcopy
+
 import pytest
 import torch
-from copy import deepcopy
 from pytest import approx
 
 from nncf.api.compression import CompressionStage
@@ -21,18 +22,22 @@ from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.magnitude.algo import MagnitudeSparsityController
 from nncf.torch.sparsity.magnitude.functions import normed_magnitude
-from tests.torch.sparsity.const.test_algo import ref_mask_2, ref_mask_1
-from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel, get_basic_magnitude_sparsity_config
-from tests.torch.helpers import create_compressed_model_and_algo_for_test, MockModel, BasicConvTestModel, \
-    get_empty_config, check_correct_nncf_modules_replacement
+from tests.torch.helpers import BasicConvTestModel
+from tests.torch.helpers import MockModel
 from tests.torch.helpers import PTTensorListComparator
+from tests.torch.helpers import check_correct_nncf_modules_replacement
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.helpers import get_empty_config
+from tests.torch.sparsity.const.test_algo import ref_mask_1
+from tests.torch.sparsity.const.test_algo import ref_mask_2
+from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
+from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
 
 def test_can_create_magnitude_sparse_algo__with_defaults():
     model = MagnitudeTestModel()
     config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = \
-        {'schedule': 'multistep'}
+    config["compression"]["params"] = {"schedule": "multistep"}
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(deepcopy(model), config)
 
     assert isinstance(compression_ctrl, MagnitudeSparsityController)
@@ -61,19 +66,18 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
 
 
 @pytest.mark.parametrize(
-    ('weight_importance', 'sparsity_level', 'threshold'),
+    ("weight_importance", "sparsity_level", "threshold"),
     (
-        ('normed_abs', None, 0.219),
-        ('abs', None, 9),
-        ('normed_abs', 0.5, 0.243),
-        ('abs', 0.5, 10),
-    )
+        ("normed_abs", None, 0.219),
+        ("abs", None, 9),
+        ("normed_abs", 0.5, 0.243),
+        ("abs", 0.5, 10),
+    ),
 )
 def test_magnitude_sparse_algo_sets_threshold(weight_importance, sparsity_level, threshold):
     model = MagnitudeTestModel()
     config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = {'schedule': 'multistep',
-                                       'weight_importance': weight_importance}
+    config["compression"]["params"] = {"schedule": "multistep", "weight_importance": weight_importance}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if sparsity_level:
         compression_ctrl.set_sparsity_level(sparsity_level)
@@ -93,45 +97,48 @@ def test_can_not_set_sparsity_more_than_one_for_magnitude_sparse_algo():
 
 def test_can_not_create_magnitude_algo__without_steps():
     config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = {'schedule': 'multistep', 'multistep_sparsity_levels': [0.1]}
+    config["compression"]["params"] = {"schedule": "multistep", "multistep_sparsity_levels": [0.1]}
     with pytest.raises(ValueError):
         _, _ = create_compressed_model_and_algo_for_test(MockModel(), config)
 
 
 def test_can_create_magnitude_algo__without_levels():
     config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = {'schedule': 'multistep', 'multistep_steps': [1]}
+    config["compression"]["params"] = {"schedule": "multistep", "multistep_steps": [1]}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
     assert compression_ctrl.scheduler.current_sparsity_level == approx(0.1)
 
 
 def test_can_not_create_magnitude_algo__with_not_matched_steps_and_levels():
     config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = {'schedule': 'multistep', 'multistep_sparsity_levels': [0.1],
-                                       'multistep_steps': [1, 2]}
+    config["compression"]["params"] = {
+        "schedule": "multistep",
+        "multistep_sparsity_levels": [0.1],
+        "multistep_steps": [1, 2],
+    }
     with pytest.raises(ValueError):
         _, _ = create_compressed_model_and_algo_for_test(MockModel(), config)
 
 
 def test_magnitude_algo_set_binary_mask_on_forward():
     config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = {'weight_importance': 'abs'}
+    config["compression"]["params"] = {"weight_importance": "abs"}
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
     compression_ctrl.set_sparsity_level(0.3)
     with torch.no_grad():
         sparse_model(torch.ones([1, 1, 10, 10]))
 
-    op = sparse_model.conv1.pre_ops['0']
+    op = sparse_model.conv1.pre_ops["0"]
     PTTensorListComparator.check_equal(ref_mask_1, op.operand.binary_mask)
 
-    op = sparse_model.conv2.pre_ops['0']
+    op = sparse_model.conv2.pre_ops["0"]
     PTTensorListComparator.check_equal(ref_mask_2, op.operand.binary_mask)
 
 
 def test_magnitude_algo_binary_masks_are_applied():
     model = BasicConvTestModel()
     config = get_empty_config()
-    config['compression'] = {'algorithm': "magnitude_sparsity"}
+    config["compression"] = {"algorithm": "magnitude_sparsity"}
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     minfo_list = compression_ctrl.sparsified_module_info  # type: List[SparseModuleInfo]
     minfo = minfo_list[0]  # type: SparseModuleInfo
@@ -144,7 +151,7 @@ def test_magnitude_algo_binary_masks_are_applied():
 
     minfo.operand.binary_mask[0][0][0][1] = 0
     minfo.operand.binary_mask[1][0][1][0] = 0
-    ref_output_2 = - 3 * torch.ones_like(ref_output_1)
+    ref_output_2 = -3 * torch.ones_like(ref_output_1)
     output_2 = compressed_model(input_)
     assert torch.all(torch.eq(output_2, ref_output_2))
 
@@ -156,39 +163,44 @@ def test_magnitude_algo_binary_masks_are_applied():
 
 
 def test_magnitude_algo_set_independently_sparsity_level_for_one_module():
-    module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]/conv2d_0'
-    module_name_conv2 = 'MagnitudeTestModel/NNCFConv2d[conv2]/conv2d_0'
+    module_name_conv1 = "MagnitudeTestModel/NNCFConv2d[conv1]/conv2d_0"
+    module_name_conv2 = "MagnitudeTestModel/NNCFConv2d[conv2]/conv2d_0"
     config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = {"sparsity_level_setting_mode": 'local'}
+    config["compression"]["params"] = {"sparsity_level_setting_mode": "local"}
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
-    sparse_info_conv1 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_node_name == module_name_conv1]
-    sparse_info_conv2 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_node_name == module_name_conv2]
+    sparse_info_conv1 = [
+        sparse_info
+        for sparse_info in compression_ctrl.sparsified_module_info
+        if sparse_info.module_node_name == module_name_conv1
+    ]
+    sparse_info_conv2 = [
+        sparse_info
+        for sparse_info in compression_ctrl.sparsified_module_info
+        if sparse_info.module_node_name == module_name_conv2
+    ]
 
     compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
 
     weights_conv1 = sparse_model.conv1.weight
     weights_conv2 = sparse_model.conv2.weight
-    count_nonzero_conv1 = sparse_model.conv1.pre_ops['0'].operand.apply_binary_mask(weights_conv1).nonzero().size(0)
+    count_nonzero_conv1 = sparse_model.conv1.pre_ops["0"].operand.apply_binary_mask(weights_conv1).nonzero().size(0)
     count_param_conv1 = weights_conv1.view(-1).size(0)
 
-    assert count_param_conv1 - count_nonzero_conv1 == 4 # 8 * 0.5
+    assert count_param_conv1 - count_nonzero_conv1 == 4  # 8 * 0.5
 
     compression_ctrl.set_sparsity_level(0.3, sparse_info_conv2[0])
 
-    count_nonzero_conv1 = sparse_model.conv1.pre_ops['0'].operand.apply_binary_mask(weights_conv1).nonzero().size(0)
+    count_nonzero_conv1 = sparse_model.conv1.pre_ops["0"].operand.apply_binary_mask(weights_conv1).nonzero().size(0)
     count_param_conv1 = weights_conv1.view(-1).size(0)
 
-    count_nonzero_conv2 = sparse_model.conv2.pre_ops['0'].operand.apply_binary_mask(weights_conv2).nonzero().size(0)
+    count_nonzero_conv2 = sparse_model.conv2.pre_ops["0"].operand.apply_binary_mask(weights_conv2).nonzero().size(0)
     count_param_conv2 = weights_conv2.view(-1).size(0)
 
-    assert count_param_conv1 - count_nonzero_conv1 == 4 # 8 * 0.5
-    assert count_param_conv2 - count_nonzero_conv2 == 6 # ~ 18 * 0.3
+    assert count_param_conv1 - count_nonzero_conv1 == 4  # 8 * 0.5
+    assert count_param_conv2 - count_nonzero_conv2 == 6  # ~ 18 * 0.3
 
 
 def test_can_do_sparsity_freeze_epoch():
-
     def compare_binary_mask(ref_sparse_module_info, sparse_module_info):
         for ref_sparse_layer, sparse_layer in zip(ref_sparse_module_info, sparse_module_info):
             if (ref_sparse_layer.operand.binary_mask != sparse_layer.operand.binary_mask).view(-1).sum() != 0:
@@ -197,29 +209,30 @@ def test_can_do_sparsity_freeze_epoch():
 
     model = BasicConvTestModel()
     config = get_empty_config()
-    config['compression'] = {"algorithm": "magnitude_sparsity",
-                             "sparsity_init": 0.1,
-                             "params": {"sparsity_target": 0.9,
-                                        "sparsity_target_epoch": 3,
-                                        "sparsity_freeze_epoch": 3}}
+    config["compression"] = {
+        "algorithm": "magnitude_sparsity",
+        "sparsity_init": 0.1,
+        "params": {"sparsity_target": 0.9, "sparsity_target_epoch": 3, "sparsity_freeze_epoch": 3},
+    }
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     sparsified_minfo_before_update = deepcopy(compression_ctrl.sparsified_module_info)
-    compression_ctrl.scheduler.epoch_step() # update binary_masks
-    compression_ctrl.scheduler.epoch_step() # update binary_masks
-    compression_ctrl.scheduler.epoch_step() # update binary_masks, freeze binary_masks
+    compression_ctrl.scheduler.epoch_step()  # update binary_masks
+    compression_ctrl.scheduler.epoch_step()  # update binary_masks
+    compression_ctrl.scheduler.epoch_step()  # update binary_masks, freeze binary_masks
     sparsified_minfo_after_update = deepcopy(compression_ctrl.sparsified_module_info)
 
     assert not compare_binary_mask(sparsified_minfo_after_update, sparsified_minfo_before_update)
 
-    compression_ctrl.scheduler.epoch_step() # don't update binary_masks
+    compression_ctrl.scheduler.epoch_step()  # don't update binary_masks
     sparsified_minfo_after_freeze = deepcopy(compression_ctrl.sparsified_module_info)
 
     assert compare_binary_mask(sparsified_minfo_after_update, sparsified_minfo_after_freeze)
 
+
 def test_can_freeze_binary_masks():
     model = BasicConvTestModel()
     config = get_empty_config()
-    config['compression'] = {'algorithm': "magnitude_sparsity"}
+    config["compression"] = {"algorithm": "magnitude_sparsity"}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     for sparse_layer in compression_ctrl.sparsified_module_info:
@@ -233,21 +246,27 @@ def test_can_freeze_binary_masks():
 
 def test_create_magnitude_algo_with_local_sparsity_mode():
     config = get_empty_config()
-    config['compression'] = {'algorithm': "magnitude_sparsity", "params": {"sparsity_level_setting_mode": 'local'}}
+    config["compression"] = {"algorithm": "magnitude_sparsity", "params": {"sparsity_level_setting_mode": "local"}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
     assert compression_ctrl.compression_stage() == CompressionStage.FULLY_COMPRESSED
 
 
 def test_magnitude_algo_can_calculate_correct_stats_for_local_mode():
-    module_node_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]/conv2d_0'
-    module_node_name_conv2 = 'MagnitudeTestModel/NNCFConv2d[conv2]/conv2d_0'
+    module_node_name_conv1 = "MagnitudeTestModel/NNCFConv2d[conv1]/conv2d_0"
+    module_node_name_conv2 = "MagnitudeTestModel/NNCFConv2d[conv2]/conv2d_0"
     config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = {"sparsity_level_setting_mode": 'local'}
+    config["compression"]["params"] = {"sparsity_level_setting_mode": "local"}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
-    sparse_info_conv1 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_node_name == module_node_name_conv1]
-    sparse_info_conv2 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_node_name == module_node_name_conv2]
+    sparse_info_conv1 = [
+        sparse_info
+        for sparse_info in compression_ctrl.sparsified_module_info
+        if sparse_info.module_node_name == module_node_name_conv1
+    ]
+    sparse_info_conv2 = [
+        sparse_info
+        for sparse_info in compression_ctrl.sparsified_module_info
+        if sparse_info.module_node_name == module_node_name_conv2
+    ]
 
     compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
 
@@ -262,20 +281,21 @@ def test_magnitude_algo_can_calculate_correct_stats_for_local_mode():
 
 
 def test_magnitude_algo_can_calculate_sparsity_rate_for_one_sparsified_module():
-    module_node_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]/conv2d_0'
+    module_node_name_conv1 = "MagnitudeTestModel/NNCFConv2d[conv1]/conv2d_0"
     config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = {"sparsity_level_setting_mode": 'local'}
+    config["compression"]["params"] = {"sparsity_level_setting_mode": "local"}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
-    sparse_info_conv1 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_node_name == module_node_name_conv1]
+    sparse_info_conv1 = [
+        sparse_info
+        for sparse_info in compression_ctrl.sparsified_module_info
+        if sparse_info.module_node_name == module_node_name_conv1
+    ]
 
     compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
 
     nncf_stats = compression_ctrl.statistics()
     sparse_model_stats = nncf_stats.magnitude_sparsity.model_statistics
-    module_name_to_sparsity_level_map = {
-        s.name: s.sparsity_level for s in sparse_model_stats.sparsified_layers_summary
-    }
+    module_name_to_sparsity_level_map = {s.name: s.sparsity_level for s in sparse_model_stats.sparsified_layers_summary}
 
     module_name = sparse_info_conv1[0].module_node_name
     assert pytest.approx(module_name_to_sparsity_level_map[module_name], 1e-2) == 0.5

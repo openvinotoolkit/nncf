@@ -14,6 +14,7 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 
+
 # pylint: disable=W1514
 @contextmanager
 def safe_open(file: Path, *args, **kwargs):
@@ -27,7 +28,7 @@ def safe_open(file: Path, *args, **kwargs):
     :return: A file object.
     """
     if file.is_symlink():
-        raise RuntimeError('File {} is a symbolic link, aborting.'.format(str(file)))
+        raise RuntimeError("File {} is a symbolic link, aborting.".format(str(file)))
     with open(str(file), *args, **kwargs) as f:
         yield f
 

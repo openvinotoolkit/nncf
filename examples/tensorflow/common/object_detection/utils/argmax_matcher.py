@@ -36,11 +36,13 @@ class ArgMaxMatcher(matcher.Matcher):
     For ignored matches this class sets the values in the Match object to -2.
     """
 
-    def __init__(self,
-                matched_threshold,
-                unmatched_threshold=None,
-                negatives_lower_than_unmatched=True,
-                force_match_for_each_row=False):
+    def __init__(
+        self,
+        matched_threshold,
+        unmatched_threshold=None,
+        negatives_lower_than_unmatched=True,
+        force_match_for_each_row=False,
+    ):
         """Construct ArgMaxMatcher.
 
         Args:
@@ -65,24 +67,23 @@ class ArgMaxMatcher(matcher.Matcher):
             or if unmatched_threshold > matched_threshold.
         """
         if (matched_threshold is None) and (unmatched_threshold is not None):
-            raise ValueError('Need to also define matched_threshold when'
-                            'unmatched_threshold is defined')
+            raise ValueError("Need to also define matched_threshold when" "unmatched_threshold is defined")
 
         self._matched_threshold = matched_threshold
         if unmatched_threshold is None:
             self._unmatched_threshold = matched_threshold
         else:
             if unmatched_threshold > matched_threshold:
-                raise ValueError('unmatched_threshold needs to be smaller or equal'
-                                'to matched_threshold')
+                raise ValueError("unmatched_threshold needs to be smaller or equal" "to matched_threshold")
             self._unmatched_threshold = unmatched_threshold
 
         if not negatives_lower_than_unmatched:
             if self._unmatched_threshold == self._matched_threshold:
-                raise ValueError('When negatives are in between matched and '
-                                'unmatched thresholds, these cannot be of equal '
-                                'value. matched: {}, unmatched: {}'.format(
-                                 self._matched_threshold, self._unmatched_threshold))
+                raise ValueError(
+                    "When negatives are in between matched and "
+                    "unmatched thresholds, these cannot be of equal "
+                    "value. matched: {}, unmatched: {}".format(self._matched_threshold, self._unmatched_threshold)
+                )
 
         self._force_match_for_each_row = force_match_for_each_row
         self._negatives_lower_than_unmatched = negatives_lower_than_unmatched
@@ -107,8 +108,7 @@ class ArgMaxMatcher(matcher.Matcher):
             Returns:
               matches:  int32 tensor indicating the row each column matches to.
             """
-            similarity_matrix_shape = shape_utils.combined_static_and_dynamic_shape(
-              similarity_matrix)
+            similarity_matrix_shape = shape_utils.combined_static_and_dynamic_shape(similarity_matrix)
             return -1 * tf.ones([similarity_matrix_shape[1]], dtype=tf.int32)
 
         def _match_when_rows_are_non_empty():
@@ -124,42 +124,30 @@ class ArgMaxMatcher(matcher.Matcher):
             if self._matched_threshold is not None:
                 # Get logical indices of ignored and unmatched columns as tf.int64
                 matched_vals = tf.reduce_max(input_tensor=similarity_matrix, axis=0)
-                below_unmatched_threshold = tf.greater(self._unmatched_threshold,
-                                                      matched_vals)
+                below_unmatched_threshold = tf.greater(self._unmatched_threshold, matched_vals)
                 between_thresholds = tf.logical_and(
                     tf.greater_equal(matched_vals, self._unmatched_threshold),
-                    tf.greater(self._matched_threshold, matched_vals))
+                    tf.greater(self._matched_threshold, matched_vals),
+                )
 
                 if self._negatives_lower_than_unmatched:
-                    matches = self._set_values_using_indicator(matches,
-                                                              below_unmatched_threshold,
-                                                              -1)
-                    matches = self._set_values_using_indicator(matches,
-                                                              between_thresholds,
-                                                              -2)
+                    matches = self._set_values_using_indicator(matches, below_unmatched_threshold, -1)
+                    matches = self._set_values_using_indicator(matches, between_thresholds, -2)
                 else:
-                    matches = self._set_values_using_indicator(matches,
-                                                              below_unmatched_threshold,
-                                                              -2)
-                    matches = self._set_values_using_indicator(matches,
-                                                              between_thresholds,
-                                                              -1)
+                    matches = self._set_values_using_indicator(matches, below_unmatched_threshold, -2)
+                    matches = self._set_values_using_indicator(matches, between_thresholds, -1)
 
             if self._force_match_for_each_row:
-                similarity_matrix_shape = shape_utils.combined_static_and_dynamic_shape(
-                    similarity_matrix)
-                force_match_column_ids = tf.argmax(
-                    input=similarity_matrix, axis=1, output_type=tf.int32)
+                similarity_matrix_shape = shape_utils.combined_static_and_dynamic_shape(similarity_matrix)
+                force_match_column_ids = tf.argmax(input=similarity_matrix, axis=1, output_type=tf.int32)
                 force_match_column_indicators = tf.one_hot(
-                    force_match_column_ids, similarity_matrix_shape[1], on_value=None,
-                    off_value=None)
-                force_match_row_ids = tf.argmax(
-                    input=force_match_column_indicators, axis=0, output_type=tf.int32)
+                    force_match_column_ids, similarity_matrix_shape[1], on_value=None, off_value=None
+                )
+                force_match_row_ids = tf.argmax(input=force_match_column_indicators, axis=0, output_type=tf.int32)
                 force_match_column_mask = tf.cast(
-                    tf.reduce_max(input_tensor=force_match_column_indicators, axis=0),
-                    tf.bool)
-                final_matches = tf.where(force_match_column_mask, force_match_row_ids,
-                                        matches)
+                    tf.reduce_max(input_tensor=force_match_column_indicators, axis=0), tf.bool
+                )
+                final_matches = tf.where(force_match_column_mask, force_match_row_ids, matches)
                 return final_matches
             return matches
 
@@ -168,9 +156,11 @@ class ArgMaxMatcher(matcher.Matcher):
                 return _match_when_rows_are_empty()
             return _match_when_rows_are_non_empty()
 
-        return tf.cond(pred=tf.greater(tf.shape(input=similarity_matrix)[0], 0),
-                       true_fn=_match_when_rows_are_non_empty,
-                       false_fn=_match_when_rows_are_empty)
+        return tf.cond(
+            pred=tf.greater(tf.shape(input=similarity_matrix)[0], 0),
+            true_fn=_match_when_rows_are_non_empty,
+            false_fn=_match_when_rows_are_empty,
+        )
 
     def _set_values_using_indicator(self, x, indicator, val):
         """Set the indicated fields of x to val.

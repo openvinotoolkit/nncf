@@ -11,25 +11,17 @@
  limitations under the License.
 """
 
-from packaging import version
 import tensorflow as tf
+from packaging import version
 
-from examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
 from examples.tensorflow.classification.datasets import tfrecords as records_dataset
-from examples.tensorflow.classification.datasets.preprocessing_selector import get_preprocessing
 from examples.tensorflow.classification.datasets.preprocessing_selector import get_label_preprocessing_fn
+from examples.tensorflow.classification.datasets.preprocessing_selector import get_preprocessing
+from examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
 
-DATASET_SPLITS = {
-    'imagenet2012': ('train', 'validation'),
-    'cifar10': ('train', 'test'),
-    'cifar100': ('train', 'test')
-}
+DATASET_SPLITS = {"imagenet2012": ("train", "validation"), "cifar10": ("train", "test"), "cifar100": ("train", "test")}
 
-DATASET_NUM_CLASSES = {
-    'imagenet2012': 1000,
-    'cifar10': 10,
-    'cifar100': 100
-}
+DATASET_NUM_CLASSES = {"imagenet2012": 1000, "cifar10": 10, "cifar100": 100}
 
 
 class DatasetBuilder(BaseDatasetBuilder):
@@ -37,55 +29,53 @@ class DatasetBuilder(BaseDatasetBuilder):
         super().__init__(config, is_train, num_devices)
 
         # Dataset params
-        self._dataset_name = config.get('dataset', 'imagenet2012')
+        self._dataset_name = config.get("dataset", "imagenet2012")
         self._as_supervised = True
 
         # Preprocessing params
-        self._dtype = config.get('dtype', 'float32')
-        self._num_preprocess_workers = config.get('workers', tf.data.experimental.AUTOTUNE)
+        self._dtype = config.get("dtype", "float32")
+        self._num_preprocess_workers = config.get("workers", tf.data.experimental.AUTOTUNE)
 
-        train_split, test_split = DATASET_SPLITS.get(self._dataset_name, ('train', 'validation'))
+        train_split, test_split = DATASET_SPLITS.get(self._dataset_name, ("train", "validation"))
         self._split = train_split if is_train else test_split
         self._image_size = image_size
-        self._num_classes = self._config.get('num_classes',
-                                             DATASET_NUM_CLASSES.get(self._dataset_name))
+        self._num_classes = self._config.get("num_classes", DATASET_NUM_CLASSES.get(self._dataset_name))
         self._one_hot = one_hot
         self._cache = False
-        self._shuffle_train = config.get('seed') is None
+        self._shuffle_train = config.get("seed") is None
         self._shuffle_buffer_size = 10000
         self._deterministic_train = False
         self._use_slack = True
 
-        self._preprocessing_fn = get_preprocessing(self._dataset_name,
-                                                   self._config.model,
-                                                   self._config.get('dataset_preprocessing_preset'))
-        self._label_preprocessing_fn = \
-            get_label_preprocessing_fn(self._dataset_name,
-                                       self._num_classes,
-                                       DATASET_NUM_CLASSES.get(self._dataset_name))
+        self._preprocessing_fn = get_preprocessing(
+            self._dataset_name, self._config.model, self._config.get("dataset_preprocessing_preset")
+        )
+        self._label_preprocessing_fn = get_label_preprocessing_fn(
+            self._dataset_name, self._num_classes, DATASET_NUM_CLASSES.get(self._dataset_name)
+        )
 
         self._tfrecord_datasets = records_dataset.__dict__
 
     @property
     def dtype(self):
         dtype_map = {
-            'float32': tf.float32,
-            'bfloat16': tf.bfloat16,
-            'float16': tf.float16,
-            'fp32': tf.float32,
-            'bf16': tf.bfloat16,
+            "float32": tf.float32,
+            "bfloat16": tf.bfloat16,
+            "float16": tf.float16,
+            "fp32": tf.float32,
+            "bf16": tf.bfloat16,
         }
         dtype = dtype_map.get(self._dtype, None)
         if dtype is None:
-            raise ValueError('Invalid DType provided. Supported types: {}'.format(dtype_map.keys()))
+            raise ValueError("Invalid DType provided. Supported types: {}".format(dtype_map.keys()))
 
         return dtype
 
     @property
     def num_examples(self):
-        if self._dataset_type == 'tfds':
+        if self._dataset_type == "tfds":
             return self._dataset_loader.info.splits[self._split].num_examples
-        if self._dataset_type == 'tfrecords':
+        if self._dataset_type == "tfrecords":
             return self._dataset_loader.num_examples
         return None
 
@@ -94,9 +84,9 @@ class DatasetBuilder(BaseDatasetBuilder):
         return self._num_classes
 
     def _get_loader_num_classes(self):
-        if self._dataset_type == 'tfds':
-            return self._dataset_loader.info.features['label'].num_classes
-        if self._dataset_type == 'tfrecords':
+        if self._dataset_type == "tfds":
+            return self._dataset_loader.info.features["label"].num_classes
+        if self._dataset_type == "tfrecords":
             return self._dataset_loader.num_classes
         return None
 
@@ -104,7 +94,7 @@ class DatasetBuilder(BaseDatasetBuilder):
         if self.is_train and not self._cache:
             dataset = dataset.repeat()
 
-        if self._dataset_type == 'tfrecords':
+        if self._dataset_type == "tfrecords":
             dataset = dataset.prefetch(self.global_batch_size)
 
         if self._cache:
@@ -115,13 +105,12 @@ class DatasetBuilder(BaseDatasetBuilder):
                 dataset = dataset.shuffle(self._shuffle_buffer_size)
             dataset = dataset.repeat()
 
-        if self._dataset_type == 'tfrecords':
+        if self._dataset_type == "tfrecords":
             preprocess = lambda record: self._preprocess(*(self._dataset_loader.decoder(record)))
         else:
             preprocess = self._preprocess
 
-        dataset = dataset.map(preprocess,
-                              num_parallel_calls=self._num_preprocess_workers)
+        dataset = dataset.map(preprocess, num_parallel_calls=self._num_preprocess_workers)
 
         dataset = dataset.batch(self.global_batch_size, drop_remainder=self.is_train)
 
@@ -131,7 +120,7 @@ class DatasetBuilder(BaseDatasetBuilder):
             options.experimental_slack = self._use_slack
             options.experimental_optimization.parallel_batch = True
             options.experimental_optimization.map_fusion = True
-            if version.parse(tf.__version__) < version.parse('2.6'):
+            if version.parse(tf.__version__) < version.parse("2.6"):
                 options.experimental_optimization.map_vectorization.enabled = True
             options.experimental_optimization.map_parallelization = True
             dataset = dataset.with_options(options)
@@ -141,11 +130,7 @@ class DatasetBuilder(BaseDatasetBuilder):
         return dataset
 
     def _preprocess(self, image: tf.Tensor, label: tf.Tensor):
-        image = self._preprocessing_fn(
-            image,
-            image_size=self._image_size,
-            is_training=self.is_train,
-            dtype=self.dtype)
+        image = self._preprocessing_fn(image, image_size=self._image_size, is_training=self.is_train, dtype=self.dtype)
 
         label = self._label_preprocessing_fn(label)
         label = tf.cast(label, tf.int32)

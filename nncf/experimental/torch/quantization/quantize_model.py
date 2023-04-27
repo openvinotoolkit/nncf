@@ -43,6 +43,7 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
     :param dataset: Dataset for model tracing
     :return: NNCFNetwork instance for the input model
     """
+
     def wrap_inputs(args):
         return wrap_nncf_model_inputs_with_objwalk(args, {})
 
@@ -71,8 +72,8 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
 
     with training_mode_switcher(model, is_training=False):
         nncf_network = NNCFNetwork(
-            model, dummy_forward_fn=dummy_forward_fn, wrap_inputs_fn=wrap_inputs,
-            wrap_outputs_fn=wrap_outputs)
+            model, dummy_forward_fn=dummy_forward_fn, wrap_inputs_fn=wrap_inputs, wrap_outputs_fn=wrap_outputs
+        )
 
         nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
 
@@ -80,30 +81,30 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
 
 
 def quantize_impl(
-        model: torch.nn.Module,
-        calibration_dataset: Dataset,
-        preset: QuantizationPreset,
-        target_device: TargetDevice,
-        subset_size: int,
-        fast_bias_correction: bool,
-        model_type: Optional[ModelType] = None,
-        ignored_scope: Optional[IgnoredScope] = None,
-        advanced_parameters: Optional[AdvancedQuantizationParameters] = None
-        ) -> torch.nn.Module:
+    model: torch.nn.Module,
+    calibration_dataset: Dataset,
+    preset: QuantizationPreset,
+    target_device: TargetDevice,
+    subset_size: int,
+    fast_bias_correction: bool,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+) -> torch.nn.Module:
     """
     Experimental implementation of the `quantize()` method for the PyTorch backend.
     """
     if fast_bias_correction is False:
-        raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
-                          'supported')
+        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not " "supported")
     if target_device == TargetDevice.CPU_SPR:
-        raise RuntimeError('target_device == CPU_SPR is not supported')
+        raise RuntimeError("target_device == CPU_SPR is not supported")
 
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
     if not advanced_parameters.disable_bias_correction:
-        nncf_logger.warning('Bias correction and fast bias correction algorithms'
-                            ' are not supported by Torch backend yet.')
+        nncf_logger.warning(
+            "Bias correction and fast bias correction algorithms" " are not supported by Torch backend yet."
+        )
         advanced_parameters.disable_bias_correction = True
 
     nncf_network = create_nncf_network(model.eval(), calibration_dataset)
@@ -115,7 +116,7 @@ def quantize_impl(
         fast_bias_correction=fast_bias_correction,
         model_type=model_type,
         ignored_scope=ignored_scope,
-        advanced_parameters=advanced_parameters
+        advanced_parameters=advanced_parameters,
     )
 
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=calibration_dataset)

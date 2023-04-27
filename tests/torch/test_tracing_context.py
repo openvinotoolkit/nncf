@@ -18,10 +18,12 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 
 
-@pytest.mark.skipif(parse_version(torch.__version__) < parse_version("1.11"),
-                    reason="__getitem__ works unexpectedly for TracedTensor until fix in torch 1.11.\n"
-                           "Fix in pytorch: https://github.com/pytorch/pytorch/pull/67202\n"
-                           "Related ticket: 82065")
+@pytest.mark.skipif(
+    parse_version(torch.__version__) < parse_version("1.11"),
+    reason="__getitem__ works unexpectedly for TracedTensor until fix in torch 1.11.\n"
+    "Fix in pytorch: https://github.com/pytorch/pytorch/pull/67202\n"
+    "Related ticket: 82065",
+)
 def test_torch_tensor_getitem_behavior(mocker):
     x = torch.ones((10, 4, 4, 4))
     indexes = torch.LongTensor([0, 1, 2])
@@ -73,7 +75,7 @@ def test_scope_and_call_counters_are_reset_on_exceptions():
             model(torch.ones([1]))
     assert not ctx.module_call_stack
     assert not ctx.relative_scopes_stack
-    #pylint:disable=protected-access
+    # pylint:disable=protected-access
     assert not ctx._threading.thread_local.operator_counters
 
 

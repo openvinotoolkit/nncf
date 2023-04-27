@@ -12,12 +12,7 @@
 """
 from pathlib import Path
 from shutil import copyfile
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
 
 import torch
 
@@ -28,18 +23,19 @@ from nncf.common.logging import nncf_logger
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingController
-from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import \
-    create_compressed_model_from_algo_names
+from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import (
+    create_compressed_model_from_algo_names,
+)
 from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_main_process
 
-TModel = TypeVar('TModel')
-OptimizerType = TypeVar('OptimizerType')
-LRSchedulerType = TypeVar('LRSchedulerType')
-TensorboardWriterType = TypeVar('TensorboardWriterType')
-DataLoaderType = TypeVar('DataLoaderType')
+TModel = TypeVar("TModel")
+OptimizerType = TypeVar("OptimizerType")
+LRSchedulerType = TypeVar("LRSchedulerType")
+TensorboardWriterType = TypeVar("TensorboardWriterType")
+DataLoaderType = TypeVar("DataLoaderType")
 TrainEpochFnType = Callable[
     [
         DataLoaderType,
@@ -47,26 +43,21 @@ TrainEpochFnType = Callable[
         CompressionAlgorithmController,
         int,
         OptimizerType,
-    ], None
-]
-ValFnType = Callable[
-    [
-        TModel,
-        DataLoaderType
     ],
-    Tuple[float, float, float]
+    None,
 ]
+ValFnType = Callable[[TModel, DataLoaderType], Tuple[float, float, float]]
 
 
 class EBTrainAlgoStateNames:
-    MODEL_STATE = 'model_state'
-    EPOCH = 'epoch'
-    SUPERNET_ACC1 = 'acc1'
-    SUPERNET_BEST_ACC1 = 'best_acc1'
-    MIN_SUBNET_ACC1 = 'min_subnet_acc1'
-    MIN_SUBNET_BEST_ACC1 = 'min_subnet_best_acc1'
-    OPTIMIZER = 'optimizer'
-    TRAINING_ALGO_STATE = 'training_algo_state'
+    MODEL_STATE = "model_state"
+    EPOCH = "epoch"
+    SUPERNET_ACC1 = "acc1"
+    SUPERNET_BEST_ACC1 = "best_acc1"
+    MIN_SUBNET_ACC1 = "min_subnet_acc1"
+    MIN_SUBNET_BEST_ACC1 = "min_subnet_best_acc1"
+    OPTIMIZER = "optimizer"
+    TRAINING_ALGO_STATE = "training_algo_state"
 
 
 class EpochBasedTrainingAlgorithm:
@@ -74,12 +65,15 @@ class EpochBasedTrainingAlgorithm:
     Algorithm for training supernet by using a train function for a single epoch. In contrast, there can be step-based
     algorithm that uses a train function for a single training step.
     """
+
     _state_names = EBTrainAlgoStateNames
 
-    def __init__(self,
-                 nncf_network: NNCFNetwork,
-                 training_ctrl: BNASTrainingController,
-                 checkpoint: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        nncf_network: NNCFNetwork,
+        training_ctrl: BNASTrainingController,
+        checkpoint: Optional[Dict[str, Any]] = None,
+    ):
         """
         Initializes the training algorithm
 
@@ -110,15 +104,17 @@ class EpochBasedTrainingAlgorithm:
         """
         return self._training_ctrl.elasticity_controller
 
-    def run(self,
-            train_epoch_fn: TrainEpochFnType,
-            train_loader: DataLoaderType,
-            val_fn: ValFnType,
-            val_loader: DataLoaderType,
-            optimizer: OptimizerType,
-            checkpoint_save_dir: str,
-            tensorboard_writer: Optional[TensorboardWriterType] = None,
-            train_iters: Optional[float] = None) -> Tuple[NNCFNetwork, ElasticityController]:
+    def run(
+        self,
+        train_epoch_fn: TrainEpochFnType,
+        train_loader: DataLoaderType,
+        val_fn: ValFnType,
+        val_loader: DataLoaderType,
+        optimizer: OptimizerType,
+        checkpoint_save_dir: str,
+        tensorboard_writer: Optional[TensorboardWriterType] = None,
+        train_iters: Optional[float] = None,
+    ) -> Tuple[NNCFNetwork, ElasticityController]:
         """
         Implements a training loop for supernet training.
 
@@ -146,11 +142,14 @@ class EpochBasedTrainingAlgorithm:
         if tensorboard_writer is None:
             try:
                 from torch.utils.tensorboard import SummaryWriter
+
                 tensorboard_writer = SummaryWriter(checkpoint_save_dir)
                 # log compression config to tensorboard
             except ModuleNotFoundError:
-                nncf_logger.warning("Tensorboard installation not found! Install tensorboard Python package "
-                                    "in order for BootstrapNAS tensorboard data to be dumped")
+                nncf_logger.warning(
+                    "Tensorboard installation not found! Install tensorboard Python package "
+                    "in order for BootstrapNAS tensorboard data to be dumped"
+                )
 
         total_num_epochs = self._training_ctrl.get_total_num_epochs()
 
@@ -171,32 +170,36 @@ class EpochBasedTrainingAlgorithm:
             min_subnet_acc1, acc5, loss = self._validate_subnet(val_fn, val_loader)
             if log_validation_info:
                 nncf_logger.info(
-                    f'* Acc@1 {min_subnet_acc1:.3f} Acc@5 {acc5:.3f} '
-                    f'for Minimal SubNet={self._training_ctrl.multi_elasticity_handler.get_active_config()}')
+                    f"* Acc@1 {min_subnet_acc1:.3f} Acc@5 {acc5:.3f} "
+                    f"for Minimal SubNet={self._training_ctrl.multi_elasticity_handler.get_active_config()}"
+                )
             if is_main_process() and log_validation_info:
                 tensorboard_writer.add_scalar("val/min_subnet_loss", loss, len(val_loader) * epoch)
                 tensorboard_writer.add_scalar("val/min_subnet_top1", min_subnet_acc1, len(val_loader) * epoch)
                 tensorboard_writer.add_scalar("val/min_subnet_top5", acc5, len(val_loader) * epoch)
-            min_subnet_best_acc1 = self._define_best_accuracy(min_subnet_acc1, self._min_subnet_best_acc1,
-                                                              compression_stage, best_compression_stage)
+            min_subnet_best_acc1 = self._define_best_accuracy(
+                min_subnet_acc1, self._min_subnet_best_acc1, compression_stage, best_compression_stage
+            )
 
             self._training_ctrl.multi_elasticity_handler.activate_supernet()
             supernet_acc1, acc5, loss = self._validate_subnet(val_fn, val_loader)
             if log_validation_info:
                 nncf_logger.info(
-                    f'* Acc@1 {supernet_acc1:.3f} Acc@5 {acc5:.3f} '
-                    f'of SuperNet={self._training_ctrl.multi_elasticity_handler.get_active_config()}')
+                    f"* Acc@1 {supernet_acc1:.3f} Acc@5 {acc5:.3f} "
+                    f"of SuperNet={self._training_ctrl.multi_elasticity_handler.get_active_config()}"
+                )
 
             if is_main_process() and log_validation_info:
                 tensorboard_writer.add_scalar("val/supernet_loss", loss, len(val_loader) * epoch)
                 tensorboard_writer.add_scalar("val/supernet_top1", supernet_acc1, len(val_loader) * epoch)
                 tensorboard_writer.add_scalar("val/supernet_top5", acc5, len(val_loader) * epoch)
-            supernet_best_acc1 = self._define_best_accuracy(supernet_acc1, self._supernet_best_acc1,
-                                                            compression_stage, best_compression_stage)
+            supernet_best_acc1 = self._define_best_accuracy(
+                supernet_acc1, self._supernet_best_acc1, compression_stage, best_compression_stage
+            )
 
             best_compression_stage = max(compression_stage, best_compression_stage)
 
-            checkpoint_path = Path(checkpoint_save_dir, 'supernet_last.pth')
+            checkpoint_path = Path(checkpoint_save_dir, "supernet_last.pth")
             checkpoint = {
                 self._state_names.EPOCH: epoch + 1,
                 self._state_names.MODEL_STATE: self._model.state_dict(),
@@ -205,18 +208,18 @@ class EpochBasedTrainingAlgorithm:
                 self._state_names.MIN_SUBNET_BEST_ACC1: min_subnet_best_acc1,
                 self._state_names.MIN_SUBNET_ACC1: min_subnet_acc1,
                 self._state_names.OPTIMIZER: optimizer.state_dict(),
-                self._state_names.TRAINING_ALGO_STATE: self._training_ctrl.get_compression_state()
+                self._state_names.TRAINING_ALGO_STATE: self._training_ctrl.get_compression_state(),
             }
             torch.save(checkpoint, checkpoint_path)
 
             if compression_stage == CompressionStage.FULLY_COMPRESSED and supernet_best_acc1 == supernet_acc1:
-                best_path = Path(checkpoint_save_dir) / 'supernet_best.pth'
+                best_path = Path(checkpoint_save_dir) / "supernet_best.pth"
                 copyfile(checkpoint_path, best_path)
 
             # Backup elasticity state and model weight to directly restore from it in a separate search sample
-            elasticity_path = Path(checkpoint_save_dir) / 'last_elasticity.pth'
+            elasticity_path = Path(checkpoint_save_dir) / "last_elasticity.pth"
             elasticity_state = self._training_ctrl.elasticity_controller.get_compression_state()
-            model_path = Path(checkpoint_save_dir) / 'last_model_weights.pth'
+            model_path = Path(checkpoint_save_dir) / "last_model_weights.pth"
             model_state = self._model.state_dict()
             torch.save(elasticity_state, elasticity_path)
             torch.save(model_state, model_path)
@@ -224,7 +227,7 @@ class EpochBasedTrainingAlgorithm:
         return self._model, self.elasticity_ctrl
 
     @classmethod
-    def from_config(cls, nncf_network: NNCFNetwork, nncf_config: NNCFConfig) -> 'EpochBasedTrainingAlgorithm':
+    def from_config(cls, nncf_network: NNCFNetwork, nncf_config: NNCFConfig) -> "EpochBasedTrainingAlgorithm":
         """
         Creates the training algorithm from a config by a given empty NNCFNetwork.
 
@@ -232,16 +235,16 @@ class EpochBasedTrainingAlgorithm:
         :param nncf_config: parameters of the training algorithm
         :return: the training algorithm
         """
-        algo_name = nncf_config.get('bootstrapNAS', {}).get('training', {}).get('algorithm', 'progressive_shrinking')
-        training_ctrl, model = create_compressed_model_from_algo_names(nncf_network, nncf_config,
-                                                                       algo_names=[algo_name])
+        algo_name = nncf_config.get("bootstrapNAS", {}).get("training", {}).get("algorithm", "progressive_shrinking")
+        training_ctrl, model = create_compressed_model_from_algo_names(
+            nncf_network, nncf_config, algo_names=[algo_name]
+        )
         return EpochBasedTrainingAlgorithm(model, training_ctrl)
 
     @classmethod
-    def from_checkpoint(cls,
-                        nncf_network: NNCFNetwork,
-                        bn_adapt_args: BNAdaptationInitArgs,
-                        resuming_checkpoint_path: str) -> 'EpochBasedTrainingAlgorithm':
+    def from_checkpoint(
+        cls, nncf_network: NNCFNetwork, bn_adapt_args: BNAdaptationInitArgs, resuming_checkpoint_path: str
+    ) -> "EpochBasedTrainingAlgorithm":
         """
         Resumes the training algorithm from a checkpoint by a given empty NNCFNetwork and BN adaptation arguments only,
         config is not involved.
@@ -254,7 +257,7 @@ class EpochBasedTrainingAlgorithm:
         if not Path(resuming_checkpoint_path).is_file():
             raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
         nncf_logger.info(f"=> loading checkpoint '{resuming_checkpoint_path}'")
-        checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
+        checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu")
 
         training_state = checkpoint[cls._state_names.TRAINING_ALGO_STATE]
         nncf_config = NNCFConfig()
@@ -263,10 +266,9 @@ class EpochBasedTrainingAlgorithm:
         return EpochBasedTrainingAlgorithm(model, training_ctrl, checkpoint)
 
     @staticmethod
-    def _define_best_accuracy(acc1: float,
-                              best_acc1: float,
-                              compression_stage: CompressionStage,
-                              best_compression_stage: CompressionStage) -> float:
+    def _define_best_accuracy(
+        acc1: float, best_acc1: float, compression_stage: CompressionStage, best_compression_stage: CompressionStage
+    ) -> float:
         """
         The best accuracy value should be considered not only by value, but also per each stage.
         Currently, there are two stages in NAS algo only: PARTIALLY_COMPRESSED and FULLY_COMPRESSED.

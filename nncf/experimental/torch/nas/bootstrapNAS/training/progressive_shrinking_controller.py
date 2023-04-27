@@ -10,34 +10,30 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import NoReturn
-
+from typing import Any, Dict, List, NoReturn
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.statistics import NNCFStatistics
 from nncf.common.logging import nncf_logger
-from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import GlobalLRScheduler
-from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import StageLRScheduler
-from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSchedulerParams
-from nncf.torch.algo_selector import ZeroCompressionLoss
+from nncf.common.statistics import NNCFStatistics
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingController
+from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import GlobalLRScheduler
+from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import StageLRScheduler
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
+from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSchedulerParams
 from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
+from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.nncf_network import NNCFNetwork
 
 
 class PSControllerStateNames:
-    ELASTICITY_CONTROLLER_STATE = 'elasticity_controller_compression_state'
-    LR_GLOBAL_SCHEDULE_STATE = 'learning_rate_global_schedule_state'
+    ELASTICITY_CONTROLLER_STATE = "elasticity_controller_compression_state"
+    LR_GLOBAL_SCHEDULE_STATE = "learning_rate_global_schedule_state"
 
 
 class ProgressiveShrinkingController(BNASTrainingController):
@@ -51,12 +47,15 @@ class ProgressiveShrinkingController(BNASTrainingController):
 
     _ps_state_names = PSControllerStateNames
 
-    def __init__(self, target_model: NNCFNetwork,
-                 elasticity_ctrl: ElasticityController,
-                 bn_adaptation: BatchnormAdaptationAlgorithm,
-                 progressivity_of_elasticity: List[ElasticityDim],
-                 schedule_params: NASSchedulerParams,
-                 lr_schedule_config: Dict[str, Any]):
+    def __init__(
+        self,
+        target_model: NNCFNetwork,
+        elasticity_ctrl: ElasticityController,
+        bn_adaptation: BatchnormAdaptationAlgorithm,
+        progressivity_of_elasticity: List[ElasticityDim],
+        schedule_params: NASSchedulerParams,
+        lr_schedule_config: Dict[str, Any],
+    ):
         super().__init__(target_model)
         self._elasticity_ctrl = elasticity_ctrl
         self._bn_adaptation = bn_adaptation
@@ -65,20 +64,21 @@ class ProgressiveShrinkingController(BNASTrainingController):
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self._available_elasticity_dims = self.multi_elasticity_handler.get_available_elasticity_dims()
         self._lr_schedule_config = lr_schedule_config
-        self._scheduler = BootstrapNASScheduler(self, schedule_params, self._available_elasticity_dims,
-                                                self._progressivity_of_elasticity)
+        self._scheduler = BootstrapNASScheduler(
+            self, schedule_params, self._available_elasticity_dims, self._progressivity_of_elasticity
+        )
         self._sample_rate = 1
 
     def set_training_lr_scheduler_args(self, optimizer, train_iters):
-        params = self._lr_schedule_config.get('params', {})
-        num_epochs = params.get('num_epochs', None)
-        base_lr = params.get('base_lr', None)
+        params = self._lr_schedule_config.get("params", {})
+        num_epochs = params.get("num_epochs", None)
+        base_lr = params.get("base_lr", None)
 
         if base_lr is not None:
             nncf_logger.info("Global LR scheduler in use")
             # Global lr scheduler
             if num_epochs is None:
-                params['num_epochs'] = self.get_total_num_epochs()
+                params["num_epochs"] = self.get_total_num_epochs()
             lr_scheduler = GlobalLRScheduler(optimizer, train_iters, **params)
         else:
             nncf_logger.info("Stage LR scheduler in use")
@@ -137,7 +137,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
         """
         if self._scheduler.current_step % self._sample_rate == 0:
             self.multi_elasticity_handler.activate_random_subnet()
-            nncf_logger.debug(f'Active config: {self.multi_elasticity_handler.get_active_config()}')
+            nncf_logger.debug(f"Active config: {self.multi_elasticity_handler.get_active_config()}")
 
     def prepare_for_validation(self) -> None:
         """

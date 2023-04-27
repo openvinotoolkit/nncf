@@ -12,6 +12,7 @@
 """
 
 import functools
+
 import tensorflow as tf
 
 from examples.tensorflow.common.object_detection.architecture import nn_ops
@@ -25,14 +26,16 @@ class Fpn:
     Serge Belongie. Feature Pyramid Networks for Object Detection. CVPR 2017.
     """
 
-    def __init__(self,
-                 min_level=3,
-                 max_level=7,
-                 fpn_feat_dims=256,
-                 use_separable_conv=False,
-                 activation='relu',
-                 use_batch_norm=True,
-                 norm_activation=nn_ops.norm_activation_builder(activation='relu')):
+    def __init__(
+        self,
+        min_level=3,
+        max_level=7,
+        fpn_feat_dims=256,
+        use_separable_conv=False,
+        activation="relu",
+        use_batch_norm=True,
+        norm_activation=nn_ops.norm_activation_builder(activation="relu"),
+    ):
         """FPN initialization function.
 
         Args:
@@ -54,12 +57,12 @@ class Fpn:
             self._conv2d_op = functools.partial(tf.keras.layers.SeparableConv2D, depth_multiplier=1)
         else:
             self._conv2d_op = tf.keras.layers.Conv2D
-        if activation == 'relu':
+        if activation == "relu":
             self._activation_op = tf.nn.relu
-        elif activation == 'swish':
+        elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError('Unsupported activation `{}`.'.format(activation))
+            raise ValueError("Unsupported activation `{}`.".format(activation))
 
         self._use_batch_norm = use_batch_norm
         self._norm_activation = norm_activation
@@ -71,25 +74,23 @@ class Fpn:
 
         for level in range(self._min_level, self._max_level + 1):
             if self._use_batch_norm:
-                self._norm_activations[level] = norm_activation(use_activation=False,
-                                                                name='p%d-bn' % level)
+                self._norm_activations[level] = norm_activation(use_activation=False, name="p%d-bn" % level)
 
-            self._lateral_conv2d_op[level] = self._conv2d_op(filters=self._fpn_feat_dims,
-                                                             kernel_size=(1, 1),
-                                                             padding='same',
-                                                             name='l%d' % level)
+            self._lateral_conv2d_op[level] = self._conv2d_op(
+                filters=self._fpn_feat_dims, kernel_size=(1, 1), padding="same", name="l%d" % level
+            )
 
-            self._post_hoc_conv2d_op[level] = self._conv2d_op(filters=self._fpn_feat_dims,
-                                                              strides=(1, 1),
-                                                              kernel_size=(3, 3),
-                                                              padding='same',
-                                                              name='post_hoc_d%d' % level)
+            self._post_hoc_conv2d_op[level] = self._conv2d_op(
+                filters=self._fpn_feat_dims,
+                strides=(1, 1),
+                kernel_size=(3, 3),
+                padding="same",
+                name="post_hoc_d%d" % level,
+            )
 
-            self._coarse_conv2d_op[level] = self._conv2d_op(filters=self._fpn_feat_dims,
-                                                            strides=(2, 2),
-                                                            kernel_size=(3, 3),
-                                                            padding='same',
-                                                            name='p%d' % level)
+            self._coarse_conv2d_op[level] = self._conv2d_op(
+                filters=self._fpn_feat_dims, strides=(2, 2), kernel_size=(3, 3), padding="same", name="p%d" % level
+            )
 
     def __call__(self, multilevel_features, is_training=None):
         """Returns the FPN features for a given multilevel features.
@@ -108,11 +109,13 @@ class Fpn:
 
         input_levels = list(multilevel_features.keys())
         if min(input_levels) > self._min_level:
-            raise ValueError('The minimum backbone level {} should be '.format(min(input_levels)) +
-                             'less or equal to FPN minimum level {}.'.format(self._min_level))
+            raise ValueError(
+                "The minimum backbone level {} should be ".format(min(input_levels))
+                + "less or equal to FPN minimum level {}.".format(self._min_level)
+            )
 
         backbone_max_level = min(max(input_levels), self._max_level)
-        with tf.name_scope('fpn'):
+        with tf.name_scope("fpn"):
             # Adds lateral connections.
             feats_lateral = {}
             for level in range(self._min_level, backbone_max_level + 1):

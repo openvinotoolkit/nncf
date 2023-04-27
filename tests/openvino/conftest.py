@@ -11,21 +11,19 @@
  limitations under the License.
 """
 
-#pylint:disable=unused-import
-import pytest
 from pathlib import Path
 
-from tests.shared.install_fixtures import tmp_venv_with_nncf
+# pylint:disable=unused-import
+import pytest
+
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
+from tests.shared.install_fixtures import tmp_venv_with_nncf
 from tests.shared.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--data", type=str, default=None,
-        help="Directory path to cached data."
-    )
+    parser.addoption("--data", type=str, default=None, help="Directory path to cached data.")
 
 
 @pytest.fixture(name="data_dir")
@@ -38,17 +36,16 @@ def data(request):
 
 # Custom markers specifying tests to be run only if a specific option
 # is present on the pytest command line must be registered here.
-MARKS_VS_OPTIONS = {
-    **COMMON_SCOPE_MARKS_VS_OPTIONS
-}
+MARKS_VS_OPTIONS = {**COMMON_SCOPE_MARKS_VS_OPTIONS}
+
 
 def pytest_collection_modifyitems(config, items):
     skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)
 
 
-OPENVINO_TEST_ROOT = TEST_ROOT / 'openvino'
-OPENVINO_POT_TEST_ROOT = OPENVINO_TEST_ROOT / 'pot'
-OPENVINO_NATIVE_TEST_ROOT = OPENVINO_TEST_ROOT / 'native'
-AC_CONFIGS_DIR = OPENVINO_TEST_ROOT / 'data' / 'ac_configs'
-OPENVINO_DATASET_DEFINITIONS_PATH = OPENVINO_TEST_ROOT / 'data' / 'ov_dataset_definitions.yml'
-DATASET_PATH = '~/.cache/nncf/datasets'
+OPENVINO_TEST_ROOT = TEST_ROOT / "openvino"
+OPENVINO_POT_TEST_ROOT = OPENVINO_TEST_ROOT / "pot"
+OPENVINO_NATIVE_TEST_ROOT = OPENVINO_TEST_ROOT / "native"
+AC_CONFIGS_DIR = OPENVINO_TEST_ROOT / "data" / "ac_configs"
+OPENVINO_DATASET_DEFINITIONS_PATH = OPENVINO_TEST_ROOT / "data" / "ov_dataset_definitions.yml"
+DATASET_PATH = "~/.cache/nncf/datasets"

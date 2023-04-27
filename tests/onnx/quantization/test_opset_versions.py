@@ -11,28 +11,25 @@
  limitations under the License.
 """
 
-from torchvision import models
-import torch
 import onnx
 import pytest
+import torch
+from torchvision import models
 
 import nncf
-
 from tests.onnx.quantization.common import get_random_dataset_for_test
 
-TEST_OPSETS = [7,  # NON SUPPORTED
-               10,  # PER-TENSOR ONLY
-               13]  # FULLY SUPPORTED
+TEST_OPSETS = [7, 10, 13]  # NON SUPPORTED  # PER-TENSOR ONLY  # FULLY SUPPORTED
 
 
-@pytest.mark.parametrize('opset_version', TEST_OPSETS)
+@pytest.mark.parametrize("opset_version", TEST_OPSETS)
 def test_model_opset_version(tmp_path, opset_version):
     model = models.mobilenet_v2(pretrained=True)
     input_shape = [1, 3, 224, 224]
     x = torch.randn(input_shape, requires_grad=False)
-    torch.onnx.export(model, x, tmp_path / 'model.onnx', opset_version=opset_version)
+    torch.onnx.export(model, x, tmp_path / "model.onnx", opset_version=opset_version)
 
-    model = onnx.load_model(tmp_path / 'model.onnx')
+    model = onnx.load_model(tmp_path / "model.onnx")
     dataset = get_random_dataset_for_test(model, False)
     if opset_version == 7:
         with pytest.raises(Exception):
@@ -41,17 +38,19 @@ def test_model_opset_version(tmp_path, opset_version):
     quantized_model = nncf.quantize(model, dataset, subset_size=1)
     if opset_version == 10:
         nodes_with_axis = []
-        for node in filter(lambda node: node.op_type in ['QuantizeLinear', 'DequantizeLinear'],
-                           quantized_model.graph.node):
+        for node in filter(
+            lambda node: node.op_type in ["QuantizeLinear", "DequantizeLinear"], quantized_model.graph.node
+        ):
             for attr in node.attribute:
-                if attr.HasField('name') and 'axis' in attr.name:
+                if attr.HasField("name") and "axis" in attr.name:
                     nodes_with_axis.append(node)
         assert not nodes_with_axis
     if opset_version == 13:
         nodes_with_axis = []
-        for node in filter(lambda node: node.op_type in ['QuantizeLinear', 'DequantizeLinear'],
-                           quantized_model.graph.node):
+        for node in filter(
+            lambda node: node.op_type in ["QuantizeLinear", "DequantizeLinear"], quantized_model.graph.node
+        ):
             for attr in node.attribute:
-                if attr.HasField('name') and 'axis' in attr.name:
+                if attr.HasField("name") and "axis" in attr.name:
                     nodes_with_axis.append(node)
         assert nodes_with_axis

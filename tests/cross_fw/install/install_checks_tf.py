@@ -11,16 +11,14 @@
  limitations under the License.
 """
 
-# Do not remove - these imports are for testing purposes.
-#pylint:disable=unused-import
-import nncf
-
 import tensorflow as tf
 
+# Do not remove - these imports are for testing purposes.
+# pylint:disable=unused-import
+import nncf
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
-
 
 inputs = tf.keras.Input(shape=(3, 3, 1))
 outputs = tf.keras.layers.Conv2D(filters=3, kernel_size=3)(inputs)

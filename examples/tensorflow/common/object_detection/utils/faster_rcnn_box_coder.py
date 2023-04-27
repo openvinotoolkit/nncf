@@ -95,9 +95,9 @@ class FasterRcnnBoxCoder(box_coder.BoxCoder):
         h = tf.exp(th) * ha
         ycenter = ty * ha + ycenter_a
         xcenter = tx * wa + xcenter_a
-        ymin = ycenter - h / 2.
-        xmin = xcenter - w / 2.
-        ymax = ycenter + h / 2.
-        xmax = xcenter + w / 2.
+        ymin = ycenter - h / 2.0
+        xmin = xcenter - w / 2.0
+        ymax = ycenter + h / 2.0
+        xmax = xcenter + w / 2.0
 
         return box_list.BoxList(tf.transpose(a=tf.stack([ymin, xmin, ymax, xmax])))

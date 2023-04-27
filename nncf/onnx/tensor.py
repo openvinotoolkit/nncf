@@ -26,4 +26,4 @@ class ONNXNNCFTensor(NNCFTensor):
 
     @property
     def device(self):
-        return 'CPU'
+        return "CPU"

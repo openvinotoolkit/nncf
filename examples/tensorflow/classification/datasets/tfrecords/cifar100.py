@@ -12,11 +12,12 @@
 """
 
 import os
+
 import tensorflow as tf
 
 from examples.tensorflow.common.tfrecords_dataset import TFRecordDataset
 
-__all__ = ['cifar100']
+__all__ = ["cifar100"]
 
 # CIFAR-10 specifications
 NUM_TRAIN_EXAMPLES = 50000
@@ -31,22 +32,18 @@ def cifar100(config, is_train):
 def parse_record(record: tf.Tensor):
     """Parse an Cifar10 record from a serialized Tensor."""
     keys_to_features = {
-        'image/encoded':
-            tf.io.FixedLenFeature((), tf.string, ''),
-        'image/format':
-            tf.io.FixedLenFeature((), tf.string, 'png'),
-        'image/class/label':
-            tf.io.FixedLenFeature([], tf.int64, -1),
-        'image/class/coarse_label':
-            tf.io.FixedLenFeature([], tf.int64, -1)
+        "image/encoded": tf.io.FixedLenFeature((), tf.string, ""),
+        "image/format": tf.io.FixedLenFeature((), tf.string, "png"),
+        "image/class/label": tf.io.FixedLenFeature([], tf.int64, -1),
+        "image/class/coarse_label": tf.io.FixedLenFeature([], tf.int64, -1),
     }
 
     parsed = tf.io.parse_single_example(record, keys_to_features)
 
-    label = tf.reshape(parsed['image/class/label'], shape=[1])
+    label = tf.reshape(parsed["image/class/label"], shape=[1])
     label = tf.cast(label, tf.int32)
 
-    encoded_image = tf.reshape(parsed['image/encoded'], shape=[])
+    encoded_image = tf.reshape(parsed["image/encoded"], shape=[])
     image = tf.image.decode_image(encoded_image, channels=3)
 
     return image, label
@@ -56,10 +53,7 @@ class Cifar100(TFRecordDataset):
     def __init__(self, config, is_train):
         super().__init__(config, is_train)
 
-        self._file_pattern = os.path.join(
-            self.dataset_dir,
-            'cifar100*{}*'.format(
-                'train' if is_train else 'test'))
+        self._file_pattern = os.path.join(self.dataset_dir, "cifar100*{}*".format("train" if is_train else "test"))
 
     @property
     def num_examples(self):

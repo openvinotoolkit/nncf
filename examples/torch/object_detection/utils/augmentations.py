@@ -12,13 +12,13 @@
 """
 
 import types
+from typing import Dict, List, Tuple
 
 import cv2
 import numpy as np
 import torch
 from numpy import random
 from PIL.Image import Image
-from typing import List, Dict, Tuple
 
 
 def intersect(box_a: np.ndarray, box_b: np.ndarray) -> np.ndarray:
@@ -40,10 +40,8 @@ def jaccard_numpy(box_a: np.ndarray, box_b: np.ndarray) -> np.ndarray:
         jaccard overlap: Shape: [box_a.shape[0], box_a.shape[1]]
     """
     inter = intersect(box_a, box_b)
-    area_a = ((box_a[:, 2] - box_a[:, 0]) *
-              (box_a[:, 3] - box_a[:, 1]))  # [A,B]
-    area_b = ((box_b[2] - box_b[0]) *
-              (box_b[3] - box_b[1]))  # [A,B]
+    area_a = (box_a[:, 2] - box_a[:, 0]) * (box_a[:, 3] - box_a[:, 1])  # [A,B]
+    area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])  # [A,B]
     union = area_a + area_b - inter
     return inter / union  # [A,B]
 
@@ -100,27 +98,27 @@ class Normalize:
 
 class ToAbsoluteCoords:
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
-        boxes = np.asarray([x['bbox'] for x in target])
+        boxes = np.asarray([x["bbox"] for x in target])
         height, width, _ = image.shape
         boxes[:, 0] *= width
         boxes[:, 2] *= width
         boxes[:, 1] *= height
         boxes[:, 3] *= height
         for i, x in enumerate(target):
-            x['bbox'] = boxes[i]
+            x["bbox"] = boxes[i]
         return image, target
 
 
 class ToPercentCoords:
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
-        boxes = np.asarray([x['bbox'] for x in target])
+        boxes = np.asarray([x["bbox"] for x in target])
         height, width, _ = image.shape
         boxes[:, 0] /= width
         boxes[:, 2] /= width
         boxes[:, 1] /= height
         boxes[:, 3] /= height
         for i, x in enumerate(target):
-            x['bbox'] = boxes[i]
+            x["bbox"] = boxes[i]
         return image, target
 
 
@@ -129,8 +127,7 @@ class Resize:
         self.size = size
 
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
-        image = cv2.resize(image, (self.size,
-                                   self.size))
+        image = cv2.resize(image, (self.size, self.size))
         return image, target
 
 
@@ -149,7 +146,7 @@ class RandomSaturation:
 
 class RandomHue:
     def __init__(self, delta=18.0):
-        assert 0 <= delta <= 360.
+        assert 0 <= delta <= 360.0
         self.delta = delta
 
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
@@ -162,9 +159,7 @@ class RandomHue:
 
 class RandomLightingNoise:
     def __init__(self):
-        self.perms = ((0, 1, 2), (0, 2, 1),
-                      (1, 0, 2), (1, 2, 0),
-                      (2, 0, 1), (2, 1, 0))
+        self.perms = ((0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0), (2, 0, 1), (2, 1, 0))
 
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
         if random.randint(2):
@@ -176,14 +171,14 @@ class RandomLightingNoise:
 
 
 class ConvertColor:
-    def __init__(self, current='BGR', transform='HSV'):
+    def __init__(self, current="BGR", transform="HSV"):
         self.transform = transform
         self.current = current
 
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
-        if self.current == 'BGR' and self.transform == 'HSV':
+        if self.current == "BGR" and self.transform == "HSV":
             image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        elif self.current == 'HSV' and self.transform == 'BGR':
+        elif self.current == "HSV" and self.transform == "BGR":
             image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
         else:
             raise NotImplementedError
@@ -258,8 +253,8 @@ class RandomSampleCrop:
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
         height, width, _ = image.shape
         while True:
-            boxes = np.asarray([x['bbox'] for x in target])
-            labels = np.asarray([x['label_idx'] for x in target])
+            boxes = np.asarray([x["bbox"] for x in target])
+            labels = np.asarray([x["label_idx"] for x in target])
             # randomly choose a mode
             mode = random.choice(self.sample_options)
             if mode is None:
@@ -267,9 +262,9 @@ class RandomSampleCrop:
 
             min_iou, max_iou = mode
             if min_iou is None:
-                min_iou = float('-inf')
+                min_iou = float("-inf")
             if max_iou is None:
-                max_iou = float('inf')
+                max_iou = float("inf")
 
             # max trails (50)
             for _ in range(50):
@@ -296,7 +291,7 @@ class RandomSampleCrop:
                     continue
 
                 # cut the crop from the image
-                current_image = current_image[rect[1]:rect[3], rect[0]:rect[2], :]
+                current_image = current_image[rect[1] : rect[3], rect[0] : rect[2], :]
 
                 # keep overlap with gt box IF center in sampled patch
                 centers = (boxes[:, :2] + boxes[:, 2:]) / 2.0
@@ -321,20 +316,18 @@ class RandomSampleCrop:
                 current_labels = labels[mask]
 
                 # should we use the box left and top corner or the crop's
-                current_boxes[:, :2] = np.maximum(current_boxes[:, :2],
-                                                  rect[:2])
+                current_boxes[:, :2] = np.maximum(current_boxes[:, :2], rect[:2])
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, :2] -= rect[:2]
 
-                current_boxes[:, 2:] = np.minimum(current_boxes[:, 2:],
-                                                  rect[2:])
+                current_boxes[:, 2:] = np.minimum(current_boxes[:, 2:], rect[2:])
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, 2:] -= rect[:2]
 
-                target = target[:len(current_boxes)]
+                target = target[: len(current_boxes)]
                 for i, x in enumerate(target):
-                    x['bbox'] = current_boxes[i]
-                    x['label_idx'] = current_labels[i]
+                    x["bbox"] = current_boxes[i]
+                    x["label_idx"] = current_labels[i]
                 return current_image, target
 
 
@@ -345,7 +338,7 @@ class Expand:
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
         if random.randint(2):
             return image, target
-        boxes = np.asarray([x['bbox'] for x in target])
+        boxes = np.asarray([x["bbox"] for x in target])
         height, width, _ = image.shape
         ratio = random.uniform(1, 4)
         left = random.uniform(0, width * ratio - width)
@@ -362,7 +355,8 @@ class Expand:
             left=left,
             right=new_width - (left + width),
             borderType=cv2.BORDER_CONSTANT,
-            value=self.mean)
+            value=self.mean,
+        )
         image = expand_image_cv
 
         if boxes is not None:
@@ -370,14 +364,14 @@ class Expand:
             boxes[:, :2] += (int(left), int(top))
             boxes[:, 2:] += (int(left), int(top))
         for i, x in enumerate(target):
-            x['bbox'] = boxes[i]
+            x["bbox"] = boxes[i]
 
         return image, target
 
 
 class RandomMirror:
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
-        boxes = np.asarray([x['bbox'] for x in target])
+        boxes = np.asarray([x["bbox"] for x in target])
 
         _, width, _ = image.shape
         if random.randint(2):
@@ -386,7 +380,7 @@ class RandomMirror:
             boxes[:, 0::2] = width - boxes[:, 2::-2]
 
         for i, x in enumerate(target):
-            x['bbox'] = boxes[i]
+            x["bbox"] = boxes[i]
 
         return image, target
 
@@ -421,17 +415,16 @@ class PhotometricDistort:
     def __init__(self):
         self.pd = [
             RandomContrast(),
-            ConvertColor(transform='HSV'),
+            ConvertColor(transform="HSV"),
             RandomSaturation(),
             RandomHue(),
-            ConvertColor(current='HSV', transform='BGR'),
-            RandomContrast()
+            ConvertColor(current="HSV", transform="BGR"),
+            RandomContrast(),
         ]
         self.rand_brightness = RandomBrightness()
         self.rand_light_noise = RandomLightingNoise()
 
     def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
-
         im = image.copy()
         im, target = self.rand_brightness(im, target)
         if random.randint(2):
@@ -443,29 +436,29 @@ class PhotometricDistort:
 
 
 class SSDAugmentation:
-    def __init__(self, size: np.int32,
-                 mean: np.float32,
-                 std: np.float32,
-                 normalize_coef: np.float32):
+    def __init__(self, size: np.int32, mean: np.float32, std: np.float32, normalize_coef: np.float32):
         self.size = size
         self.mean = mean
         self.std = std
         self.normalize_coef = normalize_coef
-        self.augment = Compose([
-            ToAbsoluteCoords(),
-            Expand(self.mean),
-            RandomSampleCrop(),
-            RandomMirror(),
-            ToPercentCoords(),
-            Resize(self.size),
-            ConvertFromInts(),
-            PhotometricDistort(),
-            Normalize(self.mean, self.std, self.normalize_coef)
-        ])
+        self.augment = Compose(
+            [
+                ToAbsoluteCoords(),
+                Expand(self.mean),
+                RandomSampleCrop(),
+                RandomMirror(),
+                ToPercentCoords(),
+                Resize(self.size),
+                ConvertFromInts(),
+                PhotometricDistort(),
+                Normalize(self.mean, self.std, self.normalize_coef),
+            ]
+        )
 
     def __call__(self, img: Image, target: List[Dict]) -> Tuple[torch.Tensor, np.ndarray]:
         res = self.augment(np.array(img)[:, :, ::-1], target)
-        boxes = np.asarray([x['bbox'] for x in res[1]])
-        labels = np.asarray([x['label_idx'] for x in res[1]])
-        return torch.from_numpy(res[0][:, :, (2, 1, 0)]).permute(2, 0, 1),\
-               np.hstack((boxes, np.expand_dims(labels, axis=1)))
+        boxes = np.asarray([x["bbox"] for x in res[1]])
+        labels = np.asarray([x["label_idx"] for x in res[1]])
+        return torch.from_numpy(res[0][:, :, (2, 1, 0)]).permute(2, 0, 1), np.hstack(
+            (boxes, np.expand_dims(labels, axis=1))
+        )

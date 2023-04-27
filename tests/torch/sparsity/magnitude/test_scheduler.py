@@ -14,18 +14,20 @@
 import pytest
 
 from nncf.common.sparsity.schedulers import MultiStepSparsityScheduler
-from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel, get_basic_magnitude_sparsity_config
-from tests.torch.helpers import get_empty_config, create_compressed_model_and_algo_for_test
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.helpers import get_empty_config
+from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
+from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
 
 def get_multistep_normed_abs_config():
     config = get_basic_magnitude_sparsity_config()
-    compression_config = config['compression']
-    compression_config['params'] = {
-        'schedule': 'multistep',
-        'weight_importance': 'normed_abs',
-        'multistep_steps': [1, 3],
-        'multistep_sparsity_levels': [0.1, 0.5, 0.9]
+    compression_config = config["compression"]
+    compression_config["params"] = {
+        "schedule": "multistep",
+        "weight_importance": "normed_abs",
+        "multistep_steps": [1, 3],
+        "multistep_sparsity_levels": [0.1, 0.5, 0.9],
     }
     return config
 
@@ -84,8 +86,10 @@ def test_magnitude_scheduler_can_do_epoch_step__with_last():
 def test_magnitude_scheduler_can_do_epoch_step__with_multistep():
     _ = MagnitudeTestModel()
     config = get_empty_config()
-    config["compression"] = {"algorithm": "magnitude_sparsity",
-                             "params": {"schedule": "multistep", 'multistep_steps': [1]}}
+    config["compression"] = {
+        "algorithm": "magnitude_sparsity",
+        "params": {"schedule": "multistep", "multistep_steps": [1]},
+    }
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
     scheduler = compression_ctrl.scheduler
     scheduler.epoch_step()

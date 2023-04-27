@@ -17,7 +17,7 @@ import pytest
 
 try:
     import torch
-except: #pylint: disable=bare-except
+except:  # pylint: disable=bare-except
     torch = None
 from nncf.common.quantization.structs import QuantizationMode
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
@@ -25,7 +25,7 @@ from tests.shared.case_collection import skip_marked_cases_if_options_not_specif
 from tests.shared.install_fixtures import tmp_venv_with_nncf  # pylint:disable=unused-import
 from tests.shared.logging import nncf_caplog  # pylint:disable=unused-import
 
-pytest.register_assert_rewrite('tests.torch.helpers')
+pytest.register_assert_rewrite("tests.torch.helpers")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -37,25 +37,29 @@ def disable_tf32_precision():
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--data", type=str, default=None,
-        help="Path to test datasets, e.g. CIFAR10 - for sanity tests or CIFAR100 - for weekly ones"
+        "--data",
+        type=str,
+        default=None,
+        help="Path to test datasets, e.g. CIFAR10 - for sanity tests or CIFAR100 - for weekly ones",
     )
 
     parser.addoption(
-        "--regen-dot", action="store_true", default=False, help="If specified, the "
-                                                                "reference .dot files will be regenerated "
-                                                                "using the current state of the repository."
-
+        "--regen-dot",
+        action="store_true",
+        default=False,
+        help="If specified, the "
+        "reference .dot files will be regenerated "
+        "using the current state of the repository.",
     )
     parser.addoption(
         "--torch-home", type=str, default=None, help="Path to cached test models, downloaded by torchvision"
     )
+    parser.addoption("--weekly-models", type=str, default=None, help="Path to models' weights for weekly tests")
     parser.addoption(
-        "--weekly-models", type=str, default=None, help="Path to models' weights for weekly tests"
-    )
-    parser.addoption(
-        "--mixed-precision", action="store_true", default=False, help="Enable mixed precision for the"
-                                                                                  " nncf weekly test"
+        "--mixed-precision",
+        action="store_true",
+        default=False,
+        help="Enable mixed precision for the" " nncf weekly test",
     )
     parser.addoption(
         "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
@@ -64,51 +68,52 @@ def pytest_addoption(parser):
         "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
     )
     parser.addoption(
-        "--metrics-dump-path", type=str, default=None, help="Path to directory to store metrics. "
-                                                            "Directory must be empty or should not exist."
-                                                            "Metric keeps in "
-                                                            "PROJECT_ROOT/test_results/metrics_dump_timestamp "
-                                                            "if param not specified"
+        "--metrics-dump-path",
+        type=str,
+        default=None,
+        help="Path to directory to store metrics. "
+        "Directory must be empty or should not exist."
+        "Metric keeps in "
+        "PROJECT_ROOT/test_results/metrics_dump_timestamp "
+        "if param not specified",
     )
     parser.addoption(
         "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVINO accuracy test"
     )
+    parser.addoption("--imagenet", action="store_true", default=False, help="Enable tests with imagenet")
     parser.addoption(
-        "--imagenet", action="store_true", default=False, help="Enable tests with imagenet"
-    )
-    parser.addoption(
-        "--backward-compat-models", type=str, default=None, help="Path to NNCF-traned model checkpoints that are tested"
-                                                                 "to be strictly loadable"
+        "--backward-compat-models",
+        type=str,
+        default=None,
+        help="Path to NNCF-traned model checkpoints that are tested" "to be strictly loadable",
     )
     parser.addoption(
         "--third-party-sanity", action="store_true", default=False, help="To run third party sanity test cases"
     )
     parser.addoption(
-        "--torch-with-cuda11", action="store_true", default=False, help="To trigger installation of pytorch with "
-                                                                        "CUDA11. It's required for 3rd sanity tests "
-                                                                        "on RTX3090 cards"
+        "--torch-with-cuda11",
+        action="store_true",
+        default=False,
+        help="To trigger installation of pytorch with "
+        "CUDA11. It's required for 3rd sanity tests "
+        "on RTX3090 cards",
     )
+    parser.addoption("--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO")
+    parser.addoption("--onnx-dir", type=str, default=None, help="Path to converted onnx models")
+    parser.addoption("--ov-config-dir", type=str, default=None, help="Path to OpenVINO configs")
     parser.addoption(
-        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO"
-    )
-    parser.addoption(
-        "--onnx-dir", type=str, default=None, help="Path to converted onnx models"
-    )
-    parser.addoption(
-        "--ov-config-dir", type=str, default=None, help="Path to OpenVINO configs"
-    )
-    parser.addoption(
-        "--pip-cache-dir", type=str, default=None,
-        help="Path to pip cached downloaded packages directory (speeds up installation tests)"
+        "--pip-cache-dir",
+        type=str,
+        default=None,
+        help="Path to pip cached downloaded packages directory (speeds up installation tests)",
     )
     parser.addoption(
         "--cuda-ip", type=str, default=None, help="IP address of distributed mode synchronization URL for train test"
     )
 
 
-
 def pytest_configure(config):
-    regen_dot = config.getoption('--regen-dot', False)
+    regen_dot = config.getoption("--regen-dot", False)
     if regen_dot:
         os.environ["NNCF_TEST_REGEN_DOT"] = "1"
 
@@ -167,7 +172,7 @@ def backward_compat_models_path(request):
 def torch_home_dir(request, monkeypatch):
     torch_home = request.config.getoption("--torch-home")
     if torch_home:
-        monkeypatch.setenv('TORCH_HOME', torch_home)
+        monkeypatch.setenv("TORCH_HOME", torch_home)
 
 
 @pytest.fixture(scope="session")
@@ -194,29 +199,36 @@ def onnx_dir(request):
 def ov_config_dir(request):
     return request.config.getoption("--ov-config-dir")
 
+
 @pytest.fixture(scope="module")
 def pip_cache_dir(request):
     return request.config.getoption("--pip-cache-dir")
+
 
 @pytest.fixture(params=[True, False], ids=["per_channel", "per_tensor"])
 def is_per_channel(request):
     return request.param
 
+
 @pytest.fixture(params=[True, False], ids=["signed", "unsigned"])
 def is_signed(request):
     return request.param
+
 
 @pytest.fixture(params=[True, False], ids=["weights", "activation"])
 def is_weights(request):
     return request.param
 
+
 @pytest.fixture(params=[True, False], ids=["cuda", "cpu"])
 def use_cuda(request):
     return request.param
 
+
 @pytest.fixture(params=[True, False], ids=["half_range", "full_range"])
 def is_half_range(request):
     return request.param
+
 
 @pytest.fixture(params=[QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC])
 def quantization_mode(request):
@@ -232,13 +244,15 @@ def runs_subprocess_in_precommit():
     # memory which has not been cached (and thus remains reserved) in the owning pytest process by PyTorch,
     # and the tests below may fail with an OOM. To avoid this, need to call torch.cuda.empty_cache()
     # each time a GPU-powered subprocess is executed during a test.
-    #pylint: disable=W0702,W0621
+    # pylint: disable=W0702,W0621
     try:
         import torch
+
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
     except ImportError:
         pass
+
 
 @pytest.fixture(scope="module")
 def cuda_ip(request):
@@ -249,21 +263,23 @@ def cuda_ip(request):
 def _seed():
     if torch is not None:
         from torch.backends import cudnn
+
         cudnn.deterministic = True
         cudnn.benchmark = False
         torch.manual_seed(0)
     try:
         import numpy as np
+
         np.random.seed(0)
     except ImportError:
         pass
     random.seed(0)
 
+
 # Custom markers specifying tests to be run only if a specific option
 # is present on the pytest command line must be registered here.
-MARKS_VS_OPTIONS = {
-    **COMMON_SCOPE_MARKS_VS_OPTIONS
-}
+MARKS_VS_OPTIONS = {**COMMON_SCOPE_MARKS_VS_OPTIONS}
+
 
 def pytest_collection_modifyitems(config, items):
     skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)

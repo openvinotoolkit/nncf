@@ -11,9 +11,11 @@
  limitations under the License.
 """
 
-from typing import Optional, Tuple
 from dataclasses import dataclass
+from typing import Optional, Tuple
+
 import numpy as np
+
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
@@ -27,16 +29,16 @@ class ONNXQuantizerLayerParameters:
     :param tensor_type: Signed or Unsigned tensor type.
     :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
     """
+
     scale: np.ndarray
     zero_point: np.ndarray
     tensor_type: np.dtype
     axis: Optional[int] = None
 
 
-def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
-                                     num_bits: int,
-                                     tensor_type: np.dtype,
-                                     axis: Optional[int] = None) -> ONNXQuantizerLayerParameters:
+def convert_fq_params_to_onnx_params(
+    parameters: FakeQuantizeParameters, num_bits: int, tensor_type: np.dtype, axis: Optional[int] = None
+) -> ONNXQuantizerLayerParameters:
     """
     Converts common FakeQuantizeParameters to ONNXQuantizerLayerParameters.
 
@@ -47,20 +49,21 @@ def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
     :return: Quantizer layer attributes.
     """
     if num_bits != 8:
-        raise ValueError('Can only export to INT8/UIN8 8 bits ONNX Quantize/Dequantize pairs.')
+        raise ValueError("Can only export to INT8/UIN8 8 bits ONNX Quantize/Dequantize pairs.")
 
     levels = parameters.levels
     if levels not in [255, 256]:
-        raise ValueError('Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.')
+        raise ValueError("Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.")
 
     input_low, input_high = parameters.input_low, parameters.input_high
     output_low, output_high = parameters.output_low, parameters.output_high
     if not np.allclose(input_high, output_high) or not np.allclose(input_low, output_low):
-        raise ValueError('ONNX Quantize/Dequantize pairs only support'
-                         ' input_high == output_high and input_low == output_low.')
+        raise ValueError(
+            "ONNX Quantize/Dequantize pairs only support" " input_high == output_high and input_low == output_low."
+        )
 
     level_low, level_high = get_level_low_level_high(tensor_type)
-    narrow_range = levels == 2 ** num_bits - 1
+    narrow_range = levels == 2**num_bits - 1
     scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, narrow_range)
     return ONNXQuantizerLayerParameters(scale, zero_point, tensor_type, axis)
 
@@ -76,8 +79,9 @@ def get_level_low_level_high(tensor_type: np.dtype) -> Tuple[int, int]:
     return (0, 255) if tensor_type == np.uint8 else (-128, 127)
 
 
-def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray,
-                               level_low: int, level_high: int, narrow_range: bool) -> Tuple[np.ndarray, np.ndarray]:
+def calculate_scale_zero_point(
+    input_low: np.ndarray, input_high: np.ndarray, level_low: int, level_high: int, narrow_range: bool
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values for the quantizer.

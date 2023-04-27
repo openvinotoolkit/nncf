@@ -26,6 +26,7 @@ def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable:
     :param dependencies: A list of dependencies
     :return: A decorator
     """
+
     def wrap(func: Callable[..., None]) -> Callable[..., None]:
         def wrapped_f(*args, **kwargs):
             for libname in dependencies:
@@ -38,14 +39,17 @@ def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable:
                     IMPORTED_DEPENDENCIES[libname] = True
                 except ImportError as ex:
                     nncf_logger.warning(
-                        f'{ex.msg} Please install NNCF package with dev '
-                        'extra. Use one of the following commands '
+                        f"{ex.msg} Please install NNCF package with dev "
+                        "extra. Use one of the following commands "
                         '"pip install .[dev]" running from the repository '
-                        'root directory or "pip install nncf[dev]"')
+                        'root directory or "pip install nncf[dev]"'
+                    )
                     IMPORTED_DEPENDENCIES[libname] = False
                     break
             else:
                 return func(*args, **kwargs)
             return None
+
         return wrapped_f
+
     return wrap

@@ -16,11 +16,10 @@ from pathlib import Path
 from examples.common.sample_config import SampleConfig
 
 
-def configure_paths(config: SampleConfig,
-                    run_name: str):
+def configure_paths(config: SampleConfig, run_name: str):
     config.name = run_name
     d = datetime.datetime.now()
-    run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
+    run_id = "{:%Y-%m-%d__%H-%M-%S}".format(d)
     log_dir = Path(config.log_dir) / run_name / run_id
     log_dir.mkdir(parents=True, exist_ok=True)
     config.log_dir = str(log_dir)
@@ -34,6 +33,6 @@ def configure_paths(config: SampleConfig,
     checkpoint_save_dir.mkdir(parents=True, exist_ok=True)
 
     # create aux dirs
-    intermediate_checkpoints_path = log_dir / 'intermediate_checkpoints'
+    intermediate_checkpoints_path = log_dir / "intermediate_checkpoints"
     intermediate_checkpoints_path.mkdir(parents=True, exist_ok=True)
     config.intermediate_checkpoints_path = str(intermediate_checkpoints_path)

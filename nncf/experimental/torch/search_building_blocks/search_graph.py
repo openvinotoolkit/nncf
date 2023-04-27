@@ -12,10 +12,7 @@
 """
 from collections import deque
 from copy import deepcopy
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Set
+from typing import Any, Dict, List, Set
 
 import networkx as nx
 
@@ -35,9 +32,7 @@ class SearchGraphNode:
     Class describing nodes used in SearchGraph.
     """
 
-    def __init__(self,
-                 node_key: str,
-                 data: Dict):
+    def __init__(self, node_key: str, data: Dict):
         self.node_key = node_key
         self.data = data if data else {}
 
@@ -79,8 +74,8 @@ class SearchGraphNode:
         Returns the id of node. In case if the node is merged returns id of the first node from merged node list.
         """
         if not self.is_merged:
-            return self.data.get('id')
-        return self.data.get(SearchGraph.MERGED_NODES_NODE_ATTR)[0].get('id')
+            return self.data.get("id")
+        return self.data.get(SearchGraph.MERGED_NODES_NODE_ATTR)[0].get("id")
 
     @property
     def bottom_id(self) -> int:
@@ -88,8 +83,8 @@ class SearchGraphNode:
         Returns the id of node. In case if the node is merged returns id of the last node from merged node list.
         """
         if not self.is_merged:
-            return self.data.get('id')
-        return self.data.get(SearchGraph.MERGED_NODES_NODE_ATTR)[-1].get('id')
+            return self.data.get("id")
+        return self.data.get(SearchGraph.MERGED_NODES_NODE_ATTR)[-1].get("id")
 
     def __str__(self):
         return self.node_key
@@ -109,12 +104,13 @@ class SearchGraph:
     A wrapper over the graph, which represents the DNN execution graph transformed
     by pattern matching, merging nodes and inserting auxiliary nodes.
     """
-    ACTIVATION_OUTPUT_SHAPE_ATTR = 'activation_output_shape'
-    IS_MERGED_NODE_ATTR = 'is_merged'
-    IS_DUMMY_NODE_ATTR = 'is_dummy'
-    KEY_NODE_ATTR = 'key'
-    MERGED_NODES_NODE_ATTR = 'merged_nodes'
-    TYPE_NODE_ATTR = 'type'
+
+    ACTIVATION_OUTPUT_SHAPE_ATTR = "activation_output_shape"
+    IS_MERGED_NODE_ATTR = "is_merged"
+    IS_DUMMY_NODE_ATTR = "is_dummy"
+    KEY_NODE_ATTR = "key"
+    MERGED_NODES_NODE_ATTR = "merged_nodes"
+    TYPE_NODE_ATTR = "type"
     DUMMY_POSTFIX = " dummy"
 
     def __init__(self, nx_merged_graph: nx.DiGraph):
@@ -218,22 +214,22 @@ class SearchGraph:
         for node in self.get_all_nodes():
             attrs_node = {}
             if node.is_merged:
-                attrs_node['label'] = f"main: {node.main_id} bottom: {node.bottom_id} {node.node_key}"
+                attrs_node["label"] = f"main: {node.main_id} bottom: {node.bottom_id} {node.node_key}"
             elif node.is_dummy:
-                attrs_node['label'] = f'dummy {node.node_key}'
+                attrs_node["label"] = f"dummy {node.node_key}"
             else:
-                attrs_node['label'] = f"id: {node.node_key}"
+                attrs_node["label"] = f"id: {node.node_key}"
             out_graph.add_node(node.node_key, **attrs_node)
 
         for u, v in self._nx_graph.edges:
             edge = self._nx_graph.edges[u, v]
-            style = 'solid'
+            style = "solid"
             out_graph.add_edge(u, v, label=edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], style=style)
 
-        mapping = {k: v['label'] for k, v in out_graph.nodes.items()}
+        mapping = {k: v["label"] for k, v in out_graph.nodes.items()}
         out_graph = nx.relabel_nodes(out_graph, mapping)
         for node in out_graph.nodes.values():
-            node.pop('label')
+            node.pop("label")
 
         return out_graph
 
@@ -246,8 +242,7 @@ def get_search_graph(original_graph: PTNNCFGraph, hw_fused_ops: bool) -> SearchG
     """
     Returns a transformed representation of the network graph for blocks searching.
     """
-    nx_merged_graph = get_merged_original_graph_with_pattern(original_graph.get_nx_graph_copy(),
-                                                             hw_fused_ops)
+    nx_merged_graph = get_merged_original_graph_with_pattern(original_graph.get_nx_graph_copy(), hw_fused_ops)
     sgraph = SearchGraph(nx_merged_graph)
     return sgraph
 
@@ -263,8 +258,7 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph, hw_fused_ops:
     if not hw_fused_ops:
         return merged_graph
     # pylint: disable=protected-access
-    pattern_fusing_graph =\
-        PatternsManager.get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
+    pattern_fusing_graph = PatternsManager.get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
     matches = find_subgraphs_matching_pattern(orig_graph, pattern_fusing_graph)
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_DUMMY_NODE_ATTR)
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_MERGED_NODE_ATTR)
@@ -288,7 +282,7 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph, hw_fused_ops:
         type_list = []
         for node_key in match:
             attrs = orig_graph.nodes[node_key]
-            merged_node_key += str(attrs['id']) + ' ' + attrs[SearchGraph.TYPE_NODE_ATTR] + '  '
+            merged_node_key += str(attrs["id"]) + " " + attrs[SearchGraph.TYPE_NODE_ATTR] + "  "
             # pylint: disable=protected-access
             merged_nodes.append(orig_graph.nodes[node_key])
             merged_graph.remove_node(node_key)
@@ -309,9 +303,9 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph, hw_fused_ops:
 
 
 # pylint:disable=too-many-branches
-def check_graph_has_no_hanging_edges_after_block_removal(graph: SearchGraph,
-                                                         first_skipped_node: SearchGraphNode,
-                                                         end_node: SearchGraphNode) -> bool:
+def check_graph_has_no_hanging_edges_after_block_removal(
+    graph: SearchGraph, first_skipped_node: SearchGraphNode, end_node: SearchGraphNode
+) -> bool:
     """
     The subgraph is traversed starting with the first_skipped_node and ending with the end_node
     to determine that after deleting such a block there are no dangling edges in the graph.
@@ -333,7 +327,7 @@ def check_graph_has_no_hanging_edges_after_block_removal(graph: SearchGraph,
     if not first_skipped_node.is_dummy:
         previous_nodes = graph.get_previous_nodes(first_skipped_node)
         num_inputs = len(previous_nodes)
-        assert num_inputs == 1, f'building block should have a single input, but it has {num_inputs} inputs.'
+        assert num_inputs == 1, f"building block should have a single input, but it has {num_inputs} inputs."
         start_node = previous_nodes[0]
     q = deque([start_node])
     addit_nodes = set()
@@ -368,9 +362,9 @@ def check_graph_has_no_hanging_edges_after_block_removal(graph: SearchGraph,
     return True
 
 
-def check_graph_has_no_duplicate_edges_after_block_removal(sgraph: SearchGraph,
-                                                           first_skipped_node: SearchGraphNode,
-                                                           end_node: SearchGraphNode) -> bool:
+def check_graph_has_no_duplicate_edges_after_block_removal(
+    sgraph: SearchGraph, first_skipped_node: SearchGraphNode, end_node: SearchGraphNode
+) -> bool:
     """
     This rule ensures that no duplicate edges will be created in the graph after a block is deleted.
     """
@@ -399,9 +393,9 @@ def check_graph_has_no_duplicate_edges_after_block_removal(sgraph: SearchGraph,
     return attr is None
 
 
-def check_graph_has_no_act_layer_duplication_after_block_removal(sgraph: SearchGraph,
-                                                                 first_skipped_node: SearchGraphNode,
-                                                                 end_node: SearchGraphNode) -> bool:
+def check_graph_has_no_act_layer_duplication_after_block_removal(
+    sgraph: SearchGraph, first_skipped_node: SearchGraphNode, end_node: SearchGraphNode
+) -> bool:
     """
     This rule ensures that after the block is deleted there will be no duplication of activation layers.
     """
@@ -420,8 +414,10 @@ def check_graph_has_no_act_layer_duplication_after_block_removal(sgraph: SearchG
     if previous_nodes[0].is_dummy:
         previous_nodes = sgraph.get_prev_nodes(previous_nodes[0].node_key)
 
-    if previous_nodes[0].node_type[-1] in PTRELUMetatype.get_all_aliases() \
-            and next_end_node[0].node_type[0] in PTRELUMetatype.get_all_aliases():
+    if (
+        previous_nodes[0].node_type[-1] in PTRELUMetatype.get_all_aliases()
+        and next_end_node[0].node_type[0] in PTRELUMetatype.get_all_aliases()
+    ):
         return False
     return True
 

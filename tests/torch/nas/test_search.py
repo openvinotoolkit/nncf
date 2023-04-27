@@ -11,18 +11,15 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import NamedTuple
+from typing import Any, Dict, List, NamedTuple
 
 import pytest
 
 from nncf import NNCFConfig
-from nncf.experimental.torch.nas.bootstrapNAS.search.search import DataLoaderType
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.search.search import DataLoaderType
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.creators import NAS_MODEL_DESCS
@@ -41,12 +38,12 @@ class SearchTestDesc(NamedTuple):
     mode: str = "auto"
 
     def __str__(self):
-        if hasattr(self.model_creator, '__name__'):
+        if hasattr(self.model_creator, "__name__"):
             name = self.model_creator.__name__
         elif self.name is not None:
             name = self.name
         else:
-            name = 'NOT_DEFINED'
+            name = "NOT_DEFINED"
         return name
 
 
@@ -56,20 +53,14 @@ def prepare_test_model(search_desc):
     config = {
         "input_info": {"sample_size": search_desc.input_sizes},
         "bootstrapNAS": {
-            "training": {
-                "elasticity": {
-                    "available_elasticity_dims": ["depth", "width"]
-                }
-            },
+            "training": {"elasticity": {"available_elasticity_dims": ["depth", "width"]}},
             "search": {
                 "algorithm": "NSGA2",
                 "num_evals": 2,
                 "population": 1,
-                "batchnorm_adaptation": {
-                    "num_bn_adaptation_samples": 2
-                },
-            }
-        }
+                "batchnorm_adaptation": {"num_bn_adaptation_samples": 2},
+            },
+        },
     }
     nncf_config = NNCFConfig.from_dict(config)
     bn_adapt_args = BNAdaptationInitArgs(data_loader=create_ones_mock_dataloader(nncf_config))
@@ -78,21 +69,20 @@ def prepare_test_model(search_desc):
 
 
 def prepare_search_algorithm(nas_model_name: str):
-    if 'inception_v3' in nas_model_name:
+    if "inception_v3" in nas_model_name:
         pytest.skip(
-            f'Skip test for {nas_model_name} as it fails because of 2 issues: '
-            'not able to set DynamicInputOp to train-only layers (ticket 60976) and '
-            'invalid padding update in elastic kernel (ticket 60990)')
-
-    elif nas_model_name in ['efficient_net_b0', 'shufflenetv2']:
-        pytest.skip(
-            f'Skip test for {nas_model_name} as exploration is underway to better manage its search space'
+            f"Skip test for {nas_model_name} as it fails because of 2 issues: "
+            "not able to set DynamicInputOp to train-only layers (ticket 60976) and "
+            "invalid padding update in elastic kernel (ticket 60990)"
         )
+
+    elif nas_model_name in ["efficient_net_b0", "shufflenetv2"]:
+        pytest.skip(f"Skip test for {nas_model_name} as exploration is underway to better manage its search space")
     model = NAS_MODEL_DESCS[nas_model_name][0]()
     nncf_config = get_empty_config(input_sample_sizes=NAS_MODEL_DESCS[nas_model_name][1])
-    nncf_config['bootstrapNAS'] = {'training': {'algorithm': 'progressive_shrinking'}}
-    nncf_config['input_info'][0].update({'filler': 'random'})
-    nncf_config['bootstrapNAS']['search'] = {"algorithm": "NSGA2", "num_evals": 2, "population": 1}
+    nncf_config["bootstrapNAS"] = {"training": {"algorithm": "progressive_shrinking"}}
+    nncf_config["input_info"][0].update({"filler": "random"})
+    nncf_config["bootstrapNAS"]["search"] = {"algorithm": "NSGA2", "num_evals": 2, "population": 1}
     nncf_config = NNCFConfig.from_dict(nncf_config)
     model, ctrl = create_bootstrap_training_model_and_ctrl(model, nncf_config)
     elasticity_ctrl = ctrl.elasticity_controller
@@ -102,7 +92,7 @@ def prepare_search_algorithm(nas_model_name: str):
 
 def update_search_bn_adapt_section(nncf_config, bn_adapt_section_is_called):
     if not bn_adapt_section_is_called:
-        nncf_config['bootstrapNAS']['search']['batchnorm_adaptation']['num_bn_adaptation_samples'] = 0
+        nncf_config["bootstrapNAS"]["search"]["batchnorm_adaptation"]["num_bn_adaptation_samples"] = 0
 
 
 NAS_MODELS_SEARCH_ENCODING = {
@@ -151,12 +141,12 @@ NAS_MODELS_SEARCH_ENCODING = {
 
 
 class TestSearchAlgorithm:
-
     def test_activate_maximum_subnet_at_init(self):
-        search_desc = SearchTestDesc(model_creator=ThreeConvModel,
-                                     algo_params={'width': {'min_width': 1, 'width_step': 1}},
-                                     input_sizes=ThreeConvModel.INPUT_SIZE,
-                                     )
+        search_desc = SearchTestDesc(
+            model_creator=ThreeConvModel,
+            algo_params={"width": {"min_width": 1, "width_step": 1}},
+            input_sizes=ThreeConvModel.INPUT_SIZE,
+        )
         model, elasticity_ctrl, nncf_config = prepare_test_model(search_desc)
         elasticity_ctrl.multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
         SearchAlgorithm(model, elasticity_ctrl, nncf_config)
@@ -169,17 +159,22 @@ class TestSearchAlgorithm:
         assert search.vars_upper == NAS_MODELS_SEARCH_ENCODING[nas_model_name]
         assert search.num_vars == len(NAS_MODELS_SEARCH_ENCODING[nas_model_name])
 
-    @pytest.mark.parametrize("bn_adapt_section_is_called", [False,True],
-                              ids=["section_with_zero_num_samples", "section_with_non_zero_num_samples"])
+    @pytest.mark.parametrize(
+        "bn_adapt_section_is_called",
+        [False, True],
+        ids=["section_with_zero_num_samples", "section_with_non_zero_num_samples"],
+    )
     def test_bn_adapt(self, mocker, bn_adapt_section_is_called, tmp_path):
-        search_desc = SearchTestDesc(model_creator=ThreeConvModel,
-                                     algo_params={'width': {'min_width': 1, 'width_step': 1}},
-                                     input_sizes=ThreeConvModel.INPUT_SIZE,
-                                     )
+        search_desc = SearchTestDesc(
+            model_creator=ThreeConvModel,
+            algo_params={"width": {"min_width": 1, "width_step": 1}},
+            input_sizes=ThreeConvModel.INPUT_SIZE,
+        )
         nncf_network, ctrl, nncf_config = prepare_test_model(search_desc)
         update_search_bn_adapt_section(nncf_config, bn_adapt_section_is_called)
         bn_adapt_run_patch = mocker.patch(
-            "nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run")
+            "nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run"
+        )
         ctrl.multi_elasticity_handler.enable_all()
         search_algo = SearchAlgorithm(nncf_network, ctrl, nncf_config)
 
@@ -195,12 +190,11 @@ class TestSearchAlgorithm:
 
 class TestSearchEvaluators:
     def test_create_default_evaluators(self, nas_model_name, tmp_path):
-        if nas_model_name in ['squeezenet1_0', 'pnasnetb']:
-            pytest.skip(
-                f'Skip test for {nas_model_name} as it fails.')
+        if nas_model_name in ["squeezenet1_0", "pnasnetb"]:
+            pytest.skip(f"Skip test for {nas_model_name} as it fails.")
         search = prepare_search_algorithm(nas_model_name)
         search.run(lambda model, val_loader: 0, None, tmp_path)
         evaluators = search.evaluator_handlers
         assert len(evaluators) == 2
-        assert evaluators[0].name == 'MACs'
-        assert evaluators[1].name == 'top1_acc'
+        assert evaluators[0].name == "MACs"
+        assert evaluators[1].name == "top1_acc"

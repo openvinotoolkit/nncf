@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from tqdm import tqdm
 import torch
+from tqdm import tqdm
 
 from examples.torch.common.example_logger import logger
 from examples.torch.semantic_segmentation.utils.loss_funcs import do_model_specific_postprocessing
@@ -65,9 +65,9 @@ class Test:
                 # Forward propagation
                 outputs = self.model(inputs)
 
-                labels, loss_outputs, metric_outputs = do_model_specific_postprocessing(self.model_name,
-                                                                                        labels,
-                                                                                        outputs)
+                labels, loss_outputs, metric_outputs = do_model_specific_postprocessing(
+                    self.model_name, labels, outputs
+                )
 
                 # Loss computation
                 loss = self.criterion(loss_outputs, labels)

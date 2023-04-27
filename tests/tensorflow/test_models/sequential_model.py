@@ -11,26 +11,31 @@
  limitations under the License.
 """
 
-from tensorflow.keras import Sequential, layers
-from tensorflow.keras.initializers import Constant # pylint: disable=no-name-in-module
+from tensorflow.keras import Sequential
+from tensorflow.keras import layers
+from tensorflow.keras.initializers import Constant  # pylint: disable=no-name-in-module
 
 
 def SequentialModel(**kwargs):
-    return Sequential([
-        layers.InputLayer(kwargs['input_shape']),
-        layers.Conv2D(10, 3, kernel_initializer=Constant(value=0)),
-        layers.MaxPool2D((4, 4)),
-        layers.Flatten(),
-        layers.Dense(20, kernel_initializer=Constant(value=0)),
-        layers.Dense(kwargs.get('classes', 10), kernel_initializer=Constant(value=0))
-    ])
+    return Sequential(
+        [
+            layers.InputLayer(kwargs["input_shape"]),
+            layers.Conv2D(10, 3, kernel_initializer=Constant(value=0)),
+            layers.MaxPool2D((4, 4)),
+            layers.Flatten(),
+            layers.Dense(20, kernel_initializer=Constant(value=0)),
+            layers.Dense(kwargs.get("classes", 10), kernel_initializer=Constant(value=0)),
+        ]
+    )
 
 
 def SequentialModelNoInput(**kwargs):
-    return Sequential([
-        layers.Conv2D(10, 3, kernel_initializer=Constant(value=0)),
-        layers.MaxPool2D((4, 4)),
-        layers.Flatten(),
-        layers.Dense(20, kernel_initializer=Constant(value=0)),
-        layers.Dense(kwargs.get('classes', 10), kernel_initializer=Constant(value=0))
-    ])
+    return Sequential(
+        [
+            layers.Conv2D(10, 3, kernel_initializer=Constant(value=0)),
+            layers.MaxPool2D((4, 4)),
+            layers.Flatten(),
+            layers.Dense(20, kernel_initializer=Constant(value=0)),
+            layers.Dense(kwargs.get("classes", 10), kernel_initializer=Constant(value=0)),
+        ]
+    )

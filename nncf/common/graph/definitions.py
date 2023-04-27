@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-MODEL_INPUT_OP_NAME = 'nncf_model_input'
-MODEL_OUTPUT_OP_NAME = 'nncf_model_output'
+MODEL_INPUT_OP_NAME = "nncf_model_input"
+MODEL_OUTPUT_OP_NAME = "nncf_model_output"
 
 
 class NNCFGraphNodeType:

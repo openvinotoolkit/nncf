@@ -10,36 +10,28 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Tuple
-from typing import Optional
 import xml.etree.ElementTree as ET
+from typing import Callable, Dict, List, Optional, Tuple
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 
 
 class Tags:
-    NET = 'net'
-    NODES = 'layers'
-    EDGES = 'edges'
-    NODE = 'layer'
-    EDGE = 'edge'
-    DATA = 'data'
-    INPUT = 'input'
-    OUTPUT = 'output'
-    PORT = 'port'
-    DIM = 'dim'
+    NET = "net"
+    NODES = "layers"
+    EDGES = "edges"
+    NODE = "layer"
+    EDGE = "edge"
+    DATA = "data"
+    INPUT = "input"
+    OUTPUT = "output"
+    PORT = "port"
+    DIM = "dim"
 
 
 class PortDesc:
-
-    def __init__(self,
-                 port_id: str,
-                 shape: Optional[List[int]] = None,
-                 precision: str = None):
+    def __init__(self, port_id: str, shape: Optional[List[int]] = None, precision: str = None):
         self.port_id = port_id
         if shape is None:
             shape = []
@@ -49,7 +41,7 @@ class PortDesc:
     def as_xml_element(self) -> ET.Element:
         port = ET.Element(Tags.PORT, id=self.port_id)
         if self.precision:
-            port.set('precision', self.precision)
+            port.set("precision", self.precision)
         for i in self.shape:
             dim = ET.Element(Tags.DIM)
             dim.text = str(i)
@@ -58,14 +50,15 @@ class PortDesc:
 
 
 class NodeDesc:
-
-    def __init__(self,
-                 node_id: str,
-                 name: str,
-                 type: str,
-                 attrs: Optional[Dict[str, str]] = None,
-                 inputs: Optional[List[PortDesc]] = None,
-                 outputs: Optional[List[PortDesc]] = None):
+    def __init__(
+        self,
+        node_id: str,
+        name: str,
+        type: str,
+        attrs: Optional[Dict[str, str]] = None,
+        inputs: Optional[List[PortDesc]] = None,
+        outputs: Optional[List[PortDesc]] = None,
+    ):
         self.node_id = node_id
         self.name = name
         self.type = type
@@ -93,12 +86,7 @@ class NodeDesc:
 
 
 class EdgeDesc:
-
-    def __init__(self,
-                 from_node: str,
-                 from_port: str,
-                 to_node: str,
-                 to_port: str):
+    def __init__(self, from_node: str, from_port: str, to_node: str, to_port: str):
         self.from_node = from_node
         self.from_port = from_port
         self.to_node = to_node
@@ -106,28 +94,30 @@ class EdgeDesc:
 
     def as_xml_element(self) -> ET.Element:
         attrs = {
-            'from-layer': self.from_node,
-            'from-port': self.from_port,
-            'to-layer': self.to_node,
-            'to-port': self.to_port,
+            "from-layer": self.from_node,
+            "from-port": self.from_port,
+            "to-layer": self.to_node,
+            "to-port": self.to_port,
         }
         edge = ET.Element(Tags.EDGE, attrs)
         return edge
 
+
 GET_ATTRIBUTES_FN_TYPE = Callable[[NNCFNode], Dict[str, str]]
 
+
 # TODO(andrey-churkin): Add support for `PortDesc.precision` param.
-def get_graph_desc(graph: NNCFGraph,
-                   include_fq_params: bool = False,
-                   get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
+def get_graph_desc(
+    graph: NNCFGraph, include_fq_params: bool = False, get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None
+) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
     if get_attributes_fn is None:
         get_attributes_fn = lambda x: {
-            'metatype': str(x.metatype.name),
+            "metatype": str(x.metatype.name),
         }
     include_node: Dict[int, bool] = {}
     edges = []
     for edge in graph.get_all_edges():
-        if not include_fq_params and edge.to_node.node_type == 'FakeQuantize' and edge.input_port_id != 0:
+        if not include_fq_params and edge.to_node.node_type == "FakeQuantize" and edge.input_port_id != 0:
             include_node[edge.from_node.node_id] = False
             continue
 
@@ -136,7 +126,7 @@ def get_graph_desc(graph: NNCFGraph,
                 from_node=str(edge.from_node.node_id),
                 from_port=str(edge.output_port_id),
                 to_node=str(edge.to_node.node_id),
-                to_port=str(edge.input_port_id)
+                to_port=str(edge.input_port_id),
             )
         )
 
@@ -147,15 +137,10 @@ def get_graph_desc(graph: NNCFGraph,
 
         inputs = []
         for edge in graph.get_input_edges(node):
-            if not include_fq_params and node.node_type == 'FakeQuantize' and edge.input_port_id != 0:
+            if not include_fq_params and node.node_type == "FakeQuantize" and edge.input_port_id != 0:
                 continue
 
-            inputs.append(
-                PortDesc(
-                    port_id=str(edge.input_port_id),
-                    shape=edge.tensor_shape
-                )
-            )
+            inputs.append(PortDesc(port_id=str(edge.input_port_id), shape=edge.tensor_shape))
 
         outputs = []
         for edge in graph.get_output_edges(node):
@@ -173,18 +158,20 @@ def get_graph_desc(graph: NNCFGraph,
                 type=node.node_type.title(),
                 attrs=get_attributes_fn(node),
                 inputs=inputs,
-                outputs=outputs
+                outputs=outputs,
             )
         )
 
     return nodes, edges
 
 
-def save_for_netron(graph: NNCFGraph,
-                    save_path: str,
-                    graph_name: str = 'Graph',
-                    include_fq_params: bool = False,
-                    get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None):
+def save_for_netron(
+    graph: NNCFGraph,
+    save_path: str,
+    graph_name: str = "Graph",
+    include_fq_params: bool = False,
+    get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None,
+):
     node_descs, edge_descs = get_graph_desc(graph, include_fq_params, get_attributes_fn)
 
     net = ET.Element(Tags.NET, name=graph_name)
@@ -198,5 +185,5 @@ def save_for_netron(graph: NNCFGraph,
         edges.append(edge.as_xml_element())
 
     # ET.indent(net)  # Only Python 3.9
-    with open(save_path, 'wb') as f:
+    with open(save_path, "wb") as f:
         f.write(ET.tostring(net))

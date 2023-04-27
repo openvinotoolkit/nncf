@@ -11,12 +11,12 @@
  limitations under the License.
 """
 
+import sys
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
 from dataclasses import is_dataclass
 from enum import Enum
-import sys
 from typing import Any, ClassVar, Dict, Optional, Protocol
 
 from nncf.common.quantization.structs import QuantizationMode
@@ -49,9 +49,10 @@ class OverflowFix(Enum):
         are quantized using a half of the 8-bit quantization range.
     :param DISABLE: All weights are quantized using the full 8-bit quantization range.
     """
-    ENABLE = 'enable'
-    FIRST_LAYER = 'first_layer_only'
-    DISABLE = 'disable'
+
+    ENABLE = "enable"
+    FIRST_LAYER = "first_layer_only"
+    DISABLE = "disable"
 
 
 @dataclass
@@ -73,6 +74,7 @@ class QuantizationParameters:
         [-2^(num_bits - 1) + 1; 2^(num_bits - 1) - 1] for signed quantization
         when it is True.
     """
+
     num_bits: Optional[int] = None
     mode: Optional[QuantizationMode] = None
     signedness_to_force: Optional[bool] = None
@@ -90,6 +92,7 @@ class AdvancedBiasCorrectionParameters:
     :param threshold: The threshold value determines the maximum bias correction value.
         The bias correction are skipped If the value is higher than threshold.
     """
+
     apply_for_all_nodes: bool = False
     threshold: Optional[float] = None
 
@@ -115,6 +118,7 @@ class AdvancedQuantizationParameters:
     :param bias_correction_params: Advanced bias correction paramters.
     :param backend_params: Backend-specific parameters.
     """
+
     # General parameters
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
     quantize_outputs: bool = False
@@ -122,20 +126,15 @@ class AdvancedQuantizationParameters:
     disable_bias_correction: bool = False
 
     # Advanced Quantization parameters
-    activations_quantization_params: QuantizationParameters = field(
-        default_factory=QuantizationParameters)
-    weights_quantization_params: QuantizationParameters = field(
-        default_factory=QuantizationParameters)
+    activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)
+    weights_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)
 
     # Range estimator parameters
-    activations_range_estimator_params: RangeEstimatorParameters = field(
-        default_factory=RangeEstimatorParameters)
-    weights_range_estimator_params: RangeEstimatorParameters = field(
-        default_factory=RangeEstimatorParameters)
+    activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
+    weights_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
 
     # Advanced BiasCorrection algorithm parameters
-    bias_correction_params: AdvancedBiasCorrectionParameters = field(
-        default_factory=AdvancedBiasCorrectionParameters)
+    bias_correction_params: AdvancedBiasCorrectionParameters = field(default_factory=AdvancedBiasCorrectionParameters)
 
     # backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)
@@ -160,6 +159,7 @@ class AdvancedAccuracyRestorerParameters:
     :param ranking_subset_size: Size of a subset that is used to rank layers by their
         contribution to the accuracy drop.
     """
+
     max_num_iterations: int = sys.maxsize
     tune_hyperparams: bool = False
     convert_to_mixed_preset: bool = False
@@ -170,6 +170,7 @@ class IsDataclass(Protocol):
     """
     Type hint class for the dataclass
     """
+
     __dataclass_fields__: ClassVar[Dict]
 
 
@@ -219,16 +220,15 @@ def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> D
     """
     result = {}
     if params.num_bits is not None:
-        result['bits'] = params.num_bits
+        result["bits"] = params.num_bits
     if params.mode is not None:
-        result['mode'] = params.mode
+        result["mode"] = params.mode
     if params.signedness_to_force is not None:
-        result['signed'] = params.signedness_to_force
+        result["signed"] = params.signedness_to_force
     if params.per_channel is not None:
-        result['per_channel'] = params.per_channel
+        result["per_channel"] = params.per_channel
     if params.narrow_range is not None:
-        raise RuntimeError(
-            'narrow_range parameter is not supported in the legacy format')
+        raise RuntimeError("narrow_range parameter is not supported in the legacy format")
     return result
 
 
@@ -240,33 +240,36 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     :return: range estimator parameters as dict in the legacy format
     """
     if params.min.clipping_value is not None or params.max.clipping_value is not None:
-        raise RuntimeError(
-            'clipping_value parameter is not supported in the legacy format')
+        raise RuntimeError("clipping_value parameter is not supported in the legacy format")
 
     result = {}
-    if (params.min.statistics_type == StatisticsType.MIN and
-        params.min.aggregator_type == AggregatorType.MIN and
-        params.max.statistics_type == StatisticsType.MAX and
-        params.max.aggregator_type == AggregatorType.MAX):
-        result['type'] = 'mixed_min_max'
-    elif (params.min.statistics_type == StatisticsType.MIN and
-          params.min.aggregator_type == AggregatorType.MEAN and
-          params.max.statistics_type == StatisticsType.MAX and
-          params.max.aggregator_type == AggregatorType.MEAN):
-        result['type'] = 'mean_min_max'
-    elif (params.min.statistics_type == StatisticsType.QUANTILE and
-          params.min.aggregator_type == AggregatorType.MEAN and
-          params.max.statistics_type == StatisticsType.QUANTILE and
-          params.max.aggregator_type == AggregatorType.MEAN):
-        result['type'] = 'mean_percentile'
-        result['params'] = {
-            'min_percentile': 1 - params.min.quantile_outlier_prob,
-            'max_percentile': 1 - params.max.quantile_outlier_prob
+    if (
+        params.min.statistics_type == StatisticsType.MIN
+        and params.min.aggregator_type == AggregatorType.MIN
+        and params.max.statistics_type == StatisticsType.MAX
+        and params.max.aggregator_type == AggregatorType.MAX
+    ):
+        result["type"] = "mixed_min_max"
+    elif (
+        params.min.statistics_type == StatisticsType.MIN
+        and params.min.aggregator_type == AggregatorType.MEAN
+        and params.max.statistics_type == StatisticsType.MAX
+        and params.max.aggregator_type == AggregatorType.MEAN
+    ):
+        result["type"] = "mean_min_max"
+    elif (
+        params.min.statistics_type == StatisticsType.QUANTILE
+        and params.min.aggregator_type == AggregatorType.MEAN
+        and params.max.statistics_type == StatisticsType.QUANTILE
+        and params.max.aggregator_type == AggregatorType.MEAN
+    ):
+        result["type"] = "mean_percentile"
+        result["params"] = {
+            "min_percentile": 1 - params.min.quantile_outlier_prob,
+            "max_percentile": 1 - params.max.quantile_outlier_prob,
         }
     else:
-        raise RuntimeError(
-            'The following range estimator parameters are not supported: '
-            f'{str(params)}')
+        raise RuntimeError("The following range estimator parameters are not supported: " f"{str(params)}")
 
     return result
 
@@ -279,46 +282,41 @@ def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) 
     :return: advanced quantization parameters as dict in the legacy format
     """
     result = {
-        'overflow_fix': params.overflow_fix.value,
-        'quantize_outputs': params.quantize_outputs,
+        "overflow_fix": params.overflow_fix.value,
+        "quantize_outputs": params.quantize_outputs,
     }
 
     if params.disable_bias_correction:
-        result['batchnorm_adaptation'] = {'num_bn_adaptation_samples': 0}
+        result["batchnorm_adaptation"] = {"num_bn_adaptation_samples": 0}
 
-    activations_config = convert_quantization_parameters_to_dict(
-        params.activations_quantization_params)
+    activations_config = convert_quantization_parameters_to_dict(params.activations_quantization_params)
     if activations_config:
-        result['activations'] = activations_config
+        result["activations"] = activations_config
 
-    weights_config = convert_quantization_parameters_to_dict(
-        params.weights_quantization_params)
+    weights_config = convert_quantization_parameters_to_dict(params.weights_quantization_params)
     if weights_config:
-        result['weights'] = weights_config
+        result["weights"] = weights_config
 
     activations_init_range_config = convert_range_estimator_parameters_to_dict(
-        params.activations_range_estimator_params)
-    weights_init_range_config = convert_range_estimator_parameters_to_dict(
-        params.weigths_range_estimator_params)
+        params.activations_range_estimator_params
+    )
+    weights_init_range_config = convert_range_estimator_parameters_to_dict(params.weigths_range_estimator_params)
     if activations_init_range_config or weights_init_range_config:
-        activations_init_range_config['target_quantizer_group'] = 'activations'
-        activations_init_range_config['target_scopes'] = '{re}.*'
-        weights_init_range_config['target_quantizer_group'] = 'weights'
-        weights_init_range_config['target_scopes'] = '{re}.*'
+        activations_init_range_config["target_quantizer_group"] = "activations"
+        activations_init_range_config["target_scopes"] = "{re}.*"
+        weights_init_range_config["target_quantizer_group"] = "weights"
+        weights_init_range_config["target_scopes"] = "{re}.*"
 
-        result['initializer']['range'] = [
-            activations_init_range_config,
-            weights_init_range_config
-        ]
+        result["initializer"]["range"] = [activations_init_range_config, weights_init_range_config]
 
     if params.bias_correction_params.apply_for_all_nodes:
         raise RuntimeError(
-            'apply_for_all_nodes parameter of the BiasCorrection algorithm is not '
-            'supported in the legacy format')
+            "apply_for_all_nodes parameter of the BiasCorrection algorithm is not " "supported in the legacy format"
+        )
 
     if params.bias_correction_params.threshold is not None:
         raise RuntimeError(
-            'threshold parameter of the BiasCorrection algorithm is not supported in '
-            'the legacy format')
+            "threshold parameter of the BiasCorrection algorithm is not supported in " "the legacy format"
+        )
 
     return result

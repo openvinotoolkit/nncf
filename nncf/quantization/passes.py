@@ -18,9 +18,11 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 
-def transform_to_inference_graph(nncf_graph: NNCFGraph,
-                                 shapeof_metatypes: List[OperatorMetatype],
-                                 read_variable_metatypes: Optional[List[OperatorMetatype]] = None) -> NNCFGraph:
+def transform_to_inference_graph(
+    nncf_graph: NNCFGraph,
+    shapeof_metatypes: List[OperatorMetatype],
+    read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
+) -> NNCFGraph:
     """
     This method contains pipeline of the passes that uses to provide inference graph without constant flows.
 
@@ -35,9 +37,11 @@ def transform_to_inference_graph(nncf_graph: NNCFGraph,
     return inference_nncf_graph
 
 
-def remove_shapeof_subgraphs(nncf_graph: NNCFGraph,
-                             shapeof_metatypes: List[OperatorMetatype],
-                             read_variable_metatypes: Optional[List[OperatorMetatype]] = None) -> NNCFGraph:
+def remove_shapeof_subgraphs(
+    nncf_graph: NNCFGraph,
+    shapeof_metatypes: List[OperatorMetatype],
+    read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
+) -> NNCFGraph:
     """
     Removes the ShapeOf subgraphs from the provided NNCFGraph instance.
 
@@ -82,8 +86,9 @@ def remove_shapeof_subgraphs(nncf_graph: NNCFGraph,
     return nncf_graph
 
 
-def filter_constant_nodes(nncf_graph: NNCFGraph,
-                          read_variable_metatypes: Optional[List[OperatorMetatype]] = None) -> NNCFGraph:
+def filter_constant_nodes(
+    nncf_graph: NNCFGraph, read_variable_metatypes: Optional[List[OperatorMetatype]] = None
+) -> NNCFGraph:
     """
     Removes all Constant nodes from NNCFGraph, making it inference graph.
     The traversing starts from the input nodes and nodes with weights.

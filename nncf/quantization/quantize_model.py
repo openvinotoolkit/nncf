@@ -14,10 +14,10 @@
 from typing import Any, Callable, Iterable, Optional
 
 from nncf.api.compression import TModel
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -27,15 +27,17 @@ from nncf.scopes import IgnoredScope
 
 
 @api(canonical_alias="nncf.quantize")
-def quantize(model: TModel,
-             calibration_dataset: Dataset,
-             preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-             target_device: TargetDevice = TargetDevice.ANY,
-             subset_size: int = 300,
-             fast_bias_correction: bool = True,
-             model_type: Optional[ModelType] = None,
-             ignored_scope: Optional[IgnoredScope] = None,
-             advanced_parameters: Optional[AdvancedQuantizationParameters] = None) -> TModel:
+def quantize(
+    model: TModel,
+    calibration_dataset: Dataset,
+    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+) -> TModel:
     """
     Applies post-training quantization algorithm to provided model.
 
@@ -73,25 +75,65 @@ def quantize(model: TModel,
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_impl
-        return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type, ignored_scope, advanced_parameters)
+
+        return quantize_impl(
+            model,
+            calibration_dataset,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_parameters,
+        )
 
     if backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import quantize_impl
-        return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type, ignored_scope, advanced_parameters)
+
+        return quantize_impl(
+            model,
+            calibration_dataset,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_parameters,
+        )
 
     if backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.quantization.quantize_model import quantize_impl
-        return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type, ignored_scope, advanced_parameters)
+
+        return quantize_impl(
+            model,
+            calibration_dataset,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_parameters,
+        )
 
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import quantize_impl
-        return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type, ignored_scope, advanced_parameters)
 
-    raise RuntimeError(f'Unsupported type of backend: {backend}')
+        return quantize_impl(
+            model,
+            calibration_dataset,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_parameters,
+        )
+
+    raise RuntimeError(f"Unsupported type of backend: {backend}")
 
 
 @api(canonical_alias="nncf.quantize_with_accuracy_control")
@@ -108,7 +150,8 @@ def quantize_with_accuracy_control(
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
-    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None) -> TModel:
+    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None,
+) -> TModel:
     """
     Applies post-training quantization algorithm with accuracy control to provided model.
 
@@ -153,10 +196,21 @@ def quantize_with_accuracy_control(
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_with_accuracy_control_impl
-        return quantize_with_accuracy_control_impl(
-            model, calibration_dataset, validation_dataset, validation_fn, max_drop,
-            preset, target_device, subset_size, fast_bias_correction, model_type,
-            ignored_scope, advanced_quantization_parameters,
-            advanced_accuracy_restorer_parameters)
 
-    raise RuntimeError(f'Unsupported type of backend: {backend}')
+        return quantize_with_accuracy_control_impl(
+            model,
+            calibration_dataset,
+            validation_dataset,
+            validation_fn,
+            max_drop,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_quantization_parameters,
+            advanced_accuracy_restorer_parameters,
+        )
+
+    raise RuntimeError(f"Unsupported type of backend: {backend}")

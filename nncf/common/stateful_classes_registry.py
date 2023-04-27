@@ -12,15 +12,15 @@
 """
 
 import inspect
-from typing import Callable
-from typing import Dict
+from typing import Callable, Dict
 
 
 class StatefulClassesRegistry:
     """
     Registry for the stateful classes  - classes that can be restored from their state by `from_state` method.
     """
-    REQUIRED_METHOD_NAME = 'from_state'
+
+    REQUIRED_METHOD_NAME = "from_state"
 
     def __init__(self):
         self._name_vs_class_map = {}  # type: Dict[str, object]
@@ -38,16 +38,21 @@ class StatefulClassesRegistry:
             registered_name = name if name is not None else cls.__name__
 
             if registered_name in self._name_vs_class_map:
-                raise ValueError('{} has already been registered to {}'.format(
-                    registered_name, self._name_vs_class_map[registered_name]))
+                raise ValueError(
+                    "{} has already been registered to {}".format(
+                        registered_name, self._name_vs_class_map[registered_name]
+                    )
+                )
 
             if cls in self._class_vs_name_map:
-                raise ValueError('{} has already been registered to {}'.format(
-                    cls, self._class_vs_name_map[cls]))
+                raise ValueError("{} has already been registered to {}".format(cls, self._class_vs_name_map[cls]))
 
             if inspect.isclass(cls) and not hasattr(cls, self.REQUIRED_METHOD_NAME):
-                raise ValueError('Cannot register a class ({}) that does not have {}() method.'.format(
-                    registered_name, self.REQUIRED_METHOD_NAME))
+                raise ValueError(
+                    "Cannot register a class ({}) that does not have {}() method.".format(
+                        registered_name, self.REQUIRED_METHOD_NAME
+                    )
+                )
 
             self._class_vs_name_map[cls] = registered_name
             self._name_vs_class_map[registered_name] = cls
@@ -65,7 +70,7 @@ class StatefulClassesRegistry:
         """
         if registered_name in self._name_vs_class_map:
             return self._name_vs_class_map[registered_name]
-        raise KeyError('No registered stateful classes with {} name'.format(registered_name))
+        raise KeyError("No registered stateful classes with {} name".format(registered_name))
 
     def get_registered_name(self, stateful_cls: object) -> str:
         """
@@ -76,7 +81,7 @@ class StatefulClassesRegistry:
         """
         if stateful_cls in self._class_vs_name_map:
             return self._class_vs_name_map[stateful_cls]
-        raise KeyError('The class {} was not registered.'.format(stateful_cls.__name__))
+        raise KeyError("The class {} was not registered.".format(stateful_cls.__name__))
 
 
 class CommonStatefulClassesRegistry:

@@ -12,15 +12,16 @@
 """
 from nncf.common.deprecation import warning_deprecated
 
-#pylint:disable=wrong-import-position
+# pylint:disable=wrong-import-position
 
 warning_deprecated(
     "Importing from nncf.common.utils.logger is deprecated. "
     "Import `from nncf` directly instead, i.e.: \n"
     "`from nncf import set_log_level` instead of `from nncf.common.utils.logger import set_log_level`, and:\n"
-    "`from nncf import nncf_logger` instead of `from nncf.common.utils.logger import logger as nncf_logger`")
+    "`from nncf import nncf_logger` instead of `from nncf.common.utils.logger import logger as nncf_logger`"
+)
 
-#pylint:disable=unused-import
+# pylint:disable=unused-import
+from nncf.common.logging.logger import disable_logging
 from nncf.common.logging.logger import nncf_logger as logger
 from nncf.common.logging.logger import set_log_level
-from nncf.common.logging.logger import disable_logging

@@ -79,7 +79,6 @@ class Train:
             loss.backward()
             self.optim.step()
 
-
             # Keep track of loss for current epoch
             epoch_loss += loss.item()
 
