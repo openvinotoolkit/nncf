@@ -13,8 +13,8 @@
 
 from typing import List, Tuple
 
-import torch
 import numpy as np
+import torch
 
 
 def max_reduce_like(input_: torch.Tensor, ref_tensor_shape: List[int]) -> torch.Tensor:

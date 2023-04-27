@@ -11,8 +11,9 @@
  limitations under the License.
 """
 
-from abc import ABC, abstractmethod
-from typing import Optional, List, Tuple, Any
+from abc import ABC
+from abc import abstractmethod
+from typing import Any, List, Optional, Tuple
 
 from nncf.api.compression import TModel
 
@@ -25,11 +26,13 @@ class Exporter(ABC):
     for deployment.
     """
 
-    def __init__(self,
-                 model: TModel,
-                 input_names: Optional[List[str]] = None,
-                 output_names: Optional[List[str]] = None,
-                 model_args: Optional[Tuple[Any, ...]] = None):
+    def __init__(
+        self,
+        model: TModel,
+        input_names: Optional[List[str]] = None,
+        output_names: Optional[List[str]] = None,
+        model_args: Optional[Tuple[Any, ...]] = None,
+    ):
         """
         Initializes an exporter.
 

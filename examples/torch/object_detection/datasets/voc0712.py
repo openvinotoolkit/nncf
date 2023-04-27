@@ -10,22 +10,19 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from PIL.Image import Image
-import cv2
 import os
 import os.path
 import sys
-from typing import Optional, Callable
-
 from pathlib import Path
 from pathlib import PurePath
+from typing import Callable, Dict, Optional, Tuple
 
-from typing import Tuple, Dict
-
+import cv2
+from PIL.Image import Image
 from torch.utils import data
 from torchvision import datasets
-from examples.torch.object_detection.utils.augmentations import Compose
 
+from examples.torch.object_detection.utils.augmentations import Compose
 
 if sys.version_info[0] == 2:
     import defusedxml.cElementTree as ET
@@ -33,15 +30,37 @@ else:
     import defusedxml.ElementTree as ET
 
 VOC_CLASSES = (  # always index 0
-    'aeroplane', 'bicycle', 'bird', 'boat',
-    'bottle', 'bus', 'car', 'cat', 'chair',
-    'cow', 'diningtable', 'dog', 'horse',
-    'motorbike', 'person', 'pottedplant',
-    'sheep', 'sofa', 'train', 'tvmonitor')
+    "aeroplane",
+    "bicycle",
+    "bird",
+    "boat",
+    "bottle",
+    "bus",
+    "car",
+    "cat",
+    "chair",
+    "cow",
+    "diningtable",
+    "dog",
+    "horse",
+    "motorbike",
+    "person",
+    "pottedplant",
+    "sheep",
+    "sofa",
+    "train",
+    "tvmonitor",
+)
 
 # for making bounding boxes pretty
-COLORS = ((255, 0, 0, 128), (0, 255, 0, 128), (0, 0, 255, 128),
-          (0, 255, 255, 128), (255, 0, 255, 128), (255, 255, 0, 128))
+COLORS = (
+    (255, 0, 0, 128),
+    (0, 255, 0, 128),
+    (0, 0, 255, 128),
+    (0, 255, 255, 128),
+    (255, 0, 255, 128),
+    (255, 255, 0, 128),
+)
 
 
 class VOCAnnotationTransform:
@@ -56,12 +75,8 @@ class VOCAnnotationTransform:
             (default: False)
     """
 
-    def __init__(self,
-                 class_to_ind: Optional[Callable] = None,
-                 keep_difficult: bool = False
-                 ):
-        self.class_to_ind = class_to_ind or dict(
-            zip(VOC_CLASSES, range(len(VOC_CLASSES))))
+    def __init__(self, class_to_ind: Optional[Callable] = None, keep_difficult: bool = False):
+        self.class_to_ind = class_to_ind or dict(zip(VOC_CLASSES, range(len(VOC_CLASSES))))
         self.keep_difficult = keep_difficult
 
     def __call__(self, image: Image, target: Dict, pull: bool = False):
@@ -78,21 +93,21 @@ class VOCAnnotationTransform:
         """
 
         if not pull:
-            width = int(target['annotation']['size']['width'])
-            height = int(target['annotation']['size']['height'])
+            width = int(target["annotation"]["size"]["width"])
+            height = int(target["annotation"]["size"]["height"])
         else:
             width = 1
             height = 1
         res = []
 
-        for obj in iter(target['annotation']['object']):
-            difficult = int(obj['difficult']) == 1
+        for obj in iter(target["annotation"]["object"]):
+            difficult = int(obj["difficult"]) == 1
             if not self.keep_difficult and difficult:
                 continue
-            name = obj['name'].lower().strip()
-            bbox = obj['bndbox']
+            name = obj["name"].lower().strip()
+            bbox = obj["bndbox"]
 
-            pts = ['xmin', 'ymin', 'xmax', 'ymax']
+            pts = ["xmin", "ymin", "xmax", "ymax"]
             bndbox = []
             for i, pt in enumerate(pts):
                 cur_pt = int(bbox[pt]) - 1
@@ -100,7 +115,7 @@ class VOCAnnotationTransform:
                 cur_pt = cur_pt / width if i % 2 == 0 else cur_pt / height
                 bndbox.append(cur_pt)
             label_idx = self.class_to_ind[name]
-            res += [{'bbox': bndbox, 'label_idx': label_idx, 'difficult': difficult}]
+            res += [{"bbox": bndbox, "label_idx": label_idx, "difficult": difficult}]
 
         return image, res
 
@@ -120,35 +135,31 @@ class VOCDetection(data.Dataset):
             (eg: take in caption string, return tensor of word indices)
         return_image_info (bool): sign indicating whether to return the height and width of the image
     """
-    classes = VOC_CLASSES
-    name = 'voc'
 
-    def __init__(self,
-                 root: str,
-                 image_sets: Tuple = (('2007', 'trainval'), ('2012', 'trainval')),
-                 transform: Optional[Callable] = None,
-                 target_transform: Optional[Callable] = VOCAnnotationTransform(keep_difficult=False),
-                 return_image_info: bool = False,
-                 ):
+    classes = VOC_CLASSES
+    name = "voc"
+
+    def __init__(
+        self,
+        root: str,
+        image_sets: Tuple = (("2007", "trainval"), ("2012", "trainval")),
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = VOCAnnotationTransform(keep_difficult=False),
+        return_image_info: bool = False,
+    ):
         super().__init__()
         self.target_transform = target_transform
         self.transform = transform
         self.return_image_info = return_image_info
-        self.transforms = Compose([
-                          self.target_transform,
-                          self.transform
-                          ])
-        self._annopath = os.path.join('%s', 'Annotations', '%s.xml')
-        self._imgpath = os.path.join('%s', 'JPEGImages', '%s.jpg')
+        self.transforms = Compose([self.target_transform, self.transform])
+        self._annopath = os.path.join("%s", "Annotations", "%s.xml")
+        self._imgpath = os.path.join("%s", "JPEGImages", "%s.jpg")
         self.ids = []
         self.root = root
 
         sub_datasets = []
         for year, name in image_sets:
-            voc_elem = datasets.VOCDetection(root, year=year,
-                                             image_set=name,
-                                             transforms=self.transforms
-                                             )
+            voc_elem = datasets.VOCDetection(root, year=year, image_set=name, transforms=self.transforms)
             for name_path in voc_elem.images:
                 self.ids.append((str(PurePath(name_path).parents[1]), Path(name_path).stem))
             sub_datasets.append(voc_elem)
@@ -188,12 +199,14 @@ class VOCDetection(data.Dataset):
         """
         img_name = self.ids[index]
         anno = ET.parse(self._annopath % img_name).getroot()
-        _, gt_res = self.target_transform(None,
-                                          # Instantiating an object is required here for backwards compatibility with
-                                          # pre-torchvision 0.13 versions, where `parse_voc_xml` was not yet a static
-                                          # method
-                                          datasets.VOCDetection(self.root).parse_voc_xml(node=anno),
-                                          pull=True)
+        _, gt_res = self.target_transform(
+            None,
+            # Instantiating an object is required here for backwards compatibility with
+            # pre-torchvision 0.13 versions, where `parse_voc_xml` was not yet a static
+            # method
+            datasets.VOCDetection(self.root).parse_voc_xml(node=anno),
+            pull=True,
+        )
         return img_name[1], gt_res
 
     def get_img_names(self):

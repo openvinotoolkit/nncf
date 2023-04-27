@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from examples.torch.common.models.classification import mobilenet_v2_tv_092
 from examples.torch.common.models.classification import MobileNetV2 as MobileNetV2_tv_092
+from examples.torch.common.models.classification import mobilenet_v2_tv_092
 
 mobilenet_v2 = mobilenet_v2_tv_092
 MobileNetV2 = MobileNetV2_tv_092

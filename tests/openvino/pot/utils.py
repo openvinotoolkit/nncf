@@ -18,16 +18,17 @@ import openvino.runtime as ov
 from openvino.tools import pot
 
 
-def convert_openvino_model_to_compressed_model(model: ov.Model,
-                                               target_device: str) -> pot.graph.nx_model.CompressedModel:
+def convert_openvino_model_to_compressed_model(
+    model: ov.Model, target_device: str
+) -> pot.graph.nx_model.CompressedModel:
     with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
-        xml_path = str(Path(tmp_dir) / 'model.xml')
-        bin_path = str(Path(tmp_dir) / 'model.bin')
+        xml_path = str(Path(tmp_dir) / "model.xml")
+        bin_path = str(Path(tmp_dir) / "model.bin")
         ov.serialize(model, xml_path, bin_path)
         model_config = {
-            'model_name': 'model',
-            'model': xml_path,
-            'weights': bin_path,
+            "model_name": "model",
+            "model": xml_path,
+            "weights": bin_path,
         }
         pot_model = pot.load_model(model_config, target_device)
 

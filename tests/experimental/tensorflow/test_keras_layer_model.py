@@ -17,25 +17,23 @@ import tensorflow_hub as hub
 
 from nncf import NNCFConfig
 from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
-
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
-
 
 patch_tf_operations()
 
 
 def test_keras_layer_model():
-    nncf_config = NNCFConfig({
-        'model': 'Model',
-        'input_info': [{'sample_size': [1, 224, 224, 3]}],
-        'compression': {
-            'algorithm': 'experimental_quantization'
+    nncf_config = NNCFConfig(
+        {
+            "model": "Model",
+            "input_info": [{"sample_size": [1, 224, 224, 3]}],
+            "compression": {"algorithm": "experimental_quantization"},
         }
-    })
+    )
 
-    model = tf.keras.Sequential([
-        hub.KerasLayer('https://tfhub.dev/google/imagenet/mobilenet_v3_small_100_224/classification/5')
-    ])
+    model = tf.keras.Sequential(
+        [hub.KerasLayer("https://tfhub.dev/google/imagenet/mobilenet_v3_small_100_224/classification/5")]
+    )
 
     with pytest.raises(ValueError):
         create_compressed_model_and_algo_for_test(model, nncf_config, force_no_init=True)

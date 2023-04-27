@@ -11,11 +11,10 @@
  limitations under the License.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from nncf.openvino.engine import OVNativeEngine
-
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import QuantizedModel

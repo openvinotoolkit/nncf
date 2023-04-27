@@ -13,7 +13,8 @@
 
 import tensorflow as tf
 
-from nncf.tensorflow.functions import logit, st_threshold
+from nncf.tensorflow.functions import logit
+from nncf.tensorflow.functions import st_threshold
 
 
 def binary_mask(mask):

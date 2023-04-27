@@ -11,14 +11,13 @@
  limitations under the License.
 """
 
-from nncf.telemetry.extractors import CollectedEvent
-from nncf.telemetry.extractors import TelemetryExtractor
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
+from nncf.telemetry.extractors import CollectedEvent
+from nncf.telemetry.extractors import TelemetryExtractor
 
 
 class CompressionStartedFromConfig(TelemetryExtractor):
     def extract(self, argvalue: NNCFConfig) -> CollectedEvent:
         algo_names = extract_algorithm_names(argvalue)
-        return CollectedEvent(name="compression_started",
-                              data=",".join(algo_names))
+        return CollectedEvent(name="compression_started", data=",".join(algo_names))

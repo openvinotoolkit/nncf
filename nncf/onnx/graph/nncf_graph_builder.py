@@ -10,22 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List, Tuple, Optional
-
 from collections import Counter
+from typing import List, Optional, Tuple
+
 import onnx
 
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.graph.layer_attributes import BaseLayerAttributes, Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-
-from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 
 class GraphConverter:
@@ -43,8 +43,8 @@ class GraphConverter:
         :return: ONNX model with filled nodes.
         """
         for i, node in enumerate(model.graph.node):
-            if node.name == '':
-                node.name = node.op_type + '_nncf_' + str(i)
+            if node.name == "":
+                node.name = node.op_type + "_nncf_" + str(i)
 
         name_counter = Counter([node.name for node in model.graph.node])
 
@@ -52,7 +52,8 @@ class GraphConverter:
             raise RuntimeError(
                 f"Nodes {[(name, cnt) for name, cnt in name_counter.items() if cnt > 1]} "
                 "(name, counts) occurred more than once. "
-                "NNCF expects every node to have a unique name.")
+                "NNCF expects every node to have a unique name."
+            )
 
         return model
 
@@ -67,9 +68,11 @@ class GraphConverter:
         """
         for i, _input in enumerate(onnx_graph.get_model_inputs()):
             input_name = _input.name
-            input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
-                                                  node_type=NNCFGraphNodeType.INPUT_NODE,
-                                                  node_metatype=InputNoopMetatype)
+            input_node = nncf_graph.add_nncf_node(
+                node_name=MODEL_INPUT_OP_NAME + "_" + str(i),
+                node_type=NNCFGraphNodeType.INPUT_NODE,
+                node_metatype=InputNoopMetatype,
+            )
             to_nodes = onnx_graph.get_nodes_by_input(input_name)
 
             input_node_node_id = input_node.node_id
@@ -87,7 +90,7 @@ class GraphConverter:
                     tensor_shape=input_shape,
                     input_port_id=input_port_id,
                     output_port_id=output_port_id,
-                    dtype=nncf_dtype
+                    dtype=nncf_dtype,
                 )
                 output_port_id += 1
 
@@ -102,9 +105,11 @@ class GraphConverter:
         """
         for i, _output in enumerate(onnx_graph.get_model_outputs()):
             output_name = _output.name
-            output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
-                                                   node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                                                   node_metatype=OutputNoopMetatype)
+            output_node = nncf_graph.add_nncf_node(
+                node_name=MODEL_OUTPUT_OP_NAME + "_" + str(i),
+                node_type=NNCFGraphNodeType.OUTPUT_NODE,
+                node_metatype=OutputNoopMetatype,
+            )
             from_nodes = onnx_graph.get_nodes_by_output(output_name)
 
             output_node_node_id = output_node.node_id
@@ -122,7 +127,7 @@ class GraphConverter:
                     tensor_shape=output_shape,
                     input_port_id=input_port_id,
                     output_port_id=output_port_id,
-                    dtype=nncf_dtype
+                    dtype=nncf_dtype,
                 )
                 input_port_id += 1
 
@@ -164,14 +169,16 @@ class GraphConverter:
                 layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
             else:
                 is_shared, weight_edge_name, layer_attributes = None, None, None
-            nncf_graph.add_nncf_node(node_name=node.name,
-                                     node_type=node.op_type,
-                                     node_metatype=metatype,
-                                     layer_attributes=layer_attributes,
-                                     layer_name=weight_edge_name,
-                                     is_shared=is_shared)
+            nncf_graph.add_nncf_node(
+                node_name=node.name,
+                node_type=node.op_type,
+                node_metatype=metatype,
+                layer_attributes=layer_attributes,
+                layer_name=weight_edge_name,
+                is_shared=is_shared,
+            )
         for output_node in onnx_graph.get_all_nodes():
-            output_edges = onnx_graph.get_node_edge_names(output_node.name)['output']
+            output_edges = onnx_graph.get_node_edge_names(output_node.name)["output"]
             for output_edge in output_edges:
                 edge = onnx_graph.get_edge(output_edge)
                 if edge is None:
@@ -186,8 +193,8 @@ class GraphConverter:
                 input_nodes = onnx_graph.get_nodes_by_input(output_edge)
                 for input_node in input_nodes:
                     port_ids = ONNXGraph.get_port_ids_between_nodes(output_node, input_node)
-                    input_port_id = port_ids['input_port_id']
-                    output_port_id = port_ids['output_port_id']
+                    input_port_id = port_ids["input_port_id"]
+                    output_port_id = port_ids["output_port_id"]
                     in_node_id = nncf_graph.get_node_by_name(input_node.name).node_id
                     nncf_graph.add_edge_between_nncf_nodes(
                         from_node_id=output_node_id,
@@ -195,7 +202,7 @@ class GraphConverter:
                         tensor_shape=tensor_shape,
                         input_port_id=input_port_id,
                         output_port_id=output_port_id,
-                        dtype=Dtype(nncf_dtype)
+                        dtype=Dtype(nncf_dtype),
                     )
         GraphConverter._add_nncf_input_nodes(onnx_graph, nncf_graph)
         GraphConverter._add_nncf_output_nodes(onnx_graph, nncf_graph)
@@ -207,10 +214,9 @@ class ONNXExtendedLayerAttributes(BaseLayerAttributes):
     This class stores extended attributes of modules/layers for the algorithms.
     """
 
-    def __init__(self,
-                 input_tensor_names: List[str],
-                 output_tensor_names: List[str],
-                 weight_shape: Optional[Tuple[int]] = None):
+    def __init__(
+        self, input_tensor_names: List[str], output_tensor_names: List[str], weight_shape: Optional[Tuple[int]] = None
+    ):
         """
         :param input_tensor_names: List of the input tensor/edge names of the module/layer.
         :param output_tensor_names: List of the output tensor/edge names of the module/layer.

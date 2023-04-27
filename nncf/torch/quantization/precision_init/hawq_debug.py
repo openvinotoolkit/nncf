@@ -21,7 +21,8 @@ from torch import Tensor
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.decorators import skip_if_dependency_unavailable
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from nncf.torch.nncf_network import ExtraCompressionModuleType, NNCFNetwork
+from nncf.torch.nncf_network import ExtraCompressionModuleType
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
@@ -32,17 +33,20 @@ from nncf.torch.utils import get_all_modules_by_type
 
 
 class HAWQDebugger:
-    def __init__(self,
-                 weight_qconfig_sequences_in_trace_order: List['QConfigSequenceForHAWQToEvaluate'],
-                 perturbations: Perturbations,
-                 weight_observers_for_each_covering_configuration: List[List[PerturbationObserver]],
-                 traces_per_layer: TracesPerLayer,
-                 bitwidths: List[int]):
+    def __init__(
+        self,
+        weight_qconfig_sequences_in_trace_order: List["QConfigSequenceForHAWQToEvaluate"],
+        perturbations: Perturbations,
+        weight_observers_for_each_covering_configuration: List[List[PerturbationObserver]],
+        traces_per_layer: TracesPerLayer,
+        bitwidths: List[int],
+    ):
         self._weight_qconfig_sequences_in_trace_order = weight_qconfig_sequences_in_trace_order
         self._num_weights = len(traces_per_layer.traces_order)
         self._perturbations = perturbations
 
-        from nncf.common.utils.debug import DEBUG_LOG_DIR #pylint: disable=cyclic-import
+        from nncf.common.utils.debug import DEBUG_LOG_DIR  # pylint: disable=cyclic-import
+
         self._dump_dir = Path(DEBUG_LOG_DIR) / Path("hawq_dumps")
         self._dump_dir.mkdir(parents=True, exist_ok=True)
 
@@ -58,11 +62,15 @@ class HAWQDebugger:
         self._num_weights_per_layer = torch.Tensor(num_of_weights)
         self._norm_weights_per_layer = torch.Tensor(norm_of_weights)
 
-        bits_in_megabyte = 2 ** 23
+        bits_in_megabyte = 2**23
         self._model_sizes = []
         for qconfig_sequence in self._weight_qconfig_sequences_in_trace_order:
-            size = torch.sum(torch.Tensor([qconfig.num_bits for qconfig in qconfig_sequence]) *
-                             self._num_weights_per_layer).item() / bits_in_megabyte
+            size = (
+                torch.sum(
+                    torch.Tensor([qconfig.num_bits for qconfig in qconfig_sequence]) * self._num_weights_per_layer
+                ).item()
+                / bits_in_megabyte
+            )
             self._model_sizes.append(size)
         self._bitwidths = bitwidths
 
@@ -74,76 +82,83 @@ class HAWQDebugger:
             all_quantizations.update(
                 get_all_modules_by_type(
                     model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
-                    quantization_type))
+                    quantization_type,
+                )
+            )
             all_quantizations.update(get_all_modules_by_type(model, quantization_type))
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
         return all_quantizations
 
-    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
     def dump_avg_traces(self):
         import matplotlib.pyplot as plt
-        dump_file = os.path.join(self._dump_dir, 'avg_traces_per_layer')
+
+        dump_file = os.path.join(self._dump_dir, "avg_traces_per_layer")
         torch.save(self._traces_per_layer, dump_file)
         fig = plt.figure()
-        fig.suptitle('Average Hessian Trace')
+        fig.suptitle("Average Hessian Trace")
         ax = fig.add_subplot(2, 1, 1)
-        ax.set_yscale('log')
-        ax.set_xlabel('weight quantizers')
-        ax.set_ylabel('average hessian trace')
+        ax.set_yscale("log")
+        ax.set_xlabel("weight quantizers")
+        ax.set_ylabel("average hessian trace")
         ax.plot(self._traces_per_layer.cpu().numpy())
         plt.savefig(dump_file)
 
-    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
     def dump_metric_MB(self, metric_per_qconfig_sequence: List[Tensor]):
         import matplotlib.pyplot as plt
+
         list_to_plot = [cm.item() for cm in metric_per_qconfig_sequence]
         fig = plt.figure()
-        fig.suptitle('Pareto Frontier')
+        fig.suptitle("Pareto Frontier")
         ax = fig.add_subplot(2, 1, 1)
-        ax.set_yscale('log')
-        ax.set_xlabel('Model Size (MB)')
-        ax.set_ylabel('Metric value (total perturbation)')
-        ax.scatter(self._model_sizes, list_to_plot, s=20, facecolors='none', edgecolors='r')
+        ax.set_yscale("log")
+        ax.set_xlabel("Model Size (MB)")
+        ax.set_ylabel("Metric value (total perturbation)")
+        ax.scatter(self._model_sizes, list_to_plot, s=20, facecolors="none", edgecolors="r")
         cm = torch.Tensor(metric_per_qconfig_sequence)
         cm_m = cm.median().item()
         qconfig_index = metric_per_qconfig_sequence.index(cm_m)
         ms_m = self._model_sizes[qconfig_index]
-        ax.scatter(ms_m, cm_m, s=30, facecolors='none', edgecolors='b', label='median from all metrics')
+        ax.scatter(ms_m, cm_m, s=30, facecolors="none", edgecolors="b", label="median from all metrics")
         ax.legend()
-        plt.savefig(os.path.join(self._dump_dir, 'Pareto_Frontier'))
+        plt.savefig(os.path.join(self._dump_dir, "Pareto_Frontier"))
         nncf_logger.debug(
-            f'Distribution of HAWQ metrics: '
-            f'min_value={cm.min().item():.3f}, '
-            f'max_value={cm.max().item():.3f}, '
-            f'median_value={cm_m:.3f}, '
-            f'median_index={qconfig_index}, '
-            f'total_number={len(metric_per_qconfig_sequence)}')
+            f"Distribution of HAWQ metrics: "
+            f"min_value={cm.min().item():.3f}, "
+            f"max_value={cm.max().item():.3f}, "
+            f"median_value={cm_m:.3f}, "
+            f"median_index={qconfig_index}, "
+            f"total_number={len(metric_per_qconfig_sequence)}"
+        )
 
-    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
-    def dump_metric_flops(self, metric_per_qconfig_sequence: List[Tensor], flops_per_config: List[float],
-                          choosen_qconfig_index: int):
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
+    def dump_metric_flops(
+        self, metric_per_qconfig_sequence: List[Tensor], flops_per_config: List[float], choosen_qconfig_index: int
+    ):
         import matplotlib.pyplot as plt
+
         list_to_plot = [cm.item() for cm in metric_per_qconfig_sequence]
         fig = plt.figure()
-        fig.suptitle('Pareto Frontier')
+        fig.suptitle("Pareto Frontier")
         ax = fig.add_subplot(1, 1, 1)
-        ax.set_xlabel('Compression ratio: total INT8 Bits Complexity / total MIXED INT Bits Complexity')
-        ax.set_ylabel('Metric value (total perturbation)')
+        ax.set_xlabel("Compression ratio: total INT8 Bits Complexity / total MIXED INT Bits Complexity")
+        ax.set_ylabel("Metric value (total perturbation)")
         ax.scatter(flops_per_config, list_to_plot, s=10, alpha=0.3)  # s=20, facecolors='none', edgecolors='r')
         flops_per_config = [torch.Tensor([v]) for v in flops_per_config]
         cm = torch.Tensor(flops_per_config)
         cm_m = cm.median().item()
         configuration_index = flops_per_config.index(cm_m)
         ms_m = metric_per_qconfig_sequence[configuration_index].item()
-        ax.scatter(cm_m, ms_m, s=30, facecolors='none', edgecolors='b', label='median from all metrics')
+        ax.scatter(cm_m, ms_m, s=30, facecolors="none", edgecolors="b", label="median from all metrics")
         cm_c = metric_per_qconfig_sequence[choosen_qconfig_index].item()
         fpc_c = flops_per_config[choosen_qconfig_index].item()
-        ax.scatter(fpc_c, cm_c, s=30, facecolors='none', edgecolors='r', label='chosen config')
+        ax.scatter(fpc_c, cm_c, s=30, facecolors="none", edgecolors="r", label="chosen config")
 
         ax.legend()
-        plt.savefig(os.path.join(self._dump_dir, 'Pareto_Frontier_compress_ratio'))
+        plt.savefig(os.path.join(self._dump_dir, "Pareto_Frontier_compress_ratio"))
 
-    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
     def dump_density_of_quantization_noise(self):
         noise_per_config = []  # type: List[Tensor]
         for qconfig_sequence in self._weight_qconfig_sequences_in_trace_order:
@@ -155,24 +170,26 @@ class HAWQDebugger:
 
         list_to_plot = [cm.item() for cm in noise_per_config]
         import matplotlib.pyplot as plt
+
         fig = plt.figure()
-        fig.suptitle('Density of quantization noise')
+        fig.suptitle("Density of quantization noise")
         ax = fig.add_subplot(2, 1, 1)
-        ax.set_yscale('log')
-        ax.set_xlabel('Blocks')
-        ax.set_ylabel('Noise value')
+        ax.set_yscale("log")
+        ax.set_xlabel("Blocks")
+        ax.set_ylabel("Noise value")
         ax.scatter(self._model_sizes, list_to_plot, s=20, alpha=0.3)
         ax.legend()
-        plt.savefig(os.path.join(self._dump_dir, 'Density_of_quantization_noise'))
+        plt.savefig(os.path.join(self._dump_dir, "Density_of_quantization_noise"))
 
-    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
     def dump_perturbations_ratio(self):
         import matplotlib.pyplot as plt
+
         fig = plt.figure()
-        fig.suptitle('Quantization noise vs Average Trace')
+        fig.suptitle("Quantization noise vs Average Trace")
         ax = fig.add_subplot(2, 1, 1)
-        ax.set_xlabel('Blocks')
-        ax.set_yscale('log')
+        ax.set_xlabel("Blocks")
+        ax.set_yscale("log")
         perturbations_per_layer_id = list(self._perturbations.get_all().values())
         perturb = []
         max_bitwidths = []
@@ -183,17 +200,23 @@ class HAWQDebugger:
             max_bitwidths.append(max_bitwidth_qconfig.num_bits)
         ax.plot(
             [p / m / n for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)],
-            label='normalized n-bit noise')
-        ax.plot(perturb, label='n-bit noise')
-        ax.plot(max_bitwidths, label='n')
-        ax.plot(self._traces_per_layer.cpu().numpy(), label='trace')
-        ax.plot([n * p for n, p in zip(self._traces_per_layer, perturb)], label='trace * noise')
+            label="normalized n-bit noise",
+        )
+        ax.plot(perturb, label="n-bit noise")
+        ax.plot(max_bitwidths, label="n")
+        ax.plot(self._traces_per_layer.cpu().numpy(), label="trace")
+        ax.plot([n * p for n, p in zip(self._traces_per_layer, perturb)], label="trace * noise")
         ax.legend()
-        plt.savefig(os.path.join(self._dump_dir, 'Quantization_noise_vs_Average_Trace'))
+        plt.savefig(os.path.join(self._dump_dir, "Quantization_noise_vs_Average_Trace"))
 
-    def dump_bitwidth_graph(self, algo_ctrl: 'QuantizationController', model: NNCFNetwork,
-                            groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph #pylint: disable=cyclic-import
+    def dump_bitwidth_graph(
+        self,
+        algo_ctrl: "QuantizationController",
+        model: NNCFNetwork,
+        groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
+    ):
+        from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph  # pylint: disable=cyclic-import
+
         bw_graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers).get()
         nx_graph = add_adjust_padding_nodes(bw_graph, model)
-        write_dot_graph(nx_graph, self._dump_dir / Path('bitwidth_graph.dot'))
+        write_dot_graph(nx_graph, self._dump_dir / Path("bitwidth_graph.dot"))

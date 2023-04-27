@@ -16,10 +16,7 @@ from typing import Tuple
 import tensorflow as tf
 
 
-def resize_image(
-        image: tf.Tensor,
-        height: int,
-        width: int) -> tf.Tensor:
+def resize_image(image: tf.Tensor, height: int, width: int) -> tf.Tensor:
     """
     Resizes an image to a given height and width.
 
@@ -28,18 +25,12 @@ def resize_image(
     :param width: image width.
     :return: a float32 tensor containing the resized image.
     """
-    return tf.compat.v1.image.resize(
-        image,
-        [height, width],
-        method=tf.image.ResizeMethod.BILINEAR,
-        align_corners=False)
+    return tf.compat.v1.image.resize(image, [height, width], method=tf.image.ResizeMethod.BILINEAR, align_corners=False)
 
 
 def mean_image_subtraction(
-        image: tf.Tensor,
-        means: Tuple[float, ...],
-        num_channels: int = 3,
-        dtype: tf.dtypes.DType = tf.float32) -> tf.Tensor:
+    image: tf.Tensor, means: Tuple[float, ...], num_channels: int = 3, dtype: tf.dtypes.DType = tf.float32
+) -> tf.Tensor:
     """
     Subtracts the given means from each image channel.
 
@@ -50,10 +41,10 @@ def mean_image_subtraction(
     :return: the centered image.
     """
     if image.get_shape().ndims != 3:
-        raise ValueError('Input must be of size [height, width, C>0]')
+        raise ValueError("Input must be of size [height, width, C>0]")
 
     if len(means) != num_channels:
-        raise ValueError('len(means) must match the number of channels')
+        raise ValueError("len(means) must match the number of channels")
 
     means = tf.broadcast_to(means, tf.shape(image))
     if dtype is not None:
@@ -63,10 +54,8 @@ def mean_image_subtraction(
 
 
 def standardize_image(
-        image: tf.Tensor,
-        stddev: Tuple[float, ...],
-        num_channels: int = 3,
-        dtype: tf.dtypes.DType = tf.float32) -> tf.Tensor:
+    image: tf.Tensor, stddev: Tuple[float, ...], num_channels: int = 3, dtype: tf.dtypes.DType = tf.float32
+) -> tf.Tensor:
     """
     Divides the given stddev from each image channel.
 
@@ -77,10 +66,10 @@ def standardize_image(
     :return: the centered image.
     """
     if image.get_shape().ndims != 3:
-        raise ValueError('Input must be of size [height, width, C>0]')
+        raise ValueError("Input must be of size [height, width, C>0]")
 
     if len(stddev) != num_channels:
-        raise ValueError('len(stddev) must match the number of channels')
+        raise ValueError("len(stddev) must match the number of channels")
 
     stddev = tf.broadcast_to(stddev, tf.shape(image))
     if dtype is not None:
@@ -90,11 +79,12 @@ def standardize_image(
 
 
 def normalize(
-        image: tf.Tensor,
-        means: Tuple[float, ...],
-        stddev: Tuple[float, ...],
-        num_channels: int = 3,
-        dtype: tf.dtypes.DType = tf.float32) -> tf.Tensor:
+    image: tf.Tensor,
+    means: Tuple[float, ...],
+    stddev: Tuple[float, ...],
+    num_channels: int = 3,
+    dtype: tf.dtypes.DType = tf.float32,
+) -> tf.Tensor:
     """
     Normalize a tensor image with mean and standard deviation.
 

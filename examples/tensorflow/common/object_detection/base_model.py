@@ -33,8 +33,9 @@ def _make_filter_trainable_variables_fn(frozen_variable_prefix):
         """
         # frozen_variable_prefix: a regex string specifing the prefix pattern of
         # the frozen variables' names.
-        filtered_variables = [v for v in variables if not frozen_variable_prefix or
-                                                      not re.match(frozen_variable_prefix, v.name)]
+        filtered_variables = [
+            v for v in variables if not frozen_variable_prefix or not re.match(frozen_variable_prefix, v.name)
+        ]
         return filtered_variables
 
     return _filter_trainable_variables
@@ -49,13 +50,13 @@ class Model:
         # One can use 'RESNET_FROZEN_VAR_PREFIX' to speed up ResNet training when loading from the checkpoint
         # RESNET_FROZEN_VAR_PREFIX = r'(resnet\d+)\/(conv2d(|_([1-9]|10))|batch_normalization(|_([1-9]|10)))\/'
         self._frozen_variable_prefix = ""
-        params_train_regularization_variable_regex = r'.*(kernel|weight):0$'
+        params_train_regularization_variable_regex = r".*(kernel|weight):0$"
         self._regularization_var_regex = params_train_regularization_variable_regex
         self._l2_weight_decay = params.weight_decay
 
         # Checkpoint restoration.
-        self._checkpoint_prefix = ''
-        self._checkpoint_path = params.get('backbone_checkpoint', None)
+        self._checkpoint_prefix = ""
+        self._checkpoint_path = params.get("backbone_checkpoint", None)
 
     @abc.abstractmethod
     def build_outputs(self, inputs, is_training):
@@ -82,18 +83,21 @@ class Model:
         return _make_filter_trainable_variables_fn(self._frozen_variable_prefix)
 
     def weight_decay_loss(self, trainable_variables):
-        reg_variables = [v for v in trainable_variables if self._regularization_var_regex is None
-                                                           or re.match(self._regularization_var_regex, v.name)]
+        reg_variables = [
+            v
+            for v in trainable_variables
+            if self._regularization_var_regex is None or re.match(self._regularization_var_regex, v.name)
+        ]
 
         return self._l2_weight_decay * tf.add_n([tf.nn.l2_loss(v) for v in reg_variables])
 
     def make_restore_checkpoint_fn(self):
         """Returns scaffold function to restore parameters from v1 checkpoint."""
         skip_regex = None
-        return checkpoint_utils.make_restore_checkpoint_fn(self._checkpoint_path,
-                                                           prefix=self._checkpoint_prefix,
-                                                           skip_regex=skip_regex)
+        return checkpoint_utils.make_restore_checkpoint_fn(
+            self._checkpoint_path, prefix=self._checkpoint_prefix, skip_regex=skip_regex
+        )
 
     def eval_metrics(self):
         """Returns tuple of metric function and its inputs for evaluation."""
-        raise NotImplementedError('Unimplemented eval_metrics')
+        raise NotImplementedError("Unimplemented eval_metrics")

@@ -19,12 +19,13 @@ from tests.torch.nas.creators import create_single_conv_kernel_supernet
 from tests.torch.nas.helpers import do_conv2d
 from tests.torch.nas.helpers import ref_kernel_transform
 
-BASIC_ELASTIC_KERNEL_PARAMS = {'max_num_kernels': 2}
+BASIC_ELASTIC_KERNEL_PARAMS = {"max_num_kernels": 2}
 
 
 ###########################
 # Behavior
 ###########################
+
 
 def test_elastic_kernel_with_odd_value():
     with pytest.raises(AssertionError):
@@ -46,6 +47,7 @@ def test_elastic_kernel_with_more_than_maximum_value():
 ###########################
 # Output checking
 ###########################
+
 
 def test_elastic_kernel_with_maximum_value():
     _, supernet = create_single_conv_kernel_supernet()
@@ -79,10 +81,10 @@ def test_elastic_kernel_with_intermediate_value():
 def test_elastic_kernel_with_custom_transition_matrix():
     kernel_handler, supernet = create_single_conv_kernel_supernet()
     device = next(iter(supernet.parameters())).device
-    custom_transition_matrix = torch.ones([3 ** 2, 3 ** 2]).to(device)
+    custom_transition_matrix = torch.ones([3**2, 3**2]).to(device)
     # pylint: disable=protected-access
     elastic_kernel_op = kernel_handler._elastic_kernel_ops[0]
-    elastic_kernel_op.__setattr__(f'{5}to{3}_matrix', Parameter(custom_transition_matrix))
+    elastic_kernel_op.__setattr__(f"{5}to{3}_matrix", Parameter(custom_transition_matrix))
     input_ = torch.ones([1, 1, 5, 5]).to(device)
     conv = supernet.conv
 

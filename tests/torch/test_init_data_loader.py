@@ -11,15 +11,17 @@
  limitations under the License.
 """
 
-import pytest
 from math import ceil
-from tests.torch.helpers import get_empty_config, create_ones_mock_dataloader
+
+import pytest
 
 from nncf.torch.initialization import PartialDataLoader
+from tests.torch.helpers import create_ones_mock_dataloader
+from tests.torch.helpers import get_empty_config
 
 N_SAMPLE = 10
 VALID_RATIO = [0.0, 0.05, 0.2, 0.51, 0.89, 1.0]
-INVALID_RATIO = ['string', '0.5', -17, -0.01, 1.01, 5, 100]
+INVALID_RATIO = ["string", "0.5", -17, -0.01, 1.01, 5, 100]
 
 
 def create_regular_dataloader():
@@ -34,18 +36,18 @@ def test_can_create_partial_dataloader__with_defaults():
     assert len(partial_dataloader) == N_SAMPLE
 
 
-@pytest.mark.parametrize('invalid_ratio', INVALID_RATIO, ids=[str(r) for r in INVALID_RATIO])
+@pytest.mark.parametrize("invalid_ratio", INVALID_RATIO, ids=[str(r) for r in INVALID_RATIO])
 def test_partial_dataloader__with_invalid_ratio(invalid_ratio):
     dataloader = create_regular_dataloader()
     with pytest.raises((ValueError, TypeError)):
         _ = PartialDataLoader(dataloader, iter_ratio=invalid_ratio)
 
 
-@pytest.mark.parametrize('valid_ratio', VALID_RATIO, ids=[str(r) for r in VALID_RATIO])
+@pytest.mark.parametrize("valid_ratio", VALID_RATIO, ids=[str(r) for r in VALID_RATIO])
 def test_partial_dataloader__with_valid_ratio(valid_ratio):
     dataloader = create_regular_dataloader()
     partial_dataloader = PartialDataLoader(dataloader, iter_ratio=valid_ratio)
-    truth_num_batch = ceil(valid_ratio * ceil(N_SAMPLE/dataloader.batch_size))
+    truth_num_batch = ceil(valid_ratio * ceil(N_SAMPLE / dataloader.batch_size))
     assert len(partial_dataloader) == truth_num_batch
 
     i = 0

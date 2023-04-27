@@ -12,31 +12,33 @@
 """
 
 import os
-import requests
 import shutil
-from fastdownload import FastDownload
 from pathlib import Path
 
-from nncf import Dataset
-from openvino.tools.accuracy_checker.config import ConfigReader
+import requests
+from fastdownload import FastDownload
 from openvino.tools.accuracy_checker.argparser import build_arguments_parser
+from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
+
+from nncf import Dataset
 from tests.openvino.omz_helpers import OPENVINO_DATASET_DEFINITIONS_PATH
 
-IMAGENETTE_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
-IMAGENETTE_ANNOTATION_URL =  \
-        'https://huggingface.co/datasets/frgfm/imagenette/resolve/main/metadata/imagenette2-320/val.txt'
-WIDER_FACE_URL = 'https://huggingface.co/datasets/wider_face/resolve/main/data/WIDER_val.zip'
-WIDER_FACE_ANNOTATION_URL = 'https://huggingface.co/datasets/wider_face/resolve/main/data/wider_face_split.zip'
+IMAGENETTE_URL = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz"
+IMAGENETTE_ANNOTATION_URL = (
+    "https://huggingface.co/datasets/frgfm/imagenette/resolve/main/metadata/imagenette2-320/val.txt"
+)
+WIDER_FACE_URL = "https://huggingface.co/datasets/wider_face/resolve/main/data/WIDER_val.zip"
+WIDER_FACE_ANNOTATION_URL = "https://huggingface.co/datasets/wider_face/resolve/main/data/wider_face_split.zip"
 
 
 def download(url: str, path: str) -> Path:
-    downloader = FastDownload(base=path, archive='downloaded', data='extracted')
+    downloader = FastDownload(base=path, archive="downloaded", data="extracted")
     return downloader.get(url)
 
 
 def preprocess_imagenette_data(dataset_path: str) -> None:
-    destination = os.path.join(dataset_path, 'val')
+    destination = os.path.join(dataset_path, "val")
     for filename in os.listdir(destination):
         path = os.path.join(destination, filename)
         if os.path.isdir(path):
@@ -48,27 +50,27 @@ def preprocess_imagenette_data(dataset_path: str) -> None:
 
 def preprocess_imagenette_labels(dataset_path: str) -> None:
     labels_map = {
-        'n01440764': 0,    # tench
-        'n02102040': 217,  # English springer
-        'n02979186': 482,  # cassette player
-        'n03000684': 491,  # chain saw
-        'n03028079': 497,  # church
-        'n03394916': 566,  # French horn
-        'n03417042': 569,  # garbage truck
-        'n03425413': 571,  # gas pump
-        'n03445777': 574,  # golf ball
-        'n03888257': 701   # parachute
+        "n01440764": 0,  # tench
+        "n02102040": 217,  # English springer
+        "n02979186": 482,  # cassette player
+        "n03000684": 491,  # chain saw
+        "n03028079": 497,  # church
+        "n03394916": 566,  # French horn
+        "n03417042": 569,  # garbage truck
+        "n03425413": 571,  # gas pump
+        "n03445777": 574,  # golf ball
+        "n03888257": 701,  # parachute
     }
 
     response = requests.get(IMAGENETTE_ANNOTATION_URL, timeout=10)
-    annotation_path = dataset_path / 'imagenette2-320_val.txt'
-    with open(annotation_path, 'w', encoding='utf-8') as output_file:
+    annotation_path = dataset_path / "imagenette2-320_val.txt"
+    with open(annotation_path, "w", encoding="utf-8") as output_file:
         for line in response.iter_lines():
-            image_path = line.decode("utf-8").split('/')
+            image_path = line.decode("utf-8").split("/")
             class_name = image_path[2]
             new_path = os.path.join(image_path[0], image_path[1], image_path[3])
             label = labels_map[class_name]
-            img_path_with_labels = f'{new_path} {label}\n'
+            img_path_with_labels = f"{new_path} {label}\n"
             output_file.write(img_path_with_labels)
 
 
@@ -86,23 +88,29 @@ def prepare_wider_for_test(data_dir: Path) -> Path:
 
 
 def get_dataset_for_test(dataset_name: str, data_dir: Path) -> Path:
-    if dataset_name == 'imagenette2-320':
+    if dataset_name == "imagenette2-320":
         return prepare_imagenette_for_test(data_dir)
-    if dataset_name == 'wider':
+    if dataset_name == "wider":
         return prepare_wider_for_test(data_dir)
 
-    raise RuntimeError(f'Unknown dataset: {dataset_name}.')
+    raise RuntimeError(f"Unknown dataset: {dataset_name}.")
 
 
 # pylint: disable=protected-access
-def get_nncf_dataset_from_ac_config(model_path, config_path, data_dir, framework='openvino', device='CPU'):
+def get_nncf_dataset_from_ac_config(model_path, config_path, data_dir, framework="openvino", device="CPU"):
     args = [
-        "-c", str(config_path),
-        "-m", str(model_path),
-        "-d", str(OPENVINO_DATASET_DEFINITIONS_PATH),
-        "-s", str(data_dir),
-        "-tf", framework,
-        "-td", device,
+        "-c",
+        str(config_path),
+        "-m",
+        str(model_path),
+        "-d",
+        str(OPENVINO_DATASET_DEFINITIONS_PATH),
+        "-s",
+        str(data_dir),
+        "-tf",
+        framework,
+        "-td",
+        device,
     ]
     parser = build_arguments_parser()
     args = parser.parse_args(args)

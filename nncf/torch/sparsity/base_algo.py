@@ -17,7 +17,6 @@ import torch
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.common.utils.api_marker import api
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
@@ -25,6 +24,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.controller import SparsityController
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import copy_model
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder

@@ -138,9 +138,7 @@ def _vgg(arch, cfg, batch_norm, pretrained, progress, device, **kwargs):
     model = VGG(make_layers(cfgs[cfg], batch_norm=batch_norm), **kwargs)
     if pretrained:
         script_dir = os.path.dirname(__file__)
-        state_dict = torch.load(
-            script_dir + "/state_dicts/" + arch + ".pt", map_location=device
-        )
+        state_dict = torch.load(script_dir + "/state_dicts/" + arch + ".pt", map_location=device)
         model.load_state_dict(state_dict)
     return model
 

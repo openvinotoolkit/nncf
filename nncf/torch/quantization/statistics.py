@@ -17,7 +17,7 @@ from nncf.common.utils.helpers import create_table
 
 def _proportion_str(num: int, total_count: int):
     percentage = 100 * (num / max(total_count, 1))
-    return f'{percentage:.2f} % ({num} / {total_count})'
+    return f"{percentage:.2f} % ({num} / {total_count})"
 
 
 class MemoryConsumptionStatistics(Statistics):
@@ -25,12 +25,14 @@ class MemoryConsumptionStatistics(Statistics):
     Contains statistics of the memory consumption.
     """
 
-    def __init__(self,
-                 fp32_weight_size: int = 0,
-                 quantized_weight_size: int = 0,
-                 max_fp32_activation_size: int = 0,
-                 max_compressed_activation_size: int = 0,
-                 weight_memory_consumption_decrease: float = 0.0):
+    def __init__(
+        self,
+        fp32_weight_size: int = 0,
+        quantized_weight_size: int = 0,
+        max_fp32_activation_size: int = 0,
+        max_compressed_activation_size: int = 0,
+        weight_memory_consumption_decrease: float = 0.0,
+    ):
         """
         Initializes statistics of the memory consumption.
 
@@ -50,23 +52,23 @@ class MemoryConsumptionStatistics(Statistics):
 
     def to_str(self) -> str:
         memory_consumption_string = create_table(
-            header=['Statistic\'s name', 'Value'],
+            header=["Statistic's name", "Value"],
             rows=[
-                ['Memory consumption for full-precision weights (Mbyte)', self.fp32_weight_size],
-                ['Memory consumption for quantized weights (Mbyte)', self.quantized_weight_size],
+                ["Memory consumption for full-precision weights (Mbyte)", self.fp32_weight_size],
+                ["Memory consumption for quantized weights (Mbyte)", self.quantized_weight_size],
                 [
-                    'Max memory consumption for an activation tensor in FP32 model (Mbyte)',
-                    self.max_fp32_activation_size
+                    "Max memory consumption for an activation tensor in FP32 model (Mbyte)",
+                    self.max_fp32_activation_size,
                 ],
                 [
-                    'Max memory consumption for an activation tensor in compressed model (Mbyte)',
-                    self.max_compressed_activation_size
+                    "Max memory consumption for an activation tensor in compressed model (Mbyte)",
+                    self.max_compressed_activation_size,
                 ],
-                ['Memory consumption decrease for weights', self.weight_memory_consumption_decrease],
-            ]
+                ["Memory consumption decrease for weights", self.weight_memory_consumption_decrease],
+            ],
         )
 
-        pretty_string = f'Statistics of the memory consumption:\n{memory_consumption_string}'
+        pretty_string = f"Statistics of the memory consumption:\n{memory_consumption_string}"
         return pretty_string
 
 
@@ -86,13 +88,13 @@ class QuantizationConfigurationStatistics(Statistics):
         self.total_edges_in_cfg = total_edges_in_cfg
 
     def to_str(self) -> str:
-        header = ['Statistic\'s name', 'Value']
+        header = ["Statistic's name", "Value"]
         rows = [
             [
-                'Share edges of the quantized data path',
-                _proportion_str(self.quantized_edges_in_cfg, self.total_edges_in_cfg)
+                "Share edges of the quantized data path",
+                _proportion_str(self.quantized_edges_in_cfg, self.total_edges_in_cfg),
             ]
         ]
         qc_string = create_table(header, rows)
-        pretty_string = f'Statistics of the quantization configuration:\n{qc_string}'
+        pretty_string = f"Statistics of the quantization configuration:\n{qc_string}"
         return pretty_string

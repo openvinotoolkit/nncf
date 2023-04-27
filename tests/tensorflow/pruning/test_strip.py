@@ -30,12 +30,7 @@ def test_strip(enable_quantization):
         {"compression": [{"algorithm": "filter_pruning", "pruning_init": 0.5, "params": {"prune_first_conv": True}}]}
     )
     if enable_quantization:
-        config["compression"].append(
-            {
-                "algorithm": "quantization",
-                "preset": "mixed"
-            }
-        )
+        config["compression"].append({"algorithm": "quantization", "preset": "mixed"})
 
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     input_tensor = tf.ones(input_shape)
@@ -45,6 +40,7 @@ def test_strip(enable_quantization):
     x_tf = inference_model(input_tensor)
 
     TFTensorListComparator.check_equal(x_nncf, x_tf)
+
 
 @pytest.mark.parametrize("do_copy", (True, False))
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))

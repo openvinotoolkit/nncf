@@ -11,21 +11,21 @@
  limitations under the License.
 """
 
-from torch import nn
 import torch
 import torch.nn.functional as F
+from torch import nn
 
 
 class UNet(nn.Module):
     def __init__(
-            self,
-            in_channels=3,
-            n_classes=12,
-            depth=5,
-            wf=6,
-            padding=False,
-            batch_norm=True,
-            up_mode='upconv',
+        self,
+        in_channels=3,
+        n_classes=12,
+        depth=5,
+        wf=6,
+        padding=False,
+        batch_norm=True,
+        up_mode="upconv",
     ):
         """
         Implementation of
@@ -50,22 +50,18 @@ class UNet(nn.Module):
                            'upsample' will use bilinear upsampling.
         """
         super().__init__()
-        assert up_mode in ('upconv', 'upsample')
+        assert up_mode in ("upconv", "upsample")
         self.padding = padding
         self.depth = depth
         prev_channels = in_channels
         self.down_path = nn.ModuleList()
         for i in range(depth):
-            self.down_path.append(
-                UNetConvBlock(prev_channels, 2 ** (wf + i), padding, batch_norm)
-            )
+            self.down_path.append(UNetConvBlock(prev_channels, 2 ** (wf + i), padding, batch_norm))
             prev_channels = 2 ** (wf + i)
 
         self.up_path = nn.ModuleList()
         for i in reversed(range(depth - 1)):
-            self.up_path.append(
-                UNetUpBlock(prev_channels, 2 ** (wf + i), up_mode, padding, batch_norm)
-            )
+            self.up_path.append(UNetUpBlock(prev_channels, 2 ** (wf + i), up_mode, padding, batch_norm))
             prev_channels = 2 ** (wf + i)
 
         self.last = nn.Conv2d(prev_channels, n_classes, kernel_size=1)
@@ -113,28 +109,24 @@ def center_crop(layer, target_size):
         _, _, layer_height, layer_width = layer.size()
         diff_y = (layer_height - target_size[0]) // 2
         diff_x = (layer_width - target_size[1]) // 2
-        return layer[
-            :, :, diff_y: (diff_y + target_size[0]), diff_x: (diff_x + target_size[1])
-            ]
+        return layer[:, :, diff_y : (diff_y + target_size[0]), diff_x : (diff_x + target_size[1])]
 
     # If dimension is not 4, assume that we are cropping ground truth labels
     assert layer.dim() == 3
     _, layer_height, layer_width = layer.size()
     diff_y = (layer_height - target_size[0]) // 2
     diff_x = (layer_width - target_size[1]) // 2
-    return layer[
-        :, diff_y: (diff_y + target_size[0]), diff_x: (diff_x + target_size[1])
-        ]
+    return layer[:, diff_y : (diff_y + target_size[0]), diff_x : (diff_x + target_size[1])]
 
 
 class UNetUpBlock(nn.Module):
     def __init__(self, in_size, out_size, up_mode, padding, batch_norm):
         super().__init__()
-        if up_mode == 'upconv':
+        if up_mode == "upconv":
             self.up = nn.ConvTranspose2d(in_size, out_size, kernel_size=2, stride=2)
-        elif up_mode == 'upsample':
+        elif up_mode == "upsample":
             self.up = nn.Sequential(
-                nn.Upsample(mode='bilinear', scale_factor=2),
+                nn.Upsample(mode="bilinear", scale_factor=2),
                 nn.Conv2d(in_size, out_size, kernel_size=1),
             )
         self.conv_block = UNetConvBlock(in_size, out_size, padding, batch_norm)

@@ -18,7 +18,8 @@ class NamespaceTarget(Enum):
     """
     NamespaceTarget stores modules from which patched operators were obtained.
     """
-    TORCH_NN_FUNCTIONAL = 'torch.nn.functional'
-    TORCH_TENSOR = 'torch.tensor'
-    TORCH = 'torch'
-    EXTERNAL = 'external_function'
+
+    TORCH_NN_FUNCTIONAL = "torch.nn.functional"
+    TORCH_TENSOR = "torch.tensor"
+    TORCH = "torch"
+    EXTERNAL = "external_function"

@@ -22,12 +22,10 @@ class DummyScheduler(CompressionScheduler):
         self.delta = delta
 
     def load_state(self, state):
-        self.delta = state['delta']
+        self.delta = state["delta"]
 
     def get_state(self):
-        state = {
-            'delta': self.delta
-        }
+        state = {"delta": self.delta}
         return state
 
     def step(self, next_step: Optional[int] = None) -> None:

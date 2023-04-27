@@ -13,18 +13,16 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Any, Optional, TypeVar
+from typing import Any, List, Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
-
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
 class AccuracyControlAlgoBackend(ABC):
-
     # Metatypes
 
     @staticmethod

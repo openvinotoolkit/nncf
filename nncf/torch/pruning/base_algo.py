@@ -10,25 +10,23 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List, Dict
+from typing import Dict, List
 
 import torch
-
-from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
-from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
-from nncf.config.schemata.defaults import PRUNE_FIRST_CONV
-from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from texttable import Texttable
 from torch import nn
 
 from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.logging import nncf_logger
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
-from nncf.common.logging import nncf_logger
 from nncf.config.extractors import extract_algo_specific_config
+from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
+from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
+from nncf.config.schemata.defaults import PRUNE_FIRST_CONV
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -40,6 +38,7 @@ from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.structs import PrunedModuleInfo
+from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.utils import get_model_device
 
@@ -47,24 +46,27 @@ from nncf.torch.utils import get_model_device
 class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
-        params = self._algo_config.get('params', {})
+        params = self._algo_config.get("params", {})
         self._set_default_params_for_ranking_type(params)
         self._params = params
 
-        self.prune_first = params.get('prune_first_conv', PRUNE_FIRST_CONV)
-        self.prune_batch_norms = params.get('prune_batch_norms', PRUNE_BATCH_NORMS)
-        self.prune_downsample_convs = params.get('prune_downsample_convs', PRUNE_DOWNSAMPLE_CONVS)
+        self.prune_first = params.get("prune_first_conv", PRUNE_FIRST_CONV)
+        self.prune_batch_norms = params.get("prune_batch_norms", PRUNE_BATCH_NORMS)
+        self.prune_downsample_convs = params.get("prune_downsample_convs", PRUNE_DOWNSAMPLE_CONVS)
 
         self._prunable_types = self.get_op_types_of_pruned_modules()
 
-        from nncf.common.pruning.node_selector import PruningNodeSelector #pylint: disable=cyclic-import
-        self.pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
-                                                         self._prunable_types,
-                                                         self.get_types_of_grouping_ops(),
-                                                         self.ignored_scopes,
-                                                         self.target_scopes,
-                                                         self.prune_first,
-                                                         self.prune_downsample_convs)
+        from nncf.common.pruning.node_selector import PruningNodeSelector  # pylint: disable=cyclic-import
+
+        self.pruning_node_selector = PruningNodeSelector(
+            PT_PRUNING_OPERATOR_METATYPES,
+            self._prunable_types,
+            self.get_types_of_grouping_ops(),
+            self.ignored_scopes,
+            self.target_scopes,
+            self.prune_first,
+            self.prune_downsample_convs,
+        )
 
         self.pruned_module_groups_info = []
         self._pruned_norms_operators = []
@@ -78,17 +80,21 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         params will be set to True by default (and remain unchanged if the user sets some value).
         :param params: dict with parameters of the algorithm from config
         """
-        learned_ranking = 'interlayer_ranking_type' in params and params['interlayer_ranking_type'] == 'learned_ranking'
+        learned_ranking = "interlayer_ranking_type" in params and params["interlayer_ranking_type"] == "learned_ranking"
         if not learned_ranking:
             return
-        nncf_logger.info('LeGR pruning sets `prune_first_conv`, `prune_downsample_convs`, '
-                         '`all_weights` to True by default. Adjusting this is not recommended.')
-        params.setdefault('prune_first_conv', True)
-        params.setdefault('prune_downsample_convs', True)
-        if params.get('all_weights') is False:
-            raise Exception('For LeGR pruning the `all_weights` config parameter be set to `true`.'
-                            'Adjust the config accordingly if you want to proceed.')
-        params.setdefault('all_weights', True)
+        nncf_logger.info(
+            "LeGR pruning sets `prune_first_conv`, `prune_downsample_convs`, "
+            "`all_weights` to True by default. Adjusting this is not recommended."
+        )
+        params.setdefault("prune_first_conv", True)
+        params.setdefault("prune_downsample_convs", True)
+        if params.get("all_weights") is False:
+            raise Exception(
+                "For LeGR pruning the `all_weights` config parameter be set to `true`."
+                "Adjust the config accordingly if you want to proceed."
+            )
+        params.setdefault("all_weights", True)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         layout = PTTransformationLayout()
@@ -120,35 +126,39 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 hook = UpdateWeightAndBias(pruning_block).to(device)
                 insertion_commands.append(
                     PTInsertionCommand(
-                        PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
-                                      target_node_name=node_name),
+                        PTTargetPoint(TargetType.PRE_LAYER_OPERATION, target_node_name=node_name),
                         hook,
-                        TransformationPriority.PRUNING_PRIORITY
+                        TransformationPriority.PRUNING_PRIORITY,
                     )
                 )
-                group_minfos.append(PrunedModuleInfo(node_name=node_name,
-                                                     module_scope=module_scope,
-                                                     module=module,
-                                                     operand=pruning_block,
-                                                     node_id=node.node_id,
-                                                     is_depthwise=is_prunable_depthwise_conv(node)))
+                group_minfos.append(
+                    PrunedModuleInfo(
+                        node_name=node_name,
+                        module_scope=module_scope,
+                        module=module,
+                        operand=pruning_block,
+                        node_id=node.node_id,
+                        is_depthwise=is_prunable_depthwise_conv(node),
+                    )
+                )
 
             cluster = Cluster[PrunedModuleInfo](i, group_minfos, [n.node_id for n in group.elements])
             self.pruned_module_groups_info.add_cluster(cluster)
 
         # Propagate masks to find norm layers to prune
         init_output_masks_in_graph(target_model_graph, self.pruned_module_groups_info.get_all_nodes())
-        MaskPropagationAlgorithm(target_model_graph, PT_PRUNING_OPERATOR_METATYPES,
-                                 PTNNCFPruningTensorProcessor).mask_propagation()
+        MaskPropagationAlgorithm(
+            target_model_graph, PT_PRUNING_OPERATOR_METATYPES, PTNNCFPruningTensorProcessor
+        ).mask_propagation()
 
         # Adding binary masks also for Batch/Group/Layer Norms to allow applying masks after propagation
-        types_to_apply_mask = ['group_norm', 'layer_norm']
+        types_to_apply_mask = ["group_norm", "layer_norm"]
         if self.prune_batch_norms:
-            types_to_apply_mask.append('batch_norm')
+            types_to_apply_mask.append("batch_norm")
 
         all_norm_layers = target_model_graph.get_nodes_by_types(types_to_apply_mask)
         for node in all_norm_layers:
-            if node.data['output_mask'] is None:
+            if node.data["output_mask"] is None:
                 # Skip elements that will not be pruned
                 continue
 
@@ -160,10 +170,9 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
             hook = UpdateWeightAndBias(pruning_block).to(device)
             insertion_commands.append(
                 PTInsertionCommand(
-                    PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
-                                  target_node_name=node_name),
+                    PTTargetPoint(TargetType.PRE_LAYER_OPERATION, target_node_name=node_name),
                     hook,
-                    TransformationPriority.PRUNING_PRIORITY
+                    TransformationPriority.PRUNING_PRIORITY,
                 )
             )
             self._pruned_norms_operators.append((node, pruning_block, module))
@@ -192,20 +201,23 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
 
 class BasePruningAlgoController(PTCompressionAlgorithmController):
-    def __init__(self, target_model: NNCFNetwork,
-                 prunable_types: List[str],
-                 pruned_module_groups_info: Clusterization[PrunedModuleInfo],
-                 config: NNCFConfig):
+    def __init__(
+        self,
+        target_model: NNCFNetwork,
+        prunable_types: List[str],
+        pruned_module_groups_info: Clusterization[PrunedModuleInfo],
+        config: NNCFConfig,
+    ):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(get_model_device(target_model))
         self._prunable_types = prunable_types
         self.config = config
-        self.pruning_config = extract_algo_specific_config(config, 'filter_pruning')
-        params = self.pruning_config.get('params', {})
+        self.pruning_config = extract_algo_specific_config(config, "filter_pruning")
+        params = self.pruning_config.get("params", {})
         self.pruned_module_groups_info = pruned_module_groups_info
-        self.prune_batch_norms = params.get('prune_batch_norms', PRUNE_BATCH_NORMS)
-        self.prune_first = params.get('prune_first_conv', PRUNE_FIRST_CONV)
-        self.prune_downsample_convs = params.get('prune_downsample_convs', PRUNE_DOWNSAMPLE_CONVS)
+        self.prune_batch_norms = params.get("prune_batch_norms", PRUNE_BATCH_NORMS)
+        self.prune_first = params.get("prune_first_conv", PRUNE_FIRST_CONV)
+        self.prune_downsample_convs = params.get("prune_downsample_convs", PRUNE_DOWNSAMPLE_CONVS)
         self.prune_flops = False
         self.check_pruning_level(params)
         self._hooks = []
@@ -223,10 +235,10 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         """
         Check that set only one of pruning target params
         """
-        pruning_target = params.get('pruning_target', None)
-        pruning_flops_target = params.get('pruning_flops_target', None)
+        pruning_target = params.get("pruning_target", None)
+        pruning_flops_target = params.get("pruning_flops_target", None)
         if pruning_target and pruning_flops_target:
-            raise ValueError('Only one parameter from \'pruning_target\' and \'pruning_flops_target\' can be set.')
+            raise ValueError("Only one parameter from 'pruning_target' and 'pruning_flops_target' can be set.")
         if pruning_flops_target:
             self.prune_flops = True
 

@@ -37,9 +37,9 @@ class CommandCreator(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_command_to_update_bias(node_with_bias: NNCFNode,
-                                      bias_value: Any,
-                                      nncf_graph: NNCFGraph) -> TransformationCommand:
+    def create_command_to_update_bias(
+        node_with_bias: NNCFNode, bias_value: Any, nncf_graph: NNCFGraph
+    ) -> TransformationCommand:
         """
         Creates command to update bias value.
 
@@ -51,9 +51,9 @@ class CommandCreator(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_command_to_update_weight(node_with_weight: NNCFNode,
-                                        weight_value: Any,
-                                        weight_port_id: int) -> TransformationCommand:
+    def create_command_to_update_weight(
+        node_with_weight: NNCFNode, weight_value: Any, weight_port_id: int
+    ) -> TransformationCommand:
         """
         Creates command to update weight value.
 

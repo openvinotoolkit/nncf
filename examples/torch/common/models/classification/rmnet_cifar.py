@@ -1,12 +1,13 @@
 from collections import OrderedDict
 
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class RMBlock(nn.Module):
-    def __init__(self, input_planes, squeeze_planes, output_planes, downsample=False, dropout_ratio=0.1,
-                 activation=nn.ELU):
+    def __init__(
+        self, input_planes, squeeze_planes, output_planes, downsample=False, dropout_ratio=0.1, activation=nn.ELU
+    ):
         super().__init__()
         self.downsample = downsample
         self.input_planes = input_planes
@@ -15,8 +16,15 @@ class RMBlock(nn.Module):
         self.squeeze_conv = nn.Conv2d(input_planes, squeeze_planes, kernel_size=1, bias=False)
         self.squeeze_bn = nn.BatchNorm2d(squeeze_planes)
 
-        self.dw_conv = nn.Conv2d(squeeze_planes, squeeze_planes, groups=squeeze_planes, kernel_size=3, padding=1,
-                                 stride=2 if downsample else 1, bias=False)
+        self.dw_conv = nn.Conv2d(
+            squeeze_planes,
+            squeeze_planes,
+            groups=squeeze_planes,
+            kernel_size=3,
+            padding=1,
+            stride=2 if downsample else 1,
+            bias=False,
+        )
         self.dw_bn = nn.BatchNorm2d(squeeze_planes)
 
         self.expand_conv = nn.Conv2d(squeeze_planes, output_planes, kernel_size=1, bias=False)
@@ -34,7 +42,7 @@ class RMBlock(nn.Module):
     def init_weights(self):
         for m in self.children():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out')
+                nn.init.kaiming_normal_(m.weight, mode="fan_out")
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -55,18 +63,29 @@ class RMBlock(nn.Module):
 
 
 class RMNetBody(nn.Module):
-    def __init__(self, block=RMBlock, blocks_per_stage=(None, 4, 8, 10, 11), trunk_width=(32, 32, 64, 128, 256),
-                 bottleneck_width=(None, 8, 16, 32, 64)):
+    def __init__(
+        self,
+        block=RMBlock,
+        blocks_per_stage=(None, 4, 8, 10, 11),
+        trunk_width=(32, 32, 64, 128, 256),
+        bottleneck_width=(None, 8, 16, 32, 64),
+    ):
         super().__init__()
         assert len(blocks_per_stage) == len(trunk_width) == len(bottleneck_width)
         self.dim_out = trunk_width[-1]
 
-        stages = [nn.Sequential(OrderedDict([
-            ('data_bn', nn.BatchNorm2d(3)),
-            ('conv1', nn.Conv2d(3, trunk_width[0], kernel_size=3, stride=2, padding=1, bias=False)),
-            ('bn1', nn.BatchNorm2d(trunk_width[0])),
-            ('relu1', nn.ReLU(inplace=True))
-        ]))]
+        stages = [
+            nn.Sequential(
+                OrderedDict(
+                    [
+                        ("data_bn", nn.BatchNorm2d(3)),
+                        ("conv1", nn.Conv2d(3, trunk_width[0], kernel_size=3, stride=2, padding=1, bias=False)),
+                        ("bn1", nn.BatchNorm2d(trunk_width[0])),
+                        ("relu1", nn.ReLU(inplace=True)),
+                    ]
+                )
+            )
+        ]
 
         for i, (blocks_num, w, wb) in enumerate(zip(blocks_per_stage, trunk_width, bottleneck_width)):
             # Zeroth stage is already added.
@@ -80,9 +99,7 @@ class RMNetBody(nn.Module):
                 stage.append(block(w, wb, w))
             stages.append(nn.Sequential(*stage))
 
-        self.stages = nn.Sequential(OrderedDict([
-            ('stage_{}'.format(i), stage) for i, stage in enumerate(stages)
-        ]))
+        self.stages = nn.Sequential(OrderedDict([("stage_{}".format(i), stage) for i, stage in enumerate(stages)]))
 
         self.init_weights()
 
@@ -91,7 +108,7 @@ class RMNetBody(nn.Module):
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)
         m = self.stages[0][1]  # ['conv1']
-        nn.init.kaiming_normal_(m.weight, mode='fan_out')
+        nn.init.kaiming_normal_(m.weight, mode="fan_out")
         m = self.stages[0][2]  # ['bn1']
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)

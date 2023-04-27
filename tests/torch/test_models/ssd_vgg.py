@@ -12,21 +12,23 @@
 """
 
 import os
+
 import torch
 from torch import nn
-from examples.common.sample_config import SampleConfig
 
+from examples.common.sample_config import SampleConfig
 from examples.torch.object_detection.layers import L2Norm
-from examples.torch.object_detection.layers.modules.ssd_head import MultiOutputSequential, SSDDetectionOutput
+from examples.torch.object_detection.layers.modules.ssd_head import MultiOutputSequential
+from examples.torch.object_detection.layers.modules.ssd_head import SSDDetectionOutput
 from nncf.torch.checkpoint_loading import load_state
 
 BASE_NUM_OUTPUTS = {
-    300: [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M', 512, 512, 512],
-    512: [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512],
+    300: [64, 64, "M", 128, 128, "M", 256, 256, 256, "C", 512, 512, 512, "M", 512, 512, 512],
+    512: [64, 64, "M", 128, 128, "M", 256, 256, 256, "M", 512, 512, 512, "M", 512, 512, 512],
 }
 EXTRAS_NUM_OUTPUTS = {
-    300: [256, 'S', 512, 128, 'S', 256, 128, 256, 128, 256],
-    512: [256, 'S', 512, 128, 'S', 256, 128, 'S', 256, 128, 'S', 256, 128, 'K', 256],
+    300: [256, "S", 512, 128, "S", 256, 128, 256, 128, 256],
+    512: [256, "S", 512, 128, "S", 256, 128, "S", 256, 128, "S", 256, 128, "K", 256],
 }
 
 BASE_OUTPUT_INDICES = {
@@ -72,27 +74,30 @@ class SSD_VGG(nn.Module):
 
     def load_weights(self, base_file):
         _, ext = os.path.splitext(base_file)
-        if ext in ['.pkl', '.pth']:
-            print('Loading weights into state dict...')
-            self.load_state_dict(torch.load(base_file,
-                                            map_location=lambda storage, loc: storage))
-            print('Finished!')
+        if ext in [".pkl", ".pth"]:
+            print("Loading weights into state dict...")
+            self.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
+            print("Finished!")
         else:
-            print('Sorry only .pth and .pkl files supported.')
+            print("Sorry only .pth and .pkl files supported.")
 
 
-def make_ssd_vgg_layer(input_features, output_features, kernel=3, padding=1, dilation=1, modifier=None,
-                       batch_norm=False):
+def make_ssd_vgg_layer(
+    input_features, output_features, kernel=3, padding=1, dilation=1, modifier=None, batch_norm=False
+):
     stride = 1
-    if modifier == 'S':
+    if modifier == "S":
         stride = 2
         padding = 1
-    elif modifier == 'K':
+    elif modifier == "K":
         kernel = 4
         padding = 1
 
-    layer = [nn.Conv2d(input_features, output_features, kernel_size=kernel, stride=stride, padding=padding,
-                       dilation=dilation)]
+    layer = [
+        nn.Conv2d(
+            input_features, output_features, kernel_size=kernel, stride=stride, padding=padding, dilation=dilation
+        )
+    ]
     if batch_norm:
         layer.append(nn.BatchNorm2d(output_features))
     layer.append(nn.ReLU(inplace=True))
@@ -106,8 +111,8 @@ def build_vgg_ssd_layers(num_outputs, output_inddices, start_input_channels=3, b
     in_planes = start_input_channels
     modifier = None
     for i, out_planes in enumerate(num_outputs):
-        if out_planes in ('M', 'C'):
-            vgg_layers.append(nn.MaxPool2d(kernel_size=2, stride=2, padding=1 if modifier == 'C' else 0))
+        if out_planes in ("M", "C"):
+            vgg_layers.append(nn.MaxPool2d(kernel_size=2, stride=2, padding=1 if modifier == "C" else 0))
             continue
         if isinstance(out_planes, str):
             modifier = out_planes
@@ -140,8 +145,11 @@ def build_vgg_ssd_extra(num_outputs, output_indices, statrt_input_channels=1024,
             modifier = out_planes
             continue
         kernel = kernel_sizes[len(extra_layers) % 2]
-        extra_layers.extend(make_ssd_vgg_layer(in_planes, out_planes, modifier=modifier, kernel=kernel, padding=0,
-                                               batch_norm=batch_norm))
+        extra_layers.extend(
+            make_ssd_vgg_layer(
+                in_planes, out_planes, modifier=modifier, kernel=kernel, padding=0, batch_norm=batch_norm
+            )
+        )
         modifier = None
         in_planes = out_planes
         if i in output_indices:
@@ -152,10 +160,10 @@ def build_vgg_ssd_extra(num_outputs, output_indices, statrt_input_channels=1024,
 
 
 def build_ssd_vgg(cfg, size, num_classes, config):
-    ssd_vgg = SSD_VGG(cfg, size, num_classes, batch_norm=config.get('batchnorm', False))
+    ssd_vgg = SSD_VGG(cfg, size, num_classes, batch_norm=config.get("batchnorm", False))
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
-        print('Loading base network...')
+        print("Loading base network...")
         #
         # ** WARNING: torch.load functionality uses Python's pickling facilities that
         # may be used to perform arbitrary code execution during unpickling. Only load the data you
@@ -164,7 +172,7 @@ def build_ssd_vgg(cfg, size, num_classes, config):
         basenet_weights = torch.load(config.basenet)
         new_weights = {}
         for wn, wv in basenet_weights.items():
-            wn = wn.replace('features.', '')
+            wn = wn.replace("features.", "")
             new_weights[wn] = wv
 
         load_state(ssd_vgg.basenet, new_weights, is_resume=False)
@@ -172,14 +180,16 @@ def build_ssd_vgg(cfg, size, num_classes, config):
 
 
 def ssd_vgg300():
-    ssd_params = SampleConfig({
-        "clip": False,
-        "variance": [0.1, 0.1, 0.2, 0.2],
-        "max_sizes": [60, 111, 162, 213, 264, 315],
-        "min_sizes": [30, 60, 111, 162, 213, 264],
-        "steps": [8, 16, 32, 64, 100, 300],
-        "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
-        "flip": True
-    })
+    ssd_params = SampleConfig(
+        {
+            "clip": False,
+            "variance": [0.1, 0.1, 0.2, 0.2],
+            "max_sizes": [60, 111, 162, 213, 264, 315],
+            "min_sizes": [30, 60, 111, 162, 213, 264],
+            "steps": [8, 16, 32, 64, 100, 300],
+            "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
+            "flip": True,
+        }
+    )
 
     return SSD_VGG(ssd_params, 300, 21, True)

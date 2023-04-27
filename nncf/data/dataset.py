@@ -11,17 +11,12 @@
  limitations under the License.
 """
 
-from typing import Iterable
-from typing import Callable
-from typing import Optional
-from typing import List
-from typing import Generic
-from typing import TypeVar
+from typing import Callable, Generic, Iterable, List, Optional, TypeVar
 
 from nncf.common.utils.api_marker import api
 
-DataItem = TypeVar('DataItem')
-ModelInput = TypeVar('ModelInput')
+DataItem = TypeVar("DataItem")
+ModelInput = TypeVar("ModelInput")
 
 
 @api(canonical_alias="nncf.Dataset")
@@ -39,9 +34,9 @@ class Dataset(Generic[DataItem, ModelInput]):
     the examples from the data item.
     """
 
-    def __init__(self,
-                 data_source: Iterable[DataItem],
-                 transform_func: Optional[Callable[[DataItem], ModelInput]] = None):
+    def __init__(
+        self, data_source: Iterable[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
+    ):
         """
         Initializes the `nncf.Dataset` object.
 
@@ -82,10 +77,12 @@ class Dataset(Generic[DataItem, ModelInput]):
 
 
 class DataProvider(Generic[DataItem, ModelInput]):
-    def __init__(self,
-                 data_source: Iterable[DataItem],
-                 transform_func: Callable[[DataItem], ModelInput],
-                 indices: Optional[List[int]] = None):
+    def __init__(
+        self,
+        data_source: Iterable[DataItem],
+        transform_func: Callable[[DataItem], ModelInput],
+        indices: Optional[List[int]] = None,
+    ):
         self._data_source = data_source
         if transform_func is None:
             transform_func = lambda x: x
@@ -96,22 +93,22 @@ class DataProvider(Generic[DataItem, ModelInput]):
         if self._indices is None:
             return map(self._transform_func, self._data_source)
 
-        if hasattr(self._data_source, '__getitem__'):
+        if hasattr(self._data_source, "__getitem__"):
             return DataProvider._get_iterator_for_map_style(self._data_source, self._transform_func, self._indices)
 
         return DataProvider._get_iterator_for_iter(self._data_source, self._transform_func, sorted(self._indices))
 
     @staticmethod
-    def _get_iterator_for_map_style(data_source: Iterable[DataItem],
-                                    transform_func: Callable[[DataItem], ModelInput],
-                                    indices: List[int]):
+    def _get_iterator_for_map_style(
+        data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
+    ):
         for index in indices:
             yield transform_func(data_source[index])
 
     @staticmethod
-    def _get_iterator_for_iter(data_source: Iterable[DataItem],
-                               transform_func: Callable[[DataItem], ModelInput],
-                               indices: List[int]):
+    def _get_iterator_for_iter(
+        data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
+    ):
         pos = 0
         num_indices = len(indices)
         for idx, data_item in enumerate(data_source):

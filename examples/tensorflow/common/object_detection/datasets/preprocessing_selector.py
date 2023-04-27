@@ -12,18 +12,19 @@
 """
 
 from examples.tensorflow.object_detection.preprocessing.retinanet_preprocessing import RetinaNetPreprocessor
-from examples.tensorflow.segmentation.preprocessing.maskrcnn_preprocessing import MaskRCNNPreprocessor
 from examples.tensorflow.object_detection.preprocessing.yolo_v4_preprocessing import YOLOv4Preprocessor
+from examples.tensorflow.segmentation.preprocessing.maskrcnn_preprocessing import MaskRCNNPreprocessor
+
 
 def get_preprocess_input_fn(config, is_train):
     model_name = config.model
-    if model_name == 'RetinaNet':
+    if model_name == "RetinaNet":
         tfds_decoder, preprocess_input_fn = RetinaNetPreprocessor(config, is_train).create_preprocess_input_fn()
-    elif model_name == 'MaskRCNN':
+    elif model_name == "MaskRCNN":
         tfds_decoder, preprocess_input_fn = MaskRCNNPreprocessor(config, is_train).create_preprocess_input_fn()
-    elif model_name == 'YOLOv4':
+    elif model_name == "YOLOv4":
         tfds_decoder, preprocess_input_fn = YOLOv4Preprocessor(config, is_train).create_preprocess_input_fn()
     else:
-        raise ValueError('Unknown model name {}'.format(model_name))
+        raise ValueError("Unknown model name {}".format(model_name))
 
     return tfds_decoder, preprocess_input_fn

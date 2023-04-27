@@ -14,17 +14,19 @@
 from __future__ import print_function
 
 import json
+import os
 import pathlib
 import time
 
 import numpy as np
-import os
 import torch
 from torch import distributed as dist
 from torch.nn import functional as F
 
 from examples.torch.common.example_logger import logger
-from nncf.torch.utils import is_main_process, is_dist_avail_and_initialized, get_world_size
+from nncf.torch.utils import get_world_size
+from nncf.torch.utils import is_dist_avail_and_initialized
+from nncf.torch.utils import is_main_process
 
 
 def str2bool(v):
@@ -35,11 +37,11 @@ class Timer:
     """A simple timer."""
 
     def __init__(self):
-        self.total_time = 0.
+        self.total_time = 0.0
         self.calls = 0
-        self.start_time = 0.
-        self.diff = 0.
-        self.average_time = 0.
+        self.start_time = 0.0
+        self.diff = 0.0
+        self.average_time = 0.0
 
     def tic(self):
         # using time.time instead of time.clock because time time.clock
@@ -54,6 +56,7 @@ class Timer:
         if average:
             return self.average_time
         return self.diff
+
 
 class AverageMeter:
     """Computes and stores the average and current value"""
@@ -77,44 +80,45 @@ class AverageMeter:
         self.count += n
         self.avg = self.sum / self.count
 
+
 def evaluate_detections(box_list, dataset, use_07=True):
-    cachedir = os.path.join('cache', 'annotations_cache')
+    cachedir = os.path.join("cache", "annotations_cache")
     aps = []
     # The PASCAL VOC metric changed in 2010
     use_07_metric = use_07
-    logger.info('VOC07 metric? {}'.format('Yes' if use_07_metric else 'No'))
+    logger.info("VOC07 metric? {}".format("Yes" if use_07_metric else "No"))
     for cls_ind, cls in enumerate(dataset.classes):  # for each class
         class_boxes = box_list[box_list[:, 1] == cls_ind + 1]
         ap, _, _ = voc_eval(  # calculate rec, prec, ap
-            class_boxes, dataset, cls, cachedir,
-            ovthresh=0.5, use_07_metric=use_07_metric)
+            class_boxes, dataset, cls, cachedir, ovthresh=0.5, use_07_metric=use_07_metric
+        )
         aps += [ap]
-        logger.info('AP for {} = {:.4f}'.format(cls, ap))
+        logger.info("AP for {} = {:.4f}".format(cls, ap))
     mAp = np.mean(aps)
-    logger.info('Mean AP = {:.4f}'.format(mAp))
+    logger.info("Mean AP = {:.4f}".format(mAp))
     return mAp
 
 
 def voc_ap(rec, prec, use_07_metric=True):
-    """ ap = voc_ap(rec, prec, [use_07_metric])
+    """ap = voc_ap(rec, prec, [use_07_metric])
     Compute VOC AP given precision and recall.
     If use_07_metric is true, uses the
     VOC 07 11 point method (default:False).
     """
     if use_07_metric:
         # 11 point metric
-        ap = 0.
-        for t in np.arange(0., 1.1, 0.1):
+        ap = 0.0
+        for t in np.arange(0.0, 1.1, 0.1):
             if np.sum(rec >= t) == 0:
                 p = 0
             else:
                 p = np.max(prec[rec >= t])
-            ap = ap + p / 11.
+            ap = ap + p / 11.0
     else:
         # correct AP calculation
         # first append sentinel values at the end
-        mrec = np.concatenate(([0.], rec, [1.]))
-        mpre = np.concatenate(([0.], prec, [0.]))
+        mrec = np.concatenate(([0.0], rec, [1.0]))
+        mpre = np.concatenate(([0.0], prec, [0.0]))
 
         # compute the precision envelope
         for i in range(mpre.size - 1, 0, -1):
@@ -129,12 +133,7 @@ def voc_ap(rec, prec, use_07_metric=True):
     return ap
 
 
-def voc_eval(class_detections,
-             dataset,
-             classname,
-             cachedir,
-             ovthresh=0.5,
-             use_07_metric=True):
+def voc_eval(class_detections, dataset, classname, cachedir, ovthresh=0.5, use_07_metric=True):
     # cachedir caches the annotations in a pickle file
     # first load gt
     gt, imagenames = load_detection_annotations(cachedir, dataset)
@@ -158,21 +157,21 @@ def voc_eval(class_detections,
         R = image_bboxes[image_ids[d]]
         bb = BB[d, :].astype(float)
         matched_iou = -np.inf
-        BBGT = R['bbox'].astype(float)
+        BBGT = R["bbox"].astype(float)
         if BBGT.size > 0:
             # compute overlaps
             # intersection
             matched_ind, matched_iou = match_bbox(BBGT, bb)
 
         if matched_iou > ovthresh:
-            if not R['difficult'][matched_ind]:
-                if not R['det'][matched_ind]:
-                    tp[d] = 1.
-                    R['det'][matched_ind] = 1
+            if not R["difficult"][matched_ind]:
+                if not R["det"][matched_ind]:
+                    tp[d] = 1.0
+                    R["det"][matched_ind] = 1
                 else:
-                    fp[d] = 1.
+                    fp[d] = 1.0
         else:
-            fp[d] = 1.
+            fp[d] = 1.0
 
     return compute_detection_metrics(fp, tp, npos, use_07_metric)
 
@@ -182,27 +181,23 @@ def extract_gt_bboxes(classname, dataset, gt, imagenames):
     class_gt = {}
     npos = 0
     for imagename in imagenames:
-        img_gt_objects_for_class = [rec for rec in gt[imagename] if dataset.classes[rec['label_idx']] == classname]
-        bbox = np.asarray([x['bbox'] for x in img_gt_objects_for_class])
+        img_gt_objects_for_class = [rec for rec in gt[imagename] if dataset.classes[rec["label_idx"]] == classname]
+        bbox = np.asarray([x["bbox"] for x in img_gt_objects_for_class])
         difficult = []
         for x in img_gt_objects_for_class:
-            if 'difficult' in x:
-                difficult.append(x['difficult'])
+            if "difficult" in x:
+                difficult.append(x["difficult"])
             else:
                 difficult.append(False)
         difficult = np.array(difficult).astype(np.bool)
         det = [False] * len(img_gt_objects_for_class)
         npos = npos + sum(~difficult)
-        class_gt[imagename] = {
-            'bbox': bbox,
-            'difficult': difficult,
-            'det': det
-        }
+        class_gt[imagename] = {"bbox": bbox, "difficult": difficult, "det": det}
     return class_gt, npos
 
 
 def load_detection_annotations(cachedir, dataset):
-    cachefile = os.path.join(cachedir, 'annots_{}.json'.format(dataset.name))
+    cachefile = os.path.join(cachedir, "annots_{}.json".format(dataset.name))
     imagenames = dataset.get_img_names()
     if is_main_process():
         if not os.path.isfile(cachefile):
@@ -212,16 +207,15 @@ def load_detection_annotations(cachedir, dataset):
                 _, gt[imagename] = dataset.pull_anno(i)
 
                 if i % 100 == 0:
-                    logger.info('Reading annotation for {:d}/{:d}'.format(
-                        i + 1, len(imagenames)))
+                    logger.info("Reading annotation for {:d}/{:d}".format(i + 1, len(imagenames)))
             # save
-            logger.info('Saving cached annotations to {:s}'.format(cachefile))
+            logger.info("Saving cached annotations to {:s}".format(cachefile))
             pathlib.Path(cachedir).mkdir(parents=True, exist_ok=True)
-            with open(cachefile, 'w', encoding='utf8') as f:
+            with open(cachefile, "w", encoding="utf8") as f:
                 json.dump(gt, f)
     if is_dist_avail_and_initialized():
         dist.barrier()
-    with open(cachefile, 'r', encoding='utf8') as f:
+    with open(cachefile, "r", encoding="utf8") as f:
         gt = json.load(f)
     return gt, imagenames
 
@@ -243,12 +237,14 @@ def match_bbox(gt_boxes, bbox):
     iymin = np.maximum(gt_boxes[:, 1], bbox[1])
     ixmax = np.minimum(gt_boxes[:, 2], bbox[2])
     iymax = np.minimum(gt_boxes[:, 3], bbox[3])
-    iw = np.maximum(ixmax - ixmin, 0.)
-    ih = np.maximum(iymax - iymin, 0.)
+    iw = np.maximum(ixmax - ixmin, 0.0)
+    ih = np.maximum(iymax - iymin, 0.0)
     inters = iw * ih
-    uni = ((bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) +
-           (gt_boxes[:, 2] - gt_boxes[:, 0]) *
-           (gt_boxes[:, 3] - gt_boxes[:, 1]) - inters)
+    uni = (
+        (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+        + (gt_boxes[:, 2] - gt_boxes[:, 0]) * (gt_boxes[:, 3] - gt_boxes[:, 1])
+        - inters
+    )
     overlaps = inters / uni
     matched_ind = np.argmax(overlaps)
     matched_iou = np.max(overlaps)
@@ -268,7 +264,7 @@ def convert_detections(all_detection):
     all_boxes = []
     for img_ind, dets in enumerate(all_detection):
         # remove predictions with zero confidence
-        mask = dets[:, 2].gt(0.).expand(7, dets.size(0)).t()
+        mask = dets[:, 2].gt(0.0).expand(7, dets.size(0)).t()
         dets = torch.masked_select(dets, mask).view(-1, 7).cpu()
 
         if dets.size() == (0,):
@@ -300,10 +296,11 @@ def predict_detections(data_loader, device, net):
         batch_detections[..., 6] *= hs
 
         all_detections.append(batch_detections.cpu())
-        logger.info('Detect for batch: {:d}/{:d} {:.3f}s'.format(batch_ind + 1, num_batches, detect_time))
+        logger.info("Detect for batch: {:d}/{:d} {:.3f}s".format(batch_ind + 1, num_batches, detect_time))
     if all_detections:
         return torch.cat(all_detections)
     return None  # No predictions
+
 
 def eval_net_loss(data_loader, device, net, criterion):
     batch_loss_l = AverageMeter()
@@ -314,7 +311,7 @@ def eval_net_loss(data_loader, device, net, criterion):
     num_batches = len(data_loader)
 
     # Assume 10 lines of reporting
-    print_freq = num_batches//10
+    print_freq = num_batches // 10
     print_freq = 1 if print_freq == 0 else print_freq
 
     # all_detections = []
@@ -336,15 +333,23 @@ def eval_net_loss(data_loader, device, net, criterion):
         t_elapsed.update(timer.toc(average=False))
 
         if batch_ind % print_freq == 0:
-            logger.info('Loss_inference: [{}/{}] || Time: {elapsed.val:.4f}s ({elapsed.avg:.4f}s)'
-                        ' || Conf Loss: {conf_loss.val:.3f} ({conf_loss.avg:.3f})'
-                        ' || Loc Loss: {loc_loss.val:.3f} ({loc_loss.avg:.3f})'
-                        ' || Model Loss: {model_loss.val:.3f} ({model_loss.avg:.3f})'.format(
-                            batch_ind, num_batches, elapsed=t_elapsed, conf_loss=batch_loss_c,
-                            loc_loss=batch_loss_l, model_loss=batch_loss))
+            logger.info(
+                "Loss_inference: [{}/{}] || Time: {elapsed.val:.4f}s ({elapsed.avg:.4f}s)"
+                " || Conf Loss: {conf_loss.val:.3f} ({conf_loss.avg:.3f})"
+                " || Loc Loss: {loc_loss.val:.3f} ({loc_loss.avg:.3f})"
+                " || Model Loss: {model_loss.val:.3f} ({model_loss.avg:.3f})".format(
+                    batch_ind,
+                    num_batches,
+                    elapsed=t_elapsed,
+                    conf_loss=batch_loss_c,
+                    loc_loss=batch_loss_l,
+                    model_loss=batch_loss,
+                )
+            )
 
     model_loss = batch_loss_l.avg + batch_loss_c.avg
     return model_loss
+
 
 def test_net(net, device, data_loader, distributed=False, loss_inference=False, criterion=None):
     """Test a Fast R-CNN network on an image database."""
@@ -381,7 +386,7 @@ def test_net(net, device, data_loader, distributed=False, loss_inference=False, 
     batch_detections = batch_detections[:num_images]
     all_boxes = convert_detections(batch_detections)
 
-    logger.info('Evaluating detections')
+    logger.info("Evaluating detections")
     output = evaluate_detections(all_boxes, data_loader.dataset)
     net.apply(restore_bn_module_mode)
     return output

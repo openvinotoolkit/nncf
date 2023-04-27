@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Tuple
+from typing import Any, Tuple
 
 import tensorflow as tf
 
@@ -34,10 +33,10 @@ def replace_value_by_index(xs: Tuple[Any, ...], pos: int, value: Any) -> Tuple[A
 def check_port_id(port_id: int, min_port_id: int, max_port_id: int):
     if min_port_id <= port_id <= max_port_id:
         return
-    raise ValueError(f'Unexpected `port_id`: {port_id}')
+    raise ValueError(f"Unexpected `port_id`: {port_id}")
 
 
-TF_ARG_PROVIDERS = Registry('TF_ARG_PROVIDERS')
+TF_ARG_PROVIDERS = Registry("TF_ARG_PROVIDERS")
 
 
 class ArgProvider:
@@ -80,27 +79,27 @@ class ArgProvider:
         """
 
 
-@TF_ARG_PROVIDERS.register('Relu6')
-@TF_ARG_PROVIDERS.register('Relu')
-@TF_ARG_PROVIDERS.register('Mean')
-@TF_ARG_PROVIDERS.register('AddV2')
-@TF_ARG_PROVIDERS.register('Placeholder')
-@TF_ARG_PROVIDERS.register('BiasAdd')
-@TF_ARG_PROVIDERS.register('GatherV2')
-@TF_ARG_PROVIDERS.register('Cast')
-@TF_ARG_PROVIDERS.register('Sub')
-@TF_ARG_PROVIDERS.register('SquaredDifference')
-@TF_ARG_PROVIDERS.register('Rsqrt')
-@TF_ARG_PROVIDERS.register('Mul')
-@TF_ARG_PROVIDERS.register('Erf')
-@TF_ARG_PROVIDERS.register('BatchMatMulV2')
-@TF_ARG_PROVIDERS.register('RealDiv')
+@TF_ARG_PROVIDERS.register("Relu6")
+@TF_ARG_PROVIDERS.register("Relu")
+@TF_ARG_PROVIDERS.register("Mean")
+@TF_ARG_PROVIDERS.register("AddV2")
+@TF_ARG_PROVIDERS.register("Placeholder")
+@TF_ARG_PROVIDERS.register("BiasAdd")
+@TF_ARG_PROVIDERS.register("GatherV2")
+@TF_ARG_PROVIDERS.register("Cast")
+@TF_ARG_PROVIDERS.register("Sub")
+@TF_ARG_PROVIDERS.register("SquaredDifference")
+@TF_ARG_PROVIDERS.register("Rsqrt")
+@TF_ARG_PROVIDERS.register("Mul")
+@TF_ARG_PROVIDERS.register("Erf")
+@TF_ARG_PROVIDERS.register("BatchMatMulV2")
+@TF_ARG_PROVIDERS.register("RealDiv")
 class SimpleOutputArgProvider(ArgProvider):
     def get_output(self, output_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f'Unexpected `args`: {args}')
+            raise ValueError(f"Unexpected `args`: {args}")
 
         return args[output_port_id]
 
@@ -108,12 +107,12 @@ class SimpleOutputArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f'Unexpected `args`: {args}')
+            raise ValueError(f"Unexpected `args`: {args}")
 
         return replace_value_by_index(args, output_port_id, value), kwargs
 
 
-@TF_ARG_PROVIDERS.register('Transpose')
+@TF_ARG_PROVIDERS.register("Transpose")
 class TransposeArgProvider(ArgProvider):
     def get_input(self, input_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(input_port_id, min_port_id=0, max_port_id=0)
@@ -124,7 +123,7 @@ class TransposeArgProvider(ArgProvider):
         return replace_value_by_index(args, input_port_id, value), kwargs
 
 
-@TF_ARG_PROVIDERS.register('ResizeNearestNeighbor')
+@TF_ARG_PROVIDERS.register("ResizeNearestNeighbor")
 class ResizeNearestNeighborArgProvider(ArgProvider):
     """
     Argument provider for the `ResizeNearestNeighbor` operation.
@@ -134,7 +133,7 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f'Unexpected `args`: {args}')
+            raise ValueError(f"Unexpected `args`: {args}")
 
         return args[output_port_id]
 
@@ -142,7 +141,7 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f'Unexpected `args`: {args}')
+            raise ValueError(f"Unexpected `args`: {args}")
 
         return replace_value_by_index(args, output_port_id, value), kwargs
 
@@ -155,7 +154,7 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
         return replace_value_by_index(args, input_port_id, value), kwargs
 
 
-@TF_ARG_PROVIDERS.register('Conv2D')
+@TF_ARG_PROVIDERS.register("Conv2D")
 class Conv2DArgProvider(ArgProvider):
     """
     Argument provider of the `Conv2D` operation.
@@ -172,7 +171,7 @@ class Conv2DArgProvider(ArgProvider):
         if input_port_id == 0:
             return args[0]
 
-        return kwargs['filter']  # input_port_id == 1
+        return kwargs["filter"]  # input_port_id == 1
 
     def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
@@ -180,14 +179,14 @@ class Conv2DArgProvider(ArgProvider):
         if input_port_id == 0:
             return replace_value_by_index(args, input_port_id, value), kwargs
 
-        kwargs['filter'] = value
+        kwargs["filter"] = value
         return args, kwargs
 
     def get_output(self, output_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f'Unexpected `args`: {args}')
+            raise ValueError(f"Unexpected `args`: {args}")
 
         return args[output_port_id]
 
@@ -195,12 +194,12 @@ class Conv2DArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f'Unexpected `args`: {args}')
+            raise ValueError(f"Unexpected `args`: {args}")
 
         return replace_value_by_index(args, output_port_id, value), kwargs
 
 
-@TF_ARG_PROVIDERS.register('FusedBatchNormV3')
+@TF_ARG_PROVIDERS.register("FusedBatchNormV3")
 class FusedBatchNormV3ArgProvider(ArgProvider):
     """
     Argument provider of the `FusedBatchNormV3` operation.
@@ -218,7 +217,7 @@ class FusedBatchNormV3ArgProvider(ArgProvider):
         return replace_value_by_index(args, 0, x), kwargs
 
 
-@TF_ARG_PROVIDERS.register('DepthwiseConv2dNative')
+@TF_ARG_PROVIDERS.register("DepthwiseConv2dNative")
 class DepthwiseConv2dNativeArgProvider(ArgProvider):
     """
     Argument provider of the `DepthwiseConv2dNative` operation.
@@ -236,7 +235,7 @@ class DepthwiseConv2dNativeArgProvider(ArgProvider):
         return replace_value_by_index(args, input_port_id, value), kwargs
 
 
-@TF_ARG_PROVIDERS.register('MatMul')
+@TF_ARG_PROVIDERS.register("MatMul")
 class MatMulArgProvider(SimpleOutputArgProvider):
     """
     Argument provider of the `MatMul` operation.
@@ -249,13 +248,13 @@ class MatMulArgProvider(SimpleOutputArgProvider):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
 
         if len(args) == 0:
-            return kwargs['a' if input_port_id == 0 else 'b']
+            return kwargs["a" if input_port_id == 0 else "b"]
         return args[input_port_id]
 
     def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
 
         if len(args) == 0:
-            kwargs['a' if input_port_id == 0 else 'b'] = value
+            kwargs["a" if input_port_id == 0 else "b"] = value
             return args, kwargs
         return replace_value_by_index(args, input_port_id, value), kwargs

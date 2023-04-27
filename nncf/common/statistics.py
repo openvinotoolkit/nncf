@@ -14,12 +14,12 @@
 from typing import Optional
 
 from nncf.api.statistics import Statistics
-from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
-from nncf.common.sparsity.statistics import RBSparsityStatistics
-from nncf.common.sparsity.statistics import MovementSparsityStatistics
-from nncf.common.sparsity.statistics import ConstSparsityStatistics
-from nncf.common.quantization.statistics import QuantizationStatistics
 from nncf.common.pruning.statistics import FilterPruningStatistics
+from nncf.common.quantization.statistics import QuantizationStatistics
+from nncf.common.sparsity.statistics import ConstSparsityStatistics
+from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
+from nncf.common.sparsity.statistics import MovementSparsityStatistics
+from nncf.common.sparsity.statistics import RBSparsityStatistics
 
 
 class NNCFStatistics(Statistics):
@@ -42,7 +42,7 @@ class NNCFStatistics(Statistics):
 
         :return: Instance of the `MagnitudeSparsityStatistics` class.
         """
-        return self._storage.get('magnitude_sparsity')
+        return self._storage.get("magnitude_sparsity")
 
     @property
     def rb_sparsity(self) -> Optional[RBSparsityStatistics]:
@@ -52,7 +52,7 @@ class NNCFStatistics(Statistics):
 
         :return: Instance of the `RBSparsityStatistics` class.
         """
-        return self._storage.get('rb_sparsity')
+        return self._storage.get("rb_sparsity")
 
     @property
     def movement_sparsity(self) -> Optional[MovementSparsityStatistics]:
@@ -62,7 +62,7 @@ class NNCFStatistics(Statistics):
 
         :return: Instance of the `MovementSparsityStatistics` class.
         """
-        return self._storage.get('movement_sparsity')
+        return self._storage.get("movement_sparsity")
 
     @property
     def const_sparsity(self) -> Optional[ConstSparsityStatistics]:
@@ -72,7 +72,7 @@ class NNCFStatistics(Statistics):
 
         :return: Instance of the `ConstSparsityStatistics` class.
         """
-        return self._storage.get('const_sparsity')
+        return self._storage.get("const_sparsity")
 
     @property
     def quantization(self) -> Optional[QuantizationStatistics]:
@@ -82,7 +82,7 @@ class NNCFStatistics(Statistics):
 
         :return: Instance of the `QuantizationStatistics` class.
         """
-        return self._storage.get('quantization')
+        return self._storage.get("quantization")
 
     @property
     def filter_pruning(self) -> Optional[FilterPruningStatistics]:
@@ -92,7 +92,7 @@ class NNCFStatistics(Statistics):
 
         :return: Instance of the `FilterPruningStatistics` class.
         """
-        return self._storage.get('filter_pruning')
+        return self._storage.get("filter_pruning")
 
     @property
     def binarization(self) -> None:
@@ -102,7 +102,7 @@ class NNCFStatistics(Statistics):
 
         :return: `None`.
         """
-        return self._storage.get('binarization')
+        return self._storage.get("binarization")
 
     def register(self, algorithm_name: str, stats: Statistics):
         """
@@ -119,12 +119,18 @@ class NNCFStatistics(Statistics):
         """
 
         available_algorithms = [
-            'magnitude_sparsity', 'rb_sparsity', 'movement_sparsity', 'const_sparsity',
-            'quantization', 'filter_pruning', 'binarization'
+            "magnitude_sparsity",
+            "rb_sparsity",
+            "movement_sparsity",
+            "const_sparsity",
+            "quantization",
+            "filter_pruning",
+            "binarization",
         ]
         if algorithm_name not in available_algorithms:
-            raise ValueError('Can not register statistics for the algorithm. '
-                             f'Unknown name of the algorithm: {algorithm_name}.')
+            raise ValueError(
+                "Can not register statistics for the algorithm. " f"Unknown name of the algorithm: {algorithm_name}."
+            )
 
         self._storage[algorithm_name] = stats
 
@@ -135,7 +141,7 @@ class NNCFStatistics(Statistics):
 
         :return: A representation of the NNCF statistics as a human-readable string.
         """
-        pretty_string = '\n\n'.join([stats.to_str() for stats in self._storage.values()])
+        pretty_string = "\n\n".join([stats.to_str() for stats in self._storage.values()])
         return pretty_string
 
     def __iter__(self):

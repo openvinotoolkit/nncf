@@ -11,13 +11,14 @@
  limitations under the License.
 """
 
-import numpy as np
 import random
+
+import numpy as np
 from PIL import Image
 
 
 def rand(a=0, b=1):
-    return np.random.rand()*(b-a) + a
+    return np.random.rand() * (b - a) + a
 
 
 def letterbox_resize(image, target_size):
@@ -40,18 +41,18 @@ def letterbox_resize(image, target_size):
     target_w, target_h = target_size
 
     # calculate padding scale and padding offset
-    scale = min(target_w/src_w, target_h/src_h)
+    scale = min(target_w / src_w, target_h / src_h)
     padding_w = int(src_w * scale)
     padding_h = int(src_h * scale)
     padding_size = (padding_w, padding_h)
 
-    dx = (target_w - padding_w)//2
-    dy = (target_h - padding_h)//2
+    dx = (target_w - padding_w) // 2
+    dy = (target_h - padding_h) // 2
     offset = (dx, dy)
 
     # create letterbox resized image
     image = image.resize(padding_size, Image.BICUBIC)
-    new_image = Image.new('RGB', target_size, (128,128,128))
+    new_image = Image.new("RGB", target_size, (128, 128, 128))
     new_image.paste(image, offset)
 
     return new_image
@@ -79,9 +80,10 @@ def random_resize_crop_pad(image, target_size, aspect_ratio_jitter=0.1, scale_ji
     target_w, target_h = target_size
 
     # generate random aspect ratio & scale for resize
-    rand_aspect_ratio = (target_w/target_h * rand(1-aspect_ratio_jitter,1+aspect_ratio_jitter)) \
-                        / (rand(1-aspect_ratio_jitter,1+aspect_ratio_jitter))
-    rand_scale = rand(scale_jitter, 1/scale_jitter)
+    rand_aspect_ratio = (target_w / target_h * rand(1 - aspect_ratio_jitter, 1 + aspect_ratio_jitter)) / (
+        rand(1 - aspect_ratio_jitter, 1 + aspect_ratio_jitter)
+    )
+    rand_scale = rand(scale_jitter, 1 / scale_jitter)
 
     # calculate random padding size and resize
     if rand_aspect_ratio < 1:
@@ -99,7 +101,7 @@ def random_resize_crop_pad(image, target_size, aspect_ratio_jitter=0.1, scale_ji
     padding_offset = (dx, dy)
 
     # create target image
-    new_image = Image.new('RGB', (target_w, target_h), (128,128,128))
+    new_image = Image.new("RGB", (target_w, target_h), (128, 128, 128))
     new_image.paste(image, padding_offset)
 
     return new_image, padding_size, padding_offset
@@ -127,7 +129,7 @@ def reshape_boxes(boxes, src_shape, target_shape, padding_shape, offset, horizon
             boolean flag.
     :return boxes: reshaped bounding box numpy array
     """
-    if len(boxes)>0:
+    if len(boxes) > 0:
         src_w, src_h = src_shape
         target_w, target_h = target_shape
         padding_w, padding_h = padding_shape
@@ -135,14 +137,14 @@ def reshape_boxes(boxes, src_shape, target_shape, padding_shape, offset, horizon
 
         # shuffle and reshape boxes
         np.random.shuffle(boxes)
-        boxes[:, [0,2]] = boxes[:, [0,2]]*padding_w/src_w + dx
-        boxes[:, [1,3]] = boxes[:, [1,3]]*padding_h/src_h + dy
+        boxes[:, [0, 2]] = boxes[:, [0, 2]] * padding_w / src_w + dx
+        boxes[:, [1, 3]] = boxes[:, [1, 3]] * padding_h / src_h + dy
         # horizontal flip boxes if needed
         if horizontal_flip:
-            boxes[:, [0,2]] = target_w - boxes[:, [2,0]]
+            boxes[:, [0, 2]] = target_w - boxes[:, [2, 0]]
         # vertical flip boxes if needed
         if vertical_flip:
-            boxes[:, [1,3]] = target_h - boxes[:, [3,1]]
+            boxes[:, [1, 3]] = target_h - boxes[:, [3, 1]]
 
         # check box coordinate range
         boxes[:, 0:2][boxes[:, 0:2] < 0] = 0
@@ -152,12 +154,12 @@ def reshape_boxes(boxes, src_shape, target_shape, padding_shape, offset, horizon
         # check box width and height to discard invalid box
         boxes_w = boxes[:, 2] - boxes[:, 0]
         boxes_h = boxes[:, 3] - boxes[:, 1]
-        boxes = boxes[np.logical_and(boxes_w>1, boxes_h>1)] # discard invalid box
+        boxes = boxes[np.logical_and(boxes_w > 1, boxes_h > 1)]  # discard invalid box
 
     return boxes
 
 
-def random_horizontal_flip(image, prob=.5):
+def random_horizontal_flip(image, prob=0.5):
     """
     Random horizontal flip for image
 
@@ -183,7 +185,7 @@ def box_candidates(box1, box2, wh_thr=2, ar_thr=20, area_thr=0.1):  # box1(4,n),
     return (w2 > wh_thr) & (h2 > wh_thr) & (w2 * h2 / (w1 * h1 + 1e-16) > area_thr) & (ar < ar_thr)  # candidates
 
 
-def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R0912
+def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size):  # pylint: disable=R0912
     # adjust & merge mosaic samples bboxes as following area order:
     # -----------
     # |     |   |
@@ -192,7 +194,7 @@ def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R
     # -----------
     # |  1  | 2 |
     # -----------
-    assert bboxes.shape[0] == 4, 'mosaic sample number should be 4'
+    assert bboxes.shape[0] == 4, "mosaic sample number should be 4"
     max_boxes = bboxes.shape[1]
     height, width = image_size
     merge_bbox = []
@@ -200,7 +202,7 @@ def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R
         for box in bboxes[i]:
             x_min, y_min, x_max, y_max = box[0], box[1], box[2], box[3]
 
-            if i == 0: # bboxes[0] is for top-left area
+            if i == 0:  # bboxes[0] is for top-left area
                 if y_min > crop_y or x_min > crop_x:
                     continue
                 if y_min < crop_y < y_max:
@@ -208,7 +210,7 @@ def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R
                 if x_min < crop_x < x_max:
                     x_max = crop_x
 
-            if i == 1: # bboxes[1] is for bottom-left area
+            if i == 1:  # bboxes[1] is for bottom-left area
                 if y_max < crop_y or x_min > crop_x:
                     continue
                 if y_min < crop_y < y_max:
@@ -216,7 +218,7 @@ def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R
                 if x_min < crop_x < x_max:
                     x_max = crop_x
 
-            if i == 2: # bboxes[2] is for bottom-right area
+            if i == 2:  # bboxes[2] is for bottom-right area
                 if y_max < crop_y or x_max < crop_x:
                     continue
                 if y_min < crop_y < y_max:
@@ -224,7 +226,7 @@ def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R
                 if x_min < crop_x < x_max:
                     x_min = crop_x
 
-            if i == 3: # bboxes[3] is for top-right area
+            if i == 3:  # bboxes[3] is for top-right area
                 if y_min > crop_y or x_max < crop_x:
                     continue
                 if y_min < crop_y < y_max:
@@ -232,8 +234,8 @@ def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R
                 if x_min < crop_x < x_max:
                     x_min = crop_x
 
-            if abs(x_max-x_min) < max(10, width*0.01) or abs(y_max-y_min) < max(10, height*0.01):
-                #if the adjusted bbox is too small, bypass it
+            if abs(x_max - x_min) < max(10, width * 0.01) or abs(y_max - y_min) < max(10, height * 0.01):
+                # if the adjusted bbox is too small, bypass it
                 continue
 
             merge_bbox.append([x_min, y_min, x_max, y_max, box[4]])
@@ -241,13 +243,13 @@ def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R
     if len(merge_bbox) > max_boxes:
         merge_bbox = merge_bbox[:max_boxes]
 
-    box_data = np.zeros((max_boxes,5))
+    box_data = np.zeros((max_boxes, 5))
     if len(merge_bbox) > 0:
-        box_data[:len(merge_bbox)] = merge_bbox
+        box_data[: len(merge_bbox)] = merge_bbox
     return box_data
 
 
-def random_mosaic_augment(image_data, boxes_data, prob=.1):
+def random_mosaic_augment(image_data, boxes_data, prob=0.1):
     """
     Random add mosaic augment on batch images and boxes, from YOLOv4
     reference:
@@ -268,7 +270,7 @@ def random_mosaic_augment(image_data, boxes_data, prob=.1):
 
     if do_augment:
         batch_size = len(image_data)
-        assert batch_size >= 4, 'mosaic augment need batch size >= 4'
+        assert batch_size >= 4, "mosaic augment need batch size >= 4"
 
         def get_mosaic_samples():
             # random select 4 images from batch as mosaic samples
@@ -285,21 +287,21 @@ def random_mosaic_augment(image_data, boxes_data, prob=.1):
         new_images = []
         new_boxes = []
         height, width = image_data[0].shape[:2]
-        #each batch has batch_size images, so we also need to
-        #generate batch_size mosaic images
+        # each batch has batch_size images, so we also need to
+        # generate batch_size mosaic images
         for _ in range(batch_size):
             images, bboxes = get_mosaic_samples()
 
-            #crop_x = np.random.randint(int(width*min_offset), int(width*(1 - min_offset)))
-            #crop_y = np.random.randint(int(height*min_offset), int(height*(1 - min_offset)))
-            crop_x = int(random.uniform(int(width*min_offset), int(width*(1-min_offset))))  # nosec
-            crop_y = int(random.uniform(int(height*min_offset), int(height*(1 - min_offset))))  # nosec
+            # crop_x = np.random.randint(int(width*min_offset), int(width*(1 - min_offset)))
+            # crop_y = np.random.randint(int(height*min_offset), int(height*(1 - min_offset)))
+            crop_x = int(random.uniform(int(width * min_offset), int(width * (1 - min_offset))))  # nosec
+            crop_y = int(random.uniform(int(height * min_offset), int(height * (1 - min_offset))))  # nosec
 
             merged_boxes = merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size=(height, width))
-            #no valid bboxes, drop this loop
-            #if merged_boxes is None:
-                #i = i - 1
-                #continue
+            # no valid bboxes, drop this loop
+            # if merged_boxes is None:
+            # i = i - 1
+            # continue
 
             # crop out selected area as following mosaic sample images order:
             # -----------
@@ -314,7 +316,7 @@ def random_mosaic_augment(image_data, boxes_data, prob=.1):
             area_2 = images[2][crop_y:, crop_x:, :]
             area_3 = images[3][:crop_y, crop_x:, :]
 
-            #merge selected area to new image
+            # merge selected area to new image
             area_left = np.concatenate([area_0, area_1], axis=0)
             area_right = np.concatenate([area_3, area_2], axis=0)
             merged_image = np.concatenate([area_left, area_right], axis=1)
@@ -328,6 +330,7 @@ def random_mosaic_augment(image_data, boxes_data, prob=.1):
         boxes_data = new_boxes
 
     return image_data, boxes_data
+
 
 def normalize_image(image):
     """

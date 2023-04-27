@@ -12,9 +12,7 @@
 """
 from functools import reduce
 from pathlib import Path
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 import pandas as pd
 import torch
@@ -23,14 +21,14 @@ import torch.nn.functional as F
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.logging import nncf_logger
+from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
+from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
 from nncf.experimental.common.pruning.propagation_data import ProducerInfo
+from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
+from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.torch.layers import NNCFLinear
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import SparseModuleInfo
-from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
-from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
-from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
-from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
 
 SUPPORTED_NNCF_MODULES = [NNCFLinear]
 EXPECTED_NODE_LAYER_ATTRS = [LinearLayerAttributes]
@@ -41,14 +39,15 @@ class StructuredMaskContextStatistics:
     Describes details of the resolved structured mask in a supported layer.
     """
 
-    def __init__(self,
-                 weight_shape: Tuple[int, int],
-                 pruned_weight_shape: Tuple[int, int],
-                 bias_shape: Tuple[int],
-                 pruned_bias_shape: Tuple[int],
-                 head_or_channel_id_to_keep: List[int],
-                 module_node_name: NNCFNodeName,
-                 ):
+    def __init__(
+        self,
+        weight_shape: Tuple[int, int],
+        pruned_weight_shape: Tuple[int, int],
+        bias_shape: Tuple[int],
+        pruned_bias_shape: Tuple[int],
+        head_or_channel_id_to_keep: List[int],
+        module_node_name: NNCFNodeName,
+    ):
         """
         Initializes the statistics for the target linear module of a structured mask context.
 
@@ -80,12 +79,13 @@ class StructuredMaskContext:
     to conduct structured mask resolution.
     """
 
-    def __init__(self,
-                 sparsifier_operand: MovementSparsifier,
-                 module_node_name: NNCFNodeName,
-                 grid_size: Tuple[int, int],
-                 prune_by_row: bool,
-                 ):
+    def __init__(
+        self,
+        sparsifier_operand: MovementSparsifier,
+        module_node_name: NNCFNodeName,
+        grid_size: Tuple[int, int],
+        prune_by_row: bool,
+    ):
         """
         Initializes the context of the target module for structured masking.
 
@@ -96,54 +96,57 @@ class StructuredMaskContext:
         """
         self.sparsifier_operand = sparsifier_operand
         self.module_node_name = module_node_name
-        operand_mask: torch.Tensor = sparsifier_operand.weight_ctx.binary_mask   # type: ignore
+        operand_mask: torch.Tensor = sparsifier_operand.weight_ctx.binary_mask  # type: ignore
         self.operand_mask_shape = operand_mask.shape
         self.grid_size = self._resolve_grid_size(grid_size)
-        self.structured_mask_shape = torch.Size(dim // grid for dim, grid in
-                                                zip(self.operand_mask_shape, self.grid_size))
+        self.structured_mask_shape = torch.Size(
+            dim // grid for dim, grid in zip(self.operand_mask_shape, self.grid_size)
+        )
         self.prune_by_row = prune_by_row
         self._independent_structured_mask = None
         self._dependent_structured_mask = None
 
     def __str__(self) -> str:
-        prune_info = 'row prune' if self.prune_by_row else 'column prune'
+        prune_info = "row prune" if self.prune_by_row else "column prune"
         return f'{self.__class__.__name__}({prune_info} by {self.grid_size}, "{self.module_node_name}")'
 
     @property
     def independent_structured_mask(self) -> Optional[torch.Tensor]:
         if self._independent_structured_mask is None:
-            nncf_logger.debug('Independent structured mask has not been calculated. Return None.')
+            nncf_logger.debug("Independent structured mask has not been calculated. Return None.")
         return self._independent_structured_mask
 
     @independent_structured_mask.setter
     @torch.no_grad()
     def independent_structured_mask(self, tensor: torch.Tensor):
         if self.structured_mask_shape != tensor.shape:
-            raise ValueError('Wrong shape about independent structured mask.')
+            raise ValueError("Wrong shape about independent structured mask.")
         if self._independent_structured_mask is None:
             self._independent_structured_mask = tensor.clone()
         else:
             if self._independent_structured_mask.device != tensor.device:
-                nncf_logger.debug(f'Changing independent_structured_mask device to {tensor.device}')
+                nncf_logger.debug(f"Changing independent_structured_mask device to {tensor.device}")
                 self._independent_structured_mask = self._independent_structured_mask.to(tensor.device)
             self._independent_structured_mask.copy_(tensor)
 
     @property
     def dependent_structured_mask(self) -> Optional[torch.Tensor]:
         if self._dependent_structured_mask is None:
-            nncf_logger.debug('Dependent structured mask has not been calculated. Return None.')
+            nncf_logger.debug("Dependent structured mask has not been calculated. Return None.")
         return self._dependent_structured_mask
 
     @dependent_structured_mask.setter
     @torch.no_grad()
     def dependent_structured_mask(self, tensor: torch.Tensor):
         if self.structured_mask_shape != tensor.shape:
-            raise ValueError('Wrong shape about dependent structured mask.')
+            raise ValueError("Wrong shape about dependent structured mask.")
         if self._dependent_structured_mask is None:
             self._dependent_structured_mask = tensor.clone()
         else:
             if self._dependent_structured_mask.device != tensor.device:
-                nncf_logger.debug(f'Changing dependent_structured_mask device to {tensor.device}', )
+                nncf_logger.debug(
+                    f"Changing dependent_structured_mask device to {tensor.device}",
+                )
                 self._dependent_structured_mask = self._dependent_structured_mask.to(tensor.device)
             self._dependent_structured_mask.copy_(tensor)
 
@@ -155,14 +158,16 @@ class StructuredMaskContext:
         """
         weight_binary_mask = self.sparsifier_operand.weight_ctx.binary_mask.detach().clone()
         mask_by_grid = F.max_pool2d(
-            weight_binary_mask.unsqueeze(0), kernel_size=self.grid_size, stride=self.grid_size).squeeze(0)
+            weight_binary_mask.unsqueeze(0), kernel_size=self.grid_size, stride=self.grid_size
+        ).squeeze(0)
         preserved_cols = mask_by_grid.amax(dim=0)
         preserved_rows = mask_by_grid.amax(dim=1)
 
         if self.sparsifier_operand.prune_bias:
             bias_binary_mask = self.sparsifier_operand.bias_ctx.binary_mask.detach().clone()
             bias_preserved_rows = F.max_pool1d(
-                bias_binary_mask.view(1, -1), kernel_size=self.grid_size[0], stride=self.grid_size[0]).squeeze(0)
+                bias_binary_mask.view(1, -1), kernel_size=self.grid_size[0], stride=self.grid_size[0]
+            ).squeeze(0)
             preserved_rows = bias_preserved_rows.logical_or(preserved_rows)
 
         structured_mask = preserved_rows.unsqueeze(1) * preserved_cols.unsqueeze(0)
@@ -187,8 +192,9 @@ class StructuredMaskContext:
         node = self.sparsifier_operand.target_module_node
         assert isinstance(node.layer_attributes, tuple(EXPECTED_NODE_LAYER_ATTRS))
         weight_shape: Tuple[int, int] = tuple(node.layer_attributes.get_weight_shape())
-        bias_shape: Tuple[int] = (node.layer_attributes.get_bias_shape(),
-                                  ) if self.sparsifier_operand.prune_bias else (0,)
+        bias_shape: Tuple[int] = (
+            (node.layer_attributes.get_bias_shape(),) if self.sparsifier_operand.prune_bias else (0,)
+        )
 
         pruned_weight_shape = list(weight_shape)
         head_id_to_keep = []
@@ -213,18 +219,18 @@ class StructuredMaskContext:
             bias_shape=bias_shape,
             pruned_bias_shape=pruned_bias_shape,
             head_or_channel_id_to_keep=head_id_to_keep,
-            module_node_name=self.module_node_name
+            module_node_name=self.module_node_name,
         )
 
     def _resolve_grid_size(self, grid_size) -> Tuple[int, int]:
         a, b = grid_size
-        return (a if a > 0 else self.operand_mask_shape[0],
-                b if b > 0 else self.operand_mask_shape[1])
+        return (a if a > 0 else self.operand_mask_shape[0], b if b > 0 else self.operand_mask_shape[1])
 
     @staticmethod
     def _inflate_structured_mask(structured_mask: torch.Tensor, grid_size: Tuple[int, int]) -> torch.Tensor:
-        assert len(structured_mask.shape) == len(grid_size), \
-            f'Unmatched dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D.'
+        assert len(structured_mask.shape) == len(
+            grid_size
+        ), f"Unmatched dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D."
         inflated_mask = structured_mask.clone()
         for axis, repeat_times in enumerate(grid_size):
             inflated_mask = inflated_mask.repeat_interleave(repeat_times, dim=axis)
@@ -236,9 +242,7 @@ class StructuredMaskContextGroup:
     Stores together the structured mask contexts that are related to the same building block.
     """
 
-    def __init__(self,
-                 group_id: int,
-                 structured_mask_contexts: List[StructuredMaskContext]):
+    def __init__(self, group_id: int, structured_mask_contexts: List[StructuredMaskContext]):
         """
         Initializes a group of related structured mask contexts.
 
@@ -251,11 +255,11 @@ class StructuredMaskContextGroup:
 
     def __str__(self) -> str:
         if not self.structured_mask_contexts:
-            ctxes_str = '[]'
+            ctxes_str = "[]"
         else:
-            ctxes = (f'\n\t{ctx}' for ctx in self.structured_mask_contexts)
-            ctxes_str = '[{}\n]'.format(''.join(ctxes))
-        return f'{self.__class__.__name__}[{self.group_id}]: {ctxes_str}'
+            ctxes = (f"\n\t{ctx}" for ctx in self.structured_mask_contexts)
+            ctxes_str = "[{}\n]".format("".join(ctxes))
+        return f"{self.__class__.__name__}[{self.group_id}]: {ctxes_str}"
 
 
 class StructuredMaskHandler:
@@ -269,9 +273,7 @@ class StructuredMaskHandler:
     via the `StructuredMaskContext` of each module that supports structured masking.
     """
 
-    def __init__(self,
-                 compressed_model: NNCFNetwork,
-                 sparsified_module_info_list: List[SparseModuleInfo]):
+    def __init__(self, compressed_model: NNCFNetwork, sparsified_module_info_list: List[SparseModuleInfo]):
         """
         Initializes the handler for structured masking in movement sparsity.
 
@@ -286,9 +288,9 @@ class StructuredMaskHandler:
             compressed_model, sparsified_module_info_list
         )
 
-        nncf_logger.debug('Totally %d structured mask context groups.', len(self._structured_mask_ctx_groups))
+        nncf_logger.debug("Totally %d structured mask context groups.", len(self._structured_mask_ctx_groups))
         for structured_mask_ctx_group in self._structured_mask_ctx_groups:
-            nncf_logger.debug(f'{structured_mask_ctx_group}')
+            nncf_logger.debug(f"{structured_mask_ctx_group}")
 
     def update_independent_structured_mask(self):
         """
@@ -307,8 +309,9 @@ class StructuredMaskHandler:
             ctxes = group.structured_mask_contexts
             row_prune_ctxes = list(filter(lambda ctx: ctx.prune_by_row, ctxes))
             col_prune_ctxes = list(filter(lambda ctx: not ctx.prune_by_row, ctxes))
-            independent_masks = [ctx.independent_structured_mask for ctx in row_prune_ctxes] + \
-                [ctx.independent_structured_mask.t() for ctx in col_prune_ctxes]
+            independent_masks = [ctx.independent_structured_mask for ctx in row_prune_ctxes] + [
+                ctx.independent_structured_mask.t() for ctx in col_prune_ctxes
+            ]
             coarse_mask = reduce(torch.logical_or, independent_masks).float()
             with torch.no_grad():
                 for ctx in row_prune_ctxes:
@@ -324,11 +327,13 @@ class StructuredMaskHandler:
             for ctx in group.structured_mask_contexts:
                 ctx.populate_dependent_structured_mask_to_operand()
 
-    def report_structured_sparsity(self,
-                                   save_dir: str,
-                                   file_name: str = 'structured_sparsity',
-                                   to_csv: bool = True,
-                                   max_num_of_kept_heads_to_report: int = 20) -> pd.DataFrame:
+    def report_structured_sparsity(
+        self,
+        save_dir: str,
+        file_name: str = "structured_sparsity",
+        to_csv: bool = True,
+        max_num_of_kept_heads_to_report: int = 20,
+    ) -> pd.DataFrame:
         """
         Generates a report file that describes the structured mask statistics for each context group.
 
@@ -341,23 +346,22 @@ class StructuredMaskHandler:
         """
         df = self._gather_statistics_dataframe(max_num_of_kept_heads_to_report)
         if to_csv:
-            df.to_csv(Path(save_dir, f'{file_name}.csv'))
+            df.to_csv(Path(save_dir, f"{file_name}.csv"))
         return df
 
     def _gather_statistics_dataframe(self, max_num_of_kept_heads_to_report: int = 20) -> pd.DataFrame:
         module_vs_name_map = {module: name for name, module in self.compressed_model.named_modules()}
         entry_list = []
         for group in self._structured_mask_ctx_groups:
-            ctxes = sorted(group.structured_mask_contexts,
-                           key=lambda ctx: ctx.sparsifier_operand.target_module_node.node_id)
+            ctxes = sorted(
+                group.structured_mask_contexts, key=lambda ctx: ctx.sparsifier_operand.target_module_node.node_id
+            )
             for ctx in ctxes:
                 stats = ctx.gather_statistics_from_operand()
                 module = self.compressed_model.nncf.get_containing_module(stats.module_node_name)
-                entry = dict(group_id=group.group_id,
-                             torch_module=module_vs_name_map[module],
-                             **stats.__dict__)
+                entry = dict(group_id=group.group_id, torch_module=module_vs_name_map[module], **stats.__dict__)
                 if len(stats.head_or_channel_id_to_keep) > max_num_of_kept_heads_to_report:  # avoid long display
-                    entry['head_or_channel_id_to_keep'] = f'[{len(stats.head_or_channel_id_to_keep)} items]'
+                    entry["head_or_channel_id_to_keep"] = f"[{len(stats.head_or_channel_id_to_keep)} items]"
                 entry_list.append(entry)
         return pd.DataFrame(entry_list)
 
@@ -367,11 +371,11 @@ class StructuredMaskHandler:
     ) -> List[StructuredMaskContextGroup]:
         module_vs_sparse_module_info_map = {minfo.module: minfo for minfo in sparsified_module_info_list}
 
-        pruning_producing_types = ['linear']
+        pruning_producing_types = ["linear"]
         nncf_graph = nncf_network.get_original_graph()
-        pruning_groups = get_pruning_groups(nncf_graph,
-                                            PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES,
-                                            pruning_producing_types)
+        pruning_groups = get_pruning_groups(
+            nncf_graph, PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types
+        )
         pruning_groups = select_largest_groups(pruning_groups)
         result = []
         for group_id, group in enumerate(pruning_groups):
@@ -390,14 +394,13 @@ class StructuredMaskHandler:
                     prune_by_row = not bool(producer_info.pruning_dimension)
                     minfo = module_vs_sparse_module_info_map[module]
                     prune_grid = (block.size, -1) if prune_by_row else (-1, block.size)
-                    ctx = StructuredMaskContext(minfo.operand,
-                                                minfo.module_node_name,
-                                                prune_grid,
-                                                prune_by_row)
+                    ctx = StructuredMaskContext(minfo.operand, minfo.module_node_name, prune_grid, prune_by_row)
                     ctxes.append(ctx)
                 else:
-                    nncf_logger.warning(f'Automatically found structured pruning group does not match the given '
-                                        f'unstructured sparse structures:\n {group}')
+                    nncf_logger.warning(
+                        f"Automatically found structured pruning group does not match the given "
+                        f"unstructured sparse structures:\n {group}"
+                    )
                     break
             if ctxes:
                 result.append(StructuredMaskContextGroup(group_id, ctxes))

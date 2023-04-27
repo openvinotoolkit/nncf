@@ -15,8 +15,8 @@ import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
-from tests.torch.helpers import create_conv
 from tests.torch.helpers import PTTensorListComparator
+from tests.torch.helpers import create_conv
 
 
 class MagnitudeTestModel(nn.Module):
@@ -36,18 +36,15 @@ def test_magnitude_model_has_expected_params():
     act_bias_1 = model.conv1.bias.data
     act_bias_2 = model.conv2.bias.data
 
-    sub_tensor = torch.tensor([[[[10., 9.],
-                                 [9., 10.]]]])
+    sub_tensor = torch.tensor([[[[10.0, 9.0], [9.0, 10.0]]]])
     ref_weights_1 = torch.cat((sub_tensor, sub_tensor), 0)
-    sub_tensor = torch.tensor([[[[-9., -10., -10.],
-                                 [-10., -9., -10.],
-                                 [-10., -10., -9.]]]])
+    sub_tensor = torch.tensor([[[[-9.0, -10.0, -10.0], [-10.0, -9.0, -10.0], [-10.0, -10.0, -9.0]]]])
     ref_weights_2 = torch.cat((sub_tensor, sub_tensor), 1)
 
     PTTensorListComparator.check_equal(act_weights_1, ref_weights_1)
     PTTensorListComparator.check_equal(act_weights_2, ref_weights_2)
 
-    PTTensorListComparator.check_equal(act_bias_1, torch.tensor([-2., -2]))
+    PTTensorListComparator.check_equal(act_bias_1, torch.tensor([-2.0, -2]))
     PTTensorListComparator.check_equal(act_bias_2, torch.tensor([0]))
 
 
@@ -55,16 +52,13 @@ def get_basic_magnitude_sparsity_config(input_sample_size=None):
     if input_sample_size is None:
         input_sample_size = [1, 1, 4, 4]
     config = NNCFConfig()
-    config.update({
-        "model": "basic_sparse_conv",
-        "input_info":
-            {
+    config.update(
+        {
+            "model": "basic_sparse_conv",
+            "input_info": {
                 "sample_size": input_sample_size,
             },
-        "compression":
-            {
-                "algorithm": "magnitude_sparsity",
-                "params": {}
-            }
-    })
+            "compression": {"algorithm": "magnitude_sparsity", "params": {}},
+        }
+    )
     return config

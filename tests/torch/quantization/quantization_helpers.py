@@ -20,11 +20,11 @@ from tests.torch.helpers import get_empty_config
 def compare_multi_gpu_dump(config, dump_dir, get_path_by_rank_fn):
     mismatching = False
     ref_file_path = get_path_by_rank_fn(dump_dir, 0)
-    with ref_file_path.open('rb') as ref_scale_file:
+    with ref_file_path.open("rb") as ref_scale_file:
         ref_data = torch.load(ref_scale_file)
         for other_rank in range(1, config.world_size):
             other_file_path = get_path_by_rank_fn(dump_dir, other_rank)
-            with other_file_path.open('rb') as in_file:
+            with other_file_path.open("rb") as in_file:
                 data_to_compare = torch.load(in_file)
                 for ref_tuple, tuple_to_compare in zip(ref_data, data_to_compare):
                     for ref_info, info_to_compare in zip(ref_tuple, tuple_to_compare):
@@ -50,21 +50,14 @@ class RankDatasetMock:
 
 def get_quantization_config_without_range_init(model_size=4) -> NNCFConfig:
     config = get_empty_config(input_sample_sizes=[1, 1, model_size, model_size])
-    config["compression"] = {
-        "algorithm": "quantization",
-        "initializer": {
-            "range": {
-                "num_init_samples": 0
-            }
-        }
-    }
+    config["compression"] = {"algorithm": "quantization", "initializer": {"range": {"num_init_samples": 0}}}
     return config
 
 
 def get_squeezenet_quantization_config(image_size=32, batch_size=3):
     config = get_quantization_config_without_range_init(image_size)
-    config['model'] = 'squeezenet1_1'
-    config['input_info'] = {
+    config["model"] = "squeezenet1_1"
+    config["input_info"] = {
         "sample_size": [batch_size, 3, image_size, image_size],
     }
     return config
@@ -72,23 +65,27 @@ def get_squeezenet_quantization_config(image_size=32, batch_size=3):
 
 def distributed_init_test_default(gpu, ngpus_per_node, config):
     config.batch_size = 3
-    config.workers = 0 #  workaround for the pytorch multiprocessingdataloader issue/
+    config.workers = 0  #  workaround for the pytorch multiprocessingdataloader issue/
     config.gpu = gpu
     config.ngpus_per_node = ngpus_per_node
     config.rank = gpu
     config.distributed = True
 
-    torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8199',
-                                         world_size=config.world_size, rank=config.rank)
+    torch.distributed.init_process_group(
+        backend="nccl", init_method="tcp://127.0.0.1:8199", world_size=config.world_size, rank=config.rank
+    )
 
 
 def create_rank_dataloader(config, rank, num_samples=10, batch_size=3):
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], rank, num_samples),
-                                              batch_size=batch_size,
-                                              num_workers=0,  # workaround
-                                              shuffle=False, drop_last=True)
+    data_loader = torch.utils.data.DataLoader(
+        RankDatasetMock(input_sample_size[1:], rank, num_samples),
+        batch_size=batch_size,
+        num_workers=0,  # workaround
+        shuffle=False,
+        drop_last=True,
+    )
     return data_loader
 
 

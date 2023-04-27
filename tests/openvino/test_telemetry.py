@@ -10,20 +10,25 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from tests.shared.datasets import MockDataset
-from tests.shared.helpers import telemetry_send_event_test_driver
-
-from openvino.runtime import Model, Shape, Type, op, opset8
+from openvino.runtime import Model
+from openvino.runtime import Shape
+from openvino.runtime import Type
+from openvino.runtime import op
+from openvino.runtime import opset8
 
 import nncf
 from nncf import Dataset
+from tests.shared.datasets import MockDataset
+from tests.shared.helpers import telemetry_send_event_test_driver
 
 INPUT_SHAPE = [2, 1, 1, 1]
+
+
 def get_mock_model() -> Model:
     param_node = op.Parameter(Type.f32, Shape(INPUT_SHAPE))
     softmax_axis = 1
     softmax_node = opset8.softmax(param_node, softmax_axis)
-    return Model(softmax_node, [param_node], 'mock')
+    return Model(softmax_node, [param_node], "mock")
 
 
 def test_telemetry_is_sent(mocker):
@@ -31,4 +36,5 @@ def test_telemetry_is_sent(mocker):
         model_to_test = get_mock_model()
 
         _ = nncf.quantize(model_to_test, Dataset(MockDataset(INPUT_SHAPE)))
+
     telemetry_send_event_test_driver(mocker, use_nncf_fn)

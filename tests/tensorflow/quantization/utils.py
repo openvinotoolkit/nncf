@@ -17,21 +17,21 @@ from nncf import NNCFConfig
 
 def get_basic_quantization_config(model_size=4):
     config = NNCFConfig()
-    config.update({
-        'model': 'basic_quant_conv',
-        'input_info':
-            {
-                'sample_size': [1, model_size, model_size, 1],
+    config.update(
+        {
+            "model": "basic_quant_conv",
+            "input_info": {
+                "sample_size": [1, model_size, model_size, 1],
             },
-        'compression':
-            {
-                'algorithm': 'quantization',
-            }
-    })
+            "compression": {
+                "algorithm": "quantization",
+            },
+        }
+    )
     return config
 
 
 def get_basic_asym_quantization_config(model_size=4):
     config = get_basic_quantization_config(model_size)
-    config['compression']['activations'] = {'mode': 'asymmetric'}
+    config["compression"]["activations"] = {"mode": "asymmetric"}
     return config

@@ -18,7 +18,7 @@ from tests.shared.paths import PROJECT_ROOT
 
 
 def YOLOv4(input_shape=None):
-    path_to_config = PROJECT_ROOT / 'examples' / 'tensorflow' / 'object_detection' / 'configs' / 'yolo_v4_coco.json'
+    path_to_config = PROJECT_ROOT / "examples" / "tensorflow" / "object_detection" / "configs" / "yolo_v4_coco.json"
 
     config_from_json = SampleConfig.from_json(path_to_config)
     predefined_config = get_predefined_config(config_from_json.model)

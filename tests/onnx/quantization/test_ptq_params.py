@@ -13,33 +13,32 @@
 
 import pytest
 
-from nncf.scopes import IgnoredScope
-from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
-
-from tests.onnx.models import LinearModel
-from tests.onnx.models import OneDepthwiseConvolutionalModel
-from tests.post_training.test_ptq_params import TemplateTestPTQParams
-from tests.post_training.models import NNCFGraphToTest
-from tests.post_training.models import NNCFGraphToTestMatMul
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.parameters import TargetDevice
+from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
-
+from tests.onnx.models import LinearModel
+from tests.onnx.models import OneDepthwiseConvolutionalModel
+from tests.post_training.models import NNCFGraphToTest
+from tests.post_training.models import NNCFGraphToTestMatMul
+from tests.post_training.test_ptq_params import TemplateTestPTQParams
 
 # pylint: disable=protected-access
 
-@pytest.mark.parametrize('target_device', TargetDevice)
+
+@pytest.mark.parametrize("target_device", TargetDevice)
 def test_target_device(target_device):
     algo = PostTrainingQuantization(target_device=target_device)
     min_max_algo = algo.algorithms[0]
@@ -57,8 +56,7 @@ class TestPTQParams(TemplateTestPTQParams):
     def check_is_mean_min_max_statistic_collector(self, tensor_collector):
         assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
 
-    def check_quantize_outputs_fq_num(self, quantize_outputs,
-                                      act_num_q, weight_num_q):
+    def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:
             assert act_num_q == 2
         else:
@@ -70,33 +68,38 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @property
     def metatypes_mapping(self):
-        return {Conv2dTestMetatype: ONNXConvolutionMetatype,
-                LinearTestMetatype: ONNXLinearMetatype,
-                SoftmaxTestMetatype: ONNXSoftmaxMetatype}
-
-    @pytest.fixture(scope='session')
-    def test_params(self):
         return {
-            'test_range_estimator_per_tensor':
-                {'model': LinearModel().onnx_model,
-                 'stat_points_num': 5},
-            'test_range_estimator_per_channel':
-                {'model': OneDepthwiseConvolutionalModel().onnx_model,
-                 'stat_points_num': 2},
-            'test_quantize_outputs':
-                {'nncf_graph': NNCFGraphToTest(ONNXConvolutionMetatype,
-                                               ONNXExtendedLayerAttributes(None, None)).nncf_graph,
-                 'pattern': GraphPattern()},
-            'test_ignored_scopes':
-                {'nncf_graph': NNCFGraphToTest(ONNXConvolutionMetatype,
-                                               ONNXExtendedLayerAttributes(None, None)).nncf_graph,
-                 'pattern': GraphPattern()},
-            'test_model_type_pass':
-                {'nncf_graph': NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
-                 'pattern': GraphPattern()},
+            Conv2dTestMetatype: ONNXConvolutionMetatype,
+            LinearTestMetatype: ONNXLinearMetatype,
+            SoftmaxTestMetatype: ONNXSoftmaxMetatype,
         }
 
-    @pytest.fixture(params=[(IgnoredScope([]), 1, 1),
-                            (IgnoredScope(['/Conv_1_0']), 0, 0)])
+    @pytest.fixture(scope="session")
+    def test_params(self):
+        return {
+            "test_range_estimator_per_tensor": {"model": LinearModel().onnx_model, "stat_points_num": 5},
+            "test_range_estimator_per_channel": {
+                "model": OneDepthwiseConvolutionalModel().onnx_model,
+                "stat_points_num": 2,
+            },
+            "test_quantize_outputs": {
+                "nncf_graph": NNCFGraphToTest(
+                    ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
+                ).nncf_graph,
+                "pattern": GraphPattern(),
+            },
+            "test_ignored_scopes": {
+                "nncf_graph": NNCFGraphToTest(
+                    ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
+                ).nncf_graph,
+                "pattern": GraphPattern(),
+            },
+            "test_model_type_pass": {
+                "nncf_graph": NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
+                "pattern": GraphPattern(),
+            },
+        }
+
+    @pytest.fixture(params=[(IgnoredScope([]), 1, 1), (IgnoredScope(["/Conv_1_0"]), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param

@@ -12,11 +12,7 @@
 """
 from enum import Enum
 from functools import partial
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -52,8 +48,8 @@ from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tracing_state
 from nncf.torch.utils import no_jit_trace
 
-QUANTIZATION_MODULES = Registry('quantization_modules')
-INITIALIZABLE_MODULES = Registry('initializable_modules')
+QUANTIZATION_MODULES = Registry("quantization_modules")
+INITIALIZABLE_MODULES = Registry("initializable_modules")
 
 
 class QuantizerExportMode(Enum):
@@ -62,29 +58,32 @@ class QuantizerExportMode(Enum):
 
 
 class PTQSpecStateNames:
-    NUM_BITS = 'num_bits'
-    MODE = 'mode'
-    SIGNED_TO_FORCE = 'signedness_to_force'
-    NARROW_RANGE = 'narrow_range'
-    HALF_RANGE = 'half_range'
-    SCALE_SHAPE = 'scale_shape'
-    LOGARITHM_SCALE = 'logarithm_scale'
-    IS_QUANTIZED_ON_EXPORT = 'is_quantized_on_export'
-    COMPRESSION_LR_MULTIPLIER = 'compression_lr_multiplier'
+    NUM_BITS = "num_bits"
+    MODE = "mode"
+    SIGNED_TO_FORCE = "signedness_to_force"
+    NARROW_RANGE = "narrow_range"
+    HALF_RANGE = "half_range"
+    SCALE_SHAPE = "scale_shape"
+    LOGARITHM_SCALE = "logarithm_scale"
+    IS_QUANTIZED_ON_EXPORT = "is_quantized_on_export"
+    COMPRESSION_LR_MULTIPLIER = "compression_lr_multiplier"
 
 
 class PTQuantizerSpec(QuantizerSpec):
     _state_names = PTQSpecStateNames
 
-    def __init__(self, num_bits: int,
-                 mode: QuantizationMode,
-                 signedness_to_force: Optional[bool],
-                 narrow_range: bool,
-                 half_range: bool,
-                 scale_shape: Tuple[int, ...],
-                 logarithm_scale: bool,
-                 is_quantized_on_export: bool = False,
-                 compression_lr_multiplier: float = None):
+    def __init__(
+        self,
+        num_bits: int,
+        mode: QuantizationMode,
+        signedness_to_force: Optional[bool],
+        narrow_range: bool,
+        half_range: bool,
+        scale_shape: Tuple[int, ...],
+        logarithm_scale: bool,
+        is_quantized_on_export: bool = False,
+        compression_lr_multiplier: float = None,
+    ):
         """
         :param scale_shape: Shape of quantizer scale parameters
         :param logarithm_scale: Whether to use log of scale as optimized parameter instead of scale itself.
@@ -93,73 +92,87 @@ class PTQuantizerSpec(QuantizerSpec):
             activation quantizers.
         """
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
-        self.per_channel = scale_shape != (1, )
+        self.per_channel = scale_shape != (1,)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
         self.compression_lr_multiplier = compression_lr_multiplier
         self.is_quantized_on_export = is_quantized_on_export
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
-                    half_range: bool, scale_shape: Tuple[int],
-                    logarithm_scale: bool, is_quantized_on_export: bool,
-                    compression_lr_multiplier: float) -> 'PTQuantizerSpec':
-        return cls(qconfig.num_bits,
-                   qconfig.mode,
-                   qconfig.signedness_to_force,
-                   narrow_range,
-                   half_range,
-                   scale_shape,
-                   logarithm_scale,
-                   is_quantized_on_export,
-                   compression_lr_multiplier)
+    def from_config(
+        cls,
+        qconfig: QuantizerConfig,
+        narrow_range: bool,
+        half_range: bool,
+        scale_shape: Tuple[int],
+        logarithm_scale: bool,
+        is_quantized_on_export: bool,
+        compression_lr_multiplier: float,
+    ) -> "PTQuantizerSpec":
+        return cls(
+            qconfig.num_bits,
+            qconfig.mode,
+            qconfig.signedness_to_force,
+            narrow_range,
+            half_range,
+            scale_shape,
+            logarithm_scale,
+            is_quantized_on_export,
+            compression_lr_multiplier,
+        )
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'PTQuantizationPoint':
+    def from_state(cls, state: Dict[str, Any]) -> "PTQuantizationPoint":
         """
         Creates the object from its state.
 
         :param state: Output of `get_state()` method.
         """
         kwargs = {
-            cls._state_names.NUM_BITS: state['num_bits'],
-            cls._state_names.MODE: state['mode'],
-            cls._state_names.SIGNED_TO_FORCE: state['signedness_to_force'],
-            cls._state_names.NARROW_RANGE: state['narrow_range'],
-            cls._state_names.HALF_RANGE: state['half_range'],
-            cls._state_names.SCALE_SHAPE: state['scale_shape'],
-            cls._state_names.LOGARITHM_SCALE: state['logarithm_scale'],
-            cls._state_names.IS_QUANTIZED_ON_EXPORT: state['is_quantized_on_export'],
-            cls._state_names.COMPRESSION_LR_MULTIPLIER: state['compression_lr_multiplier']
+            cls._state_names.NUM_BITS: state["num_bits"],
+            cls._state_names.MODE: state["mode"],
+            cls._state_names.SIGNED_TO_FORCE: state["signedness_to_force"],
+            cls._state_names.NARROW_RANGE: state["narrow_range"],
+            cls._state_names.HALF_RANGE: state["half_range"],
+            cls._state_names.SCALE_SHAPE: state["scale_shape"],
+            cls._state_names.LOGARITHM_SCALE: state["logarithm_scale"],
+            cls._state_names.IS_QUANTIZED_ON_EXPORT: state["is_quantized_on_export"],
+            cls._state_names.COMPRESSION_LR_MULTIPLIER: state["compression_lr_multiplier"],
         }
         return cls(**kwargs)
 
     def get_state(self):
-        return {self._state_names.NUM_BITS: self.num_bits,
-                self._state_names.MODE: self.mode,
-                self._state_names.SIGNED_TO_FORCE: self.signedness_to_force,
-                self._state_names.NARROW_RANGE: self.narrow_range,
-                self._state_names.HALF_RANGE: self.half_range,
-                self._state_names.SCALE_SHAPE: self.scale_shape,
-                self._state_names.LOGARITHM_SCALE: self.logarithm_scale,
-                self._state_names.IS_QUANTIZED_ON_EXPORT: self.is_quantized_on_export,
-                self._state_names.COMPRESSION_LR_MULTIPLIER: self.compression_lr_multiplier}
+        return {
+            self._state_names.NUM_BITS: self.num_bits,
+            self._state_names.MODE: self.mode,
+            self._state_names.SIGNED_TO_FORCE: self.signedness_to_force,
+            self._state_names.NARROW_RANGE: self.narrow_range,
+            self._state_names.HALF_RANGE: self.half_range,
+            self._state_names.SCALE_SHAPE: self.scale_shape,
+            self._state_names.LOGARITHM_SCALE: self.logarithm_scale,
+            self._state_names.IS_QUANTIZED_ON_EXPORT: self.is_quantized_on_export,
+            self._state_names.COMPRESSION_LR_MULTIPLIER: self.compression_lr_multiplier,
+        }
 
 
 class PTQPointStateNames:
-    QSPEC = 'qspec'
-    TARGET_POINT = 'target_point'
-    NAMES_OF_QUANTIZED_OPS = 'directly_quantized_operator_node_names'
+    QSPEC = "qspec"
+    TARGET_POINT = "target_point"
+    NAMES_OF_QUANTIZED_OPS = "directly_quantized_operator_node_names"
 
 
 class PTQuantizationPoint:
     _state_names = PTQPointStateNames
 
-    def __init__(self, qspec: PTQuantizerSpec, target_point: PTTargetPoint,
-                 directly_quantized_operator_node_names: List[NNCFNodeName]):
+    def __init__(
+        self,
+        qspec: PTQuantizerSpec,
+        target_point: PTTargetPoint,
+        directly_quantized_operator_node_names: List[NNCFNodeName],
+    ):
         self.qspec = qspec
         self.target_point = target_point
         self.directly_quantized_operator_node_names = directly_quantized_operator_node_names
@@ -171,7 +184,7 @@ class PTQuantizationPoint:
         return self.target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
 
     def __str__(self):
-        return str(self.target_point) + ' ' + str(self.qspec)
+        return str(self.target_point) + " " + str(self.qspec)
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -183,11 +196,11 @@ class PTQuantizationPoint:
         return {
             self._state_names.TARGET_POINT: self.target_point.get_state(),
             self._state_names.QSPEC: self.qspec.get_state(),
-            self._state_names.NAMES_OF_QUANTIZED_OPS: self.directly_quantized_operator_node_names
+            self._state_names.NAMES_OF_QUANTIZED_OPS: self.directly_quantized_operator_node_names,
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'PTQuantizationPoint':
+    def from_state(cls, state: Dict[str, Any]) -> "PTQuantizationPoint":
         """
         Creates the object from its state.
 
@@ -196,15 +209,15 @@ class PTQuantizationPoint:
         kwargs = {
             cls._state_names.TARGET_POINT: PTTargetPoint.from_state(state[cls._state_names.TARGET_POINT]),
             cls._state_names.QSPEC: PTQuantizerSpec.from_state(state[cls._state_names.QSPEC]),
-            cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS]
+            cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS],
         }
         return cls(**kwargs)
 
 
 class PTQSetupStateNames:
-    SHARED_INPUT_OPERATION_SET_GROUPS = 'shared_input_operation_set_groups'
-    UNIFIED_SCALE_GROUPS = 'unified_scale_groups'
-    QUANTIZATION_POINTS = 'quantization_points'
+    SHARED_INPUT_OPERATION_SET_GROUPS = "shared_input_operation_set_groups"
+    UNIFIED_SCALE_GROUPS = "unified_scale_groups"
+    QUANTIZATION_POINTS = "quantization_points"
 
 
 class PTQuantizerSetup(QuantizerSetupBase):
@@ -216,7 +229,7 @@ class PTQuantizerSetup(QuantizerSetupBase):
         self.shared_input_operation_set_groups = shared_input_operation_set_groups
 
     @classmethod
-    def from_state(cls, state: Dict) -> 'PTQuantizerSetup':
+    def from_state(cls, state: Dict) -> "PTQuantizerSetup":
         """
         Creates the object from its state.
 
@@ -272,14 +285,17 @@ class BaseQuantizer(nn.Module):
         self._is_using_log_scale_storage = qspec.logarithm_scale
         self._half_range = qspec.half_range
         self._is_quantized_on_export = qspec.is_quantized_on_export
-        self._num_bits = CompressionParameter(torch.IntTensor([qspec.num_bits]), requires_grad=False,
-                                              compression_lr_multiplier=qspec.compression_lr_multiplier)
-        OPTIONAL_PARAMETERS_REGISTRY.register('_num_bits')
+        self._num_bits = CompressionParameter(
+            torch.IntTensor([qspec.num_bits]),
+            requires_grad=False,
+            compression_lr_multiplier=qspec.compression_lr_multiplier,
+        )
+        OPTIONAL_PARAMETERS_REGISTRY.register("_num_bits")
         self.level_high = None
         self.level_low = None
 
         self.levels = 0
-        ENABLED_VAR_NAME = 'enabled'
+        ENABLED_VAR_NAME = "enabled"
         self.register_buffer(ENABLED_VAR_NAME, torch.IntTensor([1]))
         OPTIONAL_PARAMETERS_REGISTRY.register(ENABLED_VAR_NAME)
         self.initialized = False
@@ -289,15 +305,16 @@ class BaseQuantizer(nn.Module):
 
         class LoadStateListener:
             """
-               Check whether a quantization module are going to be updated by new values from state_dict or checkpoint.
+            Check whether a quantization module are going to be updated by new values from state_dict or checkpoint.
             """
 
             def __init__(self, module):
                 # pylint: disable=protected-access
                 self.hook = module._register_load_state_dict_pre_hook(partial(self.hook_fn, module=module))
 
-            def hook_fn(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs,
-                        module):
+            def hook_fn(
+                self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs, module
+            ):
                 for module_key in module.state_dict().keys():
                     candidate = prefix + module_key
                     if candidate in state_dict:
@@ -357,30 +374,24 @@ class BaseQuantizer(nn.Module):
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         raise NotImplementedError
 
-    def apply_minmax_init(self,
-                          min_values: torch.Tensor,
-                          max_values: torch.Tensor,
-                          log_module_name: str = None):
+    def apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
         """min_values and max_values must have the same shape as specified in self.scale_shape"""
         if self.initialized:
             nncf_logger.debug(f"Skipped initializing {log_module_name} - loaded from checkpoint")
             return
 
         if torch.all(torch.isinf(min_values)) or torch.all(torch.isinf(max_values)):
-            raise ValueError(f'Statistics are not collected for {log_module_name}')
+            raise ValueError(f"Statistics are not collected for {log_module_name}")
 
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise ValueError(f'Some of the values in statistics have infinite value for {log_module_name}')
+            raise ValueError(f"Some of the values in statistics have infinite value for {log_module_name}")
 
         own_device = get_model_device(self)
         min_values = min_values.to(own_device)
         max_values = max_values.to(own_device)
         self._apply_minmax_init(min_values, max_values, log_module_name)
 
-    def _apply_minmax_init(self,
-                           min_values: torch.Tensor,
-                           max_values: torch.Tensor,
-                           log_module_name: str = None):
+    def _apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
         raise NotImplementedError
 
     def set_level_ranges(self):
@@ -441,15 +452,13 @@ class BaseQuantizer(nn.Module):
             levels = level_high - level_low + 1
             assert levels in [255, 256], "Can only export to INT8 256-level ONNX Quantize/Dequantize pairs"
 
-            y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low,
-                                                                           level_high,
-                                                                           input_low,
-                                                                           input_high)
+            y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
             possible_axes = self._possible_per_channel_dimensions()
             if len(possible_axes) > 1:
                 raise RuntimeError(
                     f"Impossible to determine the per-channel axis for a scale shape {self.scale_shape} - "
-                    f"more than one dimension is >1")
+                    f"more than one dimension is >1"
+                )
             if not possible_axes:
                 # Impossible to determine proper axis for per-channel quantization because we have
                 # scale shape ~ [1, 1, 1, 1], therefore falling back to per-tensor style export
@@ -468,19 +477,14 @@ class BaseQuantizer(nn.Module):
         with torch.no_grad():
             if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
                 x, levels, input_low, input_high = self._prepare_fq_export_quantization(x)
-                return ExportQuantizeToFakeQuantize.apply(x, levels,
-                                                          input_low,
-                                                          input_high,
-                                                          input_low,
-                                                          input_high)
+                return ExportQuantizeToFakeQuantize.apply(x, levels, input_low, input_high, input_low, input_high)
             if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
                 x, y_scale, y_zero_point, axis = self._prepare_qdq_export_quantization(x)
                 return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point, axis)
-        raise RuntimeError('Unknown export mode')
+        raise RuntimeError("Unknown export mode")
 
     def extra_repr(self):
-        return 'bit={}, ch={}'.format(
-            self.num_bits, self.per_channel)
+        return "bit={}, ch={}".format(self.num_bits, self.per_channel)
 
     def get_quantizer_config(self) -> QuantizerConfig:
         raise NotImplementedError
@@ -490,7 +494,7 @@ class BaseQuantizer(nn.Module):
         numel = 1
         for el in self.scale_shape:
             numel *= el
-        is_per_tensor = ((numel == 1) and (len(self.scale_shape) == 1))
+        is_per_tensor = (numel == 1) and (len(self.scale_shape) == 1)
         return not is_per_tensor
 
     def get_parameters_for_torch_fq(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
@@ -507,7 +511,7 @@ class BaseQuantizer(nn.Module):
 
 
 class QuantizersSwitcher:
-    """ Enables/disables quantizers with saving and restoring original state """
+    """Enables/disables quantizers with saving and restoring original state"""
 
     def __init__(self, quantizers: List[BaseQuantizer]):
         self.originally_disabled = []  # type: List[BaseQuantizer]
@@ -532,14 +536,14 @@ class QuantizersSwitcher:
 
 
 class StorageRedirectingLoadStateDictHook:
-    def __init__(self, storage_attribute_in_module: str, name_in_state_dict: str,
-                 use_log_storage_in_module: bool = False):
+    def __init__(
+        self, storage_attribute_in_module: str, name_in_state_dict: str, use_log_storage_in_module: bool = False
+    ):
         self._storage_attribute_in_module = storage_attribute_in_module
         self._name_in_state_dict = name_in_state_dict
         self._use_log_storage_in_module = use_log_storage_in_module
 
-    def __call__(self, state_dict, prefix, local_metadata, strict,
-                 missing_keys, unexpected_keys, error_msgs) -> None:
+    def __call__(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs) -> None:
         state_dict_key = prefix + self._name_in_state_dict
         if state_dict_key in state_dict:
             v = state_dict.pop(state_dict_key)
@@ -551,8 +555,9 @@ class StorageRedirectingLoadStateDictHook:
 
 
 class StorageRedirectingStateDictHook:
-    def __init__(self, storage_attribute_in_module: str, name_in_state_dict: str,
-                 use_log_storage_in_module: bool = False):
+    def __init__(
+        self, storage_attribute_in_module: str, name_in_state_dict: str, use_log_storage_in_module: bool = False
+    ):
         self._storage_attribute_in_module = storage_attribute_in_module
         self._name_in_state_dict = name_in_state_dict
         self._use_log_storage_in_module = use_log_storage_in_module
@@ -567,18 +572,25 @@ class StorageRedirectingStateDictHook:
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(BaseQuantizer):
-    SCALE_PARAM_NAME = 'scale'
-    _SCALE_PARAM_STORAGE_ATTR = '_scale_param_storage'
+    SCALE_PARAM_NAME = "scale"
+    _SCALE_PARAM_STORAGE_ATTR = "_scale_param_storage"
 
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__(qspec)
-        self.signed_tensor = CompressionParameter(torch.IntTensor([0]), requires_grad=False,
-                                                  compression_lr_multiplier=qspec.compression_lr_multiplier)
+        self.signed_tensor = CompressionParameter(
+            torch.IntTensor([0]), requires_grad=False, compression_lr_multiplier=qspec.compression_lr_multiplier
+        )
         self.collect_scale_statistics = False
 
-        setattr(self, self._SCALE_PARAM_STORAGE_ATTR,
-                CompressionParameter(torch.ones(self.scale_shape), requires_grad=True,
-                                     compression_lr_multiplier=qspec.compression_lr_multiplier))
+        setattr(
+            self,
+            self._SCALE_PARAM_STORAGE_ATTR,
+            CompressionParameter(
+                torch.ones(self.scale_shape),
+                requires_grad=True,
+                compression_lr_multiplier=qspec.compression_lr_multiplier,
+            ),
+        )
         if self._is_using_log_scale_storage:
             self._scale_param_storage.data.log_()
             self.eps = 0
@@ -588,17 +600,21 @@ class SymmetricQuantizer(BaseQuantizer):
             self.signed = bool(qspec.signedness_to_force)
         self.set_level_ranges()
 
-        self._register_load_state_dict_pre_hook(StorageRedirectingLoadStateDictHook(
-            storage_attribute_in_module=self._SCALE_PARAM_STORAGE_ATTR,
-            name_in_state_dict=self.SCALE_PARAM_NAME,
-            use_log_storage_in_module=self._is_using_log_scale_storage
-        ))
+        self._register_load_state_dict_pre_hook(
+            StorageRedirectingLoadStateDictHook(
+                storage_attribute_in_module=self._SCALE_PARAM_STORAGE_ATTR,
+                name_in_state_dict=self.SCALE_PARAM_NAME,
+                use_log_storage_in_module=self._is_using_log_scale_storage,
+            )
+        )
 
-        self._register_state_dict_hook(StorageRedirectingStateDictHook(
-            storage_attribute_in_module=self._SCALE_PARAM_STORAGE_ATTR,
-            name_in_state_dict=self.SCALE_PARAM_NAME,
-            use_log_storage_in_module=self._is_using_log_scale_storage
-        ))
+        self._register_state_dict_hook(
+            StorageRedirectingStateDictHook(
+                storage_attribute_in_module=self._SCALE_PARAM_STORAGE_ATTR,
+                name_in_state_dict=self.SCALE_PARAM_NAME,
+                use_log_storage_in_module=self._is_using_log_scale_storage,
+            )
+        )
 
         # Values of level_low, level_high must be recalculated for load new signed parameter.
         self.register_load_state_dict_post_hook(lambda module, _: module.set_level_ranges())
@@ -632,8 +648,9 @@ class SymmetricQuantizer(BaseQuantizer):
 
     def set_level_ranges(self):
         scaled_num_bits = 1 if self._half_range else 0
-        self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits - scaled_num_bits,
-                                                                                   self.signed, self._narrow_range)
+        self.level_low, self.level_high, self.levels = self.calculate_level_ranges(
+            self.num_bits - scaled_num_bits, self.signed, self._narrow_range
+        )
 
     @staticmethod
     def calculate_level_ranges(num_bits, signed, narrow_range):
@@ -650,8 +667,9 @@ class SymmetricQuantizer(BaseQuantizer):
         self.set_level_ranges()
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        return symmetric_quantize(x, self.levels, self.level_low, self.level_high, self.scale, self.eps,
-                                  skip=execute_traced_op_as_identity)
+        return symmetric_quantize(
+            x, self.levels, self.level_low, self.level_high, self.scale, self.eps, skip=execute_traced_op_as_identity
+        )
 
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         return {self.SCALE_PARAM_NAME: self.scale.detach()}
@@ -666,13 +684,15 @@ class SymmetricQuantizer(BaseQuantizer):
         abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
         SCALE_LOWER_THRESHOLD = 0.1
         mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
-        self._scale_param_storage.data = torch.where(mask, abs_max,
-                                                     SCALE_LOWER_THRESHOLD * torch.ones_like(self._scale_param_storage))
+        self._scale_param_storage.data = torch.where(
+            mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self._scale_param_storage)
+        )
         if self._is_using_log_scale_storage:
             self._scale_param_storage.data.log_()
 
         nncf_logger.debug(
-            f"Set sign: {self.signed} and scale: {get_flat_tensor_contents_string(self.scale)} for {log_module_name}")
+            f"Set sign: {self.signed} and scale: {get_flat_tensor_contents_string(self.scale)} for {log_module_name}"
+        )
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
@@ -690,20 +710,18 @@ class SymmetricQuantizer(BaseQuantizer):
 
     def _prepare_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
-            input_low, input_high = self._get_input_low_input_high(self.scale,
-                                                                   self.level_low,
-                                                                   self.level_high,
-                                                                   self.eps)
+            input_low, input_high = self._get_input_low_input_high(
+                self.scale, self.level_low, self.level_high, self.eps
+            )
             level_low = self.level_low
             level_high = self.level_high
             if self._half_range:
                 x = torch.min(torch.max(x, input_low), input_high)
                 level_low = 2 * self.level_low
                 level_high = 2 * self.level_high + 1
-                input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.scale,
-                                                                       level_low,
-                                                                       level_high,
-                                                                       self.eps)
+                input_low, input_high = self._get_input_low_input_high(
+                    level_high / self.level_high * self.scale, level_low, level_high, self.eps
+                )
             if self._is_quantized_on_export:
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
@@ -719,10 +737,9 @@ class SymmetricQuantizer(BaseQuantizer):
             zero_point - Quantizer zero point.
         """
         with torch.no_grad():
-            input_low, input_high = self._get_input_low_input_high(self.scale,
-                                                                   self.level_low,
-                                                                   self.level_high,
-                                                                   self.eps)
+            input_low, input_high = self._get_input_low_input_high(
+                self.scale, self.level_low, self.level_high, self.eps
+            )
             level_low = self.level_low
             level_high = self.level_high
 
@@ -738,26 +755,35 @@ class SymmetricQuantizer(BaseQuantizer):
         return level_low, level_high, scale, zero_point
 
     def get_quantizer_config(self) -> QuantizerConfig:
-        return QuantizerConfig(num_bits=self.num_bits,
-                               mode=QuantizationMode.SYMMETRIC,
-                               signedness_to_force=self.signed,
-                               per_channel=self.per_channel)
+        return QuantizerConfig(
+            num_bits=self.num_bits,
+            mode=QuantizationMode.SYMMETRIC,
+            signedness_to_force=self.signed,
+            per_channel=self.per_channel,
+        )
 
 
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(BaseQuantizer):
-    INPUT_LOW_PARAM_NAME = 'input_low'
-    INPUT_RANGE_PARAM_NAME = 'input_range'
-    _INPUT_RANGE_PARAM_STORAGE_ATTR = '_input_range_param_storage'
+    INPUT_LOW_PARAM_NAME = "input_low"
+    INPUT_RANGE_PARAM_NAME = "input_range"
+    _INPUT_RANGE_PARAM_STORAGE_ATTR = "_input_range_param_storage"
 
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__(qspec)
-        self.input_low = CompressionParameter(torch.zeros(self.scale_shape), requires_grad=True,
-                                              compression_lr_multiplier=qspec.compression_lr_multiplier)
-        setattr(self, self._INPUT_RANGE_PARAM_STORAGE_ATTR,
-                CompressionParameter(torch.ones(self.scale_shape), requires_grad=True,
-                                     compression_lr_multiplier=qspec.compression_lr_multiplier))
+        self.input_low = CompressionParameter(
+            torch.zeros(self.scale_shape), requires_grad=True, compression_lr_multiplier=qspec.compression_lr_multiplier
+        )
+        setattr(
+            self,
+            self._INPUT_RANGE_PARAM_STORAGE_ATTR,
+            CompressionParameter(
+                torch.ones(self.scale_shape),
+                requires_grad=True,
+                compression_lr_multiplier=qspec.compression_lr_multiplier,
+            ),
+        )
 
         if self._is_using_log_scale_storage:
             self._input_range_param_storage.data.log_()
@@ -766,17 +792,21 @@ class AsymmetricQuantizer(BaseQuantizer):
             self.eps = 1e-16
         self.set_level_ranges()
 
-        self._register_load_state_dict_pre_hook(StorageRedirectingLoadStateDictHook(
-            storage_attribute_in_module=self._INPUT_RANGE_PARAM_STORAGE_ATTR,
-            name_in_state_dict=self.INPUT_RANGE_PARAM_NAME,
-            use_log_storage_in_module=self._is_using_log_scale_storage
-        ))
+        self._register_load_state_dict_pre_hook(
+            StorageRedirectingLoadStateDictHook(
+                storage_attribute_in_module=self._INPUT_RANGE_PARAM_STORAGE_ATTR,
+                name_in_state_dict=self.INPUT_RANGE_PARAM_NAME,
+                use_log_storage_in_module=self._is_using_log_scale_storage,
+            )
+        )
 
-        self._register_state_dict_hook(StorageRedirectingStateDictHook(
-            storage_attribute_in_module=self._INPUT_RANGE_PARAM_STORAGE_ATTR,
-            name_in_state_dict=self.INPUT_RANGE_PARAM_NAME,
-            use_log_storage_in_module=self._is_using_log_scale_storage
-        ))
+        self._register_state_dict_hook(
+            StorageRedirectingStateDictHook(
+                storage_attribute_in_module=self._INPUT_RANGE_PARAM_STORAGE_ATTR,
+                name_in_state_dict=self.INPUT_RANGE_PARAM_NAME,
+                use_log_storage_in_module=self._is_using_log_scale_storage,
+            )
+        )
 
     @property
     def input_range(self):
@@ -822,12 +852,22 @@ class AsymmetricQuantizer(BaseQuantizer):
         return calculate_asymmetric_level_ranges(num_bits)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        return asymmetric_quantize(x, self.levels, self.level_low, self.level_high, self.input_low, self.input_range,
-                                   self.eps, skip=execute_traced_op_as_identity)
+        return asymmetric_quantize(
+            x,
+            self.levels,
+            self.level_low,
+            self.level_high,
+            self.input_low,
+            self.input_range,
+            self.eps,
+            skip=execute_traced_op_as_identity,
+        )
 
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
-        return {self.INPUT_LOW_PARAM_NAME: self.input_low.detach(),
-                self.INPUT_RANGE_PARAM_NAME: self.input_range.detach()}
+        return {
+            self.INPUT_LOW_PARAM_NAME: self.input_low.detach(),
+            self.INPUT_RANGE_PARAM_NAME: self.input_range.detach(),
+        }
 
     def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         ranges = max_values - min_values
@@ -842,7 +882,8 @@ class AsymmetricQuantizer(BaseQuantizer):
 
         nncf_logger.debug(
             f"Set input_low: {get_flat_tensor_contents_string(self.input_low)} "
-            f"and input_range: {get_flat_tensor_contents_string(self.input_range)} for {log_module_name}")
+            f"and input_range: {get_flat_tensor_contents_string(self.input_range)} for {log_module_name}"
+        )
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
@@ -860,20 +901,18 @@ class AsymmetricQuantizer(BaseQuantizer):
 
     def _prepare_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
-            input_low, input_high = self._get_input_low_input_high(self.input_range,
-                                                                   self.input_low,
-                                                                   self.levels,
-                                                                   self.eps)
+            input_low, input_high = self._get_input_low_input_high(
+                self.input_range, self.input_low, self.levels, self.eps
+            )
             level_low = self.level_low
             level_high = self.level_high
             if self._half_range:
                 x = torch.min(torch.max(x, input_low), input_high)
                 level_low = 2 * level_low
                 level_high = 2 * level_high + 1
-                input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.input_range,
-                                                                       self.input_low,
-                                                                       self.levels,
-                                                                       self.eps)
+                input_low, input_high = self._get_input_low_input_high(
+                    level_high / self.level_high * self.input_range, self.input_low, self.levels, self.eps
+                )
             if self._is_quantized_on_export:
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
@@ -889,10 +928,9 @@ class AsymmetricQuantizer(BaseQuantizer):
             zero_point - Quantizer zero point.
         """
         with torch.no_grad():
-            input_low, input_high = self._get_input_low_input_high(self.input_range,
-                                                                   self.input_low,
-                                                                   self.levels,
-                                                                   self.eps)
+            input_low, input_high = self._get_input_low_input_high(
+                self.input_range, self.input_low, self.levels, self.eps
+            )
             level_low = self.level_low
             level_high = self.level_high
 
@@ -908,10 +946,12 @@ class AsymmetricQuantizer(BaseQuantizer):
         return level_low, level_high, scale, zero_point
 
     def get_quantizer_config(self) -> QuantizerConfig:
-        return QuantizerConfig(num_bits=self.num_bits,
-                               mode=QuantizationMode.ASYMMETRIC,
-                               signedness_to_force=self.signed,
-                               per_channel=self.per_channel)
+        return QuantizerConfig(
+            num_bits=self.num_bits,
+            mode=QuantizationMode.ASYMMETRIC,
+            signedness_to_force=self.signed,
+            per_channel=self.per_channel,
+        )
 
 
 def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None):
@@ -925,8 +965,7 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None
     return scale_shape
 
 
-def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
-                    channel_idx: int = None) -> List[int]:
+def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool, channel_idx: int = None) -> List[int]:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
     or derivatives.

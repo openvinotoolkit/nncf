@@ -21,16 +21,18 @@ from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.quantization.algo import QuantizationControllerBase
 from nncf.torch.quantization.schedulers import StagedQuantizationScheduler
-from tests.torch.helpers import create_compressed_model_and_algo_for_test, OnesDatasetMock
+from tests.torch.helpers import OnesDatasetMock
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_algo_quantization import get_squeezenet_quantization_config
 from tests.torch.test_models import squeezenet1_1
 
 
 def create_staged_scheduler(ctrl_spy, w_start=2, a_start=1):
-    params = {'activations_quant_start_epoch': a_start, 'weights_quant_start_epoch': w_start}
+    params = {"activations_quant_start_epoch": a_start, "weights_quant_start_epoch": w_start}
     scheduler = StagedQuantizationScheduler(ctrl_spy.get_mocked_algo(), params)
     return scheduler
+
 
 class QuantizationControllerBaseForTest(QuantizationControllerBase):
     @property
@@ -46,14 +48,14 @@ class QuantizationControllerBaseForTest(QuantizationControllerBase):
 
 
 class QuantizationCtrlBaseSpy:
-    #pylint:disable=no-member
+    # pylint:disable=no-member
     def __init__(self, mocker):
         self._mocked_ctrl = QuantizationControllerBaseForTest(mocker.stub)
-        mocker.patch.object(self._mocked_ctrl, 'enable_weight_quantization')
-        mocker.patch.object(self._mocked_ctrl, 'enable_activation_quantization')
-        mocker.patch.object(self._mocked_ctrl, 'disable_weight_quantization')
-        mocker.patch.object(self._mocked_ctrl, 'disable_activation_quantization')
-        mocker.patch.object(self._mocked_ctrl, 'init_range')
+        mocker.patch.object(self._mocked_ctrl, "enable_weight_quantization")
+        mocker.patch.object(self._mocked_ctrl, "enable_activation_quantization")
+        mocker.patch.object(self._mocked_ctrl, "disable_weight_quantization")
+        mocker.patch.object(self._mocked_ctrl, "disable_activation_quantization")
+        mocker.patch.object(self._mocked_ctrl, "init_range")
 
     def enable_weight_count(self):
         return self._mocked_ctrl.enable_weight_quantization.call_count
@@ -73,17 +75,19 @@ class QuantizationCtrlBaseSpy:
     def get_mocked_algo(self):
         return self._mocked_ctrl
 
-    def check_call_counts(self,
-                          enable_weight_count: int,
-                          enable_activation_count: int,
-                          disable_weight_count: int,
-                          disable_activation_count: int,
-                          init_range_count: int):
-        assert self.enable_weight_count() == enable_weight_count, 'enable weight count mismatch'
-        assert self.enable_activation_count() == enable_activation_count, 'enable activation count mismatch'
-        assert self.disable_weight_count() == disable_weight_count, 'disable weight count mismatch'
-        assert self.disable_activation_count() == disable_activation_count, 'disable activation count mismatch'
-        assert self.init_range_count() == init_range_count, 'init range count mismatch'
+    def check_call_counts(
+        self,
+        enable_weight_count: int,
+        enable_activation_count: int,
+        disable_weight_count: int,
+        disable_activation_count: int,
+        init_range_count: int,
+    ):
+        assert self.enable_weight_count() == enable_weight_count, "enable weight count mismatch"
+        assert self.enable_activation_count() == enable_activation_count, "enable activation count mismatch"
+        assert self.disable_weight_count() == disable_weight_count, "disable weight count mismatch"
+        assert self.disable_activation_count() == disable_activation_count, "disable activation count mismatch"
+        assert self.init_range_count() == init_range_count, "init range count mismatch"
 
 
 def test_scheduler_not_enables_quantizations__by_default(mocker):
@@ -146,12 +150,14 @@ def test_staged_scheduler_enables_quantizations_on_load(mocker):
 
 def test_staged_scheduler_with_empty_quantization():
     config = get_squeezenet_quantization_config()
-    config['compression'].update({
-        'params': {
-            "activations_quant_start_epoch": 1,
-            "weights_quant_start_epoch": 2,
+    config["compression"].update(
+        {
+            "params": {
+                "activations_quant_start_epoch": 1,
+                "weights_quant_start_epoch": 2,
+            }
         }
-    })
+    )
     register_bn_adaptation_init_args(config)
     model = squeezenet1_1(num_classes=10, dropout=0)
 
@@ -176,26 +182,26 @@ def test_staged_scheduler_with_empty_quantization():
 
 def test_staged_scheduler_with_range_init():
     config = get_squeezenet_quantization_config()
-    config['compression'].update({
-        'params': {
-            "activations_quant_start_epoch": 1,
-            "weights_quant_start_epoch": 2,
-        },
-        'initializer': {
-            'range': {
-                'num_init_samples': 1
-            }
+    config["compression"].update(
+        {
+            "params": {
+                "activations_quant_start_epoch": 1,
+                "weights_quant_start_epoch": 2,
+            },
+            "initializer": {"range": {"num_init_samples": 1}},
         }
-    })
+    )
     register_bn_adaptation_init_args(config)
     model = squeezenet1_1(num_classes=10, dropout=0)
 
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
-    data_loader = DataLoader(OnesDatasetMock(input_sample_size[1:]),
-                             batch_size=1,
-                             num_workers=0, # Workaround for PyTorch MultiprocessingDataLoader issues
-                             shuffle=False)
+    data_loader = DataLoader(
+        OnesDatasetMock(input_sample_size[1:]),
+        batch_size=1,
+        num_workers=0,  # Workaround for PyTorch MultiprocessingDataLoader issues
+        shuffle=False,
+    )
     config.register_extra_structs([QuantizationRangeInitArgs(wrap_dataloader_for_init(data_loader))])
 
     model, algo = create_compressed_model_and_algo_for_test(model, config)
@@ -235,32 +241,29 @@ class HawqDatasetMock:
 
 def test_staged_scheduler_with_hawq():
     config = get_squeezenet_quantization_config()
-    config['compression'].update({
-        'params': {
-            "activations_quant_start_epoch": 1,
-            "weights_quant_start_epoch": 2,
-        },
-        'initializer': {
-            'range': {
-                'num_init_samples': 1
+    config["compression"].update(
+        {
+            "params": {
+                "activations_quant_start_epoch": 1,
+                "weights_quant_start_epoch": 2,
             },
-            'precision': {
-                "type": "hawq",
-                "num_data_points": 1,
-                "iter_number": 1,
-                "tolerance": 1
-            }
+            "initializer": {
+                "range": {"num_init_samples": 1},
+                "precision": {"type": "hawq", "num_data_points": 1, "iter_number": 1, "tolerance": 1},
+            },
         }
-    })
+    )
     num_classes = 10
     model = squeezenet1_1(num_classes=num_classes, dropout=0)
 
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
-    data_loader = DataLoader(HawqDatasetMock(input_sample_size[1:], num_classes),
-                             batch_size=1,
-                             num_workers=0,  # Workaround for PyTorch MultiprocessingDataLoader issues
-                             shuffle=False)
+    data_loader = DataLoader(
+        HawqDatasetMock(input_sample_size[1:], num_classes),
+        batch_size=1,
+        num_workers=0,  # Workaround for PyTorch MultiprocessingDataLoader issues
+        shuffle=False,
+    )
     criterion = nn.CrossEntropyLoss().cuda()
     config = register_default_init_args(config, data_loader, criterion=criterion)
 

@@ -22,9 +22,24 @@ from torch import nn
 
 from nncf.torch.utils import add_domain
 
+
 class PriorBox(nn.Module):
-    def __init__(self, min_size, max_size, aspect_ratio, flip, clip, variance, step, offset,
-                 step_h, step_w, img_size, img_h, img_w):
+    def __init__(
+        self,
+        min_size,
+        max_size,
+        aspect_ratio,
+        flip,
+        clip,
+        variance,
+        step,
+        offset,
+        step_h,
+        step_w,
+        img_size,
+        img_h,
+        img_w,
+    ):
         super().__init__()
         self.min_size = min_size
         self.max_size = max_size
@@ -52,19 +67,30 @@ class PriorBoxFunction(torch.autograd.Function):
 
     @staticmethod
     def symbolic(g, input_fm, img_tensor, priorbox_params):
-        return g.op(add_domain("PriorBox"), input_fm, img_tensor, min_size_f=[priorbox_params.min_size],
-                    max_size_f=[priorbox_params.max_size],
-                    aspect_ratio_f=priorbox_params.aspect_ratio, flip_i=priorbox_params.flip,
-                    clip_i=priorbox_params.clip,
-                    variance_f=priorbox_params.variance, step_f=priorbox_params.step,
-                    offset_f=priorbox_params.offset, step_h_f=priorbox_params.step_h, step_w_f=priorbox_params.step_w,
-                    img_size_i=priorbox_params.img_size, img_h_i=priorbox_params.img_h, img_w_i=priorbox_params.img_w)
+        return g.op(
+            add_domain("PriorBox"),
+            input_fm,
+            img_tensor,
+            min_size_f=[priorbox_params.min_size],
+            max_size_f=[priorbox_params.max_size],
+            aspect_ratio_f=priorbox_params.aspect_ratio,
+            flip_i=priorbox_params.flip,
+            clip_i=priorbox_params.clip,
+            variance_f=priorbox_params.variance,
+            step_f=priorbox_params.step,
+            offset_f=priorbox_params.offset,
+            step_h_f=priorbox_params.step_h,
+            step_w_f=priorbox_params.step_w,
+            img_size_i=priorbox_params.img_size,
+            img_h_i=priorbox_params.img_h,
+            img_w_i=priorbox_params.img_w,
+        )
 
     @staticmethod
     def forward(ctx, input_fm, img_tensor, priorbox_params):
         for v in priorbox_params.variance:
             if v <= 0:
-                raise ValueError('Variances must be greater than 0')
+                raise ValueError("Variances must be greater than 0")
 
         mean = []
         variance_channel = []
@@ -73,9 +99,13 @@ class PriorBoxFunction(torch.autograd.Function):
         img_height = img_tensor.size()[2]
         img_width = img_tensor.size()[3]
 
-        box_widths_heights = [(priorbox_params.min_size, priorbox_params.min_size),
-                              (sqrt(priorbox_params.min_size * priorbox_params.max_size),
-                               sqrt(priorbox_params.min_size * priorbox_params.max_size))]
+        box_widths_heights = [
+            (priorbox_params.min_size, priorbox_params.min_size),
+            (
+                sqrt(priorbox_params.min_size * priorbox_params.max_size),
+                sqrt(priorbox_params.min_size * priorbox_params.max_size),
+            ),
+        ]
         for ar in priorbox_params.aspect_ratio:
             box_widths_heights.append((priorbox_params.min_size * sqrt(ar), priorbox_params.min_size / sqrt(ar)))
             if priorbox_params.flip:
@@ -87,8 +117,12 @@ class PriorBoxFunction(torch.autograd.Function):
             cy = (i + priorbox_params.offset) * priorbox_params.step
 
             for box_width, box_height in box_widths_heights:
-                mean += [(cx - box_width / 2.) / img_width, (cy - box_height / 2.) / img_height,
-                         (cx + box_width / 2.) / img_width, (cy + box_height / 2.) / img_height]
+                mean += [
+                    (cx - box_width / 2.0) / img_width,
+                    (cy - box_height / 2.0) / img_height,
+                    (cx + box_width / 2.0) / img_width,
+                    (cy + box_height / 2.0) / img_height,
+                ]
                 variance_channel += priorbox_params.variance
 
         # back to torch land

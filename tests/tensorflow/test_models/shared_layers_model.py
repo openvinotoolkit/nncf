@@ -17,13 +17,13 @@ from tensorflow.keras import layers
 
 def SharedLayersModel(input_shape):
     inputs = tf.keras.Input(input_shape)
-    x0 = layers.Conv2D(8, 3, name='c0')(inputs)
+    x0 = layers.Conv2D(8, 3, name="c0")(inputs)
     # pylint: disable=E1124, E1120
     x0s1, x0s2 = tf.split(x0, 2, axis=-1)
-    x1 = layers.Conv2D(2, 3, name='c1')(x0s1)
-    x2 = layers.Conv2D(2, 3, name='c2')(x0s2)
-    c3 = layers.Conv2D(1, 3, name='c3')
-    c4 = layers.Conv2D(5, 3, name='c4')
+    x1 = layers.Conv2D(2, 3, name="c1")(x0s1)
+    x2 = layers.Conv2D(2, 3, name="c2")(x0s2)
+    c3 = layers.Conv2D(1, 3, name="c3")
+    c4 = layers.Conv2D(5, 3, name="c4")
     x31 = c3(x1)
     x32 = c3(x2)
     x41 = c4(x31)

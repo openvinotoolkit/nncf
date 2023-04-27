@@ -11,48 +11,48 @@
  limitations under the License.
 """
 
-from typing import Optional, List
+from typing import List, Optional
 
 import pytest
 
-from nncf.common.quantization.statistics import QuantizersCounter
 from nncf.common.quantization.statistics import QuantizationStatistics
+from nncf.common.quantization.statistics import QuantizersCounter
 from tests.tensorflow import test_models
-from tests.tensorflow.helpers import get_empty_config
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from tests.tensorflow.helpers import get_empty_config
 
 
-def _get_basic_quantization_config(mode: str,
-                                   granularity: str,
-                                   input_sample_sizes: Optional[List[int]] = None):
+def _get_basic_quantization_config(mode: str, granularity: str, input_sample_sizes: Optional[List[int]] = None):
     config = get_empty_config(input_sample_sizes)
-    per_channel = (granularity == 'per_channel')
+    per_channel = granularity == "per_channel"
 
     compression_section = {
-        'algorithm': 'quantization',
-        'activations': {
-            'mode': mode,
-            'per_channel': per_channel,
+        "algorithm": "quantization",
+        "activations": {
+            "mode": mode,
+            "per_channel": per_channel,
         },
-        'weights': {
-            'mode': mode,
-            'per_channel': per_channel,
-        }
+        "weights": {
+            "mode": mode,
+            "per_channel": per_channel,
+        },
     }
 
-    config['compression'] = compression_section
-    config['target_device'] = 'TRIAL'
+    config["compression"] = compression_section
+    config["target_device"] = "TRIAL"
     return config
 
 
 class Case:
-    def __init__(self,
-                 model_name: str,
-                 model_builder,
-                 input_sample_sizes: List[int],
-                 mode: str,
-                 granularity: str,
-                 expected: QuantizationStatistics):
+    def __init__(
+        self,
+        model_name: str,
+        model_builder,
+        input_sample_sizes: List[int],
+        mode: str,
+        granularity: str,
+        expected: QuantizationStatistics,
+    ):
         self._model_name = model_name
         self._model_builder = model_builder
         self._input_sample_sizes = input_sample_sizes
@@ -73,47 +73,47 @@ class Case:
         return self._expected
 
     def get_id(self) -> str:
-        return f'{self._model_name}-{self._mode}-{self._granularity}'
+        return f"{self._model_name}-{self._mode}-{self._granularity}"
 
 
 TEST_CASES = [
     Case(
-        model_name='mobilenet_v2',
+        model_name="mobilenet_v2",
         model_builder=test_models.MobileNetV2,
         input_sample_sizes=[1, 96, 96, 3],
-        mode='symmetric',
-        granularity='per_tensor',
+        mode="symmetric",
+        granularity="per_tensor",
         expected=QuantizationStatistics(
             wq_counter=QuantizersCounter(53, 0, 53, 0, 53, 0, 53),
             aq_counter=QuantizersCounter(64, 0, 64, 0, 64, 0, 64),
             num_wq_per_bitwidth={8: 53},
             num_aq_per_bitwidth={8: 64},
-            ratio_of_enabled_quantizations=100.0
-        )
+            ratio_of_enabled_quantizations=100.0,
+        ),
     ),
     Case(
-        model_name='mobilenet_v2',
+        model_name="mobilenet_v2",
         model_builder=test_models.MobileNetV2,
         input_sample_sizes=[1, 96, 96, 3],
-        mode='asymmetric',
-        granularity='per_channel',
+        mode="asymmetric",
+        granularity="per_channel",
         expected=QuantizationStatistics(
             wq_counter=QuantizersCounter(0, 53, 53, 0, 0, 53, 53),
             aq_counter=QuantizersCounter(0, 64, 64, 0, 0, 64, 64),
             num_wq_per_bitwidth={8: 53},
             num_aq_per_bitwidth={8: 64},
-            ratio_of_enabled_quantizations=100.0
-        )
+            ratio_of_enabled_quantizations=100.0,
+        ),
     ),
 ]
 TEST_CASES_IDS = [test_case.get_id() for test_case in TEST_CASES]
 
 
-@pytest.mark.parametrize('test_case', TEST_CASES, ids=TEST_CASES_IDS)
+@pytest.mark.parametrize("test_case", TEST_CASES, ids=TEST_CASES_IDS)
 def test_quantization_statistics(test_case):
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(test_case.model,
-                                                                    test_case.config,
-                                                                    force_no_init=True)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(
+        test_case.model, test_case.config, force_no_init=True
+    )
     actual = compression_ctrl.statistics().quantization
     expected = test_case.expected
 
@@ -126,8 +126,8 @@ def test_quantization_statistics(test_case):
 
 def test_full_ignored_scope():
     shape = [1, 96, 96, 3]
-    config = _get_basic_quantization_config('symmetric', 'per_tensor', shape)
-    config['compression']['ignored_scopes'] = ["{re}.*"]
+    config = _get_basic_quantization_config("symmetric", "per_tensor", shape)
+    config["compression"]["ignored_scopes"] = ["{re}.*"]
     model = test_models.MobileNetV2(input_shape=tuple(shape[1:]))
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     compression_ctrl.statistics()

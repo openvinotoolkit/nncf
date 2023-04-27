@@ -13,25 +13,27 @@
 
 import argparse
 import json
-import defusedxml.cElementTree as ET
+import os
 from collections import OrderedDict
 
-import os
-
+import defusedxml.cElementTree as ET
 import numpy as np
 from torch import randn
 
-from tools.ir_utils import get_ir_paths, find_all_parameters
-from tools.debug.common import save_dump, register_print_hooks, load_torch_model, get_full_dump_paths, print_args
-
+from tools.debug.common import get_full_dump_paths
+from tools.debug.common import load_torch_model
+from tools.debug.common import print_args
+from tools.debug.common import register_print_hooks
+from tools.debug.common import save_dump
+from tools.ir_utils import find_all_parameters
+from tools.ir_utils import get_ir_paths
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument("-m", "--model", help="input IR name", required=True)
 argparser.add_argument("--bin", help="Input *.bin file name")
 argparser.add_argument("-o", "--output-dir", help="Output directory to dump weights", required=True)
-argparser.add_argument("-c", "--config", type=str, default='config.json', help="Model's config", required=True)
-argparser.add_argument("-n", "--num-layers", type=int, default=-1,
-                       help="Compare weights for given number of layers")
+argparser.add_argument("-c", "--config", type=str, default="config.json", help="Model's config", required=True)
+argparser.add_argument("-n", "--num-layers", type=int, default=-1, help="Compare weights for given number of layers")
 argparser.add_argument("--ignore", help="comma separated list of ignored layers", default="")
 args = argparser.parse_args()
 print_args(args)
@@ -45,11 +47,11 @@ def main():
 
     ir_weights = collect_IR_weights(os.path.join(args.output_dir, "IR"), model_xml, model_bin, args.num_layers)
 
-    with open(args.config, encoding='utf8') as f:
+    with open(args.config, encoding="utf8") as f:
         config = json.load(f)
     torch_weights = collect_torch_weights(os.path.join(args.output_dir, "PTH"), config, args.num_layers)
 
-    assert len(ir_weights) == len(torch_weights), '{} vs {}'.format(len(ir_weights), len(torch_weights))
+    assert len(ir_weights) == len(torch_weights), "{} vs {}".format(len(ir_weights), len(torch_weights))
     print("Maximum of absolute difference - IR vs Torch")
     max_max = []
     for (k1, v1), (k2, v2) in zip(ir_weights.items(), torch_weights.items()):
@@ -74,11 +76,11 @@ def collect_IR_weights(output_dir, model_xml, model_bin, num_layers):
     idx = 0
 
     for name, param in all_parameters.items():
-        if name.split('.')[0] in ignored or 'bias' in name:
+        if name.split(".")[0] in ignored or "bias" in name:
             continue
         if (num_layers > 0 and idx < num_layers) or (num_layers == -1):
-            name = name.replace(os.path.sep, '_')
-            dump_name = '.'.join([str(idx), name])
+            name = name.replace(os.path.sep, "_")
+            dump_name = ".".join([str(idx), name])
             output_data = param.data.flatten()
             save_dump(dump_name, output_dir, output_data)
             data_to_compare[dump_name] = output_data
@@ -95,9 +97,10 @@ def collect_torch_weights(output_dir, config, num_layers):
 
     data_to_compare = OrderedDict()
 
-    register_print_hooks(output_dir, model_e, num_layers=num_layers, data_to_compare=data_to_compare,
-                         dump_activations=False)
-    input_ = randn(config['input_sample_size'])
+    register_print_hooks(
+        output_dir, model_e, num_layers=num_layers, data_to_compare=data_to_compare, dump_activations=False
+    )
+    input_ = randn(config["input_sample_size"])
     model_e(input_)
 
     for _, module in enumerate(model_e.modules()):
@@ -120,5 +123,5 @@ def get_ignored_layers(model_xml, num_layers=1):
     return ignored_layers
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

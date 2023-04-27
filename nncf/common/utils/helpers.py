@@ -10,14 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import datetime
 import itertools
 import os
 import os.path as osp
-import datetime
-
-from typing import Dict
-from typing import Hashable
-from typing import List, Any
+from typing import Any, Dict, Hashable, List
 
 from texttable import Texttable
 
@@ -42,9 +39,8 @@ def configure_accuracy_aware_paths(log_dir: str) -> str:
     :return: Path to the accuracy-aware training subdirectory.
     """
     d = datetime.datetime.now()
-    run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
-    acc_aware_log_dir = osp.join(log_dir,
-                                 'accuracy_aware_training/{run_id}'.format(run_id=run_id))
+    run_id = "{:%Y-%m-%d__%H-%M-%S}".format(d)
+    acc_aware_log_dir = osp.join(log_dir, "accuracy_aware_training/{run_id}".format(run_id=run_id))
     os.makedirs(acc_aware_log_dir, exist_ok=True)
     return acc_aware_log_dir
 

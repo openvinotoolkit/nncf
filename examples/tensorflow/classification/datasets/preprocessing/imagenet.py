@@ -27,9 +27,7 @@ IMAGE_SIZE = 224
 CROP_PADDING = 32
 
 
-def get_model_normalize_fn(model_name: str,
-                           means: Tuple[float, ...] = None,
-                           stddev: Tuple[float, ...] = None):
+def get_model_normalize_fn(model_name: str, means: Tuple[float, ...] = None, stddev: Tuple[float, ...] = None):
     """
     Returns a function that normalizes the input image for a specific model.
 
@@ -48,9 +46,7 @@ def get_model_normalize_fn(model_name: str,
     return partial(utils.normalize, means=MEAN_RGB, stddev=STDDEV_RGB)
 
 
-def center_crop(image: tf.Tensor,
-                image_size: int = IMAGE_SIZE,
-                crop_padding: int = CROP_PADDING) -> tf.Tensor:
+def center_crop(image: tf.Tensor, image_size: int = IMAGE_SIZE, crop_padding: int = CROP_PADDING) -> tf.Tensor:
     """
     Crops to center of image with padding then scales image_size.
 
@@ -64,9 +60,9 @@ def center_crop(image: tf.Tensor,
     image_width = shape[1]
 
     padded_center_crop_size = tf.cast(
-        ((image_size / (image_size + crop_padding)) *
-         tf.cast(tf.minimum(image_height, image_width), tf.float32)),
-        tf.int32)
+        ((image_size / (image_size + crop_padding)) * tf.cast(tf.minimum(image_height, image_width), tf.float32)),
+        tf.int32,
+    )
 
     offset_height = ((image_height - padded_center_crop_size) + 1) // 2
     offset_width = ((image_width - padded_center_crop_size) + 1) // 2
@@ -76,11 +72,10 @@ def center_crop(image: tf.Tensor,
         offset_height=offset_height,
         offset_width=offset_width,
         target_height=padded_center_crop_size,
-        target_width=padded_center_crop_size)
+        target_width=padded_center_crop_size,
+    )
 
-    image = utils.resize_image(image=image,
-                               height=image_size,
-                               width=image_size)
+    image = utils.resize_image(image=image, height=image_size, width=image_size)
 
     return image
 
@@ -101,7 +96,8 @@ def crop_and_flip(image: tf.Tensor) -> tf.Tensor:
         aspect_ratio_range=[0.75, 1.33],
         area_range=[0.05, 1.0],
         max_attempts=100,
-        use_image_if_no_bounding_boxes=True)
+        use_image_if_no_bounding_boxes=True,
+    )
     bbox_begin, bbox_size, _ = sample_distorted_bounding_box
 
     # Reassemble the bounding box in the format the crop op requires.
@@ -112,17 +108,17 @@ def crop_and_flip(image: tf.Tensor) -> tf.Tensor:
         offset_height=offset_height,
         offset_width=offset_width,
         target_height=target_height,
-        target_width=target_width)
+        target_width=target_width,
+    )
 
     # Flip to add a little more random distortion in.
     cropped = tf.image.random_flip_left_right(cropped)
     return cropped
 
 
-def preprocess_for_eval(image: tf.Tensor,
-                        image_size: int = IMAGE_SIZE,
-                        dtype: tf.dtypes.DType = tf.float32,
-                        normalize_fn=None) -> tf.Tensor:
+def preprocess_for_eval(
+    image: tf.Tensor, image_size: int = IMAGE_SIZE, dtype: tf.dtypes.DType = tf.float32, normalize_fn=None
+) -> tf.Tensor:
     """
     Preprocesses the given image for evaluation.
 
@@ -139,10 +135,9 @@ def preprocess_for_eval(image: tf.Tensor,
     return images
 
 
-def preprocess_for_train(image: tf.Tensor,
-                         image_size: int = IMAGE_SIZE,
-                         dtype: tf.dtypes.DType = tf.float32,
-                         normalize_fn=None) -> tf.Tensor:
+def preprocess_for_train(
+    image: tf.Tensor, image_size: int = IMAGE_SIZE, dtype: tf.dtypes.DType = tf.float32, normalize_fn=None
+) -> tf.Tensor:
     """
     Preprocesses the given image for training.
 
@@ -160,13 +155,15 @@ def preprocess_for_train(image: tf.Tensor,
     return images
 
 
-def imagenet_preprocess_image(image: tf.Tensor,
-                              image_size: int = IMAGE_SIZE,
-                              is_training: bool = False,
-                              dtype: tf.dtypes.DType = tf.float32,
-                              means: Tuple[float, ...] = None,
-                              stddev: Tuple[float, ...] = None,
-                              model_name: str = None) -> tf.Tensor:
+def imagenet_preprocess_image(
+    image: tf.Tensor,
+    image_size: int = IMAGE_SIZE,
+    is_training: bool = False,
+    dtype: tf.dtypes.DType = tf.float32,
+    means: Tuple[float, ...] = None,
+    stddev: Tuple[float, ...] = None,
+    model_name: str = None,
+) -> tf.Tensor:
     """
     Preprocesses the given image.
 
@@ -183,23 +180,13 @@ def imagenet_preprocess_image(image: tf.Tensor,
     normalize_fn = get_model_normalize_fn(model_name, means, stddev)
 
     if is_training:
-        return preprocess_for_train(
-            image=image,
-            image_size=image_size,
-            dtype=dtype,
-            normalize_fn=normalize_fn)
-    return preprocess_for_eval(
-        image=image,
-        image_size=image_size,
-        dtype=dtype,
-        normalize_fn=normalize_fn)
+        return preprocess_for_train(image=image, image_size=image_size, dtype=dtype, normalize_fn=normalize_fn)
+    return preprocess_for_eval(image=image, image_size=image_size, dtype=dtype, normalize_fn=normalize_fn)
 
 
-def imagenet_slim_preprocess_image(image: tf.Tensor,
-                                  image_size: int = IMAGE_SIZE,
-                                  is_training: bool = False,
-                                  dtype: tf.dtypes.DType = tf.float32,
-                                  **_) -> tf.Tensor:
+def imagenet_slim_preprocess_image(
+    image: tf.Tensor, image_size: int = IMAGE_SIZE, is_training: bool = False, dtype: tf.dtypes.DType = tf.float32, **_
+) -> tf.Tensor:
     image = tf.image.central_crop(image, central_fraction=0.875)
     if is_training:
         image = tf.image.random_flip_left_right(image)

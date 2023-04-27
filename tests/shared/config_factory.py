@@ -21,7 +21,7 @@ class ConfigFactory:
         self.config_path = str(config_path)
 
     def serialize(self):
-        with open(self.config_path, 'w', encoding='utf8') as f:
+        with open(self.config_path, "w", encoding="utf8") as f:
             json.dump(self.config, f)
         return self.config_path
 

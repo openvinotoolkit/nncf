@@ -13,6 +13,7 @@
 
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 
+
 # pylint: disable=use-implicit-booleaness-not-comparison
 def test_tf_zero_loss_state():
     loss = TFZeroCompressionLoss()

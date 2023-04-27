@@ -30,10 +30,12 @@ class TrainingLoopStatistics(Statistics):
     accuracy_budget: float
 
     def to_str(self):
-        stats_str = f'Uncompressed model accuracy: {self.uncompressed_accuracy:.4f}\n' \
-                    f'Compressed model accuracy: {self.compressed_accuracy:.4f}\n' \
-                    f'Model compression rate: {self.compression_rate:.4f}\n' \
-                    f'Absolute accuracy drop: {self.absolute_accuracy_degradation:.4f}\n' \
-                    f'Relative accuracy drop: {self.relative_accuracy_degradation:.2f}%\n' \
-                    f'Accuracy budget: {self.accuracy_budget:.4f}'
+        stats_str = (
+            f"Uncompressed model accuracy: {self.uncompressed_accuracy:.4f}\n"
+            f"Compressed model accuracy: {self.compressed_accuracy:.4f}\n"
+            f"Model compression rate: {self.compression_rate:.4f}\n"
+            f"Absolute accuracy drop: {self.absolute_accuracy_degradation:.4f}\n"
+            f"Relative accuracy drop: {self.relative_accuracy_degradation:.2f}%\n"
+            f"Accuracy budget: {self.accuracy_budget:.4f}"
+        )
         return stats_str

@@ -12,18 +12,20 @@
 """
 
 import tensorflow as tf
+
 from examples.tensorflow.common.object_detection.architecture import nn_ops
 
 
 class Resnet:
     """Class to build ResNet family model."""
 
-    def __init__(self,
-                 resnet_depth,
-                 activation='relu',
-                 norm_activation=nn_ops.norm_activation_builder(activation='relu'),
-                 data_format='channels_last'):
-
+    def __init__(
+        self,
+        resnet_depth,
+        activation="relu",
+        norm_activation=nn_ops.norm_activation_builder(activation="relu"),
+        data_format="channels_last",
+    ):
         """ResNet initialization function.
 
         Args:
@@ -35,34 +37,35 @@ class Resnet:
         """
 
         self._resnet_depth = resnet_depth
-        if activation == 'relu':
+        if activation == "relu":
             self._activation_op = tf.nn.relu
-        elif activation == 'swish':
+        elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError('Unsupported activation `{}`.'.format(activation))
+            raise ValueError("Unsupported activation `{}`.".format(activation))
 
         self._norm_activation = norm_activation
         self._data_format = data_format
 
         model_params = {
-            10: {'block': self.residual_block, 'layers': [1, 1, 1, 1]},
-            18: {'block': self.residual_block, 'layers': [2, 2, 2, 2]},
-            34: {'block': self.residual_block, 'layers': [3, 4, 6, 3]},
-            50: {'block': self.bottleneck_block, 'layers': [3, 4, 6, 3]},
-            101: {'block': self.bottleneck_block, 'layers': [3, 4, 23, 3]},
-            152: {'block': self.bottleneck_block, 'layers': [3, 8, 36, 3]},
-            200: {'block': self.bottleneck_block, 'layers': [3, 24, 36, 3]}
+            10: {"block": self.residual_block, "layers": [1, 1, 1, 1]},
+            18: {"block": self.residual_block, "layers": [2, 2, 2, 2]},
+            34: {"block": self.residual_block, "layers": [3, 4, 6, 3]},
+            50: {"block": self.bottleneck_block, "layers": [3, 4, 6, 3]},
+            101: {"block": self.bottleneck_block, "layers": [3, 4, 23, 3]},
+            152: {"block": self.bottleneck_block, "layers": [3, 8, 36, 3]},
+            200: {"block": self.bottleneck_block, "layers": [3, 24, 36, 3]},
         }
 
         if resnet_depth not in model_params:
-            valid_resnet_depths = ', '.join([str(depth) for depth in sorted(model_params.keys())])
+            valid_resnet_depths = ", ".join([str(depth) for depth in sorted(model_params.keys())])
             raise ValueError(
-                'The resnet_depth should be in [%s]. Not a valid resnet_depth:' %
-                (valid_resnet_depths), self._resnet_depth)
+                "The resnet_depth should be in [%s]. Not a valid resnet_depth:" % (valid_resnet_depths),
+                self._resnet_depth,
+            )
 
         params = model_params[resnet_depth]
-        self._resnet_fn = self.resnet_v1_generator(params['block'], params['layers'])
+        self._resnet_fn = self.resnet_v1_generator(params["block"], params["layers"])
 
     def __call__(self, inputs, is_training=None):
         """Returns the ResNet model for a given size and number of output classes.
@@ -77,7 +80,7 @@ class Resnet:
           The values are corresponding feature hierarchy in ResNet with shape
           [batch_size, height_l, width_l, num_filters].
         """
-        with tf.name_scope('resnet%s' % self._resnet_depth):
+        with tf.name_scope("resnet%s" % self._resnet_depth):
             return self._resnet_fn(inputs, is_training)
 
     def fixed_padding(self, inputs, kernel_size):
@@ -96,14 +99,10 @@ class Resnet:
         pad_total = kernel_size - 1
         pad_beg = pad_total // 2
         pad_end = pad_total - pad_beg
-        if self._data_format == 'channels_first':
-            padded_inputs = tf.pad(inputs,
-                                   [[0, 0], [0, 0], [pad_beg, pad_end], [pad_beg, pad_end]],
-                                   constant_values=0)
+        if self._data_format == "channels_first":
+            padded_inputs = tf.pad(inputs, [[0, 0], [0, 0], [pad_beg, pad_end], [pad_beg, pad_end]], constant_values=0)
         else:
-            padded_inputs = tf.pad(inputs,
-                                   [[0, 0], [pad_beg, pad_end], [pad_beg, pad_end], [0, 0]],
-                                   constant_values=0)
+            padded_inputs = tf.pad(inputs, [[0, 0], [pad_beg, pad_end], [pad_beg, pad_end], [0, 0]], constant_values=0)
 
         return padded_inputs
 
@@ -125,13 +124,15 @@ class Resnet:
         if strides > 1:
             inputs = self.fixed_padding(inputs, kernel_size)
 
-        return tf.keras.layers.Conv2D(filters=filters,
-                                      kernel_size=kernel_size,
-                                      strides=strides,
-                                      padding=('SAME' if strides == 1 else 'VALID'),
-                                      use_bias=False,
-                                      kernel_initializer=tf.initializers.VarianceScaling(),
-                                      data_format=self._data_format)(inputs=inputs)
+        return tf.keras.layers.Conv2D(
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding=("SAME" if strides == 1 else "VALID"),
+            use_bias=False,
+            kernel_initializer=tf.initializers.VarianceScaling(),
+            data_format=self._data_format,
+        )(inputs=inputs)
 
     def residual_block(self, inputs, filters, strides, use_projection=False, is_training=None):
         """Standard building block for residual networks with BN after convolutions.
@@ -155,19 +156,14 @@ class Resnet:
         shortcut = inputs
         if use_projection:
             # Projection shortcut in first layer to match filters and strides
-            shortcut = self.conv2d_fixed_padding(inputs=inputs, filters=filters,
-                                                 kernel_size=1, strides=strides)
-            shortcut = self._norm_activation(use_activation=False)(shortcut,
-                                                                   is_training=is_training)
+            shortcut = self.conv2d_fixed_padding(inputs=inputs, filters=filters, kernel_size=1, strides=strides)
+            shortcut = self._norm_activation(use_activation=False)(shortcut, is_training=is_training)
 
-        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters,
-                                           kernel_size=3, strides=strides)
+        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters, kernel_size=3, strides=strides)
         inputs = self._norm_activation()(inputs, is_training=is_training)
 
-        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters,
-                                           kernel_size=3, strides=1)
-        inputs = self._norm_activation(use_activation=False,
-                                       init_zero=True)(inputs, is_training=is_training)
+        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters, kernel_size=3, strides=1)
+        inputs = self._norm_activation(use_activation=False, init_zero=True)(inputs, is_training=is_training)
 
         return self._activation_op(inputs + shortcut)
 
@@ -194,23 +190,17 @@ class Resnet:
             # Projection shortcut only in first block within a group. Bottleneck
             # blocks end with 4 times the number of filters.
             filters_out = 4 * filters
-            shortcut = self.conv2d_fixed_padding(inputs=inputs, filters=filters_out,
-                                                 kernel_size=1, strides=strides)
-            shortcut = self._norm_activation(use_activation=False)(shortcut,
-                                                                   is_training=is_training)
+            shortcut = self.conv2d_fixed_padding(inputs=inputs, filters=filters_out, kernel_size=1, strides=strides)
+            shortcut = self._norm_activation(use_activation=False)(shortcut, is_training=is_training)
 
-        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters,
-                                           kernel_size=1, strides=1)
+        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters, kernel_size=1, strides=1)
         inputs = self._norm_activation()(inputs, is_training=is_training)
 
-        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters,
-                                           kernel_size=3, strides=strides)
+        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters, kernel_size=3, strides=strides)
         inputs = self._norm_activation()(inputs, is_training=is_training)
 
-        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=4 * filters,
-                                           kernel_size=1, strides=1)
-        inputs = self._norm_activation(use_activation=False,
-                                       init_zero=True)(inputs, is_training=is_training)
+        inputs = self.conv2d_fixed_padding(inputs=inputs, filters=4 * filters, kernel_size=1, strides=1)
+        inputs = self._norm_activation(use_activation=False, init_zero=True)(inputs, is_training=is_training)
 
         return self._activation_op(inputs + shortcut)
 
@@ -256,44 +246,53 @@ class Resnet:
         def model(inputs, is_training=None):
             """Creation of the model graph."""
             inputs = self.conv2d_fixed_padding(inputs=inputs, filters=64, kernel_size=7, strides=2)
-            inputs = tf.identity(inputs, 'initial_conv')
+            inputs = tf.identity(inputs, "initial_conv")
             inputs = self._norm_activation()(inputs, is_training=is_training)
 
-            inputs = tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding='SAME',
-                                               data_format=self._data_format)(inputs)
-            inputs = tf.identity(inputs, 'initial_max_pool')
+            inputs = tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding="SAME", data_format=self._data_format)(
+                inputs
+            )
+            inputs = tf.identity(inputs, "initial_max_pool")
 
-            c_2 = self.block_group(inputs=inputs,
-                                  filters=64,
-                                  block_fn=block_fn,
-                                  blocks=layers[0],
-                                  strides=1,
-                                  name='block_group1',
-                                  is_training=is_training)
+            c_2 = self.block_group(
+                inputs=inputs,
+                filters=64,
+                block_fn=block_fn,
+                blocks=layers[0],
+                strides=1,
+                name="block_group1",
+                is_training=is_training,
+            )
 
-            c_3 = self.block_group(inputs=c_2,
-                                  filters=128,
-                                  block_fn=block_fn,
-                                  blocks=layers[1],
-                                  strides=2,
-                                  name='block_group2',
-                                  is_training=is_training)
+            c_3 = self.block_group(
+                inputs=c_2,
+                filters=128,
+                block_fn=block_fn,
+                blocks=layers[1],
+                strides=2,
+                name="block_group2",
+                is_training=is_training,
+            )
 
-            c_4 = self.block_group(inputs=c_3,
-                                  filters=256,
-                                  block_fn=block_fn,
-                                  blocks=layers[2],
-                                  strides=2,
-                                  name='block_group3',
-                                  is_training=is_training)
+            c_4 = self.block_group(
+                inputs=c_3,
+                filters=256,
+                block_fn=block_fn,
+                blocks=layers[2],
+                strides=2,
+                name="block_group3",
+                is_training=is_training,
+            )
 
-            c_5 = self.block_group(inputs=c_4,
-                                  filters=512,
-                                  block_fn=block_fn,
-                                  blocks=layers[3],
-                                  strides=2,
-                                  name='block_group4',
-                                  is_training=is_training)
+            c_5 = self.block_group(
+                inputs=c_4,
+                filters=512,
+                block_fn=block_fn,
+                blocks=layers[3],
+                strides=2,
+                name="block_group4",
+                is_training=is_training,
+            )
 
             return {2: c_2, 3: c_3, 4: c_4, 5: c_5}
 

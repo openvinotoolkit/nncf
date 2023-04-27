@@ -13,10 +13,7 @@
 from typing import Tuple
 
 
-def calculate_symmetric_level_ranges(
-        num_bits: int,
-        signed: bool,
-        narrow_range: bool = False) -> Tuple[int, int, int]:
+def calculate_symmetric_level_ranges(num_bits: int, signed: bool, narrow_range: bool = False) -> Tuple[int, int, int]:
     """
     Calculates the numbers of the low and high quant and the number of
     quantization levels for the symmetric quantization scheme.
@@ -32,7 +29,7 @@ def calculate_symmetric_level_ranges(
         level_high - the high quant number
         levels - the number of quantization levels
     """
-    levels = 2 ** num_bits
+    levels = 2**num_bits
 
     if signed:
         level_high = (levels // 2) - 1
@@ -51,9 +48,7 @@ def calculate_symmetric_level_ranges(
     return level_low, level_high, levels
 
 
-def calculate_asymmetric_level_ranges(
-        num_bits: int,
-        narrow_range: bool = False) -> Tuple[int, int, int]:
+def calculate_asymmetric_level_ranges(num_bits: int, narrow_range: bool = False) -> Tuple[int, int, int]:
     """
     Calculates the numbers of the low and high quant and the number of
     quantization levels for the asymmetric quantization scheme.
@@ -66,7 +61,7 @@ def calculate_asymmetric_level_ranges(
         level_high - the high quant number
         levels - the number of quantization levels
     """
-    levels = 2 ** num_bits
+    levels = 2**num_bits
     level_high = levels - 1
     level_low = 0
 

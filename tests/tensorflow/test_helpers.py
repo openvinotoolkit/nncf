@@ -13,16 +13,14 @@
 
 import tensorflow as tf
 
-from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import TFTensorListComparator
+from tests.tensorflow.helpers import get_basic_conv_test_model
 
 
 def test_basic_model_has_expected_params():
-    default_weight = tf.constant([[[[0., -1.],
-                                    [-1., 0.]]], [[[0., -1.],
-                                                   [-1., 0.]]]])
+    default_weight = tf.constant([[[[0.0, -1.0], [-1.0, 0.0]]], [[[0.0, -1.0], [-1.0, 0.0]]]])
     default_weight = tf.transpose(default_weight, (2, 3, 1, 0))
-    default_bias = tf.constant([-2., -2.])
+    default_bias = tf.constant([-2.0, -2.0])
     model = get_basic_conv_test_model()
     act_weights = model.layers[1].weights[0]
     ref_weights = default_weight
