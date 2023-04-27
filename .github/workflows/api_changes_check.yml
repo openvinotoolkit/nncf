@@ -17,6 +17,8 @@ jobs:
   compare-api-doc-with-develop:
     needs: call-build-api-doc
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - name: Download built HTML doc as artifact from previous step
         uses: alehechka/download-tartifact@v2
@@ -35,11 +37,23 @@ jobs:
           echo ${CHANGED_FILES}
           CHANGED_FILES=$(echo $CHANGED_FILES | tr '\n' ' ')
           echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
-      - uses: actions-ecosystem/action-remove-labels@v1
+      - uses: actions/github-script@v6
         if: ${{ !contains(steps.diff.outputs.changed_files, 'differ') }}
         with:
-          labels: API
-      - uses: actions-ecosystem/action-add-labels@v1
+          script: |
+            github.rest.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "API"
+            })
+      - uses: actions/github-script@v6
         if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}
         with:
-          labels: API
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ["API"]
+            })
