@@ -18,6 +18,13 @@ import datasets
 import evaluate
 import jstyleson
 import numpy as np
+
+# isort: off
+from nncf import NNCFConfig
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.torch import create_compressed_model
+
 from transformers import AutoConfig
 from transformers import AutoModelForSequenceClassification
 from transformers import AutoTokenizer
@@ -30,10 +37,6 @@ from transformers.trainer import TrainerControl
 from transformers.trainer import TrainerState
 from transformers.trainer import TrainingArguments
 
-from nncf import NNCFConfig
-from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.torch import create_compressed_model
 
 quick_check_num = 10
 task_to_sample_keys = {
