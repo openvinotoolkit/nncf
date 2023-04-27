@@ -29,6 +29,7 @@ jobs:
         with:
           ref: doc_pages
           path: previous_doc_state
+          token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
       - name: Get changed file names in API doc path
         id: diff
         run: |
@@ -40,6 +41,7 @@ jobs:
       - uses: actions/github-script@v6
         if: ${{ !contains(steps.diff.outputs.changed_files, 'differ') }}
         with:
+          github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
           script: |
             github.rest.issues.removeLabel({
               issue_number: context.issue.number,
@@ -50,6 +52,7 @@ jobs:
       - uses: actions/github-script@v6
         if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}
         with:
+          github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
           script: |
             github.rest.issues.addLabels({
               issue_number: context.issue.number,
