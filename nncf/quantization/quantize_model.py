@@ -39,7 +39,7 @@ def quantize(
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
 ) -> TModel:
     """
-    test
+    Applies post-training quantization to the provided model.
 
     :param model: A model to be quantized.
     :type  model: TModel
