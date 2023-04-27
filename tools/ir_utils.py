@@ -56,8 +56,8 @@ def find_all_parameters(buffer, model_xml):
 
 
 def get_conv_weight_shape(layer, input_shape, output_shape):
-    groups = int(layer.find('data').get("group", 1))
-    kernel_size = [int(dim) for dim in layer.find('data').get("kernel").split(",")]
+    groups = int(layer.find("data").get("group", 1))
+    kernel_size = [int(dim) for dim in layer.find("data").get("kernel").split(",")]
     return [output_shape[1], input_shape[1] // groups, *kernel_size]
 
 
@@ -71,7 +71,7 @@ def get_ss_weight_shape(layer, input_shape, output_shape):
 
 def extract_params(buffer, all_parameters, layer, get_weight_shape_fn):
     layer_name = layer.get("name")
-    precision = np.float32 if layer.get("precision").lower() == 'fp32' else np.float16
+    precision = np.float32 if layer.get("precision").lower() == "fp32" else np.float16
     weight = layer.find("blobs/weights")
     biases = layer.find("blobs/biases")
     input_shape = [int(dim.text) for dim in layer.find("input/port")]
@@ -94,7 +94,7 @@ def extract_params(buffer, all_parameters, layer, get_weight_shape_fn):
 
 
 def get_blob(buffer, offset, size, shape, dtype=np.float32):
-    data = np.frombuffer(buffer[offset:offset + size], dtype=dtype).copy()
+    data = np.frombuffer(buffer[offset : offset + size], dtype=dtype).copy()
     if shape is not None:
         data = data.reshape(shape)
     return data

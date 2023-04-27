@@ -30,8 +30,9 @@ from tests.torch.helpers import set_torch_seed
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
 
-def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[nn.Module, DataLoader,
-                                                                               CompressionAlgorithmController]:
+def create_initialized_lenet_model_and_dataloader(
+    config: NNCFConfig,
+) -> Tuple[nn.Module, DataLoader, CompressionAlgorithmController]:
     with set_torch_seed():
         train_loader = create_random_mock_dataloader(config, num_samples=10)
         model = LeNet()
@@ -41,22 +42,16 @@ def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[n
     return model, train_loader, compression_ctrl
 
 
-@pytest.mark.parametrize(
-    ('num_steps', 'learning_rate', 'reference_metric'),
-    (
-        (10, 5e-4, 0.78276),
-    )
-)
+@pytest.mark.parametrize(("num_steps", "learning_rate", "reference_metric"), ((10, 5e-4, 0.78276),))
 def test_runner(num_steps, learning_rate, reference_metric):
-    runner = PTAccuracyAwareTrainingRunner(accuracy_aware_training_params={},
-                                           uncompressed_model_accuracy=0.0,
-                                           dump_checkpoints=False)
+    runner = PTAccuracyAwareTrainingRunner(
+        accuracy_aware_training_params={}, uncompressed_model_accuracy=0.0, dump_checkpoints=False
+    )
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
     config = get_basic_magnitude_sparsity_config(input_sample_size=input_sample_size)
     model, train_loader, compression_ctrl = create_initialized_lenet_model_and_dataloader(config)
 
-    def train_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler,
-                 train_loader=train_loader):
+    def train_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler, train_loader=train_loader):
         with set_torch_seed():
             train_loader = iter(train_loader)
             for _ in range(num_steps):

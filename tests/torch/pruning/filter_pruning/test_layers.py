@@ -12,20 +12,22 @@
 """
 import pytest
 import torch
-from nncf.torch.dynamic_graph.scope import Scope
 from torch import nn
 
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateWeightAndBias
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask, apply_filter_binary_mask
-from tests.torch.helpers import fill_conv_weight, fill_bias
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
+from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
+from tests.torch.helpers import fill_bias
+from tests.torch.helpers import fill_conv_weight
 
 
 class FilterPruningBlockModel(nn.Module):
     def __init__(self, layer):
         super().__init__()
         self.layer = layer
-        pruning_op = FilterPruningMask(layer.weight.size(0), 'test_node')
+        pruning_op = FilterPruningMask(layer.weight.size(0), "test_node")
         self.op_key = self.layer.register_pre_forward_operation(UpdateWeightAndBias(pruning_op))
 
     @property
@@ -36,14 +38,7 @@ class FilterPruningBlockModel(nn.Module):
         return self.layer(x)
 
 
-@pytest.mark.parametrize(
-    ('weights_val', 'bias_val'),
-    (
-        (3, 0),
-        (9, 0),
-        (15, 1)
-    )
-)
+@pytest.mark.parametrize(("weights_val", "bias_val"), ((3, 0), (9, 0), (15, 1)))
 def test_can_infer_magnitude_pruned_conv(weights_val, bias_val):
     """
     Check that NNCFConv2d with FilterPruningBlock as pre ops working exactly the same as
@@ -78,13 +73,18 @@ def test_assert_broadcastable_mask_and_weight_shape():
         apply_filter_binary_mask(mask, nncf_module.weight.data)
 
 
-@pytest.mark.parametrize(('mask', 'reference_weight', 'reference_bias'),
-                         [(torch.zeros(2), torch.zeros((2, 1, 2, 2)), torch.zeros(2)),
-                          (torch.ones(2), torch.ones((2, 1, 2, 2)) + torch.eye(2), torch.ones(2)),
-                          (torch.tensor([0, 1], dtype=torch.float32),
-                           torch.cat([torch.zeros((1, 1, 2, 2)), torch.ones((1, 1, 2, 2)) + torch.eye(2)]),
-                           torch.tensor([0, 1], dtype=torch.float32)),
-                          ])
+@pytest.mark.parametrize(
+    ("mask", "reference_weight", "reference_bias"),
+    [
+        (torch.zeros(2), torch.zeros((2, 1, 2, 2)), torch.zeros(2)),
+        (torch.ones(2), torch.ones((2, 1, 2, 2)) + torch.eye(2), torch.ones(2)),
+        (
+            torch.tensor([0, 1], dtype=torch.float32),
+            torch.cat([torch.zeros((1, 1, 2, 2)), torch.ones((1, 1, 2, 2)) + torch.eye(2)]),
+            torch.tensor([0, 1], dtype=torch.float32),
+        ),
+    ],
+)
 class TestApplyMasks:
     @staticmethod
     def test_apply_filter_binary_mask(mask, reference_weight, reference_bias):

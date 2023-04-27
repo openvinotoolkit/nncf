@@ -13,19 +13,25 @@
 
 from enum import Enum
 
+from nncf.common.utils.api_marker import api
+
+
+@api(canonical_alias="nncf.TargetDevice")
 class TargetDevice(Enum):
     """
     Describes the target device the specificity of which will be taken
     into account while compressing in order to obtain the best performance
     for this type of device.
     """
-    ANY = 'ANY'
-    CPU = 'CPU'
-    GPU = 'GPU'
-    VPU = 'VPU'
-    CPU_SPR = 'CPU_SPR'
+
+    ANY = "ANY"
+    CPU = "CPU"
+    GPU = "GPU"
+    VPU = "VPU"
+    CPU_SPR = "CPU_SPR"
 
 
+@api(canonical_alias="nncf.ModelType")
 class ModelType(Enum):
     """
     Describes the model type the specificity of which will be taken into
@@ -34,4 +40,5 @@ class ModelType(Enum):
     :param TRANSFORMER: Transformer-based models
         (https://arxiv.org/pdf/1706.03762.pdf)
     """
-    TRANSFORMER = 'transformer'
+
+    TRANSFORMER = "transformer"

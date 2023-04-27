@@ -14,25 +14,25 @@
 import tempfile
 from pathlib import Path
 
-import pytest
-
-from torchvision import models
-from tests.onnx.quantization.common import ModelToTest
-import torch
 import onnx
+import pytest
+import torch
+from torchvision import models
 
+from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.weightless_model import save_model_without_tensors
 
 
 @pytest.mark.parametrize(
-    ('model_to_test', 'model'), [(ModelToTest('resnet18', [1, 3, 224, 224]), models.resnet18(pretrained=True))])
+    ("model_to_test", "model"), [(ModelToTest("resnet18", [1, 3, 224, 224]), models.resnet18(pretrained=True))]
+)
 def test_save_weightless_model(tmp_path, model_to_test, model):
-    onnx_model_path = tmp_path / (model_to_test.model_name + '.onnx')
+    onnx_model_path = tmp_path / (model_to_test.model_name + ".onnx")
     x = torch.randn([1, 3, 224, 224], requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path)
     onnx_model = onnx.load_model(onnx_model_path)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        weightless_model_path = tmpdir / Path('weightless_model.onnx')
+        weightless_model_path = tmpdir / Path("weightless_model.onnx")
         save_model_without_tensors(onnx_model, weightless_model_path)
         assert weightless_model_path.stat().st_size < Path(onnx_model_path).stat().st_size

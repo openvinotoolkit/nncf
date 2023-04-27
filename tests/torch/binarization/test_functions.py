@@ -31,7 +31,7 @@ from tests.torch.helpers import get_grads
 
 def idfn(val):
     if isinstance(val, list):
-        return '[{}]'.format('-'.join([str(v) for v in val]))
+        return "[{}]".format("-".join([str(v) for v in val]))
 
     return None
 
@@ -57,20 +57,19 @@ def get_test_data(data_list, is_cuda=False, is_backward=False):
         results.append(result)
     return results
 
+
 RXNOR = ReferenceXNORBinarize(backend_type=ReferenceBackendType.NUMPY)
 RDOREFA = ReferenceDOREFABinarize(backend_type=ReferenceBackendType.NUMPY)
 RACT = ReferenceActivationBinarize(backend_type=ReferenceBackendType.NUMPY)
 
-@pytest.mark.parametrize('input_size',
-                         [[1, 96, 112, 112],
-                          [1, 192, 28, 28],
-                          [1, 576, 14, 14],
-                          [32, 96, 112, 112],
-                          [32, 192, 28, 28],
-                          [32, 576, 14, 14]],
-                         ids=idfn)
+
+@pytest.mark.parametrize(
+    "input_size",
+    [[1, 96, 112, 112], [1, 192, 28, 28], [1, 576, 14, 14], [32, 96, 112, 112], [32, 192, 28, 28], [32, 576, 14, 14]],
+    ids=idfn,
+)
 class TestParametrized:
-    @pytest.mark.parametrize('weight_bin_type', ["xnor", "dorefa"])
+    @pytest.mark.parametrize("weight_bin_type", ["xnor", "dorefa"])
     class TestWeightBinarization:
         def test_binarize_weights_forward(self, _seed, input_size, weight_bin_type, use_cuda):
             if not torch.cuda.is_available() and use_cuda is True:
@@ -108,8 +107,9 @@ class TestParametrized:
         ref_input = generate_input(input_size)
         ref_scale, ref_threshold = generate_scale_threshold(input_size)
 
-        test_input, test_scale, test_threshold = get_test_data([ref_input, ref_scale, ref_threshold], use_cuda,
-                                                               is_backward=True)
+        test_input, test_scale, test_threshold = get_test_data(
+            [ref_input, ref_scale, ref_threshold], use_cuda, is_backward=True
+        )
 
         ref_value = RACT.forward(ref_input, ref_scale, ref_threshold)
         ref_grads = RACT.backward(np.ones(input_size), ref_input, ref_scale, ref_value)

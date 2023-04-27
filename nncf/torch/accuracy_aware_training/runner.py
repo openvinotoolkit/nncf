@@ -12,17 +12,16 @@
 """
 
 import os.path as osp
-from typing import Callable
-from typing import Dict
+from typing import Callable, Dict
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import ToTensor
 
-from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.accuracy_aware_training.utils import is_main_process
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
+from nncf.torch.accuracy_aware_training.utils import is_main_process
+from nncf.torch.checkpoint_loading import load_state
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -61,15 +60,16 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
     def update_learning_rate(self):
         if self._update_learning_rate_fn is not None:
-            self._update_learning_rate_fn(self.lr_scheduler,
-                                          self.training_epoch_count,
-                                          self.current_val_metric_value,
-                                          self.current_loss)
+            self._update_learning_rate_fn(
+                self.lr_scheduler, self.training_epoch_count, self.current_val_metric_value, self.current_loss
+            )
         else:
             if self.lr_scheduler is not None and self.lr_updates_needed:
                 self.lr_scheduler.step(
-                    self.training_epoch_count if not isinstance(self.lr_scheduler, ReduceLROnPlateau)
-                    else self.best_val_metric_value)
+                    self.training_epoch_count
+                    if not isinstance(self.lr_scheduler, ReduceLROnPlateau)
+                    else self.best_val_metric_value
+                )
 
     def reset_training(self):
         self.configure_optimizers()
@@ -77,19 +77,21 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         optimizers = self.optimizer if isinstance(self.optimizer, (tuple, list)) else [self.optimizer]
         for optimizer in optimizers:
             for param_group in optimizer.param_groups:
-                param_group['lr'] *= self.base_lr_reduction_factor_during_search
+                param_group["lr"] *= self.base_lr_reduction_factor_during_search
 
         lr_schedulers = self.lr_scheduler if isinstance(self.lr_scheduler, (tuple, list)) else [self.lr_scheduler]
         for lr_scheduler in lr_schedulers:
             if lr_scheduler is None:
                 continue
-            for attr_name in ['base_lrs', 'init_lr']:
+            for attr_name in ["base_lrs", "init_lr"]:
                 if hasattr(lr_scheduler, attr_name):
                     setattr(
                         lr_scheduler,
                         attr_name,
-                        [base_lr * self.base_lr_reduction_factor_during_search
-                         for base_lr in getattr(lr_scheduler, attr_name)]
+                        [
+                            base_lr * self.base_lr_reduction_factor_during_search
+                            for base_lr in getattr(lr_scheduler, attr_name)
+                        ],
                     )
 
         self.training_epoch_count = 0
@@ -109,12 +111,12 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     def _save_checkpoint(self, model, compression_controller, checkpoint_path):
         optimizers = self.optimizer if isinstance(self.optimizer, (tuple, list)) else [self.optimizer]
         checkpoint = {
-            'epoch': self.cumulative_epoch_count + 1,
-            'state_dict': model.state_dict(),
-            'compression_state': compression_controller.get_compression_state(),
-            'best_metric_val': self.best_val_metric_value,
-            'current_val_metric_value': self.current_val_metric_value,
-            'optimizer': [optimizer.state_dict() for optimizer in optimizers],
+            "epoch": self.cumulative_epoch_count + 1,
+            "state_dict": model.state_dict(),
+            "compression_state": compression_controller.get_compression_state(),
+            "best_metric_val": self.best_val_metric_value,
+            "current_val_metric_value": self.current_val_metric_value,
+            "optimizer": [optimizer.state_dict() for optimizer in optimizers],
         }
         torch.save(checkpoint, checkpoint_path)
 
@@ -122,12 +124,12 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if self._load_checkpoint_fn is not None:
             self._load_checkpoint_fn(model, checkpoint_path)
         else:
-            resuming_checkpoint = torch.load(checkpoint_path, map_location='cpu')
-            resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
+            resuming_checkpoint = torch.load(checkpoint_path, map_location="cpu")
+            resuming_model_state_dict = resuming_checkpoint.get("state_dict", resuming_checkpoint)
             load_state(model, resuming_model_state_dict, is_resume=True)
 
     def _make_checkpoint_path(self, is_best, compression_rate=None):
-        extension = '.pth'
+        extension = ".pth"
         return osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_{"best" if is_best else "last"}{extension}')
 
     def add_tensorboard_scalar(self, key, data, step):
@@ -141,21 +143,34 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                 self._tensorboard_writer.add_image(key, ToTensor()(data), step)
 
 
-class PTAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,
-                                               PTAccuracyAwareTrainingRunner):
-    def __init__(self, accuracy_aware_training_params: Dict, uncompressed_model_accuracy: float,
-                 verbose: bool = True, dump_checkpoints: bool = True, lr_updates_needed: bool = True,
-                 minimal_compression_rate: float = 0.0, maximal_compression_rate: float = 0.95):
-        super().__init__(accuracy_aware_training_params, uncompressed_model_accuracy,
-                         verbose, dump_checkpoints, lr_updates_needed,
-                         minimal_compression_rate=minimal_compression_rate,
-                         maximal_compression_rate=maximal_compression_rate)
+class PTAdaptiveCompressionLevelTrainingRunner(
+    BaseAdaptiveCompressionLevelTrainingRunner, PTAccuracyAwareTrainingRunner
+):
+    def __init__(
+        self,
+        accuracy_aware_training_params: Dict,
+        uncompressed_model_accuracy: float,
+        verbose: bool = True,
+        dump_checkpoints: bool = True,
+        lr_updates_needed: bool = True,
+        minimal_compression_rate: float = 0.0,
+        maximal_compression_rate: float = 0.95,
+    ):
+        super().__init__(
+            accuracy_aware_training_params,
+            uncompressed_model_accuracy,
+            verbose,
+            dump_checkpoints,
+            lr_updates_needed,
+            minimal_compression_rate=minimal_compression_rate,
+            maximal_compression_rate=maximal_compression_rate,
+        )
 
     def _make_checkpoint_path(self, is_best, compression_rate=None):
-        extension = '.pth'
-        base_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint')
+        extension = ".pth"
+        base_path = osp.join(self._checkpoint_save_dir, "acc_aware_checkpoint")
         if is_best:
             if compression_rate is None:
-                raise ValueError('Compression rate cannot be None')
-            return f'{base_path}_best_{compression_rate:.3f}{extension}'
-        return f'{base_path}_last{extension}'
+                raise ValueError("Compression rate cannot be None")
+            return f"{base_path}_best_{compression_rate:.3f}{extension}"
+        return f"{base_path}_last{extension}"

@@ -14,14 +14,14 @@ from copy import deepcopy
 from enum import Enum
 from typing import TypeVar
 
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
 class BackendType(Enum):
-    TORCH = 'Torch'
-    TENSORFLOW = 'Tensorflow'
-    ONNX = 'ONNX'
-    OPENVINO = 'OpenVINO'
+    TORCH = "Torch"
+    TENSORFLOW = "Tensorflow"
+    ONNX = "ONNX"
+    OPENVINO = "OpenVINO"
 
 
 def get_backend(model) -> BackendType:
@@ -34,25 +34,29 @@ def get_backend(model) -> BackendType:
     available_frameworks = []
     try:
         import torch
-        available_frameworks.append('PyTorch')
+
+        available_frameworks.append("PyTorch")
     except ImportError:
         torch = None
 
     try:
         import tensorflow
-        available_frameworks.append('Tensorflow')
+
+        available_frameworks.append("Tensorflow")
     except ImportError:
         tensorflow = None
 
     try:
         import onnx
-        available_frameworks.append('ONNX')
+
+        available_frameworks.append("ONNX")
     except ImportError:
         onnx = None
 
     try:
         import openvino.runtime as ov
-        available_frameworks.append('OpenVINO')
+
+        available_frameworks.append("OpenVINO")
     except ImportError:
         ov = None
 
@@ -68,9 +72,11 @@ def get_backend(model) -> BackendType:
     if ov is not None and isinstance(model, ov.Model):
         return BackendType.OPENVINO
 
-    raise RuntimeError('Could not infer the backend framework from the model type because '
-                       'the framework is not available or the model type is unsupported. '
-                       'The available frameworks found: {}.'.format(', '.join(available_frameworks)))
+    raise RuntimeError(
+        "Could not infer the backend framework from the model type because "
+        "the framework is not available or the model type is unsupported. "
+        "The available frameworks found: {}.".format(", ".join(available_frameworks))
+    )
 
 
 def copy_model(model: TModel) -> TModel:
@@ -88,6 +94,7 @@ def copy_model(model: TModel) -> TModel:
         # deepcopy and tensorflow.keras.models.clone_model does not work correctly on 2.8.4 version
         from nncf.tensorflow.graph.model_transformer import TFModelTransformer
         from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
+
         model = TFModelTransformer(model).transform(TFTransformationLayout())
         return model
     return deepcopy(model)

@@ -26,7 +26,7 @@ class ProgressBar:
     :param total: the expected total number of iterations
     """
 
-    def __init__(self, iterable, logger=nncf_logger, desc='', num_lines=10, total=None):
+    def __init__(self, iterable, logger=nncf_logger, desc="", num_lines=10, total=None):
         self._logger = logger
         self._iterable = iterable
         self._desc = desc
@@ -38,8 +38,10 @@ class ProgressBar:
         self._total = None
         if total is not None:
             if not isinstance(total, (int, float)) or total <= 0:
-                logger.error('Progress bar is disabled because the expected total number of iterations is invalid: '
-                             'it should be an integer and more than 0')
+                logger.error(
+                    "Progress bar is disabled because the expected total number of iterations is invalid: "
+                    "it should be an integer and more than 0"
+                )
                 return
             self._total = int(total)
 
@@ -47,13 +49,17 @@ class ProgressBar:
             try:
                 self._total = len(iterable)
             except (TypeError, AttributeError):
-                logger.error('Progress bar is disabled because the given iterable is invalid: '
-                             'it does not implement __len__ method')
+                logger.error(
+                    "Progress bar is disabled because the given iterable is invalid: "
+                    "it does not implement __len__ method"
+                )
                 return
 
         if not isinstance(num_lines, int) or num_lines <= 1:
-            logger.error('Progress bar is disabled because the given number of lines for logging is invalid: '
-                         'it should be an integer and more than 1')
+            logger.error(
+                "Progress bar is disabled because the given number of lines for logging is invalid: "
+                "it should be an integer and more than 1"
+            )
             return
 
         self._step = max(1, self._total // (self._num_lines - 1))
@@ -73,7 +79,10 @@ class ProgressBar:
         if self._index % self._step == 0 or self._index == self._total:
             num_filled = int(self._index * self._width / self._total)
             num_empty = self._width - num_filled
-            filled = '█' * num_filled
-            empty = ' ' * num_empty
-            self._logger.info('{desc} |{filled}{empty}| {index} / {total}'.format(
-                desc=self._desc, filled=filled, empty=empty, index=self._index, total=self._total))
+            filled = "█" * num_filled
+            empty = " " * num_empty
+            self._logger.info(
+                "{desc} |{filled}{empty}| {index} / {total}".format(
+                    desc=self._desc, filled=filled, empty=empty, index=self._index, total=self._total
+                )
+            )

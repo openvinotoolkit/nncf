@@ -21,12 +21,15 @@ from nncf.torch.dynamic_graph.scope import Scope
 
 
 class PrunedModuleInfo(PrunedLayerInfoBase):
-    def __init__(self, node_name: NNCFNodeName,
-                 module_scope: Scope,
-                 module: nn.Module,
-                 operand: Callable,
-                 node_id: int,
-                 is_depthwise: bool):
+    def __init__(
+        self,
+        node_name: NNCFNodeName,
+        module_scope: Scope,
+        module: nn.Module,
+        operand: Callable,
+        node_id: int,
+        is_depthwise: bool,
+    ):
         super().__init__(node_name, node_id, is_depthwise)
         self.module_scope = module_scope
         self.module = module

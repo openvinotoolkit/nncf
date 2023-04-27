@@ -19,7 +19,7 @@ Producers: 8
 Consumers: 23", style=filled];
 6 [color=green, label="Block: S:1__O:4
 Producers: 8
-Consumers: 23,16", style=filled];
+Consumers: 16,23", style=filled];
 7 [color=red, label="Block: S:1__O:0
 Producers: 23
 Consumers: ", style=filled];

@@ -13,8 +13,10 @@
 
 
 from __future__ import absolute_import
-from collections import deque, namedtuple
+
 import random
+from collections import deque
+from collections import namedtuple
 
 import numpy as np
 
@@ -24,7 +26,7 @@ from nncf import nncf_logger
 
 # This is to be understood as a transition: Given `state0`, performing `action`
 # yields `reward` and results in `state1`, which might be `terminal`.
-Experience = namedtuple('Experience', 'state0, action, reward, state1, terminal1')
+Experience = namedtuple("Experience", "state0, action, reward, state1, terminal1")
 
 
 def sample_batch_indexes(low, high, size):
@@ -42,8 +44,10 @@ def sample_batch_indexes(low, high, size):
         # Not enough data. Help ourselves with sampling from the range, but the same index
         # can occur multiple times. This is not good and should be avoided by picking a
         # large enough warm-up phase.
-        nncf_logger.warning('Not enough entries to sample without replacement. Consider increasing your warm-up '
-                            'phase to avoid oversampling!')
+        nncf_logger.warning(
+            "Not enough entries to sample without replacement. Consider increasing your warm-up "
+            "phase to avoid oversampling!"
+        )
         batch_idxs = np.random.random_integers(low, high - 1, size=size)
     assert len(batch_idxs) == size
     return batch_idxs
@@ -71,7 +75,7 @@ class RingBuffer:
         if self.length < self.maxlen:
             # We have space, simply append to data.
             self.data.append(v)
-            self.length+=1
+            self.length += 1
 
         elif self.length == self.maxlen:
             # No space, remove the first item then append
@@ -83,14 +87,14 @@ class RingBuffer:
 
 
 def zeroed_observation(observation):
-    if hasattr(observation, 'shape'):
+    if hasattr(observation, "shape"):
         return np.zeros(observation.shape)
-    if hasattr(observation, '__iter__'):
+    if hasattr(observation, "__iter__"):
         out = []
         for x in observation:
             out.append(zeroed_observation(x))
         return out
-    return 0.
+    return 0.0
 
 
 class Memory:
@@ -128,8 +132,8 @@ class Memory:
 
     def get_config(self):
         config = {
-            'window_length': self.window_length,
-            'ignore_episode_boundaries': self.ignore_episode_boundaries,
+            "window_length": self.window_length,
+            "ignore_episode_boundaries": self.ignore_episode_boundaries,
         }
         return config
 
@@ -195,8 +199,9 @@ class SequentialMemory(Memory):
 
             assert len(state0) == self.window_length
             assert len(state1) == len(state0)
-            experiences.append(Experience(state0=state0, action=action, reward=reward,
-                                          state1=state1, terminal1=terminal1))
+            experiences.append(
+                Experience(state0=state0, action=action, reward=reward, state1=state1, terminal1=terminal1)
+            )
         assert len(experiences) == batch_size
         return experiences
 
@@ -213,14 +218,14 @@ class SequentialMemory(Memory):
             state1_batch.append(e.state1)
             reward_batch.append(e.reward)
             action_batch.append(e.action)
-            terminal1_batch.append(0. if e.terminal1 else 1.)
+            terminal1_batch.append(0.0 if e.terminal1 else 1.0)
 
         # Prepare and validate parameters.
-        state0_batch = np.array(state0_batch, 'double').reshape(batch_size, -1)
-        state1_batch = np.array(state1_batch, 'double').reshape(batch_size, -1)
-        terminal1_batch = np.array(terminal1_batch, 'double').reshape(batch_size, -1)
-        reward_batch = np.array(reward_batch, 'double').reshape(batch_size, -1)
-        action_batch = np.array(action_batch, 'double').reshape(batch_size, -1)
+        state0_batch = np.array(state0_batch, "double").reshape(batch_size, -1)
+        state1_batch = np.array(state1_batch, "double").reshape(batch_size, -1)
+        terminal1_batch = np.array(terminal1_batch, "double").reshape(batch_size, -1)
+        reward_batch = np.array(reward_batch, "double").reshape(batch_size, -1)
+        action_batch = np.array(action_batch, "double").reshape(batch_size, -1)
 
         return state0_batch, action_batch, reward_batch, state1_batch, terminal1_batch
 
@@ -250,5 +255,5 @@ class SequentialMemory(Memory):
 
     def get_config(self):
         config = super().get_config()
-        config['limit'] = self.limit
+        config["limit"] = self.limit
         return config

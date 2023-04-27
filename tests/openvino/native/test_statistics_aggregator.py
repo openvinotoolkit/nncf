@@ -14,9 +14,9 @@
 from typing import Type
 
 import numpy as np
-from openvino.runtime import opset9 as opset
 import openvino.runtime as ov
 import pytest
+from openvino.runtime import opset9 as opset
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -30,8 +30,8 @@ from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggreg
 from tests.openvino.native.models import SharedConvModel
 from tests.openvino.native.models import SplitConcatModel
 
-INPUT_NAME = 'Input'
-CONV_NODE_NAME = 'Conv1'
+INPUT_NAME = "Input"
+CONV_NODE_NAME = "Conv1"
 INPUT_SHAPE = [1, 3, 3, 3]
 
 
@@ -40,8 +40,7 @@ def get_StatisticAgregatorTestModel(input_shape, kernel):
     strides = [1, 1]
     pads = [0, 0]
     dilations = [1, 1]
-    conv = opset.convolution(input_1, kernel.astype(np.float32),
-                             strides, pads, pads, dilations, name=CONV_NODE_NAME)
+    conv = opset.convolution(input_1, kernel.astype(np.float32), strides, pads, pads, dilations, name=CONV_NODE_NAME)
 
     result = opset.result(conv, name="Result")
     model = ov.Model([result], [input_1])
@@ -63,16 +62,12 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         conv_w = self.dataset_samples_to_conv_w(sample)
         return get_StatisticAgregatorTestModel(INPUT_SHAPE, conv_w)
 
-    @pytest.fixture(scope='session')
+    @pytest.fixture(scope="session")
     def test_params(self):
         return {
-            'test_statistic_merging': {
-                'split_concat': {
-                    'model': self._get_split_concat_backend_model
-                },
-                'shared_conv': {
-                    'model': self._get_shared_conv_model
-                }
+            "test_statistic_merging": {
+                "split_concat": {"model": self._get_split_concat_backend_model},
+                "shared_conv": {"model": self._get_shared_conv_model},
             }
         }
 
@@ -101,16 +96,19 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         dataset_samples = [np.zeros(input_shape), np.ones(input_shape)]
 
         for i, value in enumerate(dataset_values):
-            dataset_samples[0][0, i, 0, 0] = value['max']
-            dataset_samples[0][0, i, 0, 1] = value['min']
+            dataset_samples[0][0, i, 0, 0] = value["max"]
+            dataset_samples[0][0, i, 0, 1] = value["min"]
         return dataset_samples
 
     @pytest.fixture
     def is_stat_in_shape_of_scale(self) -> bool:
         return True
 
-    @pytest.fixture(params=[True, False],
-                    ids=['inplace', 'out_of_place'])
+    @pytest.fixture
+    def is_backend_support_custom_estimators(self) -> bool:
+        return True
+
+    @pytest.fixture(params=[True, False], ids=["inplace", "out_of_place"])
     def inplace_statistics(self, request) -> bool:
         return request.param
 
@@ -120,5 +118,4 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def _get_shared_conv_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(sample)
-        return SharedConvModel(input_name=INPUT_NAME,
-                               input_shape=INPUT_SHAPE, kernel=conv_w).ov_model
+        return SharedConvModel(input_name=INPUT_NAME, input_shape=INPUT_SHAPE, kernel=conv_w).ov_model

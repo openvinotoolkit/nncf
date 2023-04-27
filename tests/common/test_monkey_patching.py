@@ -13,7 +13,6 @@
 
 from nncf.common.utils.patcher import PATCHER
 
-
 CORRECT_WRAPPER_STACK = "base"
 
 

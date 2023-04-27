@@ -10,18 +10,17 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import torch
-import torch.nn.functional as F
 from abc import abstractmethod
 
-from torch.nn import BatchNorm2d
-
-from tests.torch.helpers import create_conv
+import torch
+import torch.nn.functional as F
 from torch import nn
+from torch.nn import BatchNorm2d
 from torch.nn import Dropout
 from torch.nn import Parameter
 
 from nncf.torch import register_module
+from tests.torch.helpers import create_conv
 
 
 class ModelWithDummyParameter(nn.Module):
@@ -209,9 +208,10 @@ class EmbeddingCatLinearModel(nn.Module):
         z = torch.cat([y1, y2])
         return self.linear(z)
 
+
 class MultiOutputSameTensorModel(torch.nn.Module):
     def forward(self, x):
-        return x, x*x, x
+        return x, x * x, x
 
 
 #       fq_2
@@ -305,6 +305,7 @@ class ConvBNLeakyReLU(nn.Module):
         z = torch.nn.functional.leaky_relu(z)
         return z
 
+
 class FC_ConstMul(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -316,6 +317,7 @@ class FC_ConstMul(torch.nn.Module):
         x1 = self.fc1(x)
         x1 = x1 * 2
         return x + x1
+
 
 class Baddbmm(torch.nn.Module):
     def forward(self, x, y, z):

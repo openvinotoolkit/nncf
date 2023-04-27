@@ -14,17 +14,18 @@
 from copy import deepcopy
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
-from openvino._offline_transformations import compress_quantize_weights_transformation
 import openvino.runtime as ov
+from openvino._offline_transformations import compress_quantize_weights_transformation
 
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data import Dataset
-from nncf.openvino.pot.quantization.quantize import quantize_impl as pot_quantize_impl
-from nncf.openvino.pot.quantization.quantize import \
-    quantize_with_accuracy_control_impl as pot_quantize_with_accuracy_control_impl
+from nncf.openvino.pot.quantization.quantize_model import quantize_impl as pot_quantize_impl
+from nncf.openvino.pot.quantization.quantize_model import (
+    quantize_with_accuracy_control_impl as pot_quantize_with_accuracy_control_impl,
+)
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.parameters import ModelType
@@ -32,8 +33,8 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
-from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
+from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
@@ -52,8 +53,7 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
     """
     if advanced_parameters is None:
         return USE_POT_AS_DEFAULT
-    return advanced_parameters.backend_params.get(
-        BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
+    return advanced_parameters.backend_params.get(BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
 
 
 def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = None) -> None:
@@ -71,22 +71,24 @@ def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = No
             if isinstance(value, IgnoredScope):
                 dump_parameters(model, value.__dict__, [key])
                 continue
-            rt_path = ['nncf', 'quantization'] + path + [key]
+            rt_path = ["nncf", "quantization"] + path + [key]
             model.set_rt_info(str(value), rt_path)
     except RuntimeError as e:
-        nncf_logger.debug(f'Unable to dump optimization parameters due to error: {e}')
+        nncf_logger.debug(f"Unable to dump optimization parameters due to error: {e}")
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
-def native_quantize_impl(model: ov.Model,
-                         calibration_dataset: Dataset,
-                         preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                         target_device: TargetDevice = TargetDevice.ANY,
-                         subset_size: int = 300,
-                         fast_bias_correction: bool = True,
-                         model_type: Optional[ModelType] = None,
-                         ignored_scope: Optional[IgnoredScope] = None,
-                         advanced_parameters: Optional[AdvancedQuantizationParameters] = None) -> ov.Model:
+def native_quantize_impl(
+    model: ov.Model,
+    calibration_dataset: Dataset,
+    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
@@ -97,7 +99,7 @@ def native_quantize_impl(model: ov.Model,
         fast_bias_correction=fast_bias_correction,
         model_type=model_type,
         ignored_scope=ignored_scope,
-        advanced_parameters=advanced_parameters
+        advanced_parameters=advanced_parameters,
     )
 
     quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
@@ -108,20 +110,19 @@ def native_quantize_impl(model: ov.Model,
     dump_parameters(
         quantized_model,
         {
-            'preset': preset.value,
-            'target_device': target_device.value,
-            'subset_size': subset_size,
-            'fast_bias_correction': fast_bias_correction,
-            'model_type': model_type,
-            'ignored_scope': ignored_scope,
-            'advanced_parameters': convert_to_dict_recursively(advanced_parameters)
-        })
+            "preset": preset.value,
+            "target_device": target_device.value,
+            "subset_size": subset_size,
+            "fast_bias_correction": fast_bias_correction,
+            "model_type": model_type,
+            "ignored_scope": ignored_scope,
+            "advanced_parameters": convert_to_dict_recursively(advanced_parameters),
+        },
+    )
     return quantized_model
 
 
-@tracked_function(NNCF_OV_CATEGORY,
-                  [CompressionStartedWithQuantizeApi(),
-                   "target_device", "preset", "max_drop"])
+@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop"])
 def native_quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
@@ -135,7 +136,8 @@ def native_quantize_with_accuracy_control_impl(
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
-    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None) -> ov.Model:
+    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None,
+) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via the
     OpenVINO Runtime API.
@@ -144,12 +146,16 @@ def native_quantize_with_accuracy_control_impl(
         advanced_accuracy_restorer_parameters = AdvancedAccuracyRestorerParameters()
 
     if advanced_accuracy_restorer_parameters.tune_hyperparams:
-        raise RuntimeError('Quantization algorithm with accuracy control from the '
-                           'OpenVINO backend does not support tuning hyperparams yet')
+        raise RuntimeError(
+            "Quantization algorithm with accuracy control from the "
+            "OpenVINO backend does not support tuning hyperparams yet"
+        )
     if advanced_accuracy_restorer_parameters.convert_to_mixed_preset:
-        raise RuntimeError('Quantization algorithm with accuracy control from the '
-                           'OpenVINO backend does not support the option to convert '
-                           'to the mixed preset yet')
+        raise RuntimeError(
+            "Quantization algorithm with accuracy control from the "
+            "OpenVINO backend does not support the option to convert "
+            "to the mixed preset yet"
+        )
 
     compress_weights = is_weight_compression_needed(advanced_quantization_parameters)
 
@@ -160,24 +166,32 @@ def native_quantize_with_accuracy_control_impl(
     copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
 
     quantized_model = quantize_impl(
-        model, calibration_dataset, preset, target_device, subset_size,
-        fast_bias_correction, model_type, ignored_scope, copied_parameters)
+        model,
+        calibration_dataset,
+        preset,
+        target_device,
+        subset_size,
+        fast_bias_correction,
+        model_type,
+        ignored_scope,
+        copied_parameters,
+    )
 
     # Backends
     backend = get_backend(model)
     algo_backend = get_algo_backend(backend)
 
-    nncf_logger.info('Validation of initial model was started')
+    nncf_logger.info("Validation of initial model was started")
     with timer():
-        initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
-                                       validation_dataset.get_data())
-    nncf_logger.info(f'Metric of initial model: {initial_metric}')
+        initial_metric = validation_fn(algo_backend.prepare_for_inference(model), validation_dataset.get_data())
+    nncf_logger.info(f"Metric of initial model: {initial_metric}")
 
-    nncf_logger.info('Validation of quantized model was started')
+    nncf_logger.info("Validation of quantized model was started")
     with timer():
-        quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
-                                         validation_dataset.get_data())
-    nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
+        quantized_metric = validation_fn(
+            algo_backend.prepare_for_inference(quantized_model), validation_dataset.get_data()
+        )
+    nncf_logger.info(f"Metric of quantized model: {quantized_metric}")
 
     ranking_subset_size = subset_size
     if advanced_accuracy_restorer_parameters.ranking_subset_size is not None:
@@ -186,42 +200,42 @@ def native_quantize_with_accuracy_control_impl(
     accuracy_aware_loop = QuantizationAccuracyRestorer(
         ranking_subset_size=ranking_subset_size,
         max_num_iterations=advanced_accuracy_restorer_parameters.max_num_iterations,
-        max_drop=max_drop
+        max_drop=max_drop,
     )
-    quantized_model = accuracy_aware_loop.restore_accuracy(model, initial_metric,
-                                                           quantized_model, quantized_metric,
-                                                           validation_dataset, validation_fn)
+    quantized_model = accuracy_aware_loop.restore_accuracy(
+        model, initial_metric, quantized_model, quantized_metric, validation_dataset, validation_fn
+    )
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
     dump_parameters(
         quantized_model,
         {
-            'preset': preset.value,
-            'target_device': target_device.value,
-            'subset_size': subset_size,
-            'fast_bias_correction': fast_bias_correction,
-            'model_type': model_type,
-            'ignored_scope': ignored_scope,
-            'max_drop': max_drop,
-            'advanced_quantization_parameters': convert_to_dict_recursively(
-                advanced_quantization_parameters),
-            'advanced_accuracy_restorer_parameters': convert_to_dict_recursively(
-                advanced_accuracy_restorer_parameters)
-        })
+            "preset": preset.value,
+            "target_device": target_device.value,
+            "subset_size": subset_size,
+            "fast_bias_correction": fast_bias_correction,
+            "model_type": model_type,
+            "ignored_scope": ignored_scope,
+            "max_drop": max_drop,
+            "advanced_quantization_parameters": convert_to_dict_recursively(advanced_quantization_parameters),
+            "advanced_accuracy_restorer_parameters": convert_to_dict_recursively(advanced_accuracy_restorer_parameters),
+        },
+    )
     return quantized_model
 
 
-def quantize_impl(model: ov.Model,
-                  calibration_dataset: Dataset,
-                  preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                  target_device: TargetDevice = TargetDevice.ANY,
-                  subset_size: int = 300,
-                  fast_bias_correction: bool = True,
-                  model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None,
-                  advanced_parameters: Optional[AdvancedQuantizationParameters] = None) -> ov.Model:
-
+def quantize_impl(
+    model: ov.Model,
+    calibration_dataset: Dataset,
+    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
@@ -231,8 +245,16 @@ def quantize_impl(model: ov.Model,
         quantize_fn = native_quantize_impl
 
     return quantize_fn(
-        model, calibration_dataset, preset, target_device, subset_size,
-        fast_bias_correction, model_type, ignored_scope, advanced_parameters)
+        model,
+        calibration_dataset,
+        preset,
+        target_device,
+        subset_size,
+        fast_bias_correction,
+        model_type,
+        ignored_scope,
+        advanced_parameters,
+    )
 
 
 def quantize_with_accuracy_control_impl(
@@ -248,7 +270,8 @@ def quantize_with_accuracy_control_impl(
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
-    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None) -> ov.Model:
+    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None,
+) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
     """
@@ -257,6 +280,17 @@ def quantize_with_accuracy_control_impl(
     else:
         quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
     return quantize_with_accuracy_control_fn(
-        model, calibration_dataset, validation_dataset, validation_fn, max_drop, preset,
-        target_device, subset_size, fast_bias_correction, model_type, ignored_scope,
-        advanced_quantization_parameters, advanced_accuracy_restorer_parameters)
+        model,
+        calibration_dataset,
+        validation_dataset,
+        validation_fn,
+        max_drop,
+        preset,
+        target_device,
+        subset_size,
+        fast_bias_correction,
+        model_type,
+        ignored_scope,
+        advanced_quantization_parameters,
+        advanced_accuracy_restorer_parameters,
+    )

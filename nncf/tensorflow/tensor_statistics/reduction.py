@@ -11,12 +11,12 @@
  limitations under the License.
 """
 
-from typing import Union, Tuple
+from typing import Tuple, Union
 
 import tensorflow as tf
 
-from nncf.tensorflow.layers.data_layout import get_weight_shape
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.tensorflow.layers.data_layout import get_weight_shape
 
 
 def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple]) -> list:
@@ -28,9 +28,9 @@ def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple
     return axes
 
 
-def get_reduction_shape_activations(layer: tf.keras.layers.Layer,
-                                    channel_axes: Union[int, tuple, list],
-                                    use_per_sample_stats: bool) -> ReductionShape:
+def get_reduction_shape_activations(
+    layer: tf.keras.layers.Layer, channel_axes: Union[int, tuple, list], use_per_sample_stats: bool
+) -> ReductionShape:
     ndims = len(layer.get_input_shape_at(0))
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
     reduction_shape = get_axes(ndims, layer.per_channel, channel_axes_)
@@ -39,9 +39,9 @@ def get_reduction_shape_activations(layer: tf.keras.layers.Layer,
     return tuple(reduction_shape)
 
 
-def get_reduction_shape_weights(layer: tf.keras.layers.Layer,
-                                weight_attr: str, channel_axes: Union[int, tuple, list],
-                                per_channel: bool) -> ReductionShape:
+def get_reduction_shape_weights(
+    layer: tf.keras.layers.Layer, weight_attr: str, channel_axes: Union[int, tuple, list], per_channel: bool
+) -> ReductionShape:
     weight_shape = get_weight_shape(layer, weight_attr)
     ndims = len(weight_shape)
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]

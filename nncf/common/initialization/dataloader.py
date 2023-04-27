@@ -11,9 +11,13 @@
  limitations under the License.
 """
 
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
+
+from nncf.common.utils.api_marker import api
 
 
+@api()
 class NNCFDataLoader(ABC):
     """
     Wraps a custom data source.

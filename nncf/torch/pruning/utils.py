@@ -10,10 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
-from typing import Optional
-from typing import List
-from typing import Tuple
+from typing import Dict, List, Optional, Tuple
 
 import torch
 
@@ -21,18 +18,18 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.logging import nncf_logger
 from nncf.torch.graph.graph import NNCFNode
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
-from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.common.logging import nncf_logger
+from nncf.torch.tensor import PTNNCFTensor
 
 
 def get_bn_node_for_conv(graph: NNCFGraph, conv_node: NNCFNode) -> Optional[NNCFNode]:
     successors = graph.get_next_nodes(conv_node)
     for succ in successors:
-        if succ.node_type == 'batch_norm':
+        if succ.node_type == "batch_norm":
             return succ
     return None
 
@@ -62,12 +59,12 @@ def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
     :param nodes: list with pruned nodes
     """
     for node in graph.get_all_nodes():
-        node.data.pop('output_mask', None)
+        node.data.pop("output_mask", None)
 
     for minfo in nodes:
         mask = minfo.operand.binary_filter_pruning_mask
         nncf_node = graph.get_node_by_id(minfo.nncf_node_id)
-        nncf_node.data['output_mask'] = PTNNCFTensor(mask)
+        nncf_node.data["output_mask"] = PTNNCFTensor(mask)
 
 
 def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]:
@@ -92,7 +89,7 @@ def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]
     elif isinstance(attrs, LinearLayerAttributes):
         shape = shape[:-1] + [attrs.out_features]
     else:
-        raise RuntimeError(f'Unexpected node type {node.node_type} is fed to _calculate_output_shape')
+        raise RuntimeError(f"Unexpected node type {node.node_type} is fed to _calculate_output_shape")
     return tuple(shape)
 
 
@@ -106,8 +103,8 @@ def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
     """
     modules_out_shapes = {}
     output_shape_collecting_info = [
-       (NNCF_GENERAL_CONV_MODULES_DICT, slice(2, None)),
-       (NNCF_LINEAR_MODULES_DICT, slice(None)),
+        (NNCF_GENERAL_CONV_MODULES_DICT, slice(2, None)),
+        (NNCF_LINEAR_MODULES_DICT, slice(None)),
     ]
     for nncf_module_type, shape_slice in output_shape_collecting_info:
         for node in graph.get_nodes_by_types([v.op_func_name for v in nncf_module_type]):

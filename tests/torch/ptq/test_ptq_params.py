@@ -1,4 +1,3 @@
-
 """
  Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,7 +75,7 @@ class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
         return self.depthwise_conv(x)
 
 
-@pytest.mark.parametrize('target_device', TargetDevice)
+@pytest.mark.parametrize("target_device", TargetDevice)
 def test_target_device(target_device):
     algo = PostTrainingQuantization(target_device=target_device)
     min_max_algo = algo.algorithms[0]
@@ -94,8 +93,7 @@ class TestPTQParams(TemplateTestPTQParams):
     def check_is_mean_min_max_statistic_collector(self, tensor_collector):
         assert isinstance(tensor_collector, PTMeanMinMaxStatisticCollector)
 
-    def check_quantize_outputs_fq_num(self, quantize_outputs,
-                                      act_num_q, weight_num_q):
+    def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:
             assert act_num_q == 2
         else:
@@ -107,31 +105,28 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @property
     def metatypes_mapping(self):
-        return {Conv2dTestMetatype: PTModuleConv2dMetatype,
-                LinearTestMetatype: PTModuleLinearMetatype,
-                SoftmaxTestMetatype: PTSoftmaxMetatype}
-
-    @pytest.fixture(scope='session')
-    def test_params(self):
         return {
-        'test_range_estimator_per_tensor':
-            {'model': LinearTestModel().get_nncf_network(),
-             'stat_points_num': 5},
-        'test_range_estimator_per_channel':
-            {'model': OneDepthwiseConvModel().get_nncf_network(),
-             'stat_points_num': 2},
-        'test_quantize_outputs':
-            {'nncf_graph': get_single_conv_nncf_graph().nncf_graph,
-             'pattern': GraphPattern()},
-        'test_ignored_scopes':
-            {'nncf_graph': get_single_conv_nncf_graph().nncf_graph,
-             'pattern': GraphPattern()},
-        'test_model_type_pass':
-            {'nncf_graph': get_single_no_weigth_matmul_nncf_graph().nncf_graph,
-             'pattern': GraphPattern()},
+            Conv2dTestMetatype: PTModuleConv2dMetatype,
+            LinearTestMetatype: PTModuleLinearMetatype,
+            SoftmaxTestMetatype: PTSoftmaxMetatype,
         }
 
-    @pytest.fixture(params=[(IgnoredScope([]), 1, 1),
-                            (IgnoredScope(['/Conv_1_0']), 0, 0)])
+    @pytest.fixture(scope="session")
+    def test_params(self):
+        return {
+            "test_range_estimator_per_tensor": {"model": LinearTestModel().get_nncf_network(), "stat_points_num": 5},
+            "test_range_estimator_per_channel": {
+                "model": OneDepthwiseConvModel().get_nncf_network(),
+                "stat_points_num": 2,
+            },
+            "test_quantize_outputs": {"nncf_graph": get_single_conv_nncf_graph().nncf_graph, "pattern": GraphPattern()},
+            "test_ignored_scopes": {"nncf_graph": get_single_conv_nncf_graph().nncf_graph, "pattern": GraphPattern()},
+            "test_model_type_pass": {
+                "nncf_graph": get_single_no_weigth_matmul_nncf_graph().nncf_graph,
+                "pattern": GraphPattern(),
+            },
+        }
+
+    @pytest.fixture(params=[(IgnoredScope([]), 1, 1), (IgnoredScope(["/Conv_1_0"]), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param

@@ -15,8 +15,8 @@ import torch
 import torch.nn.functional as F
 import torchvision
 
-from examples.torch.semantic_segmentation.utils.data import downsample_labels
 from examples.torch.common.models.segmentation.unet import center_crop
+from examples.torch.semantic_segmentation.utils.data import downsample_labels
 
 
 def cross_entropy_aux(inputs: dict, target: torch.Tensor, weight: list):
@@ -27,14 +27,12 @@ def cross_entropy_aux(inputs: dict, target: torch.Tensor, weight: list):
     # the auxiliary one)
     losses = {}
     for name, x in inputs.items():
-        losses[name] = F.cross_entropy(x, target,
-                                       ignore_index=255,
-                                       weight=weight)
+        losses[name] = F.cross_entropy(x, target, ignore_index=255, weight=weight)
 
     if len(losses) == 1:
-        return losses['out']
+        return losses["out"]
 
-    return losses['out'] + 0.5 * losses['aux']
+    return losses["out"] + 0.5 * losses["aux"]
 
 
 def cross_entropy(inputs, target: torch.Tensor, weight: list):
@@ -43,13 +41,11 @@ def cross_entropy(inputs, target: torch.Tensor, weight: list):
     # of tensors, but without taking aux loss into account.
     input_tensor = None
     if isinstance(inputs, dict):
-        input_tensor = inputs['out']
+        input_tensor = inputs["out"]
     else:
         input_tensor = inputs
 
-    return F.cross_entropy(input_tensor, target,
-                           ignore_index=255,
-                           weight=weight)
+    return F.cross_entropy(input_tensor, target, ignore_index=255, weight=weight)
 
 
 def cross_entropy_icnet(inputs, target: torch.Tensor, weight: list):
@@ -62,17 +58,11 @@ def cross_entropy_icnet(inputs, target: torch.Tensor, weight: list):
         target_ds8 = downsample_labels(target, downsample_factor=8)
         target_ds16 = downsample_labels(target, downsample_factor=16)
 
-        losses['ds4'] = F.cross_entropy(inputs['ds4'], target_ds4,
-                                        ignore_index=255,
-                                        weight=weight)
-        losses['ds8'] = F.cross_entropy(inputs['ds8'], target_ds8,
-                                        ignore_index=255,
-                                        weight=weight)
-        losses['ds16'] = F.cross_entropy(inputs['ds16'], target_ds16,
-                                         ignore_index=255,
-                                         weight=weight)
+        losses["ds4"] = F.cross_entropy(inputs["ds4"], target_ds4, ignore_index=255, weight=weight)
+        losses["ds8"] = F.cross_entropy(inputs["ds8"], target_ds8, ignore_index=255, weight=weight)
+        losses["ds16"] = F.cross_entropy(inputs["ds16"], target_ds16, ignore_index=255, weight=weight)
 
-        return losses['ds4'] + 0.4 * losses['ds8'] + 0.4 * losses['ds16']
+        return losses["ds4"] + 0.4 * losses["ds8"] + 0.4 * losses["ds16"]
 
     # Testing - received classifier outputs with the same resolution as
     # the input image
@@ -82,20 +72,20 @@ def cross_entropy_icnet(inputs, target: torch.Tensor, weight: list):
 def do_model_specific_postprocessing(model_name, labels, model_outputs):
     # pylint:disable=no-member
     metric_outputs = model_outputs
-    if model_name == 'unet':
+    if model_name == "unet":
         # UNet predicts center image crops
         outputs_size_hw = (model_outputs.size()[2], model_outputs.size()[3])
         labels = center_crop(labels, outputs_size_hw).contiguous()
         metric_outputs = model_outputs
-    elif model_name == 'icnet':
+    elif model_name == "icnet":
         if isinstance(model_outputs, dict):
             # Training - received a dict with auxiliary classifier outputs which
             # are downsampled relative to the ground-truth labels and input image
             # Will only calculate metric for the highest-res (1/4 size)
             # output, upscaled to 1x size
-            metric_outputs = F.interpolate(model_outputs['ds4'], scale_factor=4)
+            metric_outputs = F.interpolate(model_outputs["ds4"], scale_factor=4)
     elif model_name in torchvision.models.segmentation.__dict__:
         # Torchvision segmentation models may output a dict of labels
         if isinstance(model_outputs, dict):
-            metric_outputs = model_outputs['out']
+            metric_outputs = model_outputs["out"]
     return labels, model_outputs, metric_outputs

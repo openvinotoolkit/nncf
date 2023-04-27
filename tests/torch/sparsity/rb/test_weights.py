@@ -38,9 +38,9 @@ def test_can_freeze_mask():
     assert sw.mask.requires_grad
 
 
-@pytest.mark.parametrize('frozen', (True, False), ids=('sparsify', 'frozen'))
+@pytest.mark.parametrize("frozen", (True, False), ids=("sparsify", "frozen"))
 class TestWithSparsify:
-    @pytest.mark.parametrize('is_train', (True, False), ids=('train', 'not_train'))
+    @pytest.mark.parametrize("is_train", (True, False), ids=("train", "not_train"))
     def test_mask_is_not_updated_on_forward(self, frozen, is_train):
         sw = RBSparsifyingWeight(1, frozen=frozen)
         if is_train:
@@ -50,11 +50,11 @@ class TestWithSparsify:
         sw.forward(w)
         assert torch.allclose(default_mask, sw.mask)
 
-    @pytest.mark.parametrize(('mask_value', 'ref_loss'),
-                             ((None, 1),
-                              (0, 0),
-                              (0.3, 1),
-                              (-0.3, 0)), ids=('default', 'zero', 'positive', 'negative'))
+    @pytest.mark.parametrize(
+        ("mask_value", "ref_loss"),
+        ((None, 1), (0, 0), (0.3, 1), (-0.3, 0)),
+        ids=("default", "zero", "positive", "negative"),
+    )
     def test_loss_value(self, mask_value, ref_loss, frozen):
         sw = RBSparsifyingWeight(1, frozen=frozen)
         if mask_value is not None:

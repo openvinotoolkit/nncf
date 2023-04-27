@@ -13,30 +13,36 @@
 from functools import partial
 
 import pytest
-from tests.torch.test_models import mobilenet_v2
 from torchvision.models import resnet50
 
 from examples.torch.common.models.classification.mobilenet_v2_cifar10 import mobilenet_v2_cifar10
 from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
+from tests.torch.nas.descriptors import THREE_CONV_TEST_DESC
 from tests.torch.nas.descriptors import ModelStats
 from tests.torch.nas.descriptors import MultiElasticityTestDesc
 from tests.torch.nas.descriptors import RefModelStats
-from tests.torch.nas.descriptors import THREE_CONV_TEST_DESC
 from tests.torch.nas.test_elastic_depth import DepthBasicConvTestModel
 from tests.torch.test_models import DenseNet121
+from tests.torch.test_models import mobilenet_v2
 
 RESNET50_BLOCK_TO_SKIP = [
-    ["ResNet/Sequential[layer1]/Bottleneck[1]/ReLU[relu]/relu__2",
-     "ResNet/Sequential[layer1]/Bottleneck[2]/ReLU[relu]/relu__2"],
+    [
+        "ResNet/Sequential[layer1]/Bottleneck[1]/ReLU[relu]/relu__2",
+        "ResNet/Sequential[layer1]/Bottleneck[2]/ReLU[relu]/relu__2",
+    ],
 ]
 
 MOBILENET_V2_BLOCKS_TO_SKIP = [
-    ["MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
-     "MobileNetV2/Sequential[features]/InvertedResidual[3]/__add___0"],
-    ["MobileNetV2/Sequential[features]/InvertedResidual[4]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
-     "MobileNetV2/Sequential[features]/InvertedResidual[5]/__add___0"]
+    [
+        "MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
+        "MobileNetV2/Sequential[features]/InvertedResidual[3]/__add___0",
+    ],
+    [
+        "MobileNetV2/Sequential[features]/InvertedResidual[4]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
+        "MobileNetV2/Sequential[features]/InvertedResidual[5]/__add___0",
+    ],
 ]
 
 LIST_OF_ME_DESCS = [
@@ -46,41 +52,41 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(651_599_872, 23_467_712),
             kernel_stage=ModelStats(651_599_872, 23_467_712),
             depth_stage=ModelStats(615_948_288, 23_398_080),
-            width_stage=ModelStats(22_717_056, 174_240)
+            width_stage=ModelStats(22_717_056, 174_240),
         ),
         blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
     ),
     MultiElasticityTestDesc(
-        name='resnet50_tv',
+        name="resnet50_tv",
         model_creator=partial(resnet50, num_classes=10),
         ref_model_stats=RefModelStats(
             supernet=ModelStats(166_862_848, 23_475_392),
             kernel_stage=ModelStats(162_930_688, 23_467_712),
             depth_stage=ModelStats(154_017_792, 23_398_080),
-            width_stage=ModelStats(5_679_744, 174_240)
+            width_stage=ModelStats(5_679_744, 174_240),
         ),
         blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
     ),
     MultiElasticityTestDesc(
-        name='mobilenet_tv',
+        name="mobilenet_tv",
         model_creator=partial(mobilenet_v2, num_classes=10),
         ref_model_stats=RefModelStats(
             supernet=ModelStats(12_249_856, 2_202_560),
             kernel_stage=ModelStats(12_249_856, 2_202_560),
             depth_stage=ModelStats(10_750_720, 2_180_336),
-            width_stage=ModelStats(1_717_376, 35_728)
+            width_stage=ModelStats(1_717_376, 35_728),
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),
     MultiElasticityTestDesc(
-        name='mobilenet_tv_imagenet',
+        name="mobilenet_tv_imagenet",
         input_sizes=[1, 3, 224, 224],
         model_creator=partial(mobilenet_v2, num_classes=1000),
         ref_model_stats=RefModelStats(
             supernet=ModelStats(601_548_544, 3_469_760),
             kernel_stage=ModelStats(601_548_544, 3_469_760),
             depth_stage=ModelStats(528_090_880, 3_447_536),
-            width_stage=ModelStats(84_184_064, 67_408)
+            width_stage=ModelStats(84_184_064, 67_408),
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),
@@ -90,18 +96,18 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(175_952_896, 2_202_560),
             kernel_stage=ModelStats(175_952_896, 2_202_560),
             depth_stage=ModelStats(151_966_720, 2_180_336),
-            width_stage=ModelStats(15_401_984, 88_144)
+            width_stage=ModelStats(15_401_984, 88_144),
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),
     MultiElasticityTestDesc(
         model_creator=DenseNet121,
-        name='densenet_121',
+        name="densenet_121",
         ref_model_stats=RefModelStats(
             supernet=ModelStats(1_776_701_440, 6_872_768),
             kernel_stage=ModelStats(1_776_701_440, 6_872_768),
             depth_stage=ModelStats(1_223_053_312, 6_602_432),
-            width_stage=ModelStats(358_165_120, 1_134_752)
+            width_stage=ModelStats(358_165_120, 1_134_752),
         ),
     ),
     THREE_CONV_TEST_DESC,
@@ -111,17 +117,21 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(317_250, 705),
             kernel_stage=ModelStats(122_850, 273),
             depth_stage=ModelStats(86_400, 192),
-            width_stage=ModelStats(12_600, 28)
+            width_stage=ModelStats(12_600, 28),
         ),
-        blocks_to_skip=[['DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
-                         'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0']],
+        blocks_to_skip=[
+            [
+                "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0",
+                "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0",
+            ]
+        ],
         input_sizes=DepthBasicConvTestModel.INPUT_SIZE,
-        algo_params={'width': {'min_width': 1, 'width_step': 1}},
+        algo_params={"width": {"min_width": 1, "width_step": 1}},
     ),
 ]
 
 
-@pytest.mark.parametrize('desc', LIST_OF_ME_DESCS, ids=map(str, LIST_OF_ME_DESCS))
+@pytest.mark.parametrize("desc", LIST_OF_ME_DESCS, ids=map(str, LIST_OF_ME_DESCS))
 def test_multi_elasticity_flops(desc: MultiElasticityTestDesc):
     model, ctrl = create_bnas_model_and_ctrl_by_test_desc(desc)
     ref_model_stats = desc.ref_model_stats

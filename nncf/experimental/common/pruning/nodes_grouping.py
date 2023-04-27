@@ -14,62 +14,50 @@
 from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import (
-    Any,
-    Optional,
-    Dict,
-    List,
-    Set
-)
-from typing import (
-    Any,
-    Optional,
-    Dict,
-    List,
-    Set
-)
+from typing import Any, Dict, List, Optional, Set
 
-from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.experimental.common.graph.netron import save_for_netron
-from nncf.experimental.common.pruning.propagation_data import (
-    ConsumerInfo,
-    ProducerInfo,
-    PruningBlock,
-    PropagationGroup,
-    PropagationMask,
-)
 from nncf.experimental.common.pruning.block_hierarchy import BlockHierarchy
+from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
+from nncf.experimental.common.pruning.propagation_data import ProducerInfo
+from nncf.experimental.common.pruning.propagation_data import PropagationGroup
+from nncf.experimental.common.pruning.propagation_data import PropagationMask
+from nncf.experimental.common.pruning.propagation_data import PruningBlock
+
 
 @dataclass
 class PruningGroup:
     """
     Group of pruning blocks that is obtained after propagation.
     """
+
     block: PruningBlock
     producers: Set[ProducerInfo]
     consumers: Set[ConsumerInfo]
 
-
-    def __eq__(self, other: 'PruningGroup'):
+    def __eq__(self, other: "PruningGroup"):
         return self.block == other.block and self.producers == other.producers and self.consumers == other.consumers
 
     @classmethod
-    def from_propagation_group(cls, group: PropagationGroup) -> 'PruningGroup':
+    def from_propagation_group(cls, group: PropagationGroup) -> "PruningGroup":
         """
         Creates an object by taking all necessary information from PropagationGroup.
         """
         return cls(copy(group.block), group.get_producers(), group.get_consumers())
 
 
-def get_pruning_groups(graph: NNCFGraph,
-                       pruning_operations_metatypes: PruningOperationsMetatypeRegistry,
-                       prune_operations_types: List[str],
-                       dump_dir: Optional[Path] = None) -> List[PruningGroup]:
+def get_pruning_groups(
+    graph: NNCFGraph,
+    pruning_operations_metatypes: PruningOperationsMetatypeRegistry,
+    prune_operations_types: List[str],
+    dump_dir: Optional[Path] = None,
+) -> List[PruningGroup]:
     """
     Determines how nodes of the given types should be pruned: which nodes should be pruned together, along which
     dimension, how many sequent channels with which offset. It's done by initializing PropagationMask's on the
@@ -96,26 +84,19 @@ def get_pruning_groups(graph: NNCFGraph,
         output_tensors_shape = output_tensors_shapes[0]
         # TODO: (107663) generalize by introducing get_output_dim_affected_by_compression for layer_attributes
         target_output_dim_for_compression = len(output_tensors_shape) - 1
-        root_group = PropagationGroup(
-            block=PruningBlock(),
-            producers={ProducerInfo(node.node_id, pruning_dim)}
-        )
-        mask = PropagationMask(
-            dim_groups_map={
-                target_output_dim_for_compression: [root_group]
-            }
-        )
+        root_group = PropagationGroup(block=PruningBlock(), producers={ProducerInfo(node.node_id, pruning_dim)})
+        mask = PropagationMask(dim_groups_map={target_output_dim_for_compression: [root_group]})
         roots[node.node_id] = root_group
-        node.data['output_mask'] = mask
+        node.data["output_mask"] = mask
 
     def get_attributes_fn(node: NNCFNode) -> Dict[str, Any]:
-        result = {'metatype': str(node.metatype.name), 'node_id': str(node.node_id)}
+        result = {"metatype": str(node.metatype.name), "node_id": str(node.node_id)}
         if node.layer_attributes:
             result.update(map(lambda pair: (pair[0], str(pair[1])), node.layer_attributes.__dict__.items()))
-        if 'output_mask' in node.data:
-            output_mask = node.data['output_mask']
+        if "output_mask" in node.data:
+            output_mask = node.data["output_mask"]
             if output_mask:
-                result['output_mask'] = str(output_mask)
+                result["output_mask"] = str(output_mask)
         return result
 
     try:
@@ -124,8 +105,8 @@ def get_pruning_groups(graph: NNCFGraph,
     finally:
         block_hierarchy = BlockHierarchy(list(roots.values()))
         if dump_dir is not None:
-            block_hierarchy.visualize_graph(dump_dir / 'latest_block_group_hierarchy.dot')
-            save_for_netron(graph, str(dump_dir / 'latest_propagated_graph.xml'), get_attributes_fn=get_attributes_fn)
+            block_hierarchy.visualize_graph(dump_dir / "latest_block_group_hierarchy.dot")
+            save_for_netron(graph, str(dump_dir / "latest_propagated_graph.xml"), get_attributes_fn=get_attributes_fn)
 
     propagation_groups = block_hierarchy.get_groups_on_leaves()
     not_invalid_groups = filter(lambda group: not group.is_invalid, propagation_groups)

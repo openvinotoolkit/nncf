@@ -12,8 +12,7 @@
 """
 from collections import Counter
 from copy import deepcopy
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
 import pytest
 import torch
@@ -70,14 +69,14 @@ def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
     assert qspec.num_bits == quantizer.num_bits
     assert isinstance(quantizer, QUANTIZATION_MODULES.get(qspec.mode))
     assert qspec.scale_shape == quantizer.scale_shape
-    #pylint:disable=protected-access
+    # pylint:disable=protected-access
     assert qspec.signedness_to_force == quantizer._signedness_to_force
 
 
 def test_quantization_configs__with_defaults():
     model = BasicConvTestModel()
     config = get_quantization_config_without_range_init()
-    config['compression']['overflow_fix'] = 'disable'
+    config["compression"]["overflow_fix"] = "disable"
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -85,23 +84,27 @@ def test_quantization_configs__with_defaults():
     weight_quantizers = compression_ctrl.weight_quantizers
     activation_quantizer_infos = compression_ctrl.non_weight_quantizers
 
-    ref_weight_qspec = PTQuantizerSpec(num_bits=8,
-                                       mode=QuantizationMode.SYMMETRIC,
-                                       signedness_to_force=True,
-                                       narrow_range=True,
-                                       half_range=False,
-                                       scale_shape=model.wq_scale_shape_per_channel,
-                                       logarithm_scale=False)
+    ref_weight_qspec = PTQuantizerSpec(
+        num_bits=8,
+        mode=QuantizationMode.SYMMETRIC,
+        signedness_to_force=True,
+        narrow_range=True,
+        half_range=False,
+        scale_shape=model.wq_scale_shape_per_channel,
+        logarithm_scale=False,
+    )
     for wq_info in weight_quantizers.values():
         compare_qspecs(ref_weight_qspec, wq_info.quantizer_module_ref)
 
-    ref_activation_qspec = PTQuantizerSpec(num_bits=8,
-                                           mode=QuantizationMode.SYMMETRIC,
-                                           signedness_to_force=None,
-                                           narrow_range=False,
-                                           half_range=False,
-                                           scale_shape=(1, ),
-                                           logarithm_scale=False)
+    ref_activation_qspec = PTQuantizerSpec(
+        num_bits=8,
+        mode=QuantizationMode.SYMMETRIC,
+        signedness_to_force=None,
+        narrow_range=False,
+        half_range=False,
+        scale_shape=(1,),
+        logarithm_scale=False,
+    )
     for aq_info in activation_quantizer_infos.values():
         compare_qspecs(ref_activation_qspec, aq_info.quantizer_module_ref)
 
@@ -110,19 +113,17 @@ def test_quantization_configs__custom():
     model = BasicConvTestModel()
 
     config = get_quantization_config_without_range_init()
-    config['compression'].update({
-        "weights": {
-            "mode": "asymmetric",
-            "per_channel": True,
-            "bits": 4
-        },
-        "activations": {
-            "mode": "asymmetric",
-            "bits": 4,
-            "signed": True,
-        },
-    })
-    config['target_device'] = 'TRIAL'
+    config["compression"].update(
+        {
+            "weights": {"mode": "asymmetric", "per_channel": True, "bits": 4},
+            "activations": {
+                "mode": "asymmetric",
+                "bits": 4,
+                "signed": True,
+            },
+        }
+    )
+    config["target_device"] = "TRIAL"
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -130,38 +131,42 @@ def test_quantization_configs__custom():
     weight_quantizers = compression_ctrl.weight_quantizers
     activation_quantizer_infos = compression_ctrl.non_weight_quantizers
 
-    ref_weight_qspec = PTQuantizerSpec(num_bits=4,
-                                       mode=QuantizationMode.ASYMMETRIC,
-                                       signedness_to_force=None,
-                                       scale_shape=model.wq_scale_shape_per_channel,
-                                       narrow_range=False,
-                                       half_range=False,
-                                       logarithm_scale=False)
+    ref_weight_qspec = PTQuantizerSpec(
+        num_bits=4,
+        mode=QuantizationMode.ASYMMETRIC,
+        signedness_to_force=None,
+        scale_shape=model.wq_scale_shape_per_channel,
+        narrow_range=False,
+        half_range=False,
+        logarithm_scale=False,
+    )
     for wq_info in weight_quantizers.values():
         compare_qspecs(ref_weight_qspec, wq_info.quantizer_module_ref)
 
-    ref_activation_qspec = PTQuantizerSpec(num_bits=4,
-                                           mode=QuantizationMode.ASYMMETRIC,
-                                           signedness_to_force=True,
-                                           scale_shape=(1, ),
-                                           narrow_range=False,
-                                           half_range=False,
-                                           logarithm_scale=False)
+    ref_activation_qspec = PTQuantizerSpec(
+        num_bits=4,
+        mode=QuantizationMode.ASYMMETRIC,
+        signedness_to_force=True,
+        scale_shape=(1,),
+        narrow_range=False,
+        half_range=False,
+        logarithm_scale=False,
+    )
 
     for aq_info in activation_quantizer_infos.values():
         compare_qspecs(ref_activation_qspec, aq_info.quantizer_module_ref)
 
 
-def compare_weights_activation_quantizers_pairs(actual_pairs: List[Tuple[List[WeightQuantizerId],
-                                                                         NonWeightQuantizerId]],
-                                                algo, ref_pair_names, model_name):
+def compare_weights_activation_quantizers_pairs(
+    actual_pairs: List[Tuple[List[WeightQuantizerId], NonWeightQuantizerId]], algo, ref_pair_names, model_name
+):
     def get_wq_name(name):
-        return '/'.join([model_name, name])
+        return "/".join([model_name, name])
 
     def get_aq_name(name):
-        if name == '/nncf_model_input_0':
-            return name  + '|OUTPUT'
-        return '/'.join([model_name, name]) + '|OUTPUT'
+        if name == "/nncf_model_input_0":
+            return name + "|OUTPUT"
+        return "/".join([model_name, name]) + "|OUTPUT"
 
     all_quantizations = {str(key): quantizer for key, quantizer in algo.all_quantizations.items()}
     assert len(actual_pairs) == len(ref_pair_names)
@@ -185,14 +190,14 @@ def test_can_load_quant_algo__with_defaults():
 
     quant_model, _ = create_compressed_model_and_algo_for_test(deepcopy(model), config)
 
-    model_conv = get_all_modules_by_type(model, 'Conv2d')
-    quant_model_conv = get_all_modules_by_type(quant_model, 'NNCFConv2d')
+    model_conv = get_all_modules_by_type(model, "Conv2d")
+    quant_model_conv = get_all_modules_by_type(quant_model, "NNCFConv2d")
     assert len(model_conv) == len(quant_model_conv)
 
     for module_scope, _ in model_conv.items():
         quant_scope = deepcopy(module_scope)  # type: Scope
         quant_scope.pop()
-        quant_scope.push(ScopeElement('NNCFConv2d', 'conv'))
+        quant_scope.push(ScopeElement("NNCFConv2d", "conv"))
         assert quant_scope in quant_model_conv.keys()
 
         store = []
@@ -216,7 +221,7 @@ def test_can_create_quant_loss_and_scheduler():
 
 
 def get_path_to_keys(tmp_path, rank):
-    return '{}_{}'.format(tmp_path, str(rank))
+    return "{}_{}".format(tmp_path, str(rank))
 
 
 def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
@@ -224,7 +229,7 @@ def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
     _, qctrl = create_compressed_model_and_algo_for_test(model, config)
     path = get_path_to_keys(tmp_path, current_gpu)
     print(path)
-    with open(path, 'w', encoding='utf8') as f:
+    with open(path, "w", encoding="utf8") as f:
         for aq_id in qctrl.non_weight_quantizers:
             f.writelines("%s\n" % str(aq_id))
 
@@ -233,19 +238,18 @@ def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path, runs_su
     if not torch.cuda.is_available():
         pytest.skip("Skipping CUDA test cases for CPU only setups")
     config = get_empty_config(input_sample_sizes=[1, 3, 224, 224])
-    config['compression'] = {'algorithm': 'quantization', "initializer": {"range": {"num_init_samples": 0}}}
+    config["compression"] = {"algorithm": "quantization", "initializer": {"range": {"num_init_samples": 0}}}
     register_bn_adaptation_init_args(config)
     ngpus_per_node = torch.cuda.device_count()
 
-    torch.multiprocessing.spawn(activation_quantizers_dumping_worker,
-                                nprocs=ngpus_per_node,
-                                args=(config, tmp_path),
-                                join=True)
+    torch.multiprocessing.spawn(
+        activation_quantizers_dumping_worker, nprocs=ngpus_per_node, args=(config, tmp_path), join=True
+    )
 
-    with open(get_path_to_keys(tmp_path, 0), 'r', encoding='utf8') as f:
+    with open(get_path_to_keys(tmp_path, 0), "r", encoding="utf8") as f:
         ref_list = f.readlines()
     for i in range(1, ngpus_per_node):
-        with open(get_path_to_keys(tmp_path, i), 'r', encoding='utf8') as f:
+        with open(get_path_to_keys(tmp_path, i), "r", encoding="utf8") as f:
             curr_list = f.readlines()
             assert curr_list == ref_list
 
@@ -257,10 +261,13 @@ def test_load_state_sets_initialized_flag():
     model = TwoConvTestModel()
     quant_model, qctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    load_state(quant_model, {
-        'module.features.0.0.pre_ops.0.op.signed_tensor': torch.tensor([1.0]),  # quantizer of 1st conv's weights
-        'module.features.1.0.pre_ops.0.op.scale': torch.ones(1, 1, 1, 1)  # quantizer of 2nd conv's weights
-    })
+    load_state(
+        quant_model,
+        {
+            "module.features.0.0.pre_ops.0.op.signed_tensor": torch.tensor([1.0]),  # quantizer of 1st conv's weights
+            "module.features.1.0.pre_ops.0.op.scale": torch.ones(1, 1, 1, 1),  # quantizer of 2nd conv's weights
+        },
+    )
 
     for wq_info in qctrl.weight_quantizers.values():
         assert wq_info.quantizer_module_ref.initialized
@@ -281,7 +288,7 @@ def test_quantizers_have_proper_narrow_range_set():
 
     model = Model()
     config = get_quantization_config_without_range_init(model_size=2)
-    config['compression']['overflow_fix'] = 'disable'
+    config["compression"]["overflow_fix"] = "disable"
     register_bn_adaptation_init_args(config)
     quant_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
@@ -291,7 +298,8 @@ def test_quantizers_have_proper_narrow_range_set():
                 assert isinstance(op, (UpdateWeight, UpdateInputs))
                 assert op.operand.narrow_range == isinstance(op, UpdateWeight)
     for _, aq in quant_model.nncf.get_compression_modules_by_type(
-            ExtraCompressionModuleType.EXTERNAL_QUANTIZER).items():
+        ExtraCompressionModuleType.EXTERNAL_QUANTIZER
+    ).items():
         assert aq.narrow_range is False
 
 
@@ -390,24 +398,24 @@ def test_quantize_inputs():
         },
         {
             "sample_size": [2, 3, 32, 32],
-        }
+        },
     ]
     register_bn_adaptation_init_args(config)
 
     model, qctrl = create_compressed_model_and_algo_for_test(model, config)
     REF_QUANTIZED_INPUT_MODULE_SCOPES = [
-        '/nncf_model_input_0|OUTPUT',
-        '/nncf_model_input_1|OUTPUT',
-        '/nncf_model_input_2|OUTPUT',
-        '/nncf_model_input_3|OUTPUT',
-        '/nncf_model_input_4|OUTPUT'
+        "/nncf_model_input_0|OUTPUT",
+        "/nncf_model_input_1|OUTPUT",
+        "/nncf_model_input_2|OUTPUT",
+        "/nncf_model_input_3|OUTPUT",
+        "/nncf_model_input_4|OUTPUT",
     ]
 
     actual_input_quantizer_str_scopes = []
     for aq_id, aq_info in qctrl.non_weight_quantizers.items():
         for target_point in aq_info.affected_insertions:
             quantizer_target_node_name = str(target_point.target_node_name)
-            if 'nncf_model_input' in quantizer_target_node_name:
+            if "nncf_model_input" in quantizer_target_node_name:
                 actual_input_quantizer_str_scopes.append(quantizer_target_node_name)
 
     assert len(REF_QUANTIZED_INPUT_MODULE_SCOPES) == len(actual_input_quantizer_str_scopes)
@@ -423,73 +431,61 @@ def test_quantize_inputs():
         assert isinstance(quantizer, SymmetricQuantizer)
 
 
-
 @pytest.mark.parametrize(
-    ('requanting_qconf', 'base_qconf', 'is_valid_requant'),
+    ("requanting_qconf", "base_qconf", "is_valid_requant"),
     (
         (QuantizerConfig(), QuantizerConfig(), True),
-
         (QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=6), False),
         (QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8), True),
-
         # Technically placing a per-channel quantization after a per-tensor should not break
         # anything or limit the set of output values w.r.t to a single per-tensor quantizer.
         (QuantizerConfig(num_bits=6, per_channel=True), QuantizerConfig(num_bits=6, per_channel=False), True),
         (QuantizerConfig(num_bits=6, per_channel=False), QuantizerConfig(num_bits=6, per_channel=True), True),
-
         (QuantizerConfig(num_bits=5, per_channel=True), QuantizerConfig(num_bits=6, per_channel=False), True),
         (QuantizerConfig(num_bits=5, per_channel=False), QuantizerConfig(num_bits=6, per_channel=True), True),
-
         (
-                QuantizerConfig(num_bits=5, mode=QuantizationMode.SYMMETRIC),
-                QuantizerConfig(num_bits=5, mode=QuantizationMode.ASYMMETRIC),
-                True
+            QuantizerConfig(num_bits=5, mode=QuantizationMode.SYMMETRIC),
+            QuantizerConfig(num_bits=5, mode=QuantizationMode.ASYMMETRIC),
+            True,
         ),
         (
-                QuantizerConfig(num_bits=5, mode=QuantizationMode.ASYMMETRIC),
-                QuantizerConfig(num_bits=5, mode=QuantizationMode.SYMMETRIC),
-                False
+            QuantizerConfig(num_bits=5, mode=QuantizationMode.ASYMMETRIC),
+            QuantizerConfig(num_bits=5, mode=QuantizationMode.SYMMETRIC),
+            False,
         ),
-
-
         (QuantizerConfig(signedness_to_force=True), QuantizerConfig(), True),
         (QuantizerConfig(), QuantizerConfig(signedness_to_force=True), False),
-
         (QuantizerConfig(signedness_to_force=False), QuantizerConfig(), True),
         (QuantizerConfig(), QuantizerConfig(signedness_to_force=False), False),
-
         (QuantizerConfig(signedness_to_force=True), QuantizerConfig(signedness_to_force=False), False),
         (QuantizerConfig(signedness_to_force=False), QuantizerConfig(signedness_to_force=True), True),
-
         (
             QuantizerConfig(num_bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
             QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
-            True
+            True,
         ),
-
         (
             QuantizerConfig(num_bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
             QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
-            True
+            True,
         ),
-
         # Neither of the two configs here can requantize the other
         (
             QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC),
             QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
-            False
+            False,
         ),
         (
             QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
             QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC),
-            False
-        )
-    )
+            False,
+        ),
+    ),
 )
-def test_quantizer_ordering(requanting_qconf: QuantizerConfig,
-                            base_qconf: QuantizerConfig, is_valid_requant: bool):
+def test_quantizer_ordering(requanting_qconf: QuantizerConfig, base_qconf: QuantizerConfig, is_valid_requant: bool):
     test_result = requanting_qconf.is_valid_requantization_for(base_qconf)
     assert test_result == is_valid_requant
+
 
 class QuantizeOutputsTestModel(nn.Module):
     def __init__(self):
@@ -499,7 +495,6 @@ class QuantizeOutputsTestModel(nn.Module):
         self.conv3 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
         self.conv4 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
         self.conv5 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
-
 
     def forward(self, x):
         self.conv5(x)
@@ -514,17 +509,18 @@ def test_quantize_outputs():
         }
     ]
     model = QuantizeOutputsTestModel()
-    config['compression']['quantize_outputs'] = True
+    config["compression"]["quantize_outputs"] = True
     register_bn_adaptation_init_args(config)
     model, qctrl = create_compressed_model_and_algo_for_test(model, config)
     REF_QUANTIZED_OUTPUT_MODULE_SCOPES = [
-        'QuantizeOutputsTestModel/NNCFConv2d[conv1]/conv2d_0|OUTPUT',
-        'QuantizeOutputsTestModel/NNCFConv2d[conv2]/conv2d_0|OUTPUT',
-        'QuantizeOutputsTestModel/NNCFConv2d[conv3]/conv2d_0|OUTPUT',
-        'QuantizeOutputsTestModel/NNCFConv2d[conv4]/conv2d_0|OUTPUT'
+        "QuantizeOutputsTestModel/NNCFConv2d[conv1]/conv2d_0|OUTPUT",
+        "QuantizeOutputsTestModel/NNCFConv2d[conv2]/conv2d_0|OUTPUT",
+        "QuantizeOutputsTestModel/NNCFConv2d[conv3]/conv2d_0|OUTPUT",
+        "QuantizeOutputsTestModel/NNCFConv2d[conv4]/conv2d_0|OUTPUT",
     ]
-    actual_output_quantizer_str_scopes =\
-         [str(aq_id) for aq_id in qctrl.non_weight_quantizers if 'nncf_model_input' not in str(aq_id)]
+    actual_output_quantizer_str_scopes = [
+        str(aq_id) for aq_id in qctrl.non_weight_quantizers if "nncf_model_input" not in str(aq_id)
+    ]
     assert len(REF_QUANTIZED_OUTPUT_MODULE_SCOPES) == len(actual_output_quantizer_str_scopes)
 
     for ref_qinput_scope_str in REF_QUANTIZED_OUTPUT_MODULE_SCOPES:
@@ -545,9 +541,9 @@ def test_quantize_outputs_with_scope_overrides():
         }
     ]
     model = QuantizeOutputsTestModel()
-    config['compression']['quantize_outputs'] = True
-    config['target_device'] = "TRIAL"
-    config['compression']['scope_overrides'] = {
+    config["compression"]["quantize_outputs"] = True
+    config["target_device"] = "TRIAL"
+    config["compression"]["scope_overrides"] = {
         "activations": {
             "/nncf_model_output_0": {
                 "bits": 4,
@@ -557,8 +553,7 @@ def test_quantize_outputs_with_scope_overrides():
     }
     register_bn_adaptation_init_args(config)
     model, ctrl = create_compressed_model_and_algo_for_test(model, config)
-    output_quantizers =\
-        [q for qid, q in ctrl.all_quantizations.items() if isinstance(qid, NonWeightQuantizerId)]
+    output_quantizers = [q for qid, q in ctrl.all_quantizations.items() if isinstance(qid, NonWeightQuantizerId)]
     for q in output_quantizers[1:]:
         assert q.num_bits == 8
         assert isinstance(q, SymmetricQuantizer)
@@ -573,8 +568,7 @@ def test_debug_mode():
     model = BasicConvTestModel()
     with nncf_debug():
         model, _ = create_compressed_model_and_algo_for_test(model, config)
-        model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE,
-                                  device=get_model_device(model)))
+        model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE, device=get_model_device(model)))
 
 
 class SharedLayersModel(torch.nn.Module):
@@ -600,75 +594,80 @@ def test_shared_layers_are_weight_quantized_only_once():
 
 TEST_QUANTIZATION_PRESET_STRUCT = [
     {
-        'preset': 'performance',
-        'target_device': 'CPU',
-        'overrided_param' : {},
-        'expected_weights_q': SymmetricQuantizer,
-        'expected_activations_q': SymmetricQuantizer
+        "preset": "performance",
+        "target_device": "CPU",
+        "overrided_param": {},
+        "expected_weights_q": SymmetricQuantizer,
+        "expected_activations_q": SymmetricQuantizer,
     },
     {
-        'preset': 'mixed',
-        'target_device': 'CPU',
-        'overrided_param' : {},
-        'expected_weights_q': SymmetricQuantizer,
-        'expected_activations_q': AsymmetricQuantizer
+        "preset": "mixed",
+        "target_device": "CPU",
+        "overrided_param": {},
+        "expected_weights_q": SymmetricQuantizer,
+        "expected_activations_q": AsymmetricQuantizer,
     },
     {
-        'preset': 'performance',
-        'target_device': 'GPU',
-        'overrided_param' : {},
-        'expected_weights_q': SymmetricQuantizer,
-        'expected_activations_q': SymmetricQuantizer
+        "preset": "performance",
+        "target_device": "GPU",
+        "overrided_param": {},
+        "expected_weights_q": SymmetricQuantizer,
+        "expected_activations_q": SymmetricQuantizer,
     },
     {
-        'preset': 'mixed',
-        'target_device': 'GPU',
-        'overrided_param' : {},
-        'expected_weights_q': SymmetricQuantizer,
-        'expected_activations_q': AsymmetricQuantizer
+        "preset": "mixed",
+        "target_device": "GPU",
+        "overrided_param": {},
+        "expected_weights_q": SymmetricQuantizer,
+        "expected_activations_q": AsymmetricQuantizer,
     },
     {
-        'preset': 'performance',
-        'target_device': 'CPU',
-        'overrided_param' : {'weights': {'mode': 'asymmetric'}},
-        'expected_weights_q': AsymmetricQuantizer,
-        'expected_activations_q': SymmetricQuantizer
-    }]
+        "preset": "performance",
+        "target_device": "CPU",
+        "overrided_param": {"weights": {"mode": "asymmetric"}},
+        "expected_weights_q": AsymmetricQuantizer,
+        "expected_activations_q": SymmetricQuantizer,
+    },
+]
 
-@pytest.mark.parametrize('data', TEST_QUANTIZATION_PRESET_STRUCT)
+
+@pytest.mark.parametrize("data", TEST_QUANTIZATION_PRESET_STRUCT)
 def test_quantization_preset(data):
     model = BasicConvTestModel()
     config = get_empty_config(input_sample_sizes=[1, 1, 4, 4])
-    config['target_device']  = data['target_device']
-    config['compression'] = {'algorithm': 'quantization', 'preset': data['preset']}
-    config['compression'].update(data['overrided_param'])
+    config["target_device"] = data["target_device"]
+    config["compression"] = {"algorithm": "quantization", "preset": data["preset"]}
+    config["compression"].update(data["overrided_param"])
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     for wq_info in compression_ctrl.weight_quantizers.values():
-        assert isinstance(wq_info.quantizer_module_ref, data['expected_weights_q'])
+        assert isinstance(wq_info.quantizer_module_ref, data["expected_weights_q"])
 
     for aq_info in compression_ctrl.non_weight_quantizers.values():
-        assert isinstance(aq_info.quantizer_module_ref, data['expected_activations_q'])
+        assert isinstance(aq_info.quantizer_module_ref, data["expected_activations_q"])
+
 
 def test_quantization_preset_with_scope_overrides():
     model = QuantizeOutputsTestModel()
     config = get_empty_config(input_sample_sizes=[2, 3, 32, 32])
-    config['target_device'] = "TRIAL"
-    config['compression'] = {'algorithm': 'quantization',
-                             'preset': 'mixed',
-                             'scope_overrides': {
-                                 'weights': {
-                                    'QuantizeOutputsTestModel/NNCFConv2d[conv5]/conv2d_0': {
-                                        "mode": "asymmetric",
-                                    }}
-                             }}
+    config["target_device"] = "TRIAL"
+    config["compression"] = {
+        "algorithm": "quantization",
+        "preset": "mixed",
+        "scope_overrides": {
+            "weights": {
+                "QuantizeOutputsTestModel/NNCFConv2d[conv5]/conv2d_0": {
+                    "mode": "asymmetric",
+                }
+            }
+        },
+    }
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     for wq_info in compression_ctrl.weight_quantizers.values():
-        if wq_info.affected_insertions[0].target_node_name !=\
-             'QuantizeOutputsTestModel/NNCFConv2d[conv5]/conv2d_0':
+        if wq_info.affected_insertions[0].target_node_name != "QuantizeOutputsTestModel/NNCFConv2d[conv5]/conv2d_0":
             assert isinstance(wq_info.quantizer_module_ref, SymmetricQuantizer)
         else:
             assert isinstance(wq_info.quantizer_module_ref, AsymmetricQuantizer)
@@ -680,22 +679,22 @@ def test_quantization_preset_with_scope_overrides():
 def test_quantization_can_be_run_with_no_data_loaders_if_zero_init_samples():
     model = BasicConvTestModel()
     # Should complete successfully even though no loaders have been registered into the config.
-    _, _ = create_compressed_model_and_algo_for_test(model, NNCFConfig.from_dict({
-        'input_info': {
-            'sample_size': [1, 1, 4, 4]
-        },
-        'compression': {
-            'algorithm': 'quantization',
-            'initializer': {
-                'range': {
-                    'num_init_samples': 0
+    _, _ = create_compressed_model_and_algo_for_test(
+        model,
+        NNCFConfig.from_dict(
+            {
+                "input_info": {"sample_size": [1, 1, 4, 4]},
+                "compression": {
+                    "algorithm": "quantization",
+                    "initializer": {
+                        "range": {"num_init_samples": 0},
+                        "batchnorm_adaptation": {"num_bn_adaptation_samples": 0},
+                    },
                 },
-                'batchnorm_adaptation': {
-                    'num_bn_adaptation_samples': 0
-                }
             }
-        }
-    }))
+        ),
+    )
+
 
 if parse_version(torch.__version__).base_version <= parse_version("1.9.1").base_version:
     from torch.cuda.amp import autocast
@@ -745,23 +744,13 @@ class TestHalfPrecisionModels:
         config = get_quantization_config_without_range_init(model_size=1)
 
         # Make sure that both symmetric and asymmetric quantizers appear in the model
-        config['compression']['scope_overrides'] = {
-            "activations": {
-                "{re}.*conv_first.*": {"mode": "asymmetric"},
-                "{re}.*conv_second.*": {"mode": "symmetric"}
-            },
-            "weights": {
-                "{re}.*conv_first.*": {"mode": "asymmetric"},
-                "{re}.*conv_second.*": {"mode": "symmetric"}
-            },
+        config["compression"]["scope_overrides"] = {
+            "activations": {"{re}.*conv_first.*": {"mode": "asymmetric"}, "{re}.*conv_second.*": {"mode": "symmetric"}},
+            "weights": {"{re}.*conv_first.*": {"mode": "asymmetric"}, "{re}.*conv_second.*": {"mode": "symmetric"}},
         }
-        config['compression']['initializer'] = {
-            'range': {
-                "num_init_samples": 2
-            },
-            "batchnorm_adaptation": {
-                "num_bn_adaptation_samples": 1
-            }
+        config["compression"]["initializer"] = {
+            "range": {"num_init_samples": 2},
+            "batchnorm_adaptation": {"num_bn_adaptation_samples": 1},
         }
         data_loader = create_ones_mock_dataloader(config)
         config = register_default_init_args(config, data_loader)
@@ -779,8 +768,9 @@ class TestHalfPrecisionModels:
         # Should complete successfully, including init.
         compressed_model(inputs)
 
-    @pytest.mark.parametrize('device',
-        [pytest.param("cuda"), pytest.param("cpu", marks=pytest.mark.skip(reason="CVS-86697"))])
+    @pytest.mark.parametrize(
+        "device", [pytest.param("cuda"), pytest.param("cpu", marks=pytest.mark.skip(reason="CVS-86697"))]
+    )
     def test_manual_partial_half_precision_model(self, initializing_config: NNCFConfig, device: str):
         model = TestHalfPrecisionModels.ModelWithManualPartialHalfPrecision()
         inputs = torch.ones([1, 1, 1, 1])
@@ -809,51 +799,50 @@ class TestHalfPrecisionModels:
         with autocast():
             # Should complete successfully.
             result = compressed_model(inputs)
-            if torch.is_autocast_enabled(): # For torch <= 1.9.1 and CPU the autocast context won't have effect
+            if torch.is_autocast_enabled():  # For torch <= 1.9.1 and CPU the autocast context won't have effect
                 assert result.dtype == torch.float16
 
 
-@pytest.mark.parametrize('update_config_info, should_ignore_quantizers', [
-    (
-            {}, []
-    ),
-    (
+@pytest.mark.parametrize(
+    "update_config_info, should_ignore_quantizers",
+    [
+        ({}, []),
+        (
             {"ignored_scopes": ["LeNet/relu_1"]},
-            []  # ignoring second op in the pattern doesn't lead to exclusion of quantization first op
-    ),
-    (
+            [],  # ignoring second op in the pattern doesn't lead to exclusion of quantization first op
+        ),
+        (
             {"activations": {"ignored_scopes": ["LeNet/relu_1"]}},
-            []  # ignoring second op in the pattern doesn't lead to exclusion of quantization first op
-    ),
-    (
+            [],  # ignoring second op in the pattern doesn't lead to exclusion of quantization first op
+        ),
+        (
             {"ignored_scopes": ["LeNet/NNCFConv2d[conv2]/conv2d_0"]},
-            ["LeNet/relu_0", "LeNet/NNCFConv2d[conv2]/conv2d_0"]
-    ),
-    (
-            {"activations": {"ignored_scopes": ["LeNet/NNCFConv2d[conv2]/conv2d_0"]}},
-            ["LeNet/relu_0"]
-    )
-])
+            ["LeNet/relu_0", "LeNet/NNCFConv2d[conv2]/conv2d_0"],
+        ),
+        ({"activations": {"ignored_scopes": ["LeNet/NNCFConv2d[conv2]/conv2d_0"]}}, ["LeNet/relu_0"]),
+    ],
+)
 def test_activation_ignored_scope(update_config_info, should_ignore_quantizers):
     model = LeNet()
-    all_quantization_names = ["LeNet/NNCFConv2d[conv1]/conv2d_0",
-                              "LeNet/NNCFConv2d[conv2]/conv2d_0",
-                              "LeNet/NNCFLinear[fc1]/linear_0",
-                              "LeNet/NNCFLinear[fc2]/linear_0",
-                              "LeNet/NNCFLinear[fc3]/linear_0",
-                              "/nncf_model_input_0",
-                              "LeNet/relu_0",
-                              "LeNet/relu_1",
-                              "LeNet/relu_2",
-                              "LeNet/relu_3"]
+    all_quantization_names = [
+        "LeNet/NNCFConv2d[conv1]/conv2d_0",
+        "LeNet/NNCFConv2d[conv2]/conv2d_0",
+        "LeNet/NNCFLinear[fc1]/linear_0",
+        "LeNet/NNCFLinear[fc2]/linear_0",
+        "LeNet/NNCFLinear[fc3]/linear_0",
+        "/nncf_model_input_0",
+        "LeNet/relu_0",
+        "LeNet/relu_1",
+        "LeNet/relu_2",
+        "LeNet/relu_3",
+    ]
     ref_quantization_names = list(filter(lambda x: x not in should_ignore_quantizers, all_quantization_names))
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
     config["compression"].update(update_config_info)
     train_loader = create_random_mock_dataloader(config, num_samples=10)
     config = register_default_init_args(config, train_loader)
     ctrl, _ = create_compressed_model(model, config)
-    assert Counter([item.target_node_name for item in ctrl.all_quantizations.keys()]) == \
-           Counter(ref_quantization_names)
+    assert Counter([item.target_node_name for item in ctrl.all_quantizations.keys()]) == Counter(ref_quantization_names)
 
 
 def test_sync_of_level_ranges_and_signed_parameter():
@@ -861,12 +850,11 @@ def test_sync_of_level_ranges_and_signed_parameter():
         num_bits=4,
         mode=QuantizationMode.SYMMETRIC,
         signedness_to_force=None,
-        scale_shape=(1, ),
+        scale_shape=(1,),
         narrow_range=False,
         half_range=False,
-        logarithm_scale=False
+        logarithm_scale=False,
     )
-
 
     sq = SymmetricQuantizer(qspec)
     # Check if the default values are different from the values to be loaded.
@@ -905,21 +893,16 @@ class ModelWithUserModule(torch.nn.Module):
 
 
 def test_can_quantize_user_module_with_addmm():
-    nncf_config = NNCFConfig.from_dict({
-        "input_info": {
-            "sample_size": [1, 1]
-        },
-        "compression":
-            {
-                "algorithm": "quantization"
-            }
-    })
+    nncf_config = NNCFConfig.from_dict(
+        {"input_info": {"sample_size": [1, 1]}, "compression": {"algorithm": "quantization"}}
+    )
 
     train_loader = create_random_mock_dataloader(nncf_config, num_samples=10)
     nncf_config = register_default_init_args(nncf_config, train_loader)
 
     # Should complete successfully without exceptions:
     create_compressed_model_and_algo_for_test(ModelWithUserModule(), nncf_config)
+
 
 def test_works_when_wrapped_with_dataparallel():
     if not torch.cuda.is_available():
@@ -930,4 +913,4 @@ def test_works_when_wrapped_with_dataparallel():
     register_bn_adaptation_init_args(config)
     model, _ = create_compressed_model_and_algo_for_test(model, config)
     model = torch.nn.DataParallel(model.cuda())
-    model(torch.ones([10, 1, 1, 1], device='cuda'))
+    model(torch.ones([10, 1, 1, 1], device="cuda"))

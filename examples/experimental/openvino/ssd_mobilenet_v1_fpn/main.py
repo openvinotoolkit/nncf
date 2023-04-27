@@ -11,27 +11,25 @@
  limitations under the License.
 """
 
-from typing import Iterable
-from typing import Any
-from pathlib import Path
 from functools import partial
+from pathlib import Path
+from typing import Any, Iterable
 
-import nncf
 import numpy as np
 import openvino.runtime as ov
-
 from openvino.tools.pot.api.samples.object_detection.data_loader import COCOLoader
 from openvino.tools.pot.api.samples.object_detection.metric import MAP
 
+import nncf
 
 FILE = Path(__file__).resolve()
 # Relative path to the `ssd_mobilenet_v1_fpn` directory.
 ROOT = FILE.parent.relative_to(Path.cwd())
 # Path to the directory where the original and quantized IR will be saved.
-MODEL_DIR = ROOT / 'ssd_mobilenet_v1_fpn_quantization'
+MODEL_DIR = ROOT / "ssd_mobilenet_v1_fpn_quantization"
 # Path to COCO validation dataset.
-DATASET_DIR = ROOT / 'coco2017' / 'val2017'
-ANNOTATION_FILE = ROOT / 'coco2017' / 'instances_val2017.json'
+DATASET_DIR = ROOT / "coco2017" / "val2017"
+ANNOTATION_FILE = ROOT / "coco2017" / "instances_val2017.json"
 
 
 ie = ov.Core()
@@ -42,13 +40,13 @@ def run_example():
     Runs the SSD MobileNetV1 FPN quantize with accuracy control example.
     """
     # Step 1: Load the OpenVINO model.
-    ir_model_xml = ROOT / 'public' / 'ssd_mobilenet_v1_fpn_coco' / 'FP32' / 'ssd_mobilenet_v1_fpn_coco.xml'
+    ir_model_xml = ROOT / "public" / "ssd_mobilenet_v1_fpn_coco" / "FP32" / "ssd_mobilenet_v1_fpn_coco.xml"
     ov_model = ie.read_model(ir_model_xml)
 
     # Step 2: Create data source.
     dataset_config = {
-        'images_path': f'{DATASET_DIR}/',
-        'annotation_path': ANNOTATION_FILE,
+        "images_path": f"{DATASET_DIR}/",
+        "annotation_path": ANNOTATION_FILE,
     }
     data_source = COCOLoader(dataset_config)
 
@@ -64,31 +62,33 @@ def run_example():
     metric = MAP(91, data_source.labels)
     # Wrap framework-specific data source into the `nncf.Dataset` object.
     validation_dataset = nncf.Dataset(data_source, transform_fn)
-    quantized_model = nncf.quantize_with_accuracy_control(ov_model,
-                                                          validation_dataset,
-                                                          validation_dataset,
-                                                          validation_fn=partial(validation_fn, metric=metric),
-                                                          max_drop=0.004,
-                                                          preset=nncf.QuantizationPreset.MIXED)
+    quantized_model = nncf.quantize_with_accuracy_control(
+        ov_model,
+        validation_dataset,
+        validation_dataset,
+        validation_fn=partial(validation_fn, metric=metric),
+        max_drop=0.004,
+        preset=nncf.QuantizationPreset.MIXED,
+    )
 
     # Step 4: Save the quantized model.
     if not MODEL_DIR.exists():
         MODEL_DIR.mkdir()
 
-    ir_qmodel_xml = MODEL_DIR / 'ssd_mobilenet_v1_fpn_quantized.xml'
-    ir_qmodel_bin = MODEL_DIR / 'ssd_mobilenet_v1_fpn_quantized.bin'
+    ir_qmodel_xml = MODEL_DIR / "ssd_mobilenet_v1_fpn_quantized.xml"
+    ir_qmodel_bin = MODEL_DIR / "ssd_mobilenet_v1_fpn_quantized.bin"
     ov.serialize(quantized_model, str(ir_qmodel_xml), str(ir_qmodel_bin))
 
     # Step 6: Compare the accuracy of the original and quantized models.
-    print('Checking the accuracy of the original model:')
-    compiled_model = ie.compile_model(ov_model, device_name='CPU')
+    print("Checking the accuracy of the original model:")
+    compiled_model = ie.compile_model(ov_model, device_name="CPU")
     metric = validation_fn(compiled_model, data_source, data_source.labels)
-    print(f'mAP: {metric}')
+    print(f"mAP: {metric}")
 
-    print('Checking the accuracy of the quantized model:')
-    compiled_model = ie.compile_model(quantized_model, device_name='CPU')
+    print("Checking the accuracy of the quantized model:")
+    compiled_model = ie.compile_model(quantized_model, device_name="CPU")
     metric = validation_fn(compiled_model, data_source, data_source.labels)
-    print(f'mAP: {metric}')
+    print(f"mAP: {metric}")
 
     # Step 7: Compare Performance of the original and quantized models.
     # benchmark_app -m ssd_mobilenet_v1_fpn_quantization/ssd_mobilenet_v1_fpn.xml -d CPU -api async
@@ -103,8 +103,8 @@ def validation_fn(compiled_model: ov.CompiledModel, validation_dataset: Iterable
         output = compiled_model([input_data])[output_layer]
         metric.update(output, [labels])
 
-    return metric.avg_value['MAP'].item()
+    return metric.avg_value["MAP"].item()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_example()

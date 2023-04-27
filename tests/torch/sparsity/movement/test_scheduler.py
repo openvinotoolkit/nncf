@@ -10,10 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from collections import defaultdict
-from copy import deepcopy
 import logging
 import math
+from collections import defaultdict
+from copy import deepcopy
 from typing import Any, Dict, Optional
 from unittest.mock import MagicMock
 from unittest.mock import Mock
@@ -38,16 +38,18 @@ from tests.torch.sparsity.movement.helpers import initialize_sparsifier_paramete
 
 class TestSchedulerParams:
     def test_minimal_valid_params(self):
-        config = {
-            'warmup_start_epoch': 1,
-            'warmup_end_epoch': 2,
-            'importance_regularization_factor': 1.
-        }
+        config = {"warmup_start_epoch": 1, "warmup_end_epoch": 2, "importance_regularization_factor": 1.0}
         params = MovementSchedulerParams.from_dict(config)
-        ref_params = MovementSchedulerParams(power=3, warmup_start_epoch=1, warmup_end_epoch=2,
-                                             init_importance_threshold=None, final_importance_threshold=0.,
-                                             importance_regularization_factor=1., steps_per_epoch=None,
-                                             enable_structured_masking=True)
+        ref_params = MovementSchedulerParams(
+            power=3,
+            warmup_start_epoch=1,
+            warmup_end_epoch=2,
+            init_importance_threshold=None,
+            final_importance_threshold=0.0,
+            importance_regularization_factor=1.0,
+            steps_per_epoch=None,
+            enable_structured_masking=True,
+        )
         assert params.__dict__ == ref_params.__dict__
 
     @pytest.mark.parametrize('desc', [
@@ -77,23 +79,38 @@ class TestSchedulerParams:
              match='should not be a negative number'),
     ])  # fmt: skip
     def test_error_on_wrong_config(self, desc: dict):
-        with pytest.raises(desc['error'], match=desc['match']):
-            _ = MovementSchedulerParams.from_dict(desc['params'])
+        with pytest.raises(desc["error"], match=desc["match"]):
+            _ = MovementSchedulerParams.from_dict(desc["params"])
 
-    @pytest.mark.parametrize('desc', [
-        dict(params=dict(warmup_start_epoch=1, warmup_end_epoch=2,
-                         init_importance_threshold=2., final_importance_threshold=1.,
-                         importance_regularization_factor=1),
-             match='`init_importance_threshold` is equal to or greater'),
-        dict(params=dict(warmup_start_epoch=1, warmup_end_epoch=2,
-                         init_importance_threshold=2., final_importance_threshold=2.,
-                         importance_regularization_factor=1),
-             match='`init_importance_threshold` is equal to or greater'),
-    ])
+    @pytest.mark.parametrize(
+        "desc",
+        [
+            dict(
+                params=dict(
+                    warmup_start_epoch=1,
+                    warmup_end_epoch=2,
+                    init_importance_threshold=2.0,
+                    final_importance_threshold=1.0,
+                    importance_regularization_factor=1,
+                ),
+                match="`init_importance_threshold` is equal to or greater",
+            ),
+            dict(
+                params=dict(
+                    warmup_start_epoch=1,
+                    warmup_end_epoch=2,
+                    init_importance_threshold=2.0,
+                    final_importance_threshold=2.0,
+                    importance_regularization_factor=1,
+                ),
+                match="`init_importance_threshold` is equal to or greater",
+            ),
+        ],
+    )
     def test_warn_on_improper_config(self, desc: dict, nncf_caplog):  # pylint:disable=redefined-outer-name
         with nncf_caplog.at_level(logging.WARNING, logger=nncf_logger.name):
-            _ = MovementSchedulerParams.from_dict(desc['params'])
-        assert desc['match'] in nncf_caplog.text
+            _ = MovementSchedulerParams.from_dict(desc["params"])
+        assert desc["match"] in nncf_caplog.text
 
 
 desc_current_importance_threshold_and_regularization_factor = {
@@ -144,12 +161,15 @@ desc_current_importance_threshold_and_regularization_factor = {
 
 
 class TestSchedulerStatus:
-    @pytest.mark.parametrize('steps_per_epoch', [None, 2])
+    @pytest.mark.parametrize("steps_per_epoch", [None, 2])
     def test_current_stage(self, steps_per_epoch: Optional[int]):
-        params = MovementSchedulerParams(warmup_start_epoch=1, warmup_end_epoch=3,
-                                         importance_regularization_factor=1,
-                                         init_importance_threshold=-0.1,
-                                         steps_per_epoch=steps_per_epoch)
+        params = MovementSchedulerParams(
+            warmup_start_epoch=1,
+            warmup_end_epoch=3,
+            importance_regularization_factor=1,
+            init_importance_threshold=-0.1,
+            steps_per_epoch=steps_per_epoch,
+        )
         scheduler = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=params)
         for epoch in range(5):
             if epoch < params.warmup_start_epoch:
@@ -163,26 +183,29 @@ class TestSchedulerStatus:
                 scheduler.step()
                 assert scheduler.current_stage == ref_stage
 
-    @pytest.mark.parametrize('desc',
-                             desc_current_importance_threshold_and_regularization_factor.values(),
-                             ids=desc_current_importance_threshold_and_regularization_factor.keys())
+    @pytest.mark.parametrize(
+        "desc",
+        desc_current_importance_threshold_and_regularization_factor.values(),
+        ids=desc_current_importance_threshold_and_regularization_factor.keys(),
+    )
     def test_current_importance_threshold_and_regularization_factor(self, desc, mocker):
-        scheduler = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=desc['params'])
-        if desc['params'].init_importance_threshold is None:
-            mocker.patch.object(scheduler, '_calc_init_threshold_from_controller',
-                                side_effect=[desc['mock_init_importance_threshold']])
+        scheduler = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=desc["params"])
+        if desc["params"].init_importance_threshold is None:
+            mocker.patch.object(
+                scheduler, "_calc_init_threshold_from_controller", side_effect=[desc["mock_init_importance_threshold"]]
+            )
         threshold, factor = [], []
         for _ in range(5):
             scheduler.epoch_step()
-            for _ in range(desc['params'].steps_per_epoch):
+            for _ in range(desc["params"].steps_per_epoch):
                 scheduler.step()
                 threshold.append(scheduler.current_importance_threshold)
                 factor.append(scheduler.current_importance_regularization_factor)
-        assert np.allclose(threshold, desc['ref_threshold'], atol=1e-4)
-        assert np.allclose(factor, desc['ref_factor'], atol=1e-4)
+        assert np.allclose(threshold, desc["ref_threshold"], atol=1e-4)
+        assert np.allclose(factor, desc["ref_factor"], atol=1e-4)
 
-    @pytest.mark.parametrize('steps_per_epoch', [None, 2])
-    @pytest.mark.parametrize('adaptive_init_threshold', [True, False])
+    @pytest.mark.parametrize("steps_per_epoch", [None, 2])
+    @pytest.mark.parametrize("adaptive_init_threshold", [True, False])
     def test_get_state(self, steps_per_epoch: Optional[int], adaptive_init_threshold: bool, mocker):
         actual_steps_per_epoch = steps_per_epoch or 2
         actual_init_threshold = -0.1
@@ -193,37 +216,43 @@ class TestSchedulerStatus:
             importance_regularization_factor=1,
             enable_structured_masking=False,
             init_importance_threshold=None if adaptive_init_threshold else actual_init_threshold,
-            steps_per_epoch=steps_per_epoch
+            steps_per_epoch=steps_per_epoch,
         )
         scheduler = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=params)
         if adaptive_init_threshold:
-            mocker.patch.object(scheduler, '_calc_init_threshold_from_controller',
-                                side_effect=[actual_init_threshold])
+            mocker.patch.object(scheduler, "_calc_init_threshold_from_controller", side_effect=[actual_init_threshold])
         ref_init_importance_threshold = params.init_importance_threshold
-        assert scheduler.get_state() == {'current_epoch': -1,
-                                         'current_step': -1,
-                                         '_init_importance_threshold': ref_init_importance_threshold,
-                                         '_steps_per_epoch': params.steps_per_epoch}
+        assert scheduler.get_state() == {
+            "current_epoch": -1,
+            "current_step": -1,
+            "_init_importance_threshold": ref_init_importance_threshold,
+            "_steps_per_epoch": params.steps_per_epoch,
+        }
         for epoch in range(4):
             scheduler.epoch_step()
             ref_steps_per_epoch = actual_steps_per_epoch if epoch >= 1 else params.steps_per_epoch
-            assert scheduler.get_state() == {'current_epoch': epoch,
-                                             'current_step': epoch * actual_steps_per_epoch - 1,
-                                             '_init_importance_threshold': ref_init_importance_threshold,
-                                             '_steps_per_epoch': ref_steps_per_epoch}
+            assert scheduler.get_state() == {
+                "current_epoch": epoch,
+                "current_step": epoch * actual_steps_per_epoch - 1,
+                "_init_importance_threshold": ref_init_importance_threshold,
+                "_steps_per_epoch": ref_steps_per_epoch,
+            }
             for batch in range(actual_steps_per_epoch):
                 scheduler.step()
                 if epoch >= warmup_start_epoch:
                     ref_init_importance_threshold = actual_init_threshold
-                assert scheduler.get_state() == {'current_epoch': epoch,
-                                                 'current_step': epoch * actual_steps_per_epoch + batch,
-                                                 '_init_importance_threshold': ref_init_importance_threshold,
-                                                 '_steps_per_epoch': ref_steps_per_epoch}
+                assert scheduler.get_state() == {
+                    "current_epoch": epoch,
+                    "current_step": epoch * actual_steps_per_epoch + batch,
+                    "_init_importance_threshold": ref_init_importance_threshold,
+                    "_steps_per_epoch": ref_steps_per_epoch,
+                }
 
     # pylint: disable=protected-access
-    @pytest.mark.parametrize('steps_per_epoch', [2, 4, 9, None],
-                             ids=['epoch3', 'epoch1', 'epoch0', 'epoch0_unknown_steps_per_epoch'])
-    @pytest.mark.parametrize('adaptive_init_threshold', [True, False])
+    @pytest.mark.parametrize(
+        "steps_per_epoch", [2, 4, 9, None], ids=["epoch3", "epoch1", "epoch0", "epoch0_unknown_steps_per_epoch"]
+    )
+    @pytest.mark.parametrize("adaptive_init_threshold", [True, False])
     def test_load_state(self, steps_per_epoch: Optional[int], adaptive_init_threshold: bool, mocker):
         actual_steps_per_epoch = steps_per_epoch or 8
         actual_init_threshold = -0.1
@@ -234,12 +263,13 @@ class TestSchedulerStatus:
             importance_regularization_factor=1,
             enable_structured_masking=False,
             init_importance_threshold=None if adaptive_init_threshold else actual_init_threshold,
-            steps_per_epoch=steps_per_epoch
+            steps_per_epoch=steps_per_epoch,
         )
         ref_scheduler = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=params)
         if adaptive_init_threshold:
-            mocker.patch.object(ref_scheduler, '_calc_init_threshold_from_controller',
-                                side_effect=[actual_init_threshold])
+            mocker.patch.object(
+                ref_scheduler, "_calc_init_threshold_from_controller", side_effect=[actual_init_threshold]
+            )
 
         ref_threshold, ref_factor = [], []
         ref_state: Dict[str, Any] = {}
@@ -256,13 +286,12 @@ class TestSchedulerStatus:
         # check state is loaded
         scheduler = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=params)
         if adaptive_init_threshold:
-            mocker.patch.object(scheduler, '_calc_init_threshold_from_controller',
-                                side_effect=[actual_init_threshold])
+            mocker.patch.object(scheduler, "_calc_init_threshold_from_controller", side_effect=[actual_init_threshold])
         scheduler.load_state(ref_state)
-        assert scheduler.current_epoch == ref_state['current_epoch']
-        assert scheduler.current_step == ref_state['current_step']
-        assert scheduler._init_importance_threshold == ref_state['_init_importance_threshold']
-        assert scheduler._steps_per_epoch == ref_state['_steps_per_epoch']
+        assert scheduler.current_epoch == ref_state["current_epoch"]
+        assert scheduler.current_step == ref_state["current_step"]
+        assert scheduler._init_importance_threshold == ref_state["_init_importance_threshold"]
+        assert scheduler._steps_per_epoch == ref_state["_steps_per_epoch"]
 
         # check can resume and continue
         threshold, factor = [], []
@@ -270,7 +299,7 @@ class TestSchedulerStatus:
             scheduler.step()
             threshold.append(scheduler.current_importance_threshold)
             factor.append(scheduler.current_importance_regularization_factor)
-        for _ in range(ref_state['current_epoch'] + 1, 5):
+        for _ in range(ref_state["current_epoch"] + 1, 5):
             scheduler.epoch_step()
             for _ in range(actual_steps_per_epoch):
                 scheduler.step()
@@ -281,44 +310,54 @@ class TestSchedulerStatus:
 
 
 class TestSchedulerStepAction:
-    @pytest.mark.parametrize('desc', desc_current_importance_threshold_and_regularization_factor.values(),
-                             ids=desc_current_importance_threshold_and_regularization_factor.keys())
+    @pytest.mark.parametrize(
+        "desc",
+        desc_current_importance_threshold_and_regularization_factor.values(),
+        ids=desc_current_importance_threshold_and_regularization_factor.keys(),
+    )
     def test_update_operand(self, desc, mocker):
         num_minfo = 2
         minfo_list = [Mock() for _ in range(num_minfo)]
-        scheduler = MovementPolynomialThresholdScheduler(controller=Mock(sparsified_module_info=minfo_list),
-                                                         params=desc['params'])
-        if desc['params'].init_importance_threshold is None:
-            mocker.patch.object(scheduler, '_calc_init_threshold_from_controller',
-                                side_effect=[desc['mock_init_importance_threshold']])
+        scheduler = MovementPolynomialThresholdScheduler(
+            controller=Mock(sparsified_module_info=minfo_list), params=desc["params"]
+        )
+        if desc["params"].init_importance_threshold is None:
+            mocker.patch.object(
+                scheduler, "_calc_init_threshold_from_controller", side_effect=[desc["mock_init_importance_threshold"]]
+            )
         threshold_dict = defaultdict(list)
         factor_dict = defaultdict(list)
         for _ in range(5):
             scheduler.epoch_step()
-            for _ in range(desc['params'].steps_per_epoch):
+            for _ in range(desc["params"].steps_per_epoch):
                 scheduler.step()
                 for i, minfo in enumerate(minfo_list):
                     threshold_dict[i].append(minfo.operand.importance_threshold)
                     factor_dict[i].append(minfo.operand.importance_regularization_factor)
         for threshold in threshold_dict.values():
-            assert np.allclose(threshold, desc['ref_threshold'], atol=1e-4)
+            assert np.allclose(threshold, desc["ref_threshold"], atol=1e-4)
         for factor in factor_dict.values():
-            assert np.allclose(factor, desc['ref_factor'], atol=1e-4)
+            assert np.allclose(factor, desc["ref_factor"], atol=1e-4)
 
-    @pytest.mark.parametrize('enable_structured_masking', [True, False])
+    @pytest.mark.parametrize("enable_structured_masking", [True, False])
     def test_freeze_operand_on_warmup_end(self, enable_structured_masking: bool):
         num_minfo = 2
         controller = Mock(sparsified_module_info=[Mock() for _ in range(num_minfo)])
 
         def assert_controller_structured_masking_calls(is_called_once: bool):
-            assert_fn = 'assert_called_once' if is_called_once else 'assert_not_called'
+            assert_fn = "assert_called_once" if is_called_once else "assert_not_called"
             getattr(controller.reset_independent_structured_mask, assert_fn)()
             getattr(controller.resolve_structured_mask, assert_fn)()
             getattr(controller.populate_structured_mask, assert_fn)()
 
-        params = MovementSchedulerParams(warmup_start_epoch=0, warmup_end_epoch=1,
-                                         importance_regularization_factor=0.1, init_importance_threshold=-0.1,
-                                         steps_per_epoch=2, enable_structured_masking=enable_structured_masking)
+        params = MovementSchedulerParams(
+            warmup_start_epoch=0,
+            warmup_end_epoch=1,
+            importance_regularization_factor=0.1,
+            init_importance_threshold=-0.1,
+            steps_per_epoch=2,
+            enable_structured_masking=enable_structured_masking,
+        )
         scheduler = MovementPolynomialThresholdScheduler(controller, params=params)
         scheduler.epoch_step()
         scheduler.step()
@@ -328,7 +367,8 @@ class TestSchedulerStepAction:
         controller.freeze.assert_not_called()
         scheduler.step()
         assert_controller_structured_masking_calls(
-            is_called_once=enable_structured_masking)  # check called at this step
+            is_called_once=enable_structured_masking
+        )  # check called at this step
         controller.freeze.assert_called_once()
         scheduler.step()
         scheduler.epoch_step()
@@ -341,10 +381,16 @@ class TestSchedulerStepAction:
 class TestSchedulerInferStepsPerEpoch:
     # pylint: disable=protected-access
     def test_can_infer_steps_per_epoch(self):
-        params = MovementSchedulerParams(power=2, warmup_start_epoch=1, warmup_end_epoch=3,
-                                         init_importance_threshold=-1., final_importance_threshold=0.,
-                                         enable_structured_masking=False, importance_regularization_factor=0.1,
-                                         steps_per_epoch=None)
+        params = MovementSchedulerParams(
+            power=2,
+            warmup_start_epoch=1,
+            warmup_end_epoch=3,
+            init_importance_threshold=-1.0,
+            final_importance_threshold=0.0,
+            enable_structured_masking=False,
+            importance_regularization_factor=0.1,
+            steps_per_epoch=None,
+        )
         threshold_after_6_step_calls = approx(-0.7656, abs=1e-4)
         factor_after_6_step_calls = approx(0.0234, abs=1e-4)
         scheduler = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=params)
@@ -362,14 +408,18 @@ class TestSchedulerInferStepsPerEpoch:
         assert scheduler.current_importance_regularization_factor == factor_after_6_step_calls
 
     def test_error_on_wrong_steps_per_epoch_value(self):
-        params = MovementSchedulerParams(warmup_start_epoch=1, warmup_end_epoch=3,
-                                         init_importance_threshold=-0.1,
-                                         steps_per_epoch=2, importance_regularization_factor=1.)
+        params = MovementSchedulerParams(
+            warmup_start_epoch=1,
+            warmup_end_epoch=3,
+            init_importance_threshold=-0.1,
+            steps_per_epoch=2,
+            importance_regularization_factor=1.0,
+        )
         scheduler = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=params)
         scheduler.epoch_step()
         for _ in range(3):
             scheduler.step()
-        with pytest.raises(Exception, match='Scheduling may be incorrect'):
+        with pytest.raises(Exception, match="Scheduling may be incorrect"):
             scheduler.epoch_step()
 
 
@@ -389,19 +439,20 @@ class TestSchedulerAdaptiveInitThreshold:
              ref_sparsity=0.0010),
     ], ids=['bert_toy', 'bert_large', 'swin_large'])  # fmt: skip
     def test_set_init_importance_threshold(self, desc: dict):
-        recipe: BaseMockRunRecipe = desc['recipe']
-        ref_threshold: float = desc['ref_threshold']
-        ref_sparsity: float = desc['ref_sparsity']
+        recipe: BaseMockRunRecipe = desc["recipe"]
+        ref_threshold: float = desc["ref_threshold"]
+        ref_sparsity: float = desc["ref_sparsity"]
         recipe.algo_config.scheduler_params = MovementSchedulerParams(
-            warmup_start_epoch=0, warmup_end_epoch=3,
-            steps_per_epoch=10, importance_regularization_factor=1.,
+            warmup_start_epoch=0,
+            warmup_end_epoch=3,
+            steps_per_epoch=10,
+            importance_regularization_factor=1.0,
             enable_structured_masking=False,
-            init_importance_threshold=None, final_importance_threshold=1e3)
-        compression_ctrl, _ = create_compressed_model(recipe.model(),
-                                                      recipe.nncf_config(),
-                                                      dump_graphs=False)
-        for i, minfo in enumerate(sorted(compression_ctrl.sparsified_module_info,
-                                         key=lambda x: x.module_node_name)):
+            init_importance_threshold=None,
+            final_importance_threshold=1e3,
+        )
+        compression_ctrl, _ = create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)
+        for i, minfo in enumerate(sorted(compression_ctrl.sparsified_module_info, key=lambda x: x.module_node_name)):
             initialize_sparsifier_parameters_by_linspace(minfo.operand, i * 2, i * 2 + 1)
         scheduler = compression_ctrl.scheduler
         scheduler.epoch_step()
@@ -417,28 +468,23 @@ class TestSchedulerAdaptiveInitThreshold:
     def test_calc_init_threshold_called_once(self, tmp_path, mocker):
         recipe = BertRunRecipe(log_dir=tmp_path)
         recipe.scheduler_params_(init_importance_threshold=None)
-        compression_ctrl, _ = create_compressed_model(recipe.model(),
-                                                      recipe.nncf_config(),
-                                                      dump_graphs=False)
-        func = mocker.patch.object(compression_ctrl.scheduler,
-                                   '_calc_init_threshold_from_controller',
-                                   return_value=-1)
+        compression_ctrl, _ = create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)
+        func = mocker.patch.object(compression_ctrl.scheduler, "_calc_init_threshold_from_controller", return_value=-1)
         for _ in range(6):
             compression_ctrl.scheduler.epoch_step()
             for _ in range(4):
                 compression_ctrl.scheduler.step()
         func.assert_called_once()
 
-    @pytest.mark.parametrize(('target_sparsity', 'ref_threshold'),
-                             [(0.001, 1.), (0.5, 500.), (0.6, 600.), (0.999, 999.)])
+    @pytest.mark.parametrize(
+        ("target_sparsity", "ref_threshold"), [(0.001, 1.0), (0.5, 500.0), (0.6, 600.0), (0.999, 999.0)]
+    )
     def test_calc_init_threshold_correctness(self, target_sparsity: float, ref_threshold: float):
         recipe = LinearRunRecipe().model_config_(input_size=500, bias=False)  # 2x50 shape linear weight
         recipe.scheduler_params_(init_importance_threshold=None, steps_per_epoch=None)
-        compression_ctrl, _ = create_compressed_model(recipe.model(),
-                                                      recipe.nncf_config(),
-                                                      dump_graphs=False)
+        compression_ctrl, _ = create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)
         for minfo in compression_ctrl.sparsified_module_info:
-            initialize_sparsifier_parameters_by_linspace(minfo.operand, 0., 999.)
+            initialize_sparsifier_parameters_by_linspace(minfo.operand, 0.0, 999.0)
         scheduler: MovementPolynomialThresholdScheduler = compression_ctrl.scheduler
         threshold = scheduler._calc_init_threshold_from_controller(target_sparsity)  # pylint: disable=protected-access
         assert threshold == approx(ref_threshold)

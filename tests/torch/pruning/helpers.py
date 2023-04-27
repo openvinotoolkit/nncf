@@ -12,25 +12,28 @@
 """
 
 import copy
-import torch
 
+import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
 from nncf.torch.dynamic_graph.context import no_nncf_trace
-from tests.torch.test_models.pnasnet import CellB
-from tests.torch.helpers import create_bn, create_conv, fill_linear_weight
-from tests.torch.helpers import create_transpose_conv
+from tests.torch.helpers import create_bn
+from tests.torch.helpers import create_conv
 from tests.torch.helpers import create_depthwise_conv
 from tests.torch.helpers import create_grouped_conv
+from tests.torch.helpers import create_transpose_conv
+from tests.torch.helpers import fill_linear_weight
+from tests.torch.test_models.pnasnet import CellB
 
-#pylint: disable=too-many-lines
+# pylint: disable=too-many-lines
 
 
 class PruningTestModel(nn.Module):
     CONV_1_NODE_NAME = "PruningTestModel/NNCFConv2d[conv1]/conv2d_0"
     CONV_2_NODE_NAME = "PruningTestModel/NNCFConv2d[conv2]/conv2d_0"
     CONV_3_NODE_NAME = "PruningTestModel/NNCFConv2d[conv3]/conv2d_0"
+
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 3, 2, 9, -2)
@@ -212,7 +215,7 @@ class PruningTestBatchedLinear(nn.Module):
         for i in range(32):
             self.first_conv.weight.data[i] += i
         self.linear1 = nn.Linear(8, 16)
-        for i in range (16):
+        for i in range(16):
             self.linear1.weight.data[i] = i
         self.last_linear = nn.Linear(32 * 8 * 16, 1)
         fill_linear_weight(self.last_linear, 1)
@@ -234,7 +237,7 @@ class PruningTestModelBroadcastedLinear(nn.Module):
         for i in range(16):
             self.conv1.weight.data[i] += i
         self.linear1 = nn.Linear(32 * 8 * 8, 16)
-        for i in range (16):
+        for i in range(16):
             self.linear1.weight.data[i] = i
         self.last_linear = nn.Linear(16 * 8 * 8, 1)
         fill_linear_weight(self.last_linear, 1)
@@ -258,7 +261,7 @@ class PruningTestModelBroadcastedLinearWithConcat(nn.Module):
         for i in range(16):
             self.conv1.weight.data[i] += i
         self.linear1 = nn.Linear(32 * 8 * 8, 16)
-        for i in range (16):
+        for i in range(16):
             self.linear1.weight.data[i] = i
         self.conv2 = create_conv(32, 16, 1)
         for i in range(16):
@@ -360,7 +363,7 @@ class BigPruningTestModel(nn.Module):
         self.up = create_transpose_conv(32, 64, 3, 3, 1, 2, dim=self.dim)
         for i in range(64):
             self.up.weight.data[0][i] += i
-        self.linear = nn.Linear(448 * 7**(self.dim - 1), 128)
+        self.linear = nn.Linear(448 * 7 ** (self.dim - 1), 128)
         self.layernorm = nn.LayerNorm(128)
         for i in range(128):
             self.linear.weight.data[i] = i
@@ -382,17 +385,15 @@ class BigPruningTestModel(nn.Module):
         x = self.relu(x)
         b, *_ = x.size()
         x = self.linear(x.view(b, -1))
-        x = self.layernorm(x).view(b, -1, *[1]*self.dim)
+        x = self.layernorm(x).view(b, -1, *[1] * self.dim)
         x = self.bn3(x)
         x = self.conv3(x)
         x = x.view(b, -1)
         return x
 
+
 class TestShuffleUnit(nn.Module):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 downsample):
+    def __init__(self, in_channels, out_channels, downsample):
         super().__init__()
         self.downsample = downsample
         mid_channels = out_channels // 2
@@ -759,6 +760,7 @@ class SplitMaskPropFailModel(nn.Module):
     Mask propagation should fail because of inconsistency of number of channels (C)
     and length of the resulting mask (C/2).
     """
+
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 6, 3, 1)
@@ -786,6 +788,7 @@ class SplitPruningInvalidModel(nn.Module):
     Weights have shape [N, C, 2C, W] and split dimension is not 1, but 2.
     Mask propagation won't fail with the current code, but pruning will be invalid.
     """
+
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 3, 3, 1)
@@ -918,7 +921,7 @@ class HRNetBlock(nn.Module):
         self.conv5 = create_conv(16, 32, 1, 1)
         self.conv6 = create_conv(48, 48, 1, 1)
         self.conv7 = create_conv(48, 48, 1, 1)
-        for conv in [getattr(self, f'conv{i}') for i in range(1, 8)]:
+        for conv in [getattr(self, f"conv{i}") for i in range(1, 8)]:
             for i in range(conv.out_channels):
                 conv.weight.data[i] = i
 
@@ -927,15 +930,15 @@ class HRNetBlock(nn.Module):
     def forward(self, x):
         x1 = self.conv1(x)
         x2 = self.conv2(x)
-        y1, x1 = torch.chunk(x1, chunks=2, dim=1) # chunk1
-        x2, y2 = torch.chunk(x2, chunks=2, dim=1) # chunk2
+        y1, x1 = torch.chunk(x1, chunks=2, dim=1)  # chunk1
+        x2, y2 = torch.chunk(x2, chunks=2, dim=1)  # chunk2
         x2 = self.avg_pool(x2)
         y2 = self.conv3(y2)
         y1 = self.conv4(y1)
-        y = torch.cat([x1, x2], dim=1) # concat1
+        y = torch.cat([x1, x2], dim=1)  # concat1
         y = self.conv5(y)
-        out1 = torch.cat([y1, y], dim=1) # concat2
-        out2 = torch.cat([y, y2], dim=1) # concat3
+        out1 = torch.cat([y1, y], dim=1)  # concat2
+        out2 = torch.cat([y, y2], dim=1)  # concat3
         out1 = self.conv6(out1)
         out2 = self.conv7(out2)
         return out1, out2
@@ -960,13 +963,13 @@ class PruningTestModelPad(nn.Module):
         x = torch.nn.functional.pad(x, (1, 1, 1, 1))
         x = self.conv3(x)
         x = self.conv4(x)
-        x = torch.nn.functional.pad(x, (1, 1, 1, 1), 'constant')
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1), "constant")
         x = self.conv5(x)
-        x = torch.nn.functional.pad(x, (1, 1, 1, 1), 'constant', value=0)
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1), "constant", value=0)
         x = self.conv6(x)
-        x = torch.nn.functional.pad(x, (1, 1, 1, 1), 'reflect')
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1), "reflect")
         x = self.conv7(x)
-        x = torch.nn.functional.pad(x, (1, 1, 1, 1), 'constant', value=1)
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1), "constant", value=1)
         x = self.conv8(x)
         x = torch.nn.functional.pad(x, (1, 1, 1, 1), value=1)
         x = self.conv9(x)
@@ -999,7 +1002,7 @@ class SELayerWithReshape(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(make_divisible(channel // reduction, 8), channel, 1),
             nn.BatchNorm2d(channel),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
         )
 
     def forward(self, x):
@@ -1020,7 +1023,7 @@ class SELayerWithReshapeAndLinear(nn.Module):
             nn.ReLU(inplace=True),
             nn.Linear(make_divisible(channel // reduction, 8), channel),
             nn.BatchNorm1d(channel),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
         )
 
     def forward(self, x):
@@ -1037,7 +1040,7 @@ class SELayerWithReshapeAndLinearAndMean(nn.Module):
             nn.Linear(channel, make_divisible(channel // reduction, 8)),
             nn.ReLU(inplace=True),
             nn.Linear(make_divisible(channel // reduction, 8), channel),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
         )
 
     def forward(self, x):
@@ -1056,8 +1059,9 @@ class InvertedResidual(nn.Module):
 
         self.conv = nn.Sequential(
             # dw
-            nn.Conv2d(hidden_dim, hidden_dim, kernel_size, stride, (kernel_size - 1) // 2,
-                      groups=hidden_dim, bias=False),
+            nn.Conv2d(
+                hidden_dim, hidden_dim, kernel_size, stride, (kernel_size - 1) // 2, groups=hidden_dim, bias=False
+            ),
             nn.BatchNorm2d(hidden_dim),
             nn.ReLU(inplace=True),
             # Squeeze-and-Excite
@@ -1074,12 +1078,12 @@ class InvertedResidual(nn.Module):
 
 
 class MobilenetV3BlockSEReshape(nn.Module):
-    def __init__(self, mode='default'):
+    def __init__(self, mode="default"):
         super().__init__()
         se_block_map = {
-            'default': SELayerWithReshape,
-            'linear': SELayerWithReshapeAndLinear,
-            'linear_mean': SELayerWithReshapeAndLinearAndMean
+            "default": SELayerWithReshape,
+            "linear": SELayerWithReshapeAndLinear,
+            "linear_mean": SELayerWithReshapeAndLinearAndMean,
         }
 
         se_block = se_block_map[mode]
@@ -1109,37 +1113,34 @@ def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
     if input_sample_size is None:
         input_sample_size = [1, 1, 4, 4]
     config = NNCFConfig()
-    config.update({
-        "model": "pruning_conv_model",
-        "input_info":
-            {
+    config.update(
+        {
+            "model": "pruning_conv_model",
+            "input_info": {
                 "sample_size": input_sample_size,
             },
-        "compression":
-            {
-                "params": {
-                }
-            }
-    })
+            "compression": {"params": {}},
+        }
+    )
     return config
 
 
 def get_pruning_baseline_config(input_sample_size=None) -> NNCFConfig:
     config = get_basic_pruning_config(input_sample_size)
     # Filling params
-    compression_config = config['compression']
-    compression_config['params']["schedule"] = "baseline"
-    compression_config['params']["num_init_steps"] = 1
+    compression_config = config["compression"]
+    compression_config["params"]["schedule"] = "baseline"
+    compression_config["params"]["num_init_steps"] = 1
     return config
 
 
 def get_pruning_exponential_config(input_sample_size=None) -> NNCFConfig:
     config = get_basic_pruning_config(input_sample_size)
     # Filling params
-    compression_config = config['compression']
-    compression_config['params']["schedule"] = "exponential_with_bias"
-    compression_config['params']["num_init_steps"] = 1
-    compression_config['params']["pruning_steps"] = 20
+    compression_config = config["compression"]
+    compression_config["params"]["schedule"] = "exponential_with_bias"
+    compression_config["params"]["num_init_steps"] = 1
+    compression_config["params"]["pruning_steps"] = 20
     return config
 
 

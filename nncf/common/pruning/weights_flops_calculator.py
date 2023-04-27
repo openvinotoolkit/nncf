@@ -11,17 +11,15 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import List
-from typing import Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.pruning.utils import get_output_channels
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 
 
 class WeightsFlopsCalculator:
@@ -31,9 +29,7 @@ class WeightsFlopsCalculator:
     compression algorithms execution.
     """
 
-    def __init__(self,
-                 conv_op_metatypes: List[OperatorMetatype],
-                 linear_op_metatypes: List[OperatorMetatype]):
+    def __init__(self, conv_op_metatypes: List[OperatorMetatype], linear_op_metatypes: List[OperatorMetatype]):
         """
         Constructor.
 
@@ -43,14 +39,15 @@ class WeightsFlopsCalculator:
         self._conv_op_metatypes = conv_op_metatypes
         self._linear_op_metatypes = linear_op_metatypes
 
-    def count_flops_and_weights(self,
-                                graph: NNCFGraph,
-                                output_shapes: Dict[NNCFNodeName, int],
-                                input_channels: Dict[NNCFNodeName, int] = None,
-                                output_channels: Dict[NNCFNodeName, int] = None,
-                                kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
-                                op_addresses_to_skip: List[str] = None
-                                ) -> Tuple[int, int]:
+    def count_flops_and_weights(
+        self,
+        graph: NNCFGraph,
+        output_shapes: Dict[NNCFNodeName, int],
+        input_channels: Dict[NNCFNodeName, int] = None,
+        output_channels: Dict[NNCFNodeName, int] = None,
+        kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
+        op_addresses_to_skip: List[str] = None,
+    ) -> Tuple[int, int]:
         """
         Counts the number of weights and FLOPs in the model for convolution and fully connected layers.
 
@@ -69,19 +66,20 @@ class WeightsFlopsCalculator:
         :return number of FLOPs for the model
                 number of weights (params) in the model
         """
-        flops_pers_node, weights_per_node = self.count_flops_and_weights_per_node(graph, output_shapes,
-                                                                                  input_channels, output_channels,
-                                                                                  kernel_sizes, op_addresses_to_skip)
+        flops_pers_node, weights_per_node = self.count_flops_and_weights_per_node(
+            graph, output_shapes, input_channels, output_channels, kernel_sizes, op_addresses_to_skip
+        )
         return sum(flops_pers_node.values()), sum(weights_per_node.values())
 
-    def count_flops_and_weights_per_node(self,
-                                         graph: NNCFGraph,
-                                         output_shapes: Dict[NNCFNodeName, int],
-                                         input_channels: Dict[NNCFNodeName, int] = None,
-                                         output_channels: Dict[NNCFNodeName, int] = None,
-                                         kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
-                                         op_addresses_to_skip: List[NNCFNodeName] = None) -> \
-        Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
+    def count_flops_and_weights_per_node(
+        self,
+        graph: NNCFGraph,
+        output_shapes: Dict[NNCFNodeName, int],
+        input_channels: Dict[NNCFNodeName, int] = None,
+        output_channels: Dict[NNCFNodeName, int] = None,
+        kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
+        op_addresses_to_skip: List[NNCFNodeName] = None,
+    ) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
         """
         Counts the number of weights and FLOPs per node in the model for convolution and fully connected layers.
 
@@ -122,8 +120,9 @@ class WeightsFlopsCalculator:
             else:
                 filters_per_channel = num_out_channels // node.layer_attributes.groups
 
-            flops_numpy = 2 * np.prod(kernel_size) * num_in_channels * filters_per_channel *\
-                np.prod(output_shapes[name])
+            flops_numpy = (
+                2 * np.prod(kernel_size) * num_in_channels * filters_per_channel * np.prod(output_shapes[name])
+            )
             weights_numpy = np.prod(kernel_size) * num_in_channels * filters_per_channel
 
             flops[name] = flops_numpy.astype(int).item()
@@ -144,9 +143,7 @@ class WeightsFlopsCalculator:
 
         return flops, weights
 
-    def count_filters_num(self,
-                          graph: NNCFGraph,
-                          output_channels: Dict[NNCFNodeName, int] = None) -> int:
+    def count_filters_num(self, graph: NNCFGraph, output_channels: Dict[NNCFNodeName, int] = None) -> int:
         """
         Counts filters of `op_metatypes` layers taking into account new output channels number.
 

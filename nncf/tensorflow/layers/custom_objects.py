@@ -13,8 +13,8 @@
 
 from nncf.common.utils.registry import Registry
 
-NNCF_CUSTOM_OBJECTS = Registry('NNCF Custom Objects')
-NNCF_QUANTIZATION_OPERATIONS = Registry('NNCF Quantization Operations')
+NNCF_CUSTOM_OBJECTS = Registry("NNCF Custom Objects")
+NNCF_QUANTIZATION_OPERATIONS = Registry("NNCF Quantization Operations")
 
 
 def get_nncf_custom_objects():

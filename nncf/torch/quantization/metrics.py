@@ -11,36 +11,37 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple, Optional, Any
-from itertools import chain
-
-import networkx as nx
-import torch
-import numpy as np
 from collections import deque
 from copy import deepcopy
+from itertools import chain
+from typing import Any, Dict, List, Optional, Tuple
 
+import networkx as nx
+import numpy as np
+import torch
+
+from nncf.common.collector import StatisticsCollector
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
-from nncf.common.utils.debug import is_debug
-from nncf.common.utils.backend import BackendType
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.structs import WeightQuantizerId
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.collector import StatisticsCollector
-from nncf.common.quantization.collectors import QuantizerDescription
 from nncf.common.quantization.collectors import QuantizationStatisticsCollector
-from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
+from nncf.common.quantization.collectors import QuantizerDescription
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.debug import is_debug
+from nncf.torch.nncf_module_replacement import is_nncf_module
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.nncf_network import PTNNCFGraph
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.nncf_network import NNCFNetwork, PTNNCFGraph
-from nncf.torch.nncf_module_replacement import is_nncf_module
-from nncf.torch.quantization.structs import WeightQuantizerInfo
-from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.statistics import MemoryConsumptionStatistics
 from nncf.torch.quantization.statistics import QuantizationConfigurationStatistics
+from nncf.torch.quantization.structs import NonWeightQuantizerInfo
+from nncf.torch.quantization.structs import WeightQuantizerInfo
 
 
 class QuantizationShareBuildTimeInfo:
@@ -55,13 +56,10 @@ class QuantizationShareBuildTimeInfo:
 
         :return: state of the object
         """
-        return {
-            'aq_potential_num': self.aq_potential_num,
-            'wq_potential_num': self.wq_potential_num
-        }
+        return {"aq_potential_num": self.aq_potential_num, "wq_potential_num": self.wq_potential_num}
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'QuantizationShareBuildTimeInfo':
+    def from_state(cls, state: Dict[str, Any]) -> "QuantizationShareBuildTimeInfo":
         """
         Creates the object from its state.
 
@@ -75,10 +73,12 @@ class PTQuantizationStatisticsCollector(QuantizationStatisticsCollector):
     Implementation of the quantization statistics collector for the PyTorch backend.
     """
 
-    def __init__(self,
-                 weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
-                 non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
-                 build_time_info: QuantizationShareBuildTimeInfo):
+    def __init__(
+        self,
+        weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
+        non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
+        build_time_info: QuantizationShareBuildTimeInfo,
+    ):
         """
         Initializes a collector of the quantization statistics.
         """
@@ -95,7 +95,7 @@ class PTQuantizationStatisticsCollector(QuantizationStatisticsCollector):
         # `True` for weight quantizer, `False` otherwise.
         quantizers = chain(
             map(lambda x: (True, x), self._weight_quantizers.values()),
-            map(lambda x: (False, x), self._non_weight_quantizers.values())
+            map(lambda x: (False, x), self._non_weight_quantizers.values()),
         )
 
         quantizers_descriptions = []
@@ -104,12 +104,7 @@ class PTQuantizationStatisticsCollector(QuantizationStatisticsCollector):
 
             quantizers_descriptions.append(
                 QuantizerDescription(
-                    q.num_bits,
-                    q.per_channel,
-                    q.signed,
-                    is_symmetric,
-                    is_weight_quantizer,
-                    q.is_enabled_quantization()
+                    q.num_bits, q.per_channel, q.signed, is_symmetric, is_weight_quantizer, q.is_enabled_quantization()
                 )
             )
 
@@ -137,10 +132,12 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
       in host memory (i.e. assuming intermediate accumulation results are only stored in device memory)
     """
 
-    def __init__(self,
-                 compressed_model: NNCFNetwork,
-                 weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
-                 non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo]):
+    def __init__(
+        self,
+        compressed_model: NNCFNetwork,
+        weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
+        non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
+    ):
         """
         Initializes collector of the memory consumption statistics.
         """
@@ -182,7 +179,7 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
         for u, v in original_nx_graph.edges:
             shape = original_nx_graph.edges[u, v][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
             num_bits = self._get_precision_for_activation_tensor(u, v, original_nx_graph)
-            original_nx_graph.edges[u, v]['precision'] = num_bits
+            original_nx_graph.edges[u, v]["precision"] = num_bits
             u_node_name = original_nx_graph.nodes[u][NNCFGraph.NODE_NAME_ATTR]
             memory_consumption_fp_model[u_node_name] = np.prod(shape) * fp_num_bits
             memory_consumption_compressed_model[u_node_name] = np.prod(shape) * num_bits
@@ -197,8 +194,9 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
     def _get_precision_for_activation_tensor(self, u_node: str, v_node: str, original_nx_graph: nx.DiGraph) -> int:
         # pylint: disable=protected-access
         pred_u_nodes = original_nx_graph._pred[u_node]
-        precision_enter_activation_tensor =\
-             max([0] + [original_nx_graph.edges[pred_u_node, u_node]['precision'] for pred_u_node in pred_u_nodes])
+        precision_enter_activation_tensor = max(
+            [0] + [original_nx_graph.edges[pred_u_node, u_node]["precision"] for pred_u_node in pred_u_nodes]
+        )
         u_node_name = original_nx_graph.nodes[u_node][NNCFGraph.NODE_NAME_ATTR]
         module = self._compressed_model.nncf.get_containing_module(u_node_name)
         if is_nncf_module(module):
@@ -230,13 +228,12 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     in the original network graph. "Quantized edge" is an edge representing a quantized activation tensor.
     """
 
-    QUANTIZED_EDGES_ATTR = 'quantized'
-    PASSED_EDGES_ATTR = 'passed'
-    NODES_GRAPH_ATTR = 'nodes'
-    IS_MERGED_GRAPH_ATTR = 'is_merged'
+    QUANTIZED_EDGES_ATTR = "quantized"
+    PASSED_EDGES_ATTR = "passed"
+    NODES_GRAPH_ATTR = "nodes"
+    IS_MERGED_GRAPH_ATTR = "is_merged"
 
-    def __init__(self, compressed_model: NNCFNetwork, qctrl: 'QuantizationController',
-                 target_device: TargetDevice):
+    def __init__(self, compressed_model: NNCFNetwork, qctrl: "QuantizationController", target_device: TargetDevice):
         self._compressed_model = compressed_model
         self._qctrl = qctrl  # type: QuantizationController
         self.stats = QuantizationConfigurationStatistics(0, 0)
@@ -244,8 +241,9 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
 
     def collect(self) -> QuantizationConfigurationStatistics:
         # pylint: disable=too-many-branches
-        merged_original_graph =\
-            self.get_merged_original_graph_with_patterns(self._compressed_model.nncf.get_original_graph())
+        merged_original_graph = self.get_merged_original_graph_with_patterns(
+            self._compressed_model.nncf.get_original_graph()
+        )
         self.stats.quantized_edges_in_cfg = 0
         nx.set_edge_attributes(merged_original_graph, False, self.QUANTIZED_EDGES_ATTR)
         nx.set_edge_attributes(merged_original_graph, False, self.PASSED_EDGES_ATTR)
@@ -262,7 +260,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                 self.stats.quantized_edges_in_cfg += 1
                 queue.appendleft(next_node_key)
         visited_nodes = {}
-        #pylint: disable=too-many-nested-blocks
+        # pylint: disable=too-many-nested-blocks
         while len(queue) != 0:
             node_key = queue.pop()
             if node_key in visited_nodes:
@@ -296,13 +294,13 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                     else:
                         is_op_non_change_precision_activation_tensor = True
                         node_metatype = node[NNCFGraph.METATYPE_ATTR]
-                        is_op_non_change_precision_activation_tensor =\
-                            node_metatype not in\
-                                DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]
+                        is_op_non_change_precision_activation_tensor = (
+                            node_metatype not in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]
+                        )
 
-                        status = is_op_non_change_precision_activation_tensor and\
-                            self._all_enter_edges_in_node_of_type(merged_original_graph,
-                                                                  node_key, self.QUANTIZED_EDGES_ATTR)
+                        status = is_op_non_change_precision_activation_tensor and self._all_enter_edges_in_node_of_type(
+                            merged_original_graph, node_key, self.QUANTIZED_EDGES_ATTR
+                        )
                         self._marking_edges(merged_original_graph, node_key, queue, status)
             else:
                 queue.appendleft(node_key)
@@ -333,8 +331,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                 self.stats.quantized_edges_in_cfg += 1
 
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
-        pattern =\
-            PatternsManager.get_full_pattern_graph(BackendType.TORCH, self._target_device)
+        pattern = PatternsManager.get_full_pattern_graph(BackendType.TORCH, self._target_device)
         # pylint: disable=protected-access
         matches = find_subgraphs_matching_pattern(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)
@@ -358,14 +355,14 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
             merged_node_key = ""
             merged_nodes = []
             for node_key in match:
-                merged_node_key += node_key + '\n'
+                merged_node_key += node_key + "\n"
                 # pylint: disable=protected-access
                 merged_nodes.append(original_graph._nx_graph.nodes[node_key])
                 merged_graph.remove_node(node_key)
             merged_node_attrs = {
                 PTNNCFGraph.KEY_NODE_ATTR: merged_node_key,
                 self.NODES_GRAPH_ATTR: merged_nodes,
-                self.IS_MERGED_GRAPH_ATTR: True
+                self.IS_MERGED_GRAPH_ATTR: True,
             }
             merged_graph.add_node(merged_node_key, **merged_node_attrs)
             for in_edge_key, in_edge_attrs in in_edge_copies_dict.items():

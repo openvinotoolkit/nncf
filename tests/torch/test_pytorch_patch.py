@@ -25,14 +25,13 @@ def test_get_all_aliases_is_valid():
     for operator_metatypes, function_names in operator_names_to_function_name.items():
         if not function_names:
             invalid_metatypes.append(operator_metatypes)
-    assert not invalid_metatypes, \
-        f'There are metatypes with invalid `get_all_aliaces` method: {invalid_metatypes}'
+    assert not invalid_metatypes, f"There are metatypes with invalid `get_all_aliaces` method: {invalid_metatypes}"
 
 
 def test_are_all_magic_functions_patched():
     for operator in PT_OPERATOR_METATYPES.registry_dict:
         for function_name in PT_OPERATOR_METATYPES.get(operator).get_all_aliases():
-            if function_name.startswith('__') and function_name.endswith('__'):
+            if function_name.startswith("__") and function_name.endswith("__"):
                 is_contained = False
                 for _, functions in MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.items():
                     if function_name in functions:

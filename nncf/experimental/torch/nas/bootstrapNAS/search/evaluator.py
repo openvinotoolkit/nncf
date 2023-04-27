@@ -10,39 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import csv
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import NoReturn
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
-import csv
+from typing import Any, Callable, Dict, NoReturn, Optional, Tuple, TypeVar
 
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
 
-DataLoaderType = TypeVar('DataLoaderType')
-TModel = TypeVar('TModel')
-EvalFnType = Callable[
-    [
-        TModel
-    ],
-    float
-]
-AccValFnType = Callable[
-    [
-        TModel,
-        DataLoaderType
-    ],
-    float
-]
+DataLoaderType = TypeVar("DataLoaderType")
+TModel = TypeVar("TModel")
+EvalFnType = Callable[[TModel], float]
+AccValFnType = Callable[[TModel, DataLoaderType], float]
 
 
 class BNASEvaluatorStateNames:
-    BNAS_EVALUATOR_STAGE = 'evaluator_state'
+    BNAS_EVALUATOR_STAGE = "evaluator_state"
 
 
 class BaseEvaluator:
@@ -50,6 +33,7 @@ class BaseEvaluator:
     An interface for handling measurements collected on a target device. Evaluators make use
     of functions provided by the users to measure a particular property, e.g., accuracy, latency, etc.
     """
+
     def __init__(self, name: str, ideal_val: float):
         """
         Initializes evaluator
@@ -61,7 +45,7 @@ class BaseEvaluator:
         self._current_value = -1
         self._ideal_value = ideal_val
         self.cache = {}
-        #TODO(pablo): Here we should store some super-network signature that is associated with this evaluator
+        # TODO(pablo): Here we should store some super-network signature that is associated with this evaluator
 
     @property
     def current_value(self):
@@ -123,10 +107,10 @@ class BaseEvaluator:
         :return: Dict with the state of the evaluator
         """
         state_dict = {
-            'name': self.name,
-            'current_value': self._current_value,
-            'ideal_value': self._ideal_value,
-            'cache': self.cache,
+            "name": self.name,
+            "current_value": self._current_value,
+            "ideal_value": self._ideal_value,
+            "cache": self.cache,
         }
         return state_dict
 
@@ -138,10 +122,10 @@ class BaseEvaluator:
         :return:
         """
         new_dict = state.copy()
-        self.name = new_dict['name']
-        self._ideal_value = new_dict['ideal_value']
-        self._current_value = new_dict['current_value']
-        self.cache = new_dict['cache']
+        self.name = new_dict["name"]
+        self._ideal_value = new_dict["ideal_value"]
+        self._current_value = new_dict["current_value"]
+        self.cache = new_dict["cache"]
 
     def load_cache_from_csv(self, cache_file_path: str) -> NoReturn:
         """
@@ -150,10 +134,10 @@ class BaseEvaluator:
         :param cache_file_path: Path to CSV file containing the cache information.
         :return:
         """
-        with safe_open(Path(cache_file_path), 'r', encoding='utf8') as cache_file:
+        with safe_open(Path(cache_file_path), "r", encoding="utf8") as cache_file:
             reader = csv.reader(cache_file)
             for row in reader:
-                rep_tuple = tuple(map(int, row[0][1:len(row[0])-1].split(',')))
+                rep_tuple = tuple(map(int, row[0][1 : len(row[0]) - 1].split(",")))
                 self.add_to_cache(rep_tuple, float(row[1]))
 
     def export_cache_to_csv(self, cache_file_path: str) -> NoReturn:
@@ -163,7 +147,7 @@ class BaseEvaluator:
         :param cache_file_path: Path to export a CSV file with the cache information.
         :return:
         """
-        with safe_open(Path(cache_file_path) / f'cache_{self.name}.csv', 'w', encoding='utf8') as cache_dump:
+        with safe_open(Path(cache_file_path) / f"cache_{self.name}.csv", "w", encoding="utf8") as cache_dump:
             writer = csv.writer(cache_dump)
             for key in self.cache:
                 row = [key, self.cache[key]]
@@ -191,8 +175,9 @@ class AccuracyEvaluator(BaseEvaluator):
     A particular kind of evaluator for collecting model's accuracy measurements
     """
 
-    def __init__(self, model: TModel, eval_func: AccValFnType,
-                 val_loader: DataLoaderType, is_top1: Optional[bool] = True):
+    def __init__(
+        self, model: TModel, eval_func: AccValFnType, val_loader: DataLoaderType, is_top1: Optional[bool] = True
+    ):
         """
         Initializes Accuracy operator
 
@@ -224,7 +209,7 @@ class AccuracyEvaluator(BaseEvaluator):
         :return: Dict with state of evaluator
         """
         state = super().get_state()
-        state['is_top1'] = self._is_top1
+        state["is_top1"] = self._is_top1
         return state
 
     def update_from_state(self, state: Dict[str, Any]) -> NoReturn:
@@ -236,4 +221,4 @@ class AccuracyEvaluator(BaseEvaluator):
 
         super().update_from_state(state)
         new_dict = state.copy()
-        self._is_top1 = new_dict['is_top1']
+        self._is_top1 = new_dict["is_top1"]

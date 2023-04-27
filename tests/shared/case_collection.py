@@ -11,21 +11,21 @@
  limitations under the License.
 """
 
-import pytest
 from typing import Dict
+
+import pytest
 
 COMMON_SCOPE_MARKS_VS_OPTIONS = {
     # for instance
     # "slow": "--run-slow",
 }
 
+
 def skip_marked_cases_if_options_not_specified(config, items, marks_vs_options: Dict[str, str]) -> None:
-    options_not_given = { mark: option for mark, option in marks_vs_options.items() if config.getoption(option) is None}
+    options_not_given = {mark: option for mark, option in marks_vs_options.items() if config.getoption(option) is None}
     for item in items:
         for mark, option in options_not_given.items():
             if mark in item.keywords:
                 item.add_marker(
-                        pytest.mark.skip(
-                            reason=f"This test case requires an option {option} to be specified for pytest."
-                            )
-                        )
+                    pytest.mark.skip(reason=f"This test case requires an option {option} to be specified for pytest.")
+                )

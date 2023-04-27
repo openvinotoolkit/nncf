@@ -16,8 +16,8 @@ from typing import Callable
 
 from torch import Tensor
 
-from nncf.torch.dynamic_graph.trace_tensor import flatten_args
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
+from nncf.torch.dynamic_graph.trace_tensor import flatten_args
 
 
 def forward_trace_only(operator: Callable, *args, **kwargs):
@@ -35,8 +35,7 @@ def forward_trace_only(operator: Callable, *args, **kwargs):
     input_traced_tensor_indices = [i for i in range(len(fargs)) if isinstance(fargs[i], TracedTensor)]
 
     if isinstance(result, (list, tuple)):
-        output_tensors_to_be_traced_indices = [i for i in range(len(result)) if
-                                               isinstance(result[i], Tensor)]
+        output_tensors_to_be_traced_indices = [i for i in range(len(result)) if isinstance(result[i], Tensor)]
 
         was_tuple = isinstance(result, tuple)
         result = list(result)
@@ -46,29 +45,30 @@ def forward_trace_only(operator: Callable, *args, **kwargs):
                 forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)
                 if forwarded_meta is not None:
                     forwarded_meta.shape = tuple(result[out_idx].shape)
-                result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx],
-                                                                 forwarded_meta)
+                result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx], forwarded_meta)
         elif len(input_traced_tensor_indices) != len(output_tensors_to_be_traced_indices):
-            raise RuntimeError("Unable to forward trace through operator {} - "
-                               "input and output tensor count mismatch!".format(operator.__name__))
+            raise RuntimeError(
+                "Unable to forward trace through operator {} - "
+                "input and output tensor count mismatch!".format(operator.__name__)
+            )
         else:
             # Assume that output tensor order corresponds to input tensor order
             for in_idx, out_idx in zip(input_traced_tensor_indices, output_tensors_to_be_traced_indices):
                 forwarded_meta = deepcopy(fargs[in_idx].tensor_meta)
                 if forwarded_meta is not None:
                     forwarded_meta.shape = tuple(result[out_idx].shape)
-                result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx],
-                                                                 forwarded_meta)
+                result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx], forwarded_meta)
         if was_tuple:
             result = tuple(result)
     elif len(input_traced_tensor_indices) > 1:
-        raise RuntimeError("Unable to forward trace through operator {} - "
-                           "input and output tensor count mismatch!".format(operator.__name__))
+        raise RuntimeError(
+            "Unable to forward trace through operator {} - "
+            "input and output tensor count mismatch!".format(operator.__name__)
+        )
     elif input_traced_tensor_indices:
         forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)
         if forwarded_meta is not None:
             forwarded_meta.shape = tuple(result.shape)
-        return TracedTensor.from_torch_tensor(result,
-                                              forwarded_meta)
+        return TracedTensor.from_torch_tensor(result, forwarded_meta)
     # No traced tensors in input, return a usual torch.Tensor as well
     return result

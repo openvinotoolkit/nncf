@@ -33,7 +33,7 @@ SPARSITY_LAYER_METATYPES = [
     layer_metatypes.TFEmbeddingLayerMetatype,
     layer_metatypes.TFLocallyConnected1DLayerMetatype,
     layer_metatypes.TFLocallyConnected2DLayerMetatype,
-    layer_metatypes.TFDenseLayerMetatype
+    layer_metatypes.TFDenseLayerMetatype,
 ]
 
 

@@ -12,19 +12,16 @@
 """
 
 from nncf import NNCFConfig
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import PTTensorListComparator
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 
 EPS = 1e-9
 INPUT_SIZE = [1, 4, 4]
 
-NO_COMPRESSION_NNCF_CONFIG = NNCFConfig({
-    "model": "basic_binarization_config",
-    "input_info": {
-        "sample_size": [1] + INPUT_SIZE
-    }
-})
+NO_COMPRESSION_NNCF_CONFIG = NNCFConfig(
+    {"model": "basic_binarization_config", "input_info": {"sample_size": [1] + INPUT_SIZE}}
+)
 
 
 def test_no_compression_algo_not_change_model_params():

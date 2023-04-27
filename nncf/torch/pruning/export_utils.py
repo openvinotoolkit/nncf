@@ -16,8 +16,8 @@ def get_input_masks(nx_node, nx_graph):
     """
     Return input masks for all inputs of nx_node.
     """
-    input_edges = list(nx_graph.in_edges(nx_node['key']))
-    input_masks = [nx_graph.nodes[input_node]['output_mask'] for input_node, _ in input_edges]
+    input_edges = list(nx_graph.in_edges(nx_node["key"]))
+    input_masks = [nx_graph.nodes[input_node]["output_mask"] for input_node, _ in input_edges]
     return input_masks
 
 
@@ -27,5 +27,5 @@ def identity_mask_propagation(nx_node, nx_graph):
     """
     input_masks = get_input_masks(nx_node, nx_graph)
     assert len(input_masks) == 1
-    nx_node['input_masks'] = input_masks
-    nx_node['output_mask'] = input_masks[0]
+    nx_node["input_masks"] = input_masks
+    nx_node["output_mask"] = input_masks[0]

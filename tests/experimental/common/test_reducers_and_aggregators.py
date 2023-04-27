@@ -11,50 +11,39 @@
  limitations under the License.
 """
 
-import pytest
-import numpy as np
 from abc import abstractmethod
 
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
+import numpy as np
+import pytest
+
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanNoOutliersAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MedianNoOutliersAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+
+DEFALUT_3D_MEAN_VALUE = [[2503.125, -2493.75, 5009.375], [-4987.5, 7515.625, -7481.25], [10021.875, -9975.0, 12528.125]]
 
 
-DEFALUT_3D_MEAN_VALUE = [
-    [ 2503.125, -2493.75 ,  5009.375],
-    [-4987.5  ,  7515.625, -7481.25 ],
-    [10021.875, -9975.   , 12528.125]
-]
-
-
-DEFALUT_3D_MEDIAN_VALUE = [
-    [4.5,  5. , 13.5],
-    [10. , 22.5, 15.],
-    [31.5, 20. , 40.5]
-]
+DEFALUT_3D_MEDIAN_VALUE = [[4.5, 5.0, 13.5], [10.0, 22.5, 15.0], [31.5, 20.0, 40.5]]
 
 
 NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE = [
-    [ 4.16666667,  8.33333333, 12.5],
-    [16.66666667, 20.83333333, 25. ],
-    [29.16666667, 33.33333333, 37.5]
+    [4.16666667, 8.33333333, 12.5],
+    [16.66666667, 20.83333333, 25.0],
+    [29.16666667, 33.33333333, 37.5],
 ]
 
 
-NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE = [
-    [ 5.,  4., 15.],
-    [ 8., 25., 12.],
-    [35., 16., 45.]
-]
-
+NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE = [[5.0, 4.0, 15.0], [8.0, 25.0, 12.0], [35.0, 16.0, 45.0]]
 
 
 default_test_quantile = 0.1
+
+
 def default_test_mean_no_outlier(tp, ps):
     return MeanNoOutliersAggregator(tp, ps, quantile=default_test_quantile)
 
@@ -73,7 +62,7 @@ class TemplateTestReducersAggreagtors:
     def tensor_processor(self):
         pass
 
-    @pytest.fixture(scope='module')
+    @pytest.fixture(scope="module")
     @abstractmethod
     def reducers(self):
         pass
@@ -83,17 +72,21 @@ class TemplateTestReducersAggreagtors:
         pass
 
     def test_noop_reducer(self, reducers):
-        reducer = reducers['noop']()
+        reducer = reducers["noop"]()
         input_ = np.arange(24).reshape((1, 2, 3, 4))
         reduced_input = reducer([self.get_nncf_tensor(input_)])
         assert len(reduced_input) == 1
         assert self.all_close(reduced_input[0].tensor, input_)
 
-    @pytest.mark.parametrize('reducer_name,ref',
-        [('min', ([[[-26]], [[-17]], [[-8]], [[1]]], [[[-26]]])),
-         ('max', ([[[-18]], [[-9]], [[0]], [[9]]], [[[9]]])),
-         ('abs_max', ([[[26]], [[17]], [[8]], [[9]]], [[[26]]])),
-         ('mean', ([[[-22.]], [[-13.]], [[-4.]], [[5.]]], [[[-8.5]]]))])
+    @pytest.mark.parametrize(
+        "reducer_name,ref",
+        [
+            ("min", ([[[-26]], [[-17]], [[-8]], [[1]]], [[[-26]]])),
+            ("max", ([[[-18]], [[-9]], [[0]], [[9]]], [[[9]]])),
+            ("abs_max", ([[[26]], [[17]], [[8]], [[9]]], [[[26]]])),
+            ("mean", ([[[-22.0]], [[-13.0]], [[-4.0]], [[5.0]]], [[[-8.5]]])),
+        ],
+    )
     def test_min_max_mean_reducers(self, reducer_name, ref, reducers):
         reduction_shape = (1, 2)
         input_ = np.arange(-26, 10).reshape((4, 3, 3))
@@ -103,9 +96,9 @@ class TemplateTestReducersAggreagtors:
             assert len(val) == 1
             assert self.all_close(val[0].tensor, ref[i])
 
-    @pytest.mark.parametrize('reducer_name,ref',
-        [('quantile', ([-20000], [10000])),
-         ('abs_quantile', ([20000],))])
+    @pytest.mark.parametrize(
+        "reducer_name,ref", [("quantile", ([[[[-20000]]]], [[[[10000]]]])), ("abs_quantile", ([[[[20000]]]],))]
+    )
     def test_quantile_reducers(self, reducer_name, ref, reducers):
         reduction_shape = (1, 2, 3)
         input_ = np.arange(-26, 10).reshape((1, 4, 3, 3))
@@ -117,15 +110,11 @@ class TemplateTestReducersAggreagtors:
         for i, ref_ in enumerate(ref):
             assert self.all_close(val[i].tensor, ref_)
 
-    @pytest.mark.parametrize('reducer_name,ref',
-        [('batch_mean', [[[
-            [-12.5, -11.5, -10.5],
-            [ -9.5,  -8.5,  -7.5],
-            [ -6.5,  -5.5,  -4.5]
-         ]]]),
-         ('mean_per_ch', [-8.5])])
-    def test_batch_mean_mean_per_ch_reducers(
-            self, reducer_name, ref, reducers):
+    @pytest.mark.parametrize(
+        "reducer_name,ref",
+        [("batch_mean", [[[[-12.5, -11.5, -10.5], [-9.5, -8.5, -7.5], [-6.5, -5.5, -4.5]]]]), ("mean_per_ch", [-8.5])],
+    )
+    def test_batch_mean_mean_per_ch_reducers(self, reducer_name, ref, reducers):
         input_ = np.arange(-26, 10).reshape((4, 1, 3, 3))
         reducer = reducers[reducer_name](inplace=False)
         val = reducer([self.get_nncf_tensor(input_)])
@@ -167,88 +156,55 @@ class TemplateTestReducersAggreagtors:
             min_aggregator.register_reduced_input(self.get_nncf_tensor(input_ * (-i)))
             max_aggregator.register_reduced_input(self.get_nncf_tensor(input_ * i))
 
-        min_ref = [[
-            [-50000, -4, -8],
-            [-12, -16, -20],
-            [-24, -28, -32]
-        ]]
+        min_ref = [[[-50000, -4, -8], [-12, -16, -20], [-24, -28, -32]]]
         assert self.all_close(min_ref, min_aggregator.aggregate())
 
-        max_ref = [[
-            [50000, 4, 8],
-            [12, 16, 20],
-            [24, 28, 32]
-        ]]
+        max_ref = [[[50000, 4, 8], [12, 16, 20], [24, 28, 32]]]
         assert self.all_close(max_ref, max_aggregator.aggregate())
 
     NO_OUTLIERS_TEST_PARAMS = [
         (MeanAggregator, True, 1, 1404.5138888888905),
         (MedianAggregator, True, 1, 15.5),
-        (MeanAggregator, False, 1,
-         [2503.125, -2493.75,  5009.375,
-          -4987.5  ,  7515.625, -7481.25,
-          10021.875, -9975., 12528.125]),
-        (MedianAggregator, False, 1,
-         [4.5,  5. , 13.5,
-          10., 22.5, 15.,
-          31.5, 20. , 40.5]),
-
-        (MeanAggregator, True, 2,
-         [ 2512.5, -1651.04166667, 3352.08333333]),
-        (MedianAggregator, True, 2,
-         [ 13., 12.5,  21.]),
-        (MeanAggregator, False, 2,
-         DEFALUT_3D_MEAN_VALUE),
-        (MedianAggregator, False, 2,
-         DEFALUT_3D_MEDIAN_VALUE),
-
-        (MeanAggregator, True, 3,
-         DEFALUT_3D_MEAN_VALUE),
-        (MedianAggregator, True, 3,
-         DEFALUT_3D_MEDIAN_VALUE),
-        (MeanAggregator, False, 3,
-         [DEFALUT_3D_MEAN_VALUE]),
-        (MedianAggregator, False, 3,
-         [DEFALUT_3D_MEDIAN_VALUE]),
-
-
+        (
+            MeanAggregator,
+            False,
+            1,
+            [2503.125, -2493.75, 5009.375, -4987.5, 7515.625, -7481.25, 10021.875, -9975.0, 12528.125],
+        ),
+        (MedianAggregator, False, 1, [4.5, 5.0, 13.5, 10.0, 22.5, 15.0, 31.5, 20.0, 40.5]),
+        (MeanAggregator, True, 2, [2512.5, -1651.04166667, 3352.08333333]),
+        (MedianAggregator, True, 2, [13.0, 12.5, 21.0]),
+        (MeanAggregator, False, 2, DEFALUT_3D_MEAN_VALUE),
+        (MedianAggregator, False, 2, DEFALUT_3D_MEDIAN_VALUE),
+        (MeanAggregator, True, 3, DEFALUT_3D_MEAN_VALUE),
+        (MedianAggregator, True, 3, DEFALUT_3D_MEDIAN_VALUE),
+        (MeanAggregator, False, 3, [DEFALUT_3D_MEAN_VALUE]),
+        (MedianAggregator, False, 3, [DEFALUT_3D_MEDIAN_VALUE]),
         (default_test_mean_no_outlier, True, 1, 1404.5138888888905),
         (default_test_median_no_outlier, True, 1, 15.5),
-        (default_test_mean_no_outlier, False, 1,
-         [ 4.16666667,  8.33333333, 12.5,
-          16.66666667, 20.83333333, 25.,
-          29.16666667, 33.33333333, 37.5]),
-        (default_test_median_no_outlier, False, 1,
-         [5.,  4., 15.,
-          8., 25., 12.,
-          35., 16., 45.]),
-
-        (default_test_mean_no_outlier, True, 2,
-         [16.66666667, 20.83333333, 25.]),
-        (default_test_median_no_outlier, True, 2,
-         [14. , 10., 24.]),
-        (default_test_mean_no_outlier, False, 2,
-         NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE),
-        (default_test_median_no_outlier, False, 2,
-         NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE),
-
-        (default_test_mean_no_outlier, True, 3,
-         NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE),
-        (default_test_median_no_outlier, True, 3,
-         NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE),
-        (default_test_mean_no_outlier, False, 3,
-         [NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE]),
-        (default_test_median_no_outlier, False, 3,
-         [NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE]),
+        (
+            default_test_mean_no_outlier,
+            False,
+            1,
+            [4.16666667, 8.33333333, 12.5, 16.66666667, 20.83333333, 25.0, 29.16666667, 33.33333333, 37.5],
+        ),
+        (default_test_median_no_outlier, False, 1, [5.0, 4.0, 15.0, 8.0, 25.0, 12.0, 35.0, 16.0, 45.0]),
+        (default_test_mean_no_outlier, True, 2, [16.66666667, 20.83333333, 25.0]),
+        (default_test_median_no_outlier, True, 2, [14.0, 10.0, 24.0]),
+        (default_test_mean_no_outlier, False, 2, NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE),
+        (default_test_median_no_outlier, False, 2, NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE),
+        (default_test_mean_no_outlier, True, 3, NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE),
+        (default_test_median_no_outlier, True, 3, NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE),
+        (default_test_mean_no_outlier, False, 3, [NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE]),
+        (default_test_median_no_outlier, False, 3, [NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE]),
     ]
 
-    @pytest.mark.parametrize('aggregator_cls,use_per_sample_stats,dims,refs', NO_OUTLIERS_TEST_PARAMS)
-    def test_mean_median_agggregators(self, aggregator_cls, refs, tensor_processor,
-                                      dims, use_per_sample_stats):
+    @pytest.mark.parametrize("aggregator_cls,use_per_sample_stats,dims,refs", NO_OUTLIERS_TEST_PARAMS)
+    def test_mean_median_agggregators(self, aggregator_cls, refs, tensor_processor, dims, use_per_sample_stats):
         input_ = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
-        input_with_outliers = np.array([100_000, -100_000, 200_000,
-                                        -200_000, 300_000, -300_000,
-                                        400_000, -400_000, 500_000])
+        input_with_outliers = np.array(
+            [100_000, -100_000, 200_000, -200_000, 300_000, -300_000, 400_000, -400_000, 500_000]
+        )
         if dims == 2:
             input_ = input_.reshape((3, 3))
             input_with_outliers = input_with_outliers.reshape((3, 3))

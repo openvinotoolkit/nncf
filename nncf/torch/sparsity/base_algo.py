@@ -24,6 +24,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.controller import SparsityController
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import copy_model
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -93,6 +94,7 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
         pass
 
 
+@api()
 class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityController):
     def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)

@@ -12,39 +12,40 @@
 """
 from typing import Dict, Set
 
-from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionStage
-from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
-from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
-from nncf.config import NNCFConfig
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
-from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.config import NNCFConfig
+from nncf.torch.algo_selector import ZeroCompressionLoss
+from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import TransformationPriority
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.nncf_network import NNCFNetwork
 
 
 class TensorStatisticObservationPoint:
-    def __init__(self, target_point: PTTargetPoint,
-                 reduction_shapes: Set[ReductionShape] = None):
+    def __init__(self, target_point: PTTargetPoint, reduction_shapes: Set[ReductionShape] = None):
         self.target_point = target_point
         self.reduction_shapes = reduction_shapes
 
     def __hash__(self):
         return hash(self.target_point)
 
-    def __eq__(self, other: 'TensorStatisticObservationPoint'):
+    def __eq__(self, other: "TensorStatisticObservationPoint"):
         return self.target_point == other.target_point
 
 
 class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
-    def __init__(self, config: NNCFConfig,
-                 observation_points_vs_collectors: Dict[TensorStatisticObservationPoint,
-                                                        TensorStatisticCollectorBase]):
+    def __init__(
+        self,
+        config: NNCFConfig,
+        observation_points_vs_collectors: Dict[TensorStatisticObservationPoint, TensorStatisticCollectorBase],
+    ):
         super().__init__(config)
         self._observation_points_vs_collectors = observation_points_vs_collectors
 
@@ -56,15 +57,16 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
         for op, rs_vs_collector in self._observation_points_vs_collectors.items():
             for collector in rs_vs_collector.values():
                 hook_obj = collector.register_input
-                command = PTInsertionCommand(op.target_point, hook_obj,
-                                             TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION)
+                command = PTInsertionCommand(
+                    op.target_point, hook_obj, TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION
+                )
                 layout.register(command)
         return layout
 
-    def _build_controller(self, model: NNCFNetwork) -> 'TensorStatisticsCollectionController':
-        return TensorStatisticsCollectionController(model,
-                                                    {k.target_point: v
-                                                     for k, v in self._observation_points_vs_collectors.items()})
+    def _build_controller(self, model: NNCFNetwork) -> "TensorStatisticsCollectionController":
+        return TensorStatisticsCollectionController(
+            model, {k.target_point: v for k, v in self._observation_points_vs_collectors.items()}
+        )
 
     def _handle_frozen_layers(self, target_model: NNCFNetwork):
         pass
@@ -77,12 +79,13 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
 
 
 class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
-    def __init__(self, target_model: NNCFNetwork,
-                 ip_vs_collector_dict: Dict[PTTargetPoint, TensorStatisticCollectorBase]):
+    def __init__(
+        self, target_model: NNCFNetwork, ip_vs_collector_dict: Dict[PTTargetPoint, TensorStatisticCollectorBase]
+    ):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict
         self._scheduler = StubCompressionScheduler()
-        self._loss = ZeroCompressionLoss('cpu')
+        self._loss = ZeroCompressionLoss("cpu")
 
     @property
     def loss(self) -> ZeroCompressionLoss:

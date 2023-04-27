@@ -14,16 +14,17 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Tuple, Optional, List, Union, Callable
+from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
+
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorType
 from nncf.common.tensor import TensorElementsType
+from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
 ReductionShape = Tuple[int]
-MaskedReduceFN = Callable[[NNCFTensor,  Union[int, tuple, list], NNCFTensor, bool], NNCFTensor]
+MaskedReduceFN = Callable[[NNCFTensor, Union[int, tuple, list], NNCFTensor, bool], NNCFTensor]
 
 
 class TensorStatisticCollectorBase(ABC):
@@ -101,8 +102,9 @@ class OnlineTensorStatisticCollector(TensorStatisticCollectorBase):
 class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
     """Collects statistics in offline regime by storing the data and aggregating it afterwards."""
 
-    def __init__(self, reduction_shape: Optional[ReductionShape] = None,
-                 num_samples: int = None, window_size: int = None):
+    def __init__(
+        self, reduction_shape: Optional[ReductionShape] = None, num_samples: int = None, window_size: int = None
+    ):
         super().__init__(reduction_shape, num_samples)
         self._samples = deque(maxlen=window_size)
 
@@ -119,14 +121,14 @@ class NNCFCollectorTensorProcessor(ABC):
     @abstractmethod
     def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
         """
-         Computes minimum of elements across dimensions of NNCFTensor.
+        Computes minimum of elements across dimensions of NNCFTensor.
 
-         :param x: NNCFTensor to reduce
-         :param axis: The dimensions to reduce.
-         :param keepdims: If this is set to True, the axes which are reduced are left
-            in the result as dimensions with size one.
-         :return: Reduced NNCFTensor.
-         """
+        :param x: NNCFTensor to reduce
+        :param axis: The dimensions to reduce.
+        :param keepdims: If this is set to True, the axes which are reduced are left
+           in the result as dimensions with size one.
+        :return: Reduced NNCFTensor.
+        """
 
     @staticmethod
     @abstractmethod
@@ -263,8 +265,9 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]],
-                 axis: Union[int, tuple, list]) -> List[TensorElementsType]:
+    def quantile(
+        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list], keepdims: bool = False
+    ) -> List[TensorElementsType]:
         """
         Compute the quantile-th percentile(s) of the data along the specified axis.
 
@@ -272,6 +275,8 @@ class NNCFCollectorTensorProcessor(ABC):
         :params quantile: Percentile or sequence of percentiles to compute, which must be between
             0 and 1 inclusive.
         :param axis: Axis or axes along which the percentiles are computed.
+        :param keepdims: If True, the axes which are reduced are left in the result
+            as dimensions with size one.
         :returns: List of the quantile-th percentile(s) of the tensor elements.
         """
 
@@ -288,8 +293,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @classmethod
     @abstractmethod
-    def no_outliers_map(cls, x: NNCFTensor, fn: MaskedReduceFN,
-                        axis: int = 0, alpha: float = 0.01) -> NNCFTensor:
+    def no_outliers_map(cls, x: NNCFTensor, fn: MaskedReduceFN, axis: int = 0, alpha: float = 0.01) -> NNCFTensor:
         """
         Computes quantiles [alpha, 1 - alpha] on given tensor, masks all elements that
         are smaller that alpha and bigger than 1 - alpha quantile and applies
@@ -347,12 +351,14 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
     from minimum and maximum values of tensors.
     """
 
-    def __init__(self,
-                 use_per_sample_stats: bool,
-                 use_abs_max: bool,
-                 reduction_shape: ReductionShape,
-                 num_samples: int = None,
-                 window_size: int = None):
+    def __init__(
+        self,
+        use_per_sample_stats: bool,
+        use_abs_max: bool,
+        reduction_shape: ReductionShape,
+        num_samples: int = None,
+        window_size: int = None,
+    ):
         super().__init__(reduction_shape, num_samples)
         self._use_per_sample_stats = use_per_sample_stats
         self._use_abs_max = use_abs_max
@@ -397,14 +403,16 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     Collector aggregates (min or mean) of minimum values and (max or mean) of maximum values.
     """
 
-    def __init__(self,
-                 use_per_sample_stats: bool,
-                 use_abs_max: bool,
-                 use_means_of_mins: bool,
-                 use_means_of_maxs: bool,
-                 reduction_shape: ReductionShape,
-                 num_samples: int = None,
-                 window_size: int = None):
+    def __init__(
+        self,
+        use_per_sample_stats: bool,
+        use_abs_max: bool,
+        use_means_of_mins: bool,
+        use_means_of_maxs: bool,
+        reduction_shape: ReductionShape,
+        num_samples: int = None,
+        window_size: int = None,
+    ):
         super().__init__(use_per_sample_stats, use_abs_max, reduction_shape, num_samples, window_size)
         self._use_means_of_mins = use_means_of_mins
         self._use_means_of_maxs = use_means_of_maxs
@@ -441,10 +449,9 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     Collector that aggregates statistics as mean along a pre-assigned axis.
     """
 
-    def __init__(self,
-                 reduction_shape: ReductionShape,
-                 num_samples: Optional[int] = None,
-                 window_size: Optional[int] = None) -> None:
+    def __init__(
+        self, reduction_shape: ReductionShape, num_samples: Optional[int] = None, window_size: Optional[int] = None
+    ) -> None:
         """
         :param reduction_shape: The shape for the reduction while statistics collection.
             For the MeanStatisticCollector this parameter contains the main axis.
@@ -487,8 +494,7 @@ class BatchStatisticCollector(OfflineTensorStatisticCollector):
     Each sample stays available for usage in further stages of the algorithm.
     """
 
-    def __init__(self,
-                 num_samples: Optional[int] = None) -> None:
+    def __init__(self, num_samples: Optional[int] = None) -> None:
         """
         :param num_samples: Optional parameter for statistic collection that regulates
             the number of samples that will be processed.
@@ -515,8 +521,7 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     """
 
     def _prepare_statistics(self):
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape),
-                                                      discard_zeros=True)
+        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape), discard_zeros=True)
         per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
         per_channel_mad = []
         for idx, median in enumerate(per_channel_median):
@@ -531,11 +536,13 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
     Collector estimates percentile values of all data history.
     """
 
-    def __init__(self,
-                 percentiles_to_collect: List[float],
-                 reduction_shape: Optional[ReductionShape] = None,
-                 num_samples: int = None,
-                 window_size: int = None):
+    def __init__(
+        self,
+        percentiles_to_collect: List[float],
+        reduction_shape: Optional[ReductionShape] = None,
+        num_samples: int = None,
+        window_size: int = None,
+    ):
         super().__init__(reduction_shape, num_samples, window_size)
         self._percentiles_to_collect = percentiles_to_collect
 
@@ -554,11 +561,13 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
     Collector estimates percentile values per step and then averages the results.
     """
 
-    def __init__(self,
-                 percentiles_to_collect: List[float],
-                 reduction_shape: Optional[ReductionShape] = None,
-                 num_samples: int = None,
-                 window_size: int = None):
+    def __init__(
+        self,
+        percentiles_to_collect: List[float],
+        reduction_shape: Optional[ReductionShape] = None,
+        num_samples: int = None,
+        window_size: int = None,
+    ):
         super().__init__(reduction_shape, num_samples, window_size)
         self._all_pct_values = {}
         for pc in percentiles_to_collect:

@@ -22,12 +22,7 @@ from nncf.quantization import quantize_with_accuracy_control
 from nncf.scopes import IgnoredScope
 from nncf.version import __version__
 
-_LOADED_FRAMEWORKS = {
-    "torch": True,
-    "tensorflow": True,
-    "onnx": True,
-    "openvino": True
-}  # fmt: off
+_LOADED_FRAMEWORKS = {"torch": True, "tensorflow": True, "onnx": True, "openvino": True}  # fmt: off
 
 try:
     import torch

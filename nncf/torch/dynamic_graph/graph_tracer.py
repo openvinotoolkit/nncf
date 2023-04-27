@@ -11,8 +11,8 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Callable, Any, List, Optional
 from copy import deepcopy
+from typing import Any, Callable, List, Optional
 
 import torch
 
@@ -61,15 +61,21 @@ def create_input_infos(config) -> Optional[List[ModelInputInfo]]:
     if input_infos is None:
         return input_infos
     if isinstance(input_infos, dict):
-        return [ModelInputInfo(input_infos.get("sample_size"),
-                               input_infos.get("type"),
-                               input_infos.get("keyword"),
-                               input_infos.get("filler")), ]
+        return [
+            ModelInputInfo(
+                input_infos.get("sample_size"),
+                input_infos.get("type"),
+                input_infos.get("keyword"),
+                input_infos.get("filler"),
+            ),
+        ]
     if isinstance(input_infos, list):
-        return [ModelInputInfo(info_dict.get("sample_size"),
-                               info_dict.get("type"),
-                               info_dict.get("keyword"),
-                               info_dict.get("filler")) for info_dict in input_infos]
+        return [
+            ModelInputInfo(
+                info_dict.get("sample_size"), info_dict.get("type"), info_dict.get("keyword"), info_dict.get("filler")
+            )
+            for info_dict in input_infos
+        ]
     raise RuntimeError("Invalid input_infos specified in config - should be either dict or list of dicts")
 
 
@@ -88,16 +94,19 @@ class GraphTracer:
     def __init__(self, custom_forward_fn: Callable[[torch.nn.Module], Any]):
         self.custom_forward_fn = custom_forward_fn
 
-    def trace_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None,
-                    as_eval: bool = False) -> DynamicGraph:
+    def trace_graph(
+        self, model: torch.nn.Module, context_to_use: Optional["TracingContext"] = None, as_eval: bool = False
+    ) -> DynamicGraph:
         sd = deepcopy(model.state_dict())
 
-        from nncf.torch.dynamic_graph.context import TracingContext #pylint: disable=cyclic-import
+        from nncf.torch.dynamic_graph.context import TracingContext  # pylint: disable=cyclic-import
+
         if context_to_use is None:
             context_to_use = TracingContext()
 
         context_to_use.enable_trace_dynamic_graph()
-        from nncf.torch.utils import training_mode_switcher #pylint: disable=cyclic-import
+        from nncf.torch.utils import training_mode_switcher  # pylint: disable=cyclic-import
+
         with context_to_use as _ctx:
             _ctx.base_module_thread_local_replica = model
             with torch.no_grad():
@@ -112,16 +121,21 @@ class GraphTracer:
         return context_to_use.graph
 
 
-
-def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracing=False,
-                            wrap_inputs_fn=None,
-                            wrap_outputs_fn=None,
-                            with_output_tracing=False):
-
+def create_dummy_forward_fn(
+    input_infos: List[ModelInputInfo],
+    with_input_tracing=False,
+    wrap_inputs_fn=None,
+    wrap_outputs_fn=None,
+    with_output_tracing=False,
+):
     def default_dummy_forward_fn(model):
-        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk #pylint: disable=cyclic-import
-        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk #pylint: disable=cyclic-import
-        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors #pylint: disable=cyclic-import
+        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors  # pylint: disable=cyclic-import
+        from nncf.torch.dynamic_graph.io_handling import (
+            wrap_nncf_model_inputs_with_objwalk,  # pylint: disable=cyclic-import
+        )
+        from nncf.torch.dynamic_graph.io_handling import (
+            wrap_nncf_model_outputs_with_objwalk,  # pylint: disable=cyclic-import
+        )
 
         device = get_model_device(model)
         args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]
@@ -147,4 +161,5 @@ def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracin
                 return wrap_outputs_fn(retval)
             return wrap_nncf_model_outputs_with_objwalk(retval)
         return retval
+
     return default_dummy_forward_fn

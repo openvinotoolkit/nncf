@@ -1,28 +1,33 @@
 from collections import OrderedDict
-from inspect import Signature, Parameter
-from typing import Any
-from typing import List
+from inspect import Parameter
+from inspect import Signature
+from typing import Any, List
 
 import torch
 
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
-from nncf.torch.dynamic_graph.patch_pytorch import register_operator
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_mock_tensor
-from nncf.torch.utils import get_model_device
-from nncf.torch.utils import is_tensor, is_traced_tensor
-from nncf.torch.nested_objects_traversal import objwalk
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.api_marker import api
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.torch.dynamic_graph.patch_pytorch import register_operator
+from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_tensor
+from nncf.torch.utils import is_traced_tensor
 
 
+@api(canonical_alias="nncf.torch.nncf_model_input")
 @register_operator(name=MODEL_INPUT_OP_NAME)
-def nncf_model_input(tensor: 'torch.Tensor'):
+def nncf_model_input(tensor: "torch.Tensor"):
     return tensor
 
 
+@api(canonical_alias="nncf.torch.nncf_model_output")
 @register_operator(name=MODEL_OUTPUT_OP_NAME)
-def nncf_model_output(tensor: 'torch.Tensor'):
+def nncf_model_output(tensor: "torch.Tensor"):
     return tensor
 
 
@@ -30,6 +35,7 @@ def wrap_nncf_model_inputs_with_objwalk(model_args, model_kwargs):
     model_args = objwalk(model_args, is_tensor, nncf_model_input)
     model_kwargs = objwalk(model_kwargs, is_tensor, nncf_model_input)
     return model_args, model_kwargs
+
 
 def wrap_nncf_model_outputs_with_objwalk(model_outputs):
     model_outputs = objwalk(model_outputs, is_traced_tensor, nncf_model_output)
@@ -52,24 +58,31 @@ def replicate_same_tensors(obj: Any) -> Any:
                 return tensor.clone()
         observed_tensor_object_ids.add(tensor_object_id)
         return tensor
+
     obj = objwalk(obj, is_tensor, replicate_fn)
     return obj
 
 
 class InputInfoWrapManager:
-    INPUTS_MISMATCH_WARNING_TEXT = "Compression with regards to this input may occur incorrectly. Make sure " \
-                                   "you call the compressed model with inputs that correspond to what NNCF was " \
-                                   "configured to expect (either via NNCF config's input_infos, or custom" \
-                                   "dummy_forward_fn/wrap_inputs_fn parameters), or that you know what you are " \
-                                   "doing. This warning will not be shown again."
-    ARGS_INPUTS_MISMATCH_FORMAT_STRING = "Inputs mismatch - could not find arg with idx {} in NNCF-wrapped model " \
-                                         "input args! " + INPUTS_MISMATCH_WARNING_TEXT
-    KWARGS_INPUTS_MISMATCH_FORMAT_STRING = "Inputs mismatch - could not find kwarg '{}' in NNCF-wrapped model input " \
-                                           "kwargs! " + INPUTS_MISMATCH_WARNING_TEXT
+    INPUTS_MISMATCH_WARNING_TEXT = (
+        "Compression with regards to this input may occur incorrectly. Make sure "
+        "you call the compressed model with inputs that correspond to what NNCF was "
+        "configured to expect (either via NNCF config's input_infos, or custom"
+        "dummy_forward_fn/wrap_inputs_fn parameters), or that you know what you are "
+        "doing. This warning will not be shown again."
+    )
+    ARGS_INPUTS_MISMATCH_FORMAT_STRING = (
+        "Inputs mismatch - could not find arg with idx {} in NNCF-wrapped model "
+        "input args! " + INPUTS_MISMATCH_WARNING_TEXT
+    )
+    KWARGS_INPUTS_MISMATCH_FORMAT_STRING = (
+        "Inputs mismatch - could not find kwarg '{}' in NNCF-wrapped model input "
+        "kwargs! " + INPUTS_MISMATCH_WARNING_TEXT
+    )
 
-    def __init__(self, input_infos: List[ModelInputInfo],
-                 fwd_signature: Signature,
-                 module_ref_for_device: torch.nn.Module = None):
+    def __init__(
+        self, input_infos: List[ModelInputInfo], fwd_signature: Signature, module_ref_for_device: torch.nn.Module = None
+    ):
         self._module_ref_for_device = module_ref_for_device
         arg_iis_list = [ii for ii in input_infos if ii.keyword is None]
         kwarg_iis_list = [(ii.keyword, ii) for ii in input_infos if ii.keyword is not None]
@@ -90,16 +103,20 @@ class InputInfoWrapManager:
         for param_name in self._fwd_params_to_input_infos_odict:
             param_kind = self._fwd_signature.parameters[param_name].kind
             if param_kind is Parameter.VAR_POSITIONAL or param_kind is Parameter.VAR_KEYWORD:
-                nncf_logger.warning("An input_info tensor was bound to a *args or **kwargs variadic parameter in the"
-                                    "forward's signature! This is currently unsupported by NNCF. Input compression may "
-                                    "be incorrect.")
+                nncf_logger.warning(
+                    "An input_info tensor was bound to a *args or **kwargs variadic parameter in the"
+                    "forward's signature! This is currently unsupported by NNCF. Input compression may "
+                    "be incorrect."
+                )
                 # Currently won't support input info mapping to *args or **kwargs-mapped parameters
                 continue
 
             if param_name not in bound_model_params.arguments:
-                nncf_logger.warning("A call to a compressed model's forward occurred without one of the params"
-                                    "specified in input_infos! Input compression may be incorrect. Trying to recover "
-                                    "by wrapping the default value for the parameter.")
+                nncf_logger.warning(
+                    "A call to a compressed model's forward occurred without one of the params"
+                    "specified in input_infos! Input compression may be incorrect. Trying to recover "
+                    "by wrapping the default value for the parameter."
+                )
                 bound_model_params.apply_defaults()
 
             potential_tensor = bound_model_params.arguments[param_name]
@@ -111,7 +128,7 @@ class InputInfoWrapManager:
                 # and the post-hooks for the input node will execute. The result won't go anywhere, though.
                 nncf_logger.info(f"Wrapping a dummy tensor for input {param_name}")
                 info_for_missing_input = self._fwd_params_to_input_infos_odict[param_name]
-                device = 'cuda'
+                device = "cuda"
                 if self._module_ref_for_device is not None:
                     device = get_model_device(self._module_ref_for_device)
                 dummy_tensor = create_mock_tensor(info_for_missing_input, device)

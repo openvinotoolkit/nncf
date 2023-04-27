@@ -12,8 +12,8 @@
 """
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class ShuffleBlock(nn.Module):
@@ -22,7 +22,7 @@ class ShuffleBlock(nn.Module):
         self.groups = groups
 
     def forward(self, x):
-        '''Channel shuffle: [N,C,H,W] -> [N,g,C/g,H,W] -> [N,C/g,g,H,w] -> [N,C,H,W]'''
+        """Channel shuffle: [N,C,H,W] -> [N,g,C/g,H,W] -> [N,C/g,g,H,w] -> [N,C,H,W]"""
         N, C, H, W = x.size()
         g = self.groups
         return x.view(N, g, C // g, H, W).permute(0, 2, 1, 3, 4).contiguous().view(N, C, H, W)
@@ -38,8 +38,9 @@ class Bottleneck(nn.Module):
         self.conv1 = nn.Conv2d(in_planes, mid_planes, kernel_size=1, groups=g, bias=False)
         self.bn1 = nn.BatchNorm2d(mid_planes)
         self.shuffle1 = ShuffleBlock(groups=g)
-        self.conv2 = nn.Conv2d(mid_planes, mid_planes, kernel_size=3, stride=stride, padding=1, groups=mid_planes,
-                               bias=False)
+        self.conv2 = nn.Conv2d(
+            mid_planes, mid_planes, kernel_size=3, stride=stride, padding=1, groups=mid_planes, bias=False
+        )
         self.bn2 = nn.BatchNorm2d(mid_planes)
         self.conv3 = nn.Conv2d(mid_planes, out_planes, kernel_size=1, groups=groups, bias=False)
         self.bn3 = nn.BatchNorm2d(out_planes)
@@ -61,9 +62,9 @@ class Bottleneck(nn.Module):
 class ShuffleNet(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-        out_planes = cfg['out_planes']
-        num_blocks = cfg['num_blocks']
-        groups = cfg['groups']
+        out_planes = cfg["out_planes"]
+        num_blocks = cfg["num_blocks"]
+        groups = cfg["groups"]
 
         self.conv1 = nn.Conv2d(3, 24, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(24)
@@ -94,20 +95,12 @@ class ShuffleNet(nn.Module):
 
 
 def ShuffleNetG2():
-    cfg = {
-        'out_planes': [200, 400, 800],
-        'num_blocks': [4, 8, 4],
-        'groups': 2
-    }
+    cfg = {"out_planes": [200, 400, 800], "num_blocks": [4, 8, 4], "groups": 2}
     return ShuffleNet(cfg)
 
 
 def ShuffleNetG3():
-    cfg = {
-        'out_planes': [240, 480, 960],
-        'num_blocks': [4, 8, 4],
-        'groups': 3
-    }
+    cfg = {"out_planes": [240, 480, 960], "num_blocks": [4, 8, 4], "groups": 3}
     return ShuffleNet(cfg)
 
 
@@ -116,5 +109,6 @@ def test():
     x = torch.randn(1, 3, 32, 32)
     y = net(x)
     print(y)
+
 
 # test()

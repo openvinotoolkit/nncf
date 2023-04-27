@@ -32,9 +32,9 @@ from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import get_mean_batch_stat_collector
 from nncf.openvino.statistics.collectors import get_mean_stat_collector
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
@@ -43,7 +43,6 @@ from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionA
 # pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor
@@ -53,15 +52,13 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod
-    def target_point(target_type: TargetType,
-                     target_node_name: str,
-                     port_id: int) -> OVTargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_bias_correction_command(node: NNCFNode,
-                                       bias_value: np.ndarray,
-                                       nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+    ) -> OVBiasCorrectionCommand:
         return OVCommandCreator.create_command_to_update_bias(node, bias_value, nncf_graph)
 
     @staticmethod
@@ -77,11 +74,12 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return OVFQNodeRemovingCommand(target_point)
 
     @staticmethod
-    def mean_statistic_collector(reduction_shape: ReductionShape,
-                                 inplace: bool,
-                                 num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None,
-                                 ) -> TensorCollector:
+    def mean_statistic_collector(
+        reduction_shape: ReductionShape,
+        inplace: bool,
+        num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
+    ) -> TensorCollector:
         return get_mean_stat_collector(num_samples, reduction_shape, window_size, inplace)
 
     @staticmethod
@@ -112,9 +110,9 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
         for input_port in ops_dict[node_name].inputs():
             input_node = input_port.get_source_output().get_node()
-            if input_node.get_type_name() == 'Parameter':
+            if input_node.get_type_name() == "Parameter":
                 return input_port.get_tensor().get_any_name()
-        raise RuntimeError(f'Input layer not found for {node_name}')
+        raise RuntimeError(f"Input layer not found for {node_name}")
 
     @staticmethod
     def get_output_name(model: ov.Model, node_name: str) -> str:
@@ -123,9 +121,9 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         for output_port in ops_dict[node_name].outputs():
             for output_input_port in output_port.get_target_inputs():
                 output_node = output_input_port.get_node()
-                if output_node.get_type_name() == 'Result':
+                if output_node.get_type_name() == "Result":
                     return output_port.get_any_name()
-        raise RuntimeError(f'Output layer not found for {node_name}')
+        raise RuntimeError(f"Output layer not found for {node_name}")
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

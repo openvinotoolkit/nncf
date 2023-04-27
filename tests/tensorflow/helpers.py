@@ -10,23 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import numbers
 from typing import Union
 
-import numbers
 import numpy as np
 import tensorflow as tf
-from nncf.common.compression import BaseCompressionAlgorithmController
 from tensorflow.python.ops.init_ops import Constant
 
+from examples.tensorflow.classification.datasets.builder import DatasetBuilder
+from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from nncf import NNCFConfig
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from tests.shared.helpers import BaseTensorListComparator
 
-from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
-from examples.tensorflow.classification.datasets.builder import DatasetBuilder
-
-
 TensorType = Union[tf.Tensor, tf.Variable, np.ndarray, numbers.Number]
+
 
 def get_conv_init_value(shape, value):
     mask = np.eye(shape[0], shape[1])
@@ -45,10 +44,7 @@ def get_empty_config(input_sample_sizes=None) -> NNCFConfig:
             return [{"sample_size": sizes} for sizes in input_sample_sizes]
         return [{"sample_size": input_sample_sizes}]
 
-    config = NNCFConfig({
-        "model": "basic_sparse_conv",
-        "input_info": _create_input_info()
-    })
+    config = NNCFConfig({"model": "basic_sparse_conv", "input_info": _create_input_info()})
     return config
 
 
@@ -58,29 +54,37 @@ def get_mock_model(input_shape=(1,)):
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def get_basic_fc_test_model(input_shape=(4, ), out_shape=10):
+def get_basic_fc_test_model(input_shape=(4,), out_shape=10):
     inputs = tf.keras.Input(shape=input_shape)
     outputs = tf.keras.layers.Dense(out_shape)(inputs)
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def get_basic_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size=2, weight_init=-1., bias_init=-2.,
-                              transpose=False):
+def get_basic_conv_test_model(
+    input_shape=(4, 4, 1), out_channels=2, kernel_size=2, weight_init=-1.0, bias_init=-2.0, transpose=False
+):
     inputs = tf.keras.Input(shape=input_shape)
     outputs = create_conv(input_shape[-1], out_channels, kernel_size, weight_init, bias_init, transpose)(inputs)
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def get_basic_two_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size=2, weight_init=-1., bias_init=-2.,
-                                  transpose=False):
+def get_basic_two_conv_test_model(
+    input_shape=(4, 4, 1), out_channels=2, kernel_size=2, weight_init=-1.0, bias_init=-2.0, transpose=False
+):
     inputs = tf.keras.Input(shape=input_shape)
     outputs = create_conv(input_shape[-1], input_shape[-1], kernel_size, weight_init, bias_init, transpose)(inputs)
     outputs = create_conv(input_shape[-1], out_channels, kernel_size, weight_init, bias_init, transpose)(outputs)
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def get_basic_n_conv_test_model(input_shape=(24, 24, 1), in_out_ch=((1, 3), (3, 5), (5, 7), (7, 10)),
-                                kernel_sizes=(2,) * 4, weight_init=-1., bias_init=-2., transpose=False):
+def get_basic_n_conv_test_model(
+    input_shape=(24, 24, 1),
+    in_out_ch=((1, 3), (3, 5), (5, 7), (7, 10)),
+    kernel_sizes=(2,) * 4,
+    weight_init=-1.0,
+    bias_init=-2.0,
+    transpose=False,
+):
     # n = 2 * len(in_out_ch) conv model
     inputs = tf.keras.Input(shape=input_shape)
     outputs = inputs
@@ -102,10 +106,12 @@ def create_compressed_model_and_algo_for_test(model, config, compression_state=N
 
 def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, transpose=False):
     weight_init = get_conv_init_value((kernel_size, kernel_size, in_channels, out_channels), weight_init)
-    args = {'filters': out_channels,
-            'kernel_size': kernel_size,
-            'kernel_initializer': Constant(weight_init),
-            'bias_initializer': Constant(bias_init)}
+    args = {
+        "filters": out_channels,
+        "kernel_size": kernel_size,
+        "kernel_initializer": Constant(weight_init),
+        "bias_initializer": Constant(bias_init),
+    }
     if not transpose:
         conv_cls = tf.keras.layers.Conv2D
     else:
@@ -120,7 +126,7 @@ class TFTensorListComparator(BaseTensorListComparator):
             return tensor.numpy()
         if isinstance(tensor, (np.ndarray, numbers.Number)):
             return tensor
-        raise Exception(f'Tensor must be numbers.Number, np.ndarray, tf.Tensor or tf.Variable, not {type(tensor)}')
+        raise Exception(f"Tensor must be numbers.Number, np.ndarray, tf.Tensor or tf.Variable, not {type(tensor)}")
 
 
 class MockCOCODatasetBuilder(COCODatasetBuilder):
@@ -132,22 +138,16 @@ class MockCOCODatasetBuilder(COCODatasetBuilder):
 def get_coco_dataset_builders(config, num_devices, **kwargs):
     builders = []
 
-    if kwargs.get('train', False):
-        builders.append(MockCOCODatasetBuilder(config=config,
-                                               is_train=True,
-                                               num_devices=num_devices))
+    if kwargs.get("train", False):
+        builders.append(MockCOCODatasetBuilder(config=config, is_train=True, num_devices=num_devices))
 
-    if kwargs.get('validation', False):
-        builders.append(MockCOCODatasetBuilder(config=config,
-                                               is_train=False,
-                                               num_devices=num_devices))
+    if kwargs.get("validation", False):
+        builders.append(MockCOCODatasetBuilder(config=config, is_train=False, num_devices=num_devices))
 
-    if kwargs.get('calibration', False):
+    if kwargs.get("calibration", False):
         config_ = config.deepcopy()
         config_.batch_size = builders[0].batch_size
-        builders.append(MockCOCODatasetBuilder(config=config_,
-                                               is_train=True,
-                                               num_devices=1))
+        builders.append(MockCOCODatasetBuilder(config=config_, is_train=True, num_devices=1))
 
     if len(builders) == 1:
         builders = builders[0]
@@ -165,18 +165,12 @@ def get_cifar10_dataset_builders(config, num_devices, one_hot=True):
     image_size = config.input_info.sample_size[-2]
 
     train_builder = MockCIFAR10DatasetBuilder(
-        config,
-        image_size=image_size,
-        num_devices=num_devices,
-        one_hot=one_hot,
-        is_train=True)
+        config, image_size=image_size, num_devices=num_devices, one_hot=one_hot, is_train=True
+    )
 
     val_builder = MockCIFAR10DatasetBuilder(
-        config,
-        image_size=image_size,
-        num_devices=num_devices,
-        one_hot=one_hot,
-        is_train=False)
+        config, image_size=image_size, num_devices=num_devices, one_hot=one_hot, is_train=False
+    )
 
     return [train_builder, val_builder]
 
@@ -195,7 +189,7 @@ def get_op_by_cls(wrapper, cls):
 
 def operational_node(node_name: str) -> bool:
     """Check for non-operational nodes with names 'model_name/1234567'. Appeared in Mask-RCNN"""
-    return not (len(node_name.split('/')) == 2 and node_name.split('/')[1].isdigit())
+    return not (len(node_name.split("/")) == 2 and node_name.split("/")[1].isdigit())
 
 
 def remove_node_by_name(node_name: str, tf_graph: tf.Graph) -> tf.Graph:
@@ -216,7 +210,7 @@ def remove_node_by_name(node_name: str, tf_graph: tf.Graph) -> tf.Graph:
             node_idx = idx
 
         for port_id, name in enumerate(node.input):
-            if name in [node_name, f'^{node_name}']:
+            if name in [node_name, f"^{node_name}"]:
                 consumers.append((idx, port_id))
 
     if node_idx == -1:
@@ -229,6 +223,6 @@ def remove_node_by_name(node_name: str, tf_graph: tf.Graph) -> tf.Graph:
         graph_def.node[idx].input.extend(incoming_edges)
 
     with tf.Graph().as_default() as graph:  # pylint:disable=not-context-manager
-        tf.graph_util.import_graph_def(graph_def, name='')
+        tf.graph_util.import_graph_def(graph_def, name="")
 
     return graph

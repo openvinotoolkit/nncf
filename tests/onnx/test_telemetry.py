@@ -19,8 +19,9 @@ from tests.shared.helpers import telemetry_send_event_test_driver
 def test_telemetry_is_sent_via_quantize(mocker):
     def use_nncf_fn():
         model_to_test = LinearModel()
-        dataset = nncf.Dataset(MockDataset(model_to_test.input_shape[0]),
-                               transform_func=lambda x: {model_to_test.INPUT_NAME: x})
+        dataset = nncf.Dataset(
+            MockDataset(model_to_test.input_shape[0]), transform_func=lambda x: {model_to_test.INPUT_NAME: x}
+        )
 
         _ = nncf.quantize(model_to_test.onnx_model, dataset)
 

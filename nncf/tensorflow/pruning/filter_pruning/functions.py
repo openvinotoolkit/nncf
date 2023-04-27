@@ -50,9 +50,11 @@ def geometric_median_filter_norm(weight_tensor, dim=0):
     """
     weight_vec = _pull_tensor(weight_tensor, dim)
     square_norms = tf.reduce_sum(tf.square(weight_vec), axis=1, keepdims=True)
-    similar_matrix = tf.sqrt(tf.maximum(square_norms - 2 * tf.matmul(weight_vec, weight_vec, transpose_b=True)
-                                        + tf.transpose(square_norms),
-                                        0))
+    similar_matrix = tf.sqrt(
+        tf.maximum(
+            square_norms - 2 * tf.matmul(weight_vec, weight_vec, transpose_b=True) + tf.transpose(square_norms), 0
+        )
+    )
     similar_sum = tf.reduce_sum(similar_matrix, axis=0)
     return similar_sum
 
@@ -62,9 +64,9 @@ def _l2_distance(x, y):
 
 
 FILTER_IMPORTANCE_FUNCTIONS = {
-    'L2': l2_filter_norm,
-    'L1': l1_filter_norm,
-    'geometric_median': geometric_median_filter_norm
+    "L2": l2_filter_norm,
+    "L1": l1_filter_norm,
+    "geometric_median": geometric_median_filter_norm,
 }
 
 

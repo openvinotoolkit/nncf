@@ -18,6 +18,7 @@ from torch import nn
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
 from nncf.torch.utils import get_model_device
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.creators import create_bootstrap_nas_training_algo
@@ -25,21 +26,23 @@ from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
 from tests.torch.nas.creators import create_two_conv_width_supernet
 from tests.torch.nas.helpers import compare_tensors_ignoring_the_order
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
+from tests.torch.nas.models.synthetic import ConvTwoFcTestModel
 from tests.torch.nas.models.synthetic import TwoConvAddConvTestModel
 from tests.torch.nas.models.synthetic import TwoSequentialConvBNTestModel
-from tests.torch.nas.models.synthetic import ConvTwoFcTestModel
 from tests.torch.nas.models.synthetic import TwoSequentialFcLNTestModel
 from tests.torch.nas.test_all_elasticity import NAS_MODELS_SCOPE
 from tests.torch.nas.test_elastic_kernel import do_conv2d
+
 ###########################
 # Helpers
 ###########################
 from tests.torch.test_compressed_graph import get_full_path_to_the_graph
-from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
-@pytest.fixture(name='basic_model', params=(TwoSequentialFcLNTestModel, ConvTwoFcTestModel,
-                                            TwoConvAddConvTestModel, TwoSequentialConvBNTestModel))
+@pytest.fixture(
+    name="basic_model",
+    params=(TwoSequentialFcLNTestModel, ConvTwoFcTestModel, TwoConvAddConvTestModel, TwoSequentialConvBNTestModel),
+)
 def fixture_basic_model(request):
     model_cls = request.param
     model = model_cls()
@@ -47,19 +50,22 @@ def fixture_basic_model(request):
     return model
 
 
-BASIC_ELASTIC_WIDTH_PARAMS = {'filter_importance': 'L1',
-                              'add_dynamic_inputs': None,
-                              'max_num_widths': -1,
-                              'min_width': 1,
-                              'overwrite_groups': None,
-                              'overwrite_groups_widths': None,
-                              'width_multipliers': None,
-                              'width_step': 1}
+BASIC_ELASTIC_WIDTH_PARAMS = {
+    "filter_importance": "L1",
+    "add_dynamic_inputs": None,
+    "max_num_widths": -1,
+    "min_width": 1,
+    "overwrite_groups": None,
+    "overwrite_groups_widths": None,
+    "width_multipliers": None,
+    "width_step": 1,
+}
 
 
 ###########################
 # Behavior
 ###########################
+
 
 def test_set_elastic_width_by_value_not_from_list():
     width_handler, _ = create_two_conv_width_supernet()
@@ -70,6 +76,7 @@ def test_set_elastic_width_by_value_not_from_list():
 ###########################
 # Output checking
 ###########################
+
 
 def test_elastic_width_with_maximum_value():
     _, supernet = create_two_conv_width_supernet()
@@ -84,7 +91,7 @@ def test_elastic_width_with_maximum_value():
 
 
 def test_elastic_width_with_intermediate_value():
-    width_handler, supernet = create_two_conv_width_supernet(elasticity_params={'width': BASIC_ELASTIC_WIDTH_PARAMS})
+    width_handler, supernet = create_two_conv_width_supernet(elasticity_params={"width": BASIC_ELASTIC_WIDTH_PARAMS})
     device = get_model_device(supernet)
 
     ACTIVE_WIDTH = 1
@@ -103,15 +110,15 @@ def test_elastic_width_with_intermediate_value():
 
 def test_width_activation(basic_model):
     config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
-    config.update({
-        'bootstrapNAS': {
-            'training': {
-                'elasticity': {
-                    'width': BASIC_ELASTIC_WIDTH_PARAMS
-                },
+    config.update(
+        {
+            "bootstrapNAS": {
+                "training": {
+                    "elasticity": {"width": BASIC_ELASTIC_WIDTH_PARAMS},
+                }
             }
         }
-    })
+    )
     ref_model = copy.deepcopy(basic_model)
     ref_model.eval()
     model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
@@ -129,7 +136,7 @@ def test_width_activation(basic_model):
 
 def test_width_reorg(basic_model):
     config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
-    config['bootstrapNAS'] = {}
+    config["bootstrapNAS"] = {}
     model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
     model.eval()
     device = next(model.parameters()).device
@@ -142,14 +149,14 @@ def test_width_reorg(basic_model):
     compare_tensors_ignoring_the_order(after_reorg, before_reorg)
 
 
-@pytest.fixture(name='nas_model_name', scope='function', params=NAS_MODELS_SCOPE)
+@pytest.fixture(name="nas_model_name", scope="function", params=NAS_MODELS_SCOPE)
 def fixture_nas_model_name(request):
     return request.param
 
 
 def test_weight_reorg(nas_model_name, _seed):
-    if nas_model_name in ['inception_v3']:
-        pytest.skip('Skip test for Inception-V3 because of invalid padding update in elastic kernel (60990)')
+    if nas_model_name in ["inception_v3"]:
+        pytest.skip("Skip test for Inception-V3 because of invalid padding update in elastic kernel (60990)")
 
     compressed_model, training_ctrl, dummy_forward = create_bootstrap_nas_training_algo(nas_model_name)
     compressed_model.eval()
@@ -158,11 +165,11 @@ def test_weight_reorg(nas_model_name, _seed):
     width_handler.reorganize_weights()
     after_reorg = dummy_forward(compressed_model)
     atol = 1e-2
-    if nas_model_name == 'efficient_net_b0':
+    if nas_model_name == "efficient_net_b0":
         atol = 4e-1
-    if nas_model_name == 'ssd_vgg':
+    if nas_model_name == "ssd_vgg":
         atol = 5e-1
-    if nas_model_name == 'squeezenet1_0':
+    if nas_model_name == "squeezenet1_0":
         atol = 1
     compare_tensors_ignoring_the_order(after_reorg, before_reorg, atol=atol)
 
@@ -170,6 +177,7 @@ def test_weight_reorg(nas_model_name, _seed):
 ###########################
 # Corner case
 ###########################
+
 
 def test_multi_forward_nodes():
     class TestModel(nn.Module):
@@ -195,11 +203,11 @@ def test_multi_forward_nodes():
             return self.last_conv(o4)
 
     config = get_empty_config(input_sample_sizes=TestModel.INPUT_SIZE)
-    config['compression'] = {'algorithm': 'bootstrapNAS'}
+    config["compression"] = {"algorithm": "bootstrapNAS"}
     model, ctrl = create_bootstrap_training_model_and_ctrl(TestModel(), config)
     multi_elasticity_handler = ctrl.multi_elasticity_handler
     # multi_elasticity_handler.enable_all()
     # multi_elasticity_handler.activate_supernet()
     width_graph = SubnetGraph(model.nncf.get_graph(), multi_elasticity_handler).get()
-    path_to_dot = get_full_path_to_the_graph('multi_forward_node.dot', 'nas')
+    path_to_dot = get_full_path_to_the_graph("multi_forward_node.dot", "nas")
     compare_nx_graph_with_reference(width_graph, path_to_dot)

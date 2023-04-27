@@ -18,6 +18,7 @@ class HookHandle:
     """
     A handle to remove a hook
     """
+
     id = 0
 
     def __init__(self, hooks_registry):

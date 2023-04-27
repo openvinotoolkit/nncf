@@ -28,7 +28,7 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_model_device
 
-PT_COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
+PT_COMPRESSION_ALGORITHMS = Registry("compression algorithm", add_name_as_attr=True)
 
 
 class ZeroCompressionLoss(PTCompressionLoss):

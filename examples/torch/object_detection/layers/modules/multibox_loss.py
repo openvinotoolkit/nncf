@@ -12,10 +12,11 @@
 """
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
-from ..box_utils import match, log_sum_exp
+from ..box_utils import log_sum_exp
+from ..box_utils import match
 
 
 class MultiBoxLoss(nn.Module):
@@ -41,8 +42,19 @@ class MultiBoxLoss(nn.Module):
         See: https://arxiv.org/pdf/1512.02325.pdf for more details.
     """
 
-    def __init__(self, cfg, num_classes, overlap_thresh, prior_for_matching,
-                 bkg_label, neg_mining, neg_pos, neg_overlap, encode_target, device=None):
+    def __init__(
+        self,
+        cfg,
+        num_classes,
+        overlap_thresh,
+        prior_for_matching,
+        bkg_label,
+        neg_mining,
+        neg_pos,
+        neg_overlap,
+        encode_target,
+        device=None,
+    ):
         super().__init__()
         self.device = device
         self.num_classes = num_classes
@@ -86,7 +98,7 @@ class MultiBoxLoss(nn.Module):
         pos_idx = pos.unsqueeze(pos.dim()).expand_as(loc_data)
         loc_p = loc_data[pos_idx].view(-1, 4)
         loc_t = loc_t[pos_idx].view(-1, 4)
-        loss_l = F.smooth_l1_loss(loc_p, loc_t, reduction='sum')
+        loss_l = F.smooth_l1_loss(loc_p, loc_t, reduction="sum")
 
         # Compute max conf across batch for hard negative mining
         batch_conf = conf_data.view(-1, self.num_classes)
@@ -107,7 +119,7 @@ class MultiBoxLoss(nn.Module):
         neg_idx = neg.unsqueeze(2).expand_as(conf_data)
         conf_p = conf_data[(pos_idx + neg_idx).gt(0)].view(-1, self.num_classes)
         targets_weighted = conf_t[(pos + neg).gt(0)]
-        loss_c = F.cross_entropy(conf_p, targets_weighted, reduction='sum')
+        loss_c = F.cross_entropy(conf_p, targets_weighted, reduction="sum")
 
         # Sum of losses: L(x,c,l,g) = (Lconf(x, c) + αLloc(x,l,g)) / N
 

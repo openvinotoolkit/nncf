@@ -15,7 +15,7 @@ from typing import TypeVar
 
 from nncf.common.graph.transformations.layout import TransformationLayout
 
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
 class ModelTransformer:

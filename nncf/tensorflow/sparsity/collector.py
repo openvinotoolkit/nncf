@@ -15,11 +15,11 @@ from typing import List
 
 import tensorflow as tf
 
-from nncf.common.sparsity.collector import WeightDescription
 from nncf.common.sparsity.collector import BaseSparseModelStatisticsCollector
+from nncf.common.sparsity.collector import WeightDescription
+from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
-from nncf.tensorflow.graph.utils import get_nncf_operations
 
 
 def _get_standardized_weight_shape(shape):
@@ -60,7 +60,7 @@ class TFSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
                     weight.name,
                     _get_standardized_weight_shape(weight.shape.as_list()),
                     tf.math.count_nonzero(sparse_weight).numpy().item(),
-                    is_sparse=True
+                    is_sparse=True,
                 )
             )
 
@@ -81,7 +81,7 @@ class TFSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
                     weight.name,
                     _get_standardized_weight_shape(weight.shape.as_list()),
                     tf.math.count_nonzero(weight).numpy().item(),
-                    is_sparse=False
+                    is_sparse=False,
                 )
             )
 

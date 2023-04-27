@@ -35,10 +35,7 @@ def clear_session():
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--data", type=str, default=None,
-        help="Path to test datasets"
-    )
+    parser.addoption("--data", type=str, default=None, help="Path to test datasets")
     parser.addoption(
         "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
     )
@@ -46,24 +43,21 @@ def pytest_addoption(parser):
         "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
     )
     parser.addoption(
-        "--metrics-dump-path", type=str, default=None, help="Path to directory to store metrics. "
-                                                            "Directory must be empty or should not exist."
-                                                            "Metric keeps in "
-                                                            "PROJECT_ROOT/test_results/metrics_dump_timestamp "
-                                                            "if param not specified"
+        "--metrics-dump-path",
+        type=str,
+        default=None,
+        help="Path to directory to store metrics. "
+        "Directory must be empty or should not exist."
+        "Metric keeps in "
+        "PROJECT_ROOT/test_results/metrics_dump_timestamp "
+        "if param not specified",
     )
     parser.addoption(
         "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVINO accuracy test"
     )
-    parser.addoption(
-        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO"
-    )
-    parser.addoption(
-        "--run-weekly-tests", action="store_true", default=False, help="To run weekly tests"
-    )
-    parser.addoption(
-        "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
-    )
+    parser.addoption("--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO")
+    parser.addoption("--run-weekly-tests", action="store_true", default=False, help="To run weekly tests")
+    parser.addoption("--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests")
 
 
 @pytest.fixture(scope="module")
@@ -113,9 +107,8 @@ def install_tests(request):
 
 # Custom markers specifying tests to be run only if a specific option
 # is present on the pytest command line must be registered here.
-MARKS_VS_OPTIONS = {
-    **COMMON_SCOPE_MARKS_VS_OPTIONS
-}
+MARKS_VS_OPTIONS = {**COMMON_SCOPE_MARKS_VS_OPTIONS}
+
 
 def pytest_collection_modifyitems(config, items):
     skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)
