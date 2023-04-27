@@ -95,6 +95,7 @@ test-install-tensorflow:
 # PyTorch backend
 install-torch-test:
 	pip install -U pip
+	pip install setuptools>=62.0.0
 	pip install -e .[torch]
 	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
