@@ -50,6 +50,7 @@ COLORS = (
 )
 # fmt: on
 
+
 def _read_coco_annotation(annotation_file, images_folder):
     images_folder = Path(images_folder)
     anno_dict = OrderedDict()

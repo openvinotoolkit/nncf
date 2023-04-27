@@ -689,6 +689,7 @@ PruningTestModelDiffChInPruningClusterRef = {
 }
 # fmt: on
 
+
 @pytest.mark.parametrize(
     ('model_module', 'all_weights', 'pruning_flops_target', 'ref_flops',
      'ref_params_num', 'refs'),
