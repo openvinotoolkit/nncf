@@ -155,7 +155,7 @@ Functions
 
 .. py:function:: quantize(model, calibration_dataset, preset = QuantizationPreset.PERFORMANCE, target_device = TargetDevice.ANY, subset_size = 300, fast_bias_correction = True, model_type = None, ignored_scope = None, advanced_parameters = None)
 
-   Applies post-training quantization algorithm to provided model.
+   test
 
    :param model: A model to be quantized.
    :type  model: TModel
