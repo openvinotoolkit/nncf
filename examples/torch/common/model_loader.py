@@ -11,11 +11,11 @@
  limitations under the License.
 """
 import urllib.parse
-import urllib.request
 from functools import partial
 from os import path as osp
 from typing import Dict, Optional
 
+import requests
 import torch
 import torchvision.models
 
@@ -109,5 +109,7 @@ def download_checkpoint(url):
     download_path = CACHE_MODELS_PATH / url.split("/")[-1]
     if not download_path.exists():
         print("Downloading checkpoint ...")
-        urllib.request.urlretrieve(url, download_path)
+        checkpoint = requests.get(url)
+        with open(download_path, 'wb') as f:
+            f.write(checkpoint.content)
     return str(download_path)

@@ -10,7 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import xml.etree.ElementTree as ET
+# Since we are not reading XML, but creating it, the package security message is irrelevant
+import xml.etree.ElementTree as ET # nosec
 from typing import Callable, Dict, List, Optional, Tuple
 
 from nncf.common.graph import NNCFGraph
