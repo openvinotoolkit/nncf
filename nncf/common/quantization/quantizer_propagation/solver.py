@@ -232,10 +232,6 @@ class PostprocessingNodeLocator:
                 return True
         return False
 
-    def _check_if_postprocessing(self, node_metatype: OperatorMetatype) -> None:
-        if node_metatype in self._post_processing_marker_metatypes:
-            self._post_processing_marker_encountered = True
-
     def _get_node_metatype(self, node_key: str) -> OperatorMetatype:
         node = self._quant_prop_graph.nodes[node_key]
         return node.get(self._quant_prop_graph.OPERATOR_METATYPE_NODE_ATTR)
@@ -244,101 +240,53 @@ class PostprocessingNodeLocator:
         node = self._quant_prop_graph.nodes[node_key]
         return node.get(self._quant_prop_graph.NODE_TYPE_NODE_ATTR) == QuantizerPropagationStateGraphNodeType.OPERATOR
 
-    def _get_ignored_node_keys(self, node_keys: List[str]) -> List[str]:
-        output = []
-        for node_key, node_metatype in zip(node_keys, map(self._get_node_metatype, node_keys)):
-            if node_metatype not in self._post_processing_marker_metatypes:
-                output.append(node_key)
-        return output
-
     def get_post_processing_node_keys(self) -> Set[str]:
         """
         Finds out the nodes of the QuantizerPropagationStateGraph, which are in post-processing part of the model.
-        Starting from the output nodes all the nodes are added, until the quantizable nodes with weights are faced.
-        If the path with the nodes has the post-processing marker node,
-        all the nodes in this path will be added into ignored.
+        Traversing up from the post-processing nodes all the nodes are added into ignored,
+        until the quantizable nodes with weights are encountered.
+        Traversing down from the post-processing nodes all the nodes are added into ignored,
+        until output nodes are encountered.
+        Only QuantizerPropagationStateGraphNodeType.OPERATOR nodes are processed during the traversing.
+
         :return: Set of the node keys to be ignored.
         """
+        post_processing_nodes = []
+        for metatype in self._post_processing_marker_metatypes:
+            post_processing_nodes.extend(self._quant_prop_graph.get_node_keys_by_metatype(metatype))
 
-        visited_nodes = set()
+        def traverse_function(post_processing_nodes, criteria_fn, traverse_forward=True):
+            ignored_node_keys = set()  # Set[str]
+            for start_node_key in post_processing_nodes:
+                forward_visited_node_keys = self._quant_prop_graph.traverse_graph(start_node_key,
+                                                                                  criteria_fn,
+                                                                                  output=set(),
+                                                                                  traverse_forward=traverse_forward)
+                ignored_node_keys.update(forward_visited_node_keys)
+            return ignored_node_keys
 
-        def backward_traverse_function(
-            node_key: str, output: List[str], visited_nodes: Set[str]
-        ) -> Tuple[bool, List[str]]:
-            """
-            Realizes the search of the quantization ignored nodes in graph.
-            Only QuantizerPropagationStateGraphNodeType.OPERATOR nodes are processed during the traversing.
-            If the current node is in the list of the quantizable nodes with weights,
-             the traversing is being stopped.
-            The new forward traversing from the current node starts.
-            If the quantizable nodes with weights is faced in forward traversing faced,
-             the original backward traversing is being stopped.
-
-            :param node_key: node key to check, whether the traversing has to be stopped or not
-            and whether the node should be added to the traversed path.
-            :param output: Path contains the list of the visited nodes.
-            :param visited_nodes: Set stores whether the particular node was visited before or not.
-            :return: The first value shows whether the traversing finished,
-            the second one is traversing path containing the visited nodes.
-            """
-
-            def forward_traverse_function(
-                node_key: str, output: List[str], visited_nodes: Set[str]
-            ) -> Tuple[bool, List[bool]]:
-                # If the node is not operator
-                if not self._is_node_operator(node_key):
-                    return False, output
-                if node_key in visited_nodes:
-                    return True, output
-                output.append(node_key)
-                if self._is_node_has_underlying_weights(node_key):
-                    return True, output
-                return False, output
-
+        def criteria_function(node_key: str, output: Set[str], visited_nodes: Set[str], stop_fn) -> Tuple[bool, List[str]]:
             # If the node is not operator
             if not self._is_node_operator(node_key):
                 return False, output
             if node_key in visited_nodes:
                 return True, output
-
-            node_metatype = self._get_node_metatype(node_key)
-            # If the node weight quantizable
-            if self._is_node_has_underlying_weights(node_key):
-                visited_nodes.add(node_key)
+            if stop_fn(node_key):
                 return True, output
-            if node_metatype in list(OUTPUT_NOOP_METATYPES.values()) + list(INPUT_NOOP_METATYPES.values()):
-                visited_nodes.add(node_key)
-                return False, output
-            self._check_if_postprocessing(node_metatype)
-            partial_forward_traverse_function = partial(forward_traverse_function, visited_nodes=visited_nodes)
-            forward_visited_node_keys = self._quant_prop_graph.traverse_graph(
-                node_key, partial_forward_traverse_function, output=[], traverse_forward=True
-            )
-            # If in the path there are nodes with weights should stop the main backward traversing
-            for forward_visited_node_key in forward_visited_node_keys:
-                if self._is_node_has_underlying_weights(forward_visited_node_key):
-                    visited_nodes.add(node_key)
-                    return True, output
-            output.append(node_key)
+            output.add(node_key)
+            visited_nodes.add(node_key)
             return False, output
 
-        partial_backward_traverse_function = partial(backward_traverse_function, visited_nodes=visited_nodes)
-        output = set()
+        forward_fn = partial(criteria_function,
+                             visited_nodes=set(),
+                             stop_fn=lambda node_key: self._get_node_metatype(node_key) in OUTPUT_NOOP_METATYPES.values())
+        forward_ignored_node_keys = traverse_function(post_processing_nodes, forward_fn, traverse_forward=True)
 
-        output_nodes = []
-        for output_metatype in OUTPUT_NOOP_METATYPES.values():
-            output_nodes.extend(self._quant_prop_graph.get_node_keys_by_metatype(output_metatype))
-
-        for start_node_key in output_nodes:
-            self._post_processing_marker_encountered = False
-            node_keys = self._quant_prop_graph.traverse_graph(
-                start_node_key, partial_backward_traverse_function, output=[], traverse_forward=False
-            )
-            if self._post_processing_marker_encountered:
-                ignored_node_keys = self._get_ignored_node_keys(node_keys)
-                output.update(ignored_node_keys)
-
-        return output
+        backward_fn = partial(criteria_function,
+                              visited_nodes=set(),
+                              stop_fn=lambda node_key: self._is_node_has_underlying_weights(node_key))
+        backward_ignored_node_keys = traverse_function(post_processing_nodes, backward_fn, traverse_forward=False)
+        return forward_ignored_node_keys.union(backward_ignored_node_keys)
 
 
 class QuantizerPropagationSolver:
