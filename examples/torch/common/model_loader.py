@@ -110,6 +110,6 @@ def download_checkpoint(url):
     if not download_path.exists():
         print("Downloading checkpoint ...")
         checkpoint = requests.get(url)
-        with open(download_path, 'wb') as f:
+        with open(download_path, "wb") as f:
             f.write(checkpoint.content)
     return str(download_path)
