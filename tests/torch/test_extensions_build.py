@@ -6,6 +6,7 @@ import subprocess
 import pytest
 import torch
 
+from nncf.common.utils.os import is_windows
 from tests.shared.command import Command
 from tests.shared.helpers import create_venv_with_nncf
 from tests.shared.helpers import get_python_executable_with_venv
@@ -19,6 +20,8 @@ def test_force_cuda_build(tmp_path):
     Check that CUDA Extensions weren't initially built and \
     then with TORCH_CUDA_ARCH_LIST were forced to be built
     """
+    if is_windows():
+        pytest.skip("checked on linux only")
     venv_path = create_venv_with_nncf(tmp_path, package_type="pip_local", venv_type="venv", extra_reqs={"torch"})
     cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
     if cuda_home is None:
