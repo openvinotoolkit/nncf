@@ -1,9 +1,9 @@
 :orphan:
 
-:py:mod:`nncf.openvino.quantization.algorithms.fast_bias_correction`
-====================================================================
+:py:mod:`nncf.quantization.algorithms.bias_correction.openvino_backend`
+=======================================================================
 
-.. py:module:: nncf.openvino.quantization.algorithms.fast_bias_correction
+.. py:module:: nncf.quantization.algorithms.bias_correction.openvino_backend
 
 .. autoapi-nested-parse::
 

@@ -1,9 +1,9 @@
 :orphan:
 
-:py:mod:`nncf.openvino.quantization.algorithms.min_max.openvino_backend`
-========================================================================
+:py:mod:`nncf.quantization.algorithms.min_max.openvino_backend`
+===============================================================
 
-.. py:module:: nncf.openvino.quantization.algorithms.min_max.openvino_backend
+.. py:module:: nncf.quantization.algorithms.min_max.openvino_backend
 
 .. autoapi-nested-parse::
 
