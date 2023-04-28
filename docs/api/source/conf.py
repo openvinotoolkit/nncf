@@ -24,7 +24,8 @@ extensions = ["autoapi.extension", "sphinx.ext.autodoc"]
 autodoc_typehints = "description"
 
 autoapi_dirs = ["../../../nncf"]
-autoapi_options = ["members", "show-inheritance", "show-module-summary", "special-members", "imported-members"]
+autoapi_options = ["members", "show-inheritance", "show-module-summary", "special-members", "imported-members",
+                   "undoc-members"]
 
 autoapi_template_dir = "_autoapi_templates"
 autoapi_keep_files = True
