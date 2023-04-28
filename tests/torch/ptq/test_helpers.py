@@ -29,6 +29,7 @@ class TestModel(nn.Module):
 def test_create_nncf_network():
     input_shape = (1, 3, 5, 5)
     model = TestModel(input_shape)
+
     def transform_fn(inputs):
         x, _ = inputs
         return x
@@ -38,4 +39,4 @@ def test_create_nncf_network():
     nncf_graph = nncf_network.nncf.get_original_graph()
     all_nodes = nncf_graph.get_all_nodes()
     assert len(all_nodes) == 2
-    assert sorted([node.node_type for node in all_nodes]) == ['nncf_model_input', 'nncf_model_output']
+    assert sorted([node.node_type for node in all_nodes]) == ["nncf_model_input", "nncf_model_output"]
