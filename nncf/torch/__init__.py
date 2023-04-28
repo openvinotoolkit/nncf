@@ -10,7 +10,9 @@
 # limitations under the License.
 # isort: off
 # pylint: skip-file
-
+"""
+Base subpackage for NNCF PyTorch functionality.
+"""
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
 

@@ -8,6 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+PyTorch-specific structure definitions for passing arguments into certain NNCF calls.
+"""
 from typing import Any, Callable, Optional, Tuple
 
 import torch

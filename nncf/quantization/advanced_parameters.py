@@ -8,7 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Structures and functions for passing advanced parameters to NNCF post-training quantization APIs.
+"""
 import sys
 from dataclasses import dataclass
 from dataclasses import field

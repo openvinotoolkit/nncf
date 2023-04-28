@@ -24,8 +24,7 @@ extensions = ["autoapi.extension", "sphinx.ext.autodoc"]
 autodoc_typehints = "description"
 
 autoapi_dirs = ["../../../nncf"]
-autoapi_options = ["members", "show-inheritance", "show-module-summary", "special-members", "imported-members",
-                   "undoc-members"]
+autoapi_options = ["members", "show-inheritance", "show-module-summary", "special-members", "imported-members"]
 
 autoapi_template_dir = "_autoapi_templates"
 autoapi_keep_files = True
@@ -126,7 +125,7 @@ def skip_non_api(app, what, name, obj, skip, options):
     # non-private symbol available in NNCF)
     if what in ["module", "package"] and name in module_fqns:
         print(f"skip_non_api: keeping module {name}")
-        return skip
+        return False
     if what in ["method", "attribute"]:
         class_name = name.rpartition(".")[0]
         if class_name in api_fqns:
