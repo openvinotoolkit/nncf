@@ -23,8 +23,8 @@ from nncf.common.logging import nncf_logger
 from nncf.definitions import NNCF_CI_ENV_VAR_NAME
 from nncf.definitions import NNCF_DEV_ENV_VAR_NAME
 
-
 NNCFTelemetryStub = MagicMock
+
 
 class ITelemetry(ABC):
     # For recommendations on proper usage of categories, actions, labels and values, see:
@@ -41,8 +41,9 @@ class ITelemetry(ABC):
         """
 
     @abstractmethod
-    def send_event(self, event_category: str, event_action: str, event_label: str, event_value: int = 1,
-                   force_send=False, **kwargs):
+    def send_event(
+        self, event_category: str, event_action: str, event_label: str, event_value: int = 1, force_send=False, **kwargs
+    ):
         """
         Send single event.
 
@@ -71,23 +72,25 @@ def skip_if_raised(func: Callable[..., None]) -> Callable[..., None]:
     For the calls on the decorated function the execution will continue from the statement after the function
     even if an exception was triggered inside the function. The function to be wrapped must return nothing or None.
     """
+
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         try:
             func()
-        #pylint:disable=broad-except
+        # pylint:disable=broad-except
         except Exception as e:
             nncf_logger.debug(f"Skipped calling {func.__name__} - internally triggered exception {e}")
+
     return wrapped
 
 
 class NNCFTelemetry(ITelemetry):
-    MEASUREMENT_ID = 'UA-17808594-29'
+    MEASUREMENT_ID = "UA-17808594-29"
 
     def __init__(self):
         try:
-            self._impl = Telemetry(app_name='nncf', app_version=__version__, tid=self.MEASUREMENT_ID)
-        #pylint:disable=broad-except
+            self._impl = Telemetry(app_name="nncf", app_version=__version__, tid=self.MEASUREMENT_ID)
+        # pylint:disable=broad-except
         except Exception as e:
             nncf_logger.debug(f"Failed to instantiate telemetry object: exception {e}")
 
@@ -96,8 +99,9 @@ class NNCFTelemetry(ITelemetry):
         self._impl.start_session(category, **kwargs)
 
     @skip_if_raised
-    def send_event(self, event_category: str, event_action: str, event_label: str, event_value: int = 1,
-                   force_send=False, **kwargs):
+    def send_event(
+        self, event_category: str, event_action: str, event_label: str, event_value: int = 1, force_send=False, **kwargs
+    ):
         self._impl.send_event(event_category, event_action, event_label, event_value, force_send, **kwargs)
 
     @skip_if_raised
@@ -107,6 +111,7 @@ class NNCFTelemetry(ITelemetry):
 
 try:
     from openvino_telemetry import Telemetry
+
     telemetry = NNCFTelemetry()
 except ImportError:
     nncf_logger.debug("openvino_telemetry package not found. No telemetry will be sent.")
@@ -115,6 +120,5 @@ except ImportError:
 # Currently the easiest way to disable telemetry in tests. Will break telemetry if pytest is used in NNCF package code.
 _IS_IN_PYTEST_CONTEXT = "pytest" in sys.modules
 
-if os.getenv(NNCF_CI_ENV_VAR_NAME) or os.getenv(NNCF_DEV_ENV_VAR_NAME) \
-        or _IS_IN_PYTEST_CONTEXT:
+if os.getenv(NNCF_CI_ENV_VAR_NAME) or os.getenv(NNCF_DEV_ENV_VAR_NAME) or _IS_IN_PYTEST_CONTEXT:
     telemetry = NNCFTelemetryStub()

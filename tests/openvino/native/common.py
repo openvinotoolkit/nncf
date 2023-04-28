@@ -17,7 +17,7 @@ import numpy as np
 import openvino.runtime as ov
 
 from nncf import Dataset
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
@@ -40,12 +40,13 @@ def get_dataset_for_test(model):
 
 
 def load_json(stats_path):
-    with open(stats_path, 'r', encoding='utf8') as json_file:
+    with open(stats_path, "r", encoding="utf8") as json_file:
         return json.load(json_file)
 
 
 class NumpyEncoder(json.JSONEncoder):
-    """ Special json encoder for numpy types """
+    """Special json encoder for numpy types"""
+
     # pylint: disable=W0221, E0202
 
     def default(self, o):
@@ -59,5 +60,5 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 def dump_to_json(local_path, data):
-    with open(local_path, 'w', encoding='utf8') as file:
+    with open(local_path, "w", encoding="utf8") as file:
         json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)

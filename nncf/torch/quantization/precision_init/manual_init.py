@@ -10,35 +10,32 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
-from typing import List
+from typing import Dict, List
 
-from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
-from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
-from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
+from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer
+from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 
 
 class ManualPrecisionInitParams(BasePrecisionInitParams):
-    def __init__(self,
-                 user_init_args: QuantizationPrecisionInitArgs = None,
-                 bitwidth_per_scope: List[List] = None):
+    def __init__(self, user_init_args: QuantizationPrecisionInitArgs = None, bitwidth_per_scope: List[List] = None):
         super().__init__(user_init_args)
         self.bitwidth_per_scope = bitwidth_per_scope
 
     @classmethod
-    def from_config(cls,
-                    manual_init_params_dict: Dict):
-        return cls(user_init_args=None,
-                   bitwidth_per_scope=manual_init_params_dict.get("bitwidth_per_scope", []))
+    def from_config(cls, manual_init_params_dict: Dict):
+        return cls(user_init_args=None, bitwidth_per_scope=manual_init_params_dict.get("bitwidth_per_scope", []))
 
 
 class ManualPrecisionInitializer(BasePrecisionInitializer):
-    def __init__(self,
-                 algo: 'ExperimentalQuantizationController',
-                 params: ManualPrecisionInitParams,
-                 hw_precision_constraints: HardwareQuantizationConstraints = None):
+    def __init__(
+        self,
+        algo: "ExperimentalQuantizationController",
+        params: ManualPrecisionInitParams,
+        hw_precision_constraints: HardwareQuantizationConstraints = None,
+    ):
         super().__init__(algo, params, hw_precision_constraints)
         self._bitwidth_per_scope = params.bitwidth_per_scope
 
@@ -47,9 +44,11 @@ class ManualPrecisionInitializer(BasePrecisionInitializer):
         for pair in self._bitwidth_per_scope:
             bitwidth, scope_name = pair
             is_matched = False
-            msg = 'Failed to assign bitwidth={} to `{}`,\n' \
-                  'because it is incompatible for the specified target hardware\n' \
-                  'Supported quantization configs: {}'
+            msg = (
+                "Failed to assign bitwidth={} to `{}`,\n"
+                "because it is incompatible for the specified target hardware\n"
+                "Supported quantization configs: {}"
+            )
             for qp_id, qp in quantizer_setup.quantization_points.items():
                 if scope_name in str(qp.insertion_point):
                     if self._hw_precision_constraints:
@@ -65,6 +64,7 @@ class ManualPrecisionInitializer(BasePrecisionInitializer):
                     break
             if not is_matched:
                 raise ValueError(
-                    'Could not find a quantization point at scope name `{}`, failed to assign bitwidth {} '
-                    'to it'.format(scope_name, bitwidth))
+                    "Could not find a quantization point at scope name `{}`, failed to assign bitwidth {} "
+                    "to it".format(scope_name, bitwidth)
+                )
         return quantizer_setup

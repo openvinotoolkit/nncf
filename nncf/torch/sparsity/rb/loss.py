@@ -15,6 +15,7 @@ import torch
 
 from nncf.torch.compression_method_api import PTCompressionLoss
 
+
 # Actually in responsible to lean density to target value
 class SparseLoss(PTCompressionLoss):
     def __init__(self, sparse_layers=None, target=1.0, p=0.05):
@@ -46,7 +47,8 @@ class SparseLoss(PTCompressionLoss):
         for sparse_layer in self._sparse_layers:
             if not self.disabled and sparse_layer.frozen:
                 raise AssertionError(
-                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
+                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss"
+                )
             if not sparse_layer.frozen:
                 sw_loss = sparse_layer.loss()
                 params = params + sw_loss.view(-1).size(0)
@@ -85,7 +87,8 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         for sparse_layer in self._sparse_layers:
             if not self.disabled and not sparse_layer.sparsify:
                 raise AssertionError(
-                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
+                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss"
+                )
             if sparse_layer.sparsify:
                 sw_loss = sparse_layer.loss()
                 params_layer = sw_loss.view(-1).size(0)

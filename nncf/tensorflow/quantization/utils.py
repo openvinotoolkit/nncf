@@ -16,14 +16,14 @@ from typing import List
 import tensorflow as tf
 
 from nncf.tensorflow.graph.utils import get_nncf_operations
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization.layers import FakeQuantize
 
 
 def apply_overflow_fix(model: tf.keras.Model, op_names: List[str]) -> None:
     if not isinstance(model, tf.keras.Model):
-        raise ValueError(f'Expected model to be a `tf.keras.Model` instance but got: {type(model)}')
+        raise ValueError(f"Expected model to be a `tf.keras.Model` instance but got: {type(model)}")
 
     for wrapped_layer, weight_attr, op in get_nncf_operations(model, op_names):
         if op.half_range:
@@ -35,12 +35,12 @@ def apply_overflow_fix_to_layer(wrapped_layer: NNCFWrapper, weight_attr: str, op
     ops_weights = wrapped_layer.get_operation_weights(op.name)
     # Keep zero weights to prevent
     # zero quant calculation arithmetic errors
-    mask = layer_weight == 0.
+    mask = layer_weight == 0.0
     layer_weight_updated = op.call(layer_weight, ops_weights, False)
 
     # Assign exact zero to weights which
     # was exact zero before overflow fix
-    layer_weight_updated = tf.where(mask, [0.], layer_weight_updated)
+    layer_weight_updated = tf.where(mask, [0.0], layer_weight_updated)
     layer_weight.assign(layer_weight_updated)
     op.apply_overflow_fix(ops_weights)
 

@@ -19,6 +19,7 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 
 def test_telemetry_is_sent(mocker):
     def use_nncf_fn():
-        config = NNCFConfig({"input_info": { "sample_size": [1, 1, 32, 32] } })
+        config = NNCFConfig({"input_info": {"sample_size": [1, 1, 32, 32]}})
         create_compressed_model_and_algo_for_test(TwoConvTestModel(), config)
+
     telemetry_send_event_test_driver(mocker, use_nncf_fn)

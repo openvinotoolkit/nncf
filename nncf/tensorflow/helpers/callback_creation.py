@@ -10,19 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
+from nncf.common.utils.api_marker import api
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from nncf.tensorflow.pruning.callbacks import PruningStatisticsCallback
+from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from nncf.tensorflow.sparsity.callbacks import SparsityStatisticsCallback
 from nncf.tensorflow.sparsity.callbacks import UpdateMask
-from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 
 
+@api(canonical_alias="nncf.tensorflow.create_compression_callbacks")
 def create_compression_callbacks(compression_ctrl, log_tensorboard=True, log_text=True, log_dir=None):
-    compression_controllers = compression_ctrl.child_ctrls \
-        if isinstance(compression_ctrl, CompositeCompressionAlgorithmController) \
+    compression_controllers = (
+        compression_ctrl.child_ctrls
+        if isinstance(compression_ctrl, CompositeCompressionAlgorithmController)
         else [compression_ctrl]
+    )
     for ctrl in compression_controllers:
         if isinstance(ctrl, (BaseSparsityController, BasePruningAlgoController)):
             callbacks = [UpdateMask(ctrl.scheduler)]
@@ -32,9 +35,10 @@ def create_compression_callbacks(compression_ctrl, log_tensorboard=True, log_tex
                 else:
                     statistics_callback_cls = PruningStatisticsCallback
 
-                callbacks += [statistics_callback_cls(ctrl.statistics,
-                                                      log_tensorboard=log_tensorboard,
-                                                      log_text=log_text,
-                                                      log_dir=log_dir)]
+                callbacks += [
+                    statistics_callback_cls(
+                        ctrl.statistics, log_tensorboard=log_tensorboard, log_text=log_text, log_dir=log_dir
+                    )
+                ]
             return callbacks
     return []

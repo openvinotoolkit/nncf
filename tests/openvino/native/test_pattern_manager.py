@@ -10,30 +10,29 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.common.utils.backend import BackendType
 from nncf.common.graph.patterns import PatternNames
+from nncf.common.utils.backend import BackendType
 from tests.shared.patterns import check_patterns
 
 IGNORED_PATTERN_REASONS = {
-    PatternNames.L2_NORM:'Not relevant for OpenVINO.',
-    PatternNames.GROUP_NORM_RELU:'Not relevant for OpenVINO.',
-    PatternNames.LINEAR_CONST_MULTIPLY:'Not relevant for OpenVINO.',
-    PatternNames.SWISH_WITH_SIGMOID: 'Swish exists in the OpenVINO as layer.',
-    PatternNames.SWISH_WITH_HARD_SIGMOID: 'Swish exists in the OpenVINO as layer.',
-    PatternNames.ACTIVATIONS_SCALE_SHIFT: 'Not relevant for OpenVINO.',
-    PatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM: 'Not relevant for OpenVINO.',
-    PatternNames.ARITHMETIC_ACTIVATIONS_SCALE_SHIFT: 'Not relevant for OpenVINO.',
-    PatternNames.ARITHMETIC_BATCH_NORM: 'Not relevant for OpenVINO.',
-    PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS: 'Not relevant for OpenVINO.',
-    PatternNames.ARITHMETIC_SCALE_SHIFT: 'Not relevant for OpenVINO.',
-    PatternNames.ARITHMETIC_SCALE_SHIFT_ACTIVATIONS: 'Not relevant for OpenVINO.',
-    PatternNames.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS: 'Not relevant for OpenVINO.',
-    PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM: 'Not relevant for OpenVINO.',
-    PatternNames.LINEAR_ACTIVATIONS_SCALE_SHIFT: 'Not relevant for OpenVINO.',
-    PatternNames.LINEAR_BATCH_NORM: 'Not relevant for OpenVINO.',
-    PatternNames.LINEAR_BATCH_NORM_ACTIVATIONS: 'Not relevant for OpenVINO.',
-    PatternNames.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS: 'Not relevant for OpenVINO.',
-    PatternNames.LINEAR_SCALE_SHIFT_ACTIVATIONS: 'Not relevant for OpenVINO.',
+    PatternNames.L2_NORM: "Not relevant for OpenVINO.",
+    PatternNames.GROUP_NORM_RELU: "Not relevant for OpenVINO.",
+    PatternNames.LINEAR_CONST_MULTIPLY: "Not relevant for OpenVINO.",
+    PatternNames.SWISH_WITH_SIGMOID: "Swish exists in the OpenVINO as layer.",
+    PatternNames.ACTIVATIONS_SCALE_SHIFT: "Not relevant for OpenVINO.",
+    PatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM: "Not relevant for OpenVINO.",
+    PatternNames.ARITHMETIC_ACTIVATIONS_SCALE_SHIFT: "Not relevant for OpenVINO.",
+    PatternNames.ARITHMETIC_BATCH_NORM: "Not relevant for OpenVINO.",
+    PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS: "Not relevant for OpenVINO.",
+    PatternNames.ARITHMETIC_SCALE_SHIFT: "Not relevant for OpenVINO.",
+    PatternNames.ARITHMETIC_SCALE_SHIFT_ACTIVATIONS: "Not relevant for OpenVINO.",
+    PatternNames.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS: "Not relevant for OpenVINO.",
+    PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM: "Not relevant for OpenVINO.",
+    PatternNames.LINEAR_ACTIVATIONS_SCALE_SHIFT: "Not relevant for OpenVINO.",
+    PatternNames.LINEAR_BATCH_NORM: "Not relevant for OpenVINO.",
+    PatternNames.LINEAR_BATCH_NORM_ACTIVATIONS: "Not relevant for OpenVINO.",
+    PatternNames.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS: "Not relevant for OpenVINO.",
+    PatternNames.LINEAR_SCALE_SHIFT_ACTIVATIONS: "Not relevant for OpenVINO.",
 }
 
 

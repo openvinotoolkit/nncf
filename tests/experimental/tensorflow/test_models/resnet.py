@@ -11,21 +11,20 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Callable
-from typing import Optional
-from typing import Mapping
+from typing import Any, Callable, Mapping, Optional
 
 import tensorflow as tf
+
 
 # pylint:disable=too-many-lines
 # pylint:disable=too-many-statements
 # pylint:disable=abstract-method
-def make_divisible(value: float,
-                   divisor: int,
-                   min_value: Optional[float] = None,
-                   round_down_protect: bool = True,
-                   ) -> int:
+def make_divisible(
+    value: float,
+    divisor: int,
+    min_value: Optional[float] = None,
+    round_down_protect: bool = True,
+) -> int:
     """This is to ensure that all layers have channels that are divisible by 8.
 
     Args:
@@ -49,19 +48,22 @@ def make_divisible(value: float,
 
 class SqueezeExcitation(tf.keras.layers.Layer):
     """Creates a squeeze and excitation layer."""
-    def __init__(self,
-                 in_filters,
-                 out_filters,
-                 se_ratio,
-                 divisible_by=1,
-                 use_3d_input=False,
-                 kernel_initializer='VarianceScaling',
-                 kernel_regularizer=None,
-                 bias_regularizer=None,
-                 activation='relu',
-                 gating_activation='sigmoid',
-                 round_down_protect=True,
-                 **kwargs):
+
+    def __init__(
+        self,
+        in_filters,
+        out_filters,
+        se_ratio,
+        divisible_by=1,
+        use_3d_input=False,
+        kernel_initializer="VarianceScaling",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        activation="relu",
+        gating_activation="sigmoid",
+        round_down_protect=True,
+        **kwargs
+    ):
         """Initializes a squeeze and excitation layer.
 
         Args:
@@ -98,7 +100,7 @@ class SqueezeExcitation(tf.keras.layers.Layer):
         self._kernel_initializer = kernel_initializer
         self._kernel_regularizer = kernel_regularizer
         self._bias_regularizer = bias_regularizer
-        if tf.keras.backend.image_data_format() == 'channels_last':
+        if tf.keras.backend.image_data_format() == "channels_last":
             if not use_3d_input:
                 self._spatial_axis = [1, 2]
             else:
@@ -115,43 +117,46 @@ class SqueezeExcitation(tf.keras.layers.Layer):
         num_reduced_filters = make_divisible(
             max(1, int(self._in_filters * self._se_ratio)),
             divisor=self._divisible_by,
-            round_down_protect=self._round_down_protect)
+            round_down_protect=self._round_down_protect,
+        )
 
         self._se_reduce = tf.keras.layers.Conv2D(
             filters=num_reduced_filters,
             kernel_size=1,
             strides=1,
-            padding='same',
+            padding="same",
             use_bias=True,
             kernel_initializer=self._kernel_initializer,
             kernel_regularizer=self._kernel_regularizer,
-            bias_regularizer=self._bias_regularizer)
+            bias_regularizer=self._bias_regularizer,
+        )
 
         self._se_expand = tf.keras.layers.Conv2D(
             filters=self._out_filters,
             kernel_size=1,
             strides=1,
-            padding='same',
+            padding="same",
             use_bias=True,
             kernel_initializer=self._kernel_initializer,
             kernel_regularizer=self._kernel_regularizer,
-            bias_regularizer=self._bias_regularizer)
+            bias_regularizer=self._bias_regularizer,
+        )
 
         super().build(input_shape)
 
     def get_config(self):
         config = {
-            'in_filters': self._in_filters,
-            'out_filters': self._out_filters,
-            'se_ratio': self._se_ratio,
-            'divisible_by': self._divisible_by,
-            'use_3d_input': self._use_3d_input,
-            'kernel_initializer': self._kernel_initializer,
-            'kernel_regularizer': self._kernel_regularizer,
-            'bias_regularizer': self._bias_regularizer,
-            'activation': self._activation,
-            'gating_activation': self._gating_activation,
-            'round_down_protect': self._round_down_protect,
+            "in_filters": self._in_filters,
+            "out_filters": self._out_filters,
+            "se_ratio": self._se_ratio,
+            "divisible_by": self._divisible_by,
+            "use_3d_input": self._use_3d_input,
+            "kernel_initializer": self._kernel_initializer,
+            "kernel_regularizer": self._kernel_regularizer,
+            "bias_regularizer": self._bias_regularizer,
+            "activation": self._activation,
+            "gating_activation": self._gating_activation,
+            "round_down_protect": self._round_down_protect,
         }
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -180,7 +185,7 @@ class StochasticDepth(tf.keras.layers.Layer):
         self._drop_rate = stochastic_depth_drop_rate
 
     def get_config(self):
-        config = {'drop_rate': self._drop_rate}
+        config = {"drop_rate": self._drop_rate}
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
@@ -193,8 +198,7 @@ class StochasticDepth(tf.keras.layers.Layer):
         keep_prob = 1.0 - self._drop_rate
         batch_size = tf.shape(inputs)[0]
         random_tensor = keep_prob
-        random_tensor += tf.random.uniform(
-            [batch_size] + [1] * (inputs.shape.rank - 1), dtype=inputs.dtype)
+        random_tensor += tf.random.uniform([batch_size] + [1] * (inputs.shape.rank - 1), dtype=inputs.dtype)
         binary_tensor = tf.floor(random_tensor)
         output = tf.math.divide(inputs, keep_prob) * binary_tensor
         return output
@@ -213,7 +217,7 @@ def get_stochastic_depth_rate(init_rate, i, n):
     """
     if init_rate is not None:
         if init_rate < 0 or init_rate > 1:
-            raise ValueError('Initial drop rate must be within 0 and 1.')
+            raise ValueError("Initial drop rate must be within 0 and 1.")
         rate = init_rate * float(i) / n
     else:
         rate = None
@@ -251,7 +255,7 @@ def get_activation(identifier, use_keras_layer=False):
                 "hard_swish": None,
                 "hard_sigmoid": None,
             }
-            if identifier == 'relu':
+            if identifier == "relu":
                 return tf.keras.layers.ReLU()
             if identifier in keras_layer_allowlist:
                 return tf.keras.layers.Activation(keras_layer_allowlist[identifier])
@@ -272,23 +276,25 @@ def get_activation(identifier, use_keras_layer=False):
 class ResidualBlock(tf.keras.layers.Layer):
     """A residual block."""
 
-    def __init__(self,
-                 filters,
-                 strides,
-                 use_projection=False,
-                 se_ratio=None,
-                 resnetd_shortcut=False,
-                 stochastic_depth_drop_rate=None,
-                 kernel_initializer='VarianceScaling',
-                 kernel_regularizer=None,
-                 bias_regularizer=None,
-                 activation='relu',
-                 use_explicit_padding: bool = False,
-                 use_sync_bn=False,
-                 norm_momentum=0.99,
-                 norm_epsilon=0.001,
-                 bn_trainable=True,
-                 **kwargs):
+    def __init__(
+        self,
+        filters,
+        strides,
+        use_projection=False,
+        se_ratio=None,
+        resnetd_shortcut=False,
+        stochastic_depth_drop_rate=None,
+        kernel_initializer="VarianceScaling",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        activation="relu",
+        use_explicit_padding: bool = False,
+        use_sync_bn=False,
+        norm_momentum=0.99,
+        norm_epsilon=0.001,
+        bn_trainable=True,
+        **kwargs
+    ):
         """Initializes a residual block with BN after convolutions.
 
         Args:
@@ -343,7 +349,7 @@ class ResidualBlock(tf.keras.layers.Layer):
             self._norm = tf.keras.layers.experimental.SyncBatchNormalization
         else:
             self._norm = tf.keras.layers.BatchNormalization
-        if tf.keras.backend.image_data_format() == 'channels_last':
+        if tf.keras.backend.image_data_format() == "channels_last":
             self._bn_axis = -1
         else:
             self._bn_axis = 1
@@ -359,18 +365,20 @@ class ResidualBlock(tf.keras.layers.Layer):
                 use_bias=False,
                 kernel_initializer=self._kernel_initializer,
                 kernel_regularizer=self._kernel_regularizer,
-                bias_regularizer=self._bias_regularizer)
+                bias_regularizer=self._bias_regularizer,
+            )
             self._norm0 = self._norm(
                 axis=self._bn_axis,
                 momentum=self._norm_momentum,
                 epsilon=self._norm_epsilon,
-                trainable=self._bn_trainable)
+                trainable=self._bn_trainable,
+            )
 
-        conv1_padding = 'same'
+        conv1_padding = "same"
         # explicit padding here is added for centernet
         if self._use_explicit_padding:
             self._pad = tf.keras.layers.ZeroPadding2D(padding=(1, 1))
-            conv1_padding = 'valid'
+            conv1_padding = "valid"
 
         self._conv1 = tf.keras.layers.Conv2D(
             filters=self._filters,
@@ -380,27 +388,25 @@ class ResidualBlock(tf.keras.layers.Layer):
             use_bias=False,
             kernel_initializer=self._kernel_initializer,
             kernel_regularizer=self._kernel_regularizer,
-            bias_regularizer=self._bias_regularizer)
+            bias_regularizer=self._bias_regularizer,
+        )
         self._norm1 = self._norm(
-            axis=self._bn_axis,
-            momentum=self._norm_momentum,
-            epsilon=self._norm_epsilon,
-            trainable=self._bn_trainable)
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
+        )
 
         self._conv2 = tf.keras.layers.Conv2D(
             filters=self._filters,
             kernel_size=3,
             strides=1,
-            padding='same',
+            padding="same",
             use_bias=False,
             kernel_initializer=self._kernel_initializer,
             kernel_regularizer=self._kernel_regularizer,
-            bias_regularizer=self._bias_regularizer)
+            bias_regularizer=self._bias_regularizer,
+        )
         self._norm2 = self._norm(
-            axis=self._bn_axis,
-            momentum=self._norm_momentum,
-            epsilon=self._norm_epsilon,
-            trainable=self._bn_trainable)
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
+        )
 
         if self._se_ratio and self._se_ratio > 0 and self._se_ratio <= 1:
             self._squeeze_excitation = SqueezeExcitation(
@@ -409,13 +415,13 @@ class ResidualBlock(tf.keras.layers.Layer):
                 se_ratio=self._se_ratio,
                 kernel_initializer=self._kernel_initializer,
                 kernel_regularizer=self._kernel_regularizer,
-                bias_regularizer=self._bias_regularizer)
+                bias_regularizer=self._bias_regularizer,
+            )
         else:
             self._squeeze_excitation = None
 
         if self._stochastic_depth_drop_rate:
-            self._stochastic_depth = StochasticDepth(
-                self._stochastic_depth_drop_rate)
+            self._stochastic_depth = StochasticDepth(self._stochastic_depth_drop_rate)
         else:
             self._stochastic_depth = None
 
@@ -423,21 +429,21 @@ class ResidualBlock(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'filters': self._filters,
-            'strides': self._strides,
-            'use_projection': self._use_projection,
-            'se_ratio': self._se_ratio,
-            'resnetd_shortcut': self._resnetd_shortcut,
-            'stochastic_depth_drop_rate': self._stochastic_depth_drop_rate,
-            'kernel_initializer': self._kernel_initializer,
-            'kernel_regularizer': self._kernel_regularizer,
-            'bias_regularizer': self._bias_regularizer,
-            'activation': self._activation,
-            'use_explicit_padding': self._use_explicit_padding,
-            'use_sync_bn': self._use_sync_bn,
-            'norm_momentum': self._norm_momentum,
-            'norm_epsilon': self._norm_epsilon,
-            'bn_trainable': self._bn_trainable
+            "filters": self._filters,
+            "strides": self._strides,
+            "use_projection": self._use_projection,
+            "se_ratio": self._se_ratio,
+            "resnetd_shortcut": self._resnetd_shortcut,
+            "stochastic_depth_drop_rate": self._stochastic_depth_drop_rate,
+            "kernel_initializer": self._kernel_initializer,
+            "kernel_regularizer": self._kernel_regularizer,
+            "bias_regularizer": self._bias_regularizer,
+            "activation": self._activation,
+            "use_explicit_padding": self._use_explicit_padding,
+            "use_sync_bn": self._use_sync_bn,
+            "norm_momentum": self._norm_momentum,
+            "norm_epsilon": self._norm_epsilon,
+            "bn_trainable": self._bn_trainable,
         }
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -469,23 +475,25 @@ class ResidualBlock(tf.keras.layers.Layer):
 class BottleneckBlock(tf.keras.layers.Layer):
     """A standard bottleneck block."""
 
-    def __init__(self,
-                 filters,
-                 strides,
-                 dilation_rate=1,
-                 use_projection=False,
-                 se_ratio=None,
-                 resnetd_shortcut=False,
-                 stochastic_depth_drop_rate=None,
-                 kernel_initializer='VarianceScaling',
-                 kernel_regularizer=None,
-                 bias_regularizer=None,
-                 activation='relu',
-                 use_sync_bn=False,
-                 norm_momentum=0.99,
-                 norm_epsilon=0.001,
-                 bn_trainable=True,
-                 **kwargs):
+    def __init__(
+        self,
+        filters,
+        strides,
+        dilation_rate=1,
+        use_projection=False,
+        se_ratio=None,
+        resnetd_shortcut=False,
+        stochastic_depth_drop_rate=None,
+        kernel_initializer="VarianceScaling",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        activation="relu",
+        use_sync_bn=False,
+        norm_momentum=0.99,
+        norm_epsilon=0.001,
+        bn_trainable=True,
+        **kwargs
+    ):
         """Initializes a standard bottleneck block with BN after convolutions.
 
         Args:
@@ -537,7 +545,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
             self._norm = tf.keras.layers.experimental.SyncBatchNormalization
         else:
             self._norm = tf.keras.layers.BatchNormalization
-        if tf.keras.backend.image_data_format() == 'channels_last':
+        if tf.keras.backend.image_data_format() == "channels_last":
             self._bn_axis = -1
         else:
             self._bn_axis = 1
@@ -546,8 +554,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
     def build(self, input_shape):
         if self._use_projection:
             if self._resnetd_shortcut:
-                self._shortcut0 = tf.keras.layers.AveragePooling2D(
-                    pool_size=2, strides=self._strides, padding='same')
+                self._shortcut0 = tf.keras.layers.AveragePooling2D(pool_size=2, strides=self._strides, padding="same")
                 self._shortcut1 = tf.keras.layers.Conv2D(
                     filters=self._filters * 4,
                     kernel_size=1,
@@ -555,7 +562,8 @@ class BottleneckBlock(tf.keras.layers.Layer):
                     use_bias=False,
                     kernel_initializer=self._kernel_initializer,
                     kernel_regularizer=self._kernel_regularizer,
-                    bias_regularizer=self._bias_regularizer)
+                    bias_regularizer=self._bias_regularizer,
+                )
             else:
                 self._shortcut = tf.keras.layers.Conv2D(
                     filters=self._filters * 4,
@@ -564,13 +572,15 @@ class BottleneckBlock(tf.keras.layers.Layer):
                     use_bias=False,
                     kernel_initializer=self._kernel_initializer,
                     kernel_regularizer=self._kernel_regularizer,
-                    bias_regularizer=self._bias_regularizer)
+                    bias_regularizer=self._bias_regularizer,
+                )
 
             self._norm0 = self._norm(
                 axis=self._bn_axis,
                 momentum=self._norm_momentum,
                 epsilon=self._norm_epsilon,
-                trainable=self._bn_trainable)
+                trainable=self._bn_trainable,
+            )
 
         self._conv1 = tf.keras.layers.Conv2D(
             filters=self._filters,
@@ -579,32 +589,28 @@ class BottleneckBlock(tf.keras.layers.Layer):
             use_bias=False,
             kernel_initializer=self._kernel_initializer,
             kernel_regularizer=self._kernel_regularizer,
-            bias_regularizer=self._bias_regularizer)
+            bias_regularizer=self._bias_regularizer,
+        )
         self._norm1 = self._norm(
-            axis=self._bn_axis,
-            momentum=self._norm_momentum,
-            epsilon=self._norm_epsilon,
-            trainable=self._bn_trainable)
-        self._activation1 = get_activation(
-            self._activation, use_keras_layer=True)
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
+        )
+        self._activation1 = get_activation(self._activation, use_keras_layer=True)
 
         self._conv2 = tf.keras.layers.Conv2D(
             filters=self._filters,
             kernel_size=3,
             strides=self._strides,
             dilation_rate=self._dilation_rate,
-            padding='same',
+            padding="same",
             use_bias=False,
             kernel_initializer=self._kernel_initializer,
             kernel_regularizer=self._kernel_regularizer,
-            bias_regularizer=self._bias_regularizer)
+            bias_regularizer=self._bias_regularizer,
+        )
         self._norm2 = self._norm(
-            axis=self._bn_axis,
-            momentum=self._norm_momentum,
-            epsilon=self._norm_epsilon,
-            trainable=self._bn_trainable)
-        self._activation2 = get_activation(
-            self._activation, use_keras_layer=True)
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
+        )
+        self._activation2 = get_activation(self._activation, use_keras_layer=True)
 
         self._conv3 = tf.keras.layers.Conv2D(
             filters=self._filters * 4,
@@ -613,14 +619,12 @@ class BottleneckBlock(tf.keras.layers.Layer):
             use_bias=False,
             kernel_initializer=self._kernel_initializer,
             kernel_regularizer=self._kernel_regularizer,
-            bias_regularizer=self._bias_regularizer)
+            bias_regularizer=self._bias_regularizer,
+        )
         self._norm3 = self._norm(
-            axis=self._bn_axis,
-            momentum=self._norm_momentum,
-            epsilon=self._norm_epsilon,
-            trainable=self._bn_trainable)
-        self._activation3 = get_activation(
-            self._activation, use_keras_layer=True)
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
+        )
+        self._activation3 = get_activation(self._activation, use_keras_layer=True)
 
         if self._se_ratio and self._se_ratio > 0 and self._se_ratio <= 1:
             self._squeeze_excitation = SqueezeExcitation(
@@ -629,13 +633,13 @@ class BottleneckBlock(tf.keras.layers.Layer):
                 se_ratio=self._se_ratio,
                 kernel_initializer=self._kernel_initializer,
                 kernel_regularizer=self._kernel_regularizer,
-                bias_regularizer=self._bias_regularizer)
+                bias_regularizer=self._bias_regularizer,
+            )
         else:
             self._squeeze_excitation = None
 
         if self._stochastic_depth_drop_rate:
-            self._stochastic_depth = StochasticDepth(
-                self._stochastic_depth_drop_rate)
+            self._stochastic_depth = StochasticDepth(self._stochastic_depth_drop_rate)
         else:
             self._stochastic_depth = None
         self._add = tf.keras.layers.Add()
@@ -644,21 +648,21 @@ class BottleneckBlock(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'filters': self._filters,
-            'strides': self._strides,
-            'dilation_rate': self._dilation_rate,
-            'use_projection': self._use_projection,
-            'se_ratio': self._se_ratio,
-            'resnetd_shortcut': self._resnetd_shortcut,
-            'stochastic_depth_drop_rate': self._stochastic_depth_drop_rate,
-            'kernel_initializer': self._kernel_initializer,
-            'kernel_regularizer': self._kernel_regularizer,
-            'bias_regularizer': self._bias_regularizer,
-            'activation': self._activation,
-            'use_sync_bn': self._use_sync_bn,
-            'norm_momentum': self._norm_momentum,
-            'norm_epsilon': self._norm_epsilon,
-            'bn_trainable': self._bn_trainable
+            "filters": self._filters,
+            "strides": self._strides,
+            "dilation_rate": self._dilation_rate,
+            "use_projection": self._use_projection,
+            "se_ratio": self._se_ratio,
+            "resnetd_shortcut": self._resnetd_shortcut,
+            "stochastic_depth_drop_rate": self._stochastic_depth_drop_rate,
+            "kernel_initializer": self._kernel_initializer,
+            "kernel_regularizer": self._kernel_regularizer,
+            "bias_regularizer": self._bias_regularizer,
+            "activation": self._activation,
+            "use_sync_bn": self._use_sync_bn,
+            "norm_momentum": self._norm_momentum,
+            "norm_epsilon": self._norm_epsilon,
+            "bn_trainable": self._bn_trainable,
         }
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -700,69 +704,70 @@ class BottleneckBlock(tf.keras.layers.Layer):
 # (block_fn, num_filters, block_repeats)
 RESNET_SPECS = {
     10: [
-        ('residual', 64, 1),
-        ('residual', 128, 1),
-        ('residual', 256, 1),
-        ('residual', 512, 1),
+        ("residual", 64, 1),
+        ("residual", 128, 1),
+        ("residual", 256, 1),
+        ("residual", 512, 1),
     ],
     18: [
-        ('residual', 64, 2),
-        ('residual', 128, 2),
-        ('residual', 256, 2),
-        ('residual', 512, 2),
+        ("residual", 64, 2),
+        ("residual", 128, 2),
+        ("residual", 256, 2),
+        ("residual", 512, 2),
     ],
     34: [
-        ('residual', 64, 3),
-        ('residual', 128, 4),
-        ('residual', 256, 6),
-        ('residual', 512, 3),
+        ("residual", 64, 3),
+        ("residual", 128, 4),
+        ("residual", 256, 6),
+        ("residual", 512, 3),
     ],
     50: [
-        ('bottleneck', 64, 3),
-        ('bottleneck', 128, 4),
-        ('bottleneck', 256, 6),
-        ('bottleneck', 512, 3),
+        ("bottleneck", 64, 3),
+        ("bottleneck", 128, 4),
+        ("bottleneck", 256, 6),
+        ("bottleneck", 512, 3),
     ],
     101: [
-        ('bottleneck', 64, 3),
-        ('bottleneck', 128, 4),
-        ('bottleneck', 256, 23),
-        ('bottleneck', 512, 3),
+        ("bottleneck", 64, 3),
+        ("bottleneck", 128, 4),
+        ("bottleneck", 256, 23),
+        ("bottleneck", 512, 3),
     ],
     152: [
-        ('bottleneck', 64, 3),
-        ('bottleneck', 128, 8),
-        ('bottleneck', 256, 36),
-        ('bottleneck', 512, 3),
+        ("bottleneck", 64, 3),
+        ("bottleneck", 128, 8),
+        ("bottleneck", 256, 36),
+        ("bottleneck", 512, 3),
     ],
     200: [
-        ('bottleneck', 64, 3),
-        ('bottleneck', 128, 24),
-        ('bottleneck', 256, 36),
-        ('bottleneck', 512, 3),
+        ("bottleneck", 64, 3),
+        ("bottleneck", 128, 24),
+        ("bottleneck", 256, 36),
+        ("bottleneck", 512, 3),
     ],
     270: [
-        ('bottleneck', 64, 4),
-        ('bottleneck', 128, 29),
-        ('bottleneck', 256, 53),
-        ('bottleneck', 512, 4),
+        ("bottleneck", 64, 4),
+        ("bottleneck", 128, 29),
+        ("bottleneck", 256, 53),
+        ("bottleneck", 512, 4),
     ],
     350: [
-        ('bottleneck', 64, 4),
-        ('bottleneck', 128, 36),
-        ('bottleneck', 256, 72),
-        ('bottleneck', 512, 4),
+        ("bottleneck", 64, 4),
+        ("bottleneck", 128, 36),
+        ("bottleneck", 256, 72),
+        ("bottleneck", 512, 4),
     ],
     420: [
-        ('bottleneck', 64, 4),
-        ('bottleneck', 128, 44),
-        ('bottleneck', 256, 87),
-        ('bottleneck', 512, 4),
+        ("bottleneck", 64, 4),
+        ("bottleneck", 128, 44),
+        ("bottleneck", 256, 87),
+        ("bottleneck", 512, 4),
     ],
 }
 
+
 #
-@tf.keras.utils.register_keras_serializable(package='Vision')
+@tf.keras.utils.register_keras_serializable(package="Vision")
 class ResNet(tf.keras.Model):
     """Creates ResNet and ResNet-RS family models.
 
@@ -779,24 +784,24 @@ class ResNet(tf.keras.Model):
     def __init__(
         self,
         model_id: int,
-        input_specs: tf.keras.layers.InputSpec = tf.keras.layers.InputSpec(
-            shape=[None, None, None, 3]),
+        input_specs: tf.keras.layers.InputSpec = tf.keras.layers.InputSpec(shape=[None, None, None, 3]),
         depth_multiplier: float = 1.0,
-        stem_type: str = 'v0',
+        stem_type: str = "v0",
         resnetd_shortcut: bool = False,
         replace_stem_max_pool: bool = False,
         se_ratio: Optional[float] = None,
         init_stochastic_depth_rate: float = 0.0,
         scale_stem: bool = True,
-        activation: str = 'relu',
+        activation: str = "relu",
         use_sync_bn: bool = False,
         norm_momentum: float = 0.99,
         norm_epsilon: float = 0.001,
-        kernel_initializer: str = 'VarianceScaling',
+        kernel_initializer: str = "VarianceScaling",
         kernel_regularizer: Optional[tf.keras.regularizers.Regularizer] = None,
         bias_regularizer: Optional[tf.keras.regularizers.Regularizer] = None,
         bn_trainable: bool = True,
-        **kwargs):
+        **kwargs
+    ):
         """Initializes a ResNet model.
 
         Args:
@@ -849,7 +854,7 @@ class ResNet(tf.keras.Model):
         self._bias_regularizer = bias_regularizer
         self._bn_trainable = bn_trainable
 
-        if tf.keras.backend.image_data_format() == 'channels_last':
+        if tf.keras.backend.image_data_format() == "channels_last":
             bn_axis = -1
         else:
             bn_axis = 1
@@ -858,78 +863,58 @@ class ResNet(tf.keras.Model):
         inputs = tf.keras.Input(shape=input_specs.shape[1:])
 
         stem_depth_multiplier = self._depth_multiplier if scale_stem else 1.0
-        if stem_type == 'v0':
+        if stem_type == "v0":
             x = tf.keras.layers.Conv2D(
                 filters=int(64 * stem_depth_multiplier),
                 kernel_size=7,
                 strides=2,
                 use_bias=False,
-                padding='same',
+                padding="same",
                 kernel_initializer=self._kernel_initializer,
                 kernel_regularizer=self._kernel_regularizer,
-                bias_regularizer=self._bias_regularizer)(
-                    inputs)
-            x = self._norm(
-                axis=bn_axis,
-                momentum=norm_momentum,
-                epsilon=norm_epsilon,
-                trainable=bn_trainable)(
-                    x)
+                bias_regularizer=self._bias_regularizer,
+            )(inputs)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
-        elif stem_type == 'v1':
+        elif stem_type == "v1":
             x = tf.keras.layers.Conv2D(
                 filters=int(32 * stem_depth_multiplier),
                 kernel_size=3,
                 strides=2,
                 use_bias=False,
-                padding='same',
+                padding="same",
                 kernel_initializer=self._kernel_initializer,
                 kernel_regularizer=self._kernel_regularizer,
-                bias_regularizer=self._bias_regularizer)(
-                    inputs)
-            x = self._norm(
-                axis=bn_axis,
-                momentum=norm_momentum,
-                epsilon=norm_epsilon,
-                trainable=bn_trainable)(
-                    x)
+                bias_regularizer=self._bias_regularizer,
+            )(inputs)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
             x = tf.keras.layers.Conv2D(
                 filters=int(32 * stem_depth_multiplier),
                 kernel_size=3,
                 strides=1,
                 use_bias=False,
-                padding='same',
+                padding="same",
                 kernel_initializer=self._kernel_initializer,
                 kernel_regularizer=self._kernel_regularizer,
-                bias_regularizer=self._bias_regularizer)(
-                    x)
-            x = self._norm(
-                axis=bn_axis,
-                momentum=norm_momentum,
-                epsilon=norm_epsilon,
-                trainable=bn_trainable)(
-                    x)
+                bias_regularizer=self._bias_regularizer,
+            )(x)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
             x = tf.keras.layers.Conv2D(
                 filters=int(64 * stem_depth_multiplier),
                 kernel_size=3,
                 strides=1,
                 use_bias=False,
-                padding='same',
+                padding="same",
                 kernel_initializer=self._kernel_initializer,
                 kernel_regularizer=self._kernel_regularizer,
-                bias_regularizer=self._bias_regularizer)(
-                    x)
-            x = self._norm(
-                axis=bn_axis,
-                momentum=norm_momentum,
-                epsilon=norm_epsilon,
-                trainable=bn_trainable)(
-                    x)
+                bias_regularizer=self._bias_regularizer,
+            )(x)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
         else:
-            raise ValueError('Stem type {} not supported.'.format(stem_type))
+            raise ValueError("Stem type {} not supported.".format(stem_type))
 
         if replace_stem_max_pool:
             x = tf.keras.layers.Conv2D(
@@ -937,52 +922,49 @@ class ResNet(tf.keras.Model):
                 kernel_size=3,
                 strides=2,
                 use_bias=False,
-                padding='same',
+                padding="same",
                 kernel_initializer=self._kernel_initializer,
                 kernel_regularizer=self._kernel_regularizer,
-                bias_regularizer=self._bias_regularizer)(
-                    x)
-            x = self._norm(
-                axis=bn_axis,
-                momentum=norm_momentum,
-                epsilon=norm_epsilon,
-                trainable=bn_trainable)(
-                    x)
+                bias_regularizer=self._bias_regularizer,
+            )(x)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
         else:
-            x = tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding='same')(x)
+            x = tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding="same")(x)
 
         endpoints = {}
         for i, spec in enumerate(RESNET_SPECS[model_id]):
-            if spec[0] == 'residual':
+            if spec[0] == "residual":
                 block_fn = ResidualBlock
-            elif spec[0] == 'bottleneck':
+            elif spec[0] == "bottleneck":
                 block_fn = BottleneckBlock
             else:
-                raise ValueError('Block fn `{}` is not supported.'.format(spec[0]))
+                raise ValueError("Block fn `{}` is not supported.".format(spec[0]))
             x = self._block_group(
                 inputs=x,
                 filters=int(spec[1] * self._depth_multiplier),
                 strides=(1 if i == 0 else 2),
                 block_fn=block_fn,
                 block_repeats=spec[2],
-                stochastic_depth_drop_rate=get_stochastic_depth_rate(
-                    self._init_stochastic_depth_rate, i + 2, 5),
-                name='block_group_l{}'.format(i + 2))
+                stochastic_depth_drop_rate=get_stochastic_depth_rate(self._init_stochastic_depth_rate, i + 2, 5),
+                name="block_group_l{}".format(i + 2),
+            )
             endpoints[str(i + 2)] = x
 
         self._output_specs = {k: v.get_shape() for k, v in endpoints.items()}
 
         super().__init__(inputs=inputs, outputs=endpoints, **kwargs)
 
-    def _block_group(self,
-                     inputs: tf.Tensor,
-                     filters: int,
-                     strides: int,
-                     block_fn: Callable[..., tf.keras.layers.Layer],
-                     block_repeats: int = 1,
-                     stochastic_depth_drop_rate: float = 0.0,
-                     name: str = 'block_group'):
+    def _block_group(
+        self,
+        inputs: tf.Tensor,
+        filters: int,
+        strides: int,
+        block_fn: Callable[..., tf.keras.layers.Layer],
+        block_repeats: int = 1,
+        stochastic_depth_drop_rate: float = 0.0,
+        name: str = "block_group",
+    ):
         """Creates one group of blocks for the ResNet model.
 
         Args:
@@ -1015,8 +997,8 @@ class ResNet(tf.keras.Model):
             use_sync_bn=self._use_sync_bn,
             norm_momentum=self._norm_momentum,
             norm_epsilon=self._norm_epsilon,
-            bn_trainable=self._bn_trainable)(
-                inputs)
+            bn_trainable=self._bn_trainable,
+        )(inputs)
 
         for _ in range(1, block_repeats):
             x = block_fn(
@@ -1033,29 +1015,29 @@ class ResNet(tf.keras.Model):
                 use_sync_bn=self._use_sync_bn,
                 norm_momentum=self._norm_momentum,
                 norm_epsilon=self._norm_epsilon,
-                bn_trainable=self._bn_trainable)(
-                    x)
+                bn_trainable=self._bn_trainable,
+            )(x)
 
-        return tf.keras.layers.Activation('linear', name=name)(x)
+        return tf.keras.layers.Activation("linear", name=name)(x)
 
     def get_config(self):
         config_dict = {
-            'model_id': self._model_id,
-            'depth_multiplier': self._depth_multiplier,
-            'stem_type': self._stem_type,
-            'resnetd_shortcut': self._resnetd_shortcut,
-            'replace_stem_max_pool': self._replace_stem_max_pool,
-            'activation': self._activation,
-            'se_ratio': self._se_ratio,
-            'init_stochastic_depth_rate': self._init_stochastic_depth_rate,
-            'scale_stem': self._scale_stem,
-            'use_sync_bn': self._use_sync_bn,
-            'norm_momentum': self._norm_momentum,
-            'norm_epsilon': self._norm_epsilon,
-            'kernel_initializer': self._kernel_initializer,
-            'kernel_regularizer': self._kernel_regularizer,
-            'bias_regularizer': self._bias_regularizer,
-            'bn_trainable': self._bn_trainable
+            "model_id": self._model_id,
+            "depth_multiplier": self._depth_multiplier,
+            "stem_type": self._stem_type,
+            "resnetd_shortcut": self._resnetd_shortcut,
+            "replace_stem_max_pool": self._replace_stem_max_pool,
+            "activation": self._activation,
+            "se_ratio": self._se_ratio,
+            "init_stochastic_depth_rate": self._init_stochastic_depth_rate,
+            "scale_stem": self._scale_stem,
+            "use_sync_bn": self._use_sync_bn,
+            "norm_momentum": self._norm_momentum,
+            "norm_epsilon": self._norm_epsilon,
+            "kernel_initializer": self._kernel_initializer,
+            "kernel_regularizer": self._kernel_regularizer,
+            "bias_regularizer": self._bias_regularizer,
+            "bn_trainable": self._bn_trainable,
         }
         return config_dict
 
@@ -1076,10 +1058,9 @@ class ClassificationModel(tf.keras.Model):
         self,
         backbone: tf.keras.Model,
         num_classes: int,
-        input_specs: tf.keras.layers.InputSpec = tf.keras.layers.InputSpec(
-            shape=[None, None, None, 3]),
+        input_specs: tf.keras.layers.InputSpec = tf.keras.layers.InputSpec(shape=[None, None, None, 3]),
         dropout_rate: float = 0.0,
-        kernel_initializer: str = 'random_uniform',
+        kernel_initializer: str = "random_uniform",
         kernel_regularizer: Optional[tf.keras.regularizers.Regularizer] = None,
         bias_regularizer: Optional[tf.keras.regularizers.Regularizer] = None,
         add_head_batch_norm: bool = False,
@@ -1087,7 +1068,8 @@ class ClassificationModel(tf.keras.Model):
         norm_momentum: float = 0.99,
         norm_epsilon: float = 0.001,
         skip_logits_layer: bool = False,
-        **kwargs):
+        **kwargs
+    ):
         """Classification initialization function.
 
         Args:
@@ -1113,7 +1095,7 @@ class ClassificationModel(tf.keras.Model):
             norm = tf.keras.layers.experimental.SyncBatchNormalization
         else:
             norm = tf.keras.layers.BatchNormalization
-        axis = -1 if tf.keras.backend.image_data_format() == 'channels_last' else 1
+        axis = -1 if tf.keras.backend.image_data_format() == "channels_last" else 1
 
         inputs = tf.keras.Input(shape=input_specs.shape[1:], name=input_specs.name)
         endpoints = backbone(inputs)
@@ -1128,23 +1110,22 @@ class ClassificationModel(tf.keras.Model):
                 num_classes,
                 kernel_initializer=kernel_initializer,
                 kernel_regularizer=kernel_regularizer,
-                bias_regularizer=bias_regularizer)(
-                    x)
+                bias_regularizer=bias_regularizer,
+            )(x)
 
-        super().__init__(
-            inputs=inputs, outputs=x, **kwargs)
+        super().__init__(inputs=inputs, outputs=x, **kwargs)
         self._config_dict = {
-            'backbone': backbone,
-            'num_classes': num_classes,
-            'input_specs': input_specs,
-            'dropout_rate': dropout_rate,
-            'kernel_initializer': kernel_initializer,
-            'kernel_regularizer': kernel_regularizer,
-            'bias_regularizer': bias_regularizer,
-            'add_head_batch_norm': add_head_batch_norm,
-            'use_sync_bn': use_sync_bn,
-            'norm_momentum': norm_momentum,
-            'norm_epsilon': norm_epsilon,
+            "backbone": backbone,
+            "num_classes": num_classes,
+            "input_specs": input_specs,
+            "dropout_rate": dropout_rate,
+            "kernel_initializer": kernel_initializer,
+            "kernel_regularizer": kernel_regularizer,
+            "bias_regularizer": bias_regularizer,
+            "add_head_batch_norm": add_head_batch_norm,
+            "use_sync_bn": use_sync_bn,
+            "norm_momentum": norm_momentum,
+            "norm_epsilon": norm_epsilon,
         }
         self._input_specs = input_specs
         self._kernel_regularizer = kernel_regularizer
@@ -1172,37 +1153,38 @@ class ClassificationModel(tf.keras.Model):
 def resnet_50() -> tf.keras.Model:
     input_specs = tf.keras.layers.InputSpec(shape=(None, 224, 224, 3))
     l2_weight_decay = 0.0001
-    l2_regularizer = (tf.keras.regularizers.l2(l2_weight_decay / 2.0) if l2_weight_decay else None)
+    l2_regularizer = tf.keras.regularizers.l2(l2_weight_decay / 2.0) if l2_weight_decay else None
 
     backbone = ResNet(
         model_id=50,
         input_specs=input_specs,
         depth_multiplier=1.0,
-        stem_type='v0',
+        stem_type="v0",
         resnetd_shortcut=False,
         replace_stem_max_pool=False,
         se_ratio=0.0,
         init_stochastic_depth_rate=0.0,
         scale_stem=True,
-        activation='relu',
+        activation="relu",
         use_sync_bn=False,
         norm_momentum=0.9,
         norm_epsilon=0.00001,
         kernel_regularizer=l2_regularizer,
-        bn_trainable=True)
+        bn_trainable=True,
+    )
 
     model = ClassificationModel(
         backbone=backbone,
         num_classes=1001,
         input_specs=input_specs,
         dropout_rate=0.0,
-        kernel_initializer='random_uniform',
+        kernel_initializer="random_uniform",
         kernel_regularizer=l2_regularizer,
         add_head_batch_norm=False,
         use_sync_bn=False,
         norm_momentum=0.9,
         norm_epsilon=0.00001,
-        skip_logits_layer=False
+        skip_logits_layer=False,
     )
 
     return model

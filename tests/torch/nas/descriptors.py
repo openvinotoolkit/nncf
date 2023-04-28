@@ -11,13 +11,7 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import NamedTuple
-from typing import Optional
-from typing import Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import create_elasticity_builder_from_config
@@ -29,15 +23,17 @@ from tests.torch.nas.models.synthetic import ThreeConvModel
 
 
 class ElasticityDesc:
-    def __init__(self,
-                 elasticity_dim: ElasticityDim,
-                 model_cls: Optional[Callable] = None,
-                 ref_state: Optional[Dict[str, Any]] = None,
-                 name: Optional[str] = None,
-                 params: Dict[str, Any] = None,
-                 input_size: Optional[List[int]] = None,
-                 ref_search_space: Optional[Any] = None,
-                 ref_output_fn: Optional[Callable] = None):
+    def __init__(
+        self,
+        elasticity_dim: ElasticityDim,
+        model_cls: Optional[Callable] = None,
+        ref_state: Optional[Dict[str, Any]] = None,
+        name: Optional[str] = None,
+        params: Dict[str, Any] = None,
+        input_size: Optional[List[int]] = None,
+        ref_search_space: Optional[Any] = None,
+        ref_output_fn: Optional[Callable] = None,
+    ):
         self.elasticity_dim = elasticity_dim
         self.model_cls = model_cls
         self.ref_state = ref_state
@@ -51,8 +47,8 @@ class ElasticityDesc:
         if self.name:
             return self.name
         result = self.elasticity_dim.value
-        if hasattr(self.model_cls, '__name__'):
-            result += '_' + self.model_cls.__name__
+        if hasattr(self.model_cls, "__name__"):
+            result += "_" + self.model_cls.__name__
         return result
 
     def build_handler(self):
@@ -75,8 +71,7 @@ class ElasticityDesc:
 
 
 class WidthElasticityDesc:
-    def __init__(self, desc: ElasticityDesc,
-                 width_num_params_indicator: Optional[int] = -1):
+    def __init__(self, desc: ElasticityDesc, width_num_params_indicator: Optional[int] = -1):
         self._elasticity_desc = desc
         self._width_num_params_indicator = width_num_params_indicator
 
@@ -90,7 +85,7 @@ class WidthElasticityDesc:
         return handler, builder
 
     def __str__(self):
-        return str(self._elasticity_desc) + '_wi:' + str(self._width_num_params_indicator)
+        return str(self._elasticity_desc) + "_wi:" + str(self._width_num_params_indicator)
 
 
 class ModelStats(NamedTuple):
@@ -117,23 +112,24 @@ class MultiElasticityTestDesc(NamedTuple):
     name: str = None
 
     def __str__(self):
-        if hasattr(self.model_creator, '__name__'):
+        if hasattr(self.model_creator, "__name__"):
             name = self.model_creator.__name__
         elif self.name is not None:
             name = self.name
         else:
-            name = 'NOT_DEFINED'
+            name = "NOT_DEFINED"
         return name
 
 
-THREE_CONV_TEST_DESC = MultiElasticityTestDesc(model_creator=ThreeConvModel,
-                                               ref_model_stats=RefModelStats(supernet=ModelStats(17400, 87),
-                                                                             kernel_stage=ModelStats(7800, 39),
-                                                                             depth_stage=ModelStats(6000, 30),
-                                                                             width_stage=ModelStats(2000, 10)),
-                                               blocks_to_skip=[
-                                                   ['ThreeConvModel/NNCFConv2d[conv1]/conv2d_0',
-                                                    'ThreeConvModel/NNCFConv2d[conv_to_skip]/conv2d_0']],
-                                               algo_params={'width': {'min_width': 1, 'width_step': 1}},
-                                               input_sizes=ThreeConvModel.INPUT_SIZE,
-                                               )
+THREE_CONV_TEST_DESC = MultiElasticityTestDesc(
+    model_creator=ThreeConvModel,
+    ref_model_stats=RefModelStats(
+        supernet=ModelStats(17400, 87),
+        kernel_stage=ModelStats(7800, 39),
+        depth_stage=ModelStats(6000, 30),
+        width_stage=ModelStats(2000, 10),
+    ),
+    blocks_to_skip=[["ThreeConvModel/NNCFConv2d[conv1]/conv2d_0", "ThreeConvModel/NNCFConv2d[conv_to_skip]/conv2d_0"]],
+    algo_params={"width": {"min_width": 1, "width_step": 1}},
+    input_sizes=ThreeConvModel.INPUT_SIZE,
+)

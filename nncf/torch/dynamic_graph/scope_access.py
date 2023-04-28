@@ -15,9 +15,10 @@ def get_module_by_scope(model: torch.nn.Module, scope: Scope) -> Optional[torch.
         # pylint: disable=protected-access
         next_module = curr_module._modules.get(scope_element.calling_field_name)
         if next_module is None:
-            raise RuntimeError("Could not find a {} module member in {} module of scope {} during node search"
-                               .format(scope_element.calling_field_name,
-                                       scope_element.calling_module_class_name,
-                                       str(scope)))
+            raise RuntimeError(
+                "Could not find a {} module member in {} module of scope {} during node search".format(
+                    scope_element.calling_field_name, scope_element.calling_module_class_name, str(scope)
+                )
+            )
         curr_module = next_module
     return curr_module

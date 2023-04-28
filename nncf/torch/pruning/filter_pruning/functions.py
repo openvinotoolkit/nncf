@@ -49,9 +49,9 @@ def geometric_median_filter_norm(weight_tensor, dim=0):
 
 
 FILTER_IMPORTANCE_FUNCTIONS = {
-    'L2': l2_filter_norm,
-    'L1': l1_filter_norm,
-    'geometric_median': geometric_median_filter_norm
+    "L2": l2_filter_norm,
+    "L1": l1_filter_norm,
+    "geometric_median": geometric_median_filter_norm,
 }
 
 

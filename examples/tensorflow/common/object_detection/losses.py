@@ -12,7 +12,6 @@
 """
 
 import numpy as np
-
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
@@ -38,10 +37,9 @@ def focal_loss(logits, targets, alpha, gamma, normalizer):
         representing normalized loss on the prediction map.
     """
 
-    with tf.name_scope('focal_loss'):
+    with tf.name_scope("focal_loss"):
         positive_label_mask = tf.math.equal(targets, 1.0)
-        cross_entropy = (
-            tf.nn.sigmoid_cross_entropy_with_logits(labels=targets, logits=logits))
+        cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(labels=targets, logits=logits)
 
         # Below are comments/derivations for computing modulator.
         # For brevity, let x = logits,  z = targets, r = gamma, and p_t = sigmod(x)
@@ -74,11 +72,9 @@ def focal_loss(logits, targets, alpha, gamma, normalizer):
         #      (1 - p_t)^r = exp(-r * z * x - r * log(1 + exp(-x))).
 
         neg_logits = -1.0 * logits
-        modulator = tf.math.exp(gamma * targets * neg_logits -
-                                gamma * tf.math.log1p(tf.math.exp(neg_logits)))
+        modulator = tf.math.exp(gamma * targets * neg_logits - gamma * tf.math.log1p(tf.math.exp(neg_logits)))
         loss = modulator * cross_entropy
-        weighted_loss = tf.where(positive_label_mask, alpha * loss,
-                                (1.0 - alpha) * loss)
+        weighted_loss = tf.where(positive_label_mask, alpha * loss, (1.0 - alpha) * loss)
         weighted_loss /= normalizer
 
     return weighted_loss
@@ -90,7 +86,8 @@ class RpnScoreLoss:
     def __init__(self, params):
         self._rpn_batch_size_per_im = params.rpn_batch_size_per_im
         self._binary_crossentropy = tf.keras.losses.BinaryCrossentropy(
-            reduction=tf.keras.losses.Reduction.SUM, from_logits=True)
+            reduction=tf.keras.losses.Reduction.SUM, from_logits=True
+        )
 
     def __call__(self, score_outputs, labels):
         """Computes total RPN detection loss.
@@ -105,7 +102,7 @@ class RpnScoreLoss:
             rpn_score_loss: a scalar tensor representing total score loss.
         """
 
-        with tf.name_scope('rpn_loss'):
+        with tf.name_scope("rpn_loss"):
             levels = sorted(score_outputs.keys())
 
             score_losses = []
@@ -114,9 +111,9 @@ class RpnScoreLoss:
                     self._rpn_score_loss(
                         score_outputs[level],
                         labels[int(level)],
-                        normalizer=tf.cast(
-                            tf.shape(score_outputs[level])[0] *
-                            self._rpn_batch_size_per_im, tf.float32)))
+                        normalizer=tf.cast(tf.shape(score_outputs[level])[0] * self._rpn_batch_size_per_im, tf.float32),
+                    )
+                )
 
             # Sums per level losses to total loss.
             return tf.math.add_n(score_losses)
@@ -130,17 +127,14 @@ class RpnScoreLoss:
             (3) score_targets[i]=-1, the anchor is don't care (ignore).
         """
 
-        with tf.name_scope('rpn_score_loss'):
-            mask = tf.math.logical_or(tf.math.equal(score_targets, 1),
-                                      tf.math.equal(score_targets, 0))
+        with tf.name_scope("rpn_score_loss"):
+            mask = tf.math.logical_or(tf.math.equal(score_targets, 1), tf.math.equal(score_targets, 0))
 
-            score_targets = tf.math.maximum(score_targets,
-                                            tf.zeros_like(score_targets))
+            score_targets = tf.math.maximum(score_targets, tf.zeros_like(score_targets))
 
             score_targets = tf.expand_dims(score_targets, axis=-1)
             score_outputs = tf.expand_dims(score_outputs, axis=-1)
-            score_loss = self._binary_crossentropy(
-                score_targets, score_outputs, sample_weight=mask)
+            score_loss = self._binary_crossentropy(score_targets, score_outputs, sample_weight=mask)
 
             score_loss /= normalizer
             return score_loss
@@ -150,12 +144,11 @@ class RpnBoxLoss:
     """Region Proposal Network box regression loss function."""
 
     def __init__(self, params):
-        logger.info('RpnBoxLoss huber_loss_delta {}'.format(params.huber_loss_delta))
+        logger.info("RpnBoxLoss huber_loss_delta {}".format(params.huber_loss_delta))
         # The delta is typically around the mean value of regression target.
         # for instances, the regression targets of 512x512 input with 6 anchors on
         # P2-P6 pyramid is about [0.1, 0.1, 0.2, 0.2].
-        self._huber_loss = tf.keras.losses.Huber(
-            delta=params.huber_loss_delta, reduction=tf.keras.losses.Reduction.SUM)
+        self._huber_loss = tf.keras.losses.Huber(delta=params.huber_loss_delta, reduction=tf.keras.losses.Reduction.SUM)
 
     def __call__(self, box_outputs, labels):
         """Computes total RPN detection loss.
@@ -172,7 +165,7 @@ class RpnBoxLoss:
             rpn_box_loss: a scalar tensor representing total box regression loss.
         """
 
-        with tf.name_scope('rpn_loss'):
+        with tf.name_scope("rpn_loss"):
             levels = sorted(box_outputs.keys())
 
             box_losses = []
@@ -184,7 +177,7 @@ class RpnBoxLoss:
 
     def _rpn_box_loss(self, box_outputs, box_targets, normalizer=1.0):
         """Computes box regression loss."""
-        with tf.name_scope('rpn_box_loss'):
+        with tf.name_scope("rpn_box_loss"):
             mask = tf.cast(tf.not_equal(box_targets, 0.0), tf.float32)
             box_targets = tf.expand_dims(box_targets, axis=-1)
             box_outputs = tf.expand_dims(box_outputs, axis=-1)
@@ -201,7 +194,8 @@ class FastrcnnClassLoss:
 
     def __init__(self):
         self._categorical_crossentropy = tf.keras.losses.CategoricalCrossentropy(
-            reduction=tf.keras.losses.Reduction.SUM, from_logits=True)
+            reduction=tf.keras.losses.Reduction.SUM, from_logits=True
+        )
 
     def __call__(self, class_outputs, class_targets):
         """Computes the class loss (Fast-RCNN branch) of Mask-RCNN.
@@ -218,19 +212,18 @@ class FastrcnnClassLoss:
         Returns:
             a scalar tensor representing total class loss.
         """
-        with tf.name_scope('fast_rcnn_loss'):
+        with tf.name_scope("fast_rcnn_loss"):
             batch_size, num_boxes, num_classes = class_outputs.get_shape().as_list()
             class_targets = tf.cast(class_targets, tf.int32)
             class_targets_one_hot = tf.one_hot(class_targets, num_classes, on_value=None, off_value=None)
-            return self._fast_rcnn_class_loss(class_outputs, class_targets_one_hot,
-                                              normalizer=batch_size * num_boxes / 2.0)
+            return self._fast_rcnn_class_loss(
+                class_outputs, class_targets_one_hot, normalizer=batch_size * num_boxes / 2.0
+            )
 
-    def _fast_rcnn_class_loss(self, class_outputs, class_targets_one_hot,
-                              normalizer):
+    def _fast_rcnn_class_loss(self, class_outputs, class_targets_one_hot, normalizer):
         """Computes classification loss."""
-        with tf.name_scope('fast_rcnn_class_loss'):
-            class_loss = self._categorical_crossentropy(class_targets_one_hot,
-                                                        class_outputs)
+        with tf.name_scope("fast_rcnn_class_loss"):
+            class_loss = self._categorical_crossentropy(class_targets_one_hot, class_outputs)
             class_loss /= normalizer
             return class_loss
 
@@ -239,12 +232,11 @@ class FastrcnnBoxLoss:
     """Fast R-CNN box regression loss function."""
 
     def __init__(self, params):
-        logger.info('FastrcnnBoxLoss huber_loss_delta {}'.format(params.huber_loss_delta))
+        logger.info("FastrcnnBoxLoss huber_loss_delta {}".format(params.huber_loss_delta))
         # The delta is typically around the mean value of regression target.
         # for instances, the regression targets of 512x512 input with 6 anchors on
         # P2-P6 pyramid is about [0.1, 0.1, 0.2, 0.2].
-        self._huber_loss = tf.keras.losses.Huber(
-            delta=params.huber_loss_delta, reduction=tf.keras.losses.Reduction.SUM)
+        self._huber_loss = tf.keras.losses.Huber(delta=params.huber_loss_delta, reduction=tf.keras.losses.Reduction.SUM)
 
     def __call__(self, box_outputs, class_targets, box_targets):
         """Computes the box loss (Fast-RCNN branch) of Mask-RCNN.
@@ -272,7 +264,7 @@ class FastrcnnBoxLoss:
             box_loss: a scalar tensor representing total box regression loss.
         """
 
-        with tf.name_scope('fast_rcnn_loss'):
+        with tf.name_scope("fast_rcnn_loss"):
             class_targets = tf.cast(class_targets, tf.int32)
 
             # Selects the box from `box_outputs` based on `class_targets`, with which
@@ -282,29 +274,23 @@ class FastrcnnBoxLoss:
             box_outputs = tf.reshape(box_outputs, [batch_size, num_rois, num_classes, 4])
 
             box_indices = tf.reshape(
-                class_targets + tf.tile(
-                    tf.expand_dims(
-                        tf.range(batch_size) * num_rois * num_classes, 1),
-                    [1, num_rois]) + tf.tile(
-                        tf.expand_dims(tf.range(num_rois) * num_classes, 0),
-                        [batch_size, 1]), [-1])
+                class_targets
+                + tf.tile(tf.expand_dims(tf.range(batch_size) * num_rois * num_classes, 1), [1, num_rois])
+                + tf.tile(tf.expand_dims(tf.range(num_rois) * num_classes, 0), [batch_size, 1]),
+                [-1],
+            )
 
             box_outputs = tf.matmul(
-                tf.one_hot(
-                    box_indices,
-                    batch_size * num_rois * num_classes,
-                    None,
-                    None,
-                    None,
-                    box_outputs.dtype), tf.reshape(box_outputs, [-1, 4]))
+                tf.one_hot(box_indices, batch_size * num_rois * num_classes, None, None, None, box_outputs.dtype),
+                tf.reshape(box_outputs, [-1, 4]),
+            )
             box_outputs = tf.reshape(box_outputs, [batch_size, -1, 4])
 
             return self._fast_rcnn_box_loss(box_outputs, box_targets, class_targets)
 
-    def _fast_rcnn_box_loss(self, box_outputs, box_targets, class_targets,
-                            normalizer=1.0):
+    def _fast_rcnn_box_loss(self, box_outputs, box_targets, class_targets, normalizer=1.0):
         """Computes box regression loss."""
-        with tf.name_scope('fast_rcnn_box_loss'):
+        with tf.name_scope("fast_rcnn_box_loss"):
             mask = tf.tile(tf.expand_dims(tf.greater(class_targets, 0), axis=2), [1, 1, 4])
             mask = tf.cast(mask, tf.float32)
             box_targets = tf.expand_dims(box_targets, axis=-1)
@@ -322,7 +308,8 @@ class MaskrcnnLoss:
 
     def __init__(self):
         self._binary_crossentropy = tf.keras.losses.BinaryCrossentropy(
-            reduction=tf.keras.losses.Reduction.SUM, from_logits=True)
+            reduction=tf.keras.losses.Reduction.SUM, from_logits=True
+        )
 
     def __call__(self, mask_outputs, mask_targets, select_class_targets):
         """Computes the mask loss of Mask-RCNN.
@@ -348,17 +335,17 @@ class MaskrcnnLoss:
             mask_loss: a float tensor representing total mask loss.
         """
 
-        with tf.name_scope('mask_rcnn_loss'):
+        with tf.name_scope("mask_rcnn_loss"):
             (batch_size, num_masks, mask_height, mask_width) = mask_outputs.get_shape().as_list()
             weights = tf.tile(
                 tf.reshape(tf.greater(select_class_targets, 0), [batch_size, num_masks, 1, 1]),
-                [1, 1, mask_height, mask_width])
+                [1, 1, mask_height, mask_width],
+            )
             weights = tf.cast(weights, tf.float32)
 
             mask_targets = tf.expand_dims(mask_targets, axis=-1)
             mask_outputs = tf.expand_dims(mask_outputs, axis=-1)
-            mask_loss = self._binary_crossentropy(mask_targets, mask_outputs,
-                                                  sample_weight=weights)
+            mask_loss = self._binary_crossentropy(mask_targets, mask_outputs, sample_weight=weights)
 
             # The loss is normalized by the number of 1's in weights and
             # + 0.01 is used to avoid division by zero.
@@ -407,11 +394,13 @@ class RetinanetClassLoss:
         bs, height, width, _, _ = cls_targets_one_hot.get_shape().as_list()
         cls_targets_one_hot = tf.reshape(cls_targets_one_hot, [bs, height, width, -1])
 
-        loss = focal_loss(tf.cast(cls_outputs, tf.float32),
-                          tf.cast(cls_targets_one_hot, tf.float32),
-                          self._focal_loss_alpha,
-                          self._focal_loss_gamma,
-                          num_positives)
+        loss = focal_loss(
+            tf.cast(cls_outputs, tf.float32),
+            tf.cast(cls_targets_one_hot, tf.float32),
+            self._focal_loss_alpha,
+            self._focal_loss_gamma,
+            num_positives,
+        )
 
         ignore_loss = tf.where(
             tf.equal(cls_targets, ignore_label),
@@ -429,8 +418,7 @@ class RetinanetBoxLoss:
     """RetinaNet box loss."""
 
     def __init__(self, params):
-        self._huber_loss = tf.keras.losses.Huber(
-            delta=params.huber_loss_delta, reduction=tf.keras.losses.Reduction.SUM)
+        self._huber_loss = tf.keras.losses.Huber(delta=params.huber_loss_delta, reduction=tf.keras.losses.Reduction.SUM)
 
     def __call__(self, box_outputs, labels, num_positives):
         """Computes box detection loss.
@@ -523,9 +511,9 @@ class YOLOv4Loss:
         sigmoid_loss = K.binary_crossentropy(y_true, y_pred, from_logits=True)
 
         pred_prob = tf.sigmoid(y_pred)
-        p_t = ((y_true * pred_prob) + ((1 - y_true) * (1 - pred_prob)))
+        p_t = (y_true * pred_prob) + ((1 - y_true) * (1 - pred_prob))
         modulating_factor = tf.pow(1.0 - p_t, gamma)
-        alpha_weight_factor = (y_true * alpha + (1 - y_true) * (1 - alpha))
+        alpha_weight_factor = y_true * alpha + (1 - y_true) * (1 - alpha)
 
         sigmoid_focal_loss = modulating_factor * alpha_weight_factor * sigmoid_loss
 
@@ -543,7 +531,7 @@ class YOLOv4Loss:
         b1 = K.expand_dims(b1, -2)
         b1_xy = b1[..., :2]
         b1_wh = b1[..., 2:4]
-        b1_wh_half = b1_wh / 2.
+        b1_wh_half = b1_wh / 2.0
         b1_mins = b1_xy - b1_wh_half
         b1_maxes = b1_xy + b1_wh_half
 
@@ -551,13 +539,13 @@ class YOLOv4Loss:
         b2 = K.expand_dims(b2, 0)
         b2_xy = b2[..., :2]
         b2_wh = b2[..., 2:4]
-        b2_wh_half = b2_wh / 2.
+        b2_wh_half = b2_wh / 2.0
         b2_mins = b2_xy - b2_wh_half
         b2_maxes = b2_xy + b2_wh_half
 
         intersect_mins = K.maximum(b1_mins, b2_mins)
         intersect_maxes = K.minimum(b1_maxes, b2_maxes)
-        intersect_wh = K.maximum(intersect_maxes - intersect_mins, 0.)
+        intersect_wh = K.maximum(intersect_maxes - intersect_mins, 0.0)
         intersect_area = intersect_wh[..., 0] * intersect_wh[..., 1]
         b1_area = b1_wh[..., 0] * b1_wh[..., 1]
         b2_area = b2_wh[..., 0] * b2_wh[..., 1]
@@ -578,19 +566,19 @@ class YOLOv4Loss:
         """
         b_true_xy = b_true[..., :2]
         b_true_wh = b_true[..., 2:4]
-        b_true_wh_half = b_true_wh / 2.
+        b_true_wh_half = b_true_wh / 2.0
         b_true_mins = b_true_xy - b_true_wh_half
         b_true_maxes = b_true_xy + b_true_wh_half
 
         b_pred_xy = b_pred[..., :2]
         b_pred_wh = b_pred[..., 2:4]
-        b_pred_wh_half = b_pred_wh / 2.
+        b_pred_wh_half = b_pred_wh / 2.0
         b_pred_mins = b_pred_xy - b_pred_wh_half
         b_pred_maxes = b_pred_xy + b_pred_wh_half
 
         intersect_mins = K.maximum(b_true_mins, b_pred_mins)
         intersect_maxes = K.minimum(b_true_maxes, b_pred_maxes)
-        intersect_wh = K.maximum(intersect_maxes - intersect_mins, 0.)
+        intersect_wh = K.maximum(intersect_maxes - intersect_mins, 0.0)
         intersect_area = intersect_wh[..., 0] * intersect_wh[..., 1]
         b_true_area = b_true_wh[..., 0] * b_true_wh[..., 1]
         b_pred_area = b_pred_wh[..., 0] * b_pred_wh[..., 1]
@@ -623,19 +611,19 @@ class YOLOv4Loss:
         """
         b_true_xy = b_true[..., :2]
         b_true_wh = b_true[..., 2:4]
-        b_true_wh_half = b_true_wh / 2.
+        b_true_wh_half = b_true_wh / 2.0
         b_true_mins = b_true_xy - b_true_wh_half
         b_true_maxes = b_true_xy + b_true_wh_half
 
         b_pred_xy = b_pred[..., :2]
         b_pred_wh = b_pred[..., 2:4]
-        b_pred_wh_half = b_pred_wh / 2.
+        b_pred_wh_half = b_pred_wh / 2.0
         b_pred_mins = b_pred_xy - b_pred_wh_half
         b_pred_maxes = b_pred_xy + b_pred_wh_half
 
         intersect_mins = K.maximum(b_true_mins, b_pred_mins)
         intersect_maxes = K.minimum(b_true_maxes, b_pred_maxes)
-        intersect_wh = K.maximum(intersect_maxes - intersect_mins, 0.)
+        intersect_wh = K.maximum(intersect_maxes - intersect_mins, 0.0)
         intersect_area = intersect_wh[..., 0] * intersect_wh[..., 1]
         b_true_area = b_true_wh[..., 0] * b_true_wh[..., 1]
         b_pred_area = b_pred_wh[..., 0] * b_pred_wh[..., 1]
@@ -667,15 +655,12 @@ class YOLOv4Loss:
         anchors_tensor = K.reshape(K.constant(anchors), [1, 1, 1, num_anchors, 2])
 
         grid_shape = K.shape(feats)[1:3]  # height, width
-        grid_y = K.tile(K.reshape(K.arange(0, stop=grid_shape[0]), [-1, 1, 1, 1]),
-                        [1, grid_shape[1], 1, 1])
-        grid_x = K.tile(K.reshape(K.arange(0, stop=grid_shape[1]), [1, -1, 1, 1]),
-                        [grid_shape[0], 1, 1, 1])
+        grid_y = K.tile(K.reshape(K.arange(0, stop=grid_shape[0]), [-1, 1, 1, 1]), [1, grid_shape[1], 1, 1])
+        grid_x = K.tile(K.reshape(K.arange(0, stop=grid_shape[1]), [1, -1, 1, 1]), [grid_shape[0], 1, 1, 1])
         grid = K.concatenate([grid_x, grid_y])
         grid = K.cast(grid, K.dtype(feats))
 
-        feats = K.reshape(
-            feats, [-1, grid_shape[0], grid_shape[1], num_anchors, num_classes + 5])
+        feats = K.reshape(feats, [-1, grid_shape[0], grid_shape[1], num_anchors, num_classes + 5])
 
         # Adjust preditions to each spatial grid point and anchor size.
         if scale_x_y:
@@ -689,24 +674,35 @@ class YOLOv4Loss:
             box_xy_tmp = K.sigmoid(feats[..., :2]) * scale_x_y - (scale_x_y - 1) / 2
             box_xy = (box_xy_tmp + grid) / (K.cast(grid_shape[..., ::-1], K.dtype(feats)) + K.epsilon())
         else:
-            box_xy = (K.sigmoid(feats[..., :2]) + grid) / (K.cast(grid_shape[..., ::-1], K.dtype(feats))
-                                                           + K.epsilon())
-        box_wh = K.exp(feats[..., 2:4]) * anchors_tensor / (K.cast(input_shape[..., ::-1], K.dtype(feats))
-                                                            + K.epsilon())
+            box_xy = (K.sigmoid(feats[..., :2]) + grid) / (K.cast(grid_shape[..., ::-1], K.dtype(feats)) + K.epsilon())
+        box_wh = (
+            K.exp(feats[..., 2:4]) * anchors_tensor / (K.cast(input_shape[..., ::-1], K.dtype(feats)) + K.epsilon())
+        )
 
         return feats, box_xy, box_wh
 
     def get_anchors(self, anchors_path):
         """loads the anchors from a file"""
-        with open(anchors_path, encoding='utf8') as f:
+        with open(anchors_path, encoding="utf8") as f:
             anchors = f.readline()
-        anchors = [float(x) for x in anchors.split(',')]
+        anchors = [float(x) for x in anchors.split(",")]
         return np.array(anchors).reshape(-1, 2)
 
-    def __call__(self, labels, outputs, anchors, num_classes,
-                 ignore_thresh=.5, label_smoothing=0, elim_grid_sense=True,
-                 use_focal_loss=False, use_focal_obj_loss=False,
-                 use_softmax_loss=False, use_giou_loss=False, use_diou_loss=True):  # pylint: disable=R0915
+    def __call__(
+        self,
+        labels,
+        outputs,
+        anchors,
+        num_classes,
+        ignore_thresh=0.5,
+        label_smoothing=0,
+        elim_grid_sense=True,
+        use_focal_loss=False,
+        use_focal_obj_loss=False,
+        use_softmax_loss=False,
+        use_giou_loss=False,
+        use_diou_loss=True,
+    ):  # pylint: disable=R0915
         """
         YOLOv3 loss function.
 
@@ -718,11 +714,11 @@ class YOLOv4Loss:
         :return loss: tensor, shape=(1,)
         """
         anchors = np.array(anchors).astype(float).reshape(-1, 2)
-        num_layers = len(anchors)//3 # default setting
-        yolo_outputs = list(outputs.values()) # args[:num_layers]
-        y_true = list(labels.values()) # args[num_layers:]
+        num_layers = len(anchors) // 3  # default setting
+        yolo_outputs = list(outputs.values())  # args[:num_layers]
+        y_true = list(labels.values())  # args[num_layers:]
 
-        anchor_mask = [[6,7,8], [3,4,5], [0,1,2]]
+        anchor_mask = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
         scale_x_y = [1.05, 1.1, 1.2] if elim_grid_sense else [None, None, None]
 
         input_shape = K.cast(K.shape(yolo_outputs[0])[1:3] * 32, K.dtype(y_true[0]))
@@ -730,7 +726,7 @@ class YOLOv4Loss:
         total_location_loss = 0
         total_confidence_loss = 0
         total_class_loss = 0
-        batch_size = K.shape(yolo_outputs[0])[0] # batch size, tensor
+        batch_size = K.shape(yolo_outputs[0])[0]  # batch size, tensor
         batch_size_f = K.cast(batch_size, K.dtype(yolo_outputs[0]))
 
         for i in range(num_layers):
@@ -742,56 +738,60 @@ class YOLOv4Loss:
             else:
                 true_objectness_probs = object_mask
 
-            raw_pred, pred_xy, pred_wh = self.yolo3_decode(yolo_outputs[i],
-                 anchors[anchor_mask[i]], num_classes, input_shape, scale_x_y=scale_x_y[i])
+            raw_pred, pred_xy, pred_wh = self.yolo3_decode(
+                yolo_outputs[i], anchors[anchor_mask[i]], num_classes, input_shape, scale_x_y=scale_x_y[i]
+            )
             pred_box = K.concatenate([pred_xy, pred_wh])
 
-            box_loss_scale = 2 - y_true[i][...,2:3]*y_true[i][...,3:4]
+            box_loss_scale = 2 - y_true[i][..., 2:3] * y_true[i][..., 3:4]
 
             # Find ignore mask, iterate over each of batch.
             ignore_mask = tf.TensorArray(K.dtype(y_true[0]), size=1, dynamic_size=True)
-            object_mask_bool = K.cast(object_mask, 'bool')
+            object_mask_bool = K.cast(object_mask, "bool")
+
             def loop_body(b, ignore_mask):
-                true_box = tf.boolean_mask(y_true[i][b,...,0:4], object_mask_bool[b,...,0])
+                true_box = tf.boolean_mask(y_true[i][b, ..., 0:4], object_mask_bool[b, ..., 0])
                 iou = self.box_iou(pred_box[b], true_box)
                 best_iou = K.max(iou, axis=-1)
-                ignore_mask = ignore_mask.write(b, K.cast(best_iou<ignore_thresh, K.dtype(true_box)))
-                return b+1, ignore_mask
-            _, ignore_mask = tf.while_loop(lambda b,*args: b<batch_size, loop_body, [0, ignore_mask])
+                ignore_mask = ignore_mask.write(b, K.cast(best_iou < ignore_thresh, K.dtype(true_box)))
+                return b + 1, ignore_mask
+
+            _, ignore_mask = tf.while_loop(lambda b, *args: b < batch_size, loop_body, [0, ignore_mask])
             ignore_mask = ignore_mask.stack()
             ignore_mask = K.expand_dims(ignore_mask, -1)
 
             raw_pred = raw_pred + K.epsilon()
             if use_focal_obj_loss:
                 # Focal loss for objectness confidence
-                confidence_loss = self.sigmoid_focal_loss(true_objectness_probs, raw_pred[...,4:5])
+                confidence_loss = self.sigmoid_focal_loss(true_objectness_probs, raw_pred[..., 4:5])
             else:
-                confidence_loss = (object_mask * K.binary_crossentropy(true_objectness_probs,
-                                                                       raw_pred[...,4:5],
-                                                                       from_logits=True)) \
-                                  + ((1-object_mask) * ignore_mask * K.binary_crossentropy(object_mask,
-                                                                                           raw_pred[...,4:5],
-                                                                                           from_logits=True))
+                confidence_loss = (
+                    object_mask * K.binary_crossentropy(true_objectness_probs, raw_pred[..., 4:5], from_logits=True)
+                ) + (
+                    (1 - object_mask)
+                    * ignore_mask
+                    * K.binary_crossentropy(object_mask, raw_pred[..., 4:5], from_logits=True)
+                )
 
             if use_focal_loss:
                 # Focal loss for classification score
                 if use_softmax_loss:
-                    class_loss = self.softmax_focal_loss(true_class_probs, raw_pred[...,5:])
+                    class_loss = self.softmax_focal_loss(true_class_probs, raw_pred[..., 5:])
                 else:
-                    class_loss = self.sigmoid_focal_loss(true_class_probs, raw_pred[...,5:])
+                    class_loss = self.sigmoid_focal_loss(true_class_probs, raw_pred[..., 5:])
             else:
                 if use_softmax_loss:
                     # use softmax style classification output
-                    class_loss = object_mask \
-                                 * K.expand_dims(K.categorical_crossentropy(true_class_probs,
-                                                                            raw_pred[...,5:],
-                                                                            from_logits=True), axis=-1)
+                    class_loss = object_mask * K.expand_dims(
+                        K.categorical_crossentropy(true_class_probs, raw_pred[..., 5:], from_logits=True), axis=-1
+                    )
                 else:
                     # use sigmoid style classification output
-                    class_loss = object_mask \
-                                 * K.binary_crossentropy(true_class_probs, raw_pred[...,5:], from_logits=True)
+                    class_loss = object_mask * K.binary_crossentropy(
+                        true_class_probs, raw_pred[..., 5:], from_logits=True
+                    )
 
-            raw_true_box = y_true[i][...,0:4]
+            raw_true_box = y_true[i][..., 0:4]
             diou = self.box_diou(raw_true_box, pred_box)
             diou_loss = object_mask * box_loss_scale * (1 - diou)
             diou_loss = K.sum(diou_loss) / batch_size_f

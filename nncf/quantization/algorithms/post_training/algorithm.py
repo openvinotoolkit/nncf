@@ -11,156 +11,127 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Optional, TypeVar
+from typing import Dict, Optional, TypeVar
+
+import numpy as np
 
 from nncf import Dataset
-from nncf.parameters import TargetDevice
-from nncf.parameters import ModelType
-from nncf.scopes import IgnoredScope
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import get_backend
-from nncf.common.utils.backend import copy_model
-from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.algorithm import AlgorithmParameters
-from nncf.quantization.algorithms.definitions import RangeType
-from nncf.quantization.algorithms.definitions import Granularity
-from nncf.quantization.algorithms.definitions import OverflowFix
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
-from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
-from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrectionParameters
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
+from nncf.common.utils.backend import get_backend
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.bias_correction.algorithm import BIAS_CORRECTION_THRESHOLD
+from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FAST_BIAS_CORRECTION_THRESHOLD
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.scopes import IgnoredScope
 
-TModel = TypeVar('TModel')
-
-
-class PostTrainingQuantizationParameters(AlgorithmParameters):
-    """
-    This class handles parameters for PostTrainingQuantization algorithm.
-    """
-
-    def __init__(self,
-                 number_samples: int = 300,
-                 preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                 weight_bits: Optional[int] = None,
-                 weight_granularity: Optional[Granularity] = None,
-                 signed_weights: Optional[bool] = None,
-                 activation_bits: Optional[int] = None,
-                 activation_granularity: Optional[Granularity] = None,
-                 signed_activations: Optional[bool] = None,
-                 target_device: TargetDevice = TargetDevice.ANY,
-                 range_type: RangeType = RangeType.MEAN_MINMAX,
-                 quantize_outputs: bool = False,
-                 ignored_scopes: Optional[IgnoredScope] = None,
-                 model_type: Optional[ModelType] = None,
-                 overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
-                 fast_bias_correction: bool = True,
-                 inplace_statistics: bool = True,
-                 ):
-        """
-        :param number_samples: Number of samples for the statistics collection.
-        :param preset: Preset parameter for Quantization.
-            Defines the mode: symmetric or asymmetric of the activation quantizers.
-        :param weight_bits: Bitwidth for the weight quantizers.
-        :param weight_granularity: Type of quantization granularity for weight quantizers.
-            Could be per-channel or per-tensor.
-        :param signed_weights: Defines whether the datatype of the weight quantizers should be forced.
-            True if the quantizer *must* be signed, False if *must* be unsigned,
-            None if the signed/unsigned attribute should be determined based on the incoming activation
-            statistics during range initialization.
-        :param activation_bits: Bitwidth for the activation quantizers.
-        :param activation_granularity: Type of quantization granularity for activation quantizers.
-            Could be per-channel or per-tensor.
-        :param signed_activations: Defines whether the datatype of the activation quantizers
-            should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
-            None if the signed/unsigned attribute should be determined based on the incoming activation
-            statistics during range initialization.
-        :param target_device: Target device for the settings of the quantization pipeline.
-        :param range_type: Type of statistics range calculation.
-        :param quantize_outputs: Boolean value that says whether quantize outputs or not.
-        :param ignored_scopes: Descriptor of the layers which input must not be quantized.
-        :param overflow_fix: This option controls whether to apply the overflow issue fix for the 8-bit quantization.
-        :param model_type: Model type is needed to specify additional patterns
-            in the model. Supported only `transformer` now.
-        :param fast_bias_correction: Defines whether to use fast version of bias correction algorithm.
-        :param inplace_statistics: Appliclable only for OpenVINO backend. Will be available for ONNX backend in future.
-            Defines whether to calculate quantization statistics by backend graph operations or by default Python
-            implementation. Statistics computated inplace tend to be calculated faster and with lower memory stamp.
-        """
-        self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
-            preset=preset,
-            weight_bits=weight_bits,
-            weight_granularity=weight_granularity,
-            signed_weights=signed_weights,
-            activation_bits=activation_bits,
-            activation_granularity=activation_granularity,
-            signed_activations=signed_activations,
-            range_type=range_type,
-            number_samples=number_samples,
-            target_device=target_device,
-            quantize_outputs=quantize_outputs,
-            ignored_scopes=ignored_scopes,
-            model_type=model_type,
-            overflow_fix=overflow_fix,
-            inplace_statistics=inplace_statistics
-        )}
-
-        bias_correction_algo = {BiasCorrection: BiasCorrectionParameters(
-            number_samples=number_samples,
-            inplace_statistics=inplace_statistics
-        )}
-
-        if fast_bias_correction:
-            bias_correction_algo = {FastBiasCorrection: FastBiasCorrectionParameters(
-                number_samples=number_samples,
-                inplace_statistics=inplace_statistics
-            )}
-        self.algorithms.update(bias_correction_algo)
+TModel = TypeVar("TModel")
 
 
 class PostTrainingQuantization(Algorithm):
     """
     Implements Post-Training Quantization algorithm, which basically includes:
-    1) MinMaxQuantization
-    2) FastBiasCorrection or BiasCorrection
-    3) ChannelAlignment
+    1) ChannelAlignment
+    2) MinMaxQuantization
+    3) FastBiasCorrection or BiasCorrection
 
     Disclaimer: currently, it only supports MinMaxQuantization, FastBiasCorrection & BiasCorrection.
     ChannelAlignment will be added soon.
-
     """
 
-    def __init__(self,
-                 quantization_parameters: PostTrainingQuantizationParameters = PostTrainingQuantizationParameters()):
+    def __init__(
+        self,
+        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+        target_device: TargetDevice = TargetDevice.ANY,
+        subset_size: int = 300,
+        fast_bias_correction: bool = True,
+        model_type: Optional[ModelType] = None,
+        ignored_scope: Optional[IgnoredScope] = None,
+        advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    ):
+        """
+        :param preset: A preset that controls the quantization mode
+            (symmetric and asymmetric). It can take the following values:
+            - `performance`: Symmetric quantization of weights and activations.
+            - `mixed`: Symmetric quantization of weights and asymmetric
+            quantization of activations.
+        :param target_device: A target device the specificity of which will be taken
+            into account while compressing in order to obtain the best performance
+            for this type of device.
+        :param subset_size: Size of a subset to calculate activations
+            statistics used for quantization.
+        :param fast_bias_correction: Setting this option to `False` enables a different
+            bias correction method which is more accurate, in general, and takes
+            more time but requires less memory.
+        :param model_type: Model type is needed to specify additional patterns
+            in the model. Supported only `transformer` now.
+        :param ignored_scope: An ignored scope that defined the list of model control
+            flow graph nodes to be ignored during quantization.
+        :param advanced_parameters: Advanced quantization parameters for
+            fine-tuning the quantization algorithm
+        """
         super().__init__()
-        self.algorithms = self._get_sub_algorithms(quantization_parameters.algorithms)
+        self.algorithms = []
 
-    @staticmethod
-    def _get_sub_algorithms(algorithms: Dict[Algorithm, AlgorithmParameters]) -> List[Algorithm]:
-        """
-        This methods initializes sub-algorithms based on the general parameters.
+        if advanced_parameters is None:
+            advanced_parameters = AdvancedQuantizationParameters()
 
-        :param algorithms: The dictonary of the parameters per algorithm type.
+        min_max_quantization = MinMaxQuantization(
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            overflow_fix=advanced_parameters.overflow_fix,
+            quantize_outputs=advanced_parameters.quantize_outputs,
+            inplace_statistics=advanced_parameters.inplace_statistics,
+            activations_quantization_params=advanced_parameters.activations_quantization_params,
+            weights_quantization_params=advanced_parameters.weights_quantization_params,
+            activations_range_estimator_params=advanced_parameters.activations_range_estimator_params,
+            weights_range_estimator_params=advanced_parameters.weights_range_estimator_params,
+            backend_params=advanced_parameters.backend_params,
+        )
 
-        :return: The list of the algorithms instances.
-        """
-        algorithms_list = []
-        for algorithm, parameters in algorithms.items():
-            if algorithm == MinMaxQuantization:
-                min_max_algo = MinMaxQuantization(parameters)
-                algorithms_list.append(min_max_algo)
-            if algorithm == FastBiasCorrection:
-                fast_bc_algo = FastBiasCorrection(parameters)
-                algorithms_list.append(fast_bc_algo)
-            if algorithm == BiasCorrection:
-                bc_algo = BiasCorrection(parameters)
-                algorithms_list.append(bc_algo)
-        return algorithms_list
+        self.algorithms.append(min_max_quantization)
+
+        if advanced_parameters.disable_bias_correction:
+            return
+
+        bias_correction_params = advanced_parameters.bias_correction_params
+        if fast_bias_correction:
+            threshold = FAST_BIAS_CORRECTION_THRESHOLD
+            if bias_correction_params.threshold is not None:
+                threshold = bias_correction_params.threshold
+            bias_correction = FastBiasCorrection(
+                subset_size=subset_size,
+                threshold=threshold,
+                apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                backend_params=advanced_parameters.backend_params,
+            )
+        else:
+            threshold = BIAS_CORRECTION_THRESHOLD
+            if bias_correction_params.threshold is not None:
+                threshold = bias_correction_params.threshold
+            bias_correction_subset_size = max(np.int(subset_size * 0.2), 1)
+            bias_correction = BiasCorrection(
+                subset_size=bias_correction_subset_size,
+                threshold=threshold,
+                apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                backend_params=advanced_parameters.backend_params,
+            )
+
+        self.algorithms.append(bias_correction)
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -174,9 +145,7 @@ class PostTrainingQuantization(Algorithm):
                     output.add_statistic_point(statistic_point)
         return output
 
-    def _create_statistics_aggregator(self,
-                                      dataset: Dataset,
-                                      backend: BackendType) -> StatisticsAggregator:
+    def _create_statistics_aggregator(self, dataset: Dataset, backend: BackendType) -> StatisticsAggregator:
         """
         Creates backend-specific StatisticsAggregator.
 
@@ -187,28 +156,31 @@ class PostTrainingQuantization(Algorithm):
         :return: backnd-specific StatisticsAggregator
         """
         if backend == BackendType.ONNX:
-            from nncf.onnx.statistics.aggregator import \
-                ONNXStatisticsAggregator
+            from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
+
             return ONNXStatisticsAggregator(dataset)
         if backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.statistics.aggregator import \
-                OVStatisticsAggregator
+            from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+
             return OVStatisticsAggregator(dataset)
         if backend == BackendType.TORCH:
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
+
             return PTStatisticsAggregator(dataset)
         return None
 
-    def _apply(self,
-               model: TModel,
-               statistic_points: Optional[StatisticPointsContainer] = None,
-               dataset: Optional[Dataset] = None) -> TModel:
+    def _apply(
+        self,
+        model: TModel,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+        dataset: Optional[Dataset] = None,
+    ) -> TModel:
         modified_model = copy_model(model)
         if statistic_points is None:
             backend = get_backend(modified_model)
             # TODO (l-bat): Remove after OpenVINO Native is removed from experimental
             if backend == BackendType.OPENVINO:
-                nncf_logger.warning('You are using experimental OpenVINO backend for the Post-training quantization.')
+                nncf_logger.warning("You are using experimental OpenVINO backend for the Post-training quantization.")
 
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:

@@ -11,15 +11,15 @@
  limitations under the License.
 """
 
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from nncf.common.logging import nncf_logger
-from nncf.common.utils.registry import Registry
-from nncf.common.schedulers import PolynomialDecaySchedule
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import ExponentialDecaySchedule
 from nncf.common.schedulers import MultiStepSchedule
+from nncf.common.schedulers import PolynomialDecaySchedule
 from nncf.common.sparsity.controller import SparsityController
-from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.common.utils.registry import Registry
 from nncf.config.schemata.defaults import SPARSITY_FREEZE_EPOCH
 from nncf.config.schemata.defaults import SPARSITY_MULTISTEP_SPARSITY_LEVELS
 from nncf.config.schemata.defaults import SPARSITY_MULTISTEP_STEPS
@@ -30,7 +30,7 @@ from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZE
 from nncf.config.schemata.defaults import SPARSITY_TARGET
 from nncf.config.schemata.defaults import SPARSITY_TARGET_EPOCH
 
-SPARSITY_SCHEDULERS = Registry('sparsity_schedulers')
+SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 
 
 class SparsityScheduler(BaseCompressionScheduler):
@@ -61,10 +61,10 @@ class SparsityScheduler(BaseCompressionScheduler):
         """
         super().__init__()
         self._controller = controller
-        self.initial_level = params.get('sparsity_init')
-        self.target_level = params.get('sparsity_target', SPARSITY_TARGET)
-        self.target_epoch = params.get('sparsity_target_epoch', SPARSITY_TARGET_EPOCH)
-        self.freeze_epoch = params.get('sparsity_freeze_epoch', SPARSITY_FREEZE_EPOCH)
+        self.initial_level = params.get("sparsity_init")
+        self.target_level = params.get("sparsity_target", SPARSITY_TARGET)
+        self.target_epoch = params.get("sparsity_target_epoch", SPARSITY_TARGET_EPOCH)
+        self.freeze_epoch = params.get("sparsity_freeze_epoch", SPARSITY_FREEZE_EPOCH)
 
     def _calculate_sparsity_level(self) -> float:
         """
@@ -74,8 +74,7 @@ class SparsityScheduler(BaseCompressionScheduler):
         :return: Sparsity level that should be applied to the weights
             for the `current_epoch` or for step in the `current_epoch`.
         """
-        raise NotImplementedError(
-            'SparsityScheduler implementation must override _calculate_sparsity_level method.')
+        raise NotImplementedError("SparsityScheduler implementation must override _calculate_sparsity_level method.")
 
     def _update_sparsity_level(self) -> None:
         """
@@ -99,7 +98,7 @@ class SparsityScheduler(BaseCompressionScheduler):
         return self._calculate_sparsity_level()
 
 
-@SPARSITY_SCHEDULERS.register('polynomial')
+@SPARSITY_SCHEDULERS.register("polynomial")
 class PolynomialSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with a polynomial decay schedule.
@@ -124,13 +123,18 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         :param params: Parameters of the scheduler.
         """
         super().__init__(controller, params)
-        self.schedule = PolynomialDecaySchedule(self.initial_level, self.target_level, self.target_epoch,
-                                                params.get('power', SPARSITY_SCHEDULER_POWER),
-                                                params.get('concave', SPARSITY_SCHEDULER_CONCAVE))
+        self.schedule = PolynomialDecaySchedule(
+            self.initial_level,
+            self.target_level,
+            self.target_epoch,
+            params.get("power", SPARSITY_SCHEDULER_POWER),
+            params.get("concave", SPARSITY_SCHEDULER_CONCAVE),
+        )
         self._steps_in_current_epoch = 0
-        self._update_per_optimizer_step = params.get('update_per_optimizer_step',
-                                                     SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZER_STEP)
-        self._steps_per_epoch = params.get('steps_per_epoch', None)
+        self._update_per_optimizer_step = params.get(
+            "update_per_optimizer_step", SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZER_STEP
+        )
+        self._steps_per_epoch = params.get("steps_per_epoch", None)
         self._should_skip = False
 
     def step(self, next_step: Optional[int] = None) -> None:
@@ -160,12 +164,12 @@ class PolynomialSparsityScheduler(SparsityScheduler):
     def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
         if self._update_per_optimizer_step:
-            self._steps_per_epoch = state['_steps_per_epoch']
+            self._steps_per_epoch = state["_steps_per_epoch"]
 
     def get_state(self) -> Dict[str, Any]:
         state = super().get_state()
         if self._update_per_optimizer_step:
-            state['_steps_per_epoch'] = self._steps_per_epoch
+            state["_steps_per_epoch"] = self._steps_per_epoch
         return state
 
     def _maybe_should_skip(self) -> None:
@@ -181,18 +185,22 @@ class PolynomialSparsityScheduler(SparsityScheduler):
 
             if self._steps_per_epoch is not None and self._steps_in_current_epoch > 0:
                 if self._steps_per_epoch != self._steps_in_current_epoch:
-                    raise Exception('Actual steps per epoch and steps per epoch from the scheduler '
-                                    'parameters are different. Scheduling may be incorrect.')
+                    raise Exception(
+                        "Actual steps per epoch and steps per epoch from the scheduler "
+                        "parameters are different. Scheduling may be incorrect."
+                    )
 
             if self._steps_per_epoch is None:
                 self._should_skip = True
-                nncf_logger.warning('Scheduler set to update sparsity level per optimizer step, '
-                                    'but steps_per_epoch was not set in config. Will only start updating '
-                                    'sparsity level after measuring the actual steps per epoch as signaled '
-                                    'by a .epoch_step() call.')
+                nncf_logger.warning(
+                    "Scheduler set to update sparsity level per optimizer step, "
+                    "but steps_per_epoch was not set in config. Will only start updating "
+                    "sparsity level after measuring the actual steps per epoch as signaled "
+                    "by a .epoch_step() call."
+                )
 
 
-@SPARSITY_SCHEDULERS.register('exponential')
+@SPARSITY_SCHEDULERS.register("exponential")
 class ExponentialSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with an exponential decay schedule.
@@ -226,11 +234,12 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         return min(current_level, self.target_level)
 
 
-@SPARSITY_SCHEDULERS.register('adaptive')
+@SPARSITY_SCHEDULERS.register("adaptive")
 class AdaptiveSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with an adaptive schedule.
     """
+
     def __init__(self, controller: SparsityController, params: dict):
         """
         Initializes a sparsity scheduler with an adaptive schedule.
@@ -239,9 +248,9 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         :param params: Parameters of the scheduler.
         """
         super().__init__(controller, params)
-        self.decay_step = params.get('step', 0.05)
-        self.eps = params.get('eps', 0.03)
-        self.patience = params.get('patience', SPARSITY_SCHEDULER_PATIENCE)
+        self.decay_step = params.get("step", 0.05)
+        self.eps = params.get("eps", 0.03)
+        self.patience = params.get("patience", SPARSITY_SCHEDULER_PATIENCE)
         self.num_bad_epochs = 0
         self._current_level = self.initial_level
 
@@ -274,17 +283,17 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
 
     def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
-        self.num_bad_epochs = state['num_bad_epochs']
-        self._current_level = state['current_sparsity_level']
+        self.num_bad_epochs = state["num_bad_epochs"]
+        self._current_level = state["current_sparsity_level"]
 
     def get_state(self) -> Dict[str, Any]:
         state = super().get_state()
-        state['num_bad_epochs'] = self.num_bad_epochs
-        state['current_sparsity_level'] = self._current_level
+        state["num_bad_epochs"] = self.num_bad_epochs
+        state["current_sparsity_level"] = self._current_level
         return state
 
 
-@SPARSITY_SCHEDULERS.register('multistep')
+@SPARSITY_SCHEDULERS.register("multistep")
 class MultiStepSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with a piecewise constant schedule.
@@ -299,8 +308,9 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         """
         super().__init__(controller, params)
         self.schedule = MultiStepSchedule(
-            sorted(params.get('multistep_steps', SPARSITY_MULTISTEP_STEPS)),
-            params.get('multistep_sparsity_levels', SPARSITY_MULTISTEP_SPARSITY_LEVELS))
+            sorted(params.get("multistep_steps", SPARSITY_MULTISTEP_STEPS)),
+            params.get("multistep_sparsity_levels", SPARSITY_MULTISTEP_SPARSITY_LEVELS),
+        )
         self.target_level = self.schedule.values[-1]
 
     @property

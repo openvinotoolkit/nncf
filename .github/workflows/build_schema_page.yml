@@ -1,31 +1,23 @@
 name: Config schema HTML build
 on:
-  push:
-    branches:
-      - develop
-      - test_for_doc_build_trigger
-    paths:
-      - nncf/config/**
-permissions:
-  contents: write
+  workflow_call:
 jobs:
-  build-and-deploy:
-    concurrency: ci-${{ github.ref }} # Recommended if you intend to make multiple deployments in quick succession.
+  build-config-schema-html:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install and Build # This example project is built using npm and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
+      - name: Install and Build
         run: |
           pip install json-schema-for-humans
           pip install -e .
           python -c 'import jstyleson; from nncf.config import NNCFConfig; jstyleson.dump(NNCFConfig.schema(), open("./schema.json", "w"), indent=2)'
-          mkdir schema_html_build
-          generate-schema-doc --deprecated-from-description schema.json schema_html_build/index.html
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
+          mkdir schema
+          generate-schema-doc --deprecated-from-description schema.json schema/index.html
+
+      - name: Upload result as artifact
+        uses: alehechka/upload-tartifact@v2
         with:
-          folder: schema_html_build # The folder the action should deploy.
-          token: ${{ secrets.PUSH_TO_GH_PAGES_BRANCH }}
-          branch: doc_pages
+          name: schema_doc_artifact
+          path: schema

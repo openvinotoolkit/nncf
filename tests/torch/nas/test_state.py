@@ -56,26 +56,28 @@ COMMON_WIDTH_STATE_DESCS = [
         model_cls=TwoConvAddConvTestModel,
         params=BASIC_ELASTIC_WIDTH_PARAMS,
         ref_state={
-            'elasticity_params': BASIC_ELASTIC_WIDTH_PARAMS,
-            'grouped_node_names_to_prune': [
-                ['TwoConvAddConvTestModel/NNCFConv2d[conv1]/conv2d_0',
-                 'TwoConvAddConvTestModel/NNCFConv2d[conv2]/conv2d_0']
-            ]
+            "elasticity_params": BASIC_ELASTIC_WIDTH_PARAMS,
+            "grouped_node_names_to_prune": [
+                [
+                    "TwoConvAddConvTestModel/NNCFConv2d[conv1]/conv2d_0",
+                    "TwoConvAddConvTestModel/NNCFConv2d[conv2]/conv2d_0",
+                ]
+            ],
         },
-        ref_output_fn=ref_width_output_fn
+        ref_output_fn=ref_width_output_fn,
     ),
     ElasticityDesc(
         ElasticityDim.WIDTH,
         model_cls=TwoSequentialConvBNTestModel,
         params=BASIC_ELASTIC_WIDTH_PARAMS,
         ref_state={
-            'elasticity_params': BASIC_ELASTIC_WIDTH_PARAMS,
-            'grouped_node_names_to_prune': [
-                ['TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[0]/conv2d_0'],
-                ['TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[3]/conv2d_0']
-            ]
+            "elasticity_params": BASIC_ELASTIC_WIDTH_PARAMS,
+            "grouped_node_names_to_prune": [
+                ["TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[0]/conv2d_0"],
+                ["TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[3]/conv2d_0"],
+            ],
         },
-        ref_output_fn=ref_width_output_fn
+        ref_output_fn=ref_width_output_fn,
     ),
 ]
 
@@ -94,35 +96,30 @@ COMMON_KERNEL_DESC = ElasticityDesc(
     ref_output_fn=ref_kernel_output_fn,
     ref_state={
         SEHBuilderStateNames.ELASTICITY_PARAMS: BASIC_ELASTIC_KERNEL_PARAMS,
-        EKBuilderStateNames.NODE_NAMES_TO_MAKE_ELASTIC: ['BasicConvTestModel/NNCFConv2d[conv]/conv2d_0']
+        EKBuilderStateNames.NODE_NAMES_TO_MAKE_ELASTIC: ["BasicConvTestModel/NNCFConv2d[conv]/conv2d_0"],
     },
-    input_size=[1, 1, 5, 5]
+    input_size=[1, 1, 5, 5],
 )
 
 COMMON_DEPTH_SUPERNET_DESC = ElasticityDesc(
     ElasticityDim.DEPTH,
     model_cls=BasicTestSuperNet,
     params={
-        'min_block_size': 2,
-        'hw_fused_ops': True,
+        "min_block_size": 2,
+        "hw_fused_ops": True,
     },
     ref_state={
-        'elasticity_params': {
-            'hw_fused_ops': True,
-            'max_block_size': 50,
-            'min_block_size': 2,
-            'skipped_blocks': None
-        },
+        "elasticity_params": {"hw_fused_ops": True, "max_block_size": 50, "min_block_size": 2, "skipped_blocks": None},
         EDBuilderStateNames.SKIPPED_BLOCKS: [],
         EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: {},
     },
-    ref_search_space=[[]]
+    ref_search_space=[[]],
 )
 
 
 def ref_depth_output_fn(model: DepthBasicConvTestModel, x):
     skipped_layers_before = model.get_skipped_layers()
-    model.set_skipped_layers(['conv1'])
+    model.set_skipped_layers(["conv1"])
     result = model(x)
     model.set_skipped_layers(skipped_layers_before)
     return result
@@ -135,55 +132,55 @@ COMMON_DEPTH_BASIC_DESC = ElasticityDesc(
     ref_output_fn=ref_depth_output_fn,
     ref_search_space=[[0], []],
     ref_state={
-        'elasticity_params': {
-            'hw_fused_ops': True,
-            'max_block_size': 50,
-            'min_block_size': 5,
-            'skipped_blocks': [['DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
-                                'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0']]
+        "elasticity_params": {
+            "hw_fused_ops": True,
+            "max_block_size": 50,
+            "min_block_size": 5,
+            "skipped_blocks": [
+                [
+                    "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0",
+                    "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0",
+                ]
+            ],
         },
-        EDBuilderStateNames.SKIPPED_BLOCKS: BASIC_ELASTIC_DEPTH_PARAMS['skipped_blocks_state'],
-        EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: BASIC_ELASTIC_DEPTH_PARAMS['skipped_blocks_dependencies'],
-    }
+        EDBuilderStateNames.SKIPPED_BLOCKS: BASIC_ELASTIC_DEPTH_PARAMS["skipped_blocks_state"],
+        EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: BASIC_ELASTIC_DEPTH_PARAMS["skipped_blocks_dependencies"],
+    },
 )
 
-LIST_STATE_AFTER_BUILD_DESCS = [
-    *COMMON_WIDTH_STATE_DESCS,
-    COMMON_DEPTH_SUPERNET_DESC,
-    COMMON_KERNEL_DESC
-]
+LIST_STATE_AFTER_BUILD_DESCS = [*COMMON_WIDTH_STATE_DESCS, COMMON_DEPTH_SUPERNET_DESC, COMMON_KERNEL_DESC]
 
 
-@pytest.mark.parametrize('desc', LIST_STATE_AFTER_BUILD_DESCS, ids=map(str, LIST_STATE_AFTER_BUILD_DESCS))
+@pytest.mark.parametrize("desc", LIST_STATE_AFTER_BUILD_DESCS, ids=map(str, LIST_STATE_AFTER_BUILD_DESCS))
 def test_can_get_builder_state_after_build(desc):
     _, builder = desc.build_handler()
     actual_state = builder.get_state()
     assert actual_state == desc.ref_state
 
 
-ELASTIC_WIDTH_PARAMS_BB = {'filter_importance': 'L2', **BASIC_ELASTIC_WIDTH_PARAMS}
+ELASTIC_WIDTH_PARAMS_BB = {"filter_importance": "L2", **BASIC_ELASTIC_WIDTH_PARAMS}
 LIST_STATE_BEFORE_BUILD_DESCS = [
     ElasticityDesc(
         ElasticityDim.WIDTH,
         params=ELASTIC_WIDTH_PARAMS_BB,
         ref_state={
             SEHBuilderStateNames.ELASTICITY_PARAMS: ELASTIC_WIDTH_PARAMS_BB,
-            EWBuilderStateNames.GROUPED_NODE_NAMES_TO_PRUNE: []
-        }
+            EWBuilderStateNames.GROUPED_NODE_NAMES_TO_PRUNE: [],
+        },
     ),
     ElasticityDesc(
         ElasticityDim.KERNEL,
         params=BASIC_ELASTIC_KERNEL_PARAMS,
         ref_state={
             SEHBuilderStateNames.ELASTICITY_PARAMS: BASIC_ELASTIC_KERNEL_PARAMS,
-            EKBuilderStateNames.NODE_NAMES_TO_MAKE_ELASTIC: []
-        }
+            EKBuilderStateNames.NODE_NAMES_TO_MAKE_ELASTIC: [],
+        },
     ),
-    COMMON_DEPTH_BASIC_DESC
+    COMMON_DEPTH_BASIC_DESC,
 ]
 
 
-@pytest.mark.parametrize('desc', LIST_STATE_BEFORE_BUILD_DESCS, ids=map(str, LIST_STATE_BEFORE_BUILD_DESCS))
+@pytest.mark.parametrize("desc", LIST_STATE_BEFORE_BUILD_DESCS, ids=map(str, LIST_STATE_BEFORE_BUILD_DESCS))
 class TestBeforeBuild:
     def test_can_get_builder_state_before_build(self, desc: ElasticityDesc):
         builder = desc.create_builder()
@@ -212,14 +209,10 @@ class TestBeforeBuild:
         assert not _nncf_caplog.records
 
 
-LIST_LOAD_STATE_DESCS = [
-    COMMON_DEPTH_BASIC_DESC,
-    *COMMON_WIDTH_STATE_DESCS,
-    COMMON_KERNEL_DESC
-]
+LIST_LOAD_STATE_DESCS = [COMMON_DEPTH_BASIC_DESC, *COMMON_WIDTH_STATE_DESCS, COMMON_KERNEL_DESC]
 
 
-@pytest.mark.parametrize('desc', LIST_LOAD_STATE_DESCS, ids=map(str, LIST_LOAD_STATE_DESCS))
+@pytest.mark.parametrize("desc", LIST_LOAD_STATE_DESCS, ids=map(str, LIST_LOAD_STATE_DESCS))
 def test_can_load_handler_state(desc: ElasticityDesc):
     original_model = desc.model_cls()
     move_model_to_cuda_if_available(original_model)

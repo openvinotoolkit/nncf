@@ -29,6 +29,7 @@ from tests.torch.quantization.quantization_helpers import get_quantization_confi
 
 class ModelForHWConfigTest(torch.nn.Module):
     CONV2D_OP_NODE_NAME = "ModelForHWConfigTest/NNCFConv2d[conv2d]/conv2d_0"
+
     def __init__(self, with_hardswish=False):
         super().__init__()
         self.with_hardswish = with_hardswish
@@ -44,8 +45,9 @@ class ModelForHWConfigTest(torch.nn.Module):
 
 class TestHWConfigRules:
     @staticmethod
-    def get_model_and_ctrl_with_applied_hw_config_quantization(model: torch.nn.Module, hw_config_dict: dict,
-                                                               should_be_quantize_inputs: bool = True):
+    def get_model_and_ctrl_with_applied_hw_config_quantization(
+        model: torch.nn.Module, hw_config_dict: dict, should_be_quantize_inputs: bool = True
+    ):
         nncf_config = get_quantization_config_without_range_init(model_size=1)
         nncf_config["compression"].update({"quantize_inputs": should_be_quantize_inputs})
         nncf_config["target_device"] = "ANY"  # for compatibility
@@ -62,19 +64,22 @@ class TestHWConfigRules:
     def quantizer_has_default_config(quantizer: BaseQuantizer) -> bool:
         default_qconfig = DEFAULT_QUANTIZER_CONFIG
         is_ok = True
-        is_ok &= (quantizer.num_bits == default_qconfig.num_bits)
-        is_ok &= (quantizer.per_channel == default_qconfig.per_channel)
+        is_ok &= quantizer.num_bits == default_qconfig.num_bits
+        is_ok &= quantizer.per_channel == default_qconfig.per_channel
         if default_qconfig.signedness_to_force is not None:
-            is_ok &= (quantizer.signed == default_qconfig.signedness_to_force)
-        is_ok &= isinstance(quantizer,
-                            SymmetricQuantizer if default_qconfig.mode == QuantizationMode.SYMMETRIC else
-                            AsymmetricQuantizer)
+            is_ok &= quantizer.signed == default_qconfig.signedness_to_force
+        is_ok &= isinstance(
+            quantizer, SymmetricQuantizer if default_qconfig.mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer
+        )
         return is_ok
 
     @staticmethod
     def get_quantizer_module_after_op_name(op_name: str, ctrl: QuantizationController) -> BaseQuantizer:
-        input_matches = list(filter(lambda x: op_name in x.target_node_name and x.input_port_id is None,
-                                    ctrl.non_weight_quantizers.keys()))
+        input_matches = list(
+            filter(
+                lambda x: op_name in x.target_node_name and x.input_port_id is None, ctrl.non_weight_quantizers.keys()
+            )
+        )
         assert len(input_matches) == 1
         act_quant_key = input_matches[0]
         act_quantizer_ref = ctrl.non_weight_quantizers[act_quant_key].quantizer_module_ref
@@ -85,30 +90,17 @@ class TestHWConfigRules:
             "target_device": "test",
             "config": {
                 "quantization": {
-                    "q8_a": {
-                        "bits": 8,
-                        "mode": [
-                            "symmetric",
-                            "asymmetric"
-                        ],
-                        "granularity": "pertensor"
-                    },
+                    "q8_a": {"bits": 8, "mode": ["symmetric", "asymmetric"], "granularity": "pertensor"},
                 }
             },
             "operations": [
-                {
-                    "type": "MatMul",
-                    "quantization": {
-                        "activations": "q8_a",
-                        "weights": "q8_a"
-                    }
-                },
-            ]
+                {"type": "MatMul", "quantization": {"activations": "q8_a", "weights": "q8_a"}},
+            ],
         }
 
-        _, ctrl = \
-            self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
-                                                                        hw_config_dict, False)
+        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(
+            ModelForHWConfigTest(with_hardswish=False), hw_config_dict, False
+        )
         assert len(ctrl.weight_quantizers) == 0  # Conv2d weights remain unquantized
         assert len(ctrl.non_weight_quantizers) == 1  # Only the matmul input is quantized
 
@@ -122,37 +114,21 @@ class TestHWConfigRules:
             "target_device": "test",
             "config": {
                 "quantization": {
-                    "q4_a": {
-                        "bits": 4,
-                        "mode": [
-                            "symmetric",
-                            "asymmetric"
-                        ],
-                        "granularity": "pertensor"
-                    },
+                    "q4_a": {"bits": 4, "mode": ["symmetric", "asymmetric"], "granularity": "pertensor"},
                 }
             },
             "operations": [
                 {
                     "type": "MatMul",
-                    "quantization": {
-                        "activations": "q4_a",
-                        "weights": "q4_a"
-                    },
+                    "quantization": {"activations": "q4_a", "weights": "q4_a"},
                 },
-                {
-
-                    "type": "Convolution",
-                    "quantization": {
-                        "activations": "q4_a",
-                        "weights": "q4_a"
-                    }
-                },
-            ]
+                {"type": "Convolution", "quantization": {"activations": "q4_a", "weights": "q4_a"}},
+            ],
         }
 
-        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=True),
-                                                                              hw_config_dict)
+        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(
+            ModelForHWConfigTest(with_hardswish=True), hw_config_dict
+        )
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized
         assert len(ctrl.non_weight_quantizers) == 3  # hardswish input, conv2d input, matmul input (single in this case)
 
@@ -167,49 +143,40 @@ class TestHWConfigRules:
             "target_device": "test",
             "config": {
                 "quantization": {
-                    "q4_a": {
-                        "bits": 4,
-                        "mode": [
-                            "symmetric",
-                            "asymmetric"
-                        ],
-                        "granularity": "pertensor"
-                    },
+                    "q4_a": {"bits": 4, "mode": ["symmetric", "asymmetric"], "granularity": "pertensor"},
                 }
             },
             "operations": [
-                {
-                    "type": "MatMul"
-                },
-                {
-
-                    "type": "Convolution",
-                    "quantization": {
-                        "activations": "q4_a",
-                        "weights": "q4_a"
-                    }
-                },
-            ]
+                {"type": "MatMul"},
+                {"type": "Convolution", "quantization": {"activations": "q4_a", "weights": "q4_a"}},
+            ],
         }
 
-        _, ctrl = \
-            self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
-                                                                        hw_config_dict, False)
+        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(
+            ModelForHWConfigTest(with_hardswish=False), hw_config_dict, False
+        )
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized
         conv2d_weight_quantizer_ref = list(ctrl.weight_quantizers.values())[0].quantizer_module_ref
         assert not self.quantizer_has_default_config(conv2d_weight_quantizer_ref)
 
         assert len(ctrl.non_weight_quantizers) == 1  # Matmul input
         matmul_input_matches = list(
-            filter(lambda x: x.target_node_name == ModelForHWConfigTest.CONV2D_OP_NODE_NAME,
-                   ctrl.non_weight_quantizers.keys()))
+            filter(
+                lambda x: x.target_node_name == ModelForHWConfigTest.CONV2D_OP_NODE_NAME,
+                ctrl.non_weight_quantizers.keys(),
+            )
+        )
 
         assert len(matmul_input_matches) == 1
         matmul_quantizer_ref = ctrl.non_weight_quantizers[matmul_input_matches[0]].quantizer_module_ref
         assert self.quantizer_has_default_config(matmul_quantizer_ref)
 
-        non_matmul_input_matches = list(filter(lambda x: x.target_node_name != ModelForHWConfigTest.CONV2D_OP_NODE_NAME,
-                                               ctrl.non_weight_quantizers.keys()))
+        non_matmul_input_matches = list(
+            filter(
+                lambda x: x.target_node_name != ModelForHWConfigTest.CONV2D_OP_NODE_NAME,
+                ctrl.non_weight_quantizers.keys(),
+            )
+        )
         for quantizer_id in non_matmul_input_matches:
             quantizer_ref = ctrl.non_weight_quantizers[quantizer_id].quantizer_module_ref
             assert not self.quantizer_has_default_config(quantizer_ref)
@@ -219,29 +186,18 @@ class TestHWConfigRules:
             "target_device": "test",
             "config": {
                 "quantization": {
-                    "q4_a": {
-                        "bits": 4,
-                        "mode": [
-                            "symmetric",
-                            "asymmetric"
-                        ],
-                        "granularity": "pertensor"
-                    },
+                    "q4_a": {"bits": 4, "mode": ["symmetric", "asymmetric"], "granularity": "pertensor"},
                 }
             },
             "operations": [
-                {
-                    "type": "MatMul"
-                },
-                {
-                    "type": "Convolution"
-                },
-            ]
+                {"type": "MatMul"},
+                {"type": "Convolution"},
+            ],
         }
 
-        _, ctrl = \
-            self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
-                                                                        hw_config_dict)
+        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(
+            ModelForHWConfigTest(with_hardswish=False), hw_config_dict
+        )
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized with default config
         assert len(ctrl.non_weight_quantizers) == 2  # All inputs are quantized.
         for quantizer_ref in ctrl.all_quantizations.values():

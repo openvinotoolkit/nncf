@@ -14,8 +14,8 @@ from collections import OrderedDict
 from functools import partial
 from itertools import islice
 
-from nncf.torch.nested_objects_traversal import NestedObjectIndex
 from nncf.torch.nested_objects_traversal import InputIndexEntry
+from nncf.torch.nested_objects_traversal import NestedObjectIndex
 
 
 def nth(iterable, n, default=None):
@@ -32,9 +32,13 @@ class OperatorInput:
         op_kwargs_index_entries = NestedObjectIndex(self.op_kwargs)
 
         # pylint:disable=unnecessary-comprehension
-        self._index = {idx: entry for idx, entry in
-                       enumerate(op_args_index_entries.get_flat_nested_obj_indexing() +
-                                 op_kwargs_index_entries.get_flat_nested_obj_indexing())}
+        self._index = {
+            idx: entry
+            for idx, entry in enumerate(
+                op_args_index_entries.get_flat_nested_obj_indexing()
+                + op_kwargs_index_entries.get_flat_nested_obj_indexing()
+            )
+        }
 
     def __iter__(self):
         return iter(self._index.values())

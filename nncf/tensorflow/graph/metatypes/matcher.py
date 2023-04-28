@@ -21,9 +21,7 @@ from nncf.tensorflow.graph.metatypes.keras_layers import KERAS_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.tf_ops import TF_OPERATION_METATYPES
 
 
-def get_keras_layer_metatype(
-        layer: tf.keras.layers.Layer,
-        determine_subtype: bool = True) -> Type[OperatorMetatype]:
+def get_keras_layer_metatype(layer: tf.keras.layers.Layer, determine_subtype: bool = True) -> Type[OperatorMetatype]:
     """
     Returns a metatype of the Keras layer.
 
@@ -51,8 +49,7 @@ def get_keras_layer_metatype(
         returns the primary metatype otherwise.
     :return: A metatype.
     """
-    layer_metatype = KERAS_LAYER_METATYPES.get_operator_metatype_by_op_name(
-        layer.__class__.__name__)
+    layer_metatype = KERAS_LAYER_METATYPES.get_operator_metatype_by_op_name(layer.__class__.__name__)
 
     if not determine_subtype:
         return layer_metatype

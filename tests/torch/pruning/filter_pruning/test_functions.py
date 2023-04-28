@@ -13,15 +13,22 @@
 import pytest
 import torch
 
-from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS, calculate_binary_mask
+from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
+from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 
 
-@pytest.mark.parametrize(("norm_name", "input_tensor", "reference"),
-                         [('L1', torch.arange(120.0).view(2, 3, 4, 5), torch.tensor([1770.0, 5370.0])),
-                          ('L2', torch.arange(120.0).view(2, 3, 4, 5), torch.tensor([264.9716966, 706.12321871])),
-                          ('geometric_median', torch.arange(120.0).view(3, 2, 4, 5),
-                           torch.tensor([758.94663844, 505.96442563, 758.94663844])),
-                         ])
+@pytest.mark.parametrize(
+    ("norm_name", "input_tensor", "reference"),
+    [
+        ("L1", torch.arange(120.0).view(2, 3, 4, 5), torch.tensor([1770.0, 5370.0])),
+        ("L2", torch.arange(120.0).view(2, 3, 4, 5), torch.tensor([264.9716966, 706.12321871])),
+        (
+            "geometric_median",
+            torch.arange(120.0).view(3, 2, 4, 5),
+            torch.tensor([758.94663844, 505.96442563, 758.94663844]),
+        ),
+    ],
+)
 def test_norms(norm_name, input_tensor, reference):
     """
     Test correctness of all norms calculations.
@@ -31,9 +38,9 @@ def test_norms(norm_name, input_tensor, reference):
     assert torch.allclose(result, reference)
 
 
-@pytest.mark.parametrize(("importance", "threshold", "reference"),
-                         [(torch.arange(20.), 10.0, torch.tensor([0.0]*10 + [1.0]*10))]
-                         )
+@pytest.mark.parametrize(
+    ("importance", "threshold", "reference"), [(torch.arange(20.0), 10.0, torch.tensor([0.0] * 10 + [1.0] * 10))]
+)
 def test_calculate_binary_mask(importance, threshold, reference):
     """
     Test correctness of binary mask calculation.

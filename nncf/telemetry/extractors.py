@@ -14,9 +14,7 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
-from typing import Optional
-from typing import Union
+from typing import Any, Optional, Union
 
 SerializableData = Union[str, Enum]
 
@@ -28,6 +26,7 @@ class CollectedEvent:
     data: Optional - the data associated with the event. Must be a string - serialize to string if it is not.
     int_data: Optional - the integer data associated with the event. Must be a positive integer.
     """
+
     name: str
     data: SerializableData = None  # GA limitations
     int_data: int = None
@@ -37,6 +36,7 @@ class TelemetryExtractor(ABC):
     """
     Interface for custom telemetry extractors, to be used with the `nncf.telemetry.tracked_function` decorator.
     """
+
     def __init__(self, argname: Optional[str] = None):
         self._argname = argname
 
@@ -49,7 +49,7 @@ class TelemetryExtractor(ABC):
         """
         Implement this method to prepare the telemetry event data from the tracked function's argument value
         passed via `argvalue`.
-         """
+        """
         pass
 
 
@@ -57,5 +57,4 @@ class VerbatimTelemetryExtractor(TelemetryExtractor):
     def extract(self, argvalue: SerializableData) -> CollectedEvent:
         if isinstance(argvalue, Enum):
             argvalue = str(argvalue.value)
-        return CollectedEvent(name=self._argname,
-                              data=argvalue)
+        return CollectedEvent(name=self._argname, data=argvalue)

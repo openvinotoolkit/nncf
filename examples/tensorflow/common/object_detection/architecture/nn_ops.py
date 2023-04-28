@@ -12,21 +12,24 @@
 """
 
 import functools
+
 import tensorflow as tf
 
 
 class NormActivation(tf.keras.layers.Layer):
     """Combined Normalization and Activation layers."""
 
-    def __init__(self,
-                momentum=0.997,
-                epsilon=1e-4,
-                trainable=True,
-                init_zero=False,
-                use_activation=True,
-                activation='relu',
-                fused=True,
-                name=None):
+    def __init__(
+        self,
+        momentum=0.997,
+        epsilon=1e-4,
+        trainable=True,
+        init_zero=False,
+        use_activation=True,
+        activation="relu",
+        fused=True,
+        name=None,
+    ):
         """A class to construct layers for a batch normalization followed by a ReLU.
 
         Args:
@@ -51,22 +54,24 @@ class NormActivation(tf.keras.layers.Layer):
         else:
             gamma_initializer = tf.keras.initializers.Ones()
 
-        self._normalization_op = tf.keras.layers.BatchNormalization(momentum=momentum,
-                                                                    epsilon=epsilon,
-                                                                    center=True,
-                                                                    scale=True,
-                                                                    trainable=trainable,
-                                                                    fused=fused,
-                                                                    gamma_initializer=gamma_initializer,
-                                                                    name=name)
+        self._normalization_op = tf.keras.layers.BatchNormalization(
+            momentum=momentum,
+            epsilon=epsilon,
+            center=True,
+            scale=True,
+            trainable=trainable,
+            fused=fused,
+            gamma_initializer=gamma_initializer,
+            name=name,
+        )
 
         self._use_activation = use_activation
-        if activation == 'relu':
+        if activation == "relu":
             self._activation_op = tf.nn.relu
-        elif activation == 'swish':
+        elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError('Unsupported activation `{}`.'.format(activation))
+            raise ValueError("Unsupported activation `{}`.".format(activation))
 
     def __call__(self, inputs, is_training=None):
         """Builds the normalization layer followed by an optional activation layer.
@@ -89,18 +94,10 @@ class NormActivation(tf.keras.layers.Layer):
         return inputs
 
 
-def norm_activation_builder(momentum=0.997,
-                            epsilon=1e-4,
-                            trainable=True,
-                            activation='relu',
-                            **kwargs):
-
-    return functools.partial(NormActivation,
-                             momentum=momentum,
-                             epsilon=epsilon,
-                             trainable=trainable,
-                             activation=activation,
-                             **kwargs)
+def norm_activation_builder(momentum=0.997, epsilon=1e-4, trainable=True, activation="relu", **kwargs):
+    return functools.partial(
+        NormActivation, momentum=momentum, epsilon=epsilon, trainable=trainable, activation=activation, **kwargs
+    )
 
 
 def compose(*funcs):
@@ -115,8 +112,8 @@ def compose(*funcs):
 def YoloConv2D(*args, **kwargs):
     """Wrapper to set Yolo parameters for Conv2D."""
     L2_FACTOR = 1e-5
-    yolo_conv_kwargs = {'kernel_regularizer': tf.keras.regularizers.l2(L2_FACTOR)}
-    yolo_conv_kwargs['bias_regularizer'] = tf.keras.regularizers.l2(L2_FACTOR)
+    yolo_conv_kwargs = {"kernel_regularizer": tf.keras.regularizers.l2(L2_FACTOR)}
+    yolo_conv_kwargs["bias_regularizer"] = tf.keras.regularizers.l2(L2_FACTOR)
     yolo_conv_kwargs.update(kwargs)
     return tf.keras.layers.Conv2D(*args, **yolo_conv_kwargs)
 
@@ -124,6 +121,6 @@ def YoloConv2D(*args, **kwargs):
 @functools.wraps(YoloConv2D)
 def DarknetConv2D(*args, **kwargs):
     """Wrapper to set Darknet parameters for YoloConv2D."""
-    darknet_conv_kwargs = {'padding': 'valid' if kwargs.get('strides')==(2,2) else 'same'}
+    darknet_conv_kwargs = {"padding": "valid" if kwargs.get("strides") == (2, 2) else "same"}
     darknet_conv_kwargs.update(kwargs)
     return YoloConv2D(*args, **darknet_conv_kwargs)

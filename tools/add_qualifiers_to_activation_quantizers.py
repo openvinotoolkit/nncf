@@ -13,17 +13,21 @@
 
 import sys
 from argparse import ArgumentParser
+from os import listdir
+from os import makedirs
+from os.path import exists
+from os.path import isfile
+from os.path import join
 
 import torch
-from os import listdir, makedirs
-from os.path import isfile, join, exists
 
 
 def main(argv):
     parser = ArgumentParser()
-    parser.add_argument('-i', '--input-folder', help='Path to directory with given checkpoints to modify',
-                        required=True)
-    parser.add_argument('-o', '--output-folder', help='Path to directory to save modified checkpoints', required=True)
+    parser.add_argument(
+        "-i", "--input-folder", help="Path to directory with given checkpoints to modify", required=True
+    )
+    parser.add_argument("-o", "--output-folder", help="Path to directory to save modified checkpoints", required=True)
     args = parser.parse_args(args=argv)
 
     src_dir = args.input_folder
@@ -31,24 +35,28 @@ def main(argv):
     if not exists(dst_dir):
         makedirs(dst_dir)
 
-    pth_files = [(join(src_dir, f), join(dst_dir, f)) for f in listdir(src_dir) if
-                 isfile(join(src_dir, f)) and ('.pth' in f or '.sd' in f)]
+    pth_files = [
+        (join(src_dir, f), join(dst_dir, f))
+        for f in listdir(src_dir)
+        if isfile(join(src_dir, f)) and (".pth" in f or ".sd" in f)
+    ]
 
     for pair in pth_files:
         src_file, dst_file = pair
         sd = pth = torch.load(src_file)
-        if 'state_dict' in pth:
-            sd = pth['state_dict']
+        if "state_dict" in pth:
+            sd = pth["state_dict"]
 
         new_sd = {}
         for k, v in sd.items():
-            if 'activation_quantizers' in k and 'INPUT' not in k:
-                key_split = k.split('.')
-                key_split[-2] += '|OUTPUT'
-                k = '.'.join(key_split)
+            if "activation_quantizers" in k and "INPUT" not in k:
+                key_split = k.split(".")
+                key_split[-2] += "|OUTPUT"
+                k = ".".join(key_split)
             new_sd[k] = v
-        pth['state_dict'] = new_sd
+        pth["state_dict"] = new_sd
         torch.save(pth, dst_file)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main(sys.argv[1:])

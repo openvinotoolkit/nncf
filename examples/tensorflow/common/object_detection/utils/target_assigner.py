@@ -16,18 +16,13 @@ import tensorflow as tf
 from examples.tensorflow.common.object_detection.utils import box_list
 from examples.tensorflow.common.object_detection.utils import shape_utils
 
-KEYPOINTS_FIELD_NAME = 'keypoints'
+KEYPOINTS_FIELD_NAME = "keypoints"
 
 
 class TargetAssigner:
     """Target assigner to compute classification and regression targets."""
 
-    def __init__(self,
-                similarity_calc,
-                matcher,
-                box_coder,
-                negative_class_weight=1.0,
-                unmatched_cls_target=None):
+    def __init__(self, similarity_calc, matcher, box_coder, negative_class_weight=1.0, unmatched_cls_target=None):
         """Construct Object Detection Target Assigner.
 
         Args:
@@ -61,12 +56,7 @@ class TargetAssigner:
     def box_coder(self):
         return self._box_coder
 
-    def assign(self,
-              anchors,
-              groundtruth_boxes,
-              groundtruth_labels=None,
-              groundtruth_weights=None,
-              **params):
+    def assign(self, anchors, groundtruth_boxes, groundtruth_labels=None, groundtruth_weights=None, **params):
         """Assign classification and regression targets to each anchor.
 
         For a given set of anchors and groundtruth detections, match anchors
@@ -107,23 +97,22 @@ class TargetAssigner:
             box_list.BoxList
         """
         if not isinstance(anchors, box_list.BoxList):
-            raise ValueError('anchors must be an BoxList')
+            raise ValueError("anchors must be an BoxList")
         if not isinstance(groundtruth_boxes, box_list.BoxList):
-            raise ValueError('groundtruth_boxes must be an BoxList')
+            raise ValueError("groundtruth_boxes must be an BoxList")
 
         if groundtruth_labels is None:
-            groundtruth_labels = tf.ones(
-                tf.expand_dims(groundtruth_boxes.num_boxes(), 0))
+            groundtruth_labels = tf.ones(tf.expand_dims(groundtruth_boxes.num_boxes(), 0))
             groundtruth_labels = tf.expand_dims(groundtruth_labels, -1)
 
         unmatched_shape_assert = shape_utils.assert_shape_equal(
             shape_utils.combined_static_and_dynamic_shape(groundtruth_labels)[1:],
-            shape_utils.combined_static_and_dynamic_shape(
-                self._unmatched_cls_target))
+            shape_utils.combined_static_and_dynamic_shape(self._unmatched_cls_target),
+        )
         labels_and_box_shapes_assert = shape_utils.assert_shape_equal(
             shape_utils.combined_static_and_dynamic_shape(groundtruth_labels)[:1],
-            shape_utils.combined_static_and_dynamic_shape(
-                groundtruth_boxes.get())[:1])
+            shape_utils.combined_static_and_dynamic_shape(groundtruth_boxes.get())[:1],
+        )
 
         if groundtruth_weights is None:
             num_gt_boxes = groundtruth_boxes.num_boxes_static()
@@ -132,16 +121,12 @@ class TargetAssigner:
             groundtruth_weights = tf.ones([num_gt_boxes], dtype=tf.float32)
 
         with tf.control_dependencies([unmatched_shape_assert, labels_and_box_shapes_assert]):
-            match_quality_matrix = self._similarity_calc.compare(
-                groundtruth_boxes, anchors)
+            match_quality_matrix = self._similarity_calc.compare(groundtruth_boxes, anchors)
             match = self._matcher.match(match_quality_matrix, **params)
-            reg_targets = self._create_regression_targets(anchors, groundtruth_boxes,
-                                                          match)
-            cls_targets = self._create_classification_targets(groundtruth_labels,
-                                                              match)
+            reg_targets = self._create_regression_targets(anchors, groundtruth_boxes, match)
+            cls_targets = self._create_classification_targets(groundtruth_labels, match)
             reg_weights = self._create_regression_weights(match, groundtruth_weights)
-            cls_weights = self._create_classification_weights(match,
-                                                              groundtruth_weights)
+            cls_weights = self._create_classification_weights(match, groundtruth_weights)
 
         num_anchors = anchors.num_boxes_static()
         if num_anchors is not None:
@@ -180,33 +165,28 @@ class TargetAssigner:
           reg_targets: a float32 tensor with shape [N, box_code_dimension]
         """
         matched_gt_boxes = match.gather_based_on_match(
-            groundtruth_boxes.get(),
-            unmatched_value=tf.zeros(4),
-            ignored_value=tf.zeros(4))
+            groundtruth_boxes.get(), unmatched_value=tf.zeros(4), ignored_value=tf.zeros(4)
+        )
         matched_gt_boxlist = box_list.BoxList(matched_gt_boxes)
         if groundtruth_boxes.has_field(KEYPOINTS_FIELD_NAME):
             groundtruth_keypoints = groundtruth_boxes.get_field(KEYPOINTS_FIELD_NAME)
             matched_keypoints = match.gather_based_on_match(
                 groundtruth_keypoints,
                 unmatched_value=tf.zeros(groundtruth_keypoints.get_shape()[1:]),
-                ignored_value=tf.zeros(groundtruth_keypoints.get_shape()[1:]))
+                ignored_value=tf.zeros(groundtruth_keypoints.get_shape()[1:]),
+            )
             matched_gt_boxlist.add_field(KEYPOINTS_FIELD_NAME, matched_keypoints)
 
         matched_reg_targets = self._box_coder.encode(matched_gt_boxlist, anchors)
-        match_results_shape = shape_utils.combined_static_and_dynamic_shape(
-            match.match_results)
+        match_results_shape = shape_utils.combined_static_and_dynamic_shape(match.match_results)
 
         # Zero out the unmatched and ignored regression targets.
-        unmatched_ignored_reg_targets = tf.tile(self._default_regression_target(),
-                                                [match_results_shape[0], 1])
+        unmatched_ignored_reg_targets = tf.tile(self._default_regression_target(), [match_results_shape[0], 1])
         matched_anchors_mask = match.matched_column_indicator()
         # To broadcast matched_anchors_mask to the same shape as
         # matched_reg_targets.
-        matched_anchors_mask = tf.tile(
-            tf.expand_dims(matched_anchors_mask, 1),
-            [1, tf.shape(matched_reg_targets)[1]])
-        reg_targets = tf.where(matched_anchors_mask, matched_reg_targets,
-                              unmatched_ignored_reg_targets)
+        matched_anchors_mask = tf.tile(tf.expand_dims(matched_anchors_mask, 1), [1, tf.shape(matched_reg_targets)[1]])
+        reg_targets = tf.where(matched_anchors_mask, matched_reg_targets, unmatched_ignored_reg_targets)
         return reg_targets
 
     def _default_regression_target(self):
@@ -242,9 +222,8 @@ class TargetAssigner:
           shape [num_gt_boxes, d_1, d_2, ... d_k].
         """
         return match.gather_based_on_match(
-            groundtruth_labels,
-            unmatched_value=self._unmatched_cls_target,
-            ignored_value=self._unmatched_cls_target)
+            groundtruth_labels, unmatched_value=self._unmatched_cls_target, ignored_value=self._unmatched_cls_target
+        )
 
     def _create_regression_weights(self, match, groundtruth_weights):
         """Set regression weight for each anchor.
@@ -262,8 +241,7 @@ class TargetAssigner:
         Returns:
           a float32 tensor with shape [num_anchors] representing regression weights.
         """
-        return match.gather_based_on_match(
-            groundtruth_weights, ignored_value=0., unmatched_value=0.)
+        return match.gather_based_on_match(groundtruth_weights, ignored_value=0.0, unmatched_value=0.0)
 
     def _create_classification_weights(self, match, groundtruth_weights):
         """Create classification weights for each anchor.
@@ -286,9 +264,8 @@ class TargetAssigner:
           weights.
         """
         return match.gather_based_on_match(
-            groundtruth_weights,
-            ignored_value=0.,
-            unmatched_value=self._negative_class_weight)
+            groundtruth_weights, ignored_value=0.0, unmatched_value=self._negative_class_weight
+        )
 
     def get_box_coder(self):
         """Get BoxCoder of this TargetAssigner.

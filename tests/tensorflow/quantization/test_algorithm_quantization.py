@@ -16,11 +16,15 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+
+# TODO(nlyalyus): WA for the bug 58886, QuantizationMode should be imported after nncf.tensorflow.
+#  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
+from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.quantization import FakeQuantize
 from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
 from nncf.tensorflow.quantization.algorithm import QuantizationController
@@ -31,9 +35,6 @@ from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_basic_two_conv_test_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
-# TODO(nlyalyus): WA for the bug 58886, QuantizationMode should be imported after nncf.tensorflow.
-#  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
-from nncf.common.quantization.structs import QuantizationMode
 
 
 def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
@@ -49,8 +50,7 @@ def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
 
 def get_quantizers(model):
     # pylint: disable=protected-access
-    activation_quantizers = [layer._quantizer for layer in model.layers
-                             if isinstance(layer, FakeQuantize)]
+    activation_quantizers = [layer._quantizer for layer in model.layers if isinstance(layer, FakeQuantize)]
     weight_quantizers = []
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
@@ -63,20 +63,24 @@ def get_quantizers(model):
 
 def check_default_qspecs(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
-    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                       num_bits=8,
-                                       signedness_to_force=True,
-                                       per_channel=True,
-                                       narrow_range=False,
-                                       half_range=True)
+    ref_weight_qspec = TFQuantizerSpec(
+        mode=QuantizationMode.SYMMETRIC,
+        num_bits=8,
+        signedness_to_force=True,
+        per_channel=True,
+        narrow_range=False,
+        half_range=True,
+    )
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
-    ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                           num_bits=8,
-                                           signedness_to_force=None,
-                                           per_channel=False,
-                                           narrow_range=False,
-                                           half_range=False)
+    ref_activation_qspec = TFQuantizerSpec(
+        mode=QuantizationMode.SYMMETRIC,
+        num_bits=8,
+        signedness_to_force=None,
+        per_channel=False,
+        narrow_range=False,
+        half_range=False,
+    )
     for wq in activation_quantizers:
         compare_qspecs(ref_activation_qspec, wq)
 
@@ -95,59 +99,65 @@ def test_quantization_configs__custom():
     model = get_basic_conv_test_model()
 
     config = get_basic_quantization_config()
-    config['target_device'] = 'TRIAL'
-    config['compression'].update({
-        "weights": {
-            "mode": "asymmetric",
-            "per_channel": True,
-            "bits": 4
-        },
-        "activations": {
-            "mode": "asymmetric",
-            "bits": 4,
-            "signed": True,
-        },
-    })
+    config["target_device"] = "TRIAL"
+    config["compression"].update(
+        {
+            "weights": {"mode": "asymmetric", "per_channel": True, "bits": 4},
+            "activations": {
+                "mode": "asymmetric",
+                "bits": 4,
+                "signed": True,
+            },
+        }
+    )
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     assert isinstance(compression_ctrl, QuantizationController)
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
 
-    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.ASYMMETRIC,
-                                       num_bits=4,
-                                       signedness_to_force=None,
-                                       per_channel=True,
-                                       narrow_range=True,
-                                       half_range=False)
+    ref_weight_qspec = TFQuantizerSpec(
+        mode=QuantizationMode.ASYMMETRIC,
+        num_bits=4,
+        signedness_to_force=None,
+        per_channel=True,
+        narrow_range=True,
+        half_range=False,
+    )
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
 
-    ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.ASYMMETRIC,
-                                           num_bits=4,
-                                           signedness_to_force=True,
-                                           per_channel=False,
-                                           narrow_range=False,
-                                           half_range=False)
+    ref_activation_qspec = TFQuantizerSpec(
+        mode=QuantizationMode.ASYMMETRIC,
+        num_bits=4,
+        signedness_to_force=True,
+        per_channel=False,
+        narrow_range=False,
+        half_range=False,
+    )
     for wq in activation_quantizers:
         compare_qspecs(ref_activation_qspec, wq)
 
 
 def check_specs_for_disabled_overflow_fix(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
-    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                       num_bits=8,
-                                       signedness_to_force=True,
-                                       per_channel=True,
-                                       narrow_range=True,
-                                       half_range=False)
+    ref_weight_qspec = TFQuantizerSpec(
+        mode=QuantizationMode.SYMMETRIC,
+        num_bits=8,
+        signedness_to_force=True,
+        per_channel=True,
+        narrow_range=True,
+        half_range=False,
+    )
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
-    ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                           num_bits=8,
-                                           signedness_to_force=None,
-                                           per_channel=False,
-                                           narrow_range=False,
-                                           half_range=False)
+    ref_activation_qspec = TFQuantizerSpec(
+        mode=QuantizationMode.SYMMETRIC,
+        num_bits=8,
+        signedness_to_force=None,
+        per_channel=False,
+        narrow_range=False,
+        half_range=False,
+    )
     for wq in activation_quantizers:
         compare_qspecs(ref_activation_qspec, wq)
 
@@ -156,61 +166,64 @@ def test_quantization_configs__disable_overflow_fix():
     model = get_basic_conv_test_model()
 
     config = get_basic_quantization_config()
-    config['compression'].update({
-        'overflow_fix': 'disable'
-    })
+    config["compression"].update({"overflow_fix": "disable"})
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     assert isinstance(compression_ctrl, QuantizationController)
     check_specs_for_disabled_overflow_fix(compression_model)
 
 
-@pytest.mark.parametrize('sf_mode', ['enable', 'first_layer_only', 'disable'],
-                         ids=['enabled', 'enabled_first_layer', 'disabled'])
+@pytest.mark.parametrize(
+    "sf_mode", ["enable", "first_layer_only", "disable"], ids=["enabled", "enabled_first_layer", "disabled"]
+)
 def test_export_overflow_fix(sf_mode):
     model = get_basic_two_conv_test_model()
     config = get_basic_quantization_config()
-    config['compression'].update({
-        'overflow_fix': sf_mode
-    })
-    enabled = sf_mode in ['enable', 'first_layer_only']
+    config["compression"].update({"overflow_fix": sf_mode})
+    enabled = sf_mode in ["enable", "first_layer_only"]
 
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     activation_quantizers_be, weight_quantizers_be = get_quantizers(compression_model)
 
     for idx, wq in enumerate(weight_quantizers_be):
-        if sf_mode == 'first_layer_only' and idx > 0:
+        if sf_mode == "first_layer_only" and idx > 0:
             enabled = False
-        ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                           num_bits=8,
-                                           signedness_to_force=True,
-                                           per_channel=True,
-                                           narrow_range=not enabled,
-                                           half_range=enabled)
+        ref_weight_qspec = TFQuantizerSpec(
+            mode=QuantizationMode.SYMMETRIC,
+            num_bits=8,
+            signedness_to_force=True,
+            per_channel=True,
+            narrow_range=not enabled,
+            half_range=enabled,
+        )
         compare_qspecs(ref_weight_qspec, wq)
 
-    ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                           num_bits=8,
-                                           signedness_to_force=None,
-                                           per_channel=False,
-                                           narrow_range=False,
-                                           half_range=False)
+    ref_activation_qspec = TFQuantizerSpec(
+        mode=QuantizationMode.SYMMETRIC,
+        num_bits=8,
+        signedness_to_force=None,
+        per_channel=False,
+        narrow_range=False,
+        half_range=False,
+    )
     for wq in activation_quantizers_be:
         compare_qspecs(ref_activation_qspec, wq)
 
-    enabled = sf_mode in ['enable', 'first_layer_only']
-    compression_ctrl.export_model('/tmp/test.pb')
+    enabled = sf_mode in ["enable", "first_layer_only"]
+    compression_ctrl.export_model("/tmp/test.pb")
     activation_quantizers_ae, weight_quantizers_ae = get_quantizers(compression_model)
 
     for idx, wq in enumerate(weight_quantizers_ae):
-        if sf_mode == 'first_layer_only' and idx > 0:
+        if sf_mode == "first_layer_only" and idx > 0:
             enabled = False
-        ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                           num_bits=8,
-                                           signedness_to_force=True,
-                                           per_channel=True,
-                                           narrow_range=not enabled,
-                                           half_range=False)
+        ref_weight_qspec = TFQuantizerSpec(
+            mode=QuantizationMode.SYMMETRIC,
+            num_bits=8,
+            signedness_to_force=True,
+            per_channel=True,
+            narrow_range=not enabled,
+            half_range=False,
+        )
         compare_qspecs(ref_weight_qspec, wq)
     for wq in activation_quantizers_ae:
         compare_qspecs(ref_activation_qspec, wq)
@@ -241,7 +254,7 @@ def get_quantize_inputs_test_model(input_shapes):
 
     inputs = []
     for i, input_shape in enumerate(input_shapes):
-        inputs.append(tf.keras.Input(shape=input_shape[1:], name='input_{}'.format(i + 1)))
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
     # pylint: disable=unbalanced-tuple-unpacking
     input_1, input_2, input_3, input_4, input_5 = inputs
 
@@ -253,7 +266,7 @@ def get_quantize_inputs_test_model(input_shapes):
     conv6 = layers.Conv2D(filters=3, kernel_size=2)
     dense = layers.Dense(8)
 
-    x_1 = Rescaling(1. / 255.)(input_1)
+    x_1 = Rescaling(1.0 / 255.0)(input_1)
     x_1 = conv1(x_1)
     x_1 = conv4(x_1)
     x_1 = layers.GlobalAveragePooling2D()(x_1)
@@ -292,17 +305,17 @@ def get_quantize_inputs_test_model(input_shapes):
 
 def test_quantize_inputs():
     config = get_basic_quantization_config()
-    config['target_device'] = 'TRIAL'
+    config["target_device"] = "TRIAL"
     input_shapes = [[2, 32, 32, 3] for i in range(5)]
     model = get_quantize_inputs_test_model(input_shapes)
 
     model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     ref_fake_quantize_layers_for_inputs = {
-        'rescaling/fake_quantize',
-        'input_2/fake_quantize',
-        'input_3/fake_quantize',
-        'input_4/fake_quantize',
-        'input_5/fake_quantize'
+        "rescaling/fake_quantize",
+        "input_2/fake_quantize",
+        "input_3/fake_quantize",
+        "input_4/fake_quantize",
+        "input_5/fake_quantize",
     }
     ref_fake_quantize_layers = 17
 
@@ -327,14 +340,14 @@ def get_quantize_outputs_removal_test_model(input_shape):
     #                    /
     #             (tf_reshape)
 
-    inputs = tf.keras.Input(shape=input_shape[1:], name='input')
-    conv1 = layers.Conv2D(3, 8, name='conv1')
-    conv2 = layers.Conv2D(3, 8, name='conv2')
-    conv3 = layers.Conv2D(3, 8, name='conv3')
-    conv4 = layers.Conv2D(3, 8, name='conv4')
+    inputs = tf.keras.Input(shape=input_shape[1:], name="input")
+    conv1 = layers.Conv2D(3, 8, name="conv1")
+    conv2 = layers.Conv2D(3, 8, name="conv2")
+    conv3 = layers.Conv2D(3, 8, name="conv3")
+    conv4 = layers.Conv2D(3, 8, name="conv4")
     flatten1 = layers.Flatten()
     flatten2 = layers.Flatten()
-    keras_concat = layers.Concatenate(name='keras_concat')
+    keras_concat = layers.Concatenate(name="keras_concat")
     x1 = conv1(inputs)
     x1 = flatten1(x1)
     x2 = conv2(inputs)
@@ -344,9 +357,9 @@ def get_quantize_outputs_removal_test_model(input_shape):
     x4 = conv4(inputs)
     x4 = layers.GlobalMaxPool2D()(x4)
     x123 = keras_concat([x1, x2, x3])
-    x = tf.concat([x123, x4], -1, name='tf_concat')
-    x = layers.Reshape((-1, 4), name='keras_reshape')(x)
-    outputs = tf.reshape(x, (-1, 2, 2), name='tf_reshape')
+    x = tf.concat([x123, x4], -1, name="tf_concat")
+    x = layers.Reshape((-1, 4), name="keras_reshape")(x)
+    outputs = tf.reshape(x, (-1, 2, 2), name="tf_reshape")
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
@@ -356,66 +369,76 @@ def test_quantize_outputs_removal():
     model = get_quantize_outputs_removal_test_model(sample_size)
 
     model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
-    ref_fake_quantize_layers = ['input/fake_quantize']
+    ref_fake_quantize_layers = ["input/fake_quantize"]
     actual_fake_quantize_layers = [layer.name for layer in model.layers if isinstance(layer, FakeQuantize)]
     assert actual_fake_quantize_layers == ref_fake_quantize_layers
     assert len(actual_fake_quantize_layers) == len(ref_fake_quantize_layers)
 
 
 class DataFormat:
-    CF = 'channels_first'
-    CL = 'channels_last'
+    CF = "channels_first"
+    CL = "channels_last"
 
 
 LAYERS_PARAMS = {
-    "Conv1D":
-        {
-            "param_name": ['filters', 'kernel_size', 'data_format'],
-            "param_val": (8, 3,),
-            "shape": (10, 32, 64),
-        },
-    "Conv2D":
-        {
-            "param_name": ['filters', 'kernel_size', 'data_format'],
-            "param_val": (32, 3,),
-            "shape": (10, 32, 64, 3),
-        },
-    "Conv3D":
-        {
-            "param_name": ['filters', 'kernel_size', 'data_format'],
-            "param_val": (32, 3,),
-            "shape": (10, 32, 64, 128, 3),
-        },
-    "DepthwiseConv2D":
-        {
-            "param_name": ['kernel_size', 'data_format'],
-            "param_val": (32,),
-            "shape": (10, 32, 64, 3),
-        },
-    "Conv1DTranspose":
-        {
-            "param_name": ['filters', 'kernel_size', 'data_format'],
-            "param_val": (32, 32,),
-            "shape": (10, 32, 64),
-        },
-    "Conv2DTranspose":
-        {
-            "param_name": ['filters', 'kernel_size', 'data_format'],
-            "param_val": (32, 32,),
-            "shape": (10, 32, 64, 3),
-        },
-    "Conv3DTranspose":
-        {
-            "param_name": ['filters', 'kernel_size', 'data_format'],
-            "param_val": (32, 32,),
-            "shape": (10, 8, 32, 64, 3),
-        },
-    "Dense":
-        {
-            "param_name": ['units'],
-            "param_val": (32,),
-            "shape": (10, 32),
-        }
+    "Conv1D": {
+        "param_name": ["filters", "kernel_size", "data_format"],
+        "param_val": (
+            8,
+            3,
+        ),
+        "shape": (10, 32, 64),
+    },
+    "Conv2D": {
+        "param_name": ["filters", "kernel_size", "data_format"],
+        "param_val": (
+            32,
+            3,
+        ),
+        "shape": (10, 32, 64, 3),
+    },
+    "Conv3D": {
+        "param_name": ["filters", "kernel_size", "data_format"],
+        "param_val": (
+            32,
+            3,
+        ),
+        "shape": (10, 32, 64, 128, 3),
+    },
+    "DepthwiseConv2D": {
+        "param_name": ["kernel_size", "data_format"],
+        "param_val": (32,),
+        "shape": (10, 32, 64, 3),
+    },
+    "Conv1DTranspose": {
+        "param_name": ["filters", "kernel_size", "data_format"],
+        "param_val": (
+            32,
+            32,
+        ),
+        "shape": (10, 32, 64),
+    },
+    "Conv2DTranspose": {
+        "param_name": ["filters", "kernel_size", "data_format"],
+        "param_val": (
+            32,
+            32,
+        ),
+        "shape": (10, 32, 64, 3),
+    },
+    "Conv3DTranspose": {
+        "param_name": ["filters", "kernel_size", "data_format"],
+        "param_val": (
+            32,
+            32,
+        ),
+        "shape": (10, 8, 32, 64, 3),
+    },
+    "Dense": {
+        "param_name": ["units"],
+        "param_val": (32,),
+        "shape": (10, 32),
+    },
 }
 
 
@@ -450,17 +473,15 @@ class LayerDeck:
 class Conv1D(LayerDeck):
     def __init__(self, input_type: InputType, data_format: DataFormat):
         super().__init__("Conv1D", input_type, data_format)
-        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
-                                                       self.params,
-                                                       self.layer_inputs_shape,
-                                                       self.layer_inputs_shape[1:])
+        self.layer, self.inputs = get_layer_and_inputs(
+            self.layer_name, self.params, self.layer_inputs_shape, self.layer_inputs_shape[1:]
+        )
 
         if self.input_type == InputType.INPUTS:
             self.inputs_transformed = self.inputs
             if self.data_format == DataFormat.CF:
                 self.inputs_transformed = tf.transpose(self.inputs_transformed, [0, 2, 1])
-            self.inputs_transformed = tf.reshape(self.inputs_transformed,
-                                                 (-1, self.inputs_transformed.shape[-1]))
+            self.inputs_transformed = tf.reshape(self.inputs_transformed, (-1, self.inputs_transformed.shape[-1]))
 
         if self.input_type == InputType.WEIGHTS:
             self.inputs = self.layer.weights[0]
@@ -470,10 +491,9 @@ class Conv1D(LayerDeck):
 class Conv2D(LayerDeck):
     def __init__(self, input_type: InputType, data_format: DataFormat):
         super().__init__("Conv2D", input_type, data_format)
-        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
-                                                       self.params,
-                                                       self.layer_inputs_shape,
-                                                       self.layer_inputs_shape[1:])
+        self.layer, self.inputs = get_layer_and_inputs(
+            self.layer_name, self.params, self.layer_inputs_shape, self.layer_inputs_shape[1:]
+        )
         if self.input_type == InputType.INPUTS:
             self.inputs_transformed = self.inputs
             if self.data_format == DataFormat.CF:
@@ -486,17 +506,14 @@ class Conv2D(LayerDeck):
 class Conv3D(LayerDeck):
     def __init__(self, input_type: InputType, data_format: DataFormat):
         super().__init__("Conv3D", input_type, data_format)
-        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
-                                                       self.params,
-                                                       self.layer_inputs_shape,
-                                                       self.layer_inputs_shape[1:])
+        self.layer, self.inputs = get_layer_and_inputs(
+            self.layer_name, self.params, self.layer_inputs_shape, self.layer_inputs_shape[1:]
+        )
         if self.input_type == InputType.INPUTS:
             self.inputs_transformed = self.inputs
             if self.data_format == DataFormat.CF:
-                self.inputs_transformed = \
-                                tf.transpose(self.inputs_transformed, [0, 4, 2, 3, 1])
-            self.inputs_transformed = tf.reshape(self.inputs_transformed,
-                                                 (-1, self.inputs_transformed.shape[-1]))
+                self.inputs_transformed = tf.transpose(self.inputs_transformed, [0, 4, 2, 3, 1])
+            self.inputs_transformed = tf.reshape(self.inputs_transformed, (-1, self.inputs_transformed.shape[-1]))
 
         if self.input_type == InputType.WEIGHTS:
             self.inputs = self.layer.weights[0]
@@ -506,10 +523,9 @@ class Conv3D(LayerDeck):
 class DepthwiseConv2D(LayerDeck):
     def __init__(self, input_type: InputType, data_format: DataFormat):
         super().__init__("DepthwiseConv2D", input_type, data_format)
-        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
-                                                       self.params,
-                                                       self.layer_inputs_shape,
-                                                       self.layer_inputs_shape)
+        self.layer, self.inputs = get_layer_and_inputs(
+            self.layer_name, self.params, self.layer_inputs_shape, self.layer_inputs_shape
+        )
         if self.input_type == InputType.INPUTS:
             self.inputs_transformed = self.inputs
             if self.data_format == DataFormat.CF:
@@ -517,39 +533,34 @@ class DepthwiseConv2D(LayerDeck):
 
         if self.input_type == InputType.WEIGHTS:
             self.inputs = self.layer.weights[0]
-            self.inputs_transformed = tf.reshape(self.inputs,
-                                                 (-1, tf.math.reduce_prod(self.inputs.shape[2:])))
+            self.inputs_transformed = tf.reshape(self.inputs, (-1, tf.math.reduce_prod(self.inputs.shape[2:])))
 
 
 class Conv1DTranspose(LayerDeck):
     def __init__(self, input_type: InputType, data_format: DataFormat):
         super().__init__("Conv1DTranspose", input_type, data_format)
-        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
-                                                       self.params,
-                                                       self.layer_inputs_shape,
-                                                       self.layer_inputs_shape)
+        self.layer, self.inputs = get_layer_and_inputs(
+            self.layer_name, self.params, self.layer_inputs_shape, self.layer_inputs_shape
+        )
 
         if self.input_type == InputType.INPUTS:
             self.inputs_transformed = self.inputs
             if self.data_format == DataFormat.CF:
                 self.inputs_transformed = tf.transpose(self.inputs_transformed, [0, 2, 1])
-            self.inputs_transformed = tf.reshape(self.inputs_transformed,
-                                                 (-1, self.inputs_transformed.shape[-1]))
+            self.inputs_transformed = tf.reshape(self.inputs_transformed, (-1, self.inputs_transformed.shape[-1]))
 
         if self.input_type == InputType.WEIGHTS:
             self.inputs = self.layer.weights[0]
             self.inputs_transformed = tf.transpose(self.inputs, [0, 2, 1])
-            self.inputs_transformed = tf.reshape(self.inputs_transformed,
-                                                 (-1, self.inputs_transformed.shape[-1]))
+            self.inputs_transformed = tf.reshape(self.inputs_transformed, (-1, self.inputs_transformed.shape[-1]))
 
 
 class Conv2DTranspose(LayerDeck):
     def __init__(self, input_type: InputType, data_format: DataFormat):
         super().__init__("Conv2DTranspose", input_type, data_format)
-        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
-                                                       self.params,
-                                                       self.layer_inputs_shape,
-                                                       self.layer_inputs_shape)
+        self.layer, self.inputs = get_layer_and_inputs(
+            self.layer_name, self.params, self.layer_inputs_shape, self.layer_inputs_shape
+        )
         if self.input_type == InputType.INPUTS:
             self.inputs_transformed = self.inputs
             if self.data_format == DataFormat.CF:
@@ -563,31 +574,27 @@ class Conv2DTranspose(LayerDeck):
 class Conv3DTranspose(LayerDeck):
     def __init__(self, input_type: InputType, data_format: DataFormat):
         super().__init__("Conv3DTranspose", input_type, data_format)
-        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
-                                                       self.params,
-                                                       self.layer_inputs_shape,
-                                                       self.layer_inputs_shape)
+        self.layer, self.inputs = get_layer_and_inputs(
+            self.layer_name, self.params, self.layer_inputs_shape, self.layer_inputs_shape
+        )
         if self.input_type == InputType.INPUTS:
             self.inputs_transformed = self.inputs
             if self.data_format == DataFormat.CF:
                 self.inputs_transformed = tf.transpose(self.inputs_transformed, [0, 4, 2, 3, 1])
-            self.inputs_transformed = tf.reshape(self.inputs_transformed,
-                                                 (-1, self.inputs_transformed.shape[-1]))
+            self.inputs_transformed = tf.reshape(self.inputs_transformed, (-1, self.inputs_transformed.shape[-1]))
 
         if self.input_type == InputType.WEIGHTS:
             self.inputs = self.layer.weights[0]
             self.inputs_transformed = tf.transpose(self.inputs, [0, 1, 2, 4, 3])
-            self.inputs_transformed = tf.reshape(self.inputs_transformed,
-                                                 (-1, self.inputs_transformed.shape[-1]))
+            self.inputs_transformed = tf.reshape(self.inputs_transformed, (-1, self.inputs_transformed.shape[-1]))
 
 
 class Dense(LayerDeck):
     def __init__(self, input_type: InputType, data_format: DataFormat):
         super().__init__("Dense", input_type, data_format)
-        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
-                                                       self.params,
-                                                       self.layer_inputs_shape,
-                                                       self.layer_inputs_shape[1:])
+        self.layer, self.inputs = get_layer_and_inputs(
+            self.layer_name, self.params, self.layer_inputs_shape, self.layer_inputs_shape[1:]
+        )
         if self.input_type == InputType.INPUTS:
             self.inputs_transformed = self.inputs
 
@@ -608,8 +615,7 @@ LAYERS_MAP = {
 
 
 def get_test_layers_desk():
-    models = ["Conv1D", "Conv2D", "Conv3D", "DepthwiseConv2D",
-              "Conv1DTranspose", "Conv2DTranspose", "Conv3DTranspose"]
+    models = ["Conv1D", "Conv2D", "Conv3D", "DepthwiseConv2D", "Conv1DTranspose", "Conv2DTranspose", "Conv3DTranspose"]
     result = []
     for model_name in models:
         for input_type in [InputType.INPUTS, InputType.WEIGHTS]:
@@ -622,15 +628,14 @@ def get_test_layers_desk():
 
 
 @pytest.mark.parametrize(
-    'layer_name,input_type,data_type', get_test_layers_desk(), ids=[
-        " ".join(l) for l in get_test_layers_desk()]
+    "layer_name,input_type,data_type", get_test_layers_desk(), ids=[" ".join(l) for l in get_test_layers_desk()]
 )
 def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     layer_desk = LAYERS_MAP[layer_name](input_type, data_type)
     layer_metatype = get_keras_layer_metatype(layer_desk.layer, determine_subtype=False)
     assert len(layer_metatype.weight_definitions) == 1
     layer_name = layer_metatype.weight_definitions[0].weight_attr_name
-    q = Quantizer(name='quantizer')
+    q = Quantizer(name="quantizer")
 
     channel_axes = get_channel_axis(layer_desk.input_type, layer_name, layer_desk.layer)
     q.setup_input_transformation(layer_desk.shape, channel_axes)
@@ -640,96 +645,97 @@ def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     assert tf.math.reduce_all(preprocess == layer_desk.inputs_transformed)
     assert tf.math.reduce_all(postprocess == layer_desk.inputs)
 
+
 TEST_QUANTIZATION_PRESET_STRUCT = [
     {
-        'preset': 'performance',
-        'target_device': 'CPU',
-        'overrided_param' : {},
-        'expected_weights_q': 'symmetric',
-        'expected_activations_q': 'symmetric'
+        "preset": "performance",
+        "target_device": "CPU",
+        "overrided_param": {},
+        "expected_weights_q": "symmetric",
+        "expected_activations_q": "symmetric",
     },
     {
-        'preset': 'mixed',
-        'target_device': 'CPU',
-        'overrided_param' : {},
-        'expected_weights_q': 'symmetric',
-        'expected_activations_q': 'asymmetric'
+        "preset": "mixed",
+        "target_device": "CPU",
+        "overrided_param": {},
+        "expected_weights_q": "symmetric",
+        "expected_activations_q": "asymmetric",
     },
     {
-        'preset': 'performance',
-        'target_device': 'GPU',
-        'overrided_param' : {},
-        'expected_weights_q': 'symmetric',
-        'expected_activations_q': 'symmetric'
+        "preset": "performance",
+        "target_device": "GPU",
+        "overrided_param": {},
+        "expected_weights_q": "symmetric",
+        "expected_activations_q": "symmetric",
     },
     {
-        'preset': 'mixed',
-        'target_device': 'GPU',
-        'overrided_param' : {},
-        'expected_weights_q': 'symmetric',
-        'expected_activations_q': 'asymmetric'
+        "preset": "mixed",
+        "target_device": "GPU",
+        "overrided_param": {},
+        "expected_weights_q": "symmetric",
+        "expected_activations_q": "asymmetric",
     },
     {
-        'preset': 'performance',
-        'target_device': 'CPU',
-        'overrided_param' : {'weights': {'mode': 'asymmetric'}},
-        'expected_weights_q': 'asymmetric',
-        'expected_activations_q': 'symmetric'
-    }]
+        "preset": "performance",
+        "target_device": "CPU",
+        "overrided_param": {"weights": {"mode": "asymmetric"}},
+        "expected_weights_q": "asymmetric",
+        "expected_activations_q": "symmetric",
+    },
+]
 
-@pytest.mark.parametrize('data', TEST_QUANTIZATION_PRESET_STRUCT)
+
+@pytest.mark.parametrize("data", TEST_QUANTIZATION_PRESET_STRUCT)
 def test_quantization_preset(data):
     model = get_basic_conv_test_model()
 
     config = get_basic_quantization_config()
-    config['target_device']  = data['target_device']
-    config['compression'] = {'algorithm': 'quantization', 'preset': data['preset']}
-    config['compression'].update(data['overrided_param'])
+    config["target_device"] = data["target_device"]
+    config["compression"] = {"algorithm": "quantization", "preset": data["preset"]}
+    config["compression"].update(data["overrided_param"])
     compression_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     for aq in activation_quantizers:
-        assert aq.mode == data['expected_activations_q']
+        assert aq.mode == data["expected_activations_q"]
     for wq in weight_quantizers:
-        assert wq.mode == data['expected_weights_q']
+        assert wq.mode == data["expected_weights_q"]
 
 
 def test_quantization_preset_with_scope_overrides():
     model = get_basic_two_conv_test_model()
     config = get_basic_quantization_config()
-    config['target_device'] = "TRIAL"
-    config['compression'] = {'algorithm': 'quantization',
-                             'preset': 'mixed',
-                             'scope_overrides': {
-                                 'weights': {
-                                    'conv2d': {
-                                        "mode": "asymmetric",
-                                    }}
-                             }
-                             }
+    config["target_device"] = "TRIAL"
+    config["compression"] = {
+        "algorithm": "quantization",
+        "preset": "mixed",
+        "scope_overrides": {
+            "weights": {
+                "conv2d": {
+                    "mode": "asymmetric",
+                }
+            }
+        },
+    }
     compression_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     for aq in activation_quantizers:
-        assert aq.mode == 'asymmetric'
+        assert aq.mode == "asymmetric"
     for wq in weight_quantizers:
-        if wq.name == 'conv2d_kernel_quantizer':
-            assert wq.mode == 'asymmetric'
+        if wq.name == "conv2d_kernel_quantizer":
+            assert wq.mode == "asymmetric"
         else:
-            assert wq.mode == 'symmetric'
+            assert wq.mode == "symmetric"
 
 
 def test_quantization_with_bn_adaptation_disable(mocker):
     model = get_basic_conv_test_model()
     config = get_basic_quantization_config()
-    config['compression']['initializer'] = {
-        'batchnorm_adaptation': {
-            'num_bn_adaptation_samples': 0
-        }
-    }
+    config["compression"]["initializer"] = {"batchnorm_adaptation": {"num_bn_adaptation_samples": 0}}
 
-    init_spy = mocker.spy(QuantizationBuilder, 'initialize')
-    bn_adaptation_spy = mocker.spy(BatchnormAdaptationAlgorithm, 'run')
+    init_spy = mocker.spy(QuantizationBuilder, "initialize")
+    bn_adaptation_spy = mocker.spy(BatchnormAdaptationAlgorithm, "run")
     create_compressed_model_and_algo_for_test(model, config)
 
     init_spy.assert_called()

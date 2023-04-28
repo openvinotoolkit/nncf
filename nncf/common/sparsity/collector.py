@@ -11,14 +11,14 @@
  limitations under the License.
 """
 
-from typing import List
 from abc import abstractmethod
+from typing import List
 
 import numpy as np
 
 from nncf.common.collector import StatisticsCollector
-from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.common.sparsity.statistics import SparsifiedLayerSummary
+from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 
 
 class WeightDescription:
@@ -120,14 +120,10 @@ class BaseSparseModelStatisticsCollector(StatisticsCollector):
                 continue
 
             weight_percentage = 100 * (w.num_params / total_params)
-            sparse_layers_summary.append(
-                SparsifiedLayerSummary(w.name, w.shape, w.sparsity_level, weight_percentage)
-            )
+            sparse_layers_summary.append(SparsifiedLayerSummary(w.name, w.shape, w.sparsity_level, weight_percentage))
 
         sparse_model_stats = SparsifiedModelStatistics(
-            sparsity_level_for_model,
-            sparsity_level_for_sparse_layers,
-            sparse_layers_summary
+            sparsity_level_for_model, sparsity_level_for_sparse_layers, sparse_layers_summary
         )
 
         return sparse_model_stats

@@ -10,10 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Union
+from typing import Any, Dict, List, Union
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
@@ -23,12 +20,12 @@ from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.registry import Registry
 
-STATE_ATTR = 'state'
-DIFF_STATE_ATTR = STATE_ATTR + '__'
+STATE_ATTR = "state"
+DIFF_STATE_ATTR = STATE_ATTR + "__"
 
 
 class A(BaseCompressionAlgorithmBuilder):
-    def __init__(self, config: NNCFConfig, should_init: bool = True, state_value: int = 1, name: str = 'A'):
+    def __init__(self, config: NNCFConfig, should_init: bool = True, state_value: int = 1, name: str = "A"):
         setattr(self, Registry.REGISTERED_NAME_ATTR, name)
         super().__init__(config, should_init)
         self.state_value = state_value
@@ -75,9 +72,7 @@ class CA(CompositeCompressionAlgorithmBuilder):
 
 def _get_mock_config(algo_name: Union[List[str], str]) -> NNCFConfig:
     config = NNCFConfig()
-    config["input_info"] = {
-                "sample_size": [1, 1]
-            }
+    config["input_info"] = {"sample_size": [1, 1]}
     if isinstance(algo_name, list):
         lst = []
         for alg_n in algo_name:
@@ -85,14 +80,12 @@ def _get_mock_config(algo_name: Union[List[str], str]) -> NNCFConfig:
         config["compression"] = lst
     else:
         assert isinstance(algo_name, str)
-        config["compression"] = {
-                    "algorithm": algo_name
-                }
+        config["compression"] = {"algorithm": algo_name}
     return config
 
 
 def test_builder_state_load():
-    config = _get_mock_config('A')
+    config = _get_mock_config("A")
     builder = A(config, True, 1)
     builder.state_value += 1
 
@@ -106,10 +99,10 @@ def test_builder_state_load():
 
 def test_basic_composite_builder_load():
     def create_builder():
-        config = _get_mock_config(['A', 'A2'])
+        config = _get_mock_config(["A", "A2"])
         c = CA(config, True)
         a = A(config, True, 1)
-        b = A(config, True, 2, 'A2')
+        b = A(config, True, 2, "A2")
         c.add(a)
         c.add(b)
         return c, a, b
@@ -130,10 +123,10 @@ def test_basic_composite_builder_load():
 
 
 def test_advanced_composite_ctrl_load():
-    config = _get_mock_config(['A', 'A2', 'A3'])
+    config = _get_mock_config(["A", "A2", "A3"])
     composite_builder = CA(config, True)
     ctrl1 = A(config, True, 1)
-    ctrl2 = A(config, True, 2, name='A2')
+    ctrl2 = A(config, True, 2, name="A2")
     composite_builder.add(ctrl1)
     composite_builder.add(ctrl2)
 
@@ -144,7 +137,7 @@ def test_advanced_composite_ctrl_load():
 
     composite_builder = CA(config, True)
     ctrl1 = A(config, True, 1)
-    ctrl3 = A(config, True, 3, name='A3')
+    ctrl3 = A(config, True, 3, name="A3")
     composite_builder.add(ctrl1)
     composite_builder.add(ctrl3)
 

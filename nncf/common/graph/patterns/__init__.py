@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.common.graph.patterns.patterns import HWFusedPatterns
 from nncf.common.graph.patterns.patterns import GraphPattern
+from nncf.common.graph.patterns.patterns import HWFusedPatterns
 from nncf.common.graph.patterns.patterns import PatternNames
 from nncf.common.graph.patterns.patterns import merge_two_types_of_operations

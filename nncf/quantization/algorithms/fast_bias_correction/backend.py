@@ -13,27 +13,26 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar, Optional
+from typing import List, Optional, Tuple, TypeVar
 
 import numpy as np
-from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor import NNCFTensor
+
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
 
-
-TModel = TypeVar('TModel')
-OutputType = TypeVar('OutputType')
-ALGO_BACKENDS = Registry('algo_backends')
+TModel = TypeVar("TModel")
+OutputType = TypeVar("OutputType")
+ALGO_BACKENDS = Registry("algo_backends")
 
 
 class FastBiasCorrectionAlgoBackend(ABC):
-
     @property
     @abstractmethod
     def operation_metatypes(self):
@@ -85,11 +84,12 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean_statistic_collector(reduction_shape: ReductionShape,
-                                 inplace: bool,
-                                 num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None,
-                                 ) -> TensorStatisticCollectorBase:
+    def mean_statistic_collector(
+        reduction_shape: ReductionShape,
+        inplace: bool,
+        num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
+    ) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific mean statistic collector.
 

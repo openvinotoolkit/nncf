@@ -11,23 +11,21 @@
  limitations under the License.
 """
 
-import pytest
-
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 
 import numpy as np
+import pytest
 
-from nncf.quantization.fake_quantize import calculate_quantizer_parameters
-from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-
-from tests.shared.helpers import load_json
-from tests.shared.helpers import dump_to_json
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from tests.post_training.conftest import FQ_CALCULATED_PARAMETERS_PATH
+from tests.shared.helpers import dump_to_json
+from tests.shared.helpers import load_json
 
 
 def compare_fq_parameters(ref_params, params):
@@ -46,17 +44,17 @@ def get_test_reference_key(q_group, q_config, narrow_range, hf_range):
     mode = q_config.mode
     sign = q_config.signedness_to_force
     per_ch = q_config.per_channel
-    return f'{q_group.value}_{mode}_sign_{sign}_per_ch_{per_ch}_narrow_range_{narrow_range}_hf_range_{hf_range}'
+    return f"{q_group.value}_{mode}_sign_{sign}_per_ch_{per_ch}_narrow_range_{narrow_range}_hf_range_{hf_range}"
 
 
 def read_ref_fq_params(q_group, q_config, narrow_range, hf_range):
     fq_params = load_json(FQ_CALCULATED_PARAMETERS_PATH)
     key = get_test_reference_key(q_group, q_config, narrow_range, hf_range)
-    inp_l = np.array(fq_params[key]['input_low']).astype(np.float32)
-    inp_h = np.array(fq_params[key]['input_high']).astype(np.float32)
-    out_l = np.array(fq_params[key]['output_low']).astype(np.float32)
-    out_h = np.array(fq_params[key]['output_high']).astype(np.float32)
-    levels = fq_params[key]['levels']
+    inp_l = np.array(fq_params[key]["input_low"]).astype(np.float32)
+    inp_h = np.array(fq_params[key]["input_high"]).astype(np.float32)
+    out_l = np.array(fq_params[key]["output_low"]).astype(np.float32)
+    out_h = np.array(fq_params[key]["output_high"]).astype(np.float32)
+    levels = fq_params[key]["levels"]
     ref_quantize_params = FakeQuantizeParameters(inp_l, inp_h, out_l, out_h, levels)
     return ref_quantize_params
 
@@ -71,11 +69,11 @@ def dump_fq_params(fq_params, q_group, q_config, narrow_range, hf_range):
 
 def parse_fq_params_to_dict(fq_params):
     return {
-        'levels': fq_params.levels,
-        'input_low': fq_params.input_low,
-        'input_high': fq_params.input_high,
-        'output_low': fq_params.output_low,
-        'output_high': fq_params.output_high,
+        "levels": fq_params.levels,
+        "input_low": fq_params.input_low,
+        "input_high": fq_params.input_high,
+        "output_low": fq_params.output_low,
+        "output_high": fq_params.output_high,
     }
 
 
@@ -162,21 +160,27 @@ TO_TEST = [
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False),
+        q_config=QuantizerConfig(
+            num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False
+        ),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True),
+        q_config=QuantizerConfig(
+            num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True
+        ),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True),
+        q_config=QuantizerConfig(
+            num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True
+        ),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
         half_range=True,
@@ -191,16 +195,16 @@ class TemplateTestFQParams(ABC):
     def tensor_statistic(self):
         raise NotImplementedError
 
-    @pytest.mark.parametrize('case_to_test', TO_TEST)
+    @pytest.mark.parametrize("case_to_test", TO_TEST)
     def test_calculate_quantizer_parameters(self, case_to_test):
         q_config = case_to_test.q_config
         quant_group = case_to_test.q_group
         narrow_range = case_to_test.narrow_range
         half_range = case_to_test.half_range
-        
+
         rng = np.random.default_rng(0)
-        data = rng.uniform(0, 1, (2,3,4,5))
-        
+        data = rng.uniform(0, 1, (2, 3, 4, 5))
+
         if q_config.per_channel:
             axes = tuple(range(1, len(data.shape)))  # channel_axis = 0
         else:
@@ -210,7 +214,7 @@ class TemplateTestFQParams(ABC):
             max_values = np.amax(np.abs(data), axis=axes, keepdims=q_config.per_channel)
         else:
             max_values = np.amax(data, axis=axes, keepdims=q_config.per_channel)
-        
+
         statistics = self.tensor_statistic(max_values=max_values, min_values=min_values)
 
         if not case_to_test.should_fail:

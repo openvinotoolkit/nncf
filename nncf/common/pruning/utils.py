@@ -14,19 +14,15 @@
 import math
 from enum import Enum
 from functools import partial
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.registry import Registry
 
@@ -38,8 +34,7 @@ def is_grouped_conv(node: NNCFNode) -> bool:
     :param node: NNCFNode to check.
     :return: `True` if a feeded node a grouped convolution node.
     """
-    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
-           and node.layer_attributes.groups != 1
+    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) and node.layer_attributes.groups != 1
 
 
 def is_batched_linear(node: NNCFNode, graph: NNCFGraph) -> bool:
@@ -74,8 +69,7 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: Li
     :return: List of all sources nodes.
     """
     visited = {node_id: False for node_id in graph.get_all_node_ids()}
-    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types,
-                                        visited=visited)
+    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types, visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.node_type in sources_types:
         nncf_nodes = graph.get_previous_nodes(nncf_node)
@@ -100,8 +94,7 @@ def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: L
     :return: List of next nodes for nncf_node of type not from types list.
     """
     visited = {node_id: False for node_id in graph.get_all_node_ids()}
-    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x not in types,
-                                        visited=visited)
+    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x not in types, visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.node_type not in types:
         nncf_nodes = graph.get_next_nodes(nncf_node)
@@ -124,8 +117,7 @@ def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[s
     """
     sources_types = types
     visited = {node_id: False for node_id in graph.get_all_node_ids()}
-    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types,
-                                        visited=visited)
+    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types, visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.node_type in sources_types:
         nncf_nodes = graph.get_next_nodes(nncf_node)
@@ -151,8 +143,7 @@ def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple
     return max(total - remaining_elems, 0)
 
 
-def traverse_function(node: NNCFNode, output: List[NNCFNode], type_check_fn, visited) \
-        -> Tuple[bool, List[NNCFNode]]:
+def traverse_function(node: NNCFNode, output: List[NNCFNode], type_check_fn, visited) -> Tuple[bool, List[NNCFNode]]:
     if visited[node.node_id]:
         return True, output
     visited[node.node_id] = True
@@ -177,9 +168,7 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
     graph_outputs = graph.get_output_nodes()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_ids()}
-    partial_traverse_function = partial(traverse_function,
-                                        type_check_fn=lambda x: x in op_types,
-                                        visited=visited)
+    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in op_types, visited=visited)
     last_nodes_of_type = []
     for output in graph_outputs:
         last_nodes_of_type.extend(graph.traverse_graph(output, partial_traverse_function, False))
@@ -187,8 +176,9 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
     return last_nodes_of_type
 
 
-def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
-                       pruning_types: List[str], stop_propagation_ops: List[str]) -> List[NNCFNode]:
+def get_previous_convs(
+    graph: NNCFGraph, nncf_node: NNCFNode, pruning_types: List[str], stop_propagation_ops: List[str]
+) -> List[NNCFNode]:
     """
     Returns source convolutions of the node.
 
@@ -240,8 +230,9 @@ class PruningOperationsMetatypeRegistry(Registry):
                 if name not in self._op_name_to_op_class:
                     self._op_name_to_op_class[name] = obj
                 else:
-                    assert self._op_name_to_op_class[name] == obj, \
-                        'Inconsistent operator type registry - single patched op name maps to multiple metatypes!'
+                    assert (
+                        self._op_name_to_op_class[name] == obj
+                    ), "Inconsistent operator type registry - single patched op name maps to multiple metatypes!"
             return obj
 
         return wrap
@@ -257,20 +248,20 @@ class PruningAnalysisReason(Enum):
     Enum of possible pruning analysis decisions reasons.
     """
 
-    IGNORED_SCOPE = 'node in ignored scope'
-    FIRST_CONV = 'this scope is one of the first convolutions'
-    LAST_CONV = 'this scope is convolution with output which directly affects model output dimensions'
-    GROUP_CONV = 'this scope is grouped convolution'
-    DOWNSAMPLE_CONV = 'this scope is convolution with downsample'
-    MODEL_ANALYSIS = 'of model analysis'
-    DIMENSION_MISMATCH = 'of dimension mismatch'
-    CLOSING_CONV_MISSING = 'closing convolution missing'
-    IN_GROUP_OF_UNPRUNABLE = 'is in the group with non prunable layers'
-    BATCHED_LINEAR = 'linear node has bathced dimension(s)'
-    INCOMPATIBLE_DIMS_IN_CLUSTER = 'channels in cluster nodes have different values'
+    IGNORED_SCOPE = "node in ignored scope"
+    FIRST_CONV = "this scope is one of the first convolutions"
+    LAST_CONV = "this scope is convolution with output which directly affects model output dimensions"
+    GROUP_CONV = "this scope is grouped convolution"
+    DOWNSAMPLE_CONV = "this scope is convolution with downsample"
+    MODEL_ANALYSIS = "of model analysis"
+    DIMENSION_MISMATCH = "of dimension mismatch"
+    CLOSING_CONV_MISSING = "closing convolution missing"
+    IN_GROUP_OF_UNPRUNABLE = "is in the group with non prunable layers"
+    BATCHED_LINEAR = "linear node has bathced dimension(s)"
+    INCOMPATIBLE_DIMS_IN_CLUSTER = "channels in cluster nodes have different values"
 
     @classmethod
-    def message(cls, node_name: str, decision: Optional['PruningAnalysisDecision']) -> str:
+    def message(cls, node_name: str, decision: Optional["PruningAnalysisDecision"]) -> str:
         """
         Returns the node pruning analysis decisions in a human-readable format.
 
@@ -278,7 +269,7 @@ class PruningAnalysisReason(Enum):
         :param decision: Pruning analysis decision for given node.
         :return: Pruning analysis decision in a human-readable format.
         """
-        prefix = f'ignored adding Weight Pruner in: {node_name}'
+        prefix = f"ignored adding Weight Pruner in: {node_name}"
         reasons = decision.reasons
         if not reasons:
             return prefix
@@ -286,8 +277,8 @@ class PruningAnalysisReason(Enum):
         if len(reasons) > 1 and cls.CLOSING_CONV_MISSING in reasons:
             reasons.remove(cls.CLOSING_CONV_MISSING)
         if len(reasons) == 1 and cls.IN_GROUP_OF_UNPRUNABLE in reasons:
-            return ''
-        return prefix + ' because ' + ' and '.join([reason.value for reason in reasons])
+            return ""
+        return prefix + " because " + " and ".join([reason.value for reason in reasons])
 
 
 class PruningAnalysisDecision:
@@ -298,22 +289,25 @@ class PruningAnalysisDecision:
     decision (decision == True) possible reason will be ignored.
     """
 
-    def __init__(self,
-                 decision: bool,
-                 possible_reasons: Optional[Union[List[PruningAnalysisReason], PruningAnalysisReason]] = None):
+    def __init__(
+        self,
+        decision: bool,
+        possible_reasons: Optional[Union[List[PruningAnalysisReason], PruningAnalysisReason]] = None,
+    ):
         self.decision = decision
         if not isinstance(possible_reasons, list):
             possible_reasons = [possible_reasons]
-        self._reasons = possible_reasons if not decision and possible_reasons else None \
-            # type: Optional[List[PruningAnalysisReason]]
+        self._reasons = (
+            possible_reasons if not decision and possible_reasons else None
+        )  # type: Optional[List[PruningAnalysisReason]]
 
     def __repr__(self) -> str:
-        representation = f'Prunable: {self.decision}'
+        representation = f"Prunable: {self.decision}"
         if not self.decision:
-            representation += '; Reasons: ' + str(self._reasons)
+            representation += "; Reasons: " + str(self._reasons)
         return representation
 
-    def __eq__(self, other: 'PruningAnalysisDecision') -> bool:
+    def __eq__(self, other: "PruningAnalysisDecision") -> bool:
         eq = self.decision == other.decision
         if self._reasons is None:
             return eq and other._reasons is None
@@ -330,7 +324,7 @@ class PruningAnalysisDecision:
             return self._reasons.copy()
         return None
 
-    def join(self, other: 'PruningAnalysisDecision') -> 'PruningAnalysisDecision':
+    def join(self, other: "PruningAnalysisDecision") -> "PruningAnalysisDecision":
         """
         Join two pruning analysis decisions about one NNCFNode.
 
@@ -351,17 +345,18 @@ class PruningAnalysisDecision:
 def is_prunable_depthwise_conv(node: NNCFNode) -> bool:
     # Only convolutions with in_channels == groups == out_channels are supported
     # by pruning algorithm. Depthwise convolutions support ticket: #68580
-    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
-           and node.layer_attributes.groups == node.layer_attributes.in_channels \
-           and (node.layer_attributes.out_channels == node.layer_attributes.in_channels) \
-           and node.layer_attributes.in_channels > 1
+    return (
+        isinstance(node.layer_attributes, ConvolutionLayerAttributes)
+        and node.layer_attributes.groups == node.layer_attributes.in_channels
+        and (node.layer_attributes.out_channels == node.layer_attributes.in_channels)
+        and node.layer_attributes.in_channels > 1
+    )
 
 
 def is_conv_with_downsampling(node: NNCFNode) -> bool:
     layer_attrs = node.layer_attributes
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
-        return not np.all(np.array(layer_attrs.stride) == 1) \
-               and not layer_attrs.transpose
+        return not np.all(np.array(layer_attrs.stride) == 1) and not layer_attrs.transpose
     return False
 
 
@@ -374,7 +369,7 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     :return: Input masks.
     """
     retval = []
-    input_masks = [input_edge.from_node.data['output_mask'] for input_edge in graph.get_input_edges(node)]
+    input_masks = [input_edge.from_node.data["output_mask"] for input_edge in graph.get_input_edges(node)]
     for input_mask in input_masks:
         retval.append(input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask)
     return retval
@@ -387,12 +382,12 @@ def get_input_channels(node: NNCFNode) -> int:
     :param node: Given prunable node.
     :return: Count of input channels of the given node.
     """
-    layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
+    layer_attrs = node.layer_attributes  # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.in_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.in_features
-    raise RuntimeError(f'Can\'t get count of input channels from node {node}')
+    raise RuntimeError(f"Can't get count of input channels from node {node}")
 
 
 def get_output_channels(node: NNCFNode) -> int:
@@ -402,12 +397,12 @@ def get_output_channels(node: NNCFNode) -> int:
     :param node: Given prunable node.
     :return: Count of output channels of the given node.
     """
-    layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
+    layer_attrs = node.layer_attributes  # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.out_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.out_features
-    raise RuntimeError(f'Can\'t get count of output channels from node {node}')
+    raise RuntimeError(f"Can't get count of output channels from node {node}")
 
 
 def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
@@ -423,4 +418,4 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
         input_masks = [None]
     assert len(input_masks) == 1
 
-    node.data['output_mask'] = input_masks[0]
+    node.data["output_mask"] = input_masks[0]

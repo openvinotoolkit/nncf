@@ -17,8 +17,8 @@ from nncf.tensorflow.utils.hook_handle import HookHandle
 
 
 class InputType:
-    INPUTS = 'inputs'
-    WEIGHTS = 'weights'
+    INPUTS = "inputs"
+    WEIGHTS = "weights"
 
 
 class NNCFOperation:
@@ -26,6 +26,7 @@ class NNCFOperation:
     The abstract class represents main building block for adding compression
     extensions to a model.
     """
+
     def __init__(self, name, trainable=True):
         """
         Initializes internal NNCF operation state
@@ -97,7 +98,7 @@ class NNCFOperation:
         return self.call(inputs, *args[1:], **kwargs)
 
     def get_config(self):
-        return {'name': self._name}
+        return {"name": self._name}
 
     @classmethod
     def from_config(cls, config):

@@ -14,25 +14,24 @@
 import operator
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable, Any, List, Iterable, Optional, TypeVar
-from dataclasses import dataclass
 from copy import deepcopy
+from dataclasses import dataclass
+from typing import Any, Callable, Iterable, List, Optional, TypeVar
 
 import numpy as np
 
-from nncf.data.dataset import Dataset
-from nncf.quantization.passes import remove_shapeof_subgraphs
 from nncf.common.factory import EngineFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
-from nncf.common.logging import nncf_logger
 from nncf.common.utils.timer import timer
+from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
+from nncf.quantization.passes import remove_shapeof_subgraphs
 
-
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
 def get_ranking_subset_indices(errors: List[float], ranking_subset_size: int) -> List[int]:
@@ -45,9 +44,7 @@ def get_ranking_subset_indices(errors: List[float], ranking_subset_size: int) ->
     :param ranking_subset_size: A number of returned indices.
     :return: Indices of elements in the `errors` list which have the biggest error value.
     """
-    ordered_indices = [
-        idx for idx, _ in sorted(enumerate(errors), key=operator.itemgetter(1), reverse=True)
-    ]
+    ordered_indices = [idx for idx, _ in sorted(enumerate(errors), key=operator.itemgetter(1), reverse=True)]
     end_index = min(ranking_subset_size, len(ordered_indices))
     return sorted(ordered_indices[:end_index])
 
@@ -80,11 +77,13 @@ class Ranker(ABC):
     Encapsulates logic to rank groups of quantizers.
     """
 
-    def __init__(self,
-                 ranking_subset_size: int,
-                 ranking_fn: Callable[[Any, Any], float],
-                 dataset: Dataset,
-                 algo_backend: AccuracyControlAlgoBackend):
+    def __init__(
+        self,
+        ranking_subset_size: int,
+        ranking_fn: Callable[[Any, Any], float],
+        dataset: Dataset,
+        algo_backend: AccuracyControlAlgoBackend,
+    ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
             the dataset to rank groups of quantizers. The `len(dataset)` data items will
@@ -113,23 +112,27 @@ class Ranker(ABC):
         """
         groups_to_rank = []
         processed = {}
-        quantizers = [x for x in quantized_model_graph.topological_sort() \
-                      if x.metatype in self._algo_backend.get_quantizer_metatypes()]
+        quantizers = [
+            x
+            for x in quantized_model_graph.topological_sort()
+            if x.metatype in self._algo_backend.get_quantizer_metatypes()
+        ]
 
         quantized_model_graph_without_shapeof = remove_shapeof_subgraphs(
-            deepcopy(quantized_model_graph),
-            self._algo_backend.get_shapeof_metatypes()
+            deepcopy(quantized_model_graph), self._algo_backend.get_shapeof_metatypes()
         )
 
         for quantizer_node in reversed(quantizers):
             if processed.get(quantizer_node.node_name, False):
                 continue
-            group, operations = find_quantizer_nodes_to_cut(quantized_model_graph_without_shapeof,
-                                                            quantizer_node,
-                                                            self._algo_backend.get_quantizer_metatypes(),
-                                                            self._algo_backend.get_const_metatypes(),
-                                                            self._algo_backend.get_quantizable_metatypes(),
-                                                            self._algo_backend.get_quantize_agnostic_metatypes())
+            group, operations = find_quantizer_nodes_to_cut(
+                quantized_model_graph_without_shapeof,
+                quantizer_node,
+                self._algo_backend.get_quantizer_metatypes(),
+                self._algo_backend.get_const_metatypes(),
+                self._algo_backend.get_quantizable_metatypes(),
+                self._algo_backend.get_quantize_agnostic_metatypes(),
+            )
             for x in group:
                 processed[x.node_name] = True
 
@@ -137,11 +140,13 @@ class Ranker(ABC):
 
         return groups_to_rank
 
-    def rank_groups_of_quantizers(self,
-                                  groups_to_rank: List[GroupToRank],
-                                  initial_model: TModel,
-                                  quantized_model: TModel,
-                                  quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
+    def rank_groups_of_quantizers(
+        self,
+        groups_to_rank: List[GroupToRank],
+        initial_model: TModel,
+        quantized_model: TModel,
+        quantized_model_graph: NNCFGraph,
+    ) -> List[GroupToRank]:
         """
         Ranks groups of quantizers by their contribution to accuracy drop. Returns a list of
         ranked groups where `ranked_groups[-1]` group of quantizers has maximal ranking
@@ -155,43 +160,37 @@ class Ranker(ABC):
         """
         # See `Ranker.__init__()` to understand why we should do this.
         if self._ref_values is None:
-            nncf_logger.info('Collecting metrics for each data item using an initial model')
+            nncf_logger.info("Collecting metrics for each data item using an initial model")
             with timer():
-                self._ref_values = self._collect_values_for_each_item(initial_model,
-                                                                      self._get_data_items())
+                self._ref_values = self._collect_values_for_each_item(initial_model, self._get_data_items())
 
-        nncf_logger.info('Collecting metrics for each data item using a quantized model')
+        nncf_logger.info("Collecting metrics for each data item using a quantized model")
         with timer():
-            approx_values = self._collect_values_for_each_item(quantized_model,
-                                                               self._get_data_items())
+            approx_values = self._collect_values_for_each_item(quantized_model, self._get_data_items())
 
         # Create a subset of data items that will be used to rank groups of quantizers.
-        scores = [
-            self._ranking_fn(ref_val, approx_val) for ref_val, approx_val in zip(self._ref_values, approx_values)
-        ]
+        scores = [self._ranking_fn(ref_val, approx_val) for ref_val, approx_val in zip(self._ref_values, approx_values)]
         ranking_subset_indices = get_ranking_subset_indices_pot_version(scores, self._ranking_subset_size)
         # TODO(andrey-churkin): The ranking subset size usually is small. So it is possible
         # to save all ranking data items in memory and don't read them again.
         ranking_data_items = self._get_data_items(ranking_subset_indices)
 
-        nncf_logger.info('Calculating ranking score for groups of quantizers')
+        nncf_logger.info("Calculating ranking score for groups of quantizers")
         with timer():
             # Calculate ranking score for groups of quantizers.
             ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
             for current_group in groups_to_rank:
-                modified_model = revert_operations_to_floating_point_precision(current_group.operations,
-                                                                               current_group.quantizers,
-                                                                               quantized_model,
-                                                                               quantized_model_graph)
+                modified_model = revert_operations_to_floating_point_precision(
+                    current_group.operations, current_group.quantizers, quantized_model, quantized_model_graph
+                )
                 # Calculate the ranking score for the current group of quantizers.
-                ranking_score = self._calculate_ranking_score(modified_model, ranking_data_items,
-                                                              ranking_subset_indices)
+                ranking_score = self._calculate_ranking_score(
+                    modified_model, ranking_data_items, ranking_subset_indices
+                )
                 ranking_scores.append(float(ranking_score))
 
         # Rank groups.
-        ranked_groups = [
-            group for _, group in sorted(zip(ranking_scores, groups_to_rank), key=operator.itemgetter(0))
-        ]
+        ranked_groups = [group for _, group in sorted(zip(ranking_scores, groups_to_rank), key=operator.itemgetter(0))]
 
         return ranked_groups
 
@@ -217,10 +216,9 @@ class Ranker(ABC):
         """
 
     @abstractmethod
-    def _calculate_ranking_score(self,
-                                 modified_model: TModel,
-                                 ranking_data_items: Iterable[Any],
-                                 ranking_subset_indices: List[int]) -> float:
+    def _calculate_ranking_score(
+        self, modified_model: TModel, ranking_data_items: Iterable[Any], ranking_subset_indices: List[int]
+    ) -> float:
         """
         Calculates the ranking score for the current group of quantizers.
 
@@ -251,20 +249,15 @@ class LogitsBasedRanker(Ranker):
         :return: A list that contains logits for each item from the dataset.
         """
         engine = EngineFactory.create(model)
-        outputs = [
-            engine.infer(data_item) for data_item in data_items
-        ]
+        outputs = [engine.infer(data_item) for data_item in data_items]
         return outputs
 
-    def _calculate_ranking_score(self,
-                                 modified_model: TModel,
-                                 ranking_data_items: Iterable[Any],
-                                 ranking_subset_indices: List[int]) -> float:
+    def _calculate_ranking_score(
+        self, modified_model: TModel, ranking_data_items: Iterable[Any], ranking_subset_indices: List[int]
+    ) -> float:
         approx_values_subset = self._collect_values_for_each_item(modified_model, ranking_data_items)
         ref_values_subset = (self._ref_values[i] for i in ranking_subset_indices)
-        errors = [
-            self._ranking_fn(a, b) for a, b in zip(ref_values_subset, approx_values_subset)
-        ]
+        errors = [self._ranking_fn(a, b) for a, b in zip(ref_values_subset, approx_values_subset)]
         ranking_score = sum(errors) / len(errors)
         return ranking_score
 
@@ -274,12 +267,14 @@ class MetricBasedRanker(Ranker):
     Encapsulates logic to rank groups of quantizers based on differences in metric.
     """
 
-    def __init__(self,
-                 ranking_subset_size: int,
-                 ranking_fn: Callable[[Any, Any], float],
-                 dataset: Dataset,
-                 algo_backend: AccuracyControlAlgoBackend,
-                 validation_fn: Callable[[Any, Iterable[Any]], float]):
+    def __init__(
+        self,
+        ranking_subset_size: int,
+        ranking_fn: Callable[[Any, Any], float],
+        dataset: Dataset,
+        algo_backend: AccuracyControlAlgoBackend,
+        validation_fn: Callable[[Any, Iterable[Any]], float],
+    ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
             the dataset to rank groups of quantizers. The `len(dataset)` data items will
@@ -320,12 +315,10 @@ class MetricBasedRanker(Ranker):
 
         return metrics
 
-    def _calculate_ranking_score(self,
-                                 modified_model: TModel,
-                                 ranking_data_items: Iterable[Any],
-                                 ranking_subset_indices: List[int]) -> float:
+    def _calculate_ranking_score(
+        self, modified_model: TModel, ranking_data_items: Iterable[Any], ranking_subset_indices: List[int]
+    ) -> float:
         ranking_score = self._validation_fn(
-            self._algo_backend.prepare_for_inference(modified_model),
-            ranking_data_items
+            self._algo_backend.prepare_for_inference(modified_model), ranking_data_items
         )
         return ranking_score

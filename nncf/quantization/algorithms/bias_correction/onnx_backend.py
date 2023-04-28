@@ -11,40 +11,39 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, List, Optional, Tuple
 
-import onnx
 import numpy as np
+import onnx
 
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.common.graph import NNCFNode
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
+from nncf.onnx.graph.node_utils import get_bias_value
+from nncf.onnx.graph.node_utils import is_node_with_bias
+from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
-from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXBatchStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
-from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.onnx.graph.node_utils import get_bias_value
-from nncf.onnx.graph.node_utils import is_node_with_bias
-from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
 
 
-#pylint:disable=too-many-public-methods
+# pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
@@ -54,15 +53,13 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return [ONNXQuantizeLinearMetatype, ONNXDequantizeLinearMetatype]
 
     @staticmethod
-    def target_point(target_type: TargetType,
-                     target_node_name: str,
-                     port_id: int) -> ONNXTargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_bias_correction_command(node: NNCFNode,
-                                       bias_value: np.ndarray,
-                                       nncf_graph: NNCFGraph) -> ONNXBiasCorrectionCommand:
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+    ) -> ONNXBiasCorrectionCommand:
         return create_bias_correction_command(node, bias_value)
 
     @staticmethod
@@ -82,12 +79,13 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXQDQNodeRemovingCommand(target_point)
 
     @staticmethod
-    def mean_statistic_collector(reduction_shape: ReductionShape,
-                                 inplace: bool,
-                                 num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None,
-                                 ) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(reduction_shape,  num_samples, window_size)
+    def mean_statistic_collector(
+        reduction_shape: ReductionShape,
+        inplace: bool,
+        num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
+    ) -> ONNXMeanStatisticCollector:
+        return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
     def batch_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:

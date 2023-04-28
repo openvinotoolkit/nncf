@@ -30,6 +30,7 @@ from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.api_marker import api
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.schemata.defaults import MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE
@@ -53,11 +54,11 @@ from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
 
 
-@TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
+@TF_COMPRESSION_ALGORITHMS.register("magnitude_sparsity")
 class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        self.ignored_scopes = self._algo_config.get('ignored_scopes', [])
+        self.ignored_scopes = self._algo_config.get("ignored_scopes", [])
         self._op_names = []
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
@@ -87,16 +88,16 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
             if node.metatype in SPARSITY_LAYER_METATYPES:
                 # Processing a regular weighted node
                 for weight_def in node.metatype.weight_definitions:
-                    op_name = self._get_sparsity_operation_name(node.node_name,
-                                                                weight_def.weight_attr_name)
+                    op_name = self._get_sparsity_operation_name(node.node_name, weight_def.weight_attr_name)
                     self._op_names.append(op_name)
 
                     transformations.register(
                         TFInsertionCommand(
                             target_point=TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name),
                             callable_object=BinaryMask(op_name),
-                            priority=TransformationPriority.SPARSIFICATION_PRIORITY
-                        ))
+                            priority=TransformationPriority.SPARSIFICATION_PRIORITY,
+                        )
+                    )
             elif node.metatype in WEIGHTABLE_TF_OP_METATYPES:
                 assert is_custom
                 # Processing a custom layer weighted node
@@ -109,15 +110,16 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                     TFInsertionCommand(
                         target_point=TFLayerWeight(layer_info.layer_name, weight_attr_name),
                         callable_object=BinaryMaskWithWeightsBackup(op_name, weight_attr_name),
-                        priority=TransformationPriority.SPARSIFICATION_PRIORITY
-                    ))
+                        priority=TransformationPriority.SPARSIFICATION_PRIORITY,
+                    )
+                )
 
         return transformations
 
     def _get_sparsity_operation_name(self, layer_name: str, weight_attr_name: str) -> str:
-        return f'{layer_name}_{weight_attr_name}_sparsity_binary_mask'
+        return f"{layer_name}_{weight_attr_name}_sparsity_binary_mask"
 
-    def _build_controller(self, model: tf.keras.Model) -> 'MagnitudeSparsityController':
+    def _build_controller(self, model: tf.keras.Model) -> "MagnitudeSparsityController":
         """
         Simple implementation of building controller without setting builder state and loading controller's one.
         Should be called once the compressed model target_model is fully constructed.
@@ -132,7 +134,8 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         pass
 
 
-@ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_magnitude_sparsity')
+@api()
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register("tf_magnitude_sparsity")
 class MagnitudeSparsityController(BaseSparsityController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
@@ -143,20 +146,20 @@ class MagnitudeSparsityController(BaseSparsityController):
 
     def __init__(self, target_model, config: NNCFConfig, op_names):
         super().__init__(target_model, op_names)
-        algo_config = extract_algo_specific_config(config,
-                                                   'magnitude_sparsity')
-        params = deepcopy(algo_config.get('params', {}))
+        algo_config = extract_algo_specific_config(config, "magnitude_sparsity")
+        params = deepcopy(algo_config.get("params", {}))
         self._threshold = 0
         self._frozen = False
-        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance',
-                                                                            MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE)]
+        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[
+            params.get("weight_importance", MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE)
+        ]
 
-        sparsity_init = algo_config.get('sparsity_init', SPARSITY_INIT)
-        params['sparsity_init'] = sparsity_init
-        scheduler_type = params.get('schedule', 'polynomial')
+        sparsity_init = algo_config.get("sparsity_init", SPARSITY_INIT)
+        params["sparsity_init"] = sparsity_init
+        scheduler_type = params.get("schedule", "polynomial")
 
-        if scheduler_type == 'adaptive':
-            raise ValueError('Magnitude sparsity algorithm do not support adaptive scheduler')
+        if scheduler_type == "adaptive":
+            raise ValueError("Magnitude sparsity algorithm do not support adaptive scheduler")
 
         scheduler_cls = SPARSITY_SCHEDULERS.get(scheduler_type)
         self._scheduler = scheduler_cls(self, params)
@@ -176,12 +179,12 @@ class MagnitudeSparsityController(BaseSparsityController):
     def freeze(self, freeze: bool = True):
         self._frozen = freeze
 
-    def set_sparsity_level(self, sparsity_level,
-                           run_batchnorm_adaptation: bool = False):
+    def set_sparsity_level(self, sparsity_level, run_batchnorm_adaptation: bool = False):
         if not self._frozen:
             if sparsity_level >= 1 or sparsity_level < 0:
                 raise AttributeError(
-                    'Sparsity level should be within interval [0,1), actual value to set is: {}'.format(sparsity_level))
+                    "Sparsity level should be within interval [0,1), actual value to set is: {}".format(sparsity_level)
+                )
 
             self._threshold = self._select_threshold(sparsity_level)
             self._set_masks_for_threshold(self._threshold)
@@ -205,10 +208,8 @@ class MagnitudeSparsityController(BaseSparsityController):
 
                 for op_name in ops:
                     if op_name in self._op_names:
-                        wrapped_layer.ops_weights[op_name]['mask'].assign(
-                            calc_magnitude_binary_mask(weight,
-                                                       self._weight_importance_fn,
-                                                       threshold_val)
+                        wrapped_layer.ops_weights[op_name]["mask"].assign(
+                            calc_magnitude_binary_mask(weight, self._weight_importance_fn, threshold_val)
                         )
 
     def _collect_all_weights(self):
@@ -217,9 +218,9 @@ class MagnitudeSparsityController(BaseSparsityController):
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
                 for op_name in ops:
                     if op_name in self._op_names:
-                        all_weights.append(tf.reshape(
-                            self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]),
-                            [-1]))
+                        all_weights.append(
+                            tf.reshape(self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]), [-1])
+                        )
         return all_weights
 
     @property
@@ -251,7 +252,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         stats = MagnitudeSparsityStatistics(model_stats, threshold_stats, target_sparsity_level)
 
         nncf_stats = NNCFStatistics()
-        nncf_stats.register('magnitude_sparsity', stats)
+        nncf_stats.register("magnitude_sparsity", stats)
         return nncf_stats
 
     def compression_stage(self) -> CompressionStage:
@@ -264,6 +265,6 @@ class MagnitudeSparsityController(BaseSparsityController):
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
             self._bn_adaptation = BatchnormAdaptationAlgorithm(
-                **extract_bn_adaptation_init_params(self._config,
-                                                    self.name))
+                **extract_bn_adaptation_init_params(self._config, self.name)
+            )
         self._bn_adaptation.run(self.model)

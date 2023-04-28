@@ -17,19 +17,22 @@ from nncf.common.scopes import get_not_matched_scopes
 from nncf.scopes import IgnoredScope
 
 
-@pytest.mark.parametrize("scope, ref", [
-    ("A", []),
-    ("1", ["1"]),
-    (["A", "B"], []),
-    (["1", "2"], ["1", "2"]),
-    ([r"{re}\d"], [r"{re}\d"]),
-    ([r"{re}\w"], []),
-    (["A", "B", "{re}.*", "1"], ["1"]),
-    (IgnoredScope(names=["A", "B"]), []),
-    (IgnoredScope(names=["1", "2"]), ["1", "2"]),
-    (IgnoredScope(patterns=[r"\d"]), [r"{re}\d"]),
-    (IgnoredScope(patterns=[r"\w"]), []),
-])
+@pytest.mark.parametrize(
+    "scope, ref",
+    [
+        ("A", []),
+        ("1", ["1"]),
+        (["A", "B"], []),
+        (["1", "2"], ["1", "2"]),
+        ([r"{re}\d"], [r"{re}\d"]),
+        ([r"{re}\w"], []),
+        (["A", "B", "{re}.*", "1"], ["1"]),
+        (IgnoredScope(names=["A", "B"]), []),
+        (IgnoredScope(names=["1", "2"]), ["1", "2"]),
+        (IgnoredScope(patterns=[r"\d"]), [r"{re}\d"]),
+        (IgnoredScope(patterns=[r"\w"]), []),
+    ],
+)
 def test_get_not_matched_scopes(scope, ref):
     node_lists = [NNCFNode(1, "A"), NNCFNode(2, "B")]
     not_matched = get_not_matched_scopes(scope, node_lists)

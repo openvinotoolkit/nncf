@@ -22,10 +22,7 @@ def normed_magnitude(weight):
     return tf.abs(tf.math.l2_normalize(weight))
 
 
-WEIGHT_IMPORTANCE_FUNCTIONS = {
-    'abs': abs_magnitude,
-    'normed_abs': normed_magnitude
-}
+WEIGHT_IMPORTANCE_FUNCTIONS = {"abs": abs_magnitude, "normed_abs": normed_magnitude}
 
 
 def calc_magnitude_binary_mask(weight, weight_importance, threshold):

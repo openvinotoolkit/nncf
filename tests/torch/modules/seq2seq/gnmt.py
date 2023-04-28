@@ -2,7 +2,8 @@ from torch import nn
 
 from tests.torch.modules.seq2seq.decoder import ResidualRecurrentDecoder
 from tests.torch.modules.seq2seq.encoder import ResidualRecurrentEncoder
-from tests.torch.modules.seq2seq.seq2seq_base import Seq2Seq, PAD
+from tests.torch.modules.seq2seq.seq2seq_base import PAD
+from tests.torch.modules.seq2seq.seq2seq_base import Seq2Seq
 
 
 class GNMT(Seq2Seq):
@@ -10,8 +11,9 @@ class GNMT(Seq2Seq):
     GNMT v2 model
     """
 
-    def __init__(self, vocab_size, hidden_size=1024, num_layers=4, dropout=0.2,
-                 batch_first=False, share_embedding=True):
+    def __init__(
+        self, vocab_size, hidden_size=1024, num_layers=4, dropout=0.2, batch_first=False, share_embedding=True
+    ):
         """
         Constructor for the GNMT v2 model.
 
@@ -29,19 +31,14 @@ class GNMT(Seq2Seq):
         super().__init__(batch_first=batch_first)
 
         if share_embedding:
-            embedder = nn.Embedding(vocab_size, hidden_size,
-                                    padding_idx=PAD)
+            embedder = nn.Embedding(vocab_size, hidden_size, padding_idx=PAD)
             nn.init.uniform_(embedder.weight.data, -0.1, 0.1)
         else:
             embedder = None
 
-        self.encoder = ResidualRecurrentEncoder(vocab_size, hidden_size,
-                                                num_layers, dropout,
-                                                batch_first, embedder)
+        self.encoder = ResidualRecurrentEncoder(vocab_size, hidden_size, num_layers, dropout, batch_first, embedder)
 
-        self.decoder = ResidualRecurrentDecoder(vocab_size, hidden_size,
-                                                num_layers, dropout,
-                                                batch_first, embedder)
+        self.decoder = ResidualRecurrentDecoder(vocab_size, hidden_size, num_layers, dropout, batch_first, embedder)
 
     def forward(self, input_encoder, input_enc_len, input_decoder):
         context = self.encode(input_encoder, input_enc_len)

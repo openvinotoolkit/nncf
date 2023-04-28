@@ -64,14 +64,14 @@ class ThreeConvModel(nn.Module):
             ThreeConvModelMode.SUPERNET: self.supernet_forward,
             ThreeConvModelMode.WIDTH_STAGE: self.forward_min_subnet_on_width_stage,
             ThreeConvModelMode.KERNEL_STAGE: self.forward_min_subnet_on_kernel_stage,
-            ThreeConvModelMode.DEPTH_STAGE: self.forward_min_subnet_on_depth_stage
+            ThreeConvModelMode.DEPTH_STAGE: self.forward_min_subnet_on_depth_stage,
         }
-        self._transition_matrix = nn.Parameter(torch.eye(3 ** 2))
+        self._transition_matrix = nn.Parameter(torch.eye(3**2))
 
-    def assert_weights_equal(self, model: 'ThreeConvModel'):
+    def assert_weights_equal(self, model: "ThreeConvModel"):
         params = dict(model.named_parameters())
         for name, ref_param in self.named_parameters():
-            if name.endswith('transition_matrix'):
+            if name.endswith("transition_matrix"):
                 continue
             param = params[name]
             assert torch.equal(ref_param, param)
@@ -140,8 +140,7 @@ class TwoSequentialConvBNTestModel(nn.Module):
         self.conv2 = create_conv(3, 2, 1)
         self.bn2 = nn.BatchNorm2d(2)
 
-        weight = torch.Tensor([[self.w2_min, 2, 0],
-                               [self.w2_max, 3, 0]]).reshape(2, 3, 1, 1)
+        weight = torch.Tensor([[self.w2_min, 2, 0], [self.w2_max, 3, 0]]).reshape(2, 3, 1, 1)
         bias = torch.Tensor([1, self.w2_max])
         self.set_params(bias, weight, self.conv2, self.bn2)
 
@@ -177,8 +176,7 @@ class TwoSequentialConvBNTestModel(nn.Module):
         ref_bias_1 = torch.Tensor([self.w1_max, 2, 1]).to(device)
         ref_weights_1 = ref_bias_1.reshape(3, 1, 1, 1).to(device)
         ref_bias_2 = torch.Tensor([self.w2_max, 1]).to(device)
-        ref_weights_2 = torch.Tensor([[self.w2_max, 0, 3],
-                                      [self.w2_min, 0, 2]]).reshape(2, 3, 1, 1).to(device)
+        ref_weights_2 = torch.Tensor([[self.w2_max, 0, 3], [self.w2_min, 0, 2]]).reshape(2, 3, 1, 1).to(device)
         TwoSequentialConvBNTestModel.compare_params(ref_bias_1, ref_weights_1, self.conv1, self.bn1)
         TwoSequentialConvBNTestModel.compare_params(ref_bias_2, ref_weights_2, self.conv2, self.bn2)
 
@@ -191,7 +189,7 @@ class TwoSequentialConvBNTestModel(nn.Module):
         return self._get_model_output(relu1, self.w2_max)
 
     def _get_model_output(self, relu1, value):
-        conv2_output = (relu1 * value + value)
+        conv2_output = relu1 * value + value
         bn2_output = ((conv2_output - value) / math.sqrt(self.bn2.eps + value)) * value + value
         relu2 = nn.ReLU()(bn2_output)
 
@@ -201,7 +199,7 @@ class TwoSequentialConvBNTestModel(nn.Module):
 
     def _get_relu1_output(self, input_):
         value = self.w1_max
-        conv1_output = (input_ * value + value)
+        conv1_output = input_ * value + value
         bn1_output = ((conv1_output - value) / math.sqrt(self.bn1.eps + value)) * value + value
         relu1 = nn.ReLU()(bn1_output)
         return relu1
@@ -277,6 +275,7 @@ class TwoConvAddConvTestModel(nn.Module):
         o = self.conv1(x) + self.conv2(x)
         return self.last_conv(o)
 
+
 class ConvTwoFcTestModel(nn.Module):
     #
     # conv -> fc1 -> fc2
@@ -292,11 +291,8 @@ class ConvTwoFcTestModel(nn.Module):
         self.fc2 = nn.Linear(2, 3)
 
         self._init_params_conv(self.conv, torch.Tensor([self.V11, 1, self.V13]))
-        self._init_params_fc(self.fc1, torch.Tensor([[3, 1, 2],
-                                                     [4, 6, 5]]))
-        self._init_params_fc(self.fc2, torch.Tensor([[2, 1],
-                                                     [3, 4],
-                                                     [6, 5]]))
+        self._init_params_fc(self.fc1, torch.Tensor([[3, 1, 2], [4, 6, 5]]))
+        self._init_params_fc(self.fc2, torch.Tensor([[2, 1], [3, 4], [6, 5]]))
 
     @staticmethod
     def _init_params_conv(conv, data):
@@ -314,12 +310,9 @@ class ConvTwoFcTestModel(nn.Module):
         ref_bias_1 = torch.Tensor([self.V13, self.V11, 1]).to(device)
         ref_weights_1 = ref_bias_1.reshape(3, 1, 1, 1).to(device)
 
-        fc_weights_1 = torch.Tensor([[5, 4, 6],
-                                     [2, 3, 1]]).to(device)
+        fc_weights_1 = torch.Tensor([[5, 4, 6], [2, 3, 1]]).to(device)
         fc_bias_1 = torch.Tensor([4, 3]).to(device)
-        fc_weights_2 = torch.Tensor([[1, 2],
-                                     [4, 3],
-                                     [5, 6]]).to(device) #last layer don't change the output order
+        fc_weights_2 = torch.Tensor([[1, 2], [4, 3], [5, 6]]).to(device)  # last layer don't change the output order
 
         assert torch.equal(self.conv.weight, ref_weights_1)
         assert torch.equal(self.conv.bias, ref_bias_1)
@@ -333,9 +326,9 @@ class ConvTwoFcTestModel(nn.Module):
         fc_weight_2 = torch.Tensor([[1], [4], [5]]).to(device)
         fc_bias_2 = torch.Tensor([2, 3, 6]).reshape(1, 1, 1, 3).to(device)
 
-        x = self.V13 * x + self.V13 #conv1
-        x = x * fc_weight_1.t() + 4 #fc1
-        x = x * fc_weight_2.t() + fc_bias_2 #fc2
+        x = self.V13 * x + self.V13  # conv1
+        x = x * fc_weight_1.t() + 4  # fc1
+        x = x * fc_weight_2.t() + fc_bias_2  # fc2
         return x
 
     def forward(self, x):
@@ -359,11 +352,8 @@ class TwoSequentialFcLNTestModel(nn.Module):
         self.ln1 = nn.LayerNorm(2)
         self.ln2 = nn.LayerNorm(3)
 
-        ConvTwoFcTestModel._init_params_fc(self.fc1, torch.Tensor([[3],
-                                                                   [4]]))
-        ConvTwoFcTestModel._init_params_fc(self.fc2, torch.Tensor([[2, 1],
-                                                                   [3, 4],
-                                                                   [6, 5]]))
+        ConvTwoFcTestModel._init_params_fc(self.fc1, torch.Tensor([[3], [4]]))
+        ConvTwoFcTestModel._init_params_fc(self.fc2, torch.Tensor([[2, 1], [3, 4], [6, 5]]))
         self._init_params_ln(self.ln1)
         self._init_params_ln(self.ln2)
 
@@ -378,9 +368,7 @@ class TwoSequentialFcLNTestModel(nn.Module):
         ref_fc_bias_1 = torch.Tensor([4, 3]).to(device)
         ref_ln_weights_1 = torch.Tensor([1, 0]).to(device)
         ref_ln_bias_1 = torch.Tensor([1, 0]).to(device)
-        ref_fc_weights_2 = torch.Tensor([[1, 2],
-                                         [4, 3],
-                                         [5, 6]]).to(device)
+        ref_fc_weights_2 = torch.Tensor([[1, 2], [4, 3], [5, 6]]).to(device)
         assert torch.equal(self.fc1.weight, ref_fc_weights_1)
         assert torch.equal(self.fc1.bias, ref_fc_bias_1)
         assert torch.equal(self.fc2.weight, ref_fc_weights_2)
@@ -395,10 +383,10 @@ class TwoSequentialFcLNTestModel(nn.Module):
         ln_weight_2 = torch.Tensor([0, 1, 2]).to(device)
         ln_bias_2 = torch.Tensor([0, 1, 2]).to(device)
 
-        x = x * fc_weight_1.t() + 4 #fc1
-        x = (x - 8) / math.sqrt(self.ln1.eps + 8) * 1 + 1 #ln1
-        x = x * fc_weight_2.t() + fc_bias_2 #fc2
-        x = (x - 7) / math.sqrt(self.ln2.eps + 32 / 3) * ln_weight_2 + ln_bias_2 #ln2
+        x = x * fc_weight_1.t() + 4  # fc1
+        x = (x - 8) / math.sqrt(self.ln1.eps + 8) * 1 + 1  # ln1
+        x = x * fc_weight_2.t() + fc_bias_2  # fc2
+        x = (x - 7) / math.sqrt(self.ln2.eps + 32 / 3) * ln_weight_2 + ln_bias_2  # ln2
         return x
 
     def forward(self, x):

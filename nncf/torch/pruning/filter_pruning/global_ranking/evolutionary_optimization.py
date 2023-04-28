@@ -11,13 +11,14 @@
  limitations under the License.
 """
 import queue
-from typing import List, Callable, Optional, Tuple, Dict
+from copy import copy
+from copy import deepcopy
+from functools import partial
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
 from torch import nn
-from copy import deepcopy, copy
-from functools import partial
 from torch import optim
 
 from nncf.config.config import NNCFConfig
@@ -49,11 +50,11 @@ class EvolutionOptimizer:
         """
         self.random_seed = random_seed
         # Optimizer hyper-params
-        self.population_size = hparams.get('population_size', 64)
-        self.num_generations = hparams.get('num_generations', 400)
-        self.num_samples = hparams.get('num_samples', 16)
-        self.mutate_percent = hparams.get('mutate_percent', 0.1)
-        self.scale_sigma = hparams.get('sigma_scale', 1)
+        self.population_size = hparams.get("population_size", 64)
+        self.num_generations = hparams.get("num_generations", 400)
+        self.num_samples = hparams.get("num_samples", 16)
+        self.mutate_percent = hparams.get("mutate_percent", 0.1)
+        self.scale_sigma = hparams.get("sigma_scale", 1)
         self.max_reward = -np.inf
         self.mean_rewards = []
 
@@ -69,7 +70,7 @@ class EvolutionOptimizer:
         self.initial_norms_stats = {}
         for key in self.layer_keys:
             layer_norms = initial_filter_norms[key].cpu().detach().numpy()
-            self.initial_norms_stats[key] = {'mean': np.mean(layer_norms), 'std': np.std(layer_norms)}
+            self.initial_norms_stats[key] = {"mean": np.mean(layer_norms), "std": np.std(layer_norms)}
 
         self.cur_state = None
         self.cur_reward = None
@@ -111,7 +112,7 @@ class EvolutionOptimizer:
             # During first population_size generations, generates random actions
             for key in self.layer_keys:
                 scale = np.exp(np.random.normal(0, self.scale_sigma))
-                shift = np.random.normal(0, self.initial_norms_stats[key]['std'])
+                shift = np.random.normal(0, self.initial_norms_stats[key]["std"])
                 action[key] = (scale, shift)
         elif episode_num == self.population_size - 1:
             # Adding identity action to population
@@ -133,7 +134,7 @@ class EvolutionOptimizer:
                 scale, shift = 1, 0
                 if key in mutate_idxs:
                     scale = np.exp(np.random.normal(0, self.scale_sigma * step_size))
-                    shift = np.random.normal(0, self.initial_norms_stats[key]['std'])
+                    shift = np.random.normal(0, self.initial_norms_stats[key]["std"])
                 action[key] = (scale * best_action[key][0], shift + best_action[key][1])
             self.oldest_index = self.indexes_queue.get()
         return action
@@ -169,10 +170,19 @@ class LeGREvolutionEnv:
     During 'reset' resetting Pruner and environment params changed during iteration.
     """
 
-    def __init__(self, filter_pruner: 'LeGRPruner', model: nn.Module, train_loader: torch.utils.data.DataLoader,
-                 val_loader: torch.utils.data.DataLoader, train_fn: Callable,
-                 train_optimizer: Optional[torch.optim.Optimizer], val_fn: Callable, config: NNCFConfig,
-                 train_steps: int, pruning_max: float):
+    def __init__(
+        self,
+        filter_pruner: "LeGRPruner",
+        model: nn.Module,
+        train_loader: torch.utils.data.DataLoader,
+        val_loader: torch.utils.data.DataLoader,
+        train_fn: Callable,
+        train_optimizer: Optional[torch.optim.Optimizer],
+        val_fn: Callable,
+        config: NNCFConfig,
+        train_steps: int,
+        pruning_max: float,
+    ):
         """
         :param filter_pruner: LeGRPruner, should have an interface for pruning model and resetting pruner.
         :param model: target model for which ranking coefficients are trained
@@ -262,14 +272,16 @@ class LeGRPruner:
     and resetting all changes in the model made by the environment.
     """
 
-    def __init__(self, filter_pruner_ctrl: 'FilterPruningController', model: nn.Module):
+    def __init__(self, filter_pruner_ctrl: "FilterPruningController", model: nn.Module):
         self.filter_pruner = filter_pruner_ctrl
         self.scheduler = copy(self.filter_pruner.scheduler)
         self.model = model
         self.model_params_copy = None
         self._save_model_weights()
-        self.init_filter_norms = {node.node_name: self.filter_pruner.filter_importance(node.module.weight)
-                                  for node in self.filter_pruner.pruned_module_groups_info.get_all_nodes()}
+        self.init_filter_norms = {
+            node.node_name: self.filter_pruner.filter_importance(node.module.weight)
+            for node in self.filter_pruner.pruned_module_groups_info.get_all_nodes()
+        }
 
     def loss(self) -> float:
         """
@@ -294,8 +306,7 @@ class LeGRPruner:
         Resetting masks for all pruned nodes
         """
         for minfo in self.filter_pruner.pruned_module_groups_info.get_all_nodes():
-            new_mask = torch.ones(get_filters_num(minfo.module)).to(
-                minfo.module.weight.device)
+            new_mask = torch.ones(get_filters_num(minfo.module)).to(minfo.module.weight.device)
             self.filter_pruner.set_mask(minfo, new_mask)
 
     def reset(self) -> None:

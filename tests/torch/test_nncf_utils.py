@@ -11,10 +11,11 @@
  limitations under the License.
 """
 from collections import namedtuple
+from functools import partial
 from typing import Any
 
 import pytest
-from functools import partial
+
 from nncf.torch.nested_objects_traversal import objwalk
 
 
@@ -34,50 +35,43 @@ NamedTuple = namedtuple("NamedTuple", ("field1", "field2"))
 OBJWALK_INIT_VAL = 0
 OBJWALK_REF_VAL = OBJWALK_INIT_VAL + 1
 TEST_VS_REF_OBJECTS_TO_WALK = [
-    (0,
-     0),
-
-    ("foo",
-     "foo"),
-
-    (ObjwalkTestClass(OBJWALK_INIT_VAL),
-     ObjwalkTestClass(OBJWALK_REF_VAL)),
-
-    ([0, ObjwalkTestClass(OBJWALK_INIT_VAL), "bar"],
-     [0, ObjwalkTestClass(OBJWALK_REF_VAL), "bar"]),
-
-    ([ObjwalkTestClass(OBJWALK_INIT_VAL), ObjwalkTestClass(OBJWALK_INIT_VAL), (5, 8)],
-     [ObjwalkTestClass(OBJWALK_REF_VAL), ObjwalkTestClass(OBJWALK_REF_VAL), (5, 8)]),
-
+    (0, 0),
+    ("foo", "foo"),
+    (ObjwalkTestClass(OBJWALK_INIT_VAL), ObjwalkTestClass(OBJWALK_REF_VAL)),
+    ([0, ObjwalkTestClass(OBJWALK_INIT_VAL), "bar"], [0, ObjwalkTestClass(OBJWALK_REF_VAL), "bar"]),
     (
-        {
-            "obj1": ObjwalkTestClass(OBJWALK_INIT_VAL),
-            "obj2": ObjwalkTestClass(OBJWALK_INIT_VAL)
-        },
-        {
-            "obj1": ObjwalkTestClass(OBJWALK_REF_VAL),
-            "obj2": ObjwalkTestClass(OBJWALK_REF_VAL)
-        }
+        [ObjwalkTestClass(OBJWALK_INIT_VAL), ObjwalkTestClass(OBJWALK_INIT_VAL), (5, 8)],
+        [ObjwalkTestClass(OBJWALK_REF_VAL), ObjwalkTestClass(OBJWALK_REF_VAL), (5, 8)],
     ),
-
-    ((ObjwalkTestClass(OBJWALK_INIT_VAL), 42),
-     (ObjwalkTestClass(OBJWALK_REF_VAL), 42)),
-
-    ([(ObjwalkTestClass(OBJWALK_INIT_VAL), 8), [ObjwalkTestClass(OBJWALK_INIT_VAL), "foo"],
-      {"bar": ObjwalkTestClass(OBJWALK_INIT_VAL),
-       "baz": (ObjwalkTestClass(OBJWALK_INIT_VAL), ObjwalkTestClass(OBJWALK_INIT_VAL)),
-       "xyzzy": {1337: ObjwalkTestClass(OBJWALK_INIT_VAL),
-                 31337: ObjwalkTestClass(OBJWALK_INIT_VAL)}}],
-     [(ObjwalkTestClass(OBJWALK_REF_VAL), 8), [ObjwalkTestClass(OBJWALK_REF_VAL), "foo"],
-      {"bar": ObjwalkTestClass(OBJWALK_REF_VAL),
-       "baz": (ObjwalkTestClass(OBJWALK_REF_VAL), ObjwalkTestClass(OBJWALK_REF_VAL)),
-       "xyzzy": {1337: ObjwalkTestClass(OBJWALK_REF_VAL),
-                 31337: ObjwalkTestClass(OBJWALK_REF_VAL)}}]
-     ),
+    (
+        {"obj1": ObjwalkTestClass(OBJWALK_INIT_VAL), "obj2": ObjwalkTestClass(OBJWALK_INIT_VAL)},
+        {"obj1": ObjwalkTestClass(OBJWALK_REF_VAL), "obj2": ObjwalkTestClass(OBJWALK_REF_VAL)},
+    ),
+    ((ObjwalkTestClass(OBJWALK_INIT_VAL), 42), (ObjwalkTestClass(OBJWALK_REF_VAL), 42)),
+    (
+        [
+            (ObjwalkTestClass(OBJWALK_INIT_VAL), 8),
+            [ObjwalkTestClass(OBJWALK_INIT_VAL), "foo"],
+            {
+                "bar": ObjwalkTestClass(OBJWALK_INIT_VAL),
+                "baz": (ObjwalkTestClass(OBJWALK_INIT_VAL), ObjwalkTestClass(OBJWALK_INIT_VAL)),
+                "xyzzy": {1337: ObjwalkTestClass(OBJWALK_INIT_VAL), 31337: ObjwalkTestClass(OBJWALK_INIT_VAL)},
+            },
+        ],
+        [
+            (ObjwalkTestClass(OBJWALK_REF_VAL), 8),
+            [ObjwalkTestClass(OBJWALK_REF_VAL), "foo"],
+            {
+                "bar": ObjwalkTestClass(OBJWALK_REF_VAL),
+                "baz": (ObjwalkTestClass(OBJWALK_REF_VAL), ObjwalkTestClass(OBJWALK_REF_VAL)),
+                "xyzzy": {1337: ObjwalkTestClass(OBJWALK_REF_VAL), 31337: ObjwalkTestClass(OBJWALK_REF_VAL)},
+            },
+        ],
+    ),
     (
         (0, NamedTuple(field1=ObjwalkTestClass(OBJWALK_INIT_VAL), field2=-5.3), "bar"),
         (0, NamedTuple(field1=ObjwalkTestClass(OBJWALK_REF_VAL), field2=-5.3), "bar"),
-    )
+    ),
 ]
 
 
@@ -99,6 +93,7 @@ def test_objwalk(objwalk_objects):
 
     assert test_obj == ref_obj
 
+
 def assert_named_tuples_are_equal(ref_named_tuple: tuple, test_obj: Any):
     assert test_obj.__class__.__qualname__ == ref_named_tuple.__class__.__qualname__
     assert hasattr(test_obj, "_fields")
@@ -107,9 +102,10 @@ def assert_named_tuples_are_equal(ref_named_tuple: tuple, test_obj: Any):
 
 
 def test_objwalk_retains_named_tuple():
-    named_tuple = NamedTuple(field1=ObjwalkTestClass(OBJWALK_INIT_VAL),
-                             field2=NamedTuple(field1=ObjwalkTestClass(OBJWALK_INIT_VAL),
-                                               field2=-8))
+    named_tuple = NamedTuple(
+        field1=ObjwalkTestClass(OBJWALK_INIT_VAL),
+        field2=NamedTuple(field1=ObjwalkTestClass(OBJWALK_INIT_VAL), field2=-8),
+    )
 
     def is_target_class(obj):
         return isinstance(obj, ObjwalkTestClass)
