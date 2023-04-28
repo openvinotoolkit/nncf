@@ -23,4 +23,5 @@ def logit(x):
 def st_threshold(input_):
     def grad(upstream):
         return upstream
+
     return tf.round(input_), grad

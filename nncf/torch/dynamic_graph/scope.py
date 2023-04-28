@@ -23,12 +23,12 @@ class ScopeElement:
     def __str__(self):
         if self.calling_field_name is None:
             return self.calling_module_class_name
-        return "{cls}[{name}]".format(cls=self.calling_module_class_name,
-                                      name=self.calling_field_name)
+        return "{cls}[{name}]".format(cls=self.calling_module_class_name, name=self.calling_field_name)
 
-    def __eq__(self, other: 'ScopeElement'):
-        return (self.calling_module_class_name == other.calling_module_class_name) and \
-               (self.calling_field_name == other.calling_field_name)
+    def __eq__(self, other: "ScopeElement"):
+        return (self.calling_module_class_name == other.calling_module_class_name) and (
+            self.calling_field_name == other.calling_field_name
+        )
 
     def __hash__(self):
         return hash((self.calling_module_class_name, self.calling_field_name))
@@ -53,7 +53,7 @@ class Scope:
             self.scope_elements = []
 
     def __str__(self):
-        return '/'.join([str(scope_el) for scope_el in self.scope_elements])
+        return "/".join([str(scope_el) for scope_el in self.scope_elements])
 
     def __repr__(self):
         return str(self)
@@ -61,13 +61,13 @@ class Scope:
     def __hash__(self):
         return hash(str(self))
 
-    def __eq__(self, other: 'Scope'):
+    def __eq__(self, other: "Scope"):
         return self.scope_elements == other.scope_elements
 
     def __getitem__(self, key) -> ScopeElement:
         return self.scope_elements[key]
 
-    def __contains__(self, item: 'Scope'):
+    def __contains__(self, item: "Scope"):
         """Idiom: ('A/B/C' in 'A/B') == True"""
         if len(self.scope_elements) > len(item.scope_elements):
             return False
@@ -76,11 +76,11 @@ class Scope:
                 return False
         return True
 
-    def __add__(self, rhs: 'Scope') -> 'Scope':
+    def __add__(self, rhs: "Scope") -> "Scope":
         init_list = self.scope_elements + rhs.scope_elements
         return Scope(init_list)
 
-    def copy(self) -> 'Scope':
+    def copy(self) -> "Scope":
         return Scope(deepcopy(self.scope_elements))
 
     def push(self, scope_element: ScopeElement):
@@ -90,9 +90,9 @@ class Scope:
         return self.scope_elements.pop()
 
     @staticmethod
-    def from_str(string: str) -> 'Scope':
+    def from_str(string: str) -> "Scope":
         if string:
-            elts = string.split('/')
+            elts = string.split("/")
         else:
             elts = []
         return Scope([ScopeElement.from_str(s) for s in elts])
@@ -100,7 +100,8 @@ class Scope:
     def get_iteration_scopes(self) -> List[str]:
         results = []
         scope_name = str(self)
-        from nncf.torch.layers import ITERATION_MODULES #pylint: disable=cyclic-import
+        from nncf.torch.layers import ITERATION_MODULES  # pylint: disable=cyclic-import
+
         for iter_scope in ITERATION_MODULES.registry_dict:
             if iter_scope in scope_name:
                 results.append(iter_scope)

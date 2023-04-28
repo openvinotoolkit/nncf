@@ -12,11 +12,7 @@
 """
 
 from os import path as osp
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.utils.debug import set_debug_log_dir
@@ -29,10 +25,9 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_main_process
 
 
-def create_compressed_model_from_algo_names(nncf_network: NNCFNetwork,
-                                            config: NNCFConfig,
-                                            algo_names: List[str],
-                                            dump_graphs: bool = True) -> Tuple[BaseController, NNCFNetwork]:
+def create_compressed_model_from_algo_names(
+    nncf_network: NNCFNetwork, config: NNCFConfig, algo_names: List[str], dump_graphs: bool = True
+) -> Tuple[BaseController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from empty NNCFNetwork,
     a configuration object and a list of compression algorithm names.
@@ -70,8 +65,9 @@ def create_compressed_model_from_algo_names(nncf_network: NNCFNetwork,
     return compression_ctrl, compressed_model
 
 
-def resume_compression_algorithm_builder(compression_state: Dict[str, Any],
-                                         config: Optional[NNCFConfig] = None) -> PTCompressionAlgorithmBuilder:
+def resume_compression_algorithm_builder(
+    compression_state: Dict[str, Any], config: Optional[NNCFConfig] = None
+) -> PTCompressionAlgorithmBuilder:
     """
     Resume compression builder from its state.
 
@@ -93,10 +89,9 @@ def resume_compression_algorithm_builder(compression_state: Dict[str, Any],
     return builder
 
 
-def resume_compression_from_state(nncf_network: NNCFNetwork,
-                                  compression_state: Dict[str, Any],
-                                  config: Optional[NNCFConfig] = None) \
-    -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
+def resume_compression_from_state(
+    nncf_network: NNCFNetwork, compression_state: Dict[str, Any], config: Optional[NNCFConfig] = None
+) -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
     """
     Resumes compression model
 

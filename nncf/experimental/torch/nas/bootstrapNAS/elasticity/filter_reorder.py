@@ -10,18 +10,16 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Optional, Type
+
 import torch
-from typing import Type
-
-from typing import Optional
-
-from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.logging import nncf_logger
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.common.logging import nncf_logger
 
 
 class FilterReorderingAlgorithm(MaskPropagationAlgorithm):
@@ -29,9 +27,14 @@ class FilterReorderingAlgorithm(MaskPropagationAlgorithm):
     Reorders filters based on reordering indexes encoded in the `output_mask` attribute in the nodes of
     model graph.
     """
-    def __init__(self, model: NNCFNetwork, graph: NNCFGraph,
-                 pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-                 tensor_processor: Optional[Type[NNCFPruningBaseTensorProcessor]] = None):
+
+    def __init__(
+        self,
+        model: NNCFNetwork,
+        graph: NNCFGraph,
+        pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
+        tensor_processor: Optional[Type[NNCFPruningBaseTensorProcessor]] = None,
+    ):
         super().__init__(graph, pruning_operator_metatypes, tensor_processor)
         self._model = model
 
@@ -50,7 +53,7 @@ class FilterReorderingAlgorithm(MaskPropagationAlgorithm):
                     node_cls.input_reorder(self._model, node, self._graph)
                     node_cls.output_reorder(self._model, node, self._graph)
                     pruned_node_modules.append(node_module)
-            nncf_logger.debug('Finished mask applying step')
+            nncf_logger.debug("Finished mask applying step")
 
     def reorder_filters(self) -> None:
         """
@@ -58,7 +61,7 @@ class FilterReorderingAlgorithm(MaskPropagationAlgorithm):
         1. Mask propagation: propagate pruning masks through the graph.
         2. Applying calculated masks
         """
-        nncf_logger.info('Start reordering filters')
+        nncf_logger.info("Start reordering filters")
         self.mask_propagation()
         self.apply_reordering_indexes()
-        nncf_logger.info('Finished reordering filters')
+        nncf_logger.info("Finished reordering filters")

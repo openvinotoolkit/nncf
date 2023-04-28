@@ -13,13 +13,13 @@
 
 import pytest
 
-from nncf.scopes import convert_ignored_scope_to_list
 from nncf.scopes import IgnoredScope
+from nncf.scopes import convert_ignored_scope_to_list
 
 
 def test_convert_ignored_scope_to_list():
-    ignored_names = ['name1', 'name2']
-    ignored_patterns = ['.*1', '.*2']
+    ignored_names = ["name1", "name2"]
+    ignored_patterns = [".*1", ".*2"]
 
     ignored_scope = IgnoredScope(
         names=ignored_names,
@@ -32,12 +32,10 @@ def test_convert_ignored_scope_to_list():
     for name in ignored_names:
         assert name in ignored_list
     for p in ignored_patterns:
-        assert '{re}' + p in ignored_list
+        assert "{re}" + p in ignored_list
 
 
 def test_create_ignored_scope_config_raise_exception():
-    ignored_scope = IgnoredScope(
-        types=['type1']
-    )
+    ignored_scope = IgnoredScope(types=["type1"])
     with pytest.raises(Exception):
         _ = convert_ignored_scope_to_list(ignored_scope)

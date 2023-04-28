@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from nncf.telemetry.wrapper import telemetry
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.extractors import TelemetryExtractor
-
+from nncf.telemetry.wrapper import telemetry

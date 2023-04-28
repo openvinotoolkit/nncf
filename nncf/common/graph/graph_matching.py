@@ -11,16 +11,18 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Set
+from typing import List, Set
+
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
-from nncf.common.graph.patterns import GraphPattern
+
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.patterns import GraphPattern
 
 
-def is_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, full_subgraph_with_non_pattern_nodes: List[str],
-                                         pattern_subgraph: List[str]) -> bool:
+def is_subgraph_has_inner_outgoing_edges(
+    graph: nx.DiGraph, full_subgraph_with_non_pattern_nodes: List[str], pattern_subgraph: List[str]
+) -> bool:
     """
     Checks out whether the 'pattern_subgraph' has outgoing edges,
     that aren't connected with nodes from full_subgraph_with_non_pattern_nodes.
@@ -81,8 +83,10 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                 # GraphPattern.ANY_PATTERN_NODE_TYPE and GraphPattern.NON_PATTERN_NODE_TYPE
                 # are matched to any node type.
 
-                if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2[attr] or \
-                        GraphPattern.NON_PATTERN_NODE_TYPE in node_2[attr]:
+                if (
+                    GraphPattern.ANY_PATTERN_NODE_TYPE in node_2[attr]
+                    or GraphPattern.NON_PATTERN_NODE_TYPE in node_2[attr]
+                ):
                     continue
                 # Torch and TF pattern mapping based on 'type' section,
                 # While ONNX mapping based on metatypes -
@@ -123,13 +127,12 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
     patterns = sorted(patterns, key=sort_patterns, reverse=True)
 
     for pattern in patterns:
-        matcher = ism.DiGraphMatcher(graph, pattern,
-                                     node_match=are_nodes_matching,
-                                     edge_match=are_edges_matching)
+        matcher = ism.DiGraphMatcher(graph, pattern, node_match=are_nodes_matching, edge_match=are_edges_matching)
         for subgraph in matcher.subgraph_isomorphisms_iter():
             # Bottleneck that need to sort by id for result consistency
-            pattern_subgraph = list(nx.lexicographical_topological_sort(graph.subgraph(subgraph),
-                                                                        key=lambda x: int(x.split()[0])))
+            pattern_subgraph = list(
+                nx.lexicographical_topological_sort(graph.subgraph(subgraph), key=lambda x: int(x.split()[0]))
+            )
 
             full_subgraph_with_non_pattern_nodes = pattern_subgraph[:]
             outside_pattern_nodes = []

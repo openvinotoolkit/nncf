@@ -13,24 +13,29 @@
 
 import pytest
 
-TESTED_BACKENDS = ['torch', 'tf', 'onnx', 'openvino']
+TESTED_BACKENDS = ["torch", "tf", "onnx", "openvino"]
+
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--host-configuration", type=str,
+        "--host-configuration",
+        type=str,
         help="Set to 'cpu' for CPU-only (i.e. non-GPU) host configuration testing, 'gpu' otherwise.",
-        default="gpu"
+        default="gpu",
     )
     parser.addoption(
-        "--backend", type=str, help="Backend to test installation for.",
-        choices=[*TESTED_BACKENDS, "all"], nargs='+', default=["all"]
+        "--backend",
+        type=str,
+        help="Backend to test installation for.",
+        choices=[*TESTED_BACKENDS, "all"],
+        nargs="+",
+        default=["all"],
     )
 
 
 @pytest.fixture(scope="module")
 def backend_clopt(request):
     return request.config.getoption("--backend")
-
 
 
 @pytest.fixture(scope="module")

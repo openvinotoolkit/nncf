@@ -34,9 +34,9 @@ def assert_shape_equal(shape_a, shape_b):
     Raises:
       ValueError: When shapes are both static and unequal.
     """
-    if (all(isinstance(dim, int) for dim in shape_a) and all(isinstance(dim, int) for dim in shape_b)):
+    if all(isinstance(dim, int) for dim in shape_a) and all(isinstance(dim, int) for dim in shape_b):
         if shape_a != shape_b:
-            raise ValueError('Unequal shapes {}, {}'.format(shape_a, shape_b))
+            raise ValueError("Unequal shapes {}, {}".format(shape_a, shape_b))
         return tf.no_op()
     return tf.assert_equal(shape_a, shape_b)
 

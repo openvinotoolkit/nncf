@@ -17,13 +17,11 @@ from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 CONST_SPARSITY_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
     "properties": {
-        "algorithm": {
-            "const": CONST_SPARSITY_ALGO_NAME_IN_CONFIG
-        },
+        "algorithm": {"const": CONST_SPARSITY_ALGO_NAME_IN_CONFIG},
         **SCOPING_PROPERTIES,
     },
     "additionalProperties": False,
     "description": "This algorithm takes no additional parameters and is used when you want to load "
-                   "a checkpoint trained with another sparsity algorithm and do other compression without "
-                   "changing the sparsity mask."
+    "a checkpoint trained with another sparsity algorithm and do other compression without "
+    "changing the sparsity mask.",
 }

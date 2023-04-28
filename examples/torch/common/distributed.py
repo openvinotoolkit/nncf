@@ -14,6 +14,7 @@
 from __future__ import print_function
 
 import os
+
 import torch
 from torch import distributed as dist
 from torch.utils.data import Sampler
@@ -33,10 +34,10 @@ def configure_distributed(config):
         # default device (E.g. NMS kernel - https://github.com/facebookresearch/maskrcnn-benchmark/issues/74)
         torch.cuda.set_device(config.current_gpu)
 
-    logger.info('| distributed init (rank {}): {}'.format(
-        config.rank, config.dist_url))
-    dist.init_process_group(backend=config.dist_backend, init_method=config.dist_url,
-                            world_size=config.world_size, rank=config.rank)
+    logger.info("| distributed init (rank {}): {}".format(config.rank, config.dist_url))
+    dist.init_process_group(
+        backend=config.dist_backend, init_method=config.dist_url, world_size=config.world_size, rank=config.rank
+    )
     config.world_size = dist.get_world_size()
 
 
@@ -55,7 +56,7 @@ class DistributedSampler(Sampler):
         self.rank = rank
         indices = list(range(len(dataset)))
         self.samples_per_rank = (len(indices) - 1) // self.world_size + 1
-        self.indices = indices[self.rank * self.samples_per_rank: (self.rank + 1) * self.samples_per_rank]
+        self.indices = indices[self.rank * self.samples_per_rank : (self.rank + 1) * self.samples_per_rank]
 
         if len(self.indices) < self.samples_per_rank:
             # Workaround for mock datasets with a small number of entries

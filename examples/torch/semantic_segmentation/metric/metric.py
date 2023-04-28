@@ -11,11 +11,13 @@
  limitations under the License.
 """
 
+
 class Metric:
     """Base class for all metrics.
 
     From: https://github.com/pytorch/tnt/blob/master/torchnet/meter/meter.py
     """
+
     def reset(self):
         pass
 

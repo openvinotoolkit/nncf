@@ -1,0 +1,27 @@
+name: HTML documentation build
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+jobs:
+  build-html:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Install NNCF and doc requirements
+        run: |
+          pip install -e .
+          pip install -r docs/api/requirements.txt
+      - name: Build API docs
+        run: |
+          sphinx-build -M html docs/api/source html_build
+      - name: Upload built HTMLs as job artifact
+        uses: alehechka/upload-tartifact@v2
+        with:
+          name: html_doc_artifact
+          path: html_build/html

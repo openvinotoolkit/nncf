@@ -16,6 +16,7 @@ from typing import List
 
 def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
     # TODO: rewrite and add target_scopes handling
-    return all(not re.fullmatch(ignored.replace('{re}', ''), scope_str) if ignored.startswith('{re}')
-               else scope_str != ignored
-               for ignored in ignored_scopes)
+    return all(
+        not re.fullmatch(ignored.replace("{re}", ""), scope_str) if ignored.startswith("{re}") else scope_str != ignored
+        for ignored in ignored_scopes
+    )

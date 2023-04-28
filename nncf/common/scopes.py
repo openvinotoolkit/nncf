@@ -12,9 +12,7 @@
 """
 
 import re
-from typing import List
-from typing import Optional
-from typing import Union
+from typing import List, Optional, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -70,8 +68,9 @@ def should_consider_scope(
     :return: A boolean value specifying whether a serializable_id should be considered (i.e. "not ignored", "targeted")
     """
     string_id = str(serializable_id)
-    return (target_scopes is None or matches_any(string_id, target_scopes)) \
-               and not matches_any(string_id, ignored_scopes)
+    return (target_scopes is None or matches_any(string_id, target_scopes)) and not matches_any(
+        string_id, ignored_scopes
+    )
 
 
 def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope], nodes: List[NNCFNode]) -> List[str]:

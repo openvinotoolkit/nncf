@@ -21,19 +21,19 @@ class PruningStatisticsCallback(StatisticsCallback):
     """
 
     def _prepare_for_tensorboard(self, stats: NNCFStatistics):
-        base_prefix = '2.compression/statistics'
-        detailed_prefix = '3.compression_details/statistics'
+        base_prefix = "2.compression/statistics"
+        detailed_prefix = "3.compression_details/statistics"
 
         ms = stats.filter_pruning.model_statistics
         tensorboard_stats = {
-            f'{base_prefix}/algo_current_pruning_level': stats.filter_pruning.current_pruning_level,
-            f'{base_prefix}/model_FLOPS_pruning_level': ms.flops_pruning_level,
-            f'{base_prefix}/model_params_pruning_level': ms.params_pruning_level,
-            f'{base_prefix}/model_filters_pruning_level': ms.filter_pruning_level,
+            f"{base_prefix}/algo_current_pruning_level": stats.filter_pruning.current_pruning_level,
+            f"{base_prefix}/model_FLOPS_pruning_level": ms.flops_pruning_level,
+            f"{base_prefix}/model_params_pruning_level": ms.params_pruning_level,
+            f"{base_prefix}/model_filters_pruning_level": ms.filter_pruning_level,
         }
 
         for ls in ms.pruned_layers_summary:
             layer_name, pruning_level = ls.name, ls.filter_pruning_level
-            tensorboard_stats[f'{detailed_prefix}/{layer_name}/pruning_level'] = pruning_level
+            tensorboard_stats[f"{detailed_prefix}/{layer_name}/pruning_level"] = pruning_level
 
         return tensorboard_stats

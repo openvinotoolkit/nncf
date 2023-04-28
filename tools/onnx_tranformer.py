@@ -19,17 +19,15 @@ import onnx
 
 def rename_quantize(model):
     for node in model.graph.node:
-        if node.op_type == 'Quantize':
-            node.op_type = 'FakeQuantize'
-            node.doc_string = 'Fake quantization operation'
+        if node.op_type == "Quantize":
+            node.op_type = "FakeQuantize"
+            node.doc_string = "Fake quantization operation"
 
 
 def main(argv):
     parser = ArgumentParser()
-    parser.add_argument('-i', '--input-model', help='Path to input model file',
-                        required=True)
-    parser.add_argument('-o', '--output-model', help='Path to output model file',
-                        required=True)
+    parser.add_argument("-i", "--input-model", help="Path to input model file", required=True)
+    parser.add_argument("-o", "--output-model", help="Path to output model file", required=True)
     args = parser.parse_args(args=argv)
 
     model = onnx.load(args.input_model)  # pylint: disable=no-member
@@ -39,5 +37,5 @@ def main(argv):
     onnx.save(model, args.output_model)  # pylint: disable=no-member
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv[1:])

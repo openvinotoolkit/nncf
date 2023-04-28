@@ -12,8 +12,8 @@
 """
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class BasicBlock(nn.Module):
@@ -27,8 +27,7 @@ class BasicBlock(nn.Module):
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != planes:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, planes, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes)
+                nn.Conv2d(in_planes, planes, kernel_size=1, stride=stride, bias=False), nn.BatchNorm2d(planes)
             )
 
         # SE layers
@@ -60,9 +59,7 @@ class PreActBlock(nn.Module):
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
 
         if stride != 1 or in_planes != planes:
-            self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, planes, kernel_size=1, stride=stride, bias=False)
-            )
+            self.shortcut = nn.Sequential(nn.Conv2d(in_planes, planes, kernel_size=1, stride=stride, bias=False))
 
         # SE layers
         self.fc1 = nn.Conv2d(planes, planes // 16, kernel_size=1)
@@ -70,7 +67,7 @@ class PreActBlock(nn.Module):
 
     def forward(self, x):
         out = F.relu(self.bn1(x))
-        shortcut = self.shortcut(out) if hasattr(self, 'shortcut') else x
+        shortcut = self.shortcut(out) if hasattr(self, "shortcut") else x
         out = self.conv1(out)
         out = self.conv2(F.relu(self.bn2(out)))
 
@@ -126,5 +123,6 @@ def test():
     net = SENet18()
     y = net(torch.randn(1, 3, 32, 32))
     print(y.size())
+
 
 # test()

@@ -15,7 +15,8 @@ import ctypes
 import importlib
 import inspect
 from collections import OrderedDict
-from functools import partial, partialmethod
+from functools import partial
+from functools import partialmethod
 from typing import Callable
 
 
@@ -162,7 +163,6 @@ class Patcher:
         self._patched[key].append((fn, wrapper))
 
     def _patch_class_fn(self, obj_cls, fn_name, fn, wrapper, force):
-
         if isinstance(fn, (staticmethod, classmethod)):
 
             def helper(*args, **kwargs):  # type: ignore

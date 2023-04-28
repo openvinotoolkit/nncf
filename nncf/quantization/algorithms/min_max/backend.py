@@ -13,11 +13,8 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, List, Optional
+from typing import Dict, List, Optional, Set, TypeVar
 
-from nncf.parameters import ModelType
-from nncf.parameters import TargetDevice
-from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -25,18 +22,21 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
-from nncf.common.quantization.structs import QuantizerConfig
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.scopes import IgnoredScope
 
-TModel = TypeVar('TModel')
-ALGO_BACKENDS = Registry('algo_backends')
+TModel = TypeVar("TModel")
+ALGO_BACKENDS = Registry("algo_backends")
 
 
 class MinMaxAlgoBackend(ABC):
-
     @property
     @abstractmethod
     def mat_mul_metatype(self) -> OperatorMetatype:
@@ -107,10 +107,12 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                      target_point: TargetPoint,
-                                                      quantizer_config: QuantizerConfig,
-                                                      parameters: FakeQuantizeParameters) -> TransformationCommand:
+    def create_activation_quantizer_insertion_command(
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
@@ -123,10 +125,12 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                  target_point: TargetPoint,
-                                                  quantizer_config: QuantizerConfig,
-                                                  parameters: FakeQuantizeParameters) -> TransformationCommand:
+    def create_weight_quantizer_insertion_command(
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
@@ -149,39 +153,21 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                   target_point: TargetPoint,
-                                   quantizer_config: QuantizerConfig,
-                                   inplace: bool,
-                                   num_samples: int = None,
-                                   ) -> TensorStatisticCollectorBase:
+    def get_statistic_collector(
+        range_estimator_params: RangeEstimatorParameters,
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        inplace: bool,
+        num_samples: int = None,
+    ) -> TensorStatisticCollectorBase:
         """
-        Returns backend-specific min max statistic collector.
+        Returns backend-specific statistic collector.
 
+        :param range_estimator_params: Parameters that specify estimators types.
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param inplace: Whether to calculate statistic inplace or not.
-        :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                        target_point: TargetPoint,
-                                        quantizer_config: QuantizerConfig,
-                                        use_per_sample_stats: bool,
-                                        inplace: bool,
-                                        num_samples: int = None,
-                                        ) -> TensorStatisticCollectorBase:
-        """
-        Returns backend-specific min max statistic collector.
-
-        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
-        :param target_point: Target location for the correction.
-        :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param use_per_sample_stats: Whether to collect statistics in per sample mode or not.
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
@@ -205,6 +191,16 @@ class MinMaxAlgoBackend(ABC):
         :param nncf_graph: NNCFGraph instance.
         :param target_point: The TargetPoint instance that contains layer's information.
         :return: Weight name.
+        """
+
+    @staticmethod
+    def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
+        """
+        Return True if weight should be quantized.
+
+        :param weight_name: Weight name.
+        :param quantized_weight_names: Set containing already quantized weight names.
+        :return: A boolean value specifying whether a weight should be quantized.
         """
 
     @staticmethod

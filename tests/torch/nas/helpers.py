@@ -42,14 +42,14 @@ def compare_tensors_ignoring_the_order(t1: torch.Tensor, t2: torch.Tensor, rtol=
 
 def ref_kernel_transform(weights, target_kernel_size=3, start=1, end=4, transition_matrix=None):
     if transition_matrix is None:
-        transition_matrix = torch.eye(target_kernel_size ** 2)
+        transition_matrix = torch.eye(target_kernel_size**2)
     weights = weights[:, :, start:end, start:end]
     out_channels = weights.size(0)
     in_channels = weights.size(1)
     weights = weights.reshape(weights.size(0), weights.size(1), -1)
     weights = weights.view(-1, weights.size(2))
     weights = F.linear(weights, transition_matrix)
-    weights = weights.view(out_channels, in_channels, target_kernel_size ** 2)
+    weights = weights.view(out_channels, in_channels, target_kernel_size**2)
     weights = weights.view(out_channels, in_channels, target_kernel_size, target_kernel_size)
     return weights
 
@@ -68,11 +68,11 @@ class DebugGraphContext:
     def dump_graph(self, file_name):
         dyn_graph = self._model.nncf.get_dynamic_graph()
         nncf_graph = GraphConverter.convert(dyn_graph, self._input_info)
-        nncf_graph.visualize_graph(f'{file_name}.dot')
+        nncf_graph.visualize_graph(f"{file_name}.dot")
 
     def __enter__(self):
-        self.dump_graph('before')
+        self.dump_graph("before")
         return self
 
     def __exit__(self, *args):
-        self.dump_graph('after')
+        self.dump_graph("after")

@@ -13,10 +13,10 @@
 
 import numpy as np
 
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.graph import NNCFNode
-from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
 
 def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ONNXBiasCorrectionCommand:

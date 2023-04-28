@@ -26,4 +26,4 @@ def timer():
     yield
     elapsed_time = time.perf_counter() - start_time
     time_string = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-    nncf_logger.info(f'Elapsed Time: {time_string}')
+    nncf_logger.info(f"Elapsed Time: {time_string}")

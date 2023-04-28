@@ -10,11 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.tensorflow.graph.metatypes import common
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
-from nncf.tensorflow.graph.metatypes import common
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 
 # If there are no some metatypes it means that they are considered as QuantizationTrait.QuantizationAgnostic
 
@@ -52,16 +52,21 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         op_metatypes.TFRelu6OpMetatype,
         op_metatypes.TFBatchMatMulV2OpMetatype,
     ],
-    QuantizationTrait.NON_QUANTIZABLE: [layer_metatypes.TFSoftmaxLayerMetatype,
-                                        op_metatypes.TFSigmoidOpMetatype,
-                                        op_metatypes.TFExpOpMetatype,
-                                        op_metatypes.TFLogOpMetatype,
-                                        op_metatypes.TFSoftmaxOpMetatype,
-                                        op_metatypes.TFReluOpMetatype,
-                                        UnknownMetatype],
+    QuantizationTrait.NON_QUANTIZABLE: [
+        layer_metatypes.TFSoftmaxLayerMetatype,
+        op_metatypes.TFSigmoidOpMetatype,
+        op_metatypes.TFSoftmaxOpMetatype,
+        UnknownMetatype,
+        # Ticket: 108478
+        op_metatypes.TFReluOpMetatype,
+        op_metatypes.TFAbsOpMetatype,
+        op_metatypes.TFExpOpMetatype,
+        op_metatypes.TFLogOpMetatype,
+        op_metatypes.TFSqrtOpMetatype,
+    ],
     QuantizationTrait.CONCAT: [
         layer_metatypes.TFConcatenateLayerMetatype,
         op_metatypes.TFConcatOpMetatype,
     ],
-    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [layer_metatypes.TFEmbeddingLayerMetatype]
+    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [layer_metatypes.TFEmbeddingLayerMetatype],
 }

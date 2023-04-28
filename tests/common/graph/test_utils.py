@@ -12,7 +12,7 @@ TEST_CASES = [
 ]
 
 
-@pytest.mark.parametrize('input_shape,output_shape,possible_axes', TEST_CASES)
+@pytest.mark.parametrize("input_shape,output_shape,possible_axes", TEST_CASES)
 def test_get_concat_axis(input_shape, output_shape, possible_axes):
     axis = get_concat_axis(input_shape, output_shape)
     assert axis in possible_axes

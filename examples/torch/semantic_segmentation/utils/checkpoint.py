@@ -12,6 +12,7 @@
 """
 
 import os
+
 import torch
 
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
@@ -36,18 +37,17 @@ def save_checkpoint(model, compression_ctrl, optimizer, epoch, miou, config):
     name = config.name
     save_dir = config.checkpoint_save_dir
 
-    assert os.path.isdir(
-        save_dir), "The directory \"{0}\" doesn't exist.".format(save_dir)
+    assert os.path.isdir(save_dir), 'The directory "{0}" doesn\'t exist.'.format(save_dir)
 
     # Save model
     checkpoint_path = os.path.join(save_dir, name) + "_last.pth"
 
     checkpoint = {
-        'epoch': epoch,
-        'miou': miou,
+        "epoch": epoch,
+        "miou": miou,
         MODEL_STATE_ATTR: model.state_dict(),
         COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
-        'optimizer': optimizer.state_dict()
+        "optimizer": optimizer.state_dict(),
     }
     torch.save(checkpoint, checkpoint_path)
     return checkpoint_path

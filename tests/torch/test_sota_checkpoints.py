@@ -8,14 +8,14 @@ import subprocess
 import sys
 from collections import OrderedDict
 from pathlib import Path
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 import pytest
 from prettytable import PrettyTable
 from yattag import Doc
 
+from nncf.common.utils.os import is_linux
+from nncf.common.utils.os import is_windows
 from nncf.config import NNCFConfig
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
 from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
@@ -25,30 +25,31 @@ from tests.shared.paths import DATASET_DEFINITIONS_PATH
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
 
-BG_COLOR_GREEN_HEX = 'ccffcc'
-BG_COLOR_YELLOW_HEX = 'ffffcc'
-BG_COLOR_RED_HEX = 'ffcccc'
+BG_COLOR_GREEN_HEX = "ccffcc"
+BG_COLOR_YELLOW_HEX = "ffffcc"
+BG_COLOR_RED_HEX = "ffcccc"
 
 
 class EvalRunParamsStruct:
-    def __init__(self,
-                 config_name_: str,
-                 reference_: Optional[str],
-                 expected_: float,
-                 metric_type_: str,
-                 dataset_name_: str,
-                 sample_type_: str,
-                 resume_file_: str,
-                 batch_: int,
-                 mean_val_: Optional[str],
-                 scale_val_: Optional[str],
-                 diff_fp32_min_: float,
-                 diff_fp32_max_: float,
-                 model_name_: str,
-                 diff_target_min_: float,
-                 diff_target_max_: float,
-                 multiprocessing_distributed: bool
-                 ):
+    def __init__(
+        self,
+        config_name_: str,
+        reference_: Optional[str],
+        expected_: float,
+        metric_type_: str,
+        dataset_name_: str,
+        sample_type_: str,
+        resume_file_: str,
+        batch_: int,
+        mean_val_: Optional[str],
+        scale_val_: Optional[str],
+        diff_fp32_min_: float,
+        diff_fp32_max_: float,
+        model_name_: str,
+        diff_target_min_: float,
+        diff_target_max_: float,
+        multiprocessing_distributed: bool,
+    ):
         self.config_name_ = config_name_
         self.reference_ = reference_
         self.expected_ = expected_
@@ -86,7 +87,6 @@ class TestSotaCheckpoints:
          --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
           {metrics_dump_file_path}"
 
-
     @staticmethod
     def q_dq_config(config):
         nncf_config = NNCFConfig.from_json(config)
@@ -113,7 +113,11 @@ class TestSotaCheckpoints:
         print()
         print(comm)
         print()
-        com_line = shlex.split(comm)
+
+        if is_linux():
+            com_line = shlex.split(comm)
+        elif is_windows():
+            com_line = comm
 
         env = os.environ.copy()
         if "PYTHONPATH" in env:
@@ -121,27 +125,26 @@ class TestSotaCheckpoints:
         else:
             env["PYTHONPATH"] = str(PROJECT_ROOT)
 
-        with subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              cwd=cwd, env=env) as result:
+        with subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd, env=env) as result:
             exit_code = result.poll()
 
             def process_line(decoded_line: str, error_lines: List):
-                if re.search('Error|(No module named)', decoded_line):
+                if re.search("Error|(No module named)", decoded_line):
                     # WA for tensorboardX multiprocessing bug (https://github.com/lanpa/tensorboardX/issues/598)
-                    if not re.search('EOFError', decoded_line):
+                    if not re.search("EOFError", decoded_line):
                         error_lines.append(decoded_line)
                 if decoded_line != "":
                     print(decoded_line)
 
             error_lines = []
             while exit_code is None:
-                decoded_line = result.stdout.readline().decode('utf-8').strip()
+                decoded_line = result.stdout.readline().decode("utf-8").strip()
                 process_line(decoded_line, error_lines)
                 exit_code = result.poll()
 
             # The process may exit before the first process_line is executed, handling this case here
             outs, _ = result.communicate()
-            remaining_lines = outs.decode('utf-8').strip().split('\n')
+            remaining_lines = outs.decode("utf-8").strip().split("\n")
             for output_line in remaining_lines:
                 process_line(output_line, error_lines)
 
@@ -153,7 +156,7 @@ class TestSotaCheckpoints:
     def get_onnx_model_file_path(name):
         onnx_name = str(name + ".onnx")
         path_to_model = None
-        for root, dirs, files in os.walk('/'):
+        for root, dirs, files in os.walk("/"):
             if onnx_name in files:
                 path_to_model = os.path.join(root, onnx_name)
                 print("Found ", onnx_name)
@@ -161,8 +164,18 @@ class TestSotaCheckpoints:
         return path_to_model
 
     @staticmethod
-    def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target,
-                       fp32_metric_=None, diff_fp32=None, metric_type_from_json=None):
+    def make_table_row(
+        test,
+        expected_,
+        metrics_type_,
+        key,
+        error_message,
+        metric,
+        diff_target,
+        fp32_metric_=None,
+        diff_fp32=None,
+        metric_type_from_json=None,
+    ):
         TestSotaCheckpoints.test = test
         if fp32_metric_ is None:
             fp32_metric_ = "-"
@@ -170,28 +183,62 @@ class TestSotaCheckpoints:
         if metric_type_from_json and fp32_metric_ != "-":
             fp32_metric_ = str("({})".format(fp32_metric_))
         if metric is not None:
-            if test == 'eval':
-                row = [str(key), str(metrics_type_), str(expected_), str(metric), str(fp32_metric_), str(diff_fp32),
-                       str(diff_target), str("-")]
+            if test == "eval":
+                row = [
+                    str(key),
+                    str(metrics_type_),
+                    str(expected_),
+                    str(metric),
+                    str(fp32_metric_),
+                    str(diff_fp32),
+                    str(diff_target),
+                    str("-"),
+                ]
             else:
                 row = [str(key), str(metrics_type_), str(expected_), str(metric), str(diff_target), str("-")]
         else:
-            if test == 'eval':
-                row = [str(key), str(metrics_type_), str(expected_), str("Not executed"), str(fp32_metric_),
-                       str("-"), str("-"), str(error_message)]
+            if test == "eval":
+                row = [
+                    str(key),
+                    str(metrics_type_),
+                    str(expected_),
+                    str("Not executed"),
+                    str(fp32_metric_),
+                    str("-"),
+                    str("-"),
+                    str(error_message),
+                ]
             else:
                 row = [str(key), str(metrics_type_), str(expected_), str("Not executed"), str("-"), str(error_message)]
         return row
 
     @staticmethod
     def write_error_in_csv(error_message, filename):
-        with open(f'{filename}.csv', 'w', newline='', encoding='utf8') as csvfile:
-            fieldnames = ['model', 'launcher', 'device', 'dataset', 'tags', 'metric_name', 'metric_type',
-                          'metric_value']
+        with open(f"{filename}.csv", "w", newline="", encoding="utf8") as csvfile:
+            fieldnames = [
+                "model",
+                "launcher",
+                "device",
+                "dataset",
+                "tags",
+                "metric_name",
+                "metric_type",
+                "metric_value",
+            ]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
-            writer.writerow({'model': filename, 'launcher': '-', 'device': '-', 'dataset': '-', 'tags': '-',
-                             'metric_name': '-', 'metric_type': '-', 'metric_value': error_message})
+            writer.writerow(
+                {
+                    "model": filename,
+                    "launcher": "-",
+                    "device": "-",
+                    "dataset": "-",
+                    "tags": "-",
+                    "metric_name": "-",
+                    "metric_type": "-",
+                    "metric_value": error_message,
+                }
+            )
 
     def write_results_table(self, init_table_string, path):
         result_table = PrettyTable()
@@ -202,39 +249,46 @@ class TestSotaCheckpoints:
         print(result_table)
 
         doc, tag, text = Doc().tagtext()
-        doc.asis('<!DOCTYPE html>')
-        with tag('p'):
-            text('legend: ')
-        with tag('p'):
-            with tag('span', style="Background-color: #{}".format(BG_COLOR_GREEN_HEX)):
-                text('Thresholds for FP32 and Expected are passed')
-        with tag('p'):
-            with tag('span', style="Background-color: #{}".format(BG_COLOR_YELLOW_HEX)):
-                text('Thresholds for Expected is failed, but for FP32 passed')
-        with tag('p'):
-            with tag('span', style="Background-color: #{}".format(BG_COLOR_RED_HEX)):
-                text('Thresholds for FP32 and Expected are failed')
-        with tag('p'):
+        doc.asis("<!DOCTYPE html>")
+        with tag("p"):
+            text("legend: ")
+        with tag("p"):
+            with tag("span", style="Background-color: #{}".format(BG_COLOR_GREEN_HEX)):
+                text("Thresholds for FP32 and Expected are passed")
+        with tag("p"):
+            with tag("span", style="Background-color: #{}".format(BG_COLOR_YELLOW_HEX)):
+                text("Thresholds for Expected is failed, but for FP32 passed")
+        with tag("p"):
+            with tag("span", style="Background-color: #{}".format(BG_COLOR_RED_HEX)):
+                text("Thresholds for FP32 and Expected are failed")
+        with tag("p"):
             text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
-        with tag('table', border="1", cellpadding="5", style="border-collapse: collapse; border: 1px solid;"):
-            with tag('tr'):
+        with tag("table", border="1", cellpadding="5", style="border-collapse: collapse; border: 1px solid;"):
+            with tag("tr"):
                 for i in init_table_string:
-                    with tag('td'):
+                    with tag("td"):
                         text(i)
             for key in self.row_dict:
-                with tag('tr', bgcolor='{}'.format(self.color_dict[key])):
+                with tag("tr", bgcolor="{}".format(self.color_dict[key])):
                     for i in self.row_dict[key]:
                         if i is None:
-                            i = '-'
-                        with tag('td'):
+                            i = "-"
+                        with tag("td"):
                             text(i)
-        with open(path / 'results.html', 'w', encoding='utf8') as f:
+        with open(path / "results.html", "w", encoding="utf8") as f:
             f.write(doc.getvalue())
 
-
     @staticmethod
-    def threshold_check(is_ok, diff_target, diff_fp32_min_=None, diff_fp32_max_=None, fp32_metric=None,
-                        diff_fp32=None, diff_target_min=None, diff_target_max=None):
+    def threshold_check(
+        is_ok,
+        diff_target,
+        diff_fp32_min_=None,
+        diff_fp32_max_=None,
+        fp32_metric=None,
+        diff_fp32=None,
+        diff_target_min=None,
+        diff_target_max=None,
+    ):
         color = BG_COLOR_RED_HEX
         within_thresholds = False
         if not diff_target_min:
@@ -264,106 +318,111 @@ class TestSotaCheckpoints:
         for root, dirs, files in os.walk(per_model_metric_file_dump_path):
             for file in files:
                 metric_file_path = per_model_metric_file_dump_path / file
-                with open(str(metric_file_path), encoding='utf8') as metric_file:
+                with open(str(metric_file_path), encoding="utf8") as metric_file:
                     metrics = json.load(metric_file)
-                model_name = str(file).split('.', maxsplit=1)[0]
-                metric_value[model_name] = metrics['Accuracy']
-                common_metrics_file_path = per_model_metric_file_dump_path / 'metrics.json'
+                model_name = str(file).split(".", maxsplit=1)[0]
+                metric_value[model_name] = metrics["Accuracy"]
+                common_metrics_file_path = per_model_metric_file_dump_path / "metrics.json"
                 if common_metrics_file_path.is_file():
-                    data = json.loads(common_metrics_file_path.read_text(encoding='utf-8'))
+                    data = json.loads(common_metrics_file_path.read_text(encoding="utf-8"))
                     data.update(metric_value)
-                    common_metrics_file_path.write_text(json.dumps(data, indent=4), encoding='utf-8')
+                    common_metrics_file_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
                 else:
-                    with open(str(common_metrics_file_path), 'w', encoding='utf8') as outfile:
+                    with open(str(common_metrics_file_path), "w", encoding="utf8") as outfile:
                         json.dump(metric_value, outfile)
                 dirs.clear()
 
     @staticmethod
     def read_metric(metric_file_name: str):
-        with open(metric_file_name, encoding='utf8') as metric_file:
+        with open(metric_file_name, encoding="utf8") as metric_file:
             metrics = json.load(metric_file)
-        return metrics['Accuracy']
+        return metrics["Accuracy"]
 
-    with open('{}/sota_checkpoints_eval.json'.format(os.path.join(TEST_ROOT, 'torch')), encoding='utf8') as f:
+    with open("{}/sota_checkpoints_eval.json".format(os.path.join(TEST_ROOT, "torch")), encoding="utf8") as f:
         sota_eval_config = json.load(f, object_pairs_hook=OrderedDict)
     for sample_type_ in sota_eval_config:
         datasets = sota_eval_config[sample_type_]
         for dataset_name in datasets:
             model_dict = datasets[dataset_name]
             for model_name in model_dict:
-                config_name = model_dict[model_name].get('config', {})
+                config_name = model_dict[model_name].get("config", {})
                 reference = None
-                if model_dict[model_name].get('reference', {}):
-                    reference = model_dict[model_name].get('reference', {})
+                if model_dict[model_name].get("reference", {}):
+                    reference = model_dict[model_name].get("reference", {})
                 else:
-                    ref_fp32_dict[model_name] = model_dict[model_name].get('target', {})
-                expected = model_dict[model_name].get('target', {})
-                metric_type = model_dict[model_name].get('metric_type', {})
-                if model_dict[model_name].get('resume', {}):
-                    resume_file = model_dict[model_name].get('resume', {})
+                    ref_fp32_dict[model_name] = model_dict[model_name].get("target", {})
+                expected = model_dict[model_name].get("target", {})
+                metric_type = model_dict[model_name].get("metric_type", {})
+                if model_dict[model_name].get("resume", {}):
+                    resume_file = model_dict[model_name].get("resume", {})
                 else:
                     resume_file = None
-                if model_dict[model_name].get('batch', {}):
-                    batch = model_dict[model_name].get('batch', {})
+                if model_dict[model_name].get("batch", {}):
+                    batch = model_dict[model_name].get("batch", {})
                 else:
                     batch = None
-                if model_dict[model_name].get('mean_value', {}):
-                    mean_val = model_dict[model_name].get('mean_value', {})
+                if model_dict[model_name].get("mean_value", {}):
+                    mean_val = model_dict[model_name].get("mean_value", {})
                 else:
-                    mean_val = '[123.675,116.28,103.53]'
-                if model_dict[model_name].get('scale_value', {}):
-                    scale_val = model_dict[model_name].get('scale_value', {})
+                    mean_val = "[123.675,116.28,103.53]"
+                if model_dict[model_name].get("scale_value", {}):
+                    scale_val = model_dict[model_name].get("scale_value", {})
                 else:
-                    scale_val = '[58.4795,57.1429,57.4713]'
-                diff_fp32_min = model_dict[model_name].get('diff_fp32_min')
-                diff_fp32_max = model_dict[model_name].get('diff_fp32_max')
-                diff_target_min = model_dict[model_name].get('diff_target_min')
-                diff_target_max = model_dict[model_name].get('diff_target_max')
-                multiprocessing_distributed = model_dict[model_name].get('multiprocessing_distributed', False)
+                    scale_val = "[58.4795,57.1429,57.4713]"
+                diff_fp32_min = model_dict[model_name].get("diff_fp32_min")
+                diff_fp32_max = model_dict[model_name].get("diff_fp32_max")
+                diff_target_min = model_dict[model_name].get("diff_target_min")
+                diff_target_max = model_dict[model_name].get("diff_target_max")
+                multiprocessing_distributed = model_dict[model_name].get("multiprocessing_distributed", False)
 
-                param_list.append(EvalRunParamsStruct(config_name,
-                                                      reference,
-                                                      expected,
-                                                      metric_type,
-                                                      dataset_name,
-                                                      sample_type_,
-                                                      resume_file,
-                                                      batch,
-                                                      mean_val,
-                                                      scale_val,
-                                                      diff_fp32_min,
-                                                      diff_fp32_max,
-                                                      model_name,
-                                                      diff_target_min,
-                                                      diff_target_max,
-                                                      multiprocessing_distributed))
+                param_list.append(
+                    EvalRunParamsStruct(
+                        config_name,
+                        reference,
+                        expected,
+                        metric_type,
+                        dataset_name,
+                        sample_type_,
+                        resume_file,
+                        batch,
+                        mean_val,
+                        scale_val,
+                        diff_fp32_min,
+                        diff_fp32_max,
+                        model_name,
+                        diff_target_min,
+                        diff_target_max,
+                        multiprocessing_distributed,
+                    )
+                )
                 ids_list.append(model_name)
-                if model_dict[model_name].get('compression_description', {}):
-                    train_param_list.append((config_name,
-                                             expected,
-                                             metric_type,
-                                             dataset_name,
-                                             sample_type_,
-                                             model_name))
+                if model_dict[model_name].get("compression_description", {}):
+                    train_param_list.append(
+                        (config_name, expected, metric_type, dataset_name, sample_type_, model_name)
+                    )
                     train_ids_list.append(model_name)
 
     @pytest.mark.eval
-    @pytest.mark.parametrize("eval_test_struct", param_list,
-                             ids=ids_list)
+    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
     def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
         if sota_data_dir is None:
-            pytest.skip('Path to datasets is not set')
+            pytest.skip("Path to datasets is not set")
         test = "eval"
         metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
         metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
         log_dir = pytest.metrics_dump_path / "logs"
-        cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                            dataset=sota_data_dir,
-                                            data_name=eval_test_struct.dataset_name_,
-                                            sample_type=eval_test_struct.sample_type_,
-                                            metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
+        cmd = self.CMD_FORMAT_STRING.format(
+            sys.executable,
+            "test",
+            conf=eval_test_struct.config_name_,
+            dataset=sota_data_dir,
+            data_name=eval_test_struct.dataset_name_,
+            sample_type=eval_test_struct.sample_type_,
+            metrics_dump_file_path=metrics_dump_file_path,
+            log_dir=log_dir,
+        )
         if eval_test_struct.resume_file_:
-            resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
+            resume_file_path = sota_checkpoints_dir + "/" + eval_test_struct.resume_file_
             cmd += " --resume {}".format(resume_file_path)
         else:
             cmd += " --pretrained"
@@ -373,7 +432,7 @@ class TestSotaCheckpoints:
             cmd += " --multiprocessing-distributed"
         exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
 
-        is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
+        is_ok = exit_code == 0 and metrics_dump_file_path.exists()
         if is_ok:
             metric_value = self.read_metric(str(metrics_dump_file_path))
         else:
@@ -384,13 +443,14 @@ class TestSotaCheckpoints:
         if eval_test_struct.reference_ is not None:
             fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
             metric_type_from_json = True
-            reference_metric_file_path = pytest.metrics_dump_path / \
-                                         self.get_metric_file_name(eval_test_struct.reference_)
+            reference_metric_file_path = pytest.metrics_dump_path / self.get_metric_file_name(
+                eval_test_struct.reference_
+            )
             if os.path.exists(reference_metric_file_path):
-                with open(str(reference_metric_file_path), encoding='utf8') as ref_metric:
+                with open(str(reference_metric_file_path), encoding="utf8") as ref_metric:
                     metrics = json.load(ref_metric)
-                if metrics['Accuracy'] != 0:
-                    fp32_metric = metrics['Accuracy']
+                if metrics["Accuracy"] != 0:
+                    fp32_metric = metrics["Accuracy"]
                     metric_type_from_json = False
             else:
                 metric_type_from_json = True
@@ -402,23 +462,28 @@ class TestSotaCheckpoints:
             diff_target = None
             diff_fp32 = None
 
-        self.row_dict[eval_test_struct.model_name_] = self.make_table_row(test, eval_test_struct.expected_,
-                                                                          eval_test_struct.metric_type_,
-                                                                          eval_test_struct.model_name_,
-                                                                          err_str,
-                                                                          metric_value,
-                                                                          diff_target,
-                                                                          fp32_metric,
-                                                                          diff_fp32,
-                                                                          metric_type_from_json)
-        retval = self.threshold_check(is_ok,
-                                      diff_target,
-                                      eval_test_struct.diff_fp32_min_,
-                                      eval_test_struct.diff_fp32_max_,
-                                      fp32_metric,
-                                      diff_fp32,
-                                      eval_test_struct.diff_target_min_,
-                                      eval_test_struct.diff_target_max_)
+        self.row_dict[eval_test_struct.model_name_] = self.make_table_row(
+            test,
+            eval_test_struct.expected_,
+            eval_test_struct.metric_type_,
+            eval_test_struct.model_name_,
+            err_str,
+            metric_value,
+            diff_target,
+            fp32_metric,
+            diff_fp32,
+            metric_type_from_json,
+        )
+        retval = self.threshold_check(
+            is_ok,
+            diff_target,
+            eval_test_struct.diff_fp32_min_,
+            eval_test_struct.diff_fp32_max_,
+            fp32_metric,
+            diff_fp32,
+            eval_test_struct.diff_target_min_,
+            eval_test_struct.diff_target_max_,
+        )
 
         self.color_dict[eval_test_struct.model_name_], is_accuracy_within_thresholds = retval
         assert is_accuracy_within_thresholds
@@ -427,15 +492,16 @@ class TestSotaCheckpoints:
     @pytest.mark.convert
     @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
     @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])
-    def test_convert_to_onnx(self, tmpdir, openvino, sota_checkpoints_dir, sota_data_dir,
-                             eval_test_struct: EvalRunParamsStruct, onnx_type):
+    def test_convert_to_onnx(
+        self, tmpdir, openvino, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct, onnx_type
+    ):
         if not openvino:
             pytest.skip()
         os.chdir(PROJECT_ROOT)
-        onnx_path = PROJECT_ROOT / 'onnx'
+        onnx_path = PROJECT_ROOT / "onnx"
         q_dq_config_path = tmpdir / os.path.basename(eval_test_struct.config_name_)
 
-        with open(str(q_dq_config_path), 'w', encoding='utf8') as outfile:
+        with open(str(q_dq_config_path), "w", encoding="utf8") as outfile:
             json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
         if not os.path.exists(onnx_path):
             os.mkdir(onnx_path)
@@ -443,22 +509,25 @@ class TestSotaCheckpoints:
              --data {dataset}/{data_name} --to-onnx={onnx_path}"
         self.test = "openvino_eval"
         if onnx_type == "q_dq":
-            if not os.path.exists(onnx_path / 'q_dq'):
-                os.mkdir(onnx_path / 'q_dq')
+            if not os.path.exists(onnx_path / "q_dq"):
+                os.mkdir(onnx_path / "q_dq")
             onnx_name = str("q_dq/" + eval_test_struct.model_name_ + ".onnx")
-            with open(str(q_dq_config_path), 'w', encoding='utf8') as outfile:
+            with open(str(q_dq_config_path), "w", encoding="utf8") as outfile:
                 json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
             nncf_config_path = q_dq_config_path
         else:
             onnx_name = str(eval_test_struct.model_name_ + ".onnx")
             nncf_config_path = eval_test_struct.config_name_
-        onnx_cmd = CMD_FORMAT_STRING.format(sys.executable, conf=nncf_config_path,
-                                            dataset=sota_data_dir,
-                                            data_name=eval_test_struct.dataset_name_,
-                                            sample_type=eval_test_struct.sample_type_,
-                                            onnx_path=(onnx_path / onnx_name))
+        onnx_cmd = CMD_FORMAT_STRING.format(
+            sys.executable,
+            conf=nncf_config_path,
+            dataset=sota_data_dir,
+            data_name=eval_test_struct.dataset_name_,
+            sample_type=eval_test_struct.sample_type_,
+            onnx_path=(onnx_path / onnx_name),
+        )
         if eval_test_struct.resume_file_:
-            resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
+            resume_file_path = sota_checkpoints_dir + "/" + eval_test_struct.resume_file_
             onnx_cmd += " --resume {}".format(resume_file_path)
         else:
             onnx_cmd += " --pretrained"
@@ -469,28 +538,31 @@ class TestSotaCheckpoints:
     @pytest.mark.oveval
     @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
     @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])
-    def test_openvino_eval(self, eval_test_struct: EvalRunParamsStruct, ov_data_dir, onnx_type, openvino, onnx_dir,
-                           ov_config_dir):
+    def test_openvino_eval(
+        self, eval_test_struct: EvalRunParamsStruct, ov_data_dir, onnx_type, openvino, onnx_dir, ov_config_dir
+    ):
         if not openvino or not onnx_dir:
             pytest.skip()
         if ov_config_dir:
             config_folder = ov_config_dir
         else:
-            config_folder = PROJECT_ROOT / 'tests' / 'torch' / 'data' / 'ac_configs'
-        ir_model_folder = PROJECT_ROOT / 'ir_models' / eval_test_struct.model_name_
-        q_dq_ir_model_folder = PROJECT_ROOT / 'q_dq_ir_models' / eval_test_struct.model_name_
+            config_folder = PROJECT_ROOT / "tests" / "torch" / "data" / "ac_configs"
+        ir_model_folder = PROJECT_ROOT / "ir_models" / eval_test_struct.model_name_
+        q_dq_ir_model_folder = PROJECT_ROOT / "q_dq_ir_models" / eval_test_struct.model_name_
         mean_val = eval_test_struct.mean_val_
         scale_val = eval_test_struct.scale_val_
-        mo_cmd_tail_template = "--framework=onnx --data_type=FP16 --reverse_input_channels" \
-                               " --mean_values={} --scale_values={} --output_dir {}"
+        mo_cmd_tail_template = (
+            "--framework=onnx --data_type=FP16 --reverse_input_channels"
+            " --mean_values={} --scale_values={} --output_dir {}"
+        )
         if onnx_type == "q_dq":
             model_folder = q_dq_ir_model_folder
             mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, model_folder)
-            onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
+            onnx_model = str(onnx_dir + "q_dq/" + eval_test_struct.model_name_ + ".onnx")
             mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
         else:
             model_folder = ir_model_folder
-            onnx_model = str(onnx_dir + eval_test_struct.model_name_ + '.onnx')
+            onnx_model = str(onnx_dir + eval_test_struct.model_name_ + ".onnx")
             mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, model_folder)
             mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
 
@@ -501,8 +573,10 @@ class TestSotaCheckpoints:
                 report_csv_path = f"{PROJECT_ROOT}/{eval_test_struct.model_name_}_q_dq.csv"
             else:
                 report_csv_path = f"{PROJECT_ROOT}/{eval_test_struct.model_name_}.csv"
-            ac_cmd = f"accuracy_check -c {ac_yml_path} -s {ov_data_dir} -d {DATASET_DEFINITIONS_PATH} " \
-                     f"-m {model_folder} --csv_result {report_csv_path}"
+            ac_cmd = (
+                f"accuracy_check -c {ac_yml_path} -s {ov_data_dir} -d {DATASET_DEFINITIONS_PATH} "
+                f"-m {model_folder} --csv_result {report_csv_path}"
+            )
             exit_code, err_str = self.run_cmd(ac_cmd, cwd=PROJECT_ROOT)
             if exit_code != 0 or err_str is not None:
                 pytest.fail(err_str)
@@ -513,28 +587,34 @@ class TestSotaCheckpoints:
     @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
     def test_train(self, cuda_ip, sota_data_dir, sota_checkpoints_dir, eval_test_struct: EvalRunParamsStruct):
         if sota_data_dir is None:
-            pytest.skip('Path to datasets is not set')
-        test = 'train'
+            pytest.skip("Path to datasets is not set")
+        test = "train"
         self.color_dict[eval_test_struct.model_name_] = BG_COLOR_RED_HEX
         metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
         metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
-        log_dir = pytest.metrics_dump_path / 'logs'
-        checkpoint_dir = pytest.metrics_dump_path / 'checkpoints'
-        cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'train', conf=eval_test_struct.config_name_,
-                                            dataset=sota_data_dir, data_name=eval_test_struct.dataset_name_,
-                                            sample_type=eval_test_struct.sample_type_,
-                                            metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
-        cmd += f' --checkpoint-save-dir {checkpoint_dir}'
+        log_dir = pytest.metrics_dump_path / "logs"
+        checkpoint_dir = pytest.metrics_dump_path / "checkpoints"
+        cmd = self.CMD_FORMAT_STRING.format(
+            sys.executable,
+            "train",
+            conf=eval_test_struct.config_name_,
+            dataset=sota_data_dir,
+            data_name=eval_test_struct.dataset_name_,
+            sample_type=eval_test_struct.sample_type_,
+            metrics_dump_file_path=metrics_dump_file_path,
+            log_dir=log_dir,
+        )
+        cmd += f" --checkpoint-save-dir {checkpoint_dir}"
         if cuda_ip is not None:
-            print(f'Setting distributed mode synchronization URL to tcp://127.0.0.1:{cuda_ip}')
-            cmd += f' --dist-url=tcp://127.0.0.1:{cuda_ip}'
+            print(f"Setting distributed mode synchronization URL to tcp://127.0.0.1:{cuda_ip}")
+            cmd += f" --dist-url=tcp://127.0.0.1:{cuda_ip}"
         if eval_test_struct.reference_ is not None:
             fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
-            weights_path = Path(sota_checkpoints_dir) / Path(str(eval_test_struct.reference_ + '.pth'))
+            weights_path = Path(sota_checkpoints_dir) / Path(str(eval_test_struct.reference_ + ".pth"))
             if os.path.isfile(weights_path):
-                cmd += f' --weights {weights_path}'
+                cmd += f" --weights {weights_path}"
             exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
-            is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
+            is_ok = exit_code == 0 and metrics_dump_file_path.exists()
             if is_ok:
                 metric_value = self.read_metric(str(metrics_dump_file_path))
                 diff_fp32 = round((metric_value - fp32_metric), 2)
@@ -543,29 +623,36 @@ class TestSotaCheckpoints:
             else:
                 metric_value = None
                 diff_fp32 = None
-            self.row_dict[eval_test_struct.model_name_] = self.make_table_row(test,
-                                                                              fp32_metric,
-                                                                              eval_test_struct.metric_type_,
-                                                                              eval_test_struct.model_name_,
-                                                                              err_str,
-                                                                              metric_value,
-                                                                              diff_fp32)
+            self.row_dict[eval_test_struct.model_name_] = self.make_table_row(
+                test,
+                fp32_metric,
+                eval_test_struct.metric_type_,
+                eval_test_struct.model_name_,
+                err_str,
+                metric_value,
+                diff_fp32,
+            )
             assert self.color_dict[eval_test_struct.model_name_] == BG_COLOR_GREEN_HEX
-        else: pytest.skip('Only compressed models must be trained')
+        else:
+            pytest.skip("Only compressed models must be trained")
 
 
 Tsc = TestSotaCheckpoints
+
 
 @pytest.fixture(autouse=True, scope="class")
 def make_metrics_dump_path(metrics_dump_dir):
     if pytest.metrics_dump_path is None:
         data = datetime.datetime.now()
-        pytest.metrics_dump_path = PROJECT_ROOT / "test_results" / "metrics_dump_" \
+        pytest.metrics_dump_path = (
+            PROJECT_ROOT / "test_results" / "metrics_dump_"
             f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
+        )
     else:
         pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
-    assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path), \
-                                    f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
+    assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(
+        pytest.metrics_dump_path
+    ), f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
     print(f"metrics_dump_path: {pytest.metrics_dump_path}")
 
 
@@ -575,8 +662,16 @@ def results(sota_data_dir):
     if sota_data_dir:
         Tsc.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
         if Tsc.test == "eval":
-            header = ["Model", "Metrics type", "Expected", "Measured", "Reference FP32", "Diff FP32", "Diff Expected",
-                      "Error"]
+            header = [
+                "Model",
+                "Metrics type",
+                "Expected",
+                "Measured",
+                "Reference FP32",
+                "Diff FP32",
+                "Diff Expected",
+                "Error",
+            ]
         else:
             header = ["Model", "Metrics type", "Reference FP32", "Measured", "Diff FP32", "Error"]
         Tsc().write_results_table(header, pytest.metrics_dump_path)

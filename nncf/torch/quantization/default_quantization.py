@@ -12,11 +12,11 @@
 """
 from typing import Dict, List
 
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.torch.graph import operator_metatypes
-from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
+from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 
 # If there are no some metatypes it means that they are considered as QuantizationTrait.QuantizationAgnostic
 
@@ -55,27 +55,29 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTBatchNormMetatype,
         operator_metatypes.PTModuleBatchNormMetatype,
         operator_metatypes.PTAvgPool2dMetatype,
-        operator_metatypes.PTAvgPool3dMetatype
+        operator_metatypes.PTAvgPool3dMetatype,
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
         operator_metatypes.PTSigmoidMetatype,
-        operator_metatypes.PTExpMetatype,
         operator_metatypes.PTSoftmaxMetatype,
         operator_metatypes.PTRELUMetatype,
         operator_metatypes.PTDeformConv2dMetatype,
         operator_metatypes.PTModuleDeformConv2dMetatype,
-        UnknownMetatype
+        UnknownMetatype,
+        # Ticket: 108478
+        operator_metatypes.PTAbsMetatype,
+        operator_metatypes.PTExpMetatype,
+        operator_metatypes.PTLogMetatype,
+        operator_metatypes.PTSqrtMetatype,
     ],
-    QuantizationTrait.CONCAT: [
-        operator_metatypes.PTCatMetatype
-    ],
+    QuantizationTrait.CONCAT: [operator_metatypes.PTCatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [
         operator_metatypes.PTEmbeddingMetatype,
         operator_metatypes.PTModuleEmbeddingMetatype,
         operator_metatypes.PTEmbeddingBagMetatype,
-        operator_metatypes.PTModuleEmbeddingBagMetatype
-    ]
+        operator_metatypes.PTModuleEmbeddingBagMetatype,
+    ],
 }  # type: Dict[QuantizationTrait, List[PTOperatorMetatype]]
 
 
-QUANTIZATION_LAYER_METATYPES = OPERATORS_WITH_WEIGHTS_METATYPES # type: List[PTOperatorMetatype]
+QUANTIZATION_LAYER_METATYPES = OPERATORS_WITH_WEIGHTS_METATYPES  # type: List[PTOperatorMetatype]

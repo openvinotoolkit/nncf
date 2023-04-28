@@ -21,14 +21,14 @@ def is_accuracy_aware_training(nncf_config: NNCFConfig) -> bool:
 
 
 def is_experimental_quantization(nncf_config: NNCFConfig) -> bool:
-    compression_section = nncf_config.get('compression', [])
+    compression_section = nncf_config.get("compression", [])
     algorithms_names = []
 
     if isinstance(compression_section, dict):
-        algorithms_names.append(compression_section['algorithm'])
+        algorithms_names.append(compression_section["algorithm"])
 
     if isinstance(compression_section, list):
         for sec in compression_section:
-            algorithms_names.append(sec['algorithm'])
+            algorithms_names.append(sec["algorithm"])
 
-    return 'experimental_quantization' in algorithms_names
+    return "experimental_quantization" in algorithms_names

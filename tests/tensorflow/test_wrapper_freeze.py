@@ -13,40 +13,36 @@
 
 import tensorflow as tf
 
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 
 class MaskOperation(NNCFOperation):
     def build(self, input_shape, input_type, name, layer):
         mask_trainable = layer.add_weight(
-            name + '_mask_trainable',
-            shape=input_shape,
-            initializer=tf.keras.initializers.Constant(1.0),
-            trainable=True)
+            name + "_mask_trainable", shape=input_shape, initializer=tf.keras.initializers.Constant(1.0), trainable=True
+        )
 
         mask_non_trainable = layer.add_weight(
-            name + '_mask_non_trainable',
+            name + "_mask_non_trainable",
             shape=input_shape,
             initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False)
+            trainable=False,
+        )
 
-        return {
-            'mask_trainable': mask_trainable,
-            'mask_non_trainable': mask_non_trainable
-        }
+        return {"mask_trainable": mask_trainable, "mask_non_trainable": mask_non_trainable}
 
     def call(self, inputs, weights, _):
-        return self.apply_mask(inputs, weights['mask_trainable'], weights['mask_non_trainable'])
+        return self.apply_mask(inputs, weights["mask_trainable"], weights["mask_non_trainable"])
 
     def apply_mask(self, weights, mask1, mask2):
         return weights * mask1 * mask2
 
 
 def registry_and_build_op(layer):
-    op_name = 'masking_op'
+    op_name = "masking_op"
     mask_op = MaskOperation(op_name)
-    layer.registry_weight_operation('kernel', mask_op)
+    layer.registry_weight_operation("kernel", mask_op)
     layer.build((1,))
 
 
@@ -78,9 +74,8 @@ def test_wrapper_weights_freeze():
     model = get_model_for_test()
 
     # Initial state check
-    ref_trainable_weights = ['kernel_mask_trainable:0', 'layer1/kernel:0',
-                             'layer1/kernel:0', 'layer1/bias:0']
-    ref_non_trainable_weights = ['kernel_mask_non_trainable:0']
+    ref_trainable_weights = ["kernel_mask_trainable:0", "layer1/kernel:0", "layer1/kernel:0", "layer1/bias:0"]
+    ref_non_trainable_weights = ["kernel_mask_non_trainable:0"]
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
     # Switching off whole layer from training
@@ -88,34 +83,35 @@ def test_wrapper_weights_freeze():
         if isinstance(layer, NNCFWrapper):
             layer.trainable = False
     ref_trainable_weights = []
-    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'layer1/kernel:0',
-                                 'layer1/bias:0', 'kernel_mask_trainable:0',
-                                 'layer1/kernel:0']
+    ref_non_trainable_weights = [
+        "kernel_mask_non_trainable:0",
+        "layer1/kernel:0",
+        "layer1/bias:0",
+        "kernel_mask_trainable:0",
+        "layer1/kernel:0",
+    ]
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
     # Operation weights are enabled for training
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             layer.set_ops_trainable(True)
-    ref_trainable_weights = ['kernel_mask_trainable:0']
-    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'layer1/kernel:0',
-                                 'layer1/bias:0', 'layer1/kernel:0']
+    ref_trainable_weights = ["kernel_mask_trainable:0"]
+    ref_non_trainable_weights = ["kernel_mask_non_trainable:0", "layer1/kernel:0", "layer1/bias:0", "layer1/kernel:0"]
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
     # All weights are enabled for training
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             layer.trainable = True
-    ref_trainable_weights = ['kernel_mask_trainable:0', 'layer1/kernel:0',
-                             'layer1/kernel:0', 'layer1/bias:0']
-    ref_non_trainable_weights = ['kernel_mask_non_trainable:0']
+    ref_trainable_weights = ["kernel_mask_trainable:0", "layer1/kernel:0", "layer1/kernel:0", "layer1/bias:0"]
+    ref_non_trainable_weights = ["kernel_mask_non_trainable:0"]
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
     # Operation weights are disable for training
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             layer.set_ops_trainable(False)
-    ref_trainable_weights = ['layer1/kernel:0', 'layer1/kernel:0',
-                             'layer1/bias:0']
-    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'kernel_mask_trainable:0']
+    ref_trainable_weights = ["layer1/kernel:0", "layer1/kernel:0", "layer1/bias:0"]
+    ref_non_trainable_weights = ["kernel_mask_non_trainable:0", "kernel_mask_trainable:0"]
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)

@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from examples.tensorflow.common.models import MobileNetV3Small as mobilenet_v3_small
 from examples.tensorflow.common.models import MobileNetV3Large as mobilenet_v3_large
+from examples.tensorflow.common.models import MobileNetV3Small as mobilenet_v3_small
 
 
 def MobileNetV3Small(input_shape=None):

@@ -11,15 +11,13 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Dict
-from typing import TypeVar
+from typing import Any, Dict, TypeVar
 
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
 class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
@@ -30,11 +28,14 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        compression_lr_multiplier = \
-            config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier', self.name)
+        compression_lr_multiplier = config.get_redefinable_global_param_value_for_algo(
+            "compression_lr_multiplier", self.name
+        )
         if compression_lr_multiplier is not None:
-            raise Exception('compression_lr_multiplier is not supported when your work with a TF model in NNCF. '
-                            'Please remove the compression_lr_multiplier attribute from your NNCFConfig.')
+            raise Exception(
+                "compression_lr_multiplier is not supported when your work with a TF model in NNCF. "
+                "Please remove the compression_lr_multiplier attribute from your NNCFConfig."
+            )
 
     def _get_state_without_name(self) -> Dict[str, Any]:
         """

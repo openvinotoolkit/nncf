@@ -28,18 +28,16 @@ def excluded_module(name, excluded_modules_patterns):
 
 def onerror(name, excluded_modules_patterns):
     if not excluded_module(name, excluded_modules_patterns):
-        raise RuntimeError(f'Could not import {name}')
+        raise RuntimeError(f"Could not import {name}")
 
 
 def load_nncf_modules(excluded_modules_patterns, verbose=False):
     onerror_partial = partial(onerror, excluded_modules_patterns=excluded_modules_patterns)
-    for loader, module_name, _ in pkgutil.walk_packages(nncf.__path__,
-                                                        nncf.__name__ + '.',
-                                                        onerror_partial):
+    for loader, module_name, _ in pkgutil.walk_packages(nncf.__path__, nncf.__name__ + ".", onerror_partial):
         if module_name in sys.modules or excluded_module(module_name, excluded_modules_patterns):
             if verbose:
-                print(f'Module {module_name} ------ SKIPPED')
+                print(f"Module {module_name} ------ SKIPPED")
             continue
         loader.find_module(module_name).load_module(module_name)
         if verbose:
-            print(f'Module {module_name} ------ LOADED')
+            print(f"Module {module_name} ------ LOADED")

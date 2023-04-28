@@ -21,18 +21,19 @@ from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
-class TFCompositeCompressionAlgorithmBuilder(
-    CompositeCompressionAlgorithmBuilder, TFCompressionAlgorithmBuilder):
+class TFCompositeCompressionAlgorithmBuilder(CompositeCompressionAlgorithmBuilder, TFCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
 
         algo_names = extract_algorithm_names(config)
         if len(algo_names) < 2:
-            raise RuntimeError("Composite algorithm builder must be supplied with a config with more than one "
-                               "compression algo specified!")
+            raise RuntimeError(
+                "Composite algorithm builder must be supplied with a config with more than one "
+                "compression algo specified!"
+            )
         for algo_name in algo_names:
             algo_builder_cls = get_compression_algorithm_builder(algo_name)
             self._child_builders.append(algo_builder_cls(config, should_init=should_init))

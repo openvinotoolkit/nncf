@@ -13,10 +13,10 @@
 from abc import ABC
 from abc import abstractmethod
 
-from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
+from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 
 
 class BNASTrainingAlgorithm(ABC):
@@ -58,6 +58,7 @@ class BNASTrainingController(PTCompressionAlgorithmController, BNASTrainingAlgor
     """
     A base class for BootstrapNAS training controllers that provides capabilities for supernet training.
     """
+
     @property
     @abstractmethod
     def multi_elasticity_handler(self) -> MultiElasticityHandler:

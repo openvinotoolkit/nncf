@@ -10,12 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from .inceptionv3_cifar100 import *
-from .resnet_cifar import *
-from .rmnet_cifar import *
 from .efficientnet import *
+from .inceptionv3_cifar100 import *
 from .mobilenet_v2_cifar10 import *
-from .resnet_cifar10 import *
-from .vgg11_bn_cifar10 import *
 from .mobilenet_v2_tv_092 import *
 from .mobilenet_v3_tv_092 import *
+from .resnet_cifar import *
+from .resnet_cifar10 import *
+from .rmnet_cifar import *
+from .vgg11_bn_cifar10 import *

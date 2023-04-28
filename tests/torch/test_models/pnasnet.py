@@ -12,19 +12,18 @@
 """
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class SepConv(nn.Module):
-    '''Separable Convolution.'''
+    """Separable Convolution."""
 
     def __init__(self, in_planes, out_planes, kernel_size, stride):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_planes, out_planes,
-                               kernel_size, stride,
-                               padding=(kernel_size - 1) // 2,
-                               bias=False, groups=in_planes)
+        self.conv1 = nn.Conv2d(
+            in_planes, out_planes, kernel_size, stride, padding=(kernel_size - 1) // 2, bias=False, groups=in_planes
+        )
         self.bn1 = nn.BatchNorm2d(out_planes)
 
     def forward(self, x):
@@ -134,5 +133,6 @@ def test():
     x = torch.randn(1, 3, 32, 32)
     y = net(x)
     print(y)
+
 
 # test()

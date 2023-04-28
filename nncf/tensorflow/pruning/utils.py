@@ -11,28 +11,28 @@
  limitations under the License.
 """
 
+from typing import Dict, List
+
 import numpy as np
 import tensorflow as tf
 
-from typing import List, Dict
-
-from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
-from nncf.tensorflow.graph.utils import unwrap_layer
-from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
-from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
+from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
+from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
+from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 
 def is_shared(node: NNCFNode) -> bool:
-    return node.data['is_shared']
+    return node.data["is_shared"]
 
 
 def get_filter_axis(layer: NNCFWrapper, weight_attr: str) -> int:
@@ -44,16 +44,17 @@ def get_filter_axis(layer: NNCFWrapper, weight_attr: str) -> int:
 def get_filters_num(layer: NNCFWrapper):
     layer_metatype = get_keras_layer_metatype(layer)
     if len(layer_metatype.weight_definitions) != 1:
-        raise ValueError(f'Could not calculate the number of filters '
-                         f'for the layer {layer.layer.name}.')
+        raise ValueError(f"Could not calculate the number of filters " f"for the layer {layer.layer.name}.")
 
     weight_def = layer_metatype.weight_definitions[0]
     weight_attr = weight_def.weight_attr_name
 
     if layer_metatype is TFBatchNormalizationLayerMetatype and not layer.layer.scale:
-        nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
-                          'Using beta parameter instead to calculate the number of filters.')
-        weight_attr = 'beta'
+        nncf_logger.debug(
+            "Fused gamma parameter encountered in BatchNormalization layer. "
+            "Using beta parameter instead to calculate the number of filters."
+        )
+        weight_attr = "beta"
 
     filter_axis = get_filter_axis(layer, weight_attr)
     filters_num = layer.layer_weights[weight_attr].shape[filter_axis]
@@ -76,7 +77,7 @@ def broadcast_filter_mask(filter_mask, shape, dim):
     return broadcasted_filter_mask
 
 
-def collect_output_shapes(model: 'NNCFNetwork', graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
+def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
     """
     Collects output dimension shapes for convolutions and fully connected layers
     from the connected edges in the NNCFGraph.
@@ -91,13 +92,16 @@ def collect_output_shapes(model: 'NNCFNetwork', graph: NNCFGraph) -> Dict[NNCFNo
         layer_ = unwrap_layer(layer)
 
         channel_axis = get_input_channel_axis(layer)
-        dims_slice = slice(channel_axis - layer_.rank, channel_axis) \
-            if layer.data_format == 'channels_last' else slice(channel_axis + 1, None)
+        dims_slice = (
+            slice(channel_axis - layer_.rank, channel_axis)
+            if layer.data_format == "channels_last"
+            else slice(channel_axis + 1, None)
+        )
         in_shape = layer.get_input_shape_at(node_index)[dims_slice]
         out_shape = layer.get_output_shape_at(node_index)[dims_slice]
 
         if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
-            raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
+            raise RuntimeError(f"Input/output shape is not defined for layer `{layer.name}` ")
 
         layers_out_shapes[node.node_name] = out_shape
 
@@ -109,7 +113,7 @@ def collect_output_shapes(model: 'NNCFNetwork', graph: NNCFGraph) -> Dict[NNCFNo
         out_shape = layer.get_output_shape_at(node_index)[1:]
 
         if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
-            raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
+            raise RuntimeError(f"Input/output shape is not defined for layer `{layer.name}` ")
 
         layers_out_shapes[node.node_name] = out_shape
     return layers_out_shapes

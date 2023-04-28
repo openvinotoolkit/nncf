@@ -16,28 +16,29 @@ from typing import Any, Dict
 import numpy as np
 import pytest
 import torch
-from tests.shared.helpers import compare_stats, load_json
-from tests.shared.paths import TEST_ROOT
-from tests.torch.helpers import TwoConvTestModel, create_random_mock_dataloader
 
 import nncf
-from nncf.quantization.algorithms.definitions import OverflowFix
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import get_all_modules_by_type
+from tests.shared.helpers import compare_stats
+from tests.shared.helpers import load_json
+from tests.shared.paths import TEST_ROOT
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import create_random_mock_dataloader
 
-REFERENCE_SCALES_DIR = TEST_ROOT / 'torch' / 'data' / 'reference_scales'
+REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "reference_scales"
 
 
 def min_max_quantize_model(
     original_model: torch.nn.Module, quantization_params: Dict[str, Any] = None
 ) -> torch.nn.Module:
-    config = nncf.NNCFConfig.from_dict({'input_info': {'sample_size': [1, 1, 10, 10]}})
+    config = nncf.NNCFConfig.from_dict({"input_info": {"sample_size": [1, 1, 10, 10]}})
 
     dataloader = create_random_mock_dataloader(config)
 
@@ -47,9 +48,7 @@ def min_max_quantize_model(
 
     dataset = nncf.Dataset(dataloader, transform_func=transform_fn)
 
-    post_training_quantization = PostTrainingQuantization(
-        PostTrainingQuantizationParameters(number_samples=1, **quantization_params)
-    )
+    post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
     # Using PTQ, but apply only MinMax
     updated_algorithms = []
     for algo in post_training_quantization.algorithms:
@@ -76,22 +75,24 @@ def get_fq_nodes_params(model: NNCFNetwork) -> Dict[str, np.ndarray]:
         input_low, input_high = nncf_module_quantization.get_input_low_input_high()
         input_low = input_low.cpu().detach().numpy()
         input_high = input_high.cpu().detach().numpy()
-        output[str(name)] = {'input_low': input_low, 'input_high': input_high}
+        output[str(name)] = {"input_low": input_low, "input_high": input_high}
 
     return output
 
 
 @pytest.mark.parametrize(
-    'overflow_fix',
+    "overflow_fix",
     [OverflowFix.DISABLE, OverflowFix.ENABLE, OverflowFix.FIRST_LAYER],
     ids=[OverflowFix.DISABLE.value, OverflowFix.ENABLE.value, OverflowFix.FIRST_LAYER.value],
 )
 def test_overflow_fix_scales(_seed, overflow_fix):
     model = TwoConvTestModel()
-    quantized_model = min_max_quantize_model(model, quantization_params={'overflow_fix': overflow_fix})
+    quantized_model = min_max_quantize_model(
+        model, quantization_params={"advanced_parameters": AdvancedQuantizationParameters(overflow_fix=overflow_fix)}
+    )
     fq_nodes_params = get_fq_nodes_params(quantized_model)
 
-    ref_stats_name = 'TwoConvTestModel' + f'_overflow_fix_{overflow_fix.value}.json'
+    ref_stats_name = "TwoConvTestModel" + f"_overflow_fix_{overflow_fix.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
     # Unkomment lines below to generate reference for new models.
@@ -99,5 +100,5 @@ def test_overflow_fix_scales(_seed, overflow_fix):
     # dump_to_json(ref_stats_path, fq_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
-    params = ['input_low', 'input_high']
+    params = ["input_low", "input_high"]
     compare_stats(ref_nodes_params, fq_nodes_params, params)

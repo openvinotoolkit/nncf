@@ -11,21 +11,22 @@
  limitations under the License.
 """
 
-from openvino.tools.accuracy_checker.annotation_converters.ms_coco import COCO_TO_VOC, MSCocoSegmentationConverter
+from openvino.tools.accuracy_checker.annotation_converters.ms_coco import COCO_TO_VOC
+from openvino.tools.accuracy_checker.annotation_converters.ms_coco import MSCocoSegmentationConverter
 from openvino.tools.accuracy_checker.main import main
 
 
 class MSCocoSegmentationToVOCConverter(MSCocoSegmentationConverter):
-    __provider__ = 'mscoco_segmentation_to_voc'
+    __provider__ = "mscoco_segmentation_to_voc"
 
     @staticmethod
     def _read_image_annotation(image, annotations, label_id_to_label):
         image_labels, is_crowd, segmentation_polygons = MSCocoSegmentationConverter._read_image_annotation(
-            image, annotations, label_id_to_label)
+            image, annotations, label_id_to_label
+        )
 
         # Convert to VOC labels
-        image_labels = MSCocoSegmentationToVOCConverter.convert_to_voc(
-            image_labels)
+        image_labels = MSCocoSegmentationToVOCConverter.convert_to_voc(image_labels)
 
         return image_labels, is_crowd, segmentation_polygons
 

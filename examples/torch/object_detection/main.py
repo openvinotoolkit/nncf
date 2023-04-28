@@ -20,6 +20,7 @@ import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils import data
 
+from examples.common.paths import configure_paths
 from examples.common.sample_config import SampleConfig
 from examples.common.sample_config import create_sample_config
 from examples.torch.common import restricted_pickle_module
@@ -41,9 +42,8 @@ from examples.torch.common.optimizer import make_optimizer
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
-from examples.torch.common.utils import configure_paths
 from examples.torch.common.utils import create_code_snapshot
-from examples.torch.common.utils import get_name
+from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_on_first_rank
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import log_common_mlflow_params
@@ -80,21 +80,22 @@ def get_option(args, config, key, default=None):
 def get_argument_parser():
     parser = get_common_argument_parser()
 
-    parser.add_argument('--basenet', default='', help='pretrained base model, should be located in save_folder')
-    parser.add_argument('--test-interval', default=1, type=int, help='test interval')
+    parser.add_argument("--basenet", default="", help="pretrained base model, should be located in save_folder")
+    parser.add_argument("--test-interval", default=1, type=int, help="test interval")
     parser.add_argument("--dataset", help="Dataset to use.", choices=["voc", "coco"], default=None)
-    parser.add_argument('--train_imgs', help='path to training images or VOC root directory')
-    parser.add_argument('--train_anno', help='path to training annotations or VOC root directory')
-    parser.add_argument('--test_imgs', help='path to testing images or VOC root directory')
-    parser.add_argument('--test_anno', help='path to testing annotations or VOC root directory')
+    parser.add_argument("--train_imgs", help="path to training images or VOC root directory")
+    parser.add_argument("--train_anno", help="path to training annotations or VOC root directory")
+    parser.add_argument("--test_imgs", help="path to testing images or VOC root directory")
+    parser.add_argument("--test_anno", help="path to testing annotations or VOC root directory")
     return parser
+
 
 def main(argv):
     parser = get_argument_parser()
     args = parse_args(parser, argv)
     config = create_sample_config(args, parser)
 
-    configure_paths(config)
+    configure_paths(config, get_run_name(config))
     source_root = Path(__file__).absolute().parents[2]  # nncf root
     create_code_snapshot(source_root, osp.join(config.log_dir, "snapshot.tar.gz"))
 
@@ -133,7 +134,7 @@ def main_worker(current_gpu, config):
 
     criterion = MultiBoxLoss(
         config,
-        config['num_classes'],
+        config["num_classes"],
         overlap_thresh=0.5,
         prior_for_matching=True,
         bkg_label=0,
@@ -141,7 +142,7 @@ def main_worker(current_gpu, config):
         neg_pos=3,
         neg_overlap=0.5,
         encode_target=False,
-        device=config.device
+        device=config.device,
     )
 
     train_data_loader = test_data_loader = None
@@ -153,7 +154,7 @@ def main_worker(current_gpu, config):
 
     pretrained = is_pretrained_model_requested(config)
 
-    is_export_only = 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode)
+    is_export_only = "export" in config.mode and ("train" not in config.mode and "test" not in config.mode)
     if is_export_only:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
@@ -165,18 +166,30 @@ def main_worker(current_gpu, config):
 
         def autoq_test_fn(model, eval_loader):
             # RL is maximization, change the loss polarity
-            return -1 * test_net(model, config.device, eval_loader, distributed=config.distributed,
-                                 loss_inference=True, criterion=criterion)
+            return -1 * test_net(
+                model,
+                config.device,
+                eval_loader,
+                distributed=config.distributed,
+                loss_inference=True,
+                criterion=criterion,
+            )
 
         def model_eval_fn(model):
             model.eval()
-            mAP = test_net(model, config.device, test_data_loader,
-                           distributed=config.distributed, criterion=criterion)
+            mAP = test_net(model, config.device, test_data_loader, distributed=config.distributed, criterion=criterion)
             return mAP
 
         nncf_config = register_default_init_args(
-            nncf_config, init_data_loader, criterion=criterion, criterion_fn=criterion_fn,
-            autoq_eval_fn=autoq_test_fn, val_loader=test_data_loader, model_eval_fn=model_eval_fn, device=config.device)
+            nncf_config,
+            init_data_loader,
+            criterion=criterion,
+            criterion_fn=criterion_fn,
+            autoq_eval_fn=autoq_test_fn,
+            val_loader=test_data_loader,
+            model_eval_fn=model_eval_fn,
+            device=config.device,
+        )
 
     ##################
     # Prepare model
@@ -203,28 +216,27 @@ def main_worker(current_gpu, config):
     # Load additional checkpoint data
     #################################
 
-    if resuming_checkpoint_path is not None and 'train' in config.mode:
-        optimizer.load_state_dict(resuming_checkpoint.get('optimizer', optimizer.state_dict()))
-        config.start_epoch = resuming_checkpoint.get('epoch', 0) + 1
+    if resuming_checkpoint_path is not None and "train" in config.mode:
+        optimizer.load_state_dict(resuming_checkpoint.get("optimizer", optimizer.state_dict()))
+        config.start_epoch = resuming_checkpoint.get("epoch", 0) + 1
 
     log_common_mlflow_params(config)
 
     if is_export_only:
         export_model(compression_ctrl.strip(), config.to_onnx)
-        logger.info(f'Saved to {config.to_onnx}')
+        logger.info(f"Saved to {config.to_onnx}")
         return
 
     if is_main_process():
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    if 'train' in config.mode and is_accuracy_aware_training(config):
+    if "train" in config.mode and is_accuracy_aware_training(config):
         # validation function that returns the target metric value
         # pylint: disable=E1123
         def validate_fn(model, epoch):
             model.eval()
-            mAP = test_net(model, config.device, test_data_loader,
-                           distributed=config.distributed)
+            mAP = test_net(model, config.device, test_data_loader, distributed=config.distributed)
             model.train()
             return mAP
 
@@ -235,8 +247,18 @@ def main_worker(current_gpu, config):
             loc_loss = 0
             conf_loss = 0
             epoch_size = len(train_data_loader)
-            train_epoch(compression_ctrl, model, config, train_data_loader, criterion, optimizer,
-                        epoch_size, epoch, loc_loss, conf_loss)
+            train_epoch(
+                compression_ctrl,
+                model,
+                config,
+                train_data_loader,
+                criterion,
+                optimizer,
+                epoch_size,
+                epoch,
+                loc_loss,
+                conf_loss,
+            )
 
         # function that initializes optimizers & lr schedulers to start training
         def configure_optimizers_fn():
@@ -245,46 +267,56 @@ def main_worker(current_gpu, config):
             return optimizer, lr_scheduler
 
         acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
-        net = acc_aware_training_loop.run(net,
-                                          train_epoch_fn=train_epoch_fn,
-                                          validate_fn=validate_fn,
-                                          configure_optimizers_fn=configure_optimizers_fn,
-                                          tensorboard_writer=config.tb,
-                                          log_dir=config.log_dir)
-        logger.info(f'Compressed model statistics:\n{acc_aware_training_loop.statistics.to_str()}')
-    elif 'train' in config.mode:
+        net = acc_aware_training_loop.run(
+            net,
+            train_epoch_fn=train_epoch_fn,
+            validate_fn=validate_fn,
+            configure_optimizers_fn=configure_optimizers_fn,
+            tensorboard_writer=config.tb,
+            log_dir=config.log_dir,
+        )
+        logger.info(f"Compressed model statistics:\n{acc_aware_training_loop.statistics.to_str()}")
+    elif "train" in config.mode:
         train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
 
-    if 'test' in config.mode:
+    if "test" in config.mode:
         with torch.no_grad():
             val_net = net
             net.eval()
-            if config['ssd_params'].get('loss_inference', False):
-                model_loss = test_net(val_net, config.device, test_data_loader, distributed=config.distributed,
-                                      loss_inference=True, criterion=criterion)
+            if config["ssd_params"].get("loss_inference", False):
+                model_loss = test_net(
+                    val_net,
+                    config.device,
+                    test_data_loader,
+                    distributed=config.distributed,
+                    loss_inference=True,
+                    criterion=criterion,
+                )
                 logger.info("Final model loss: {:.3f}".format(model_loss))
             else:
                 mAp = test_net(val_net, config.device, test_data_loader, distributed=config.distributed)
                 if config.metrics_dump is not None:
                     write_metrics(mAp, config.metrics_dump)
 
-    if 'export' in config.mode:
+    if "export" in config.mode:
         export_model(compression_ctrl.strip(), config.to_onnx)
-        logger.info(f'Saved to {config.to_onnx}')
+        logger.info(f"Saved to {config.to_onnx}")
 
 
 def create_dataloaders(config):
-    logger.info('Loading Dataset...')
+    logger.info("Loading Dataset...")
     train_dataset = get_training_dataset(config.dataset, config.train_anno, config.train_imgs, config)
     logger.info("Loaded {} training images".format(len(train_dataset)))
     if config.distributed:
         sampler_seed = 0 if config.seed is None else config.seed
         dist_sampler_shuffle = config.seed is None
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
-                                                                        num_replicas=config.ngpus_per_node,
-                                                                        rank=config.rank,
-                                                                        seed=sampler_seed,
-                                                                        shuffle=dist_sampler_shuffle)
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            train_dataset,
+            num_replicas=config.ngpus_per_node,
+            rank=config.rank,
+            seed=sampler_seed,
+            shuffle=dist_sampler_shuffle,
+        )
     else:
         train_sampler = None
 
@@ -292,12 +324,13 @@ def create_dataloaders(config):
 
     def create_train_data_loader(batch_size):
         return data.DataLoader(
-            train_dataset, batch_size,
+            train_dataset,
+            batch_size,
             num_workers=config.workers,
             shuffle=train_shuffle,
             collate_fn=detection_collate,
             pin_memory=True,
-            sampler=train_sampler
+            sampler=train_sampler,
         )
 
     train_data_loader = create_train_data_loader(config.batch_size)
@@ -313,26 +346,25 @@ def create_dataloaders(config):
     else:
         test_sampler = torch.utils.data.SequentialSampler(test_dataset)
     test_data_loader = data.DataLoader(
-        test_dataset, config.batch_size,
+        test_dataset,
+        config.batch_size,
         num_workers=config.workers,
         shuffle=False,
         collate_fn=detection_collate,
         pin_memory=True,
         drop_last=False,
-        sampler=test_sampler
+        sampler=test_sampler,
     )
     return test_data_loader, train_data_loader, init_data_loader
 
 
-def create_model(config: SampleConfig,
-                 resuming_checkpoint: dict = None):
+def create_model(config: SampleConfig, resuming_checkpoint: dict = None):
     input_info_list = create_input_infos(config.nncf_config)
     image_size = input_info_list[0].shape[-1]
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
-    weights = config.get('weights')
+    weights = config.get("weights")
     if weights:
-        sd = torch.load(weights, map_location='cpu',
-                        pickle_module=restricted_pickle_module)
+        sd = torch.load(weights, map_location="cpu", pickle_module=restricted_pickle_module)
         sd = sd["state_dict"]
         load_state(ssd_net, sd)
 
@@ -348,9 +380,9 @@ def create_model(config: SampleConfig,
 
 
 def train_step(batch_iterator, compression_ctrl, config, criterion, net, train_data_loader):
-    batch_loss_l = torch.tensor(0.).to(config.device)
-    batch_loss_c = torch.tensor(0.).to(config.device)
-    batch_loss = torch.tensor(0.).to(config.device)
+    batch_loss_l = torch.tensor(0.0).to(config.device)
+    batch_loss_c = torch.tensor(0.0).to(config.device)
+    batch_loss = torch.tensor(0.0).to(config.device)
     # load train data
     try:
         images, targets = next(batch_iterator)
@@ -382,7 +414,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
     conf_loss = 0
 
     epoch_size = len(train_data_loader)
-    logger.info('Training {} on {} dataset...'.format(config.model, train_data_loader.dataset.name))
+    logger.info("Training {} on {} dataset...".format(config.model, train_data_loader.dataset.name))
 
     best_mAp = 0
     best_compression_stage = CompressionStage.UNCOMPRESSED
@@ -390,13 +422,23 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
     if config.test_interval is None:
         test_freq_in_epochs = 1
 
-    max_epochs = config['epochs']
+    max_epochs = config["epochs"]
 
     for epoch in range(config.start_epoch, max_epochs):
         compression_ctrl.scheduler.epoch_step(epoch)
 
-        train_epoch(compression_ctrl, net, config, train_data_loader, criterion, optimizer,
-                    epoch_size, epoch, loc_loss, conf_loss)
+        train_epoch(
+            compression_ctrl,
+            net,
+            config,
+            train_data_loader,
+            criterion,
+            optimizer,
+            epoch_size,
+            epoch,
+            loc_loss,
+            conf_loss,
+        )
 
         if is_main_process():
             logger.info(compression_ctrl.statistics().to_str())
@@ -418,19 +460,19 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                 net.train()
 
         if is_on_first_rank(config):
-            logger.info('Saving state, epoch: {}'.format(epoch))
+            logger.info("Saving state, epoch: {}".format(epoch))
 
-            checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_name(config)))
-            torch.save({
-                MODEL_STATE_ATTR: net.state_dict(),
-                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
-                'optimizer': optimizer.state_dict(),
-                'epoch': epoch,
-            }, str(checkpoint_file_path))
-            make_additional_checkpoints(checkpoint_file_path,
-                                        is_best=is_best,
-                                        epoch=epoch + 1,
-                                        config=config)
+            checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_run_name(config)))
+            torch.save(
+                {
+                    MODEL_STATE_ATTR: net.state_dict(),
+                    COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
+                    "optimizer": optimizer.state_dict(),
+                    "epoch": epoch,
+                },
+                str(checkpoint_file_path),
+            )
+            make_additional_checkpoints(checkpoint_file_path, is_best=is_best, epoch=epoch + 1, config=config)
 
         # Learning rate scheduling should be applied after optimizer’s update
         if not isinstance(lr_scheduler, ReduceLROnPlateau):
@@ -442,8 +484,9 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
         write_metrics(best_mAp, config.metrics_dump)
 
 
-def train_epoch(compression_ctrl, net, config, train_data_loader, criterion, optimizer,
-                epoch_size, epoch, loc_loss, conf_loss):
+def train_epoch(
+    compression_ctrl, net, config, train_data_loader, criterion, optimizer, epoch_size, epoch, loc_loss, conf_loss
+):
     batch_iterator = iter(train_data_loader)
     t_start = time.time()
 
@@ -451,7 +494,8 @@ def train_epoch(compression_ctrl, net, config, train_data_loader, criterion, opt
         compression_ctrl.scheduler.step()
         optimizer.zero_grad()
         batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp = train_step(
-            batch_iterator, compression_ctrl, config, criterion, net, train_data_loader)
+            batch_iterator, compression_ctrl, config, criterion, net, train_data_loader
+        )
         optimizer.step()
 
         model_loss = batch_loss_l + batch_loss_c
@@ -468,11 +512,18 @@ def train_epoch(compression_ctrl, net, config, train_data_loader, criterion, opt
             t_finish = time.time()
             t_elapsed = t_finish - t_start
             t_start = time.time()
-            logger.info('{}: iter {} epoch {} || Loss: {:.4} || Time {:.4}s || lr: {} || CR loss: {}'.format(
-                config.rank, iteration, epoch, model_loss.item(), t_elapsed, optimizer.param_groups[0]['lr'],
-                loss_comp.item() if isinstance(loss_comp, torch.Tensor) else loss_comp
-            ))
+            logger.info(
+                "{}: iter {} epoch {} || Loss: {:.4} || Time {:.4}s || lr: {} || CR loss: {}".format(
+                    config.rank,
+                    iteration,
+                    epoch,
+                    model_loss.item(),
+                    t_elapsed,
+                    optimizer.param_groups[0]["lr"],
+                    loss_comp.item() if isinstance(loss_comp, torch.Tensor) else loss_comp,
+                )
+            )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv[1:])

@@ -12,6 +12,7 @@
 """
 
 import math
+
 import tensorflow as tf
 
 from examples.tensorflow.common.object_detection.utils import box_utils
@@ -40,8 +41,7 @@ def pad_to_fixed_size(input_tensor, size, constant_values=0):
         padding_shape.append(tf.shape(input=input_tensor)[i])
 
     # Pads input tensor to the fixed first dimension.
-    paddings = tf.cast(constant_values * tf.ones(padding_shape),
-                       input_tensor.dtype)
+    paddings = tf.cast(constant_values * tf.ones(padding_shape), input_tensor.dtype)
     padded_tensor = tf.concat([input_tensor, paddings], 0)
     output_shape = input_shape
     output_shape[0] = size
@@ -50,9 +50,7 @@ def pad_to_fixed_size(input_tensor, size, constant_values=0):
     return padded_tensor
 
 
-def normalize_image(image,
-                    offset=(0.485, 0.456, 0.406),
-                    scale=(0.229, 0.224, 0.225)):
+def normalize_image(image, offset=(0.485, 0.456, 0.406), scale=(0.229, 0.224, 0.225)):
     """Normalizes the image to zero mean and unit variance."""
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     offset = tf.constant(offset)
@@ -83,23 +81,21 @@ def compute_padded_size(desired_size, stride):
         [height, width] of the padded output image size.
     """
     if isinstance(desired_size, (list, tuple)):
-        padded_size = [
-            int(math.ceil(d * 1.0 / stride) * stride) for d in desired_size
-        ]
+        padded_size = [int(math.ceil(d * 1.0 / stride) * stride) for d in desired_size]
     else:
-        padded_size = tf.cast(
-            tf.math.ceil(tf.cast(desired_size, tf.float32) / stride) * stride,
-            tf.int32)
+        padded_size = tf.cast(tf.math.ceil(tf.cast(desired_size, tf.float32) / stride) * stride, tf.int32)
     return padded_size
 
 
-def resize_and_crop_image(image,
-                          desired_size,
-                          padded_size,
-                          aug_scale_min=1.0,
-                          aug_scale_max=1.0,
-                          seed=1,
-                          method=tf.image.ResizeMethod.BILINEAR):
+def resize_and_crop_image(
+    image,
+    desired_size,
+    padded_size,
+    aug_scale_min=1.0,
+    aug_scale_max=1.0,
+    seed=1,
+    method=tf.image.ResizeMethod.BILINEAR,
+):
     """
     Resizes the input image to output size.
 
@@ -134,9 +130,9 @@ def resize_and_crop_image(image,
         the scaling factory, which is the ratio of
         scaled dimension / original dimension.
     """
-    with tf.name_scope('resize_and_crop_image'):
+    with tf.name_scope("resize_and_crop_image"):
         image_size = tf.cast(tf.shape(input=image)[0:2], tf.float32)
-        random_jittering = (aug_scale_min != 1.0 or aug_scale_max != 1.0)
+        random_jittering = aug_scale_min != 1.0 or aug_scale_max != 1.0
 
         if random_jittering:
             random_scale = tf.random.uniform([], aug_scale_min, aug_scale_max, tf.float32, seed)
@@ -144,8 +140,7 @@ def resize_and_crop_image(image,
         else:
             scaled_size = desired_size
 
-        scale = tf.minimum(scaled_size[0] / image_size[0],
-                          scaled_size[1] / image_size[1])
+        scale = tf.minimum(scaled_size[0] / image_size[0], scaled_size[1] / image_size[1])
         scaled_size = tf.round(image_size * scale)
 
         # Computes 2D image_scale.
@@ -155,40 +150,44 @@ def resize_and_crop_image(image,
         # desired_size.
         if random_jittering:
             max_offset = scaled_size - desired_size
-            max_offset = tf.where(
-                tf.less(max_offset, 0), tf.zeros_like(max_offset), max_offset)
-            offset = max_offset * tf.random.uniform([2,], 0, 1, tf.float32, seed)
+            max_offset = tf.where(tf.less(max_offset, 0), tf.zeros_like(max_offset), max_offset)
+            offset = max_offset * tf.random.uniform(
+                [
+                    2,
+                ],
+                0,
+                1,
+                tf.float32,
+                seed,
+            )
             offset = tf.cast(offset, tf.int32)
         else:
             offset = tf.zeros((2,), tf.int32)
 
-        scaled_image = tf.image.resize(
-            image, tf.cast(scaled_size, tf.int32), method=method)
+        scaled_image = tf.image.resize(image, tf.cast(scaled_size, tf.int32), method=method)
 
         if random_jittering:
-            scaled_image = scaled_image[offset[0]:offset[0] + desired_size[0],
-                                        offset[1]:offset[1] + desired_size[1], :]
+            scaled_image = scaled_image[
+                offset[0] : offset[0] + desired_size[0], offset[1] : offset[1] + desired_size[1], :
+            ]
 
-        output_image = tf.image.pad_to_bounding_box(scaled_image, 0, 0,
-                                                    padded_size[0], padded_size[1])
+        output_image = tf.image.pad_to_bounding_box(scaled_image, 0, 0, padded_size[0], padded_size[1])
 
-        image_info = tf.stack([
-            image_size,
-            tf.cast(desired_size, tf.float32), image_scale,
-            tf.cast(offset, tf.float32)
-        ])
+        image_info = tf.stack([image_size, tf.cast(desired_size, tf.float32), image_scale, tf.cast(offset, tf.float32)])
 
         return output_image, image_info
 
 
-def resize_and_crop_image_v2(image,
-                             short_side,
-                             long_side,
-                             padded_size,
-                             aug_scale_min=1.0,
-                             aug_scale_max=1.0,
-                             seed=1,
-                             method=tf.image.ResizeMethod.BILINEAR):
+def resize_and_crop_image_v2(
+    image,
+    short_side,
+    long_side,
+    padded_size,
+    aug_scale_min=1.0,
+    aug_scale_max=1.0,
+    seed=1,
+    method=tf.image.ResizeMethod.BILINEAR,
+):
     """
     Resizes the input image to output size (Faster R-CNN style).
 
@@ -226,22 +225,21 @@ def resize_and_crop_image_v2(image,
         the scaling factor, which is the ratio of
         scaled dimension / original dimension.
     """
-    with tf.name_scope('resize_and_crop_image_v2'):
+    with tf.name_scope("resize_and_crop_image_v2"):
         image_size = tf.cast(tf.shape(image)[0:2], tf.float32)
 
-        scale_using_short_side = (
-            short_side / tf.math.minimum(image_size[0], image_size[1]))
-        scale_using_long_side = (
-            long_side / tf.math.maximum(image_size[0], image_size[1]))
+        scale_using_short_side = short_side / tf.math.minimum(image_size[0], image_size[1])
+        scale_using_long_side = long_side / tf.math.maximum(image_size[0], image_size[1])
 
         scaled_size = tf.math.round(image_size * scale_using_short_side)
         scaled_size = tf.where(
-            tf.math.greater(
-                tf.math.maximum(scaled_size[0], scaled_size[1]), long_side),
-            tf.math.round(image_size * scale_using_long_side), scaled_size)
+            tf.math.greater(tf.math.maximum(scaled_size[0], scaled_size[1]), long_side),
+            tf.math.round(image_size * scale_using_long_side),
+            scaled_size,
+        )
         desired_size = scaled_size
 
-        random_jittering = (aug_scale_min != 1.0 or aug_scale_max != 1.0)
+        random_jittering = aug_scale_min != 1.0 or aug_scale_max != 1.0
 
         if random_jittering:
             random_scale = tf.random.uniform([], aug_scale_min, aug_scale_max, tf.float32, seed)
@@ -254,28 +252,30 @@ def resize_and_crop_image_v2(image,
         # desired_size.
         if random_jittering:
             max_offset = scaled_size - desired_size
-            max_offset = tf.where(
-                tf.math.less(max_offset, 0), tf.zeros_like(max_offset), max_offset)
-            offset = max_offset * tf.random.uniform([2,], 0, 1, tf.float32, seed)
+            max_offset = tf.where(tf.math.less(max_offset, 0), tf.zeros_like(max_offset), max_offset)
+            offset = max_offset * tf.random.uniform(
+                [
+                    2,
+                ],
+                0,
+                1,
+                tf.float32,
+                seed,
+            )
             offset = tf.cast(offset, tf.int32)
         else:
             offset = tf.zeros((2,), tf.int32)
 
-        scaled_image = tf.image.resize(
-            image, tf.cast(scaled_size, tf.int32), method=method)
+        scaled_image = tf.image.resize(image, tf.cast(scaled_size, tf.int32), method=method)
 
         if random_jittering:
-            scaled_image = scaled_image[offset[0]:offset[0] + desired_size[0],
-                                        offset[1]:offset[1] + desired_size[1], :]
+            scaled_image = scaled_image[
+                offset[0] : offset[0] + desired_size[0], offset[1] : offset[1] + desired_size[1], :
+            ]
 
-        output_image = tf.image.pad_to_bounding_box(scaled_image, 0, 0,
-                                                    padded_size[0], padded_size[1])
+        output_image = tf.image.pad_to_bounding_box(scaled_image, 0, 0, padded_size[0], padded_size[1])
 
-        image_info = tf.stack([
-            image_size,
-            tf.cast(desired_size, tf.float32), image_scale,
-            tf.cast(offset, tf.float32)
-        ])
+        image_info = tf.stack([image_size, tf.cast(desired_size, tf.float32), image_scale, tf.cast(offset, tf.float32)])
 
         return output_image, image_info
 
@@ -336,7 +336,7 @@ def random_horizontal_flip(image, boxes=None, masks=None, seed=None):
             row is in the form of [ymin, xmin, ymax, xmax].
         :return: Flipped boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1) # pylint: disable=E1120, E1124
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)  # pylint: disable=E1120, E1124
         flipped_xmin = tf.subtract(1.0, xmax)
         flipped_xmax = tf.subtract(1.0, xmin)
         flipped_boxes = tf.concat([ymin, flipped_xmin, ymax, flipped_xmax], 1)
@@ -353,32 +353,27 @@ def random_horizontal_flip(image, boxes=None, masks=None, seed=None):
         """
         return masks[:, :, ::-1]
 
-    with tf.name_scope('RandomHorizontalFlip'):
+    with tf.name_scope("RandomHorizontalFlip"):
         result = []
         # random variable defining whether to do flip or not
         do_a_flip_random = tf.greater(tf.random.uniform([], seed=seed, dtype=tf.float32), 0.5)
 
         # flip image
-        image = tf.cond(
-            pred=do_a_flip_random,
-            true_fn=lambda: _flip_image(image),
-            false_fn=lambda: image)
+        image = tf.cond(pred=do_a_flip_random, true_fn=lambda: _flip_image(image), false_fn=lambda: image)
         result.append(image)
 
         # flip boxes
         if boxes is not None:
             boxes = tf.cond(
-                pred=do_a_flip_random,
-                true_fn=lambda: _flip_boxes_left_right(boxes),
-                false_fn=lambda: boxes)
+                pred=do_a_flip_random, true_fn=lambda: _flip_boxes_left_right(boxes), false_fn=lambda: boxes
+            )
             result.append(boxes)
 
         # flip masks
         if masks is not None:
             masks = tf.cond(
-                pred=do_a_flip_random,
-                true_fn=lambda: _flip_masks_left_right(masks),
-                false_fn=lambda: masks)
+                pred=do_a_flip_random, true_fn=lambda: _flip_masks_left_right(masks), false_fn=lambda: masks
+            )
             result.append(masks)
 
         return tuple(result)
@@ -418,7 +413,7 @@ def random_vertical_flip(image, boxes=None, masks=None, probability=0.1, seed=No
         Returns:
           Flipped boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1) # pylint: disable=E1120, E1124
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)  # pylint: disable=E1120, E1124
         flipped_ymin = tf.subtract(1.0, ymax)
         flipped_ymax = tf.subtract(1.0, ymin)
         flipped_boxes = tf.concat([flipped_ymin, xmin, flipped_ymax, xmax], 1)
@@ -435,32 +430,23 @@ def random_vertical_flip(image, boxes=None, masks=None, probability=0.1, seed=No
         """
         return masks[:, ::-1, :]
 
-    with tf.name_scope('RandomVerticalFlip'):
+    with tf.name_scope("RandomVerticalFlip"):
         result = []
         # random variable defining whether to do flip or not
         do_a_flip_random = tf.greater(tf.random.uniform([], seed=seed, dtype=tf.float32), probability)
 
         # flip image
-        image = tf.cond(
-            pred=do_a_flip_random,
-            true_fn=lambda: _flip_image(image),
-            false_fn=lambda: image)
+        image = tf.cond(pred=do_a_flip_random, true_fn=lambda: _flip_image(image), false_fn=lambda: image)
         result.append(image)
 
         # flip boxes
         if boxes is not None:
-            boxes = tf.cond(
-                pred=do_a_flip_random,
-                true_fn=lambda: _flip_boxes_up_down(boxes),
-                false_fn=lambda: boxes)
+            boxes = tf.cond(pred=do_a_flip_random, true_fn=lambda: _flip_boxes_up_down(boxes), false_fn=lambda: boxes)
             result.append(boxes)
 
         # flip masks
         if masks is not None:
-            masks = tf.cond(
-                pred=do_a_flip_random,
-                true_fn=lambda: _flip_masks_up_down(masks),
-                false_fn=lambda: masks)
+            masks = tf.cond(pred=do_a_flip_random, true_fn=lambda: _flip_masks_up_down(masks), false_fn=lambda: masks)
             result.append(masks)
 
         return tuple(result)
@@ -510,13 +496,12 @@ def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None)
                Each row is in the form of [ymin, xmin, ymax, xmax].
         :return: Rotated boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1) # pylint: disable=E1120, E1124
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)  # pylint: disable=E1120, E1124
         rotated_ymin = tf.subtract(1.0, xmax)
         rotated_ymax = tf.subtract(1.0, xmin)
         rotated_xmin = ymin
         rotated_xmax = ymax
-        rotated_boxes = tf.concat(
-          [rotated_ymin, rotated_xmin, rotated_ymax, rotated_xmax], 1)
+        rotated_boxes = tf.concat([rotated_ymin, rotated_xmin, rotated_ymax, rotated_xmax], 1)
         return rotated_boxes
 
     def _rot90_masks(masks):
@@ -531,34 +516,29 @@ def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None)
         masks = tf.transpose(masks, [0, 2, 1])
         return masks[:, ::-1, :]
 
-    with tf.name_scope('RandomRotation90'):
+    with tf.name_scope("RandomRotation90"):
         result = []
         # random variable defining whether to do flip or not
         do_a_rot90_random = tf.greater(tf.random.uniform([], seed=seed, dtype=tf.float32), probability)
 
         # flip image
-        image = tf.cond(do_a_rot90_random, lambda: _rot90_image(image),
-                        lambda: image)
+        image = tf.cond(do_a_rot90_random, lambda: _rot90_image(image), lambda: image)
         result.append(image)
 
         # flip boxes
         if boxes is not None:
-            boxes = tf.cond(do_a_rot90_random, lambda: _rot90_boxes(boxes),
-                          lambda: boxes)
+            boxes = tf.cond(do_a_rot90_random, lambda: _rot90_boxes(boxes), lambda: boxes)
             result.append(boxes)
 
         # flip masks
         if masks is not None:
-            masks = tf.cond(do_a_rot90_random, lambda: _rot90_masks(masks),
-                          lambda: masks)
+            masks = tf.cond(do_a_rot90_random, lambda: _rot90_masks(masks), lambda: masks)
             result.append(masks)
 
         return tuple(result)
 
 
-def random_adjust_brightness(image,
-                             max_delta=0.2,
-                             seed=None):
+def random_adjust_brightness(image, max_delta=0.2, seed=None):
     """
     Randomly adjusts brightness.
     Makes sure the output image is still between 0 and 255.
@@ -569,7 +549,7 @@ def random_adjust_brightness(image,
     :param seed: random seed.
     :return image: image which is the same shape as input image.
     """
-    with tf.name_scope('RandomAdjustBrightness'):
+    with tf.name_scope("RandomAdjustBrightness"):
         # random variable from [-max_delta, max_delta]
         delta = tf.random.uniform([], -max_delta, max_delta, tf.float32, seed)
 
@@ -583,10 +563,7 @@ def random_adjust_brightness(image,
         return image
 
 
-def random_adjust_saturation(image,
-                             min_delta=0.8,
-                             max_delta=1.25,
-                             seed=None):
+def random_adjust_saturation(image, min_delta=0.8, max_delta=1.25, seed=None):
     """
     Randomly adjusts saturation.
     Makes sure the output image is still between 0 and 255.
@@ -600,20 +577,19 @@ def random_adjust_saturation(image,
     :param seed: random seed.
     :return image: image which is the same shape as input image.
     """
-    with tf.name_scope('RandomAdjustSaturation'):
+    with tf.name_scope("RandomAdjustSaturation"):
         saturation_factor = tf.random.uniform([], min_delta, max_delta, tf.float32, seed)
+
         def _adjust_saturation(image):
             image = tf.image.adjust_saturation(image / 255, saturation_factor) * 255
             image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)
             return image
+
         image = _adjust_saturation(image)
         return image
 
 
-def random_adjust_contrast(image,
-                           min_delta=0.8,
-                           max_delta=1.25,
-                           seed=None):
+def random_adjust_contrast(image, min_delta=0.8, max_delta=1.25, seed=None):
     """
     Randomly adjusts contrast.
     Makes sure the output image is still between 0 and 255.
@@ -627,19 +603,19 @@ def random_adjust_contrast(image,
     :param seed: random seed.
     :return image: image which is the same shape as input image.
     """
-    with tf.name_scope('RandomAdjustContrast'):
+    with tf.name_scope("RandomAdjustContrast"):
         contrast_factor = tf.random.uniform([], min_delta, max_delta, tf.float32, seed)
+
         def _adjust_contrast(image):
             image = tf.image.adjust_contrast(image / 255, contrast_factor) * 255
             image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)
             return image
+
         image = _adjust_contrast(image)
         return image
 
 
-def random_adjust_hue(image,
-                      max_delta=0.02,
-                      seed=None):
+def random_adjust_hue(image, max_delta=0.02, seed=None):
     """
     Randomly adjusts hue.
     Makes sure the output image is still between 0 and 255.
@@ -650,19 +626,19 @@ def random_adjust_hue(image,
     :param seed: random seed.
     :return image: image which is the same shape as input image.
     """
-    with tf.name_scope('RandomAdjustHue'):
+    with tf.name_scope("RandomAdjustHue"):
         delta = tf.random.uniform([], -max_delta, max_delta, tf.float32, seed)
+
         def _adjust_hue(image):
             image = tf.image.adjust_hue(image / 255, delta) * 255
             image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)
             return image
+
         image = _adjust_hue(image)
         return image
 
 
-def random_rgb_to_gray(image,
-                       probability=0.2,
-                       seed=None):
+def random_rgb_to_gray(image, probability=0.2, seed=None):
     """
     Changes the image from RGB to Grayscale with the given probability.
 
@@ -673,15 +649,15 @@ def random_rgb_to_gray(image,
     :param seed: random seed.
     :return image: image which is the same shape as input image.
     """
+
     def _image_to_gray(image):
         image_gray1 = tf.image.rgb_to_grayscale(image)
         image_gray3 = tf.image.grayscale_to_rgb(image_gray1)
         return image_gray3
 
-    with tf.name_scope('RandomRGBtoGray'):
+    with tf.name_scope("RandomRGBtoGray"):
         do_gray_random = tf.greater(tf.random.uniform([], seed=seed, dtype=tf.float32), probability)
 
-        image = tf.cond(do_gray_random, lambda: _image_to_gray(image),
-                        lambda: image)
+        image = tf.cond(do_gray_random, lambda: _image_to_gray(image), lambda: image)
 
     return image

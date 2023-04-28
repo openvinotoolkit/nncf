@@ -17,17 +17,16 @@ from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import min_max_quantize_model
-from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 from tests.onnx.quantization.common import mock_collect_statistics
+from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 
 
-@pytest.mark.parametrize(('model_to_test'),
-                         [ModelToTest('icnet_camvid', [1, 3, 768, 960]),
-                          ModelToTest('unet_camvid', [1, 3, 368, 480])]
-                         )
+@pytest.mark.parametrize(
+    ("model_to_test"), [ModelToTest("icnet_camvid", [1, 3, 768, 960]), ModelToTest("unet_camvid", [1, 3, 368, 480])]
+)
 def test_min_max_quantization_graph(tmp_path, mocker, model_to_test):
     mock_collect_statistics(mocker)
-    onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + '.onnx')
+    onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + ".onnx")
     original_model = load_model_topology_with_zeros_weights(onnx_model_path)
     quantized_model = min_max_quantize_model(original_model)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)

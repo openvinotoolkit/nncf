@@ -15,19 +15,22 @@ import logging
 import sys
 from contextlib import contextmanager
 
-NNCF_LOGGER_NAME = 'nncf'
+NNCF_LOGGER_NAME = "nncf"
 
 nncf_logger = logging.getLogger(NNCF_LOGGER_NAME)
 nncf_logger.propagate = False
 
 stdout_handler = logging.StreamHandler(sys.stdout)
-fmt_string = '%(levelname)s:%(name)s:%(message)s'
+fmt_string = "%(levelname)s:%(name)s:%(message)s"
 fmt = logging.Formatter(fmt_string)
-fmt_no_newline = logging.Formatter(fmt_string, )
+fmt_no_newline = logging.Formatter(
+    fmt_string,
+)
 stdout_handler.setFormatter(fmt)
 stdout_handler.setLevel(logging.INFO)
 nncf_logger.addHandler(stdout_handler)
 nncf_logger.setLevel(logging.INFO)
+
 
 def set_log_level(level: int):
     """
@@ -47,7 +50,7 @@ def set_log_file(filename: str):
 
     :param filename: Path to the file to save the log.
     """
-    file_handler = logging.FileHandler(filename)
+    file_handler = logging.FileHandler(filename, encoding="utf-8")
     file_handler.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
     nncf_logger.addHandler(file_handler)
 
@@ -83,4 +86,5 @@ def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: s
     nncf_logger.warning(
         f"NNCF provides best results with {backend}=={bkc_version}, "
         f"while current {backend} version is {current_version}. "
-        f"If you encounter issues, consider switching to {backend}=={bkc_version}")
+        f"If you encounter issues, consider switching to {backend}=={bkc_version}"
+    )
