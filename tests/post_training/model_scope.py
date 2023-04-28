@@ -64,10 +64,11 @@ def get_validation_scope() -> dict:
 
 VALIDATION_SCOPE = get_validation_scope()
 
+
 def get_cached_metric(report_model_name, metric_name):
     cached_metric = -1
     try:
-        cached_metric = VALIDATION_SCOPE[report_model_name]['metrics'][metric_name]
+        cached_metric = VALIDATION_SCOPE[report_model_name]["metrics"][metric_name]
     except KeyError:
         pass
     return cached_metric

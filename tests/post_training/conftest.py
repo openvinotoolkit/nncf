@@ -11,26 +11,34 @@
  limitations under the License.
 """
 
-import pytest
-import numpy as np
-from typing import Dict
 from abc import abstractclassmethod
-from pathlib import Path
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Dict
+
+import numpy as np
+import pytest
+
 from tests.shared.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):
     parser.addoption("--data", action="store")
     parser.addoption("--output", action="store", default="./tmp/")
-    parser.addoption("--backends", action="store", default="TORCH,TORCH_PTQ,ONNX,OV_NATIVE,OV")
+    parser.addoption(
+        "--backends", action="store", default="TORCH,TORCH_PTQ,ONNX,OV_NATIVE,OV"
+    )
     parser.addoption(
         "--eval_fp32",
         action="store_true",
-        help="Evaluation fp32 model, by defaults used cached metric."
+        help="Evaluation fp32 model, by defaults used cached metric.",
     )
-    parser.addoption("--skip_bench", action="store_true", help="Skip the collection of performance statistics.")
+    parser.addoption(
+        "--skip_bench",
+        action="store_true",
+        help="Skip the collection of performance statistics.",
+    )
 
 
 def pytest_configure(config):
@@ -38,12 +46,12 @@ def pytest_configure(config):
 
 
 class PipelineType(Enum):
-    FP32 = 'FP32'
-    TORCH = 'Torch INT8'
-    TORCH_PTQ = 'Torch PTQ INT8'
-    ONNX = 'ONNX INT8'
-    OV_NATIVE = 'OV Native INT8'
-    OV = 'Openvino INT8'
+    FP32 = "FP32"
+    TORCH = "Torch INT8"
+    TORCH_PTQ = "Torch PTQ INT8"
+    ONNX = "ONNX INT8"
+    OV_NATIVE = "OV Native INT8"
+    OV = "Openvino INT8"
 
 
 @dataclass
@@ -75,8 +83,9 @@ class TableColumn:
 
     @classmethod
     @abstractclassmethod
-    def get_value(cls, info: Dict[PipelineType, RunInfo],
-                  target_pipeline_type: PipelineType) -> str:
+    def get_value(
+        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
+    ) -> str:
         """
         Metod describes how to retrieve column info out of RunInfo.
 
@@ -87,18 +96,20 @@ class TableColumn:
 
     @staticmethod
     def assign_default_value(func):
-        def wrapped_get_value(cls, info: Dict[PipelineType, RunInfo],
-                              target_pipeline_type: PipelineType):
+        def wrapped_get_value(
+            cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
+        ):
             if target_pipeline_type not in info:
-                return '-'
+                return "-"
             return func(cls, info, target_pipeline_type)
+
         return wrapped_get_value
 
 
 class Top1Column(TableColumn):
     @classmethod
     def name(cls):
-        return 'top 1'
+        return "top 1"
 
     @classmethod
     def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
@@ -106,15 +117,16 @@ class Top1Column(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
-    def get_value(cls, info: Dict[PipelineType, RunInfo],
-                  target_pipeline_type: PipelineType) -> str:
+    def get_value(
+        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
+    ) -> str:
         return info[target_pipeline_type].top_1
 
 
 class FPSColumn(TableColumn):
     @classmethod
     def name(cls):
-        return 'FPS'
+        return "FPS"
 
     @classmethod
     def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
@@ -122,15 +134,16 @@ class FPSColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
-    def get_value(cls, info: Dict[PipelineType, RunInfo],
-                  target_pipeline_type: PipelineType) -> str:
+    def get_value(
+        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
+    ) -> str:
         return info[target_pipeline_type].FPS
 
 
 class Top1DiffColumn(TableColumn):
     @classmethod
     def name(cls):
-        return 'top 1 diff'
+        return "top 1 diff"
 
     @classmethod
     def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
@@ -138,15 +151,16 @@ class Top1DiffColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
-    def get_value(cls, info: Dict[PipelineType, RunInfo],
-                  target_pipeline_type: PipelineType) -> str:
+    def get_value(
+        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
+    ) -> str:
         return info[PipelineType.FP32].top_1 - info[target_pipeline_type].top_1
 
 
 class FPSSpeedupColumn(TableColumn):
     @classmethod
     def name(cls):
-        return 'FPS speedup'
+        return "FPS speedup"
 
     @classmethod
     def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
@@ -154,26 +168,28 @@ class FPSSpeedupColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
-    def get_value(cls, info: Dict[PipelineType, RunInfo],
-                  target_pipeline_type: PipelineType) -> str:
+    def get_value(
+        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
+    ) -> str:
         fps = info[PipelineType.FP32].FPS
         if isinstance(fps, float) and fps > 1e-5:
             return info[target_pipeline_type].FPS / info[PipelineType.FP32].FPS
-        return 'inf'
+        return "inf"
 
 
 class StatusColumn(TableColumn):
     @classmethod
     def name(cls):
-        return 'Status'
+        return "Status"
 
     @classmethod
     def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
         return True
 
     @classmethod
-    def get_value(cls, info: Dict[PipelineType, RunInfo],
-                  target_pipeline_type: PipelineType) -> str:
+    def get_value(
+        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
+    ) -> str:
         status = []
         for pipeline_type in PipelineType:
             if pipeline_type in info:
@@ -181,20 +197,22 @@ class StatusColumn(TableColumn):
                 if stat is not None:
                     status.append(stat)
 
-        return ','.join(status)
+        return ",".join(status)
 
 
 @pytest.fixture
 def backends_list(request):
-    return request.config.getoption('--backends')
+    return request.config.getoption("--backends")
+
 
 @pytest.fixture
 def eval_fp32(request):
-    return request.config.getoption('--eval_fp32')
+    return request.config.getoption("--eval_fp32")
+
 
 @pytest.fixture
 def skip_bench(request):
-    return request.config.getoption('--skip_bench')
+    return request.config.getoption("--skip_bench")
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -202,7 +220,7 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     result = outcome.get_result()
 
-    if result.when == 'call':
+    if result.when == "call":
         test_results = item.config.test_results
         per_model_columns = [Top1Column, FPSColumn, Top1DiffColumn, FPSSpeedupColumn]
         grouped_columns = [StatusColumn]
@@ -227,9 +245,15 @@ def pytest_runtest_makereport(item, call):
 
         output_folder = Path(item.config.getoption("--output"))
         output_folder.mkdir(parents=True, exist_ok=True)
-        np.savetxt(output_folder / "results.csv", table, delimiter=",", fmt='%s', header=','.join(header))
+        np.savetxt(
+            output_folder / "results.csv",
+            table,
+            delimiter=",",
+            fmt="%s",
+            header=",".join(header),
+        )
 
 
-PTQ_TEST_ROOT = TEST_ROOT / 'post_training'
-FQ_CALCULATED_PARAMETERS_PATH = PTQ_TEST_ROOT / 'data' / 'fq_params' / 'fq_params.json'
-MODELS_SCOPE_PATH = PTQ_TEST_ROOT / 'model_scope.json'
+PTQ_TEST_ROOT = TEST_ROOT / "post_training"
+FQ_CALCULATED_PARAMETERS_PATH = PTQ_TEST_ROOT / "data" / "fq_params" / "fq_params.json"
+MODELS_SCOPE_PATH = PTQ_TEST_ROOT / "model_scope.json"
