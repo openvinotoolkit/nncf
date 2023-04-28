@@ -91,7 +91,9 @@ def find_version(*file_paths):
         try:
             repo_root = os.path.dirname(os.path.realpath(__file__))
             dev_version_id = (
-                subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=repo_root)  # nosec
+                subprocess.check_output(
+                    ["git", "rev-parse", "--short", "HEAD"], cwd=repo_root
+                )  # nosec
                 .strip()
                 .decode()
             )
@@ -136,10 +138,7 @@ TORCH_EXTRAS = [
     "torch>=1.9.1,<1.14;python_version < '3.11'",
 ]
 
-ONNX_EXTRAS = [
-    "onnx~=1.13.1",
-    "onnxruntime~=1.14.1;python_version < '3.11'"
-]
+ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]
 
 OPENVINO_EXTRAS = ["openvino-dev"]
 
@@ -184,7 +183,9 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/openvinotoolkit/nncf",
     license="Apache-2.0",
-    packages=find_packages(exclude=["tests", "tests.*", "examples", "examples.*", "tools", "tools.*"]),
+    packages=find_packages(
+        exclude=["tests", "tests.*", "examples", "examples.*", "tools", "tools.*"]
+    ),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
@@ -212,7 +213,9 @@ setup(
     include_package_data=True,
 )
 
-path_to_ninja = glob.glob(str(sysconfig.get_paths()["purelib"] + "/ninja*/ninja/data/bin/"))
+path_to_ninja = glob.glob(
+    str(sysconfig.get_paths()["purelib"] + "/ninja*/ninja/data/bin/")
+)
 if path_to_ninja:
     path_to_ninja = str(path_to_ninja[0] + "ninja")
     if not os.access(path_to_ninja, os.X_OK):
