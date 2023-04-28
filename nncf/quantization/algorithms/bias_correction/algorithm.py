@@ -117,7 +117,7 @@ class BiasCorrection(Algorithm):
 
             self._backend_entity = ONNXBiasCorrectionAlgoBackend()
         elif model_backend == BackendType.OPENVINO:
-            from nncf.openvino.quantization.algorithms.bias_correction.openvino_backend import (
+            from nncf.quantization.algorithms.bias_correction.openvino_backend import (
                 OVBiasCorrectionAlgoBackend,
             )
 
