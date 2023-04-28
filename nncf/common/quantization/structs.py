@@ -311,6 +311,9 @@ class UnifiedScaleType(Enum):
 
 @api(canonical_alias="nncf.QuantizationPreset")
 class QuantizationPreset(Enum):
+    """
+    An enum with values corresponding to the available quantization presets.
+    """
     PERFORMANCE = "performance"
     MIXED = "mixed"
 

@@ -139,7 +139,7 @@ class AdvancedQuantizationParameters:
     # backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)
 
-
+@api()
 @dataclass
 class AdvancedAccuracyRestorerParameters:
     """

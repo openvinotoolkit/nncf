@@ -20,31 +20,30 @@ ModelInput = TypeVar("ModelInput")
 @api(canonical_alias="nncf.Dataset")
 class Dataset(Generic[DataItem, ModelInput]):
     """
-    The `nncf.Dataset` class defines the interface by which compression algorithms
+    Wrapper for passing custom user datasets into NNCF algorithms.
+
+    This class defines the interface by which compression algorithms
     retrieve data items from the passed data source object. These data items are used
-    for different purposes, for example, model inference and model validation. It depends
-    on the compression algorithm.
+    for different purposes, for example, model inference and model validation, based
+    on the choice of the exact compression algorithm.
 
     If the data item has been returned from the data source per iteration and it cannot be
     used as input for model inference, the transformation function is used to extract the
     model's input from this data item. For example, in supervised learning, the data item
     usually contains both examples and labels. So transformation function should extract
     the examples from the data item.
+
+    :param data_source: The iterable object serving as the source of data items.
+    :param transform_func: The function that is used to extract the model's input
+        from the data item. The data item here is the data item that is returned from
+        the data source per iteration. This function should be passed when
+        the data item cannot be directly used as model's input. If this is not specified, then the data item
+        will be passed into the model as-is.
     """
 
     def __init__(
         self, data_source: Iterable[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
     ):
-        """
-        Initializes the `nncf.Dataset` object.
-
-        :param data_source: It is the iterable object where data items are from.
-        :param transform_func: The function that is used to extract the model's input
-            from the data item. The data item here is the data item that is returned from
-            the data source per iteration. This function should be passed when
-            the data item cannot be used as model's input. The identity function is used
-            by default.
-        """
         self._data_source = data_source
         self._transform_func = transform_func
 
