@@ -153,8 +153,7 @@ class ONNXModelTransformer(ModelTransformer):
         for output in outputs:
             edge = onnx_graph.get_edge(output)
             onnx_dtype = ONNXGraph.get_edge_dtype(edge)
-            shape = ONNXGraph.get_edge_shape(edge)
-            type_proto = onnx.helper.make_tensor_type_proto(onnx_dtype, shape=shape)
+            type_proto = onnx.helper.make_tensor_type_proto(onnx_dtype, shape=None)
             model_outputs.append(onnx.helper.make_value_info(name=output, type_proto=type_proto))
 
         graph = onnx.helper.make_graph(

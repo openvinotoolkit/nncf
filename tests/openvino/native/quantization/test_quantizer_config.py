@@ -22,7 +22,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetaty
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
 from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
-from nncf.openvino.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.models import NNCFGraphToTestSumAggregation
