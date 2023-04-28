@@ -1007,3 +1007,182 @@ class Float64InputMulModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "float64_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class NonShapeModel(ONNXReferenceModel):
+    def __init__(self):
+        input_shape = [1, 3, 32, 32]
+        model_input_name = "X"
+        model_output_name = "Y"
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
+
+        model_output_channels = 10
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_output_channels])
+
+        conv1_output_node_name = "conv"
+        conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3, 32, (3, 3)
+        rng = get_random_generator()
+        conv1_W = rng.uniform(0, 1, (conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
+        conv1_B = rng.uniform(0, 1, conv1_out_channels).astype(np.float32)
+
+        conv1_W_initializer_tensor_name = "Conv_W"
+        conv1_W_initializer_tensor = create_initializer_tensor(
+            name=conv1_W_initializer_tensor_name, tensor_array=conv1_W, data_type=onnx.TensorProto.FLOAT
+        )
+        conv1_B_initializer_tensor_name = "Conv_B"
+        conv1_B_initializer_tensor = create_initializer_tensor(
+            name=conv1_B_initializer_tensor_name, tensor_array=conv1_B, data_type=onnx.TensorProto.FLOAT
+        )
+
+        conv1_node = onnx.helper.make_node(
+            name="Conv",
+            op_type="Conv",
+            inputs=[model_input_name, conv1_W_initializer_tensor_name, conv1_B_initializer_tensor_name],
+            outputs=[conv1_output_node_name],
+            kernel_shape=conv1_kernel_shape,
+        )
+
+        relu1_output_node_name = "relu_1"
+        relu1_node = onnx.helper.make_node(
+            name="Relu1",
+            op_type="Relu",
+            inputs=[conv1_output_node_name],
+            outputs=[relu1_output_node_name],
+        )
+
+        # Shape subgraph
+        shape1_output_node_name = "shape_1"
+        shape1_node = onnx.helper.make_node(
+            name="Shape1",
+            op_type="Shape",
+            inputs=[relu1_output_node_name],
+            outputs=[shape1_output_node_name],
+        )
+        shape2_output_node_name = "shape_2"
+        shape2_node = onnx.helper.make_node(
+            name="Shape2",
+            op_type="Shape",
+            inputs=[relu1_output_node_name],
+            outputs=[shape2_output_node_name],
+        )
+        gather1_output_node_name = "gather_1"
+        gather1_indices_tensor_name = "gather_1_w"
+        gather1_indices_initializer_tensor = create_initializer_tensor(
+            name=gather1_indices_tensor_name, tensor_array=np.int64(0), data_type=onnx.TensorProto.INT64
+        )
+        gather1_node = onnx.helper.make_node(
+            name="Gather1",
+            op_type="Gather",
+            inputs=[shape1_output_node_name, gather1_indices_tensor_name],
+            outputs=[gather1_output_node_name],
+        )
+        gather2_output_node_name = "gather_2"
+        gather2_indices_tensor_name = "gather_2_w"
+        gather2_indices_initializer_tensor = create_initializer_tensor(
+            name=gather2_indices_tensor_name, tensor_array=np.int64(1), data_type=onnx.TensorProto.INT64
+        )
+        gather2_node = onnx.helper.make_node(
+            name="Gather2",
+            op_type="Gather",
+            inputs=[shape2_output_node_name, gather2_indices_tensor_name],
+            outputs=[gather2_output_node_name],
+        )
+        unsqueeze1_output_node_name = "unsqueeze_1"
+        unsqueeze1_axes_tensor_name = "unsqueeze_1_a"
+        unsqueeze1_axes_initializer_tensor = create_initializer_tensor(
+            name=unsqueeze1_axes_tensor_name, tensor_array=np.int64([0]), data_type=onnx.TensorProto.INT64
+        )
+        unsqueeze1_node = onnx.helper.make_node(
+            name="Unsqueeze1",
+            op_type="Unsqueeze",
+            inputs=[gather1_output_node_name, unsqueeze1_axes_tensor_name],
+            outputs=[unsqueeze1_output_node_name],
+        )
+        unsqueeze2_output_node_name = "unsqueeze_2"
+        unsqueeze2_axes_tensor_name = "unsqueeze_2_a"
+        unsqueeze2_axes_initializer_tensor = create_initializer_tensor(
+            name=unsqueeze2_axes_tensor_name, tensor_array=np.int64([0]), data_type=onnx.TensorProto.INT64
+        )
+        unsqueeze2_node = onnx.helper.make_node(
+            name="Unsqueeze2",
+            op_type="Unsqueeze",
+            inputs=[gather2_output_node_name, unsqueeze2_axes_tensor_name],
+            outputs=[unsqueeze2_output_node_name],
+        )
+        concat_output_node_name = "concat"
+        concat_node = onnx.helper.make_node(
+            name="Concat",
+            op_type="Concat",
+            inputs=[unsqueeze1_output_node_name, unsqueeze2_output_node_name],
+            outputs=[concat_output_node_name],
+            axis=0,
+        )
+
+        avg_pool_output_node_name = "global_average_pool"
+        avg_pool_node = onnx.helper.make_node(
+            name="GlobalAveragePool",
+            op_type="GlobalAveragePool",
+            inputs=[relu1_output_node_name],
+            outputs=[avg_pool_output_node_name],
+        )
+
+        reshape_output_node_name = "reshape"
+        reshape_node = onnx.helper.make_node(
+            name="Reshape",
+            op_type="Reshape",
+            inputs=[avg_pool_output_node_name, concat_output_node_name],
+            outputs=[reshape_output_node_name],
+        )
+
+        rng = np.random.default_rng(seed=0)
+        shape = [conv1_out_channels, model_output_channels]
+        gemm_w_tensor = create_initializer_tensor(
+            name="W", tensor_array=rng.uniform(0, 1, shape).astype(np.float32), data_type=onnx.TensorProto.FLOAT
+        )
+        gemm_output_node_name = "gemm"
+        gemm_node = onnx.helper.make_node(
+            name="Gemm", op_type="Gemm", inputs=[reshape_output_node_name, "W"], outputs=[gemm_output_node_name]
+        )
+
+        relu2_node = onnx.helper.make_node(
+            name="Relu2",
+            op_type="Relu",
+            inputs=[gemm_output_node_name],
+            outputs=[model_output_name],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[
+                conv1_node,
+                relu1_node,
+                shape1_node,
+                shape2_node,
+                gather1_node,
+                gather2_node,
+                unsqueeze1_node,
+                unsqueeze2_node,
+                concat_node,
+                avg_pool_node,
+                reshape_node,
+                gemm_node,
+                relu2_node,
+            ],
+            name="NonShapeModel",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[
+                conv1_W_initializer_tensor,
+                conv1_B_initializer_tensor,
+                gather1_indices_initializer_tensor,
+                gather2_indices_initializer_tensor,
+                unsqueeze1_axes_initializer_tensor,
+                unsqueeze2_axes_initializer_tensor,
+                gemm_w_tensor,
+            ],
+        )
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "non_shape_model.dot")
