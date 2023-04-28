@@ -11,7 +11,7 @@
  limitations under the License.
 """
 # Since we are not reading XML, but creating it, the package security message is irrelevant
-import xml.etree.ElementTree as ET # nosec
+import xml.etree.ElementTree as ET  # nosec
 from typing import Callable, Dict, List, Optional, Tuple
 
 from nncf.common.graph import NNCFGraph
