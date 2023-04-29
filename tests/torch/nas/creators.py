@@ -1,26 +1,17 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from functools import partial
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
-from tests.torch.test_models import mobilenet_v2
-from tests.torch.test_models import mobilenet_v3_small
 
 from examples.torch.common.models import efficient_net
 from nncf import NNCFConfig
@@ -28,10 +19,12 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import E
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingController
-from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import \
-    create_compressed_model_from_algo_names
-from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import \
-    ProgressiveShrinkingController
+from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import (
+    create_compressed_model_from_algo_names,
+)
+from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import (
+    ProgressiveShrinkingController,
+)
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -47,14 +40,15 @@ from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import TwoConvModel
 from tests.torch.nas.models.tcn import TCN
 from tests.torch.nas.models.vgg_k7 import VGG11_K7
+from tests.torch.test_models import mobilenet_v2
+from tests.torch.test_models import mobilenet_v3_small
 
 
 # TODO(nlyalyus) reduce number of creators and descriptors. create wrapper of TrainingAlgorithm  (ticket 81015)
-def create_bootstrap_training_model_and_ctrl(model,
-                                             nncf_config: NNCFConfig,
-                                             register_bn_adapt: bool = True) \
-                                             -> Tuple[NNCFNetwork, BNASTrainingController]:
-    algo_name = nncf_config.get('bootstrapNAS', {}).get('training', {}).get('algorithm', 'progressive_shrinking')
+def create_bootstrap_training_model_and_ctrl(
+    model, nncf_config: NNCFConfig, register_bn_adapt: bool = True
+) -> Tuple[NNCFNetwork, BNASTrainingController]:
+    algo_name = nncf_config.get("bootstrapNAS", {}).get("training", {}).get("algorithm", "progressive_shrinking")
     nncf_network = create_nncf_network(model, nncf_config)
     if register_bn_adapt:
         register_bn_adaptation_init_args(nncf_config)
@@ -69,20 +63,12 @@ def create_bootstrap_training_model_and_ctrl(model,
 def create_bnas_model_and_ctrl_by_test_desc(desc: MultiElasticityTestDesc):
     config = {
         "input_info": {"sample_size": desc.input_sizes},
-        "bootstrapNAS": {
-            "training": {
-                "elasticity": {
-                    "depth": {
-                        'skipped_blocks': desc.blocks_to_skip
-                    }
-                }
-            }
-        }
+        "bootstrapNAS": {"training": {"elasticity": {"depth": {"skipped_blocks": desc.blocks_to_skip}}}},
     }
-    depth_config = config['bootstrapNAS']['training']['elasticity']['depth']
+    depth_config = config["bootstrapNAS"]["training"]["elasticity"]["depth"]
     if not desc.blocks_to_skip:
-        del depth_config['skipped_blocks']
-    config['bootstrapNAS']['training']['elasticity'].update(desc.algo_params)
+        del depth_config["skipped_blocks"]
+    config["bootstrapNAS"]["training"]["elasticity"].update(desc.algo_params)
 
     nncf_config = NNCFConfig.from_dict(config)
     model = desc.model_creator()
@@ -103,32 +89,32 @@ def build_elastic_model_from_handler(nncf_network, handler):
 
 
 NAS_MODEL_DESCS = {
-    'resnet50': [test_models.ResNet50, [1, 3, 32, 32]],
-    'resnet50_imagenet': [test_models.ResNet50, [1, 3, 224, 224]],
-    'resnet18': [test_models.ResNet18, [1, 3, 32, 32]],
-    'inception_v3': [partial(test_models.Inception3, num_classes=10), [1, 3, 299, 299]],
-    'vgg11': [partial(test_models.VGG, 'VGG11'), [1, 3, 32, 32]],
-    'vgg11_k7': [VGG11_K7, [1, 3, 32, 32]],  # for testing elastic kernel
-    'densenet_121': [test_models.DenseNet121, [1, 3, 32, 32]],
-    'mobilenet_v2': [mobilenet_v2, [1, 3, 32, 32]],
-    'mobilenet_v3_small': [mobilenet_v3_small, [1, 3, 32, 32]],
-    'efficient_net_b0': [partial(efficient_net, model_name='efficientnet-b0', pretrained=False), [1, 3, 240, 240]],
-    'squeezenet1_0': [test_models.squeezenet1_0, [1, 3, 32, 32]],
-    'shufflenetv2': [partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]],
-    'ssd_mobilenet': [test_models.ssd_mobilenet, [2, 3, 300, 300]],
-    'resnext29_32x4d': [test_models.ResNeXt29_32x4d, [1, 3, 32, 32]],
-    'pnasnetb': [test_models.PNASNetB, [1, 3, 32, 32]],
-    'unet': [test_models.UNet, [1, 3, 360, 480]],
-    'ssd_vgg': [test_models.ssd_vgg300, [2, 3, 300, 300]],
-    'tcn': [partial(TCN, input_size=1, output_size=10, num_channels=[25] * 8, kernel_size=7, dropout=0.05), [1, 1, 3]]
+    "resnet50": [test_models.ResNet50, [1, 3, 32, 32]],
+    "resnet50_imagenet": [test_models.ResNet50, [1, 3, 224, 224]],
+    "resnet18": [test_models.ResNet18, [1, 3, 32, 32]],
+    "inception_v3": [partial(test_models.Inception3, num_classes=10), [1, 3, 299, 299]],
+    "vgg11": [partial(test_models.VGG, "VGG11"), [1, 3, 32, 32]],
+    "vgg11_k7": [VGG11_K7, [1, 3, 32, 32]],  # for testing elastic kernel
+    "densenet_121": [test_models.DenseNet121, [1, 3, 32, 32]],
+    "mobilenet_v2": [mobilenet_v2, [1, 3, 32, 32]],
+    "mobilenet_v3_small": [mobilenet_v3_small, [1, 3, 32, 32]],
+    "efficient_net_b0": [partial(efficient_net, model_name="efficientnet-b0", pretrained=False), [1, 3, 240, 240]],
+    "squeezenet1_0": [test_models.squeezenet1_0, [1, 3, 32, 32]],
+    "shufflenetv2": [partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]],
+    "ssd_mobilenet": [test_models.ssd_mobilenet, [2, 3, 300, 300]],
+    "resnext29_32x4d": [test_models.ResNeXt29_32x4d, [1, 3, 32, 32]],
+    "pnasnetb": [test_models.PNASNetB, [1, 3, 32, 32]],
+    "unet": [test_models.UNet, [1, 3, 360, 480]],
+    "ssd_vgg": [test_models.ssd_vgg300, [2, 3, 300, 300]],
+    "tcn": [partial(TCN, input_size=1, output_size=10, num_channels=[25] * 8, kernel_size=7, dropout=0.05), [1, 1, 3]],
 }
 
 
 def create_bootstrap_nas_training_algo(model_name) -> Tuple[NNCFNetwork, ProgressiveShrinkingController, Callable]:
     model = NAS_MODEL_DESCS[model_name][0]()
     nncf_config = get_empty_config(input_sample_sizes=NAS_MODEL_DESCS[model_name][1])
-    nncf_config['bootstrapNAS'] = {'training': {'algorithm': 'progressive_shrinking'}}
-    nncf_config['input_info'][0].update({'filler': 'random'})
+    nncf_config["bootstrapNAS"] = {"training": {"algorithm": "progressive_shrinking"}}
+    nncf_config["input_info"][0].update({"filler": "random"})
 
     input_info_list = create_input_infos(nncf_config)
     dummy_forward = create_dummy_forward_fn(input_info_list)
@@ -136,12 +122,12 @@ def create_bootstrap_nas_training_algo(model_name) -> Tuple[NNCFNetwork, Progres
     return compressed_model, training_ctrl, dummy_forward
 
 
-def create_supernet(model_creator: Callable,
-                    input_sample_sizes: List[int],
-                    elasticity_params: Optional[Dict[str, Any]] = None) -> Tuple[MultiElasticityHandler, NNCFNetwork]:
+def create_supernet(
+    model_creator: Callable, input_sample_sizes: List[int], elasticity_params: Optional[Dict[str, Any]] = None
+) -> Tuple[MultiElasticityHandler, NNCFNetwork]:
     params = {} if elasticity_params is None else elasticity_params
     config = get_empty_config(input_sample_sizes=input_sample_sizes)
-    config['bootstrapNAS'] = {'training': {'elasticity': params}}
+    config["bootstrapNAS"] = {"training": {"elasticity": params}}
     model = model_creator()
     model, ctrl = create_bootstrap_training_model_and_ctrl(model, config)
     return ctrl.multi_elasticity_handler, model

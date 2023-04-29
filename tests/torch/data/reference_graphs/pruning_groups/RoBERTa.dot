@@ -6,16 +6,16 @@ Consumers: ", style=filled];
 Producers: 19
 Consumers: ", style=filled];
 2 [color=grey, label="Block: S:64__O:0
-Producers: 20,19
+Producers: 19,20
 Consumers: ", style=filled];
 3 [color=green, label="Block: S:64__O:0
-Producers: 20,23,19
+Producers: 19,20,23
 Consumers: 38", style=filled];
 4 [color=grey, label="Block: S:1__O:64
 Producers: 19
 Consumers: ", style=filled];
 5 [color=green, label="Block: S:1__O:64
-Producers: 20,19
+Producers: 19,20
 Consumers: 29", style=filled];
 6 [color=grey, label="Block: S:1__O:0
 Producers: 20

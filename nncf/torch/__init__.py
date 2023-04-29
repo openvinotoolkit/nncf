@@ -1,23 +1,32 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# isort: off
+# pylint: skip-file
+
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
-# pylint: skip-file
+
 from nncf.version import BKC_TORCH_VERSION
 
 import torch
 from pkg_resources import parse_version
-torch_version = parse_version(torch.__version__).base_version
+
+try:
+    _torch_version = torch.__version__
+    torch_version = parse_version(_torch_version).base_version
+except:
+    nncf_logger.debug("Could not parse torch version")
+    _torch_version = "0.0.0"
+    torch_version = parse_version(_torch_version).base_version
+
 if parse_version(BKC_TORCH_VERSION).base_version != torch_version:
     warn_bkc_version_mismatch("torch", BKC_TORCH_VERSION, torch.__version__)
 

@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import collections
 from typing import List, Optional
@@ -18,9 +16,11 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 
-def transform_to_inference_graph(nncf_graph: NNCFGraph,
-                                 shapeof_metatypes: List[OperatorMetatype],
-                                 read_variable_metatypes: Optional[List[OperatorMetatype]] = None) -> NNCFGraph:
+def transform_to_inference_graph(
+    nncf_graph: NNCFGraph,
+    shapeof_metatypes: List[OperatorMetatype],
+    read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
+) -> NNCFGraph:
     """
     This method contains pipeline of the passes that uses to provide inference graph without constant flows.
 
@@ -35,9 +35,11 @@ def transform_to_inference_graph(nncf_graph: NNCFGraph,
     return inference_nncf_graph
 
 
-def remove_shapeof_subgraphs(nncf_graph: NNCFGraph,
-                             shapeof_metatypes: List[OperatorMetatype],
-                             read_variable_metatypes: Optional[List[OperatorMetatype]] = None) -> NNCFGraph:
+def remove_shapeof_subgraphs(
+    nncf_graph: NNCFGraph,
+    shapeof_metatypes: List[OperatorMetatype],
+    read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
+) -> NNCFGraph:
     """
     Removes the ShapeOf subgraphs from the provided NNCFGraph instance.
 
@@ -82,8 +84,9 @@ def remove_shapeof_subgraphs(nncf_graph: NNCFGraph,
     return nncf_graph
 
 
-def filter_constant_nodes(nncf_graph: NNCFGraph,
-                          read_variable_metatypes: Optional[List[OperatorMetatype]] = None) -> NNCFGraph:
+def filter_constant_nodes(
+    nncf_graph: NNCFGraph, read_variable_metatypes: Optional[List[OperatorMetatype]] = None
+) -> NNCFGraph:
     """
     Removes all Constant nodes from NNCFGraph, making it inference graph.
     The traversing starts from the input nodes and nodes with weights.

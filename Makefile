@@ -39,8 +39,7 @@ test-install-onnx:
 install-openvino-test:
 	pip install -U pip
 	pip install -e .[openvino]
-	git clone https://github.com/openvinotoolkit/open_model_zoo.git
-	pip install open_model_zoo/tools/model_tools
+	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git#subdirectory=tools/model_tools
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/experimental/openvino/bert/requirements.txt
@@ -55,7 +54,7 @@ test-openvino:
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
 		nncf/openvino/                      \
-		nncf/experimental/openvino_native/  \
+		nncf/experimental/openvino/  \
 		tests/openvino/                     \
 		examples/experimental/openvino/
 
@@ -129,3 +128,9 @@ test-install-torch-gpu:
 	pytest tests/cross_fw/install -s        \
 		--backend torch                     \
 		--junitxml ${JUNITXML_PATH}
+
+###############################################################################
+# Pre commit check
+pre-commit:
+	pip install pre-commit==3.2.2
+	pre-commit run -a

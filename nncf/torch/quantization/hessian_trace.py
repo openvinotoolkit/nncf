@@ -1,31 +1,29 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from functools import partial
-from typing import List, Union, Any, Callable
+from typing import Any, Callable, List, Union
 
 import torch
-
-from nncf.torch.utils import get_model_device
-from nncf.torch.utils import is_tensor
-from nncf.torch.nested_objects_traversal import objwalk
 from torch import Tensor
 from torch import nn
 from torch.nn import Parameter
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf.torch.initialization import wrap_dataloader_for_init, PTInitializingDataLoader
 from nncf.common.logging import nncf_logger
+from nncf.torch.initialization import PTInitializingDataLoader
+from nncf.torch.initialization import wrap_dataloader_for_init
+from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_tensor
 
 
 class ParameterHandler:
@@ -40,7 +38,7 @@ class ParameterHandler:
     def get_gradients(self) -> List[Union[Tensor, float]]:
         gradients = []
         for parameter in self.parameters:
-            gradients.append(0. if parameter.grad is None else parameter.grad + 0.)
+            gradients.append(0.0 if parameter.grad is None else parameter.grad + 0.0)
         return gradients
 
     def sample_rademacher_like_params(self) -> List[Tensor]:
@@ -55,10 +53,15 @@ class ParameterHandler:
 
 
 class GradientsCalculator:
-
-    def __init__(self, model: nn.Module, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
-                 data_loader: PTInitializingDataLoader, num_data_iter: int,
-                 paramerter_handler: ParameterHandler):
+    def __init__(
+        self,
+        model: nn.Module,
+        criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor],
+        criterion: _Loss,
+        data_loader: PTInitializingDataLoader,
+        num_data_iter: int,
+        paramerter_handler: ParameterHandler,
+    ):
         self._model = model
         self._criterion_fn = criterion_fn
         self._criterion = criterion
@@ -100,18 +103,24 @@ class HessianTraceEstimator:
     Performs estimation of Hessian Trace based on Hutchinson algorithm.
     """
 
-    def __init__(self, model: nn.Module, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
-                 device: str, data_loader: DataLoader,
-                 num_data_points: int):
+    def __init__(
+        self,
+        model: nn.Module,
+        criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor],
+        criterion: _Loss,
+        device: str,
+        data_loader: DataLoader,
+        num_data_points: int,
+    ):
         self._model = model
         parameters = [p for p in model.parameters() if p.requires_grad]
         self._parameter_handler = ParameterHandler(parameters, device)
         self._batch_size = data_loader.batch_size
         data_loader = wrap_dataloader_for_init(data_loader)
         self._num_data_iter = num_data_points // self._batch_size if num_data_points >= self._batch_size else 1
-        self._gradients_calculator = GradientsCalculator(self._model, criterion_fn, criterion, data_loader,
-                                                         self._num_data_iter,
-                                                         self._parameter_handler)
+        self._gradients_calculator = GradientsCalculator(
+            self._model, criterion_fn, criterion, data_loader, self._num_data_iter, self._parameter_handler
+        )
         self._diff_eps = 1e-6
 
     def get_average_traces(self, max_iter=500, tolerance=1e-5) -> Tensor:
@@ -122,7 +131,7 @@ class HessianTraceEstimator:
         It's calculated  between mean average trace from previous iteration and current one.
         :return: Tensor with average hessian trace per parameter
         """
-        avg_total_trace = 0.
+        avg_total_trace = 0.0
         avg_traces_per_iter = []  # type: List[Tensor]
         mean_avg_traces_per_param = None
 
@@ -136,7 +145,7 @@ class HessianTraceEstimator:
             if diff_avg < tolerance:
                 return mean_avg_traces_per_param
             avg_total_trace = mean_avg_total_trace
-            nncf_logger.debug(f'{i}# difference_avg={diff_avg} avg_trace={avg_total_trace}')
+            nncf_logger.debug(f"{i}# difference_avg={diff_avg} avg_trace={avg_total_trace}")
 
         return mean_avg_traces_per_param
 
@@ -145,12 +154,10 @@ class HessianTraceEstimator:
         vhp = self._parameter_handler.sample_normal_like_params()
         num_all_data = self._num_data_iter * self._batch_size
         for gradients in self._gradients_calculator:
-            vhp_curr = torch.autograd.grad(gradients,
-                                           self._parameter_handler.parameters,
-                                           grad_outputs=v,
-                                           only_inputs=True,
-                                           retain_graph=False)
-            vhp = [a + b * float(self._batch_size) + 0. for a, b in zip(vhp, vhp_curr)]
+            vhp_curr = torch.autograd.grad(
+                gradients, self._parameter_handler.parameters, grad_outputs=v, only_inputs=True, retain_graph=False
+            )
+            vhp = [a + b * float(self._batch_size) + 0.0 for a, b in zip(vhp, vhp_curr)]
         vhp = [a / float(num_all_data) for a in vhp]
         avg_traces_per_param = torch.stack([torch.sum(a * b) / a.size().numel() for (a, b) in zip(vhp, v)])
         return avg_traces_per_param

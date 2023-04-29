@@ -1,21 +1,19 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from pathlib import Path
-from typing import Dict
-from typing import List
+from typing import Dict, List
 
 import networkx as nx
+
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.experimental.common.pruning.propagation_data import PropagationGroup
 
@@ -27,7 +25,7 @@ class BlockHierarchy:
 
     PROPAGATION_GROUP = "propagation_group"
 
-    def __init__(self,  root_groups: List[PropagationGroup]) -> None:
+    def __init__(self, root_groups: List[PropagationGroup]) -> None:
         """
         Creates hierarchy of propagation blocks/groups by traversing children in the given root groups.
 
@@ -54,7 +52,6 @@ class BlockHierarchy:
                 groups.append(data[self.PROPAGATION_GROUP])
         return groups
 
-
     def visualize_graph(self, path: Path) -> None:
         out_graph = self._get_graph_for_visualization()
         write_dot_graph(out_graph, path)
@@ -67,9 +64,7 @@ class BlockHierarchy:
         """
         parent_graph_id = str(self._id_counter)
         is_leaf = not parent_group.has_children()
-        attrs = {
-            self.PROPAGATION_GROUP: parent_group
-        }
+        attrs = {self.PROPAGATION_GROUP: parent_group}
         self._graph.add_node(parent_graph_id, **attrs)
         self._visited_block_ids_map[id(parent_group)] = parent_graph_id
         if not is_leaf:
@@ -93,10 +88,10 @@ class BlockHierarchy:
         for node_id, node_data in self._graph.nodes(data=True):
             group = node_data[self.PROPAGATION_GROUP]
             is_leaf = not group.has_children()
-            color = 'grey'
+            color = "grey"
             if is_leaf:
-                color = 'red' if group.is_invalid else 'green'
-            out_graph.add_node(node_id, label=f"\"{str(group)}\"", color=color, style='filled')
+                color = "red" if group.is_invalid else "green"
+            out_graph.add_node(node_id, label=f'"{str(group)}"', color=color, style="filled")
 
         for u, v in self._graph.edges:
             out_graph.add_edge(u, v)

@@ -1,60 +1,54 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import ctypes
+import functools
 import json
 import os
 import os.path as osp
 from collections import OrderedDict
 from copy import deepcopy
 from pathlib import Path
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Tuple
-from typing import Union
+from typing import Callable, Dict, List, Tuple, Union
 
-import functools
 import numpy as np
 import pandas as pd
 import torch
-from torch import nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 from natsort import natsorted
 from sklearn.preprocessing import MinMaxScaler
+from torch import nn
 
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.config.extractors import extract_bn_adaptation_init_params
-from nncf.common.logging import nncf_logger
 from nncf.common.hardware.config import HWConfigType
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.common.logging import nncf_logger
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
+from nncf.common.utils.os import safe_open
+from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.initialization import PartialDataLoader
-from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.algo import ExperimentalQuantizationController
 from nncf.torch.quantization.algo import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationController
-from nncf.common.utils.os import safe_open
+from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.compression_ratio import CompressionRatioCalculator
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizerId
-from nncf.common.quantization.structs import WeightQuantizerId
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
 
 
 def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
@@ -63,8 +57,10 @@ def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
             return _qid
     return None
 
+
 class ModelSizeCalculator:
     FLOAT_BITWIDTH = ctypes.sizeof(ctypes.c_float) * 8
+
     def __init__(self, qmodel: NNCFNetwork, per_quantizer_config_space: Dict[QuantizerId, List[QuantizerConfig]]):
         self._bw_space_map = OrderedDict()
         self._nparam_map = OrderedDict()
@@ -74,8 +70,7 @@ class ModelSizeCalculator:
                 m = qmodel.nncf.get_containing_module(qid.target_node_name)
                 self._nparam_map[qid] = np.prod(m.weight.size())
 
-        self.min_model_size, self.max_model_size = \
-            self._calc_min_max_model_size()
+        self.min_model_size, self.max_model_size = self._calc_min_max_model_size()
 
         self.fp_model_size = self.get_uniform_bit_model_size(ModelSizeCalculator.FLOAT_BITWIDTH)
 
@@ -89,7 +84,7 @@ class ModelSizeCalculator:
         return min_size, max_size
 
     def get_uniform_bit_model_size(self, uniform_bitwidth: int) -> np.int64:
-        return np.sum(np.array(list(self._nparam_map.values())*uniform_bitwidth))
+        return np.sum(np.array(list(self._nparam_map.values()) * uniform_bitwidth))
 
     def get_model_size(self, per_quantizer_bw: Dict[QuantizerId, int]) -> np.int64:
         model_size = 0
@@ -99,22 +94,27 @@ class ModelSizeCalculator:
             else:
                 nncf_logger.warning(
                     f"[ModelSizeCalculator] Missing Bitwidth of QID: {str(qid)}, "
-                    f"using {ModelSizeCalculator.FLOAT_BITWIDTH} bits")
+                    f"using {ModelSizeCalculator.FLOAT_BITWIDTH} bits"
+                )
                 model_size += nparam * ModelSizeCalculator.FLOAT_BITWIDTH
         return model_size
 
     def get_model_size_ratio(self, per_quantizer_bw: Dict[QuantizerId, int]) -> np.float64:
-        return self.get_model_size(per_quantizer_bw)/self.fp_model_size
+        return self.get_model_size(per_quantizer_bw) / self.fp_model_size
+
 
 class QuantizationEnvParams:
-    def __init__(self, compression_ratio: float,
-                 eval_subset_ratio: float,
-                 skip_constraint: bool,
-                 performant_bw: bool,
-                 finetune: bool,
-                 bits: List[int],
-                 dump_init_precision_data: bool = False,
-                 log_dir: str = None):
+    def __init__(
+        self,
+        compression_ratio: float,
+        eval_subset_ratio: float,
+        skip_constraint: bool,
+        performant_bw: bool,
+        finetune: bool,
+        bits: List[int],
+        dump_init_precision_data: bool = False,
+        log_dir: str = None,
+    ):
         self.compression_ratio = compression_ratio
         self.eval_subset_ratio = eval_subset_ratio
         self.skip_constraint = skip_constraint
@@ -127,16 +127,16 @@ class QuantizationEnvParams:
 
 class QuantizationEnv:
     # pylint:disable=too-many-branches,too-many-statements
-    def __init__(self,
-                 model: NNCFNetwork,
-                 quantization_controller: ExperimentalQuantizationController,
-                 hw_precision_constraints: HardwareQuantizationConstraints,
-                 eval_loader: torch.utils.data.DataLoader,
-                 eval_fn: Callable[[nn.Module, torch.utils.data.DataLoader], float],
-                 hw_config_type: HWConfigType,
-                 params: QuantizationEnvParams
-                 ):
-
+    def __init__(
+        self,
+        model: NNCFNetwork,
+        quantization_controller: ExperimentalQuantizationController,
+        hw_precision_constraints: HardwareQuantizationConstraints,
+        eval_loader: torch.utils.data.DataLoader,
+        eval_fn: Callable[[nn.Module, torch.utils.data.DataLoader], float],
+        hw_config_type: HWConfigType,
+        params: QuantizationEnvParams,
+    ):
         nncf_logger.info("[Q.Env] Instantiating NNCF Quantization Environment...")
         self.qctrl = quantization_controller
         self.qmodel = model
@@ -176,8 +176,9 @@ class QuantizationEnv:
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 
         # Create mapping of QuantizerId to the space of the corresponding quantizer's allowed qconfigs
-        #pylint:disable=line-too-long
-        self.qconfig_space_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())  # type: Dict[QuantizerId, List[QuantizerConfig]]
+        self.qconfig_space_map = OrderedDict.fromkeys(
+            self.qctrl.all_quantizations.keys()
+        )  # type: Dict[QuantizerId, List[QuantizerConfig]]
         if self.hw_cfg_type is None:
             for qid in self.qconfig_space_map.keys():
                 conf = self.qctrl.all_quantizations[qid].get_quantizer_config()
@@ -199,7 +200,8 @@ class QuantizationEnv:
                             f"{';'.join([str(qconf) for qconf in qconf_list])} for same bitwidth {bitwidth} for "
                             f"quantizer {str(qid)} - AutoQ can currently only choose among bitwidths, but not within "
                             f"quantizer configuration space with the same bitwidths. Selecting {str(target_qconf)} as "
-                            f"the target configuration for bitwidth {bitwidth}")
+                            f"the target configuration for bitwidth {bitwidth}"
+                        )
                     conf_list_to_set.append(target_qconf)
 
                 self.qconfig_space_map[qid] = conf_list_to_set
@@ -213,8 +215,9 @@ class QuantizationEnv:
         if self.master_df.isnull().values.any():
             raise ValueError("Q.Env Master Dataframe has null value(s)")
 
-        assert len(self.quantizer_table) == len(self.qctrl.all_quantizations), \
-            "Number of Quantizer is not tally between quantizer table and quantization controller"
+        assert len(self.quantizer_table) == len(
+            self.qctrl.all_quantizations
+        ), "Number of Quantizer is not tally between quantizer table and quantization controller"
 
         # MinMaxScaler for State Embedding
         self.state_scaler = MinMaxScaler()
@@ -232,16 +235,20 @@ class QuantizationEnv:
         self.target_model_size = self.orig_model_size * self.compression_ratio
 
         if self.target_model_size < self.min_model_size and self.target_model_size > self.max_model_size:
-            raise ValueError("Model Size Ratio {} is out of bound ({}, {})"
-                             .format(self.compression_ratio,
-                                     self.min_model_size / self.orig_model_size,
-                                     self.max_model_size / self.orig_model_size))
+            raise ValueError(
+                "Model Size Ratio {} is out of bound ({}, {})".format(
+                    self.compression_ratio,
+                    self.min_model_size / self.orig_model_size,
+                    self.max_model_size / self.orig_model_size,
+                )
+            )
 
         # Compression Ratio Calculation (BOP relative to 8-bit)
         self.compression_ratio_calculator = CompressionRatioCalculator(
             self.qmodel.nncf.get_flops_per_module(),
             self.qctrl.get_quantizer_setup_for_current_state(),
-            self.qctrl.groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id)
+            self.qctrl.groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id,
+        )
 
         # Evaluate and store metric score of pretrained model
         self._evaluate_pretrained_model()
@@ -264,18 +271,17 @@ class QuantizationEnv:
         # End of QuantizationEnv.__init__()
         # --------------------------------------------------------------------------------------------------------------
 
-
     def reset(self):
         self.collected_strategy = []
-        self.master_df['action'] = max(self.model_bitwidth_space)
-        self.master_df['prev_action'] = 0
-        self.master_df['unconstrained_action'] = 0
-
+        self.master_df["action"] = max(self.model_bitwidth_space)
+        self.master_df["prev_action"] = 0
+        self.master_df["unconstrained_action"] = 0
 
     def _create_quantizer_table(self) -> pd.DataFrame:
         def get_hook(qid, exec_order_list):
             def register_quantizer_exec_order(module, input_, output, qid, exec_order_list):
                 exec_order_list.append(qid)
+
             return functools.partial(register_quantizer_exec_order, qid=qid, exec_order_list=exec_order_list)
 
         # Create a mapping of qid to its adjacent quantizer group id
@@ -283,8 +289,9 @@ class QuantizationEnv:
         for qid in self.qctrl.all_quantizations:
             adjq_gid_map[qid] = self.groups_of_adjacent_quantizers.get_group_id_for_quantizer(qid)
 
-        assert len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
-            "both qconfig_space_map and adjq_gid_map must have exact keys."
+        assert (
+            len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0
+        ), "both qconfig_space_map and adjq_gid_map must have exact keys."
 
         # By design, AutoQ requires quantizers in execution order.
         # RL assumes that state satisfies Markov assumption in which
@@ -295,11 +302,7 @@ class QuantizationEnv:
         quantizers_in_exec_order = []
         hooklist = []
         for qid, qmod in self.qctrl.all_quantizations.items():
-            hooklist.append(
-                qmod.register_forward_hook(
-                    get_hook(qid, quantizers_in_exec_order)
-                )
-            )
+            hooklist.append(qmod.register_forward_hook(get_hook(qid, quantizers_in_exec_order)))
         self.qmodel.nncf.do_dummy_forward(force_eval=True)
         for h in hooklist:
             h.remove()
@@ -310,29 +313,30 @@ class QuantizationEnv:
             gid = adjq_gid_map[qid]
 
             d[idx_str] = OrderedDict()
-            d[idx_str]['qid'] = str(qid)
-            d[idx_str]['gid'] = gid
-            d[idx_str]['qconf_space'] = self.qconfig_space_map[qid]
-            d[idx_str]['qp_id_set'] = self.qctrl.module_id_to_qp_id_translation_dict[qid]
-            d[idx_str]['state_scope'] = qid.target_node_name
+            d[idx_str]["qid"] = str(qid)
+            d[idx_str]["gid"] = gid
+            d[idx_str]["qconf_space"] = self.qconfig_space_map[qid]
+            d[idx_str]["qp_id_set"] = self.qctrl.module_id_to_qp_id_translation_dict[qid]
+            d[idx_str]["state_scope"] = qid.target_node_name
 
         # quantizer_table index is QuantizerId in string prepended with its quantize node id in NNCFGraph
-        df = pd.DataFrame.from_dict(d, orient='index')
-        df['qid_obj'] = df['qid'].apply(lambda x: find_qid_by_str(self.qctrl, x))
-        df['qmodule'] = df['qid_obj'].apply(lambda x: self.qctrl.all_quantizations[x])
-        df['is_wt_quantizer'] = df['qid_obj'].apply(lambda x: x in self.qctrl.weight_quantizers)
-        df['state_module'] = df['state_scope'].apply(self.qmodel.nncf.get_containing_module)
+        df = pd.DataFrame.from_dict(d, orient="index")
+        df["qid_obj"] = df["qid"].apply(lambda x: find_qid_by_str(self.qctrl, x))
+        df["qmodule"] = df["qid_obj"].apply(lambda x: self.qctrl.all_quantizations[x])
+        df["is_wt_quantizer"] = df["qid_obj"].apply(lambda x: x in self.qctrl.weight_quantizers)
+        df["state_module"] = df["state_scope"].apply(self.qmodel.nncf.get_containing_module)
 
         return df
 
-
-    def _get_state_space(self,
-                         quantization_controller: QuantizationController,
-                         quantized_model: NNCFNetwork,
-                         quantizer_table: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
+    def _get_state_space(
+        self,
+        quantization_controller: QuantizationController,
+        quantized_model: NNCFNetwork,
+        quantizer_table: pd.DataFrame,
+    ) -> Tuple[pd.DataFrame, List[str]]:
         def annotate_learnable_module_io_shape(model):
             def annotate_io_shape(module, input_, output):
-                if hasattr(module, 'weight') or isinstance(module, BaseQuantizer):
+                if hasattr(module, "weight") or isinstance(module, BaseQuantizer):
                     module.input_shape_ = input_[0].shape
                     module.output_shape_ = output.shape
 
@@ -344,26 +348,25 @@ class QuantizationEnv:
         annotate_learnable_module_io_shape(quantized_model)
 
         # State Embedding Extraction
-        #---------------------------
+        # ---------------------------
         df = quantizer_table
         layer_attr_df = df.apply(self._get_layer_attr, axis=1)
-        layer_attr_df['layer_idx'] = np.array(range(len(layer_attr_df)))
-        layer_attr_df['weight_quantizer'] = df['is_wt_quantizer'].astype('float')
+        layer_attr_df["layer_idx"] = np.array(range(len(layer_attr_df)))
+        layer_attr_df["weight_quantizer"] = df["is_wt_quantizer"].astype("float")
         state_list = layer_attr_df.columns.to_list()
 
         # create master dataframe
-        master_df = pd.concat([df, layer_attr_df], axis='columns')
+        master_df = pd.concat([df, layer_attr_df], axis="columns")
 
         # Annotate a min and a max value in prev_action before minmaxscaler fitting
-        master_df.loc[master_df.index[0], 'prev_action'] = max(self.model_bitwidth_space)
-        master_df.loc[master_df.index[-1], 'prev_action'] = min(self.model_bitwidth_space)
+        master_df.loc[master_df.index[0], "prev_action"] = max(self.model_bitwidth_space)
+        master_df.loc[master_df.index[-1], "prev_action"] = min(self.model_bitwidth_space)
 
         # add GEMM Ops to weight quantizer
-        master_df['n_op'] = master_df['state_scope'].map(self.qmodel.nncf.get_flops_per_module())
-        master_df['n_op'] = master_df['n_op'].fillna(0)
+        master_df["n_op"] = master_df["state_scope"].map(self.qmodel.nncf.get_flops_per_module())
+        master_df["n_op"] = master_df["n_op"].fillna(0)
 
         return master_df, state_list
-
 
     def _get_layer_attr(self, row: pd.Series) -> pd.Series:
         m = row.state_module
@@ -372,24 +375,24 @@ class QuantizationEnv:
 
         if isinstance(qid, WeightQuantizerId):
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-                feature['conv_dw'] = int(m.weight.shape[1] == m.groups) # 1.0 for depthwise, 0.0 for other conv2d
-                feature['cin'] = m.weight.shape[1]
-                feature['cout'] = m.weight.shape[0]
-                feature['stride'] = m.stride[0]
-                feature['kernel'] = m.kernel_size[0]
-                feature['param'] = np.prod(m.weight.size())
-                feature['ifm_size'] = np.prod(m.input_shape_[-2:]) # H*W
-                feature['prev_action'] = 0.0 # placeholder
+                feature["conv_dw"] = int(m.weight.shape[1] == m.groups)  # 1.0 for depthwise, 0.0 for other conv2d
+                feature["cin"] = m.weight.shape[1]
+                feature["cout"] = m.weight.shape[0]
+                feature["stride"] = m.stride[0]
+                feature["kernel"] = m.kernel_size[0]
+                feature["param"] = np.prod(m.weight.size())
+                feature["ifm_size"] = np.prod(m.input_shape_[-2:])  # H*W
+                feature["prev_action"] = 0.0  # placeholder
 
             elif isinstance(m, nn.Linear):
-                feature['conv_dw'] = 0.0
-                feature['cin'] = m.in_features
-                feature['cout'] = m.out_features
-                feature['stride'] = 0.0
-                feature['kernel'] = 1.0
-                feature['param'] = np.prod(m.weight.size())
-                feature['ifm_size'] = np.prod(m.input_shape_[-1]) # feature elements
-                feature['prev_action'] = 0.0 # placeholder
+                feature["conv_dw"] = 0.0
+                feature["cin"] = m.in_features
+                feature["cout"] = m.out_features
+                feature["stride"] = 0.0
+                feature["kernel"] = 1.0
+                feature["param"] = np.prod(m.weight.size())
+                feature["ifm_size"] = np.prod(m.input_shape_[-1])  # feature elements
+                feature["prev_action"] = 0.0  # placeholder
 
             else:
                 raise NotImplementedError("State embedding extraction of {}".format(m.__class__.__name__))
@@ -398,14 +401,14 @@ class QuantizationEnv:
             qmod = self.qctrl.all_quantizations[qid]
             input_shape = qmod.input_shape_
             output_shape = qmod.output_shape_
-            feature['cin'] = input_shape[1] if len(input_shape) == 4 else input_shape[-1]
-            feature['cout'] = output_shape[1] if len(output_shape) == 4 else output_shape[-1]
-            feature['ifm_size'] = np.prod(input_shape[-2:]) if len(input_shape) == 4 else input_shape[-1]
-            feature['conv_dw'] = 0.0
-            feature['stride'] = 0.0
-            feature['kernel'] = 0.0
-            feature['param'] = 0.0
-            feature['prev_action'] = 0.0
+            feature["cin"] = input_shape[1] if len(input_shape) == 4 else input_shape[-1]
+            feature["cout"] = output_shape[1] if len(output_shape) == 4 else output_shape[-1]
+            feature["ifm_size"] = np.prod(input_shape[-2:]) if len(input_shape) == 4 else input_shape[-1]
+            feature["conv_dw"] = 0.0
+            feature["stride"] = 0.0
+            feature["kernel"] = 0.0
+            feature["param"] = 0.0
+            feature["prev_action"] = 0.0
 
             if len(input_shape) != 4 and len(input_shape) != 2:
                 raise NotImplementedError("A design is required to cater this scenario. Pls. report to maintainer")
@@ -414,11 +417,10 @@ class QuantizationEnv:
 
         return pd.Series(feature)
 
-
     def _create_map_of_adjq_groupid_to_common_bw_space(self) -> Dict:
         # Extracting common bitwidth space per group of quantizer
         bwassigner_df = deepcopy(self.master_df)
-        bwassigner_df['bw_space'] = list(map(lambda x: [qc.num_bits for qc in x], bwassigner_df.qconf_space.values))
+        bwassigner_df["bw_space"] = list(map(lambda x: [qc.num_bits for qc in x], bwassigner_df.qconf_space.values))
 
         adjq_groupwise_intersecting_bw_space = {}
         for i, _ in enumerate(self.groups_of_adjacent_quantizers):
@@ -432,7 +434,7 @@ class QuantizationEnv:
                 bw_space = bwassigner_df.bw_space[bwassigner_df.qid == str(wq[0])][0]
                 list_of_bw_space.append(bw_space)
 
-            intersecting_bw_space = set.intersection(*map(set,list_of_bw_space))
+            intersecting_bw_space = set.intersection(*map(set, list_of_bw_space))
             adjq_groupwise_intersecting_bw_space[i] = intersecting_bw_space
 
         return adjq_groupwise_intersecting_bw_space
@@ -450,7 +452,6 @@ class QuantizationEnv:
 
         return adjq_groupwise_df_lut_keys
 
-
     def _evaluate_pretrained_model(self):
         nncf_logger.info("[Q.Env] Evaluating Pretrained Model")
         self.qctrl.disable_weight_quantization()
@@ -467,7 +468,8 @@ class QuantizationEnv:
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
             self._bn_adaptation = BatchnormAdaptationAlgorithm(
-            **extract_bn_adaptation_init_params(self.qctrl.config, "quantization"))
+                **extract_bn_adaptation_init_params(self.qctrl.config, "quantization")
+            )
         self._bn_adaptation.run(self.qctrl.model)
 
     def _run_quantization_pipeline(self, finetune=False) -> float:
@@ -481,32 +483,31 @@ class QuantizationEnv:
             nncf_logger.info(f"[Q.Env] Quantized Score: {quantized_score:.3f}")
         return quantized_score
 
-
     def _get_quantizer_bitwidth(self) -> Dict[BaseQuantizer, int]:
-        assert len(set(self.model_bitwidth_space) - set(self.master_df.action.values)) >= 0, \
-            "there is bitwidth choice not within model bitwidth space"
+        assert (
+            len(set(self.model_bitwidth_space) - set(self.master_df.action.values)) >= 0
+        ), "there is bitwidth choice not within model bitwidth space"
         return OrderedDict(zip(self.master_df.qid_obj, self.master_df.action))
-
 
     def _constrain_model_size(self, collected_strategy: List, skip=False) -> List:
         def lower_bitwidth(bw: int, qconf_space: List[QuantizerConfig]) -> int:
             bw_space = [qconf.num_bits for qconf in qconf_space]
             assert bw in bw_space
             sorted_bw_space = sorted(bw_space)
-            return sorted_bw_space[sorted_bw_space.index(bw)-1] if sorted_bw_space.index(bw) > 0 else bw
+            return sorted_bw_space[sorted_bw_space.index(bw) - 1] if sorted_bw_space.index(bw) > 0 else bw
 
         # This function acts on self.master_df['action']
-        self.master_df['action'] = collected_strategy
+        self.master_df["action"] = collected_strategy
 
         if skip is not True:
-            self.master_df['unconstrained_action'] = self.master_df['action']
+            self.master_df["unconstrained_action"] = self.master_df["action"]
 
             current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
 
             while self.min_model_size < current_model_size and self.target_model_size < current_model_size:
                 for _, nodestr in enumerate(reversed(self.master_df.index.tolist())):
                     if self.master_df.loc[nodestr, "is_wt_quantizer"]:
-                        bw_choice, qconf_space = self.master_df.loc[nodestr, ['action', 'qconf_space']]
+                        bw_choice, qconf_space = self.master_df.loc[nodestr, ["action", "qconf_space"]]
                         new_bw = lower_bitwidth(bw_choice, qconf_space)
                         self.master_df.loc[nodestr, "action"] = new_bw if new_bw != bw_choice else bw_choice
 
@@ -516,7 +517,7 @@ class QuantizationEnv:
         else:
             nncf_logger.info("[Q.Env] Skipping the model size constraint.")
 
-        return self.master_df['action'].tolist()
+        return self.master_df["action"].tolist()
 
     def reward(self, acc: float, model_ratio: float) -> float:
         def order_of_magnitude(number):
@@ -525,7 +526,7 @@ class QuantizationEnv:
         if self.pretrained_score == 0:
             return acc
         order = order_of_magnitude(self.pretrained_score)
-        return acc*(10**(-order))
+        return acc * (10 ** (-order))
 
     def step(self, action: Union[int, float]) -> Tuple:
         currently_processed_qconf_idx = len(self.collected_strategy)
@@ -552,12 +553,9 @@ class QuantizationEnv:
 
         return self.evaluate_strategy(self.collected_strategy, skip_constraint=self.skip_constraint)
 
-
     def select_config_for_actions(self, actions) -> Dict[QuantizationPointId, QuantizerConfig]:
         retval = OrderedDict()  # type: Dict[QuantizationPointId, QuantizerConfig]
-        for action, qp_id_set, qconf_space in zip(actions,
-                                            self.master_df['qp_id_set'],
-                                            self.master_df['qconf_space']):
+        for action, qp_id_set, qconf_space in zip(actions, self.master_df["qp_id_set"], self.master_df["qconf_space"]):
             matches = []
             for qconf in qconf_space:
                 if qconf.num_bits == action:
@@ -571,24 +569,25 @@ class QuantizationEnv:
         assert len(collected_strategy) == len(self.master_df)
         if skip_constraint is not True:
             collected_strategy = self._constrain_model_size(collected_strategy)
-        self.master_df['action'] = collected_strategy # This must be after constraint
+        self.master_df["action"] = collected_strategy  # This must be after constraint
 
         if self.performant_bw:
             self._align_bw_action()
-            configs_to_set = self.select_config_for_actions(self.master_df['action_aligned'])
+            configs_to_set = self.select_config_for_actions(self.master_df["action_aligned"])
 
             if self._dump_autoq_data or is_debug():
                 self._dump_adjacent_quantizer_group_alignment()
 
-            self.master_df['action'] = self.master_df['action_aligned']
+            self.master_df["action"] = self.master_df["action_aligned"]
         else:
-            configs_to_set = self.select_config_for_actions(self.master_df['action'])
+            configs_to_set = self.select_config_for_actions(self.master_df["action"])
 
         self._apply_quantizer_configs_to_model(configs_to_set)
 
-        for idx, qid in zip(self.master_df.index, self.master_df['qid']):
+        for idx, qid in zip(self.master_df.index, self.master_df["qid"]):
             nncf_logger.info(
-                f"[Q.Env] {str(self.qctrl.all_quantizations[find_qid_by_str(self.qctrl, qid)]):50} | {idx}")
+                f"[Q.Env] {str(self.qctrl.all_quantizations[find_qid_by_str(self.qctrl, qid)]):50} | {idx}"
+            )
 
         quantized_score = self._run_quantization_pipeline(finetune=self.finetune)
 
@@ -596,14 +595,17 @@ class QuantizationEnv:
         current_model_ratio = self.model_size_calculator.get_model_size_ratio(self._get_quantizer_bitwidth())
 
         current_model_bop_ratio = self.compression_ratio_calculator.run_for_quantizer_setup(
-            self.qctrl.get_quantizer_setup_for_current_state())
+            self.qctrl.get_quantizer_setup_for_current_state()
+        )
 
         reward = self.reward(quantized_score, current_model_ratio)
 
-        info_set = {'model_ratio': current_model_ratio,
-                    'accuracy': quantized_score,
-                    'model_size': current_model_size,
-                    'bop_ratio': current_model_bop_ratio}
+        info_set = {
+            "model_ratio": current_model_ratio,
+            "accuracy": quantized_score,
+            "model_size": current_model_size,
+            "bop_ratio": current_model_bop_ratio,
+        }
 
         obs = self.get_normalized_obs(len(collected_strategy) - 1)
         done = True
@@ -611,10 +613,8 @@ class QuantizationEnv:
 
         return obs, reward, done, info_set
 
-
     def set_next_step_prev_action(self, idx, action):
-        self.master_df.loc[self.master_df.index[idx], 'prev_action'] = action
-
+        self.master_df.loc[self.master_df.index[idx], "prev_action"] = action
 
     def get_normalized_obs(self, idx: int) -> pd.Series:
         _df = self.master_df.loc[self.master_df.index, self.state_list]
@@ -636,16 +636,13 @@ class QuantizationEnv:
         for qid, qp_id_set in self.qctrl.module_id_to_qp_id_translation_dict.items():
             self.master_df.loc[self.master_df.qp_id_set == qp_id_set].qid = str(qid)
 
-
-
     def _dump_master_df(self):
-        self.master_df.drop('state_module', axis=1).to_csv(
-            osp.join(self.dump_dir, self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
-
+        self.master_df.drop("state_module", axis=1).to_csv(
+            osp.join(self.dump_dir, self.model_name + "_quantizable_state_table.csv"), index_label="nodestr"
+        )
 
     def _dump_quantized_graph(self):
         self.qmodel.nncf.get_graph().visualize_graph(osp.join(self.dump_dir, "qenv_graph.dot"))
-
 
     def _dump_groups_of_adjacent_quantizers(self):
         adj_quantizer_groups = []
@@ -661,22 +658,21 @@ class QuantizationEnv:
         with safe_open(self.dump_dir / "{}_groups_of_adjacent_quantizers.json".format(self.model_name), "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
 
-
     def _align_bw_action(self):
         # align bw action per group of adjacent quantizer
         # this alignment aims to realize GEMM compute in a lower precision
 
-        self.master_df['action_aligned']=0
+        self.master_df["action_aligned"] = 0
 
         for i, _ in enumerate(self.groups_of_adjacent_quantizers):
             # Collect all actions of a group
             list_of_action = []
 
             for _, aq in enumerate(self.groups_of_adjacent_quantizers[i].activation_quantizers):
-                list_of_action.append( self.master_df.action[self.master_df.qid == str(aq[0])][0] )
+                list_of_action.append(self.master_df.action[self.master_df.qid == str(aq[0])][0])
 
             for _, wq in enumerate(self.groups_of_adjacent_quantizers[i].weight_quantizers):
-                list_of_action.append( self.master_df.action[self.master_df.qid == str(wq[0])][0] )
+                list_of_action.append(self.master_df.action[self.master_df.qid == str(wq[0])][0])
 
             # Get the minimum prediction bw of a group
             group_min_predicted_bw = min(list_of_action)
@@ -698,20 +694,17 @@ class QuantizationEnv:
                 if self.master_df.loc[self.master_df.qid == str(wq[0]), "action"][0] > group_final_min_bw:
                     self.master_df.loc[self.master_df.qid == str(wq[0]), "action_aligned"] = group_final_min_bw
                 else:
-                    self.master_df.loc[self.master_df.qid == str(wq[0]), "action_aligned"] = \
-                        self.master_df.loc[self.master_df.qid == str(wq[0]), "action"][0]
+                    self.master_df.loc[self.master_df.qid == str(wq[0]), "action_aligned"] = self.master_df.loc[
+                        self.master_df.qid == str(wq[0]), "action"
+                    ][0]
 
     def _dump_adjacent_quantizer_group_alignment(self):
         list_of_dump_dict = []
         for i, _ in enumerate(self.groups_of_adjacent_quantizers):
             list_of_dump_dict.append(
-                self.master_df.loc[
-                    self.adjq_groupwise_df_lut_keys[i],
-                    ["action", "action_aligned"]
-                ].to_dict()
+                self.master_df.loc[self.adjq_groupwise_df_lut_keys[i], ["action", "action_aligned"]].to_dict()
             )
 
-        os.makedirs(self.dump_dir / 'bw_alignment', exist_ok=True)
-        with safe_open(
-            self.dump_dir / 'bw_alignment/{0:03d}_bw_alignment.json'.format(self._n_eval) , "w") as DUMP_FH:
+        os.makedirs(self.dump_dir / "bw_alignment", exist_ok=True)
+        with safe_open(self.dump_dir / "bw_alignment/{0:03d}_bw_alignment.json".format(self._n_eval), "w") as DUMP_FH:
             json.dump(list_of_dump_dict, DUMP_FH, indent=4)

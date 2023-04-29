@@ -1,21 +1,18 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+import math
 from abc import ABC
 from abc import abstractmethod
 from typing import Optional
-
-import math
 
 from nncf.api.compression import TModel
 from nncf.common.initialization.dataloader import NNCFDataLoader
@@ -29,10 +26,7 @@ class BatchnormAdaptationAlgorithmImpl(ABC):
     the batch-norm statistics adaptation algorithm inherit.
     """
 
-    def __init__(self,
-                 data_loader: NNCFDataLoader,
-                 num_bn_adaptation_steps: int,
-                 device: Optional[str] = None):
+    def __init__(self, data_loader: NNCFDataLoader, num_bn_adaptation_steps: int, device: Optional[str] = None):
         """
         Initializes the batch-norm statistics adaptation algorithm implementation.
 
@@ -63,10 +57,7 @@ class BatchnormAdaptationAlgorithm:
     accuracy drop even before model training.
     """
 
-    def __init__(self,
-                 data_loader: NNCFDataLoader,
-                 num_bn_adaptation_samples: int,
-                 device: Optional[str] = None):
+    def __init__(self, data_loader: NNCFDataLoader, num_bn_adaptation_samples: int, device: Optional[str] = None):
         """
         Initializes the batch-norm statistics adaptation algorithm.
 
@@ -79,7 +70,7 @@ class BatchnormAdaptationAlgorithm:
             of the model parameters will be used.
         """
         if num_bn_adaptation_samples < 0:
-            raise ValueError('Number of adaptation samples must be >= 0')
+            raise ValueError("Number of adaptation samples must be >= 0")
 
         self._device = device
         self._data_loader = data_loader
@@ -93,13 +84,17 @@ class BatchnormAdaptationAlgorithm:
         """
         backend = get_backend(model)
         if backend is BackendType.TORCH:
-            from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl #pylint: disable=cyclic-import
+            from nncf.torch.batchnorm_adaptation import (
+                PTBatchnormAdaptationAlgorithmImpl,  # pylint: disable=cyclic-import
+            )
+
             impl_cls = PTBatchnormAdaptationAlgorithmImpl
         else:
             assert backend is BackendType.TENSORFLOW
-            from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl #pylint: disable=cyclic-import
+            from nncf.tensorflow.batchnorm_adaptation import (
+                TFBatchnormAdaptationAlgorithmImpl,  # pylint: disable=cyclic-import
+            )
+
             impl_cls = TFBatchnormAdaptationAlgorithmImpl
-        impl = impl_cls(self._data_loader,
-                        self._num_bn_adaptation_steps,
-                        self._device)
+        impl = impl_cls(self._data_loader, self._num_bn_adaptation_steps, self._device)
         impl.run(model)

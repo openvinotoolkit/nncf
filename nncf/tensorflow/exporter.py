@@ -1,17 +1,16 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
+
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
@@ -21,9 +20,9 @@ from nncf.telemetry.events import NNCF_TF_CATEGORY
 
 
 class TFExportFormat:
-    SAVED_MODEL = 'tf'
-    KERAS_H5 = 'h5'
-    FROZEN_GRAPH = 'frozen_graph'
+    SAVED_MODEL = "tf"
+    KERAS_H5 = "h5"
+    FROZEN_GRAPH = "frozen_graph"
 
 
 # TODO(andrey-churkin): Add support for `input_names` and `output_names`
@@ -32,7 +31,6 @@ class TFExporter(Exporter):
     This class provides export of the compressed model to the Frozen Graph,
     TensorFlow SavedModel, or Keras H5 formats.
     """
-
 
     @tracked_function(NNCF_TF_CATEGORY, ["save_format"])
     def export_model(self, save_path: str, save_format: str = TFExportFormat.FROZEN_GRAPH) -> None:
@@ -58,8 +56,7 @@ class TFExporter(Exporter):
 
         if export_fn is None:
             available_formats = list(format_to_export_fn.keys())
-            raise ValueError(f'Unsupported saving format: \'{save_format}\'. '
-                             f'Available formats: {available_formats}')
+            raise ValueError(f"Unsupported saving format: '{save_format}'. " f"Available formats: {available_formats}")
 
         export_fn(save_path)
 

@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from abc import abstractclassmethod
 from dataclasses import dataclass
@@ -22,13 +20,13 @@ import pytest
 
 from tests.shared.paths import TEST_ROOT
 
+NOT_AVAILABLE_MESSAGE = "N/A"
+
 
 def pytest_addoption(parser):
     parser.addoption("--data", action="store")
     parser.addoption("--output", action="store", default="./tmp/")
-    parser.addoption(
-        "--backends", action="store", default="TORCH,TORCH_PTQ,ONNX,OV_NATIVE,OV"
-    )
+    parser.addoption("--backends", action="store", default="TORCH,TORCH_PTQ,ONNX,OV_NATIVE,OV")
     parser.addoption(
         "--eval_fp32",
         action="store_true",
@@ -83,9 +81,7 @@ class TableColumn:
 
     @classmethod
     @abstractclassmethod
-    def get_value(
-        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
-    ) -> str:
+    def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         """
         Metod describes how to retrieve column info out of RunInfo.
 
@@ -96,9 +92,7 @@ class TableColumn:
 
     @staticmethod
     def assign_default_value(func):
-        def wrapped_get_value(
-            cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
-        ):
+        def wrapped_get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType):
             if target_pipeline_type not in info:
                 return "-"
             return func(cls, info, target_pipeline_type)
@@ -117,9 +111,7 @@ class Top1Column(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
-    def get_value(
-        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
-    ) -> str:
+    def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         return info[target_pipeline_type].top_1
 
 
@@ -134,9 +126,7 @@ class FPSColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
-    def get_value(
-        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
-    ) -> str:
+    def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         return info[target_pipeline_type].FPS
 
 
@@ -151,9 +141,7 @@ class Top1DiffColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
-    def get_value(
-        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
-    ) -> str:
+    def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         return info[PipelineType.FP32].top_1 - info[target_pipeline_type].top_1
 
 
@@ -168,13 +156,13 @@ class FPSSpeedupColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
-    def get_value(
-        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
-    ) -> str:
-        fps = info[PipelineType.FP32].FPS
-        if isinstance(fps, float) and fps > 1e-5:
+    def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
+        if info[target_pipeline_type].FPS is None or info[PipelineType.FP32].FPS is None:
+            return NOT_AVAILABLE_MESSAGE
+        fps = info[target_pipeline_type].FPS
+        if fps > 1e-5:
             return info[target_pipeline_type].FPS / info[PipelineType.FP32].FPS
-        return "inf"
+        return NOT_AVAILABLE_MESSAGE
 
 
 class StatusColumn(TableColumn):
@@ -187,9 +175,7 @@ class StatusColumn(TableColumn):
         return True
 
     @classmethod
-    def get_value(
-        cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType
-    ) -> str:
+    def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         status = []
         for pipeline_type in PipelineType:
             if pipeline_type in info:
@@ -245,13 +231,7 @@ def pytest_runtest_makereport(item, call):
 
         output_folder = Path(item.config.getoption("--output"))
         output_folder.mkdir(parents=True, exist_ok=True)
-        np.savetxt(
-            output_folder / "results.csv",
-            table,
-            delimiter=",",
-            fmt="%s",
-            header=",".join(header),
-        )
+        np.savetxt(output_folder / "results.csv", table, delimiter=",", fmt="%s", header=",".join(header))
 
 
 PTQ_TEST_ROOT = TEST_ROOT / "post_training"

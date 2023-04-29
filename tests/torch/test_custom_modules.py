@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional
+
 from nncf import NNCFConfig
 from nncf.torch import register_module
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -28,11 +29,7 @@ class ModelWithCustomConvModules(torch.nn.Module):
 
 
 def test_custom_module_processing():
-    nncf_config = NNCFConfig.from_dict({
-        "input_info": {
-            "sample_size": [1, 1, 1, 1]
-        }
-    })
+    nncf_config = NNCFConfig.from_dict({"input_info": {"sample_size": [1, 1, 1, 1]}})
 
     # Should complete successfully without exceptions:
     create_compressed_model_and_algo_for_test(ModelWithCustomConvModules(), nncf_config)

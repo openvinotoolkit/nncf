@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from typing import List
 
 from torch import Tensor
@@ -19,8 +17,9 @@ class TracesOrder:
     def __init__(self, execution_indexes_of_weights_ordered_by_traces: List[int]):
         self._index_by_traces_to_execution_index = execution_indexes_of_weights_ordered_by_traces
         self._num_weights = len(execution_indexes_of_weights_ordered_by_traces)
-        self._index_by_execution_to_index_by_traces = \
-            [execution_indexes_of_weights_ordered_by_traces.index(i) for i in range(self._num_weights)]
+        self._index_by_execution_to_index_by_traces = [
+            execution_indexes_of_weights_ordered_by_traces.index(i) for i in range(self._num_weights)
+        ]
 
     def get_execution_order_configs(self, trace_ordered_configuration: List) -> List:
         if len(trace_ordered_configuration) != self._num_weights:
@@ -51,8 +50,9 @@ class TracesOrder:
 class TracesPerLayer:
     def __init__(self, traces_per_layer_by_execution: Tensor):
         self._traces_per_layer_by_execution = traces_per_layer_by_execution
-        execution_indexes_of_weights_in_descending_order_of_traces = \
-            [i[0] for i in sorted(enumerate(traces_per_layer_by_execution), reverse=False, key=lambda x: x[1])]
+        execution_indexes_of_weights_in_descending_order_of_traces = [
+            i[0] for i in sorted(enumerate(traces_per_layer_by_execution), reverse=False, key=lambda x: x[1])
+        ]
         self.traces_order = TracesOrder(execution_indexes_of_weights_in_descending_order_of_traces)
 
     def get_by_execution_index(self, execution_index: int) -> Tensor:

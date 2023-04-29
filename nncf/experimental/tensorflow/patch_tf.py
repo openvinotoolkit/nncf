@@ -1,36 +1,31 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import functools
 import inspect
-from typing import Optional
-from typing import List
-from typing import Dict
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import tensorflow as tf
 from tensorflow.python.eager import context
 from tensorflow.python.framework import ops
-from tensorflow.python.ops import nn
 from tensorflow.python.ops import math_ops
+from tensorflow.python.ops import nn
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.experimental.tensorflow.context import get_current_context
-from nncf.experimental.tensorflow.scope import get_op_name
+from nncf.experimental.tensorflow.graph.argprovider import TF_ARG_PROVIDERS
 from nncf.experimental.tensorflow.graph.argprovider import replace_value_by_index
 from nncf.experimental.tensorflow.graph.transformations.commands import TFTargetPoint
-from nncf.experimental.tensorflow.graph.argprovider import TF_ARG_PROVIDERS
+from nncf.experimental.tensorflow.scope import get_op_name
+from nncf.tensorflow.layers.operation import NNCFOperation
 
 
 class Hook:
@@ -39,10 +34,7 @@ class Hook:
     these operations should be applied.
     """
 
-    def __init__(self,
-                 operations: List[NNCFOperation],
-                 target_point: TFTargetPoint,
-                 ops_weights: Dict[str, Any]):
+    def __init__(self, operations: List[NNCFOperation], target_point: TFTargetPoint, ops_weights: Dict[str, Any]):
         """
         Initializes the hook.
 
@@ -58,9 +50,11 @@ class Hook:
 
         arg_provider_cls = TF_ARG_PROVIDERS.registry_dict.get(self._target_point.op_type_name)
         if arg_provider_cls is None:
-            raise ValueError(f'Unexpected type of the TensorFlow operation: {self._target_point.op_type_name}. '
-                             'Register an `ArgProvider` instance for this type in the '
-                             '`TF_ARG_PROVIDERS` registry, please.')
+            raise ValueError(
+                f"Unexpected type of the TensorFlow operation: {self._target_point.op_type_name}. "
+                "Register an `ArgProvider` instance for this type in the "
+                "`TF_ARG_PROVIDERS` registry, please."
+            )
 
         self._arg_provider = arg_provider_cls()
 
@@ -140,28 +134,20 @@ class TensorFlowOpWrapper:
         if not tracing_context.wrap_ops:
             return self._op(*args, **kwargs)
 
-        op_name = get_op_name(self._op_type_name, kwargs.get('name'))
+        op_name = get_op_name(self._op_type_name, kwargs.get("name"))
 
-        _pre_hooks = getattr(get_current_context().model, '_pre_hooks')
-        _post_hooks = getattr(get_current_context().model, '_post_hooks')
+        _pre_hooks = getattr(get_current_context().model, "_pre_hooks")
+        _post_hooks = getattr(get_current_context().model, "_post_hooks")
 
         with tracing_context.enter(in_call=True, wrap_ops=False):
             # Apply pre-hooks
-            args, kwargs = TensorFlowOpWrapper._apply_hooks(
-                _pre_hooks.get(op_name, []),
-                args,
-                kwargs
-            )
+            args, kwargs = TensorFlowOpWrapper._apply_hooks(_pre_hooks.get(op_name, []), args, kwargs)
 
             # Apply TensorFlow operation
             outputs = self._op(*args, **kwargs)
 
             # Apply post-hooks
-            (outputs,), _ = TensorFlowOpWrapper._apply_hooks(
-                _post_hooks.get(op_name, []),
-                (outputs,),
-                {}
-            )
+            (outputs,), _ = TensorFlowOpWrapper._apply_hooks(_post_hooks.get(op_name, []), (outputs,), {})
 
         return outputs
 
@@ -200,10 +186,10 @@ class TFPatcher:
                 setattr(module, op_type_name, tf_op_wrapper)
 
             # Wraps `fn` from the public API
-            if hasattr(fn, '_tf_api_names'):
-                tf_api_names = getattr(fn, '_tf_api_names')
+            if hasattr(fn, "_tf_api_names"):
+                tf_api_names = getattr(fn, "_tf_api_names")
                 for api_name in tf_api_names:
-                    items = api_name.split('.')
+                    items = api_name.split(".")
                     module_names = items[:-1]
                     name = items[-1]
 
@@ -254,7 +240,7 @@ class TFPatcher:
             if len(args) == 4:
                 args = replace_value_by_index(args, 3, False)
             else:
-                kwargs['skip_on_eager'] = False
+                kwargs["skip_on_eager"] = False
             return func(*args, **kwargs)
 
         return wrapper
@@ -266,19 +252,19 @@ class TFPatcher:
             tracing_context = get_current_context()
 
             if tf.executing_eagerly() and tracing_context.in_call:
-                obj, = args  # self
+                (obj,) = args  # self
                 eager_context = context.context()
                 old_name = eager_context.scope_name
                 name = obj._name  # pylint: disable=protected-access
 
                 if not name:
-                    scope_name = ''
-                elif name[-1] == '/':
+                    scope_name = ""
+                elif name[-1] == "/":
                     scope_name = name
                 elif old_name:
-                    scope_name = tracing_context.unique_name(old_name + name) + '/'
+                    scope_name = tracing_context.unique_name(old_name + name) + "/"
                 else:
-                    scope_name = name + '/'
+                    scope_name = name + "/"
                 eager_context.scope_name = scope_name
 
                 def _restore_name_scope(*_):

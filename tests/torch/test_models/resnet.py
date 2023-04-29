@@ -1,19 +1,17 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class BasicBlock(nn.Module):
@@ -30,7 +28,7 @@ class BasicBlock(nn.Module):
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(self.expansion * planes)
+                nn.BatchNorm2d(self.expansion * planes),
             )
 
     def forward(self, x):
@@ -57,7 +55,7 @@ class Bottleneck(nn.Module):
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(self.expansion * planes)
+                nn.BatchNorm2d(self.expansion * planes),
             )
 
     def forward(self, x):
@@ -128,7 +126,7 @@ def ResNet152():
 class ElasticResNet(ResNet):
     def __init__(self, block, num_blocks, num_classes, index_skipped_block):
         self._num_blocks = -1
-        self._idx_skipped_block = index_skipped_block # 0, 1, 2...
+        self._idx_skipped_block = index_skipped_block  # 0, 1, 2...
         super().__init__(block, num_blocks, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -145,7 +143,4 @@ class ElasticResNet(ResNet):
 
 
 def ResNet50__elastic(idx_skip_block):
-    return ElasticResNet(Bottleneck,
-                         num_blocks=[3, 4, 6, 3],
-                         num_classes=10,
-                         index_skipped_block=idx_skip_block)
+    return ElasticResNet(Bottleneck, num_blocks=[3, 4, 6, 3], num_classes=10, index_skipped_block=idx_skip_block)

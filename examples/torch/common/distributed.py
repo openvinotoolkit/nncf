@@ -1,19 +1,18 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import print_function
 
 import os
+
 import torch
 from torch import distributed as dist
 from torch.utils.data import Sampler
@@ -33,10 +32,10 @@ def configure_distributed(config):
         # default device (E.g. NMS kernel - https://github.com/facebookresearch/maskrcnn-benchmark/issues/74)
         torch.cuda.set_device(config.current_gpu)
 
-    logger.info('| distributed init (rank {}): {}'.format(
-        config.rank, config.dist_url))
-    dist.init_process_group(backend=config.dist_backend, init_method=config.dist_url,
-                            world_size=config.world_size, rank=config.rank)
+    logger.info("| distributed init (rank {}): {}".format(config.rank, config.dist_url))
+    dist.init_process_group(
+        backend=config.dist_backend, init_method=config.dist_url, world_size=config.world_size, rank=config.rank
+    )
     config.world_size = dist.get_world_size()
 
 
@@ -55,7 +54,7 @@ class DistributedSampler(Sampler):
         self.rank = rank
         indices = list(range(len(dataset)))
         self.samples_per_rank = (len(indices) - 1) // self.world_size + 1
-        self.indices = indices[self.rank * self.samples_per_rank: (self.rank + 1) * self.samples_per_rank]
+        self.indices = indices[self.rank * self.samples_per_rank : (self.rank + 1) * self.samples_per_rank]
 
         if len(self.indices) < self.samples_per_rank:
             # Workaround for mock datasets with a small number of entries

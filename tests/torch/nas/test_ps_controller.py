@@ -1,19 +1,14 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import NamedTuple
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from typing import Any, Dict, List, NamedTuple
 
 import pytest
 
@@ -36,12 +31,12 @@ class PSControllerTestDesc(NamedTuple):
     mode: str = "auto"
 
     def __str__(self):
-        if hasattr(self.model_creator, '__name__'):
+        if hasattr(self.model_creator, "__name__"):
             name = self.model_creator.__name__
         elif self.name is not None:
             name = self.name
         else:
-            name = 'NOT_DEFINED'
+            name = "NOT_DEFINED"
         return name
 
 
@@ -50,11 +45,9 @@ def prepare_test_model(ps_ctrl_desc, bn_adapt_section_is_called):
         "input_info": {"sample_size": ps_ctrl_desc.input_sizes},
         "bootstrapNAS": {
             "training": {
-                "batchnorm_adaptation": {
-                    "num_bn_adaptation_samples": 2
-                },
+                "batchnorm_adaptation": {"num_bn_adaptation_samples": 2},
             },
-        }
+        },
     }
     nncf_config = NNCFConfig.from_dict(config)
     update_train_bn_adapt_section(nncf_config, bn_adapt_section_is_called)
@@ -64,22 +57,28 @@ def prepare_test_model(ps_ctrl_desc, bn_adapt_section_is_called):
     move_model_to_cuda_if_available(model)
     return model, bn_adapt_args, nncf_config
 
+
 def update_train_bn_adapt_section(nncf_config, bn_adapt_section_is_called):
     if not bn_adapt_section_is_called:
-        nncf_config['bootstrapNAS']['training']['batchnorm_adaptation']['num_bn_adaptation_samples'] = 0
+        nncf_config["bootstrapNAS"]["training"]["batchnorm_adaptation"]["num_bn_adaptation_samples"] = 0
 
 
 # pylint: disable=protected-access
 class TestProgressiveTrainingController:
-    @pytest.mark.parametrize("bn_adapt_section_is_called", [False, True],
-                             ids=["section_with_zero_num_samples", "section_with_non_zero_num_samples"])
+    @pytest.mark.parametrize(
+        "bn_adapt_section_is_called",
+        [False, True],
+        ids=["section_with_zero_num_samples", "section_with_non_zero_num_samples"],
+    )
     def test_bn_adapt(self, mocker, bn_adapt_section_is_called, schedule_params):
-        test_desc = PSControllerTestDesc(model_creator=ThreeConvModel,
-                                         algo_params={'width': {'min_width': 1, 'width_step': 1}},
-                                         input_sizes=ThreeConvModel.INPUT_SIZE,
-                                         )
+        test_desc = PSControllerTestDesc(
+            model_creator=ThreeConvModel,
+            algo_params={"width": {"min_width": 1, "width_step": 1}},
+            input_sizes=ThreeConvModel.INPUT_SIZE,
+        )
         bn_adapt_run_patch = mocker.patch(
-            "nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run")
+            "nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run"
+        )
         model, _, nncf_config = prepare_test_model(test_desc, bn_adapt_section_is_called)
         model = create_nncf_network(model, nncf_config)
 

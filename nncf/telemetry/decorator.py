@@ -1,25 +1,22 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import functools
 import inspect
-from typing import Callable
-from typing import List, Union
+from typing import Callable, List, Union
 
 from nncf.telemetry.events import get_current_category
 from nncf.telemetry.events import telemetry_category
-from nncf.telemetry.wrapper import telemetry
 from nncf.telemetry.extractors import TelemetryExtractor
 from nncf.telemetry.extractors import VerbatimTelemetryExtractor
+from nncf.telemetry.wrapper import telemetry
 
 
 class tracked_function:
@@ -28,6 +25,7 @@ class tracked_function:
     will in general result in a telemetry session being created and a set of events being sent before
     function execution. The category of the session and events will be determined by parameters to the decorator.
     """
+
     def __init__(self, category: str = None, extractors: List[Union[str, TelemetryExtractor]] = None):
         """
         :param category: A category to be attributed to the events. If set to None, no events will be sent.
@@ -63,10 +61,12 @@ class tracked_function:
                     if category != previous_category:
                         telemetry.start_session(self._category)
                     for event in events:
-                        telemetry.send_event(event_category=category,
-                                                 event_action=event.name,
-                                                 event_label=event.data,
-                                                 event_value=event.int_data)
+                        telemetry.send_event(
+                            event_category=category,
+                            event_action=event.name,
+                            event_label=event.data,
+                            event_value=event.int_data,
+                        )
 
                 retval = fn(*args, **kwargs)
 
