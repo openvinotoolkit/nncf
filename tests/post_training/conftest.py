@@ -55,7 +55,7 @@ class PipelineType(Enum):
 @dataclass
 class RunInfo:
     top_1: float
-    FPS: float
+    fps: float
     status: str = None
 
 
@@ -76,16 +76,16 @@ class TableColumn:
         Is statistic applicable for given pipeline type.
 
         :param pipeline_type: Given pipeline type.
-        :returns: Eather given pipeline type applicable or not.
+        :returns: Ether given pipeline type applicable or not.
         """
 
     @classmethod
     @abstractclassmethod
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         """
-        Metod describes how to retrieve column info out of RunInfo.
+        Method describes how to retrieve column info out of RunInfo.
 
-        :param info: Runinfo to retrive column info.
+        :param info: Runinfo to retrieve column info.
         :param target_pipeline_type: Target type of the pipeline.
         :returns: Column info.
         """
@@ -127,7 +127,7 @@ class FPSColumn(TableColumn):
     @classmethod
     @TableColumn.assign_default_value
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
-        return info[target_pipeline_type].FPS
+        return info[target_pipeline_type].fps
 
 
 class Top1DiffColumn(TableColumn):
@@ -157,11 +157,11 @@ class FPSSpeedupColumn(TableColumn):
     @classmethod
     @TableColumn.assign_default_value
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
-        if info[target_pipeline_type].FPS is None or info[PipelineType.FP32].FPS is None:
+        if info[target_pipeline_type].fps is None or info[PipelineType.FP32].fps is None:
             return NOT_AVAILABLE_MESSAGE
-        fps = info[target_pipeline_type].FPS
+        fps = info[target_pipeline_type].fps
         if fps > 1e-5:
-            return info[target_pipeline_type].FPS / info[PipelineType.FP32].FPS
+            return info[target_pipeline_type].fps / info[PipelineType.FP32].fps
         return NOT_AVAILABLE_MESSAGE
 
 

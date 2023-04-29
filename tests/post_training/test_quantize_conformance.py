@@ -108,7 +108,7 @@ def run_benchmark(model_path):
     return None, cmd_output
 
 
-def benchmark_performance(model_path, model_name, skip_bench=False):
+def benchmark_performance(model_path, model_name, skip_bench):
     """
     Receives the OpenVINO IR model and runs benchmark tool for it
     """
@@ -122,13 +122,12 @@ def benchmark_performance(model_path, model_name, skip_bench=False):
         if model_perf is None:
             logging.info(f"Cannot measure performance for the model: {model_name}\nDetails: {bench_output}\n")
     except BaseException as error:
-        logging.error(f"Error when becnhmarking the model: {model_name} Details: {error}")
+        logging.error(f"Error when benchmarking the model: {model_name} Details: {error}")
 
     return model_perf
 
 
 def validate_accuracy(model_path, val_loader):
-    return -1
     dataset_size = len(val_loader)
     predictions = [0] * dataset_size
     references = [-1] * dataset_size
@@ -184,7 +183,7 @@ def benchmark_torch_model(model, dataloader, model_name, output_path, eval=True,
     return performance, accuracy
 
 
-def benchmark_onnx_model(model, dataloader, model_name, output_path, skip_bench=False):
+def benchmark_onnx_model(model, dataloader, model_name, output_path, skip_bench):
     # Dump model
     onnx_path = Path(output_path) / (model_name + ".onnx")
     onnx.save(model, onnx_path)
@@ -198,7 +197,7 @@ def benchmark_onnx_model(model, dataloader, model_name, output_path, skip_bench=
     return performance, accuracy
 
 
-def benchmark_ov_model(model, dataloader, model_name, output_path, skip_bench=False):
+def benchmark_ov_model(model, dataloader, model_name, output_path, skip_bench):
     # Dump model
     ov_path = Path(output_path) / (model_name + ".xml")
     ov.serialize(model, str(ov_path))
