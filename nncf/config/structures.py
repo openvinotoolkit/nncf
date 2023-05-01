@@ -1,19 +1,18 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
+from nncf.common.utils.api_marker import api
 
 
 class NNCFExtraConfigStruct:
@@ -27,14 +26,13 @@ class NNCFExtraConfigStruct:
         raise NotImplementedError
 
 
+@api()
 class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
     """
     Stores additional arguments for quantization range initialization algorithms.
     """
 
-    def __init__(self,
-                 data_loader: NNCFDataLoader,
-                 device: Optional[str] = None):
+    def __init__(self, data_loader: NNCFDataLoader, device: Optional[str] = None):
         """
         Initializes additional arguments for quantization range initialization
         algorithms.
@@ -56,17 +54,16 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
 
     @classmethod
     def get_id(cls) -> str:
-        return 'quantization_range_init_args'
+        return "quantization_range_init_args"
 
 
+@api()
 class BNAdaptationInitArgs(NNCFExtraConfigStruct):
     """
     Stores additional arguments for batchnorm statistics adaptation algorithm.
     """
 
-    def __init__(self,
-                 data_loader: NNCFDataLoader,
-                 device: Optional[str] = None):
+    def __init__(self, data_loader: NNCFDataLoader, device: Optional[str] = None):
         """
         Initializes additional arguments for batchnorm statistics adaptation
         algorithm.
@@ -88,12 +85,12 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
 
     @classmethod
     def get_id(cls) -> str:
-        return 'bn_adaptation_init_args'
+        return "bn_adaptation_init_args"
 
 
+@api()
 class ModelEvaluationArgs(NNCFExtraConfigStruct):
-    def __init__(self,
-                 eval_fn: Callable):
+    def __init__(self, eval_fn: Callable):
         self.eval_fn = eval_fn
 
     @classmethod

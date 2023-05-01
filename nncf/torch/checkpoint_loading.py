@@ -1,27 +1,28 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import re
 from enum import Enum
 from typing import Dict, List, Set, Tuple
 
 import torch
 
-from nncf.common.logging import nncf_logger
 from nncf.common.deprecation import warning_deprecated
+from nncf.common.logging import nncf_logger
+from nncf.common.utils.api_marker import api
 
 
-def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False,
-               keys_to_ignore: List[str] = None) -> int:
+@api(canonical_alias="nncf.torch.load_state")
+def load_state(
+    model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False, keys_to_ignore: List[str] = None
+) -> int:
     """
     Used to load a checkpoint containing a compressed model into an NNCFNetwork object, but can
     be used for any PyTorch module as well. Will do matching of state_dict_to_load parameters to
@@ -44,7 +45,8 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 
     model_state_dict = model.state_dict()
 
-    from nncf.torch.utils import maybe_convert_legacy_names_in_model_state #pylint: disable=cyclic-import
+    from nncf.torch.utils import maybe_convert_legacy_names_in_model_state  # pylint: disable=cyclic-import
+
     maybe_convert_legacy_names_in_model_state(state_dict_to_load)
     key_matcher = KeyMatcher(is_resume, state_dict_to_load, model_state_dict, keys_to_ignore)
     new_dict = key_matcher.run()
@@ -77,16 +79,17 @@ OPTIONAL_PARAMETERS_REGISTRY = ParametersRegistry()
 
 
 class ProcessedKeyStatus(Enum):
-    """ Status of matching checkpoint key with model keys """
-    MATCHED = 'Matched'
-    MISSING = 'Missing'
-    UNEXPECTED = 'Unexpected'
-    SIZE_MISMATCHED = 'Size mismatched'
-    SKIPPED = 'Skipped'
+    """Status of matching checkpoint key with model keys"""
+
+    MATCHED = "Matched"
+    MISSING = "Missing"
+    UNEXPECTED = "Unexpected"
+    SIZE_MISMATCHED = "Size mismatched"
+    SKIPPED = "Skipped"
 
 
 class ProcessedKeys:
-    """ Contains checkpoint keys with their status of matching with model keys """
+    """Contains checkpoint keys with their status of matching with model keys"""
 
     def __init__(self):
         self._keys = {}  # type: Dict[ProcessedKeyStatus, Set[str]]
@@ -99,11 +102,10 @@ class ProcessedKeys:
     def extend_keys(self, keys: List[str], status: ProcessedKeyStatus):
         self._keys[status].update(keys)
 
-    def add_skipped_and_missing_keys(self,
-                                     model_state_dict: Dict[str, torch.Tensor]):
+    def add_skipped_and_missing_keys(self, model_state_dict: Dict[str, torch.Tensor]):
         all_processed_keys = []
         optional_param_names = OPTIONAL_PARAMETERS_REGISTRY.get_parameters_names()
-        params_to_skip = tuple('.' + name for name in optional_param_names)
+        params_to_skip = tuple("." + name for name in optional_param_names)
         for keys in self._keys.values():
             all_processed_keys.extend(keys)
 
@@ -128,9 +130,7 @@ class ProcessedKeys:
         error_msgs = []
 
         def add_error_msg(name, keys_):
-            error_msgs.insert(
-                0, '{} key(s):\n{}. '.format(name,
-                                             ',\n'.join('\t\t"{}"'.format(k) for k in keys_)))
+            error_msgs.insert(0, "{} key(s):\n{}. ".format(name, ",\n".join('\t\t"{}"'.format(k) for k in keys_)))
 
         for key_status, keys in self._keys.items():
             is_missing = key_status == ProcessedKeyStatus.MISSING
@@ -138,7 +138,7 @@ class ProcessedKeys:
             if keys and (erroneous or is_missing and (is_resume or not are_all_loaded_params_matched)):
                 add_error_msg(key_status.value, keys)
         if error_msgs:
-            error_msg = 'Error(s) when loading model parameters:\n\t{}'.format("\n\t".join(error_msgs))
+            error_msg = "Error(s) when loading model parameters:\n\t{}".format("\n\t".join(error_msgs))
             if is_resume:
                 raise RuntimeError(error_msg)
             nncf_logger.error(error_msg)
@@ -146,9 +146,9 @@ class ProcessedKeys:
 
 class NormalizedKeys:
     """
-        Contains normalized form of parameters. It helps to discard irrelevant prefixes added during wrapping in
-        NNCFNetwork or DataParallel/DistributedDataParallel objects, to handle legacy parameters' names and to match
-        unified compression parameters from the separate ones.
+    Contains normalized form of parameters. It helps to discard irrelevant prefixes added during wrapping in
+    NNCFNetwork or DataParallel/DistributedDataParallel objects, to handle legacy parameters' names and to match
+    unified compression parameters from the separate ones.
     """
 
     def __init__(self, keys: List[str], keys_to_ignore: List[str]):
@@ -169,9 +169,9 @@ class NormalizedKeys:
     def get_orig_key(self, normalized_key: str):
         return self._unique_normalized_key_vs_orig_key_map[normalized_key]
 
-    def _normalize_keys_without_collisions(self,
-                                           unique_clipped_key_vs_orig_key_map: Dict[str, str],
-                                           keys_to_ignore: List[str]) -> List[str]:
+    def _normalize_keys_without_collisions(
+        self, unique_clipped_key_vs_orig_key_map: Dict[str, str], keys_to_ignore: List[str]
+    ) -> List[str]:
         ignored_keys = []
         normalized_key_vs_clipped_key_list_map = {}
         for clipped_key in unique_clipped_key_vs_orig_key_map:
@@ -228,17 +228,18 @@ class NormalizedKeys:
     @staticmethod
     def _key_clipper(key: str) -> str:
         new_key = key
-        from nncf.torch.nncf_network import LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME #pylint: disable=cyclic-import
-        clip_patterns = [LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME + '.', 'module.', '|OUTPUT', '|INPUT', '_nncf.']
+        from nncf.torch.nncf_network import LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME  # pylint: disable=cyclic-import
+
+        clip_patterns = [LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME + ".", "module.", "|OUTPUT", "|INPUT", "_nncf."]
         for pattern in clip_patterns:
-            new_key = new_key.replace(pattern, '')
+            new_key = new_key.replace(pattern, "")
         return new_key
 
     def _key_replacer(self, key: str) -> List[str]:
         new_key = key
 
-        match = re.search('(pre_ops|post_ops)\\.(\\d+?)\\.op', key)
-        new_key = new_key if not match else new_key.replace(match.group(), 'operation')
+        match = re.search("(pre_ops|post_ops)\\.(\\d+?)\\.op", key)
+        new_key = new_key if not match else new_key.replace(match.group(), "operation")
 
         new_key, did_replace = self._replace_legacy_act_quantizer_storage_name(new_key)
         if did_replace:
@@ -251,40 +252,39 @@ class NormalizedKeys:
 
     @staticmethod
     def _split_unified_parameters(new_key: str) -> List[str]:
-        """ covers unified activation quantizers case, e.g.
-                external_quantizers.RELU_0;RELU_1;RELU_2.op
-            Result of this function is full names of individual parameters:
-                external_quantizers.RELU_2.op
-                external_quantizers.RELU_1.op
-                external_quantizers.RELU_0.op
-            It's utilized to match parameters from checkpoints without unified operations to not start training
-            compression from scratch, but instead initialize group of parameters by one of the matched individual one.
-            Returns original key if there's no ';' and operation doesn't start with EXTERNAL_QUANTIZERS_STORAGE_NAME
+        """covers unified activation quantizers case, e.g.
+            external_quantizers.RELU_0;RELU_1;RELU_2.op
+        Result of this function is full names of individual parameters:
+            external_quantizers.RELU_2.op
+            external_quantizers.RELU_1.op
+            external_quantizers.RELU_0.op
+        It's utilized to match parameters from checkpoints without unified operations to not start training
+        compression from scratch, but instead initialize group of parameters by one of the matched individual one.
+        Returns original key if there's no ';' and operation doesn't start with EXTERNAL_QUANTIZERS_STORAGE_NAME
         """
         result = [new_key]
-        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX #pylint: disable=cyclic-import
-        if ';' in new_key and new_key.startswith(CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX):
-            group_of_keys = new_key.split(';')
+        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
+
+        if ";" in new_key and new_key.startswith(CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX):
+            group_of_keys = new_key.split(";")
             last_key = group_of_keys[-1]
-            common_op = last_key.split('.')[-1]
-            result = [
-                group_of_keys[0] + '.' + common_op,
-                CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.' + last_key
-            ]
+            common_op = last_key.split(".")[-1]
+            result = [group_of_keys[0] + "." + common_op, CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + "." + last_key]
             for key in group_of_keys[1:-1]:
-                result.append(CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.' + key + '.' + common_op)
+                result.append(CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + "." + key + "." + common_op)
         return result
 
     @staticmethod
     def _replace_legacy_act_quantizer_storage_name(checkpoint_key: str) -> Tuple[str, bool]:
         did_replace = False
-        splits = checkpoint_key.split('.')
-        from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX #pylint: disable=cyclic-import
-        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX #pylint: disable=cyclic-import
+        splits = checkpoint_key.split(".")
+        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
+        from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
+
         if splits[0] == LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX:
             did_replace = True
             splits[0] = CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-        reconstructed_key = '.'.join(splits)
+        reconstructed_key = ".".join(splits)
         return reconstructed_key, did_replace
 
 
@@ -296,9 +296,13 @@ class KeyMatcher:
     compression parameters from the separate ones and forms the model state dict with matched parameters.
     """
 
-    def __init__(self, is_resume: bool,
-                 state_dict_to_load: Dict[str, torch.Tensor], model_state_dict: Dict[str, torch.Tensor],
-                 ignored_keys: List[str] = None):
+    def __init__(
+        self,
+        is_resume: bool,
+        state_dict_to_load: Dict[str, torch.Tensor],
+        model_state_dict: Dict[str, torch.Tensor],
+        ignored_keys: List[str] = None,
+    ):
         """
         :param state_dict_to_load: A state dict containing the parameters to be loaded into the model.
         :param ignored_keys: list of parameters to skip from matching process on loading.
@@ -316,58 +320,63 @@ class KeyMatcher:
         """
         :return: the model state dict with matched parameters
         """
-        normalized_model_keys = NormalizedKeys(list(self.model_state_dict.keys()),
-                                               keys_to_ignore=self.ignored_keys)
-        normalized_keys_to_load = NormalizedKeys(list(self.state_dict_to_load.keys()),
-                                                 keys_to_ignore=self.ignored_keys)
+        normalized_model_keys = NormalizedKeys(list(self.model_state_dict.keys()), keys_to_ignore=self.ignored_keys)
+        normalized_keys_to_load = NormalizedKeys(list(self.state_dict_to_load.keys()), keys_to_ignore=self.ignored_keys)
 
         has_version_agnostic_names = False
-        cross_match_key_map = self._cross_match_version_agnostic_names(list(normalized_keys_to_load),
-                                                                       list(normalized_model_keys))
+        cross_match_key_map = self._cross_match_version_agnostic_names(
+            list(normalized_keys_to_load), list(normalized_model_keys)
+        )
 
         for matched_checkpoint_key, matched_model_key in cross_match_key_map.items():
             if matched_checkpoint_key != matched_model_key:
                 has_version_agnostic_names = True
 
         if has_version_agnostic_names:
-            warning_deprecated('Legacy NNCF-enabled .pth checkpoint has been loaded! '
-                                'The version-agnostic `RELU` operator name entries in the state dict '
-                               'have been deprecated. '
-                                'The loader will try to match these entries to the correspoindig `relu` and `relu_` op '
-                                'names. The newly exported checkpoints will be adjusted to the new format.')
+            warning_deprecated(
+                "Legacy NNCF-enabled .pth checkpoint has been loaded! "
+                "The version-agnostic `RELU` operator name entries in the state dict "
+                "have been deprecated. "
+                "The loader will try to match these entries to the correspoindig `relu` and `relu_` op "
+                "names. The newly exported checkpoints will be adjusted to the new format."
+            )
 
         if normalized_keys_to_load.has_legacy_storage_keys:
             from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
             from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-            warning_deprecated(f'Legacy NNCF-enabled .pth checkpoint has been loaded! '
-                               f'The {LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX} storage key is replaced with '
-                               f'{CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX} in newer versions of NNCF, and support '
-                               f'for the legacy storage key will be dropped in a future release. '
-                               f'This checkpoint will be loaded; update your checkpoint file by saving this model\'s'
-                               f'checkpoint file again.')
+
+            warning_deprecated(
+                f"Legacy NNCF-enabled .pth checkpoint has been loaded! "
+                f"The {LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX} storage key is replaced with "
+                f"{CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX} in newer versions of NNCF, and support "
+                f"for the legacy storage key will be dropped in a future release. "
+                f"This checkpoint will be loaded; update your checkpoint file by saving this model's"
+                f"checkpoint file again."
+            )
 
         if normalized_model_keys.is_unified_group_detected and not normalized_keys_to_load.is_unified_group_detected:
             nncf_logger.warning(
-                'Unified parameters are detected in the compressed model, but all parameters are independent '
-                'and separate in the loading checkpoint. The unified parameters will be initialized by one of'
-                'the corresponding separate parameter in the checkpoint. That may slightly degrade the '
-                'accuracy, but should allow to not start training compression from scratch with unified '
-                'params.')
+                "Unified parameters are detected in the compressed model, but all parameters are independent "
+                "and separate in the loading checkpoint. The unified parameters will be initialized by one of"
+                "the corresponding separate parameter in the checkpoint. That may slightly degrade the "
+                "accuracy, but should allow to not start training compression from scratch with unified "
+                "params."
+            )
         ignored_keys = normalized_model_keys.ignored_orig_keys + normalized_keys_to_load.ignored_orig_keys
         self._processed_keys.extend_keys(ignored_keys, ProcessedKeyStatus.SKIPPED)
         if ignored_keys:
-            ignored_keys_str = '\n'.join(set(ignored_keys))
+            ignored_keys_str = "\n".join(set(ignored_keys))
             nncf_logger.warning(
-                f"Following parameters were skipped from matching checkpoint's keys:\n{ignored_keys_str}")
+                f"Following parameters were skipped from matching checkpoint's keys:\n{ignored_keys_str}"
+            )
 
         loaded_prefixless_keys = False
         for normalized_key_to_load in normalized_keys_to_load:
             key_to_load = normalized_keys_to_load.get_orig_key(normalized_key_to_load)
-            normalized_key_to_load = cross_match_key_map.get(normalized_key_to_load,
-                                                             normalized_key_to_load)
+            normalized_key_to_load = cross_match_key_map.get(normalized_key_to_load, normalized_key_to_load)
             if normalized_key_to_load in normalized_model_keys:
                 model_key = normalized_model_keys.get_orig_key(normalized_key_to_load)
-                if '_nncf.' + key_to_load == model_key:
+                if "_nncf." + key_to_load == model_key:
                     loaded_prefixless_keys = True
                 value_to_load = self.state_dict_to_load[key_to_load]
                 size_of_value_to_load = value_to_load.size()
@@ -378,22 +387,26 @@ class KeyMatcher:
                 else:
                     nncf_logger.warning(
                         f"Different size of value of '{model_key}' "
-                        f"in resuming dictionary ({size_of_value_to_load}) and in model ({size_of_model_value})")
+                        f"in resuming dictionary ({size_of_value_to_load}) and in model ({size_of_model_value})"
+                    )
                     self._processed_keys.add_key(model_key, ProcessedKeyStatus.SIZE_MISMATCHED)
             else:
                 self._processed_keys.add_key(key_to_load, ProcessedKeyStatus.UNEXPECTED)
         self._processed_keys.add_skipped_and_missing_keys(self.model_state_dict)
         if loaded_prefixless_keys:
-            warning_deprecated('Legacy NNCF-enabled .pth checkpoint has been loaded! '
-                               'Some storage keys in the loaded checkpoint should now have a "_nncf." prefix,'
-                               'support for the legacy storage key will be dropped in a future release. '
-                               'This checkpoint will be loaded; update your checkpoint file by saving this model\'s'
-                               'checkpoint file again.')
+            warning_deprecated(
+                "Legacy NNCF-enabled .pth checkpoint has been loaded! "
+                'Some storage keys in the loaded checkpoint should now have a "_nncf." prefix,'
+                "support for the legacy storage key will be dropped in a future release. "
+                "This checkpoint will be loaded; update your checkpoint file by saving this model's"
+                "checkpoint file again."
+            )
         return self._new_dict
 
     @staticmethod
-    def _cross_match_version_agnostic_names(normalized_keys_to_load: List[str],
-                                            normalized_model_keys: List[str]) -> Dict[str, str]:
+    def _cross_match_version_agnostic_names(
+        normalized_keys_to_load: List[str], normalized_model_keys: List[str]
+    ) -> Dict[str, str]:
         """
         Handles the situation where the normalized_keys_to_load contain legacy version-agnostic names
         of operations, such as `RELU`.
@@ -416,13 +429,13 @@ class KeyMatcher:
                     # The op names in existing checkpoint can only appear in external quantizers,
                     # i.e. external_quantizers.ResNet/ReLU[relu]/relu_0.signed_tensor, so composing a regex to match
                     # for that
-                    slash_split_str = model_key.split('/')
+                    slash_split_str = model_key.split("/")
                     last_portion = slash_split_str[-1]
                     if specific_op_name in last_portion:
                         last_portion = last_portion.replace(specific_op_name, agnostic_op_name, 1)
                         has_specific_op_name = True
                     slash_split_str[-1] = last_portion
-                    agnostic_version_of_model_key = '/'.join(slash_split_str)
+                    agnostic_version_of_model_key = "/".join(slash_split_str)
                     processed_agnostic_version_of_model_key = agnostic_version_of_model_key
                     if processed_agnostic_version_of_model_key in processed_keys_to_load:
                         idx = processed_keys_to_load.index(processed_agnostic_version_of_model_key)
@@ -438,9 +451,11 @@ class KeyMatcher:
                 elif len(matches_for_curr_agnostic_op_name) == 0:
                     nncf_logger.debug(f"Failed to match a version-specific key: {model_key}")
                 elif len(matches_for_curr_agnostic_op_name) > 1:
-                    nncf_logger.debug(f"More than one match for the version specific key: {model_key}\n"
-                                      f"Matches:\n"
-                                      f"{', '.join(matches_for_curr_agnostic_op_name)}")
+                    nncf_logger.debug(
+                        f"More than one match for the version specific key: {model_key}\n"
+                        f"Matches:\n"
+                        f"{', '.join(matches_for_curr_agnostic_op_name)}"
+                    )
 
         return retval
 

@@ -1,20 +1,16 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from collections import defaultdict
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Dict, List, Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -44,14 +40,16 @@ class PruningNodeSelector:
     and which of them should be pruned together.
     """
 
-    def __init__(self,
-                 pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-                 prune_operations_types: List[str],
-                 grouping_operations_types: List[str],
-                 ignored_scopes: Optional[List[str]],
-                 target_scopes: Optional[List[str]],
-                 prune_first: bool,
-                 prune_downsample_convs: bool):
+    def __init__(
+        self,
+        pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
+        prune_operations_types: List[str],
+        grouping_operations_types: List[str],
+        ignored_scopes: Optional[List[str]],
+        target_scopes: Optional[List[str]],
+        prune_first: bool,
+        prune_downsample_convs: bool,
+    ):
         """
         :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
             metatypes describing operations with common pruning mask application and propagation properties, e.g.
@@ -68,8 +66,8 @@ class PruningNodeSelector:
         """
         self._pruning_operator_metatypes = pruning_operator_metatypes
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
-        self._identity_mask_propagation_op_metatype = pruning_op_metatypes_dict['identity_mask_propagation']
-        self._stop_propagation_op_metatype = pruning_op_metatypes_dict['stop_propagation_ops']
+        self._identity_mask_propagation_op_metatype = pruning_op_metatypes_dict["identity_mask_propagation"]
+        self._stop_propagation_op_metatype = pruning_op_metatypes_dict["stop_propagation_ops"]
 
         self._prune_operations_types = prune_operations_types
         self._grouping_operations_types = grouping_operations_types
@@ -98,8 +96,7 @@ class PruningNodeSelector:
 
         # 1. Clusters for special ops
         identity_like_types = self._identity_mask_propagation_op_metatype.get_all_op_aliases()
-        special_ops_clusterization = cluster_special_ops(graph, self._grouping_operations_types,
-                                                         identity_like_types)
+        special_ops_clusterization = cluster_special_ops(graph, self._grouping_operations_types, identity_like_types)
 
         pruned_nodes_clusterization = Clusterization[NNCFNode](lambda x: x.node_id)
 
@@ -152,16 +149,18 @@ class PruningNodeSelector:
         # 5. Merge nodes into one cluster if some module forwards several times
         multiforward_nodes = self._get_multiforward_nodes(graph)
         for list_of_nodes in multiforward_nodes:
-            clusters_to_merge = [pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id
-                                 for node in list_of_nodes]
+            clusters_to_merge = [
+                pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id for node in list_of_nodes
+            ]
             pruned_nodes_clusterization.merge_list_of_clusters(clusters_to_merge)
 
             # Merge previous convolutions into one cluster
             all_previous_convs = []
             for node in list_of_nodes:
                 nncf_node = graph.get_node_by_id(node.node_id)
-                previous_convs = get_previous_convs(graph, nncf_node, self._prune_operations_types,
-                                                    stop_propagation_ops)
+                previous_convs = get_previous_convs(
+                    graph, nncf_node, self._prune_operations_types, stop_propagation_ops
+                )
                 # Check if previous node isn't multiforward,
                 # in case of multiforward nodes cycle
                 for previous_conv in previous_convs:
@@ -177,11 +176,12 @@ class PruningNodeSelector:
         # 6. Checks for groups (all nodes in group can be pruned or all group can't be pruned).
         model_analyser = ModelAnalyzer(graph, self._pruning_operator_metatypes, self._prune_operations_types)
         can_prune_analysis = model_analyser.analyse_model_before_pruning()
-        can_prune_and_should_prune_analysis = self._should_prune_groups_analysis(graph,
-                                                                                 pruned_nodes_clusterization,
-                                                                                 can_prune_analysis)
-        can_prune_final_analysis = self._pruning_dimensions_analysis(graph, pruned_nodes_clusterization,
-                                                                     can_prune_and_should_prune_analysis)
+        can_prune_and_should_prune_analysis = self._should_prune_groups_analysis(
+            graph, pruned_nodes_clusterization, can_prune_analysis
+        )
+        can_prune_final_analysis = self._pruning_dimensions_analysis(
+            graph, pruned_nodes_clusterization, can_prune_and_should_prune_analysis
+        )
         self._filter_groups(pruned_nodes_clusterization, can_prune_final_analysis)
         return pruned_nodes_clusterization
 
@@ -199,10 +199,12 @@ class PruningNodeSelector:
             ret[node.layer_name].append(node)
         return [ret[module_identifier] for module_identifier in ret if len(ret[module_identifier]) > 1]
 
-    def _pruning_dimensions_analysis(self, graph: NNCFGraph,
-                                     pruned_nodes_clusterization: Clusterization,
-                                     can_prune_after_check: Dict[int, PruningAnalysisDecision]) ->\
-                                     Dict[int, PruningAnalysisDecision]:
+    def _pruning_dimensions_analysis(
+        self,
+        graph: NNCFGraph,
+        pruned_nodes_clusterization: Clusterization,
+        can_prune_after_check: Dict[int, PruningAnalysisDecision],
+    ) -> Dict[int, PruningAnalysisDecision]:
         """
         Checks:
         1) All nodes that were marked as prunable after the model analysis and compatibility check vs.
@@ -224,9 +226,9 @@ class PruningNodeSelector:
 
         return self._check_all_closing_nodes_are_feasible(graph, can_prune_after_check_updated)
 
-    def _check_all_closing_nodes_are_feasible(self, graph: NNCFGraph,
-                                              can_prune_after_check: Dict[int, PruningAnalysisDecision]) ->\
-                                              Dict[int, PruningAnalysisDecision]:
+    def _check_all_closing_nodes_are_feasible(
+        self, graph: NNCFGraph, can_prune_after_check: Dict[int, PruningAnalysisDecision]
+    ) -> Dict[int, PruningAnalysisDecision]:
         """
         Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
         pruning algo have a correct correspondent closing node on each path from self to outputs.
@@ -240,15 +242,17 @@ class PruningNodeSelector:
         mask_prop_algo = MaskPropagationAlgorithm(graph, self._pruning_operator_metatypes)
         can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations_types, can_prune_after_check)
 
-        can_prune_for_prunable_layers = \
-            {node_id: can_prune_after_check[node_id].join(can_prune_by_dim[node_id]) for node_id in can_prune_by_dim}
+        can_prune_for_prunable_layers = {
+            node_id: can_prune_after_check[node_id].join(can_prune_by_dim[node_id]) for node_id in can_prune_by_dim
+        }
 
         can_prune_updated = can_prune_after_check.copy()
         can_prune_updated.update(can_prune_for_prunable_layers)
         return can_prune_updated
 
-    def _check_internal_groups_dim(self, pruned_nodes_clusterization: Clusterization) ->\
-                                   Dict[int, PruningAnalysisDecision]:
+    def _check_internal_groups_dim(
+        self, pruned_nodes_clusterization: Clusterization
+    ) -> Dict[int, PruningAnalysisDecision]:
         """
         Checks pruning dimensions of all nodes in each cluster group are equal and
         returns nodes of clusters that failed the check.
@@ -259,18 +263,24 @@ class PruningNodeSelector:
         """
         retval = {}
         for cluster in pruned_nodes_clusterization.get_all_clusters():
-            has_equal_amount_of_channel = \
-                all(get_output_channels(cluster.elements[0]) == get_output_channels(node)
-                                        for node in cluster.elements[1:])
+            has_equal_amount_of_channel = all(
+                get_output_channels(cluster.elements[0]) == get_output_channels(node) for node in cluster.elements[1:]
+            )
             if not has_equal_amount_of_channel:
                 retval.update(
-                    {node.node_id: PruningAnalysisDecision(False, PruningAnalysisReason.INCOMPATIBLE_DIMS_IN_CLUSTER)
-                     for node in cluster.elements})
+                    {
+                        node.node_id: PruningAnalysisDecision(False, PruningAnalysisReason.INCOMPATIBLE_DIMS_IN_CLUSTER)
+                        for node in cluster.elements
+                    }
+                )
         return retval
 
-    def _should_prune_groups_analysis(self, graph: NNCFGraph, pruned_nodes_clusterization: Clusterization,
-                                      can_prune: Dict[int, PruningAnalysisDecision]) \
-            -> Dict[int, PruningAnalysisDecision]:
+    def _should_prune_groups_analysis(
+        self,
+        graph: NNCFGraph,
+        pruned_nodes_clusterization: Clusterization,
+        can_prune: Dict[int, PruningAnalysisDecision],
+    ) -> Dict[int, PruningAnalysisDecision]:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and
         model analysis. Otherwise the whole group cannot be pruned.
@@ -289,8 +299,9 @@ class PruningNodeSelector:
                 updated_decisions = {}
                 for node, decision in zip(cluster.elements, decisions):
                     if decision:
-                        updated_decisions[node.node_id] = \
-                            PruningAnalysisDecision(False, PruningAnalysisReason.IN_GROUP_OF_UNPRUNABLE)
+                        updated_decisions[node.node_id] = PruningAnalysisDecision(
+                            False, PruningAnalysisReason.IN_GROUP_OF_UNPRUNABLE
+                        )
                     else:
                         updated_decisions[node.node_id] = decision
 
@@ -300,8 +311,9 @@ class PruningNodeSelector:
         can_prune_updated.update(should_prune)
         return can_prune_updated
 
-    def _filter_groups(self, pruned_nodes_clusterization: Clusterization,
-                       can_prune: Dict[int, PruningAnalysisDecision]) -> None:
+    def _filter_groups(
+        self, pruned_nodes_clusterization: Clusterization, can_prune: Dict[int, PruningAnalysisDecision]
+    ) -> None:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and
         connections inside the network. Otherwise the whole group cannot be pruned and will be
@@ -321,8 +333,10 @@ class PruningNodeSelector:
                         if message:
                             cannot_prune_messages.append(message)
 
-                nncf_logger.debug(f'Could not prune node group [{", ".join(nodes_names)}], '
-                                  f'reason: {", ".join(cannot_prune_messages)}.')
+                nncf_logger.debug(
+                    f'Could not prune node group [{", ".join(nodes_names)}], '
+                    f'reason: {", ".join(cannot_prune_messages)}.'
+                )
                 pruned_nodes_clusterization.delete_cluster(cluster.id)
             else:
                 nncf_logger.debug(f'Node group [{", ".join(nodes_names)}] will be pruned together.')

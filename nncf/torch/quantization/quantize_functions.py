@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from typing import Any
 
 import torch
@@ -216,6 +214,7 @@ class TuneRange(torch.autograd.Function):
     floating point zeroes even if we don't use rounding.
     See [docs](../../../docs/compression_algorithms/Quantization.md#asymmetric-quantization) for details.
     """
+
     @staticmethod
     def forward(ctx, input_low, input_range, levels):
         input_high = input_range + input_low
@@ -228,7 +227,7 @@ class TuneRange(torch.autograd.Function):
         zp = torch.round(-input_low_copy * scale)
 
         new_input_low = torch.where(zp < n, zp / (zp - n) * input_high, input_low_copy)
-        new_input_high = torch.where(zp > 0., (zp - n) / zp * input_low_copy, input_high)
+        new_input_high = torch.where(zp > 0.0, (zp - n) / zp * input_low_copy, input_high)
 
         range_1 = input_high - new_input_low
         range_2 = new_input_high - input_low_copy

@@ -1,18 +1,15 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from collections import OrderedDict
-from typing import Callable
-from typing import List
+from typing import Callable, List
 
 from texttable import Texttable
 from torch import nn
@@ -22,16 +19,16 @@ from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.statistics import NNCFStatistics
 from nncf.common.logging import nncf_logger
+from nncf.common.statistics import NNCFStatistics
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import BINARIZATION_MODE
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
+from nncf.torch.binarization.layers import BINARIZATION_MODULES
 from nncf.torch.binarization.layers import ActivationBinarizationScaleThreshold
 from nncf.torch.binarization.layers import ActivationBinarizer
-from nncf.torch.binarization.layers import BINARIZATION_MODULES
 from nncf.torch.binarization.layers import BaseBinarizer
 from nncf.torch.binarization.layers import WeightBinarizer
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -47,11 +44,11 @@ from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.torch.utils import get_model_device
 
 
-@PT_COMPRESSION_ALGORITHMS.register('binarization')
+@PT_COMPRESSION_ALGORITHMS.register("binarization")
 class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
-        self.mode = self._algo_config.get('mode', BINARIZATION_MODE)
+        self.mode = self._algo_config.get("mode", BINARIZATION_MODE)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         layout = PTTransformationLayout()
@@ -64,13 +61,16 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
         return BINARIZATION_MODULES.get(self.mode)()
 
     def _nncf_module_types_to_compress(self) -> List[str]:
-        return [NNCFConv2d.__name__, ]
+        return [
+            NNCFConv2d.__name__,
+        ]
 
     def _binarize_weights_and_module_inputs(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = get_model_device(target_model)
 
         module_nodes = target_model.nncf.get_weighted_original_graph_nodes(
-            nncf_module_names=self.compressed_nncf_module_names)
+            nncf_module_names=self.compressed_nncf_module_names
+        )
 
         insertion_commands = []
         for module_node in module_nodes:
@@ -84,23 +84,24 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
             nncf_logger.debug(f"Adding activation binarizer in scope: {module_node.node_name}")
 
             compression_lr_multiplier = self.config.get_redefinable_global_param_value_for_algo(
-                'compression_lr_multiplier',
-                self.name)
+                "compression_lr_multiplier", self.name
+            )
 
-            op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(
-                module_node.layer_attributes.get_weight_shape(),
-                compression_lr_multiplier=compression_lr_multiplier
-            )).to(device)
+            op_inputs = UpdateInputs(
+                ActivationBinarizationScaleThreshold(
+                    module_node.layer_attributes.get_weight_shape(), compression_lr_multiplier=compression_lr_multiplier
+                )
+            ).to(device)
 
-            ip_w = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                 target_node_name=module_node.node_name)
-            insertion_commands.append(PTInsertionCommand(ip_w, op_weights,
-                                                         TransformationPriority.QUANTIZATION_PRIORITY))
+            ip_w = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, target_node_name=module_node.node_name)
+            insertion_commands.append(
+                PTInsertionCommand(ip_w, op_weights, TransformationPriority.QUANTIZATION_PRIORITY)
+            )
 
-            ip_i = PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
-                                 target_node_name=module_node.node_name, input_port_id=0)
-            insertion_commands.append(PTInsertionCommand(ip_i, op_inputs,
-                                                         TransformationPriority.QUANTIZATION_PRIORITY))
+            ip_i = PTTargetPoint(
+                TargetType.PRE_LAYER_OPERATION, target_node_name=module_node.node_name, input_port_id=0
+            )
+            insertion_commands.append(PTInsertionCommand(ip_i, op_inputs, TransformationPriority.QUANTIZATION_PRIORITY))
         return insertion_commands
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
@@ -118,7 +119,8 @@ class BinarizationController(QuantizationControllerBase):
         scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
         algo_config = extract_algo_specific_config(config, "binarization")
         self._scheduler = scheduler_cls(self, algo_config.get("params", {}))
-        from nncf.torch.utils import is_main_process #pylint: disable=cyclic-import
+        from nncf.torch.utils import is_main_process  # pylint: disable=cyclic-import
+
         if is_main_process():
             self._compute_and_display_flops_binarization_rate()
 
@@ -130,8 +132,9 @@ class BinarizationController(QuantizationControllerBase):
     def scheduler(self) -> CompressionScheduler:
         return self._scheduler
 
-    def _set_binarization_status(self, condition_fn: Callable[[BaseBinarizer], bool],
-                                 apply_fn: Callable[[BaseBinarizer], None]):
+    def _set_binarization_status(
+        self, condition_fn: Callable[[BaseBinarizer], bool], apply_fn: Callable[[BaseBinarizer], None]
+    ):
         if self._model is not None:
             for _, m in self._model.named_modules():
                 if condition_fn(m):
@@ -208,7 +211,7 @@ class BinarizationController(QuantizationControllerBase):
             drow = {h: 0 for h in header}
             drow["Layer name"] = layer_name
             drow["Layer type"] = layer_type
-            drow["Binarized"] = 'Y' if is_binarized else 'N'
+            drow["Binarized"] = "Y" if is_binarized else "N"
             drow["MAC count"] = f"{ops * 1e-9:.3f}G"
             drow["MAC share"] = f"{ops / ops_total * 100:2.1f}%"
             row = [drow[h] for h in header]

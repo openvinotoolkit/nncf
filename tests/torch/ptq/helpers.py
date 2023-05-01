@@ -1,30 +1,21 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from ast import Tuple
 from typing import List
 
 import torch
-from torch import nn
 
 from nncf import NNCFConfig
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
-from nncf.data.dataset import Dataset
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
@@ -35,8 +26,6 @@ from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.models import NNCFGraphToTestSumAggregation
-from tests.torch.helpers import create_bn
-from tests.torch.helpers import create_conv
 
 
 def get_single_conv_nncf_graph() -> NNCFGraphToTest:
@@ -84,13 +73,6 @@ def get_nncf_network(model: torch.nn.Module, input_shape: List[int] = [1, 3, 32,
         config=nncf_config,
     )
     return nncf_network
-
-
-def get_min_max_algo_for_test():
-    params = PostTrainingQuantizationParameters()
-    min_max_params = params.algorithms[MinMaxQuantization]
-    params.algorithms = {MinMaxQuantization: min_max_params}
-    return PostTrainingQuantization(params)
 
 
 def mock_collect_statistics(mocker):

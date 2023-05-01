@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from typing import Callable, Dict
 
 from nncf.common.graph.patterns.patterns import GraphPattern
@@ -34,18 +32,18 @@ class PatternsManager:
         :return: Dictionary with the PatternNames instance as keys and callable as value.
         """
         if backend == BackendType.ONNX:
-            from nncf.onnx.hardware.fused_patterns import \
-                ONNX_HW_FUSED_PATTERNS
+            from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
+
             return ONNX_HW_FUSED_PATTERNS.registry_dict
         if backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.hardware.fused_patterns import \
-                OPENVINO_HW_FUSED_PATTERNS
+            from nncf.openvino.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
+
             return OPENVINO_HW_FUSED_PATTERNS.registry_dict
         if backend == BackendType.TORCH:
-            from nncf.torch.hardware.fused_patterns import \
-                PT_HW_FUSED_PATTERNS
+            from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
+
             return PT_HW_FUSED_PATTERNS.registry_dict
-        raise ValueError(f'Hardware-fused patterns not implemented for {backend} backend.')
+        raise ValueError(f"Hardware-fused patterns not implemented for {backend} backend.")
 
     @staticmethod
     def get_full_pattern_graph(backend: BackendType, device: TargetDevice) -> GraphPattern:

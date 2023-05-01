@@ -1,19 +1,18 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import torch
 
 from nncf.torch.compression_method_api import PTCompressionLoss
+
 
 # Actually in responsible to lean density to target value
 class SparseLoss(PTCompressionLoss):
@@ -46,7 +45,8 @@ class SparseLoss(PTCompressionLoss):
         for sparse_layer in self._sparse_layers:
             if not self.disabled and sparse_layer.frozen:
                 raise AssertionError(
-                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
+                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss"
+                )
             if not sparse_layer.frozen:
                 sw_loss = sparse_layer.loss()
                 params = params + sw_loss.view(-1).size(0)
@@ -85,7 +85,8 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         for sparse_layer in self._sparse_layers:
             if not self.disabled and not sparse_layer.sparsify:
                 raise AssertionError(
-                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
+                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss"
+                )
             if sparse_layer.sparsify:
                 sw_loss = sparse_layer.loss()
                 params_layer = sw_loss.view(-1).size(0)

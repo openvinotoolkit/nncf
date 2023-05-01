@@ -1,19 +1,18 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import numpy as np
-from .metric import Metric
+
 from .confusionmatrix import ConfusionMatrix
+from .metric import Metric
 
 
 class IoU(Metric):
@@ -64,12 +63,11 @@ class IoU(Metric):
 
         """
         # Dimensions check
-        assert predicted.size(0) == target.size(0), \
-            'number of targets and predicted outputs do not match'
-        assert predicted.dim() == 3 or predicted.dim() == 4, \
-            "predictions must be of dimension (N, H, W) or (N, K, H, W)"
-        assert target.dim() == 3 or target.dim() == 4, \
-            "targets must be of dimension (N, H, W) or (N, K, H, W)"
+        assert predicted.size(0) == target.size(0), "number of targets and predicted outputs do not match"
+        assert (
+            predicted.dim() == 3 or predicted.dim() == 4
+        ), "predictions must be of dimension (N, H, W) or (N, K, H, W)"
+        assert target.dim() == 3 or target.dim() == 4, "targets must be of dimension (N, H, W) or (N, K, H, W)"
 
         # If the tensor is in categorical format convert it to integer format
         if predicted.dim() == 4:
@@ -99,7 +97,7 @@ class IoU(Metric):
         false_negative = np.sum(conf_matrix, 1) - true_positive
 
         # Just in case we get a division by 0, ignore/hide the error
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             iou = true_positive / (true_positive + false_positive + false_negative)
 
         if self.ignore_index is not None:

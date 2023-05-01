@@ -1,41 +1,35 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import pytest
-import numpy as np
-import openvino.runtime as ov
-from openvino.runtime import opset9 as opset
 from typing import Type
 
+import numpy as np
+import openvino.runtime as ov
+import pytest
+from openvino.runtime import opset9 as opset
+
 from nncf import Dataset
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import\
-    OVMinMaxAlgoBackend
-from nncf.experimental.openvino_native.quantization.algorithms.bias_correction.openvino_backend import\
-    OVBiasCorrectionAlgoBackend
-from nncf.experimental.openvino_native.quantization.algorithms.fast_bias_correction.openvino_backend import\
-    OVFastBiasCorrectionAlgoBackend
-
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
+from nncf.quantization.algorithms.fast_bias_correction.openvino_backend import OVFastBiasCorrectionAlgoBackend
+from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
-from tests.openvino.native.models import SplitConcatModel
 from tests.openvino.native.models import SharedConvModel
+from tests.openvino.native.models import SplitConcatModel
 
-
-INPUT_NAME = 'Input'
-CONV_NODE_NAME = 'Conv1'
+INPUT_NAME = "Input"
+CONV_NODE_NAME = "Conv1"
 INPUT_SHAPE = [1, 3, 3, 3]
 
 
@@ -44,8 +38,7 @@ def get_StatisticAgregatorTestModel(input_shape, kernel):
     strides = [1, 1]
     pads = [0, 0]
     dilations = [1, 1]
-    conv = opset.convolution(input_1, kernel.astype(np.float32),
-                             strides, pads, pads, dilations, name=CONV_NODE_NAME)
+    conv = opset.convolution(input_1, kernel.astype(np.float32), strides, pads, pads, dilations, name=CONV_NODE_NAME)
 
     result = opset.result(conv, name="Result")
     model = ov.Model([result], [input_1])
@@ -67,16 +60,12 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         conv_w = self.dataset_samples_to_conv_w(sample)
         return get_StatisticAgregatorTestModel(INPUT_SHAPE, conv_w)
 
-    @pytest.fixture(scope='session')
+    @pytest.fixture(scope="session")
     def test_params(self):
         return {
-            'test_statistic_merging': {
-                'split_concat': {
-                    'model': self._get_split_concat_backend_model
-                },
-                'shared_conv': {
-                    'model': self._get_shared_conv_model
-                }
+            "test_statistic_merging": {
+                "split_concat": {"model": self._get_split_concat_backend_model},
+                "shared_conv": {"model": self._get_shared_conv_model},
             }
         }
 
@@ -105,16 +94,19 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         dataset_samples = [np.zeros(input_shape), np.ones(input_shape)]
 
         for i, value in enumerate(dataset_values):
-            dataset_samples[0][0, i, 0, 0] = value['max']
-            dataset_samples[0][0, i, 0, 1] = value['min']
+            dataset_samples[0][0, i, 0, 0] = value["max"]
+            dataset_samples[0][0, i, 0, 1] = value["min"]
         return dataset_samples
 
     @pytest.fixture
     def is_stat_in_shape_of_scale(self) -> bool:
         return True
 
-    @pytest.fixture(params=[True, False],
-                    ids=['inplace', 'out_of_place'])
+    @pytest.fixture
+    def is_backend_support_custom_estimators(self) -> bool:
+        return True
+
+    @pytest.fixture(params=[True, False], ids=["inplace", "out_of_place"])
     def inplace_statistics(self, request) -> bool:
         return request.param
 
@@ -124,5 +116,4 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def _get_shared_conv_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(sample)
-        return SharedConvModel(input_name=INPUT_NAME,
-                               input_shape=INPUT_SHAPE, kernel=conv_w).ov_model
+        return SharedConvModel(input_name=INPUT_NAME, input_shape=INPUT_SHAPE, kernel=conv_w).ov_model

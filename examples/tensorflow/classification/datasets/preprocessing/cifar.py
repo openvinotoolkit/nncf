@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import Tuple
 
@@ -29,11 +27,13 @@ IMAGE_SIZE = 32
 PADDING = 4
 
 
-def preprocess_for_eval(image: tf.Tensor,
-                        image_size: int = IMAGE_SIZE,
-                        dtype: tf.dtypes.DType = tf.float32,
-                        means: Tuple[float, ...] = None,
-                        stddev: Tuple[float, ...] = None) -> tf.Tensor:
+def preprocess_for_eval(
+    image: tf.Tensor,
+    image_size: int = IMAGE_SIZE,
+    dtype: tf.dtypes.DType = tf.float32,
+    means: Tuple[float, ...] = None,
+    stddev: Tuple[float, ...] = None,
+) -> tf.Tensor:
     """
     Preprocesses the given image for evaluation.
 
@@ -51,13 +51,15 @@ def preprocess_for_eval(image: tf.Tensor,
     return images
 
 
-def preprocess_for_train(image: tf.Tensor,
-                         image_size: int = IMAGE_SIZE,
-                         num_channels: int = 3,
-                         padding: int = PADDING,
-                         dtype: tf.dtypes.DType = tf.float32,
-                         means: Tuple[float, ...] = None,
-                         stddev: Tuple[float, ...] = None) -> tf.Tensor:
+def preprocess_for_train(
+    image: tf.Tensor,
+    image_size: int = IMAGE_SIZE,
+    num_channels: int = 3,
+    padding: int = PADDING,
+    dtype: tf.dtypes.DType = tf.float32,
+    means: Tuple[float, ...] = None,
+    stddev: Tuple[float, ...] = None,
+) -> tf.Tensor:
     """
     Preprocesses the given image for training.
 
@@ -72,9 +74,7 @@ def preprocess_for_train(image: tf.Tensor,
     """
     images = image
     if padding > 0:
-        images = tf.pad(images,
-                        [[padding, padding], [padding, padding], [0, 0]],
-                        constant_values=0)
+        images = tf.pad(images, [[padding, padding], [padding, padding], [0, 0]], constant_values=0)
     images = tf.image.random_crop(images, [image_size, image_size, num_channels])
     images = tf.image.random_flip_left_right(images)
     images = tf.cast(images, tf.float32)
@@ -83,12 +83,14 @@ def preprocess_for_train(image: tf.Tensor,
     return images
 
 
-def preprocess_image(image: tf.Tensor,
-                     image_size: int = IMAGE_SIZE,
-                     is_training: bool = False,
-                     dtype: tf.dtypes.DType = tf.float32,
-                     means: Tuple[float, ...] = None,
-                     stddev: Tuple[float, ...] = None) -> tf.Tensor:
+def preprocess_image(
+    image: tf.Tensor,
+    image_size: int = IMAGE_SIZE,
+    is_training: bool = False,
+    dtype: tf.dtypes.DType = tf.float32,
+    means: Tuple[float, ...] = None,
+    stddev: Tuple[float, ...] = None,
+) -> tf.Tensor:
     """
     Preprocesses the given image.
 
@@ -102,26 +104,18 @@ def preprocess_image(image: tf.Tensor,
     :return: a preprocessed image.
     """
     if is_training:
-        return preprocess_for_train(
-            image=image,
-            image_size=image_size,
-            dtype=dtype,
-            means=means,
-            stddev=stddev)
-    return preprocess_for_eval(
-        image=image,
-        image_size=image_size,
-        dtype=dtype,
-        means=means,
-        stddev=stddev)
+        return preprocess_for_train(image=image, image_size=image_size, dtype=dtype, means=means, stddev=stddev)
+    return preprocess_for_eval(image=image, image_size=image_size, dtype=dtype, means=means, stddev=stddev)
 
 
-def cifar10_preprocess_image(image: tf.Tensor,
-                             image_size: int = IMAGE_SIZE,
-                             is_training: bool = False,
-                             dtype: tf.dtypes.DType = tf.float32,
-                             means: Tuple[float, ...] = CIFAR10_MEAN_RGB,
-                             stddev: Tuple[float, ...] = CIFAR10_STDDEV_RGB) -> tf.Tensor:
+def cifar10_preprocess_image(
+    image: tf.Tensor,
+    image_size: int = IMAGE_SIZE,
+    is_training: bool = False,
+    dtype: tf.dtypes.DType = tf.float32,
+    means: Tuple[float, ...] = CIFAR10_MEAN_RGB,
+    stddev: Tuple[float, ...] = CIFAR10_STDDEV_RGB,
+) -> tf.Tensor:
     """
     Preprocesses the given image using mean and standard deviation calculated by CIFAR10 dataset
 
@@ -135,20 +129,18 @@ def cifar10_preprocess_image(image: tf.Tensor,
     :return: a preprocessed image.
     """
     return preprocess_image(
-        image=image,
-        image_size=image_size,
-        is_training=is_training,
-        dtype=dtype,
-        means=means,
-        stddev=stddev)
+        image=image, image_size=image_size, is_training=is_training, dtype=dtype, means=means, stddev=stddev
+    )
 
 
-def cifar100_preprocess_image(image: tf.Tensor,
-                              image_size: int = IMAGE_SIZE,
-                              is_training: bool = False,
-                              dtype: tf.dtypes.DType = tf.float32,
-                              means: Tuple[float, ...] = CIFAR100_MEAN_RGB,
-                              stddev: Tuple[float, ...] = CIFAR100_STDDEV_RGB) -> tf.Tensor:
+def cifar100_preprocess_image(
+    image: tf.Tensor,
+    image_size: int = IMAGE_SIZE,
+    is_training: bool = False,
+    dtype: tf.dtypes.DType = tf.float32,
+    means: Tuple[float, ...] = CIFAR100_MEAN_RGB,
+    stddev: Tuple[float, ...] = CIFAR100_STDDEV_RGB,
+) -> tf.Tensor:
     """
     Preprocesses the given image using mean and standard deviation calculated by CIFAR100 dataset
 
@@ -162,9 +154,5 @@ def cifar100_preprocess_image(image: tf.Tensor,
     :return: a preprocessed image.
     """
     return preprocess_image(
-        image=image,
-        image_size=image_size,
-        is_training=is_training,
-        dtype=dtype,
-        means=means,
-        stddev=stddev)
+        image=image, image_size=image_size, is_training=is_training, dtype=dtype, means=means, stddev=stddev
+    )

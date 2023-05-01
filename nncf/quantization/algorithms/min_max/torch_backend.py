@@ -1,17 +1,15 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import torch
@@ -32,9 +30,12 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import AggregatorType
+from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -147,28 +148,38 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def minmax_statistic_collector(
+    def get_statistic_collector(
+        range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         inplace: bool,
         num_samples: int = None,
-    ) -> PTMinMaxStatisticCollector:
-        return PTMinMaxAlgoBackend._statistic_collector_builder(
-            "min_max", nncf_graph, target_point, quantizer_config, num_samples
-        )
+    ) -> Union[PTMinMaxStatisticCollector, PTMeanMinMaxStatisticCollector]:
+        if (
+            range_estimator_params.min.statistics_type == StatisticsType.MIN
+            and range_estimator_params.min.aggregator_type == AggregatorType.MIN
+            and range_estimator_params.max.statistics_type == StatisticsType.MAX
+            and range_estimator_params.max.aggregator_type == AggregatorType.MAX
+        ):
+            collector_name = "min_max"
 
-    @staticmethod
-    def mean_minmax_statistic_collector(
-        nncf_graph: NNCFGraph,
-        target_point: PTTargetPoint,
-        quantizer_config: QuantizerConfig,
-        use_per_sample_stats: bool,
-        inplace: bool,
-        num_samples: int = None,
-    ) -> PTMeanMinMaxStatisticCollector:
+        elif (
+            range_estimator_params.min.statistics_type == StatisticsType.MIN
+            and range_estimator_params.min.aggregator_type == AggregatorType.MEAN
+            and range_estimator_params.max.statistics_type == StatisticsType.MAX
+            and range_estimator_params.max.aggregator_type == AggregatorType.MEAN
+        ):
+            collector_name = "mean_min_max"
+
+        else:
+            raise RuntimeError(
+                "The following range estimator parameters are not supported by PyTorch backend by now: "
+                f"{str(range_estimator_params)}"
+            )
+
         return PTMinMaxAlgoBackend._statistic_collector_builder(
-            "mean_min_max", nncf_graph, target_point, quantizer_config, num_samples
+            collector_name, nncf_graph, target_point, quantizer_config, num_samples
         )
 
     @staticmethod

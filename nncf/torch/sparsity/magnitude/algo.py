@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from copy import deepcopy
 from typing import List
 
@@ -25,6 +23,7 @@ from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.api_marker import api
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.schemata.defaults import MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE
@@ -42,7 +41,7 @@ from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from nncf.torch.sparsity.magnitude.functions import calc_magnitude_binary_mask
 
 
-@PT_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
+@PT_COMPRESSION_ALGORITHMS.register("magnitude_sparsity")
 class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         return BinaryMask(target_module_node.layer_attributes.get_weight_shape())
@@ -51,25 +50,26 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
         return MagnitudeSparsityController(model, self._sparsified_module_info, self.config)
 
 
-@ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_magnitude_sparsity')
+@api()
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register("pt_magnitude_sparsity")
 class MagnitudeSparsityController(BaseSparsityAlgoController):
-    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo],
-                 config: NNCFConfig):
+    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config: NNCFConfig):
         super().__init__(target_model, sparsified_module_info)
         self._config = config
-        self._algo_config = extract_algo_specific_config(self._config, 'magnitude_sparsity')
-        params = self._algo_config.get('params', {})
+        self._algo_config = extract_algo_specific_config(self._config, "magnitude_sparsity")
+        params = self._algo_config.get("params", {})
 
-        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance',
-                                                                            MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE)]
-        self._mode = params.get('sparsity_level_setting_mode', SPARSITY_LEVEL_SETTING_MODE)
+        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[
+            params.get("weight_importance", MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE)
+        ]
+        self._mode = params.get("sparsity_level_setting_mode", SPARSITY_LEVEL_SETTING_MODE)
         self._scheduler = None
-        sparsity_init = self._algo_config.get('sparsity_init', SPARSITY_INIT)
+        sparsity_init = self._algo_config.get("sparsity_init", SPARSITY_INIT)
 
-        if self._mode == 'global':
+        if self._mode == "global":
             scheduler_params = deepcopy(params)
-            scheduler_params['sparsity_init'] = sparsity_init
-            scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
+            scheduler_params["sparsity_init"] = sparsity_init
+            scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
             self._scheduler = scheduler_cls(self, scheduler_params)
         else:
             self._scheduler = StubCompressionScheduler()
@@ -83,15 +83,16 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         model_statistics = collector.collect()
 
         threshold_statistics = []
-        if self._mode == 'global':
-            global_threshold = self._select_threshold(model_statistics.sparsity_level_for_layers,
-                                                      self.sparsified_module_info)
+        if self._mode == "global":
+            global_threshold = self._select_threshold(
+                model_statistics.sparsity_level_for_layers, self.sparsified_module_info
+            )
 
         module_name_to_sparsity_level_map = {
             s.name: s.sparsity_level for s in model_statistics.sparsified_layers_summary
         }
         for minfo in self.sparsified_module_info:
-            if self._mode == 'global':
+            if self._mode == "global":
                 threshold = global_threshold
             else:
                 sparsity_level_for_sparse_module = module_name_to_sparsity_level_map[minfo.module_node_name]
@@ -99,12 +100,12 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
             threshold_statistics.append(LayerThreshold(minfo.module_node_name, threshold))
 
-        target_sparsity_level = self.scheduler.current_sparsity_level if self._mode == 'global' else None
+        target_sparsity_level = self.scheduler.current_sparsity_level if self._mode == "global" else None
 
         stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics, target_sparsity_level)
 
         nncf_stats = NNCFStatistics()
-        nncf_stats.register('magnitude_sparsity', stats)
+        nncf_stats.register("magnitude_sparsity", stats)
         return nncf_stats
 
     def freeze(self, freeze: bool = True):
@@ -121,14 +122,18 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         self.set_sparsity_level(sparsity_level)
         self.freeze(True)
 
-    def set_sparsity_level(self, sparsity_level,
-                           target_sparsified_module_info: SparseModuleInfo = None,
-                           run_batchnorm_adaptation: bool = False):
+    def set_sparsity_level(
+        self,
+        sparsity_level,
+        target_sparsified_module_info: SparseModuleInfo = None,
+        run_batchnorm_adaptation: bool = False,
+    ):
         if sparsity_level >= 1 or sparsity_level < 0:
             raise AttributeError(
-                'Sparsity level should be within interval [0,1), actual value to set is: {}'.format(sparsity_level))
+                "Sparsity level should be within interval [0,1), actual value to set is: {}".format(sparsity_level)
+            )
         if target_sparsified_module_info is None:
-            target_sparsified_module_info_list = self.sparsified_module_info # List[SparseModuleInfo]
+            target_sparsified_module_info_list = self.sparsified_module_info  # List[SparseModuleInfo]
         else:
             target_sparsified_module_info_list = [target_sparsified_module_info]
         threshold = self._select_threshold(sparsity_level, target_sparsified_module_info_list)
@@ -148,9 +153,9 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
     def _set_masks_for_threshold(self, threshold_val, target_sparsified_module_info_list):
         for layer in target_sparsified_module_info_list:
             if not layer.operand.frozen:
-                layer.operand.binary_mask = calc_magnitude_binary_mask(layer.module.weight,
-                                                                       self._weight_importance_fn,
-                                                                       threshold_val)
+                layer.operand.binary_mask = calc_magnitude_binary_mask(
+                    layer.module.weight, self._weight_importance_fn, threshold_val
+                )
 
     def _collect_all_weights(self, target_sparsified_module_info_list: List[SparseModuleInfo]):
         all_weights = []
@@ -159,7 +164,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         return all_weights
 
     def compression_stage(self) -> CompressionStage:
-        if self._mode == 'local':
+        if self._mode == "local":
             return CompressionStage.FULLY_COMPRESSED
 
         if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
@@ -171,6 +176,6 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
             self._bn_adaptation = BatchnormAdaptationAlgorithm(
-                **extract_bn_adaptation_init_params(self._config,
-                                                    'magnitude_sparsity'))
+                **extract_bn_adaptation_init_params(self._config, "magnitude_sparsity")
+            )
         self._bn_adaptation.run(self.model)

@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import math
 from copy import deepcopy
@@ -55,35 +53,40 @@ class TFRangeInitParams(RangeInitParams):
         batch_size = self.init_range_data_loader.batch_size
         return math.ceil(max(steps) / batch_size)
 
-    def get_init_config_for_quantization_point(self, layer: tf.keras.layers.Layer,
-                                               input_type: str) -> RangeInitConfig:
+    def get_init_config_for_quantization_point(self, layer: tf.keras.layers.Layer, input_type: str) -> RangeInitConfig:
         if input_type == InputType.WEIGHTS:
             node_name = layer.name
             group = QuantizerGroup.WEIGHTS
         else:
-            node_name = layer.name.replace('/fake_quantize', '')
+            node_name = layer.name.replace("/fake_quantize", "")
             group = QuantizerGroup.ACTIVATIONS
         return self.get_init_config_for_scope_and_group(node_name, group)
 
     def get_init_config_for_scope_and_group(self, node_name: str, group: QuantizerGroup) -> RangeInitConfig:
         matches = []  # type: List[RangeInitConfig]
         for pl_config in self.per_layer_range_init_configs:
-            if should_consider_scope(node_name,
-                                     ignored_scopes=pl_config.ignored_scopes,
-                                     target_scopes=pl_config.target_scopes):
+            if should_consider_scope(
+                node_name, ignored_scopes=pl_config.ignored_scopes, target_scopes=pl_config.target_scopes
+            ):
                 if group == pl_config.target_group or pl_config.target_group is None:
-                    matches.append(RangeInitConfig(pl_config.init_type, pl_config.num_init_samples,
-                                                   pl_config.init_type_specific_params))
+                    matches.append(
+                        RangeInitConfig(
+                            pl_config.init_type, pl_config.num_init_samples, pl_config.init_type_specific_params
+                        )
+                    )
         if len(matches) > 1:
-            raise ValueError('Location {} matches more than one per-layer initialization parameter '
-                             'definition!'.format(str(node_name)))
+            raise ValueError(
+                "Location {} matches more than one per-layer initialization parameter "
+                "definition!".format(str(node_name))
+            )
         if len(matches) == 1:
             return matches[0]
         if not matches and self.global_init_config is not None:
             return deepcopy(self.global_init_config)
 
-        raise ValueError('Location {} does not match any per-layer initialization parameter '
-                         'definition!'.format(str(node_name)))
+        raise ValueError(
+            "Location {} does not match any per-layer initialization parameter definition!".format(str(node_name))
+        )
 
 
 class RangeInitializer:
@@ -95,63 +98,64 @@ class RangeInitializer:
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATIONS.registry_dict.values()
 
     @staticmethod
-    def generate_stat_collector(reduction_shape: ReductionShape,
-                                collector_params: RangeInitCollectorParams,
-                                init_config: RangeInitConfig,
-                                num_samples_to_collect_override: int = None) -> TensorStatisticCollectorBase:
+    def generate_stat_collector(
+        reduction_shape: ReductionShape,
+        collector_params: RangeInitCollectorParams,
+        init_config: RangeInitConfig,
+        num_samples_to_collect_override: int = None,
+    ) -> TensorStatisticCollectorBase:
         range_type = init_config.init_type
         num_samples = init_config.num_init_samples
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
 
-        if range_type == 'min_max':
+        if range_type == "min_max":
             return TFMinMaxStatisticCollector(collector_params.use_abs_max, reduction_shape, num_samples)
-        if range_type == 'mixed_min_max':
-            return TFMixedMinMaxStatisticCollector(collector_params.use_per_sample_stats(per_sample_stats=True),
-                                                   collector_params.use_abs_max,
-                                                   collector_params.use_means_of_mins,
-                                                   collector_params.use_means_of_maxs,
-                                                   reduction_shape,
-                                                   num_samples)
-        if range_type == 'mean_min_max':
-            return TFMeanMinMaxStatisticCollector(collector_params.use_per_sample_stats(per_sample_stats=True),
-                                                  collector_params.use_abs_max,
-                                                  reduction_shape, num_samples)
-        if range_type == 'threesigma':
-            return TFMedianMADStatisticCollector(reduction_shape,
-                                                 num_samples)
-        if range_type == 'percentile':
-            min_percentile = init_config.init_type_specific_params.get('min_percentile', MIN_PERCENTILE)
-            max_percentile = init_config.init_type_specific_params.get('max_percentile', MAX_PERCENTILE)
-            return TFPercentileStatisticCollector([min_percentile, max_percentile],
-                                                  reduction_shape,
-                                                  num_samples)
-        if range_type == 'mean_percentile':
-            min_percentile = init_config.init_type_specific_params.get('min_percentile', MIN_PERCENTILE)
-            max_percentile = init_config.init_type_specific_params.get('max_percentile', MAX_PERCENTILE)
-            return TFMeanPercentileStatisticCollector([min_percentile, max_percentile],
-                                                      reduction_shape,
-                                                      num_samples)
-        raise ValueError(f'Range type {range_type} is not supported.')
+        if range_type == "mixed_min_max":
+            return TFMixedMinMaxStatisticCollector(
+                collector_params.use_per_sample_stats(per_sample_stats=True),
+                collector_params.use_abs_max,
+                collector_params.use_means_of_mins,
+                collector_params.use_means_of_maxs,
+                reduction_shape,
+                num_samples,
+            )
+        if range_type == "mean_min_max":
+            return TFMeanMinMaxStatisticCollector(
+                collector_params.use_per_sample_stats(per_sample_stats=True),
+                collector_params.use_abs_max,
+                reduction_shape,
+                num_samples,
+            )
+        if range_type == "threesigma":
+            return TFMedianMADStatisticCollector(reduction_shape, num_samples)
+        if range_type == "percentile":
+            min_percentile = init_config.init_type_specific_params.get("min_percentile", MIN_PERCENTILE)
+            max_percentile = init_config.init_type_specific_params.get("max_percentile", MAX_PERCENTILE)
+            return TFPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+        if range_type == "mean_percentile":
+            min_percentile = init_config.init_type_specific_params.get("min_percentile", MIN_PERCENTILE)
+            max_percentile = init_config.init_type_specific_params.get("max_percentile", MAX_PERCENTILE)
+            return TFMeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+        raise ValueError(f"Range type {range_type} is not supported.")
 
     def _register_layer_statistics(self, layer: tf.keras.layers.Layer, layer_statistics: list, handles: list):
-        channel_axes = get_channel_axis(InputType.INPUTS, '', layer)
+        channel_axes = get_channel_axis(InputType.INPUTS, "", layer)
         init_config = self.range_init_params.get_init_config_for_quantization_point(layer, InputType.INPUTS)
 
         is_weights = False
         collector_params = RangeInitCollectorParams(is_weights, layer.mode, layer.per_channel)
-        per_sample_stats = init_config.init_type in ['mixed_min_max', 'mean_min_max']
+        per_sample_stats = init_config.init_type in ["mixed_min_max", "mean_min_max"]
 
-        reduction_shape = get_reduction_shape_activations(layer, channel_axes,
-                                                          collector_params.use_per_sample_stats(per_sample_stats))
+        reduction_shape = get_reduction_shape_activations(
+            layer, channel_axes, collector_params.use_per_sample_stats(per_sample_stats)
+        )
 
-        num_batches = int(np.ceil(
-            init_config.num_init_samples / self.dataset.batch_size))
+        num_batches = int(np.ceil(init_config.num_init_samples / self.dataset.batch_size))
 
-        collector = RangeInitializer.generate_stat_collector(reduction_shape,
-                                                             collector_params,
-                                                             init_config,
-                                                             num_batches)
+        collector = RangeInitializer.generate_stat_collector(
+            reduction_shape, collector_params, init_config, num_batches
+        )
         handles.append(layer.register_hook_pre_quantizer(collector.register_input))
         layer.enabled = False
         layer_statistics.append((layer, collector))
@@ -161,8 +165,9 @@ class RangeInitializer:
             for op_name, op in ops.items():
                 if op.__class__ in self.nncf_quantization_operation_classes:
                     channel_axes = get_channel_axis(InputType.WEIGHTS, weight_attr, layer)
-                    init_config = self.range_init_params. \
-                        get_init_config_for_quantization_point(layer, InputType.WEIGHTS)
+                    init_config = self.range_init_params.get_init_config_for_quantization_point(
+                        layer, InputType.WEIGHTS
+                    )
 
                     is_weights = True
                     collector_params = RangeInitCollectorParams(is_weights, op.mode, op.per_channel)
@@ -172,10 +177,9 @@ class RangeInitializer:
                     # No need to store extra statistics in memory since weights won't change during range init
                     num_batches = 1
 
-                    collector = RangeInitializer.generate_stat_collector(reduction_shape,
-                                                                         collector_params,
-                                                                         init_config,
-                                                                         num_batches)
+                    collector = RangeInitializer.generate_stat_collector(
+                        reduction_shape, collector_params, init_config, num_batches
+                    )
                     handles.append(op.register_hook_pre_call(collector.register_input))
                     op.enabled = False
                     op_statistics.append((layer, op_name, op, collector))
@@ -190,10 +194,8 @@ class RangeInitializer:
             elif isinstance(layer, NNCFWrapper):
                 self._register_op_statistics(layer, op_statistics, handles)
 
-        for (x, _) in ProgressBar(
-                islice(self.dataset, self.num_steps),
-                total=self.num_steps,
-                desc='Collecting tensor statistics/data'
+        for x, _ in ProgressBar(
+            islice(self.dataset, self.num_steps), total=self.num_steps, desc="Collecting tensor statistics/data"
         ):
             model(x, training=False)
 

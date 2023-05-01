@@ -14,21 +14,19 @@ GOOD_CONFIG_SOURCES = [
     PROJECT_ROOT / Path("examples/torch/semantic_segmentation/configs"),
     PROJECT_ROOT / Path("examples/torch/object_detection/configs"),
     TEST_ROOT / Path("torch/data/configs"),
-    TEST_ROOT / Path("torch/data/schema_validation_good_configs")
+    TEST_ROOT / Path("torch/data/schema_validation_good_configs"),
 ]
 
-BAD_CONFIG_SOURCES = [
-    TEST_ROOT / Path("torch/data/schema_validation_bad_configs")
-]
+BAD_CONFIG_SOURCES = [TEST_ROOT / Path("torch/data/schema_validation_bad_configs")]
 
-ConfigPathVsPassesSchemaVal = namedtuple('ConfigPathVsPassesSchemaVal', ('path', 'should_pass'))
+ConfigPathVsPassesSchemaVal = namedtuple("ConfigPathVsPassesSchemaVal", ("path", "should_pass"))
 TEST_STRUCTS = []
 
 
 def get_all_jsons_from_sources(source_directories_list: List[Path]) -> List[Path]:
     retval = []
     for source_dir in source_directories_list:
-        files = source_dir.glob('**/*.json')
+        files = source_dir.glob("**/*.json")
         retval += files
     return retval
 
@@ -42,8 +40,11 @@ for file in bad_config_files:
     TEST_STRUCTS.append(ConfigPathVsPassesSchemaVal(file, False))
 
 
-@pytest.fixture(name="config_test_struct", params=TEST_STRUCTS,
-                ids=[str(struct.path.relative_to(PROJECT_ROOT)) for struct in TEST_STRUCTS])
+@pytest.fixture(
+    name="config_test_struct",
+    params=TEST_STRUCTS,
+    ids=[str(struct.path.relative_to(PROJECT_ROOT)) for struct in TEST_STRUCTS],
+)
 def _config_test_struct(request):
     return request.param
 

@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import TypeVar
 
@@ -38,12 +36,12 @@ class NNCFGraphFactory:
 
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
+            from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.TORCH:
             return model.nncf.get_original_graph()
-        raise RuntimeError("Cannot create backend-specific graph" "because {} is not supported!".format(model_backend))
+        raise RuntimeError("Cannot create backend-specific graph because {} is not supported!".format(model_backend))
 
 
 class ModelTransformerFactory:
@@ -61,7 +59,7 @@ class ModelTransformerFactory:
 
             return ONNXModelTransformer(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
+            from nncf.openvino.graph.model_transformer import OVModelTransformer
 
             return OVModelTransformer(model)
         if model_backend == BackendType.TORCH:
@@ -69,7 +67,7 @@ class ModelTransformerFactory:
 
             return PTModelTransformer(model)
         raise RuntimeError(
-            "Cannot create backend-specific model transformer" "because {} is not supported!".format(model_backend)
+            "Cannot create backend-specific model transformer because {} is not supported!".format(model_backend)
         )
 
 
@@ -88,14 +86,14 @@ class EngineFactory:
 
             return ONNXEngine(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.engine import OVNativeEngine
+            from nncf.openvino.engine import OVNativeEngine
 
             return OVNativeEngine(model)
         if model_backend == BackendType.TORCH:
             from nncf.torch.engine import PTEngine
 
             return PTEngine(model)
-        raise RuntimeError("Cannot create backend-specific engine" "because {} is not supported!".format(model_backend))
+        raise RuntimeError("Cannot create backend-specific engine because {} is not supported!".format(model_backend))
 
 
 class CommandCreatorFactory:
@@ -109,9 +107,9 @@ class CommandCreatorFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.graph.transformations.command_creation import OVCommandCreator
+            from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 
             return OVCommandCreator()
         raise RuntimeError(
-            "Cannot create backend-specific command creator" "because {} is not supported!".format(model_backend)
+            "Cannot create backend-specific command creator because {} is not supported!".format(model_backend)
         )

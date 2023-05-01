@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import torch
 from torch import nn
@@ -49,16 +47,13 @@ class TestModel(nn.Module):
 
 def test_no_trace_model_patching():
     config = get_empty_config()
-    config["input_info"] = {
-        "sample_size": [1, 1, 4, 4],
-        "filler": "random"
-    }
+    config["input_info"] = {"sample_size": [1, 1, 4, 4], "filler": "random"}
 
     # Not patching anything: all output nodes are traced
     _, compressed_model = create_compressed_model(TestModel(True), config)
-    assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 2    # pylint: disable=protected-access
+    assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 2  # pylint: disable=protected-access
 
     # Patching a function results with no_nncf_trace in method not producing an output node
     disable_tracing(TestModel.ambiguous_op)
     _, compressed_model = create_compressed_model(TestModel(False), get_empty_config())
-    assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 1    # pylint: disable=protected-access
+    assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 1  # pylint: disable=protected-access

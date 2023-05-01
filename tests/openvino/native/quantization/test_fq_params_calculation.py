@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from pathlib import Path
 
@@ -18,10 +16,9 @@ import openvino.runtime as ov
 import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
-from nncf.quantization.algorithms.definitions import OverflowFix
+from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import SYNTHETIC_MODELS
@@ -60,7 +57,7 @@ def get_fq_nodes_stats_algo(model):
 def quantize_model(ov_model, q_params):
     dataset = get_dataset_for_test(ov_model)
 
-    min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, **q_params))
+    min_max_algo = MinMaxQuantization(subset_size=1, **q_params)
     statistics_aggregator = OVStatisticsAggregator(dataset)
     statistic_points = min_max_algo.get_statistic_points(ov_model)
     statistics_aggregator.register_statistic_points(statistic_points)

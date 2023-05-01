@@ -1,21 +1,15 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from collections import defaultdict
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import torch
 
@@ -32,9 +26,13 @@ class GraphBuilder:
     def __init__(self, custom_forward_fn: Callable[[torch.nn.Module], Any]):
         self.custom_forward_fn = custom_forward_fn
 
-    def build_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None,
-                    as_eval: bool = False,
-                    input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
+    def build_graph(
+        self,
+        model: torch.nn.Module,
+        context_to_use: Optional["TracingContext"] = None,
+        as_eval: bool = False,
+        input_infos: List[ModelInputInfo] = None,
+    ) -> PTNNCFGraph:
         tracer = GraphTracer(self.custom_forward_fn)
         dynamic_graph = tracer.trace_graph(model, context_to_use, as_eval)
         return GraphConverter.convert(dynamic_graph, input_infos)
@@ -47,10 +45,12 @@ class GraphConverter:
         module_id_vs_known_op_addrs_map = defaultdict(set)  # type: Dict[int, Set[Scope]]
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
             module_id_vs_known_op_addrs_map[dynamic_graph_node.calling_module_id].add(
-                dynamic_graph_node.op_exec_context.op_address)
+                dynamic_graph_node.op_exec_context.op_address
+            )
 
-        module_id_vs_sorted_scopes_map = {k: list(sorted([s.scope_in_model for s in v], key=str))
-            for k, v in module_id_vs_known_op_addrs_map.items()}
+        module_id_vs_sorted_scopes_map = {
+            k: list(sorted([s.scope_in_model for s in v], key=str)) for k, v in module_id_vs_known_op_addrs_map.items()
+        }
 
         nncf_graph = PTNNCFGraph()
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
@@ -58,8 +58,9 @@ class GraphConverter:
 
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_address.operator_name)
             if metatype.get_subtypes():
-                subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes,
-                                                     functions_kwargs=dynamic_graph_node.__dict__)
+                subtype = metatype.determine_subtype(
+                    dynamic_graph_node.layer_attributes, functions_kwargs=dynamic_graph_node.__dict__
+                )
             else:
                 subtype = None
             if subtype is not None:
@@ -74,16 +75,18 @@ class GraphConverter:
             is_shared = len(module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id]) > 1
             canonical_scope = module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id][0]
 
-            nncf_graph.add_nncf_node(node_name=str(op_address),
-                                     node_type=op_address.operator_name,
-                                     node_metatype=metatype,
-                                     layer_attributes=dynamic_graph_node.layer_attributes,
-                                     node_id_override=dynamic_graph_node.node_id,
-                                     layer_name=str(canonical_scope),
-                                     ignored_algorithms=dynamic_graph_node.ignored_algorithms,
-                                     is_in_iteration_scope=dynamic_graph_node.is_in_iteration_scope,
-                                     is_integer_input=is_integer_input,
-                                     is_shared=is_shared)
+            nncf_graph.add_nncf_node(
+                node_name=str(op_address),
+                node_type=op_address.operator_name,
+                node_metatype=metatype,
+                layer_attributes=dynamic_graph_node.layer_attributes,
+                node_id_override=dynamic_graph_node.node_id,
+                layer_name=str(canonical_scope),
+                ignored_algorithms=dynamic_graph_node.ignored_algorithms,
+                is_in_iteration_scope=dynamic_graph_node.is_in_iteration_scope,
+                is_integer_input=is_integer_input,
+                is_shared=is_shared,
+            )
 
         for dynamic_graph_edge in dynamic_graph.get_all_edges():
             nncf_graph.add_edge_between_nncf_nodes(
@@ -92,7 +95,7 @@ class GraphConverter:
                 tensor_shape=dynamic_graph_edge.activation_shape,
                 input_port_id=dynamic_graph_edge.input_port_id,
                 output_port_id=dynamic_graph_edge.output_port_id,
-                dtype=dynamic_graph_edge.dtype
+                dtype=dynamic_graph_edge.dtype,
             )
 
         set_nodes_attributes_in_nncf_graph(nncf_graph)

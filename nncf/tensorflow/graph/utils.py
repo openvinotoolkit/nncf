@@ -1,30 +1,28 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-from typing import List, Tuple
-import sys
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import inspect
+import sys
+from typing import List, Tuple
 
 import tensorflow as tf
 
-from nncf.tensorflow.graph.metatypes.keras_layers import TFNNCFWrapperLayerMetatype
-from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.tensorflow.graph.metatypes.keras_layers import TFNNCFWrapperLayerMetatype
+from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
+from nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
-SHARED_OPERATION_MARK = '^'
+SHARED_OPERATION_MARK = "^"
 
 
 def is_sequential_or_functional_model(model):
@@ -36,9 +34,11 @@ def is_sequential_model(model):
 
 
 def is_functional_model(model):
-    return isinstance(model, tf.keras.Model) \
-           and not isinstance(model, tf.keras.Sequential) \
-           and getattr(model, '_is_graph_network', False)
+    return (
+        isinstance(model, tf.keras.Model)
+        and not isinstance(model, tf.keras.Sequential)
+        and getattr(model, "_is_graph_network", False)
+    )
 
 
 def is_keras_layer_model(model: tf.keras.Model) -> bool:
@@ -50,21 +50,24 @@ def is_keras_layer_model(model: tf.keras.Model) -> bool:
         `False` otherwise.
     """
     for layer in model.submodules:
-        if layer.__class__.__name__ == 'KerasLayer':
+        if layer.__class__.__name__ == "KerasLayer":
             return True
     return False
 
 
 def get_keras_layers_class_names():
-    keras_layers = [class_name for class_name, _ in
-                    inspect.getmembers(sys.modules[tf.keras.layers.__name__], inspect.isclass)]
-    keras_layers += ['TensorFlowOpLayer', 'TFOpLambda', 'SlicingOpLambda']
+    keras_layers = [
+        class_name for class_name, _ in inspect.getmembers(sys.modules[tf.keras.layers.__name__], inspect.isclass)
+    ]
+    keras_layers += ["TensorFlowOpLayer", "TFOpLambda", "SlicingOpLambda"]
     return keras_layers
 
 
 def get_keras_activation_names():
-    keras_activations = [activation_name for activation_name, _ in
-                    inspect.getmembers(sys.modules[tf.keras.activations.__name__], inspect.isfunction)]
+    keras_activations = [
+        activation_name
+        for activation_name, _ in inspect.getmembers(sys.modules[tf.keras.activations.__name__], inspect.isfunction)
+    ]
     return keras_activations
 
 
@@ -73,11 +76,11 @@ def get_custom_objects(model):
     keras_activations = get_keras_activation_names()
     custom_objects = {}
     for layer in model.submodules:
-        if layer.__class__.__name__ == 'NNCFWrapper':
+        if layer.__class__.__name__ == "NNCFWrapper":
             layer = layer.layer
         if layer.__class__.__name__ not in keras_layers:
             custom_objects[layer.__class__.__name__] = layer.__class__
-        if layer.__class__.__name__ == 'Activation':
+        if layer.__class__.__name__ == "Activation":
             if layer.activation.__name__ not in keras_activations:
                 custom_objects[layer.activation.__name__] = layer.activation
     return custom_objects
@@ -85,7 +88,7 @@ def get_custom_objects(model):
 
 def get_weight_name(name, layer_name=None):
     if layer_name and layer_name in name:
-        return name.split(layer_name + '/')[-1]
+        return name.split(layer_name + "/")[-1]
     return name
 
 
@@ -107,7 +110,7 @@ def collect_wrapped_layers(model):
 
 
 def get_shared_node_name(layer_name: str, instance_idx: int):
-    return '{}{}{}'.format(layer_name, SHARED_OPERATION_MARK, instance_idx)
+    return "{}{}{}".format(layer_name, SHARED_OPERATION_MARK, instance_idx)
 
 
 def get_original_name_and_instance_idx(node_name: NNCFNodeName):
@@ -122,14 +125,12 @@ def get_original_name(node_name):
 
 
 def get_layer_to_graph_nodes_map(model, node_names):
-    layer_to_nodes_map = {layer.name: {'type': layer.__class__.__name__,
-                                       'nodes': []}
-                          for layer in model.layers}
+    layer_to_nodes_map = {layer.name: {"type": layer.__class__.__name__, "nodes": []} for layer in model.layers}
     for node in node_names:
-        parent_layer_name = node.split('/')[1]  # model_name/layer_name/layer_op_name/...
+        parent_layer_name = node.split("/")[1]  # model_name/layer_name/layer_op_name/...
         if parent_layer_name not in layer_to_nodes_map:
-            raise RuntimeError('Could not find {} layer in Model'.format(parent_layer_name))
-        layer_to_nodes_map[parent_layer_name]['nodes'].append(node)
+            raise RuntimeError("Could not find {} layer in Model".format(parent_layer_name))
+        layer_to_nodes_map[parent_layer_name]["nodes"].append(node)
     return layer_to_nodes_map
 
 
@@ -172,16 +173,17 @@ def get_nncf_operations(model: tf.keras.Model, operation_names: List[str]) -> Tu
 
 
 def _was_specially_wrapped_with_keras_export(layer, attr_name) -> bool:
-    return hasattr(layer, attr_name) and \
-           getattr(layer, attr_name) != ('keras.layers.Layer', )
+    return hasattr(layer, attr_name) and getattr(layer, attr_name) != ("keras.layers.Layer",)
 
 
 def is_builtin_layer(layer) -> bool:
     # A similar logic is actually what gets used in TF as
     # tensorflow.python.keras.utils.layer_utils.is_builtin_layer.
-    return layer.__class__.__name__ in ['SlicingOpLambda', 'TFOpLambda', 'TensorFlowOpLayer'] or \
-           _was_specially_wrapped_with_keras_export(layer, '_keras_api_names') or \
-           _was_specially_wrapped_with_keras_export(layer, '_keras_api_names_v1')
+    return (
+        layer.__class__.__name__ in ["SlicingOpLambda", "TFOpLambda", "TensorFlowOpLayer"]
+        or _was_specially_wrapped_with_keras_export(layer, "_keras_api_names")
+        or _was_specially_wrapped_with_keras_export(layer, "_keras_api_names_v1")
+    )
 
 
 def get_list_level(lst: List) -> int:
@@ -219,7 +221,7 @@ def reformat_inbound_nodes_for_oplambda(inbound_nodes: List) -> List[List[List]]
 
     inbound_nodes_oplambda = []
     for inbound_node in inbound_nodes[0]:
-        if inbound_node[0] != '_CONSTANT_VALUE':
+        if inbound_node[0] != "_CONSTANT_VALUE":
             # If an element in the first call argument did not originate as a keras tensor
             # and is a constant value, it is saved using '_CONSTANT_VALUE'.
             inbound_nodes_oplambda.append(inbound_node)

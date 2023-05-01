@@ -1,19 +1,17 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class Bottleneck(nn.Module):
@@ -33,7 +31,7 @@ class Bottleneck(nn.Module):
         if first_layer:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(last_planes, out_planes + dense_depth, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(out_planes + dense_depth)
+                nn.BatchNorm2d(out_planes + dense_depth),
             )
 
     def forward(self, x):
@@ -50,8 +48,8 @@ class Bottleneck(nn.Module):
 class DPN(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-        in_planes, out_planes = cfg['in_planes'], cfg['out_planes']
-        num_blocks, dense_depth = cfg['num_blocks'], cfg['dense_depth']
+        in_planes, out_planes = cfg["in_planes"], cfg["out_planes"]
+        num_blocks, dense_depth = cfg["num_blocks"], cfg["dense_depth"]
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
@@ -84,20 +82,20 @@ class DPN(nn.Module):
 
 def DPN26():
     cfg = {
-        'in_planes': (96, 192, 384, 768),
-        'out_planes': (256, 512, 1024, 2048),
-        'num_blocks': (2, 2, 2, 2),
-        'dense_depth': (16, 32, 24, 128)
+        "in_planes": (96, 192, 384, 768),
+        "out_planes": (256, 512, 1024, 2048),
+        "num_blocks": (2, 2, 2, 2),
+        "dense_depth": (16, 32, 24, 128),
     }
     return DPN(cfg)
 
 
 def DPN92():
     cfg = {
-        'in_planes': (96, 192, 384, 768),
-        'out_planes': (256, 512, 1024, 2048),
-        'num_blocks': (3, 4, 20, 3),
-        'dense_depth': (16, 32, 24, 128)
+        "in_planes": (96, 192, 384, 768),
+        "out_planes": (256, 512, 1024, 2048),
+        "num_blocks": (3, 4, 20, 3),
+        "dense_depth": (16, 32, 24, 128),
     }
     return DPN(cfg)
 
@@ -107,5 +105,6 @@ def test():
     x = torch.randn(1, 3, 32, 32)
     y = net(x)
     print(y)
+
 
 # test()

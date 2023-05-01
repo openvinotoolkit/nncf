@@ -1,34 +1,36 @@
 import os
+
 import pytest
 
 from tests.torch import test_models
-from tests.torch.test_compressed_graph import check_model_graph, QUANTIZERS, QuantizeTestCaseConfiguration
-from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
+from tests.torch.test_compressed_graph import QUANTIZERS
+from tests.torch.test_compressed_graph import QuantizeTestCaseConfiguration
+from tests.torch.test_compressed_graph import check_model_graph
+from tests.torch.test_compressed_graph import get_basic_quantization_config
 
-TEST_MODELS = [(("alexnet.dot", "lenet.dot"),
-                (test_models.AlexNet, test_models.LeNet),
-                ([1, 3, 32, 32], [1, 3, 32, 32]))]
+TEST_MODELS = [
+    (("alexnet.dot", "lenet.dot"), (test_models.AlexNet, test_models.LeNet), ([1, 3, 32, 32], [1, 3, 32, 32]))
+]
 
 
-@pytest.fixture(scope='function', params=QUANTIZERS)
+@pytest.fixture(scope="function", params=QUANTIZERS)
 def _case_config(request):
     quantization_type = request.param
-    graph_dir = os.path.join('quantized', quantization_type)
+    graph_dir = os.path.join("quantized", quantization_type)
     return QuantizeTestCaseConfiguration(quantization_type, graph_dir)
 
 
-@pytest.mark.parametrize(
-    "model_name, model_builder, input_size", TEST_MODELS
-)
+@pytest.mark.parametrize("model_name, model_builder, input_size", TEST_MODELS)
 def test_context_independence(model_name, model_builder, input_size, _case_config):
-
     config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_size[0])
     register_bn_adaptation_init_args(config)
 
-    compressed_models = [create_compressed_model_and_algo_for_test(model_builder[0](), config)[0],
-                         create_compressed_model_and_algo_for_test(model_builder[1](), config)[0]]
+    compressed_models = [
+        create_compressed_model_and_algo_for_test(model_builder[0](), config)[0],
+        create_compressed_model_and_algo_for_test(model_builder[1](), config)[0],
+    ]
 
     for i, compressed_model in enumerate(compressed_models):
         check_model_graph(compressed_model, model_name[i], _case_config.graph_dir)

@@ -17,13 +17,12 @@ from typing import List, Tuple, TypeVar
 import pytest
 
 from nncf.data import Dataset
-from nncf.quantization.algorithms.definitions import OverflowFix
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from tests.post_training.helpers import ConvBNTestModel
 from tests.post_training.helpers import ConvTestModel
 from tests.post_training.helpers import FCTestModel
@@ -66,7 +65,7 @@ class TemplateTestFBCAlgorithm:
         bias_value = self.list_to_backend_type(data=bias_value)
         bias_shift = self.list_to_backend_type(data=bias_shift)
 
-        algo = FastBiasCorrection(FastBiasCorrectionParameters(number_samples=1, inplace_statistics=False))
+        algo = FastBiasCorrection(subset_size=1, inplace_statistics=False)
         # pylint: disable=protected-access
         algo._backend_entity = self.get_backend()
         new_bias_shift = algo.reshape_bias_shift(bias_shift, bias_value, channel_axis)
@@ -107,15 +106,11 @@ class TemplateTestFBCAlgorithm:
 
     @staticmethod
     def get_quantization_algorithm():
-        params = PostTrainingQuantizationParameters(
-            number_samples=1,
-            overflow_fix=OverflowFix.DISABLE,
+        return PostTrainingQuantization(
+            subset_size=1,
+            fast_bias_correction=True,
+            advanced_parameters=AdvancedQuantizationParameters(overflow_fix=OverflowFix.DISABLE),
         )
-        params.algorithms = {
-            MinMaxQuantization: params.algorithms[MinMaxQuantization],
-            FastBiasCorrection: params.algorithms[FastBiasCorrection],
-        }
-        return PostTrainingQuantization(params)
 
     @pytest.mark.parametrize(
         "model_cls, ref_bias",

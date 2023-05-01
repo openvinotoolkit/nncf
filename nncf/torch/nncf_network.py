@@ -1,16 +1,14 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# pylint: disable=too-many-lines
 import functools
 import inspect
 import types
@@ -186,7 +184,7 @@ class NNCFNetworkInterface(torch.nn.Module):
     def __init__(
         self,
         model: torch.nn.Module,
-        input_infos: List[ModelInputInfo],
+        input_infos: List[ModelInputInfo] = None,
         dummy_forward_fn: Callable = None,
         wrap_inputs_fn: Callable = None,
         scopes_without_shape_matching: List[str] = None,
@@ -226,11 +224,13 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
-        else:
+        elif self._input_infos is not None:
             self.__input_infos_based_input_wrapper = InputInfoWrapManager(
                 self._input_infos, self._forward_signature, module_ref_for_device=model
             )
             self._wrap_inputs_fn = self.__input_infos_based_input_wrapper.wrap_inputs
+        else:
+            raise ValueError("wrap_inputs_fn or input_infos should be passed.")
 
         if wrap_outputs_fn is not None:
             self._wrap_outputs_fn = wrap_outputs_fn
@@ -241,7 +241,6 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._scopes_without_shape_matching = scopes_without_shape_matching
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
         self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
-        # pylint:disable=line-too-long
         self._insertions_into_original_graph = (
             {}
         )  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
@@ -729,7 +728,7 @@ class NNCFNetworkMeta(type):
     def __call__(
         cls,
         original_model: torch.nn.Module,
-        input_infos: List[ModelInputInfo],
+        input_infos: List[ModelInputInfo] = None,
         dummy_forward_fn: Callable = None,
         wrap_inputs_fn: Callable[..., None] = None,
         scopes_without_shape_matching: List[str] = None,
@@ -929,8 +928,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
             nncf_logger.warning(
                 "You are setting `forward` on an NNCF-processed model object.\n"
                 "NNCF relies on custom-wrapping the `forward` call in order to function properly.\n"
-                "Arbitrary adjustments to the forward function on an NNCFNetwork object have undefined "
-                "behavior.\n"
+                "Arbitrary adjustments to the forward function on an NNCFNetwork object have undefined behavior.\n"
                 "If you need to replace the underlying forward function of the original model so that "
                 "NNCF should be using that instead of the original forward function that NNCF saved "
                 "during the compressed model creation, you can do this by calling:\n"
