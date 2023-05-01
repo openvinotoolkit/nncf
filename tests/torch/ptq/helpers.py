@@ -41,10 +41,15 @@ from tests.torch.helpers import create_conv
 
 def get_single_conv_nncf_graph() -> NNCFGraphToTest:
     conv_layer_attrs = ConvolutionLayerAttributes(
-                            weight_requires_grad=True,
-                            in_channels=4, out_channels=4, kernel_size=(4, 4),
-                            stride=1, groups=1, transpose=False,
-                            padding_values=[])
+        weight_requires_grad=True,
+        in_channels=4,
+        out_channels=4,
+        kernel_size=(4, 4),
+        stride=1,
+        groups=1,
+        transpose=False,
+        padding_values=[],
+    )
     return NNCFGraphToTest(PTModuleConv2dMetatype, conv_layer_attrs, PTNNCFGraph)
 
 
@@ -59,24 +64,21 @@ def get_single_no_weight_matmul_nncf_graph() -> NNCFGraphToTest:
 
 def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
     conv_layer_attrs = ConvolutionLayerAttributes(
-                            weight_requires_grad=True,
-                            in_channels=4, out_channels=4, kernel_size=(4, 4),
-                            stride=1, groups=1, transpose=False,
-                            padding_values=[])
-    return NNCFGraphToTestSumAggregation(PTModuleConv2dMetatype,
-                                         PTSumMetatype,
-                                         conv_layer_attrs,
-                                         PTNNCFGraph)
+        weight_requires_grad=True,
+        in_channels=4,
+        out_channels=4,
+        kernel_size=(4, 4),
+        stride=1,
+        groups=1,
+        transpose=False,
+        padding_values=[],
+    )
+    return NNCFGraphToTestSumAggregation(PTModuleConv2dMetatype, PTSumMetatype, conv_layer_attrs, PTNNCFGraph)
 
 
-def get_nncf_network(model: torch.nn.Module,
-                     input_shape: List[int] = [1, 3, 32, 32]):
+def get_nncf_network(model: torch.nn.Module, input_shape: List[int] = [1, 3, 32, 32]):
     model.eval()
-    nncf_config = NNCFConfig({
-        'input_info': {
-            'sample_size': input_shape.copy()
-        }
-    })
+    nncf_config = NNCFConfig({"input_info": {"sample_size": input_shape.copy()}})
     nncf_network = create_nncf_network(
         model=model,
         config=nncf_config,
@@ -93,9 +95,11 @@ def get_min_max_algo_for_test():
 
 def mock_collect_statistics(mocker):
     _ = mocker.patch(
-        'nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics', return_value=None)
-    min_, max_ = 0., 1.
+        "nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics", return_value=None
+    )
+    min_, max_ = 0.0, 1.0
     min_, max_ = map(lambda x: torch.tensor(x), [min_, max_])
     _ = mocker.patch(
-        'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics',
-        return_value=PTMinMaxTensorStatistic(min_, max_))
+        "nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics",
+        return_value=PTMinMaxTensorStatistic(min_, max_),
+    )

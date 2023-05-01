@@ -66,7 +66,7 @@ class TemplateTestFBCAlgorithm:
         bias_value = self.list_to_backend_type(data=bias_value)
         bias_shift = self.list_to_backend_type(data=bias_shift)
 
-        algo = FastBiasCorrection(FastBiasCorrectionParameters(number_samples=1,inplace_statistics=False))
+        algo = FastBiasCorrection(FastBiasCorrectionParameters(number_samples=1, inplace_statistics=False))
         # pylint: disable=protected-access
         algo._backend_entity = self.get_backend()
         new_bias_shift = algo.reshape_bias_shift(bias_shift, bias_value, channel_axis)
@@ -113,24 +113,21 @@ class TemplateTestFBCAlgorithm:
         )
         params.algorithms = {
             MinMaxQuantization: params.algorithms[MinMaxQuantization],
-            FastBiasCorrection: params.algorithms[FastBiasCorrection]
+            FastBiasCorrection: params.algorithms[FastBiasCorrection],
         }
         return PostTrainingQuantization(params)
 
-
-    @pytest.mark.parametrize("model_cls, ref_bias",
+    @pytest.mark.parametrize(
+        "model_cls, ref_bias",
         (
             (ConvTestModel, [0.01984841, 1.0838453]),
             (ConvBNTestModel, [0.08396978, 1.1676897]),
             # (FCTestModel, [0.9995632, 1.1002693]),
-        )
+        ),
     )
     def test_update_bias(self, model_cls, ref_bias, tmpdir):
-
         model = self.backend_specific_model(model_cls(), tmpdir)
-        dataset = Dataset(
-            self.get_dataset(model_cls.INPUT_SIZE),
-            self.get_transform_fn())
+        dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
         quantized_model = quantization_algorithm.apply(model, dataset=dataset)

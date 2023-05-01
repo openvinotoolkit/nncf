@@ -17,11 +17,7 @@ This package defines the API for the NNCF compression methods so that the user c
 extend the existing algorithms.
 """
 from abc import abstractmethod
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Tuple
-from typing import TypeVar
+from typing import Any, Dict, List, Tuple, TypeVar
 
 import torch
 from torch import nn
@@ -40,7 +36,7 @@ from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
 
@@ -169,8 +165,10 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         """
         ctrl = self._build_controller(model)
         if not isinstance(ctrl, PTCompressionAlgorithmController):
-            raise RuntimeError('Internal error: builder must create controller inherited from '
-                               '`PTCompressionAlgorithmController` class')
+            raise RuntimeError(
+                "Internal error: builder must create controller inherited from "
+                "`PTCompressionAlgorithmController` class"
+            )
         ctrl.set_builder_state_with_name(self.name, self.get_state())
         return ctrl
 
@@ -199,19 +197,20 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
             if not weighted_node.layer_attributes.weight_requires_grad:
                 if self._should_consider_scope(weighted_node.node_name):
                     scopes_of_frozen_layers.append(weighted_node.node_name)
-        scopes_to_print = '\n'.join(scopes_of_frozen_layers)
+        scopes_to_print = "\n".join(scopes_of_frozen_layers)
         if len(scopes_of_frozen_layers) > 0:
             is_allowed, reason = self._are_frozen_layers_allowed()
             if is_allowed:
                 nncf_logger.warning(
-                    f'{reason}, compressing them without tuning weights.\n'
-                    f'Frozen layers:\n'
-                    f'{scopes_to_print}')
+                    f"{reason}, compressing them without tuning weights.\n" f"Frozen layers:\n" f"{scopes_to_print}"
+                )
             else:
-                raise RuntimeError(f'{reason}.\n'
-                                   f'Please unfreeze them or put into the Ignored Scope.\n'
-                                   f'Frozen Layers:\n'
-                                   f'{scopes_to_print}')
+                raise RuntimeError(
+                    f"{reason}.\n"
+                    f"Please unfreeze them or put into the Ignored Scope.\n"
+                    f"Frozen Layers:\n"
+                    f"{scopes_to_print}"
+                )
 
     def _should_consider_scope(self, node_name: NNCFNodeName) -> bool:
         return should_consider_scope(node_name, self.ignored_scopes, self.target_scopes)
@@ -229,5 +228,5 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         return filtered_nncf_module_names_list
 
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
-        algo_name = self.name.replace('_', ' ')
-        return False, f'Frozen layers are not allowed for {algo_name}'
+        algo_name = self.name.replace("_", " ")
+        return False, f"Frozen layers are not allowed for {algo_name}"

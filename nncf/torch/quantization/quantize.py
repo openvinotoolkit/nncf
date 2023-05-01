@@ -12,10 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Any
-from typing import Dict
-from typing import Optional
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 
@@ -53,8 +50,8 @@ class CalibrationDataLoader(PTInitializingDataLoader):
 
     @property
     def batch_size(self):
-        data_source = getattr(self._data_loader, '_data_source')
-        return getattr(data_source, 'batch_size', 1)
+        data_source = getattr(self._data_loader, "_data_source")
+        return getattr(data_source, "batch_size", 1)
 
     def __iter__(self):
         return iter(self._data_loader.get_inference_data())
@@ -67,7 +64,7 @@ class CalibrationDataLoader(PTInitializingDataLoader):
 
     def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
         if not isinstance(dataloader_output, tuple):
-            dataloader_output = (dataloader_output, )
+            dataloader_output = (dataloader_output,)
         return dataloader_output, {}
 
     @staticmethod
@@ -84,46 +81,46 @@ def _get_transformer_quantization_config(subset_size: int) -> Dict:
     :return: The quantization config for transformer-based models.
     """
     return {
-        'algorithm': 'quantization',
-        'preset': 'mixed',
-        'initializer': {
-            'range': {'num_init_samples': subset_size, 'type': 'mean_min_max'},
-            'batchnorm_adaptation': {'num_bn_adaptation_samples': 0},
+        "algorithm": "quantization",
+        "preset": "mixed",
+        "initializer": {
+            "range": {"num_init_samples": subset_size, "type": "mean_min_max"},
+            "batchnorm_adaptation": {"num_bn_adaptation_samples": 0},
         },
-        'scope_overrides': {
-            'activations': {'{re}.*matmul_0': {'mode': 'symmetric'}}},
-        'ignored_scopes': [
-            '{re}.*Embeddings.*',
-            '{re}.*__add___[0-1]',
-            '{re}.*layer_norm_0',
-            '{re}.*matmul_1',
-            '{re}.*__truediv__*',
+        "scope_overrides": {"activations": {"{re}.*matmul_0": {"mode": "symmetric"}}},
+        "ignored_scopes": [
+            "{re}.*Embeddings.*",
+            "{re}.*__add___[0-1]",
+            "{re}.*layer_norm_0",
+            "{re}.*matmul_1",
+            "{re}.*__truediv__*",
         ],
-        'overflow_fix': 'disable',
+        "overflow_fix": "disable",
     }
 
 
-def _get_default_quantization_config(preset: QuantizationPreset,
-                                     subset_size: int) -> Dict:
+def _get_default_quantization_config(preset: QuantizationPreset, subset_size: int) -> Dict:
     """
     :return: The default quantization config.
     """
     return {
-        'algorithm': 'quantization',
-        'preset': preset.value,
-        'initializer': {
-            'range': {'num_init_samples': subset_size},
-            'batchnorm_adaptation': {'num_bn_adaptation_samples': 0}
+        "algorithm": "quantization",
+        "preset": preset.value,
+        "initializer": {
+            "range": {"num_init_samples": subset_size},
+            "batchnorm_adaptation": {"num_bn_adaptation_samples": 0},
         },
-        'overflow_fix': 'first_layer_only'
+        "overflow_fix": "first_layer_only",
     }
 
 
-def _create_nncf_config(preset: QuantizationPreset,
-                        target_device: TargetDevice,
-                        subset_size: int,
-                        model_type: Optional[ModelType],
-                        ignored_scope: Optional[IgnoredScope]) -> NNCFConfig:
+def _create_nncf_config(
+    preset: QuantizationPreset,
+    target_device: TargetDevice,
+    subset_size: int,
+    model_type: Optional[ModelType],
+    ignored_scope: Optional[IgnoredScope],
+) -> NNCFConfig:
     """
     :return: The NNCFConfig for quantization method.
     """
@@ -134,34 +131,35 @@ def _create_nncf_config(preset: QuantizationPreset,
 
     if ignored_scope is not None:
         _ignored_scope = convert_ignored_scope_to_list(ignored_scope)
-        if 'ignored_scopes' in compression_config:
-            compression_config['ignored_scopes'].extend(_ignored_scope)
+        if "ignored_scopes" in compression_config:
+            compression_config["ignored_scopes"].extend(_ignored_scope)
         else:
-            compression_config['ignored_scopes'] = _ignored_scope
+            compression_config["ignored_scopes"] = _ignored_scope
 
-    return NNCFConfig({
-        'target_device': target_device.value,
-        'compression': compression_config
-    })
+    return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 
 
-def quantize_impl(model: torch.nn.Module,
-                  calibration_dataset: Dataset,
-                  preset: QuantizationPreset,
-                  target_device: TargetDevice,
-                  subset_size: int,
-                  fast_bias_correction: bool,
-                  model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None) -> torch.nn.Module:
+def quantize_impl(
+    model: torch.nn.Module,
+    calibration_dataset: Dataset,
+    preset: QuantizationPreset,
+    target_device: TargetDevice,
+    subset_size: int,
+    fast_bias_correction: bool,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+) -> torch.nn.Module:
     """
     Implementation of the `quantize()` method for the PyTorch backend.
     """
     if ignored_scope is not None and ignored_scope.types is not None:
-        raise RuntimeError('Quantization algorithm from the PyTorch backend '
-                            'does not support operation types in the ignored '
-                            'scopes yet')
+        raise RuntimeError(
+            "Quantization algorithm from the PyTorch backend "
+            "does not support operation types in the ignored "
+            "scopes yet"
+        )
     if target_device == TargetDevice.CPU_SPR:
-        raise RuntimeError('target_device == CPU_SPR is not supported')
+        raise RuntimeError("target_device == CPU_SPR is not supported")
 
     nncf_config = _create_nncf_config(preset, target_device, subset_size, model_type, ignored_scope)
 
@@ -169,7 +167,7 @@ def quantize_impl(model: torch.nn.Module,
     nncf_config.register_extra_structs(
         [
             QuantizationRangeInitArgs(data_loader=calibration_data_loader),
-            BNAdaptationInitArgs(data_loader=calibration_data_loader)
+            BNAdaptationInitArgs(data_loader=calibration_data_loader),
         ]
     )
 
@@ -192,7 +190,7 @@ def quantize_impl(model: torch.nn.Module,
                 kwargs = objwalk(kwargs, is_tensor, send_to_device)
 
             args, kwargs = wrap_inputs(args, kwargs)
-            retval =  model(*args, **kwargs)
+            retval = model(*args, **kwargs)
             retval = replicate_same_tensors(retval)
             return wrap_outputs(retval)
 
@@ -206,7 +204,7 @@ def quantize_impl(model: torch.nn.Module,
         config=nncf_config,
         dummy_forward_fn=dummy_forward_fn,
         wrap_inputs_fn=wrap_inputs,
-        wrap_outputs_fn=wrap_outputs
+        wrap_outputs_fn=wrap_outputs,
     )
     compression_ctrl.prepare_for_export()
     compressed_model.nncf.disable_dynamic_graph_building()

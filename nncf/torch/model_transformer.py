@@ -93,5 +93,5 @@ class PTModelTransformer(ModelTransformer):
             update_fused_bias(
                 target_node_name=transformation.target_point.target_node_name,
                 new_bias=transformation.bias_value,
-                model=self._model
+                model=self._model,
             )

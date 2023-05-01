@@ -31,8 +31,8 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 
-TModel = TypeVar('TModel')
-TTensor = TypeVar('TTensor')
+TModel = TypeVar("TModel")
+TTensor = TypeVar("TTensor")
 
 
 class FastBiasCorrectionParameters(AlgorithmParameters):
@@ -43,8 +43,7 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
     :param threshold: The magnitude threshold that regulates the application of the shift.
     """
 
-    def __init__(self,  number_samples: int = 100, threshold: float = 2.0,
-                 inplace_statistics: bool = True) -> None:
+    def __init__(self, number_samples: int = 100, threshold: float = 2.0, inplace_statistics: bool = True) -> None:
         """
         :param number_samples: The number of the samples for the statistics collection.
             This statistics uses for the further calculation of the bias shift.
@@ -106,24 +105,30 @@ class FastBiasCorrection(Algorithm):
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
+
             self._backend_entity = ONNXFastBiasCorrectionAlgoBackend()
         elif model_backend == BackendType.OPENVINO:
             # pylint: disable=line-too-long
             from nncf.experimental.openvino_native.quantization.algorithms.fast_bias_correction.openvino_backend import (
                 OVFastBiasCorrectionAlgoBackend,
             )
+
             self._backend_entity = OVFastBiasCorrectionAlgoBackend()
         elif model_backend == BackendType.TORCH:
             from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
+
             self._backend_entity = PTFastBiasCorrectionAlgoBackend()
         else:
-            raise RuntimeError('Cannot return backend-specific entity '
-                               'because {} is not supported!'.format(model_backend))
+            raise RuntimeError(
+                "Cannot return backend-specific entity " "because {} is not supported!".format(model_backend)
+            )
 
-    def _apply(self,
-               model: TModel,
-               statistic_points: Optional[StatisticPointsContainer] = None,
-               dataset: Optional[Dataset] = None) -> TModel:
+    def _apply(
+        self,
+        model: TModel,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+        dataset: Optional[Dataset] = None,
+    ) -> TModel:
         self._set_backend_entity(model)
 
         nncf_graph = NNCFGraphFactory.create(model)
@@ -139,7 +144,7 @@ class FastBiasCorrection(Algorithm):
             bias_value = self._backend_entity.get_bias_value(node, nncf_graph, model)
 
             if not self._backend_entity.is_quantized_weights(node, nncf_graph, model):
-                nncf_logger.debug(f'Skipping node {node_name} because weights were not quantized')
+                nncf_logger.debug(f"Skipping node {node_name} because weights were not quantized")
                 continue
 
             in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, model)
@@ -160,7 +165,7 @@ class FastBiasCorrection(Algorithm):
                 input_blob=input_blob,
                 channel_axis=channel_axis,
                 output_fp=output_fp,
-                output_name=sub_output_name
+                output_name=sub_output_name,
             )
 
             bias_shift = self.reshape_bias_shift(bias_shift, bias_value, channel_axis)
@@ -168,10 +173,10 @@ class FastBiasCorrection(Algorithm):
             magnitude = self._backend_entity.get_bias_shift_magnitude(bias_value, updated_bias)
 
             if magnitude < self.threshold:
-                nncf_logger.debug(f'{node_name} bias would be changed')
+                nncf_logger.debug(f"{node_name} bias would be changed")
                 node_and_new_bias_value.append((node, updated_bias))
             else:
-                nncf_logger.debug(f'{node_name} bias skipped by threshold. Magnitude: {magnitude}')
+                nncf_logger.debug(f"{node_name} bias skipped by threshold. Magnitude: {magnitude}")
 
         # Create commands of bias correction and apply them to the model.
         transformation_layout = TransformationLayout()
@@ -209,15 +214,16 @@ class FastBiasCorrection(Algorithm):
         """
 
         def input_filter_func(point):
-            return FastBiasCorrection in point.algorithm_to_tensor_collectors and \
-                   point.target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATOR_PRE_HOOK]
+            return FastBiasCorrection in point.algorithm_to_tensor_collectors and point.target_point.type in [
+                TargetType.PRE_LAYER_OPERATION,
+                TargetType.OPERATOR_PRE_HOOK,
+            ]
 
         input_fp = []
         input_shape = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-                node_name,
-                input_filter_func,
-                FastBiasCorrection):
+            node_name, input_filter_func, FastBiasCorrection
+        ):
             statistics = tensor_collector.get_statistics()
             input_fp.extend(statistics.mean_values)
             input_shape.extend(statistics.shape)
@@ -233,20 +239,19 @@ class FastBiasCorrection(Algorithm):
         """
 
         def output_filter_func(point):
-            return FastBiasCorrection in point.algorithm_to_tensor_collectors and \
-                   point.target_point.type in [TargetType.POST_LAYER_OPERATION, TargetType.OPERATOR_POST_HOOK]
+            return FastBiasCorrection in point.algorithm_to_tensor_collectors and point.target_point.type in [
+                TargetType.POST_LAYER_OPERATION,
+                TargetType.OPERATOR_POST_HOOK,
+            ]
 
         output_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-                node_name,
-                output_filter_func,
-                FastBiasCorrection):
+            node_name, output_filter_func, FastBiasCorrection
+        ):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
-    def _extract_submodel(self,
-                          model_transformer: ModelTransformer,
-                          node_name: str) -> TModel:
+    def _extract_submodel(self, model_transformer: ModelTransformer, node_name: str) -> TModel:
         """
         Extracts sub-model using backend-specific ModelTransformer.
 
@@ -268,18 +273,16 @@ class FastBiasCorrection(Algorithm):
         :param point: TargetPoint for statistic collection.
         :param axis: Channel axis for the statistics calculation.
         """
-        stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=axis,
-                                                                       num_samples=self.number_samples,
-                                                                       inplace=self.inplace_statistics)
-        container.add_statistic_point(StatisticPoint(target_point=point,
-                                                     tensor_collector=stat_collector,
-                                                     algorithm=FastBiasCorrection))
+        stat_collector = self._backend_entity.mean_statistic_collector(
+            reduction_shape=axis, num_samples=self.number_samples, inplace=self.inplace_statistics
+        )
+        container.add_statistic_point(
+            StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=FastBiasCorrection)
+        )
 
-    def _create_input_data(self,
-                           input_shape: Tuple[int],
-                           input_fp: List[TTensor],
-                           input_name: str,
-                           channel_axis: int) -> Dict[str, NNCFTensor]:
+    def _create_input_data(
+        self, input_shape: Tuple[int], input_fp: List[TTensor], input_name: str, channel_axis: int
+    ) -> Dict[str, NNCFTensor]:
         """
         Creates input blob for the bias shift calculation.
         :param input_shape: Input shape for the blob.
@@ -295,12 +298,14 @@ class FastBiasCorrection(Algorithm):
         input_data = {input_name: input_blob}
         return input_data
 
-    def _get_bias_shift(self,
-                        model: TModel,
-                        input_blob: Dict[str, NNCFTensor],
-                        channel_axis: Tuple[int],
-                        output_fp: List[TTensor],
-                        output_name: str) -> TTensor:
+    def _get_bias_shift(
+        self,
+        model: TModel,
+        input_blob: Dict[str, NNCFTensor],
+        channel_axis: Tuple[int],
+        output_fp: List[TTensor],
+        output_name: str,
+    ) -> TTensor:
         """
         Calculates updated bias.
 
@@ -322,26 +327,25 @@ class FastBiasCorrection(Algorithm):
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
-        nodes_with_bias = [node for node in nncf_graph.get_all_nodes() if
-                           self._backend_entity.is_node_with_bias(node, nncf_graph, model)]
+        nodes_with_bias = [
+            node
+            for node in nncf_graph.get_all_nodes()
+            if self._backend_entity.is_node_with_bias(node, nncf_graph, model)
+        ]
 
         statistic_container = StatisticPointsContainer()
         for node in nodes_with_bias:
             input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
             in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, model)
-            pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
-                                                                          in_node_name,
-                                                                          input_port_id)
-            post_layer_statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
-                                                                           out_node_name,
-                                                                           output_port_id)
+            pre_layer_statistic_point = self._backend_entity.target_point(
+                TargetType.PRE_LAYER_OPERATION, in_node_name, input_port_id
+            )
+            post_layer_statistic_point = self._backend_entity.target_point(
+                TargetType.POST_LAYER_OPERATION, out_node_name, output_port_id
+            )
             channel_axis = node.metatype.output_channel_axis
 
-            self._add_statistic_point(statistic_container,
-                                      pre_layer_statistic_point,
-                                      channel_axis)
-            self._add_statistic_point(statistic_container,
-                                      post_layer_statistic_point,
-                                      channel_axis)
+            self._add_statistic_point(statistic_container, pre_layer_statistic_point, channel_axis)
+            self._add_statistic_point(statistic_container, post_layer_statistic_point, channel_axis)
 
         return statistic_container

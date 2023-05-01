@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 import onnx
@@ -35,8 +34,9 @@ def is_node_with_bias(node: NNCFNode) -> bool:
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
-    if node.metatype in OPERATIONS_WITH_BIAS_METATYPES and \
-            isinstance(node.layer_attributes, ONNXExtendedLayerAttributes):
+    if node.metatype in OPERATIONS_WITH_BIAS_METATYPES and isinstance(
+        node.layer_attributes, ONNXExtendedLayerAttributes
+    ):
         return len(node.layer_attributes.input_tensor_names) > 2
     return False
 
@@ -59,7 +59,7 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
     if metatype == ONNXIdentityMetatype:
         return onnx_graph.get_initializers_value(node.input[0])
-    raise RuntimeError('Could not find the bias value of the node')
+    raise RuntimeError("Could not find the bias value of the node")
 
 
 def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]:
@@ -92,6 +92,6 @@ def get_input_edge(input_node_name: str, input_edges_mapping: Dict[str, Tuple[st
     input_edges = set()
     for node_info in input_edges_mapping[input_node_name]:
         name, port_id = node_info
-        input_edges.add(onnx_graph.get_node_edge_names(name)['input'][port_id])
+        input_edges.add(onnx_graph.get_node_edge_names(name)["input"][port_id])
     assert len(input_edges) == 1
     return input_edges.pop()

@@ -40,7 +40,6 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCo
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-
     @property
     def operation_metatypes(self) -> Registry:
         return OV_OPERATOR_METATYPES
@@ -50,15 +49,13 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVNNCFCollectorTensorProcessor
 
     @staticmethod
-    def target_point(target_type: TargetType,
-                     target_node_name: str,
-                     port_id: int) -> OVTargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_bias_correction_command(node: NNCFNode,
-                                       bias_value: np.ndarray,
-                                       nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+    ) -> OVBiasCorrectionCommand:
         return OVCommandCreator.create_command_to_update_bias(node, bias_value, nncf_graph)
 
     @staticmethod
@@ -66,11 +63,12 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVModelExtractionCommand(inputs, outputs)
 
     @staticmethod
-    def mean_statistic_collector(reduction_shape: ReductionShape,
-                                 inplace: bool,
-                                 num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None,
-                                 ) -> TensorCollector:
+    def mean_statistic_collector(
+        reduction_shape: ReductionShape,
+        inplace: bool,
+        num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
+    ) -> TensorCollector:
         return get_mean_stat_collector(num_samples, reduction_shape, window_size, inplace)
 
     @staticmethod

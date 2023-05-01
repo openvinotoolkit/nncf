@@ -1,4 +1,3 @@
-
 """
  Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,8 +28,8 @@ from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggreg
 from tests.torch.ptq.helpers import get_nncf_network
 from tests.torch.ptq.test_ptq_params import ToNNCFNetworkInterface
 
-IDENTITY_NODE_NAME = 'PTIdentityConvModel/__add___0'
-CONV_NODE_NAME = 'PTIdentityConvModel/NNCFConv2d[conv]/conv2d_0'
+IDENTITY_NODE_NAME = "PTIdentityConvModel/__add___0"
+CONV_NODE_NAME = "PTIdentityConvModel/NNCFConv2d[conv]/conv2d_0"
 INPUT_SHAPE = [1, 3, 3, 3]
 
 
@@ -41,7 +40,7 @@ class PTIdentityConvModel(nn.Module, ToNNCFNetworkInterface):
         self.conv.weight.data = torch.tensor(kernel, dtype=torch.float32)
 
     def forward(self, x):
-        return self.conv(x + 0.)
+        return self.conv(x + 0.0)
 
     def get_nncf_network(self):
         return get_nncf_network(self, INPUT_SHAPE)
@@ -62,7 +61,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         conv_w = self.dataset_samples_to_conv_w(np.array(sample))
         return PTIdentityConvModel(conv_w).get_nncf_network()
 
-    @pytest.fixture(scope='session')
+    @pytest.fixture(scope="session")
     def test_params(self):
         return
 
@@ -92,8 +91,8 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         dataset_samples = [np.zeros(input_shape), np.ones(input_shape)]
 
         for i, value in enumerate(dataset_values):
-            dataset_samples[0][0, i, 0, 0] = value['max']
-            dataset_samples[0][0, i, 0, 1] = value['min']
+            dataset_samples[0][0, i, 0, 0] = value["max"]
+            dataset_samples[0][0, i, 0, 1] = value["min"]
 
         return torch.tensor(dataset_samples, dtype=torch.float32)
 
@@ -101,14 +100,14 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def is_stat_in_shape_of_scale(self) -> bool:
         return True
 
-    @pytest.fixture(params=[False], ids=['out_of_palce'])
+    @pytest.fixture(params=[False], ids=["out_of_palce"])
     def inplace_statistics(self, request) -> bool:
         return request.param
 
-    @pytest.mark.skip('Merging is not implemented yet')
+    @pytest.mark.skip("Merging is not implemented yet")
     def test_statistics_merging_simple(self, dataset_samples, inplace_statistics):
         pass
 
-    @pytest.mark.skip('Merging is not implemented yet')
+    @pytest.mark.skip("Merging is not implemented yet")
     def test_statistic_merging(self, dataset_samples, inplace_statistics):
         pass

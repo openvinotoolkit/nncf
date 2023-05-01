@@ -38,9 +38,9 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def backend_specific_model(model: bool, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=['input.1'])
+        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         ov_path = f"{tmp_dir}/model.xml"
-        runner = Command(f'mo -m {onnx_path} -o {tmp_dir} -n model')
+        runner = Command(f"mo -m {onnx_path} -o {tmp_dir} -n model")
         runner.run()
         core = ov.Core()
         ov_model = core.read_model(ov_path)
@@ -54,7 +54,8 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
     def get_transform_fn():
         def transform_fn(data_item):
             tensor, _ = data_item
-            return {'input.1': tensor}
+            return {"input.1": tensor}
+
         return transform_fn
 
     @staticmethod

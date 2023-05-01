@@ -58,9 +58,7 @@ def is_node_with_fused_bias(node: NNCFNode, model: NNCFNetwork) -> bool:
     fused_node = get_potential_fused_node(node.node_name, model)
     node_module = model.get_containing_module(node.node_name)
 
-    return node.metatype in OPERATORS_WITH_BIAS_METATYPES and (
-        node_module.bias is not None or fused_node is not None
-    )
+    return node.metatype in OPERATORS_WITH_BIAS_METATYPES and (node_module.bias is not None or fused_node is not None)
 
 
 def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
@@ -138,7 +136,5 @@ def extraction_potential_fused_modules(node_name: str, model: NNCFNetwork) -> nn
     if fused_node:
         extracted_node_names.append(fused_node.node_name)
 
-    extracted_modules = [
-        copy.deepcopy(model.get_containing_module(node_name)) for node_name in extracted_node_names
-    ]
+    extracted_modules = [copy.deepcopy(model.get_containing_module(node_name)) for node_name in extracted_node_names]
     return nn.Sequential(*extracted_modules)

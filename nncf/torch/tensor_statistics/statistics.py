@@ -50,13 +50,16 @@ def pt_convert_stat_to_min_max_tensor_stat(statistic: TensorStatistic) -> PTMinM
     if isinstance(statistic, PTMedianMADTensorStatistic):
         # Using three-sigma approach to estimate min and max
         # Constant factor depends on the distribution form - assuming normal and the factor is 1.4826
-        return PTMinMaxTensorStatistic(statistic.median_values - 3 * 1.4826230 * statistic.mad_values,
-                                     statistic.median_values + 3 * 1.4826230 * statistic.mad_values)
+        return PTMinMaxTensorStatistic(
+            statistic.median_values - 3 * 1.4826230 * statistic.mad_values,
+            statistic.median_values + 3 * 1.4826230 * statistic.mad_values,
+        )
     if isinstance(statistic, PTPercentileTensorStatistic):
         if len(statistic.percentile_vs_values_dict.keys()) < 2:
             raise ValueError("Cannot create a min-max statistic for less than 2 percentile values")
         min_pct = min(statistic.percentile_vs_values_dict.keys())
         max_pct = max(statistic.percentile_vs_values_dict.keys())
-        return PTMinMaxTensorStatistic(statistic.percentile_vs_values_dict[min_pct],
-                                     statistic.percentile_vs_values_dict[max_pct])
+        return PTMinMaxTensorStatistic(
+            statistic.percentile_vs_values_dict[min_pct], statistic.percentile_vs_values_dict[max_pct]
+        )
     raise ValueError("Unknown TensorStatistic to generate min-max stat from!")

@@ -27,7 +27,7 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
 class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
@@ -47,8 +47,8 @@ class PTCompositeCompressionAlgorithmBuilder(CompositeCompressionAlgorithmBuilde
         algo_names = extract_algorithm_names(config)
         if len(algo_names) < 2:
             raise RuntimeError(
-                'Composite algorithm builder must be supplied with a config with more than one '
-                'compression algo specified!'
+                "Composite algorithm builder must be supplied with a config with more than one "
+                "compression algo specified!"
             )
         for algo_name in algo_names:
             algo_builder = PT_COMPRESSION_ALGORITHMS.get(algo_name)

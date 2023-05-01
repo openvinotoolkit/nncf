@@ -54,10 +54,9 @@ from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
-#pylint:disable=too-many-public-methods
+# pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
-
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
@@ -81,14 +80,15 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTModuleConv1dMetatype,
-                om.PTModuleConv2dMetatype,
-                om.PTModuleConv3dMetatype,
-                om.PTModuleLinearMetatype,
-                om.PTModuleConvTranspose1dMetatype,
-                om.PTModuleConvTranspose2dMetatype,
-                om.PTModuleConvTranspose3dMetatype,
-                ]
+        return [
+            om.PTModuleConv1dMetatype,
+            om.PTModuleConv2dMetatype,
+            om.PTModuleConv3dMetatype,
+            om.PTModuleLinearMetatype,
+            om.PTModuleConvTranspose1dMetatype,
+            om.PTModuleConvTranspose2dMetatype,
+            om.PTModuleConvTranspose3dMetatype,
+        ]
 
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
@@ -107,9 +107,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTModelTransformer(model)
 
     @staticmethod
-    def target_point(target_type: TargetType,
-                     target_node_name: str,
-                     port_id: int) -> PTTargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             port_id = None
         if target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
@@ -118,24 +116,25 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def create_activation_quantizer_insertion_command(
-            nncf_graph: NNCFGraph,
-            target_point: PTTargetPoint,
-            quantizer_config: QuantizerConfig,
-            parameters: FakeQuantizeParameters) -> PTInsertionCommand:
-        return PTMinMaxAlgoBackend._create_quantizer_insertion_command(nncf_graph,
-                                                                       target_point,
-                                                                       quantizer_config,
-                                                                       parameters)
+        nncf_graph: NNCFGraph,
+        target_point: PTTargetPoint,
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> PTInsertionCommand:
+        return PTMinMaxAlgoBackend._create_quantizer_insertion_command(
+            nncf_graph, target_point, quantizer_config, parameters
+        )
+
     @staticmethod
     def create_weight_quantizer_insertion_command(
-            nncf_graph: NNCFGraph,
-            target_point: PTTargetPoint,
-            quantizer_config: QuantizerConfig,
-            parameters: FakeQuantizeParameters) -> PTInsertionCommand:
-        return PTMinMaxAlgoBackend._create_quantizer_insertion_command(nncf_graph,
-                                                                       target_point,
-                                                                       quantizer_config,
-                                                                       parameters)
+        nncf_graph: NNCFGraph,
+        target_point: PTTargetPoint,
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> PTInsertionCommand:
+        return PTMinMaxAlgoBackend._create_quantizer_insertion_command(
+            nncf_graph, target_point, quantizer_config, parameters
+        )
 
     @staticmethod
     def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
@@ -148,31 +147,29 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                   target_point: PTTargetPoint,
-                                   quantizer_config: QuantizerConfig,
-                                   inplace: bool,
-                                   num_samples: int = None,
-                                   ) -> PTMinMaxStatisticCollector:
-        return PTMinMaxAlgoBackend._statistic_collector_builder("min_max",
-                                                                nncf_graph,
-                                                                target_point,
-                                                                quantizer_config,
-                                                                num_samples)
+    def minmax_statistic_collector(
+        nncf_graph: NNCFGraph,
+        target_point: PTTargetPoint,
+        quantizer_config: QuantizerConfig,
+        inplace: bool,
+        num_samples: int = None,
+    ) -> PTMinMaxStatisticCollector:
+        return PTMinMaxAlgoBackend._statistic_collector_builder(
+            "min_max", nncf_graph, target_point, quantizer_config, num_samples
+        )
 
     @staticmethod
-    def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
-                                        target_point: PTTargetPoint,
-                                        quantizer_config: QuantizerConfig,
-                                        use_per_sample_stats: bool,
-                                        inplace: bool,
-                                        num_samples: int = None,
-                                        ) -> PTMeanMinMaxStatisticCollector:
-        return PTMinMaxAlgoBackend._statistic_collector_builder("mean_min_max",
-                                                                nncf_graph,
-                                                                target_point,
-                                                                quantizer_config,
-                                                                num_samples)
+    def mean_minmax_statistic_collector(
+        nncf_graph: NNCFGraph,
+        target_point: PTTargetPoint,
+        quantizer_config: QuantizerConfig,
+        use_per_sample_stats: bool,
+        inplace: bool,
+        num_samples: int = None,
+    ) -> PTMeanMinMaxStatisticCollector:
+        return PTMinMaxAlgoBackend._statistic_collector_builder(
+            "mean_min_max", nncf_graph, target_point, quantizer_config, num_samples
+        )
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
@@ -193,9 +190,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def _get_input_scale_shape(
-            nncf_graph: NNCFGraph,
-            target_point: PTTargetPoint,
-            quantization_config: QuantizerConfig) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
+        nncf_graph: NNCFGraph, target_point: PTTargetPoint, quantization_config: QuantizerConfig
+    ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
         is_weights = target_point.is_weight_target_point()
         if is_weights:
             module_node = nncf_graph.get_node_by_name(target_point.target_node_name)
@@ -207,59 +203,67 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
             channel_idx = 1  # channel dim for activations
 
-        scale_shape = tuple(get_scale_shape(
-            input_shape,
-            is_weights=is_weights,
-            per_channel=quantization_config.per_channel,
-            channel_idx=channel_idx))
+        scale_shape = tuple(
+            get_scale_shape(
+                input_shape, is_weights=is_weights, per_channel=quantization_config.per_channel, channel_idx=channel_idx
+            )
+        )
 
         return input_shape, scale_shape, channel_idx
 
     @staticmethod
     def _default_collector_params_and_scale_shape(
-            nncf_graph: NNCFGraph,
-            target_point: PTTargetPoint,
-            quantizer_config: QuantizerConfig) -> Tuple[PTRangeInitCollectorParams, Tuple[int, ...]]:
-        input_shape, scale_shape, channel_idx = \
-            PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
-        return PTRangeInitCollectorParams(is_weights=target_point.is_weight_target_point(),
-                                          mode=quantizer_config.mode,
-                                          per_channel=quantizer_config.per_channel,
-                                          input_shape=input_shape,
-                                          channel_idx=channel_idx), scale_shape
+        nncf_graph: NNCFGraph, target_point: PTTargetPoint, quantizer_config: QuantizerConfig
+    ) -> Tuple[PTRangeInitCollectorParams, Tuple[int, ...]]:
+        input_shape, scale_shape, channel_idx = PTMinMaxAlgoBackend._get_input_scale_shape(
+            nncf_graph, target_point, quantizer_config
+        )
+        return (
+            PTRangeInitCollectorParams(
+                is_weights=target_point.is_weight_target_point(),
+                mode=quantizer_config.mode,
+                per_channel=quantizer_config.per_channel,
+                input_shape=input_shape,
+                channel_idx=channel_idx,
+            ),
+            scale_shape,
+        )
 
     @staticmethod
-    def _statistic_collector_builder(collector_name: str,
-                                     nncf_graph: NNCFGraph,
-                                     target_point: PTTargetPoint,
-                                     quantizer_config: QuantizerConfig,
-                                     num_samples: int = None) -> PTMeanMinMaxStatisticCollector:
-        collector_params, scale_shape = \
-            PTMinMaxAlgoBackend._default_collector_params_and_scale_shape(nncf_graph,
-                                                                          target_point,
-                                                                          quantizer_config)
+    def _statistic_collector_builder(
+        collector_name: str,
+        nncf_graph: NNCFGraph,
+        target_point: PTTargetPoint,
+        quantizer_config: QuantizerConfig,
+        num_samples: int = None,
+    ) -> PTMeanMinMaxStatisticCollector:
+        collector_params, scale_shape = PTMinMaxAlgoBackend._default_collector_params_and_scale_shape(
+            nncf_graph, target_point, quantizer_config
+        )
         init_config = RangeInitConfig(collector_name, num_samples)
         return StatCollectorGenerator.generate_stat_collector_for_range_init_config(
-            init_config,
-            scale_shape,
-            collector_params,
-            num_samples)
+            init_config, scale_shape, collector_params, num_samples
+        )
 
     @staticmethod
-    def _create_quantizer(quantizer_config: QuantizerConfig,
-                          scale_shape: Tuple,
-                          parameters: FakeQuantizeParameters,
-                          target_type: TargetType) -> BaseQuantizer:
+    def _create_quantizer(
+        quantizer_config: QuantizerConfig,
+        scale_shape: Tuple,
+        parameters: FakeQuantizeParameters,
+        target_type: TargetType,
+    ) -> BaseQuantizer:
         mode = quantizer_config.mode
         quantizer_cls = QUANTIZATION_MODULES.get(mode)
         narrow_range = target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationMode.SYMMETRIC
-        quantizer_spec = PTQuantizerSpec.from_config(quantizer_config,
-                                                     narrow_range=narrow_range,
-                                                     scale_shape=scale_shape,
-                                                     half_range=False,
-                                                     logarithm_scale=False,
-                                                     is_quantized_on_export=False,
-                                                     compression_lr_multiplier=None)
+        quantizer_spec = PTQuantizerSpec.from_config(
+            quantizer_config,
+            narrow_range=narrow_range,
+            scale_shape=scale_shape,
+            half_range=False,
+            logarithm_scale=False,
+            is_quantized_on_export=False,
+            compression_lr_multiplier=None,
+        )
         quantizer = quantizer_cls(quantizer_spec)
 
         # Fill it with minmax
@@ -271,22 +275,25 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer.eps = 0
         if isinstance(quantizer, AsymmetricQuantizer):
             quantizer.input_low = torch.nn.Parameter(torch.from_numpy(parameters.input_low))
-            quantizer.input_range = \
-                torch.nn.Parameter(torch.from_numpy(np.array(parameters.input_high - parameters.input_low)))
+            quantizer.input_range = torch.nn.Parameter(
+                torch.from_numpy(np.array(parameters.input_high - parameters.input_low))
+            )
         else:
             quantizer.signed = np.any(parameters.input_low < 0)
             quantizer.scale = torch.nn.Parameter(torch.from_numpy(parameters.input_high))
 
     @staticmethod
-    def _create_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                            target_point: PTTargetPoint,
-                                            quantizer_config: QuantizerConfig,
-                                            parameters: FakeQuantizeParameters) -> PTInsertionCommand:
-        _, scale_shape, _ =\
-            PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
+    def _create_quantizer_insertion_command(
+        nncf_graph: NNCFGraph,
+        target_point: PTTargetPoint,
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> PTInsertionCommand:
+        _, scale_shape, _ = PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
 
-        quantizer = PTMinMaxAlgoBackend._create_quantizer(quantizer_config,
-                                                          scale_shape, parameters, target_point.target_type)
+        quantizer = PTMinMaxAlgoBackend._create_quantizer(
+            quantizer_config, scale_shape, parameters, target_point.target_type
+        )
 
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
@@ -306,5 +313,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return [node for node in nncf_graph.get_all_nodes() if
-                isinstance(node.layer_attributes, WeightedLayerAttributes)]
+        return [
+            node for node in nncf_graph.get_all_nodes() if isinstance(node.layer_attributes, WeightedLayerAttributes)
+        ]

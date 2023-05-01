@@ -42,7 +42,6 @@ from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcess
 
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
@@ -65,9 +64,9 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
     @staticmethod
-    def create_bias_correction_command(node: NNCFNode,
-                                       bias_value: np.ndarray,
-                                       nncf_graph: NNCFGraph) -> PTBiasCorrectionCommand:
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+    ) -> PTBiasCorrectionCommand:
         return create_bias_correction_command(node, bias_value)
 
     @staticmethod
@@ -75,10 +74,12 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return PTModelExtractionWithFusedBiasCommand(inputs[0])
 
     @staticmethod
-    def mean_statistic_collector(reduction_shape: ReductionShape,
-                                 inplace: bool,
-                                 num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None) -> PTMeanStatisticCollector:
+    def mean_statistic_collector(
+        reduction_shape: ReductionShape,
+        inplace: bool,
+        num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
+    ) -> PTMeanStatisticCollector:
         return PTMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod

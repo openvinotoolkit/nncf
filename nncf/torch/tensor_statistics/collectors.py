@@ -97,7 +97,7 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         tensor = x.tensor
-        if list(tensor.shape) == []: #pylint: disable=C1803
+        if list(tensor.shape) == []:  # pylint: disable=C1803
             tensor = tensor.unsqueeze(0)
         tensor_list = torch.unbind(tensor, dim=axis)
         return [PTNNCFTensor(t) for t in tensor_list]
@@ -107,21 +107,22 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return torch.sum(tensor.tensor).item()
 
     @staticmethod
-    def quantile(tensor: NNCFTensor,
-                 quantile: Union[float, List[float]],
-                 axis: Union[int, tuple, list]) -> List[NNCFTensor]:
+    def quantile(
+        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list]
+    ) -> List[NNCFTensor]:
         raise NotImplementedError()
 
     @classmethod
-    def no_outliers_map(cls, x: NNCFTensor,
-                        fn: Callable[[NNCFTensor, Optional[int]], Any],
-                        axis: int = 0, alpha: float = 0.01):
+    def no_outliers_map(
+        cls, x: NNCFTensor, fn: Callable[[NNCFTensor, Optional[int]], Any], axis: int = 0, alpha: float = 0.01
+    ):
         raise NotImplementedError()
 
 
 class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
-    def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, output_shape: ReductionShape,
-                 num_samples: int = None):
+    def __init__(
+        self, use_abs_max: bool, reduction_shape: ReductionShape, output_shape: ReductionShape, num_samples: int = None
+    ):
         super().__init__(use_abs_max, reduction_shape, num_samples)
         self._output_shape = output_shape
 
@@ -140,17 +141,26 @@ class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
 
 
 class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
-    def __init__(self,
-                 use_per_sample_stats: bool,
-                 use_abs_max: bool,
-                 use_means_of_mins: bool,
-                 use_means_of_maxs: bool,
-                 reduction_shape: ReductionShape,
-                 output_shape: ReductionShape,
-                 num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(use_per_sample_stats, use_abs_max, use_means_of_mins,
-                         use_means_of_maxs, reduction_shape, num_samples, window_size)
+    def __init__(
+        self,
+        use_per_sample_stats: bool,
+        use_abs_max: bool,
+        use_means_of_mins: bool,
+        use_means_of_maxs: bool,
+        reduction_shape: ReductionShape,
+        output_shape: ReductionShape,
+        num_samples: int = None,
+        window_size: int = None,
+    ):
+        super().__init__(
+            use_per_sample_stats,
+            use_abs_max,
+            use_means_of_mins,
+            use_means_of_maxs,
+            reduction_shape,
+            num_samples,
+            window_size,
+        )
         self._output_shape = output_shape
 
     @staticmethod
@@ -168,15 +178,16 @@ class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
 
 
 class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
-    def __init__(self,
-                 use_per_sample_stats: bool,
-                 use_abs_max: bool,
-                 reduction_shape: ReductionShape,
-                 output_shape: ReductionShape,
-                 num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape,
-                                                             num_samples, window_size)
+    def __init__(
+        self,
+        use_per_sample_stats: bool,
+        use_abs_max: bool,
+        reduction_shape: ReductionShape,
+        output_shape: ReductionShape,
+        num_samples: int = None,
+        window_size: int = None,
+    ):
+        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape, num_samples, window_size)
         self._output_shape = output_shape
 
     @staticmethod
