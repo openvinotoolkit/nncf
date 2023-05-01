@@ -1,4 +1,4 @@
-# Post-Training Quantization of MobileNet v2 OpenVINO Model
+# Post-Training Quantization of YOLOv8 OpenVINO Model
 This example demonstrates how to use Post-Training Quantization API from Neural Network Compression Framework (NNCF) to quantize YOLOv8n model.
 
 
