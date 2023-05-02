@@ -421,9 +421,9 @@ class MinMaxQuantization(Algorithm):
         if self._quantization_target_points_to_qconfig:
             return self._quantization_target_points_to_qconfig, self._unified_scale_groups
         backend = get_backend(model)
-        pattern = PatternsManager.get_full_pattern_graph(backend=backend,
-                                                         device=self._target_device,
-                                                         model_type=self._model_type)
+        pattern = PatternsManager.get_full_pattern_graph(
+            backend=backend, device=self._target_device, model_type=self._model_type
+        )
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         self._apply_model_type_pass(self._model_type, quantizer_setup, nncf_graph)
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup)
@@ -468,9 +468,9 @@ class MinMaxQuantization(Algorithm):
         :return: GraphPattern instance.
         """
         backend = get_backend(model)
-        return PatternsManager.get_full_pattern_graph(backend=backend,
-                                                      device=self._target_device,
-                                                      model_type=self._model_type)
+        return PatternsManager.get_full_pattern_graph(
+            backend=backend, device=self._target_device, model_type=self._model_type
+        )
 
     def _topological_sort_quantization_points(
         self, quantization_points: List[SingleConfigQuantizationPoint], nncf_graph: NNCFGraph
