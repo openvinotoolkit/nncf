@@ -1,5 +1,54 @@
 # Release Notes
 
+## New in Release 2.5.0
+Post-training Quantization:
+- Features:
+  - Added Post-training Quantization support for OpenVINO IR (OpenVINO backend).
+  - Added `"overflow_fix"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support & functionality. It improves accuracy for optimized model for affected devices.
+  - Added `"model_type"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support that allows reach better accuracy for specific model architectures (e.g. transformers).
+  - Added support for in-place statistics collection (reduce memory footprint during optimization).
+  - Added `nncf.parameters.IgnoredScope` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support that allows exclude layers from optimization scope in different ways.
+  - (OpenVINO) Added Quantization with accuracy control algorithm.
+  - (OpenVINO) Added weights compression after quantization (reduced .bin size of the optimized model).
+  - (OpenVINO) Added support of the Depthwise & GroupConvolution layers support for correct quantization.
+  - (OpenVINO) Added YOLOv8 examples for [`quantize(...)`](examples/post_training_quantization/openvino/yolov8) & [`quantize_with_accuracy_control(...)`](examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control) methods.
+  - (OpenVINO) Added support for dynamic-shape models.
+  - (OpenVINO) Added GRU/LSTM quantization support.
+  - (OpenVINO) Added quantizer scales unification.
+  - (OpenVINO, ONNX) Added BiasCorrection algorithm support.
+  - (PyTorch) Added MinMaxAlgorithm support.
+- Fixes:
+  - Fixed `ignored_scope` attribute behaviour for weights. Now, the weighted layers excludes from optimization scope correctly.
+  - (ONNX) Checking correct ONNX opset version via the `nncf.quantize(...)`. For now, models with opset < 13 optimizes correctly in per-tensor quantization.
+- Improvements:
+  - Added improvements for statistic collection process (collect statistics only once).
+  - (PyTorch, OpenVINO, ONNX) Introduced unified quantizer parameters calculation.
+  - (OpenVINO) Added support for per-tensor & per-channel quantization.
+  - (OpenVINO) Aligned parameters for FP16 models.
+
+Compression-aware training:
+- New Features:
+  - Introduced automated structured pruning algorithm for JPQD with support for BERT, Wave2VecV2, Swin, ViT, DistilBERT, CLIP, and MobileBERT models.
+  - Added `nncf.common.utils.patcher.Patcher` - this class can be used to patch methods on live PyTorch model objects with wrappers such as `nncf.torch.dynamic_graph.context.no_nncf_trace` when doing so in the model code is not possible (e.g. if the model comes from an external library package).
+  - Compression controllers of the `nncf.api.compression.CompressionAlgorithmController` class now have a `.strip()` method that will return the compressed model object with as many custom NNCF additions removed as possible while preserving the functioning of the model object as a compressed model.
+- Fixes:
+  - Fixed statistics computation for pruned layers.
+  - (PyTorch) Fixed traced tensors to implement the YOLOv8 from Ultralytics.
+- Improvements:
+  - Extension of attributes (`transpose/permute/getitem`) for pruning node selector.
+  - NNCFNetwork was refactored from a wrapper-approach to a mixin-like approach.
+  - Added average pool 3d-like ops to pruning mask.
+  - Added Conv3d for overflow fix.
+  - `nncf.set_log_file(...)` can now be used to set location of the NNCF log file.
+  - (PyTorch) Added support for pruning of `torch.nn.functional.pad` operation.
+  - (PyTorch) Added `torch.baddbmm` as an alias for the matmul metatype for quantization purposes.
+  - (PyTorch) Added config file for ResNet18 accuracy-aware pruning + quantization on CIFAR10.
+  - (PyTorch) Fixed JIT-traceable PyTorch models with internal patching.
+  - (PyTorch) Added `__matmul__` magic functions to the list of patched ops (for SwinTransformer by Microsoft).
+- Requirements:
+  - Updated ONNX version (1.13)
+  - Updated Tensorflow version (2.11)
+
 ## New in Release 2.4.0
 Target version updates:
 - Bump target framework versions to PyTorch 1.13.1, TensorFlow 2.8.x, ONNX 1.12, ONNXRuntime 1.13.1
