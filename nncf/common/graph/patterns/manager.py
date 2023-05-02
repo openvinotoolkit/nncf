@@ -62,8 +62,6 @@ class PatternsManager:
         hw_fused_patterns = HWFusedPatterns()
 
         for pattern_desc, pattern in backend_registry_map.items():
-            if pattern_desc.name == 'MATMUL_SOFTMAX_MATMUL':
-                print('s')
             pattern_desc_devices = pattern_desc.value.devices
             pattern_desc_model_types = pattern_desc.value.model_types
             devices_condition = (pattern_desc_devices is None or device in pattern_desc_devices)
