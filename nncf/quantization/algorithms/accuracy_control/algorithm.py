@@ -22,6 +22,7 @@ from nncf.common.quantization.quantizer_removal import revert_operations_to_floa
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data.dataset import Dataset
+from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
 from nncf.quantization.algorithms.accuracy_control.ranker import LogitsBasedRanker
@@ -98,16 +99,26 @@ class QuantizationAccuracyRestorer:
     Implementation of the accuracy-aware loop.
     """
 
-    def __init__(self, ranking_subset_size: int = 300, max_num_iterations: int = sys.maxsize, max_drop: float = 0.01):
+    def __init__(
+        self,
+        ranking_subset_size: int = 300,
+        max_num_iterations: int = sys.maxsize,
+        max_drop: float = 0.01,
+        drop_type: DropType = DropType.ABSOLUTE,
+    ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
             the dataset to rank groups of quantizers.
         :param max_num_iterations: A maximal number of iterations.
-        :param max_drop: The maximum absolute accuracy drop that should be achieved.
+        :param max_drop: The maximum accuracy drop that should be achieved.
+        :param drop_type: The accuracy drop type, which determines how the maximum
+            accuracy drop between the original model and the compressed model is
+            calculated.
         """
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations
         self.max_drop = max_drop
+        self.drop_type = drop_type
 
     def restore_accuracy(
         self,
@@ -134,18 +145,24 @@ class QuantizationAccuracyRestorer:
                 validate the provided model.
             The function should return the value of the metric with the following meaning:
             A higher value corresponds to better performance of the model.
-        :return: The quantized model whose metric `final_metric` is satisfied the following condition
-
-            initial_metric - final_metric <= max_drop.
+        :return: The quantized model whose metric `final_metric` is satisfied
+            the maximum accuracy drop condition.
         """
+        if self.drop_type == DropType.ABSOLUTE:
+            max_absolute_drop = self.max_drop
+        elif self.drop_type == DropType.RELATIVE:
+            max_absolute_drop = self.max_drop * initial_metric
+        else:
+            raise ValueError(f"{self.drop_type} drop type is not supported.")
+        nncf_logger.info(f"Maximum absolute accuracy drop: {max_absolute_drop}")
 
         backend = get_backend(initial_model)
         algo_backend = get_algo_backend(backend)
 
         accuracy_drop = initial_metric - quantized_metric
-        nncf_logger.info(f"Accuracy drop: {accuracy_drop}")
+        nncf_logger.info(f"Absolute accuracy drop: {accuracy_drop}")
 
-        if accuracy_drop <= self.max_drop:
+        if accuracy_drop <= max_absolute_drop:
             return quantized_model
 
         initial_model_graph = NNCFGraphFactory.create(initial_model)
@@ -218,12 +235,12 @@ class QuantizationAccuracyRestorer:
                 break
 
             # Accuracy was restored to the acceptable drop.
-            if current_accuracy_drop <= self.max_drop:
+            if current_accuracy_drop <= max_absolute_drop:
                 report.reached_required_drop = True
                 break
 
             # Continue greedy quantizer remove
-            if self.max_drop < current_accuracy_drop <= previous_accuracy_drop or (
+            if max_absolute_drop < current_accuracy_drop <= previous_accuracy_drop or (
                 current_accuracy_drop > previous_accuracy_drop and is_step_back
             ):
                 is_step_back = False
