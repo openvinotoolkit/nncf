@@ -27,8 +27,8 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.parameters import TargetDevice
+from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
