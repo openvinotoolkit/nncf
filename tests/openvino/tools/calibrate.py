@@ -20,9 +20,10 @@ from typing import Iterable, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
+from openvino.runtime import Dimension
+from openvino.runtime import PartialShape
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
-from openvino.tools.accuracy_checker.launcher.openvino_launcher import OpenVINOLauncher
 from openvino.tools.pot.configs.config import Config
 
 import nncf
@@ -602,7 +603,12 @@ def maybe_reshape_model(model, accuracy_checker_config, transform_fn, dataset):
 
     inputs = transform_fn(next(iter(dataset)))
     shapes = {name: tensor.shape for name, tensor in inputs.items()}
-    return OpenVINOLauncher.reshape_network(model, shapes)
+    partial_shapes = {}
+    for name, shape in shapes.items():
+        p_shape = PartialShape([Dimension(d) if not isinstance(d, tuple) else Dimension(d[0], d[1]) for d in shape])
+        partial_shapes[name] = p_shape
+    model.reshape(partial_shapes)
+    return model
 
 
 # pylint: disable=protected-access
