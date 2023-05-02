@@ -22,6 +22,7 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
+from openvino.tools.accuracy_checker.launcher.openvino_launcher import OpenVINOLauncher
 from openvino.tools.pot.configs.config import Config
 
 import nncf
@@ -587,10 +588,27 @@ def get_nncf_algorithms_config(compression_config):
     return nncf_algorithms
 
 
+def get_allow_reshape_input(accuracy_checker_config) -> bool:
+    for model_config in accuracy_checker_config["models"]:
+        for launcher_config in model_config["launchers"]:
+            if "allow_reshape_input" in launcher_config:
+                return launcher_config["allow_reshape_input"]
+    return False
+
+
+def maybe_reshape_model(model, accuracy_checker_config, transform_fn, dataset):
+    if not get_allow_reshape_input(accuracy_checker_config):
+        return model
+
+    inputs = transform_fn(next(iter(dataset)))
+    shapes = {name: tensor.shape for name, tensor in inputs.items()}
+    return OpenVINOLauncher.reshape_network(model, shapes)
+
+
 # pylint: disable=protected-access
-def quantize_model(xml_path, bin_path, accuracy_checcker_config, quantization_impl, quantization_parameters):
+def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_impl, quantization_parameters):
     ov_model = ov.Core().read_model(model=xml_path, weights=bin_path)
-    model_evaluator = create_model_evaluator(accuracy_checcker_config)
+    model_evaluator = create_model_evaluator(accuracy_checker_config)
     model_evaluator.load_network([{"model": ov_model}])
     model_evaluator.select_dataset("")
 
@@ -612,16 +630,17 @@ def quantize_model(xml_path, bin_path, accuracy_checcker_config, quantization_im
         return input_data
 
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
+    ov_model = maybe_reshape_model(ov_model, accuracy_checker_config, transform_fn, model_evaluator.dataset)
     quantized_model = nncf.quantize(ov_model, calibration_dataset, **quantization_parameters)
     return quantized_model
 
 
 # pylint: disable=protected-access
 def quantize_model_with_accuracy_control(
-    xml_path: str, bin_path: str, accuracy_checcker_config, quantization_impl: str, quantization_parameters
+    xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str, quantization_parameters
 ):
     ov_model = ov.Core().read_model(xml_path, bin_path)
-    model_evaluator = create_model_evaluator(accuracy_checcker_config)
+    model_evaluator = create_model_evaluator(accuracy_checker_config)
     model_evaluator.load_network_from_ir([{"model": xml_path, "weights": bin_path}])
     model_evaluator.select_dataset("")
 
@@ -633,9 +652,11 @@ def quantize_model_with_accuracy_control(
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
     validation_dataset = nncf.Dataset(list(range(model_evaluator.dataset.full_size)))
 
-    metric_name = accuracy_checcker_config["models"][0]["datasets"][0]["metrics"][0].get("name", None)
+    ov_model = maybe_reshape_model(ov_model, accuracy_checker_config, transform_fn, model_evaluator.dataset)
+
+    metric_name = accuracy_checker_config["models"][0]["datasets"][0]["metrics"][0].get("name", None)
     if metric_name is None:
-        metric_name = accuracy_checcker_config["models"][0]["datasets"][0]["metrics"][0]["type"]
+        metric_name = accuracy_checker_config["models"][0]["datasets"][0]["metrics"][0]["type"]
     validation_fn = ACValidationFunction(model_evaluator, metric_name)
 
     name_to_quantization_impl_map = {
@@ -667,7 +688,7 @@ def main():
     config.configure_params()
 
     xml_path, bin_path = get_model_paths(config.model)
-    accuracy_checcker_config = get_accuracy_checker_config(config.engine)
+    accuracy_checker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression)
 
     set_log_file(f"{args.output_dir}/log.txt")
@@ -685,7 +706,7 @@ def main():
             quantize_model_arguments = {
                 "xml_path": xml_path,
                 "bin_path": bin_path,
-                "accuracy_checcker_config": accuracy_checcker_config,
+                "accuracy_checker_config": accuracy_checker_config,
                 "quantization_impl": args.impl,
                 "quantization_parameters": algo_config["parameters"],
             }
