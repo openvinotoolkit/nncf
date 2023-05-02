@@ -22,10 +22,10 @@ from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.openvino_backend import OVFastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
 from tests.openvino.native.models import SharedConvModel
 from tests.openvino.native.models import SplitConcatModel
