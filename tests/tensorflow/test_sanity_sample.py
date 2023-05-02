@@ -441,7 +441,10 @@ def test_model_accuracy_aware_train(_accuracy_aware_config, tmp_path):
     main = get_sample_fn(_accuracy_aware_config["sample_type"], modes=["train"])
     main(convert_to_argv(args))
 
-    aa_checkpoint_path = get_accuracy_aware_checkpoint_dir_path(checkpoint_save_dir)
+    model_dirs = [x for x in checkpoint_save_dir.glob("*/") if x.is_dir()]
+    assert len(model_dirs) == 1
+    model_specific_run_dir = model_dirs[0]
+    aa_checkpoint_path = get_accuracy_aware_checkpoint_dir_path(model_specific_run_dir)
     assert tf.train.latest_checkpoint(str(aa_checkpoint_path))
 
 
