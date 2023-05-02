@@ -65,7 +65,7 @@ The NNCF PTQ is the simplest way to apply 8-bit quantization. To run the algorit
 2) Create an instance of `nncf.Dataset` class by passing two parameters:
    * `data_source` — Iterable object containing data items for model calibration.
    * `transform_fn` — [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function), if your data source returns both images and labels.
-3) Run the quantization pipeline. It will return the quantized model for faster inference in OpenVINO Intermediate Representation format.
+3) Run the quantization pipeline. It will return the quantized model for faster inference when exported to OpenVINO Intermediate Representation format.
 
 Below are the usage examples for every backend.
 
