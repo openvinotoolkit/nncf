@@ -20,6 +20,7 @@ import networkx.algorithms.isomorphism as ism
 
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.parameters import TargetDevice
+from nncf.parameters import ModelType
 
 
 class HWFusedPatterns:
@@ -267,10 +268,14 @@ class PatternDesc:
     :param devices: A field containing the list of devices
         for which this pattern should be taken into account when quantizing.
         None value means that this pattern is applicable to all devices.
+    :param model_types: This field contains the list of the model types
+        for which this pattern should be taken into account when quantizing.
+        None value means that this pattern is applicable to all model types.
     """
 
     name: str
     devices: Optional[List[TargetDevice]] = None
+    model_types: Optional[List[TargetDevice]] = None
 
 
 class PatternNames(Enum):
@@ -378,4 +383,4 @@ class PatternNames(Enum):
     )
 
     # TRANSFORMERS
-    MATMUL_SOFTMAX_MATMUL = PatternDesc("matmul_softmax_matmul")
+    MATMUL_SOFTMAX_MATMUL = PatternDesc("matmul_softmax_matmul", model_types=[ModelType.TRANSFORMER])
