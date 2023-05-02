@@ -381,6 +381,10 @@ class PatternNames(Enum):
     # TRANSFORMERS
     MATMUL_SOFTMAX_MATMUL = PatternDesc("matmul_softmax_matmul", model_types=[ModelType.TRANSFORMER])
     SOFTMAX_RESHAPE_MATMUL = PatternDesc("softmax_reshape_matmul", model_types=[ModelType.TRANSFORMER])
-    SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL = PatternDesc("softmax_reshape_transpose_gather_matmul", model_types=[ModelType.TRANSFORMER])
-    SOFTMAX_RESHAPE_TRANSPOSE_MATMUL = PatternDesc("softmax_reshape_transpose_matmul", model_types=[ModelType.TRANSFORMER])
+    SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL = PatternDesc(
+        "softmax_reshape_transpose_gather_matmul", model_types=[ModelType.TRANSFORMER]
+    )
+    SOFTMAX_RESHAPE_TRANSPOSE_MATMUL = PatternDesc(
+        "softmax_reshape_transpose_matmul", model_types=[ModelType.TRANSFORMER]
+    )
     STABLE_DIFFUSION = PatternDesc("stable_diffusion", model_types=[ModelType.TRANSFORMER])
