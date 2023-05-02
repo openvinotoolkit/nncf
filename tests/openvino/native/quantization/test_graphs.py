@@ -77,7 +77,8 @@ def test_omz_models_fq_placement(model_name_params, tmp_path):
 def test_transformer_models_fq_placement(model_creator_func):
     model = model_creator_func()
     quantized_model = quantize_model(
-        model.ov_model, {"preset": QuantizationPreset.PERFORMANCE, "inplace_statistics": True, "model_type": ModelType.TRANSFORMER}
+        model.ov_model,
+        {"preset": QuantizationPreset.PERFORMANCE, "inplace_statistics": True, "model_type": ModelType.TRANSFORMER},
     )
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
