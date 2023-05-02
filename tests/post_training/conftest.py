@@ -13,7 +13,7 @@ from abc import abstractclassmethod
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import pytest
@@ -54,8 +54,8 @@ class PipelineType(Enum):
 
 @dataclass
 class RunInfo:
-    top_1: float
-    fps: float
+    top_1: Optional[float]
+    fps: Optional[float]
     status: str = None
 
 
@@ -76,7 +76,7 @@ class TableColumn:
         Is statistic applicable for given pipeline type.
 
         :param pipeline_type: Given pipeline type.
-        :returns: Ether given pipeline type applicable or not.
+        :returns: Either given pipeline type applicable or not.
         """
 
     @classmethod
@@ -99,6 +99,20 @@ class TableColumn:
 
         return wrapped_get_value
 
+    @staticmethod
+    def na_msg(func):
+        """
+        Replace return value of function from None to NOT_AVAILABLE_MESSAGE.
+        """
+
+        def wrapped_na_msg(*args, **kwargs):
+            result = func(*args, **kwargs)
+            if result is None:
+                return NOT_AVAILABLE_MESSAGE
+            return result
+
+        return wrapped_na_msg
+
 
 class Top1Column(TableColumn):
     @classmethod
@@ -111,6 +125,7 @@ class Top1Column(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
+    @TableColumn.na_msg
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         return info[target_pipeline_type].top_1
 
@@ -126,6 +141,7 @@ class FPSColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
+    @TableColumn.na_msg
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         return info[target_pipeline_type].fps
 
@@ -141,7 +157,10 @@ class Top1DiffColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
+    @TableColumn.na_msg
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
+        if info[target_pipeline_type].top_1 is None or info[PipelineType.FP32].top_1 is None:
+            return None
         return info[PipelineType.FP32].top_1 - info[target_pipeline_type].top_1
 
 
@@ -156,13 +175,14 @@ class FPSSpeedupColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
+    @TableColumn.na_msg
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         if info[target_pipeline_type].fps is None or info[PipelineType.FP32].fps is None:
-            return NOT_AVAILABLE_MESSAGE
+            return None
         fps = info[target_pipeline_type].fps
         if fps > 1e-5:
             return info[target_pipeline_type].fps / info[PipelineType.FP32].fps
-        return NOT_AVAILABLE_MESSAGE
+        return None
 
 
 class StatusColumn(TableColumn):

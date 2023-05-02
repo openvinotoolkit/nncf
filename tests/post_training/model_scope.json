@@ -16,7 +16,7 @@
     "mobilenetv2_050": {
         "model_name": "mobilenetv2_050",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.59498
@@ -25,7 +25,7 @@
     "mobilenetv2_050_BC": {
         "model_name": "mobilenetv2_050",
         "quantization_params": {
-            "preset": "mixed",
+            "preset": "MIXED",
             "fast_bias_correction": false
         },
         "metrics": {
@@ -51,7 +51,7 @@
     "tf_inception_v3": {
         "model_name": "tf_inception_v3",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.75948
@@ -60,7 +60,7 @@
     "xception": {
         "model_name": "xception",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.77522
@@ -69,7 +69,7 @@
     "efficientnet_b0": {
         "model_name": "efficientnet_b0",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.72912
@@ -78,7 +78,7 @@
     "efficientnet_b0_BC": {
         "model_name": "efficientnet_b0",
         "quantization_params": {
-            "preset": "mixed",
+            "preset": "MIXED",
             "fast_bias_correction": false
         },
         "metrics": {
@@ -88,7 +88,7 @@
     "darknet53": {
         "model_name": "darknet53",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.7645
@@ -97,7 +97,7 @@
     "resnest14d": {
         "model_name": "resnest14d",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.70102
@@ -113,7 +113,7 @@
     "wide_resnet50_2": {
         "model_name": "wide_resnet50_2",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.7664
@@ -122,7 +122,7 @@
     "regnetx_002": {
         "model_name": "regnetx_002",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.63078
@@ -131,7 +131,7 @@
     "mobilenetv3_small_050": {
         "model_name": "mobilenetv3_small_050",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.51764
@@ -140,8 +140,8 @@
     "levit_128": {
         "model_name": "levit_128",
         "quantization_params": {
-            "preset": "mixed",
-            "model_type": "transformer"
+            "preset": "MIXED",
+            "model_type": "TRANSFORMER"
         },
         "metrics": {
             "FP32 top 1": 0.7405
@@ -150,8 +150,8 @@
     "deit3_small_patch16_224": {
         "model_name": "deit3_small_patch16_224",
         "quantization_params": {
-            "preset": "mixed",
-            "model_type": "transformer"
+            "preset": "MIXED",
+            "model_type": "TRANSFORMER"
         },
         "metrics": {
             "FP32 top 1": 0.76974
@@ -160,8 +160,8 @@
     "swin_base_patch4_window7_224": {
         "model_name": "swin_base_patch4_window7_224",
         "quantization_params": {
-            "preset": "mixed",
-            "model_type": "transformer"
+            "preset": "MIXED",
+            "model_type": "TRANSFORMER"
         },
         "metrics": {
             "FP32 top 1": 0.81462
@@ -171,16 +171,16 @@
         "skipped" : "Suppressed due to bug - 104173",
         "model_name": "convit_tiny",
         "quantization_params": {
-            "preset": "mixed",
-            "model_type": "transformer"
+            "preset": "MIXED",
+            "model_type": "TRANSFORMER"
         },
         "metrics": -1
     },
     "visformer_small": {
         "model_name": "visformer_small",
         "quantization_params": {
-            "preset": "mixed",
-            "model_type": "transformer"
+            "preset": "MIXED",
+            "model_type": "TRANSFORMER"
         },
         "metrics": {
             "FP32 top 1": 0.77902
@@ -189,8 +189,8 @@
     "crossvit_9_240": {
         "model_name": "crossvit_9_240",
         "quantization_params": {
-            "preset": "mixed",
-            "model_type": "transformer"
+            "preset": "MIXED",
+            "model_type": "TRANSFORMER"
         },
         "metrics": {
             "FP32 top 1": 0.69966
@@ -199,7 +199,7 @@
     "hrnet_w18": {
         "model_name": "hrnet_w18",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.70656
@@ -208,7 +208,7 @@
     "efficientnet_lite0": {
         "model_name": "efficientnet_lite0",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.69878
@@ -217,7 +217,7 @@
     "dpn68": {
         "model_name": "dpn68",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.71478
@@ -226,7 +226,7 @@
     "dla34": {
         "model_name": "dla34",
         "quantization_params": {
-            "preset": "mixed"
+            "preset": "MIXED"
         },
         "metrics": {
             "FP32 top 1": 0.68424

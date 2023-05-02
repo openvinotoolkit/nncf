@@ -122,7 +122,7 @@ def benchmark_performance(model_path, model_name, skip_bench):
         if model_perf is None:
             logging.info(f"Cannot measure performance for the model: {model_name}\nDetails: {bench_output}\n")
     except BaseException as error:
-        logging.error(f"Error when benchmarking the model: {model_name} Details: {error}")
+        logging.error(f"Error when benchmarking the model: {model_name}. Details: {error}")
 
     return model_perf
 
@@ -176,7 +176,7 @@ def benchmark_torch_model(model, dataloader, model_name, output_path, eval=True,
     performance = benchmark_performance(ov_path, model_name, skip_bench)
 
     # Validate accuracy
-    accuracy = -1
+    accuracy = None
     if eval:
         accuracy = validate_accuracy(ov_path, dataloader)
 
@@ -505,7 +505,7 @@ def run_ptq_timm(
                 traceback_path = Path.joinpath(output_folder, backend_dir, model_name + "_error_log.txt")
                 create_error_log(traceback_path)
                 status = get_error_msg(traceback_path, backend_dir)
-                runinfo = RunInfo(-1, -1, status)
+                runinfo = RunInfo(None, None, status)
             runinfos[backend] = runinfo
 
         process_connection.send(runinfos)
@@ -513,7 +513,7 @@ def run_ptq_timm(
         traceback_path = Path.joinpath(output_folder, model_name + "_error_log.txt")
         create_error_log(traceback_path)
         status = f"{model_name} traceback: {traceback_path}"
-        runinfos[PipelineType.FP32] = RunInfo(-1, -1, status)
+        runinfos[PipelineType.FP32] = RunInfo(None, None, status)
         process_connection.send(runinfos)
         raise error
 

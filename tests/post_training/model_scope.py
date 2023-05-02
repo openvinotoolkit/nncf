@@ -9,38 +9,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, Dict
+
 from nncf import ModelType
 from nncf import QuantizationPreset
 from tests.post_training.conftest import MODELS_SCOPE_PATH
 from tests.shared.helpers import load_json
 
 
-def get_preset_enum_by_str(value: str) -> QuantizationPreset:
-    """
-    Return enum of QuantizationPreset by value.
-    """
-    for enum_value in QuantizationPreset:
-        if enum_value.value == value:
-            return enum_value
-    raise ValueError(f"QuantizationPreset does not contain {value}")
-
-
-def get_model_type_enum_by_str(value: str) -> ModelType:
-    """
-    Return enum of ModelType by value.
-    """
-    for enum_value in ModelType:
-        if enum_value.value == value:
-            return enum_value
-    raise ValueError(f"ModelType does not contain {value}")
-
-
-def get_validation_scope() -> dict:
+def get_validation_scope() -> Dict[str, Any]:
     """
     Read json file that collected models to validation from MODELS_SCOPE_PATH.
     Convert parameters
 
-    :return dict: _description_
+    :return dict: Dict with model attributes.
     """
     model_scope = load_json(MODELS_SCOPE_PATH)
 
@@ -53,9 +35,9 @@ def get_validation_scope() -> dict:
 
         qparams = model_info["quantization_params"]
         if "preset" in qparams.keys():
-            qparams["preset"] = get_preset_enum_by_str(qparams["preset"])
+            qparams["preset"] = QuantizationPreset[qparams["preset"]]
         if "model_type" in qparams.keys():
-            qparams["model_type"] = get_model_type_enum_by_str(qparams["model_type"])
+            qparams["model_type"] = ModelType[qparams["model_type"]]
 
     return model_scope
 
@@ -64,7 +46,7 @@ VALIDATION_SCOPE = get_validation_scope()
 
 
 def get_cached_metric(report_model_name, metric_name):
-    cached_metric = -1
+    cached_metric = None
     try:
         cached_metric = VALIDATION_SCOPE[report_model_name]["metrics"][metric_name]
     except KeyError:
