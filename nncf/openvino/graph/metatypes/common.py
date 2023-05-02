@@ -30,7 +30,15 @@ QUANTIZE_AGNOSTIC_OPERATIONS = [
     ov_metatypes.OVMaximumMetatype,
     ov_metatypes.OVConvertLikeMetatype,
     ov_metatypes.OVGatherMetatype,
+    ov_metatypes.OVGatherNDMetatype,
+    ov_metatypes.OVGatherElementsMetatype,
+    ov_metatypes.OVScatterUpdateMetatype,
+    ov_metatypes.OVScatterNDUpdateMetatype,
+    ov_metatypes.OVScatterElementsUpdateMetatype,
     ov_metatypes.OVDepthToSpaceMetatype,
+    ov_metatypes.OVSpaceToDepthMetatype,
+    ov_metatypes.OVBatchToSpaceMetatype,
+    ov_metatypes.OVSpaceToBatchMetatype,
 ]
 
 
