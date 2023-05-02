@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import copy_model
 
 TModel = TypeVar("TModel")
@@ -149,28 +150,23 @@ class CompressionStage(IntEnum):
         return CompressionStage.PARTIALLY_COMPRESSED
 
 
+@api()
 class CompressionAlgorithmController(ABC):
     """
-    Serves as a handle to the additional modules, parameters and hooks inserted
-    into the original uncompressed model to enable algorithm-specific compression.
-    Hosts entities that are to be used during the training process, such as
-    compression scheduler and compression loss.
+    A handle to the compression-specific modifications made to the model.
+    Hosts entities that are to be used during the training process, such as compression scheduler and compression loss.
+
+    :param target_model: The model with additional modifications necessary
+        to enable algorithm-specific compression during fine-tuning built by the `CompressionAlgorithmBuilder`.
     """
 
     def __init__(self, target_model: TModel):
-        """
-        Initializes the internal state of the compression algorithm controller.
-
-        :param target_model: The model with additional modifications necessary
-            to enable algorithm-specific compression during fine-tuning built
-            by the `CompressionAlgorithmBuilder`.
-        """
         self._model = target_model
 
     @property
     def model(self) -> TModel:
         """
-        :return: The target model.
+        The compressed model object with which this controller is associated.
         """
         return self._model
 
@@ -178,22 +174,22 @@ class CompressionAlgorithmController(ABC):
     @abstractmethod
     def loss(self) -> CompressionLoss:
         """
-        :return: The instance of the `CompressionLoss`.
+        The compression loss for this particular algorithm combination.
         """
 
     @property
     @abstractmethod
     def scheduler(self) -> CompressionScheduler:
         """
-        :return: The instance of the `CompressionScheduler`.
+        The compression scheduler for this particular algorithm combination.
         """
 
     @property
     @abstractmethod
     def name(self) -> str:
         """
-        :return: name of the compression algorithm that is being controlled. Should be unique to identify the controller
-        and its state among other controllers and their states.
+        Name of the compression algorithm that is being controlled.
+        Should be unique to identify the controller and its state among other controllers and their states.
         """
 
     @abstractmethod
@@ -265,14 +261,11 @@ class CompressionAlgorithmController(ABC):
 
     def strip(self, do_copy: bool = True) -> TModel:
         """
-        Return model where removes as much custom NNCF additions as possible from the model object
-        while preserving the functioning of the model object as a compressed model.
+        Returns the model object with as much custom NNCF additions as possible removed
+        while still preserving the functioning of the model object as a compressed model.
 
-
-        :param do_copy: `True` means that a copy of the model will be modified.
-            `False` means that the original model will be modify. Defaults to True.
-
-        :return: Modified model.
+        :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
+        will return the currently associated model object "stripped" in-place.
         """
         return self.strip_model(self.model, do_copy)
 

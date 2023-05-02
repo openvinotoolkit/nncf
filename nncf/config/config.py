@@ -44,6 +44,7 @@ class NNCFConfig(dict):
     def from_dict(cls, nncf_dict: Dict) -> "NNCFConfig":
         """
         Load NNCF config from a Python dictionary. The dict must contain only JSON-supported primitives.
+
         :param nncf_dict: A Python dict with the JSON-style configuration for NNCF.
         """
 
@@ -54,6 +55,7 @@ class NNCFConfig(dict):
     def from_json(cls, path: str) -> "NNCFConfig":
         """
         Load NNCF config from a JSON file at `path`.
+
         :param path: Path to the .json file containing the NNCF configuration.
         """
         file_path = Path(path).resolve()
@@ -64,6 +66,7 @@ class NNCFConfig(dict):
     def register_extra_structs(self, struct_list: List[NNCFExtraConfigStruct]):
         """
         Attach the supplied list of extra configuration structures to this configuration object.
+
         :param struct_list: List of extra configuration structures.
         """
         for struct in struct_list:
