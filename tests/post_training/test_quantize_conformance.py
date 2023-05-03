@@ -231,8 +231,8 @@ def benchmark_torch_model(
     dataloader: DataLoader,
     model_name: str,
     output_path: str,
-    eval: bool = True,
     skip_bench: bool = False,
+    eval: bool = True,
 ) -> RunInfo:
     """
     Benchmark the torch model.
@@ -621,8 +621,8 @@ def run_ptq_timm(
             batch_one_dataloader,
             model_name,
             output_folder,
-            eval_fp32,
             skip_bench,
+            eval_fp32,
         )
         # Get cached accuracy
         if not eval_fp32:
