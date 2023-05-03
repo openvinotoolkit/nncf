@@ -37,16 +37,14 @@
         "model_name": "densenet121",
         "quantization_params": {
             "fast_bias_correction": false
-        },
-        "metrics": -1
+        }
     },
     "densenet121_BC": {
         "skipped": "temporary excluded due to memory leaks",
         "model_name": "densenet121",
         "quantization_params": {
             "fast_bias_correction": false
-        },
-        "metrics": -1
+        }
     },
     "tf_inception_v3": {
         "model_name": "tf_inception_v3",
@@ -173,8 +171,7 @@
         "quantization_params": {
             "preset": "MIXED",
             "model_type": "TRANSFORMER"
-        },
-        "metrics": -1
+        }
     },
     "visformer_small": {
         "model_name": "visformer_small",

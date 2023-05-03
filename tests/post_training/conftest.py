@@ -13,7 +13,7 @@ from abc import abstractclassmethod
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 import numpy as np
 import pytest
@@ -91,7 +91,11 @@ class TableColumn:
         """
 
     @staticmethod
-    def assign_default_value(func):
+    def assign_default_value(func: Callable):
+        """
+        Return '-' for pipeline types that does not runs.
+        """
+
         def wrapped_get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType):
             if target_pipeline_type not in info:
                 return "-"
@@ -100,7 +104,7 @@ class TableColumn:
         return wrapped_get_value
 
     @staticmethod
-    def na_msg(func):
+    def na_msg(func: Callable):
         """
         Replace return value of function from None to NOT_AVAILABLE_MESSAGE.
         """
