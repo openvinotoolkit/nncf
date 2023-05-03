@@ -487,7 +487,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
 
         if IMG_PACKAGES_AVAILABLE:
             backend = plt.get_backend()
-            plt.switch_backend('agg')
+            plt.switch_backend("agg")
             plt.ioff()
             fig = plt.figure()
             plt.plot(self.compressed_training_history.keys(), self.compressed_training_history.values())

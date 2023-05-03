@@ -386,6 +386,20 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
         prepare_and_check_nx_graph(compressed_graph, graph_path, ref_graph_exist, graph_to_layer_var_names_map)
 
 
+@pytest.fixture(scope="module", autouse=True)
+def tmp_tf_hub_cache_dir(tmp_path_factory):
+    # Required so that the models are downloaded to a run-specific empty directory, otherwise tfhub model downloads
+    # will fail on Windows due to trying to download into a non-empty cache directory from a previous run or test case
+    varname = "TFHUB_CACHE_DIR"
+    old_tfhub_cache = os.environ.get(varname)
+    os.environ[varname] = str(tmp_path_factory.mktemp(basename="tfhub_cache"))
+    yield
+    if old_tfhub_cache is None:
+        os.environ.pop(varname)
+    else:
+        os.environ[varname] = old_tfhub_cache
+
+
 class TestModelsGraph:
     @pytest.mark.parametrize(
         "desc",
