@@ -87,7 +87,7 @@ pylint-tensorflow:
 		nncf/tensorflow                     \
 		nncf/experimental/tensorflow        \
 		tests/tensorflow                    \
-		tests/experimental/tensorflow       \
+		tests/experimental/tensorflow      \
 		examples/tensorflow
 
 test-install-tensorflow:
