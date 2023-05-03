@@ -183,7 +183,7 @@ class FPSSpeedupColumn(TableColumn):
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         if info[target_pipeline_type].fps is None or info[PipelineType.FP32].fps is None:
             return None
-        if info[PipelineType.FP32].FPS > 1e-5:
+        if info[PipelineType.FP32].fps > 1e-5:
             return info[target_pipeline_type].fps / info[PipelineType.FP32].fps
         return None
 
