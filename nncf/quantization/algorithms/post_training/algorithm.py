@@ -14,7 +14,6 @@ from typing import Dict, Optional, TypeVar
 import numpy as np
 
 from nncf import Dataset
-from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -176,9 +175,6 @@ class PostTrainingQuantization(Algorithm):
         modified_model = copy_model(model)
         if statistic_points is None:
             backend = get_backend(modified_model)
-            # TODO (l-bat): Remove after OpenVINO Native is removed from experimental
-            if backend == BackendType.OPENVINO:
-                nncf_logger.warning("You are using experimental OpenVINO backend for the Post-training quantization.")
 
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
