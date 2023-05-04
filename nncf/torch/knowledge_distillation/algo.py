@@ -58,6 +58,9 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
 
 @api()
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
+    """
+    Controller for the knowledge distillation in PT.
+    """
     def __init__(
         self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str, scale: float, temperature: float
     ):

@@ -28,8 +28,7 @@ autoapi_options = ["members",
                    "show-inheritance",
                    "show-module-summary",
                    "special-members",
-                   "imported-members",
-                   "inherited-members"]
+                   "imported-members"]
 
 autoapi_template_dir = "_autoapi_templates"
 autoapi_keep_files = True

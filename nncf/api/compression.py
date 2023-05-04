@@ -22,6 +22,7 @@ from nncf.common.utils.backend import copy_model
 TModel = TypeVar("TModel")
 
 
+@api()
 class CompressionLoss(ABC):
     """
     Used to calculate the additional loss to be added to the base loss during the
@@ -34,9 +35,7 @@ class CompressionLoss(ABC):
     @abstractmethod
     def calculate(self, *args, **kwargs) -> Any:
         """
-        Calculates the compression loss value.
-
-        :return: The compression loss value.
+        Calculates and returns the compression loss value.
         """
 
     @abstractmethod
@@ -44,43 +43,42 @@ class CompressionLoss(ABC):
         """
         Loads the compression loss state.
 
-        :param state: Output of `get_state()` method.
+        :param state: The state of the compression loss, most likely obtained as the result of a `.get_state()` method
+            call.
         """
 
     @abstractmethod
     def get_state(self) -> Dict[str, Any]:
         """
         Returns the compression loss state.
-
-        :return: The compression loss state.
         """
 
     def __call__(self, *args, **kwargs) -> Any:
         """
-        Invokes the `CompressionLoss` instance.
-
-        :return: The compression loss value.
+        Calculates and returns the compression loss value. Same as `.calculate()`.
         """
         return self.calculate(*args, **kwargs)
 
 
+@api()
 class CompressionScheduler(ABC):
     """
     Implements the logic of compression method control during the training process.
-    May change the method hyperparameters in regards to the current training step
+    May change the method hyperparameters in regard to the current training step
     or epoch. For example, the sparsity method can smoothly increase the sparsity
     rate over several epochs.
 
     The `step()` and `epoch_step()` methods of the compression scheduler must be
-    called at the beginning of each training step and epoch, respectively.
+    called at the beginning of each training step and epoch, respectively:
 
-    ```
-    for epoch in range(0, num_epochs):
-        scheduler.epoch_step()
-        for i, (x, y) in enumerate(dataset):
-             scheduler.step()
-             ...
-    ```
+    ..  code-block:: python
+
+        for epoch in range(0, num_epochs):
+            scheduler.epoch_step()
+            for i, (x, y) in enumerate(dataset):
+                 scheduler.step()
+                 ...
+
     """
 
     @abstractmethod
@@ -116,11 +114,10 @@ class CompressionScheduler(ABC):
     def get_state(self) -> Dict[str, Any]:
         """
         Returns the compression scheduler state.
-
-        :return: The compression scheduler state.
         """
 
 
+@api()
 class CompressionStage(IntEnum):
     """
     Specifies the compression stage for the model.
@@ -135,12 +132,13 @@ class CompressionStage(IntEnum):
         Defines compression stage of a composite compression controller, consist of
         two algorithms, where `self` is the compression stage of the first algorithm
         and other - compression stage of the second one.
-            UNCOMPRESSED    & UNCOMPRESSED    = UNCOMPRESSED
-            PARTIALLY_COMPRESSED & PARTIALLY_COMPRESSED = PARTIALLY_COMPRESSED
-            FULLY_COMPRESSED    & FULLY_COMPRESSED    = FULLY_COMPRESSED
-            UNCOMPRESSED    & PARTIALLY_COMPRESSED = PARTIALLY_COMPRESSED
-            UNCOMPRESSED    & FULLY_COMPRESSED    = PARTIALLY_COMPRESSED
-            PARTIALLY_COMPRESSED & FULLY_COMPRESSED    = PARTIALLY_COMPRESSED
+
+        * ``UNCOMPRESSED         & UNCOMPRESSED         == UNCOMPRESSED``
+        * ``PARTIALLY_COMPRESSED & PARTIALLY_COMPRESSED == PARTIALLY_COMPRESSED``
+        * ``FULLY_COMPRESSED     & FULLY_COMPRESSED     == FULLY_COMPRESSED``
+        * ``UNCOMPRESSED         & PARTIALLY_COMPRESSED == PARTIALLY_COMPRESSED``
+        * ``UNCOMPRESSED         & FULLY_COMPRESSED     == PARTIALLY_COMPRESSED``
+        * ``PARTIALLY_COMPRESSED & FULLY_COMPRESSED     == PARTIALLY_COMPRESSED``
 
         :param other: An instance of another compression stage.
         :return: The common compression stage of the two algorithms.
@@ -203,20 +201,18 @@ class CompressionAlgorithmController(ABC):
     @abstractmethod
     def get_state(self) -> Dict[str, Dict[str, Any]]:
         """
-        Returns compression controller state, which is the map of the algorithm name to the dictionary with the
+        Returns the compression controller state, which is the map of the algorithm name to the dictionary with the
         corresponding state attributes.
-
-        :return: The compression controller state.
         """
 
     @abstractmethod
     def get_compression_state(self) -> Dict[str, Any]:
         """
-        Returns compression state - builder and controller state.
-        This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
-        method.
+        Returns the compression state - builder and controller state.
+        This state should be used to unambiguously resume compression via `compression_state` argument of
+        `create_compressed_model` method.
 
-        :return: Compression state of the model to unambiguously resume compression from it.
+        :return: Compression state of the model to  resume compression from it.
         """
 
     def compression_stage(self) -> CompressionStage:
@@ -236,7 +232,6 @@ class CompressionAlgorithmController(ABC):
         :param quickly_collected_only: Enables collection of the statistics that
             don't take too much time to compute. Can be helpful for the case when
             need to keep track of statistics on each training batch/step/iteration.
-        :return: A `Statistics` class instance that contains compression algorithm statistics.
         """
 
     def strip_model(self, model: TModel, do_copy: bool = False) -> TModel:
@@ -255,7 +250,7 @@ class CompressionAlgorithmController(ABC):
 
     def prepare_for_export(self) -> None:
         """
-        Prepare the compressed model for deployment.
+        Prepare the compressed model for exporting to a backend-specific model serialization format.
         """
         self._model = self.strip_model(self._model)
 
@@ -293,19 +288,18 @@ class CompressionAlgorithmController(ABC):
         :param model_args: Tuple of additional positional and keyword arguments
             which are required for the model's forward during export. Should be
             specified in the following format:
-                - (a, b, {'x': None, 'y': y}) for positional and keyword arguments.
-                - (a, b, {}) for positional arguments only.
-                - ({'x': None, 'y': y},) for keyword arguments only.
+
+            * (a, b, {'x': None, 'y': y}) for positional and keyword arguments.
+            * (a, b, {}) for positional arguments only.
+            * ({'x': None, 'y': y},) for keyword arguments only.
         """
 
     @property
     @abstractmethod
     def compression_rate(self) -> float:
         """
-        Returns a float compression rate value ranging from 0 to 1 (e.g. the sparsity level or
-        the ratio of filters pruned).
-
-        :return: Compression rate value
+        Returns a float compression rate value ranging from 0 to 1 (e.g. the sparsity level,
+        or the ratio of filters pruned).
         """
 
     @compression_rate.setter
@@ -321,8 +315,8 @@ class CompressionAlgorithmController(ABC):
     @abstractmethod
     def disable_scheduler(self) -> None:
         """
-        Disables current compression scheduler during training by changing
-        it to a dummy one that does not change the compression rate.
+        Disables current compression scheduler during training by changing it to a dummy one that does not change
+        the compression rate.
         """
 
     @property
@@ -332,11 +326,11 @@ class CompressionAlgorithmController(ABC):
         Returns the maximal model compression rate supported by the compression controller.
         """
 
-
+@api()
 class CompressionAlgorithmBuilder(ABC):
     """
-    Determines which modifications should be made to the original model in
-    order to enable algorithm-specific compression during fine-tuning.
+    Determines which modifications should be made to the original model in order to enable algorithm-specific
+    compression during fine-tuning.
     """
 
     @property
@@ -360,13 +354,13 @@ class CompressionAlgorithmBuilder(ABC):
     @abstractmethod
     def build_controller(self, model: TModel) -> CompressionAlgorithmController:
         """
-        Builds `CompressionAlgorithmController` to handle the additional modules,
-        parameters, and hooks inserted into the model to enable algorithm-specific
+        Builds an instance of algorithm-specific `nncf.api.compression.CompressionAlgorithmController`
+        to handle the additional modules, parameters, and hooks inserted into the model to enable algorithm-specific
         compression.
 
         :param model: The model with additional modifications necessary to enable
             algorithm-specific compression during fine-tuning.
-        :return: The instance of the `CompressionAlgorithmController`.
+        :return: The instance of a `CompressionAlgorithmController`-derived class, specific for this algorithm.
         """
 
     @abstractmethod
@@ -383,7 +377,7 @@ class CompressionAlgorithmBuilder(ABC):
     @abstractmethod
     def initialize(self, model: TModel) -> None:
         """
-        Initialize model parameters before training
+        Initialize model parameters before training.
 
         :param model: The model with additional modifications necessary to enable
             algorithm-specific compression during fine-tuning.
@@ -392,9 +386,9 @@ class CompressionAlgorithmBuilder(ABC):
     @abstractmethod
     def load_state(self, state: Dict[str, Any]) -> None:
         """
-        Initializes object from the state.
+        Initializes object from the supplied state.
 
-        :param state: Output of `get_state()` method.
+        :param state: The state of the builder, most likely obtained as the result of a `.get_state()` call.
         """
 
     @abstractmethod
@@ -402,8 +396,6 @@ class CompressionAlgorithmBuilder(ABC):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
-
-        :return: state of the object
         """
 
 

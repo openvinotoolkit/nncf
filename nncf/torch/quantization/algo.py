@@ -1287,6 +1287,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
 
 class QuantizationControllerBase(PTCompressionAlgorithmController):
+    """
+    Base controller class for the quantization controllers in PT.
+    """
     def enable_activation_quantization(self):
         raise NotImplementedError
 
@@ -1305,6 +1308,9 @@ class QuantizationControllerBase(PTCompressionAlgorithmController):
 
 @api()
 class QuantizationController(QuantizationControllerBase):
+    """
+    Controller for the quantization algorithm in PT.
+    """
     def __init__(
         self,
         target_model: NNCFNetwork,

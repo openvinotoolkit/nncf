@@ -24,6 +24,7 @@ from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
 class QuantizationMode:
     """
     Basic enumeration for quantization mode specification.
+
     :param SYMMETRIC:
     :param ASYMMETRIC:
     """

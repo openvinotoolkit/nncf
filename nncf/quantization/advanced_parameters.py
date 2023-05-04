@@ -72,13 +72,17 @@ class QuantizationParameters:
     :param per_channel: True if per-channel quantization is used, and False if
         per-tensor quantization is used.
     :type per_channel: Optional[bool]
-    :param narrow_range: Whether to use a narrow quantization range. If narrow range is
-        False then the input will be quantized into quantizaiton range
-        [0; 2^num_bits - 1] for unsigned qunatization and
-        [-2^(num_bits - 1); 2^(num_bits - 1) - 1] for signed quantization, otherwise
-        [0; 2^num_bits - 2] for unsigned qunatization and
-        [-2^(num_bits - 1) + 1; 2^(num_bits - 1) - 1] for signed quantization
-        when it is True.
+    :param narrow_range: Whether to use a narrow quantization range.
+
+        If False, then the input will be quantized into quantization range
+
+        * [0; 2^num_bits - 1] for unsigned quantization and
+        * [-2^(num_bits - 1); 2^(num_bits - 1) - 1] for signed quantization
+
+        If True, then the ranges would be:
+
+        * [0; 2^num_bits - 2] for unsigned quantization and
+        * [-2^(num_bits - 1) + 1; 2^(num_bits - 1) - 1] for signed quantization
     :type narrow_range: Optional[bool]
     """
 
