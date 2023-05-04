@@ -16,6 +16,7 @@ import pytest
 
 import nncf
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.os import is_windows
 from nncf.parameters import TargetDevice
 from tests.openvino.conftest import AC_CONFIGS_DIR
 from tests.openvino.datasets_helpers import get_dataset_for_test
@@ -35,6 +36,8 @@ OMZ_MODELS = [
 
 @pytest.mark.parametrize("model, dataset, ref_metrics", OMZ_MODELS, ids=[model[0] for model in OMZ_MODELS])
 def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
+    if is_windows() and model == "mobilefacedet-v1-mxnet":
+        pytest.xfail("OMZ for Windows has version 1.2.0 pinned that is incompatible with Python 3.8+")
     extracted_data_dir = os.path.dirname(get_dataset_for_test(dataset, data_dir))
     config_path = AC_CONFIGS_DIR / f"{model}.yml"
 
