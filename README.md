@@ -185,7 +185,7 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 Training-Time Compression pipeline allows to fine-tune the quantized model in order to improve on the possible accuracy drop introduced by quantization. The basic workflow steps are:
 1) Create an NNCF config object from (a) JSON configuration file and (b) initialization dataloader.
 2) Pass your model together with the config to the `create_compressed_model()` function which returns (a) compression controller and (b) compressed model.
-3) Finetune the compressed model as a regular PyTorch/Tensorflow module.
+3) Finetune the compressed model as a regular PyTorch/Tensorflow model.
 4) Export the finetuned model using the compression controller.
 
 Expand the blocks below for PyTorch and Tensorflow usage examples: 
