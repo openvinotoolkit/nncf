@@ -2,8 +2,9 @@
 
 ## New in Release 2.5.0
 Post-training Quantization:
+
 - Features:
-  - Added Post-training Quantization support for OpenVINO IR (OpenVINO backend).
+  - Added Post-training Quantization full support for OpenVINO IR based on NGraph.
   - Added `"overflow_fix"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support & functionality. It improves accuracy for optimized model for affected devices.
   - Added `"model_type"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support that allows reach better accuracy for specific model architectures (e.g. transformers).
   - Added support for in-place statistics collection (reduce memory footprint during optimization).
@@ -17,9 +18,11 @@ Post-training Quantization:
   - (OpenVINO) Added quantizer scales unification.
   - (OpenVINO, ONNX) Added BiasCorrection algorithm support.
   - (PyTorch) Added MinMaxAlgorithm support.
+
 - Fixes:
   - Fixed `ignored_scope` attribute behaviour for weights. Now, the weighted layers excludes from optimization scope correctly.
-  - (ONNX) Checking correct ONNX opset version via the `nncf.quantize(...)`. For now, models with opset < 13 optimizes correctly in per-tensor quantization.
+  - (ONNX) Checking correct ONNX opset version via the `nncf.quantize(...)`. For now, models with opset < 13 are optimized correctly in per-tensor quantization.
+
 - Improvements:
   - Added improvements for statistic collection process (collect statistics only once).
   - (PyTorch, OpenVINO, ONNX) Introduced unified quantizer parameters calculation.
@@ -27,13 +30,16 @@ Post-training Quantization:
   - (OpenVINO) Aligned parameters for FP16 models.
 
 Compression-aware training:
+
 - New Features:
   - Introduced automated structured pruning algorithm for JPQD with support for BERT, Wave2VecV2, Swin, ViT, DistilBERT, CLIP, and MobileBERT models.
   - Added `nncf.common.utils.patcher.Patcher` - this class can be used to patch methods on live PyTorch model objects with wrappers such as `nncf.torch.dynamic_graph.context.no_nncf_trace` when doing so in the model code is not possible (e.g. if the model comes from an external library package).
   - Compression controllers of the `nncf.api.compression.CompressionAlgorithmController` class now have a `.strip()` method that will return the compressed model object with as many custom NNCF additions removed as possible while preserving the functioning of the model object as a compressed model.
+
 - Fixes:
   - Fixed statistics computation for pruned layers.
   - (PyTorch) Fixed traced tensors to implement the YOLOv8 from Ultralytics.
+
 - Improvements:
   - Extension of attributes (`transpose/permute/getitem`) for pruning node selector.
   - NNCFNetwork was refactored from a wrapper-approach to a mixin-like approach.
@@ -45,9 +51,13 @@ Compression-aware training:
   - (PyTorch) Added config file for ResNet18 accuracy-aware pruning + quantization on CIFAR10.
   - (PyTorch) Fixed JIT-traceable PyTorch models with internal patching.
   - (PyTorch) Added `__matmul__` magic functions to the list of patched ops (for SwinTransformer by Microsoft).
+
 - Requirements:
   - Updated ONNX version (1.13)
   - Updated Tensorflow version (2.11)
+
+- Breaking changes:
+  - Added Windows support for NNCF.
 
 ## New in Release 2.4.0
 Target version updates:
