@@ -514,6 +514,12 @@ class ONNXTransposeMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXDropoutMetatype(ONNXOpMetatype):
+    name = "DropoutOp"
+    op_names = ["Dropout"]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXFlattenMetatype(ONNXOpMetatype):
     name = "FlattenOp"
     op_names = ["Flatten"]

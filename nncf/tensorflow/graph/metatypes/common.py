@@ -104,6 +104,7 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
     layer_metatypes.TFZeroPadding1DLayerMetatype,
     layer_metatypes.TFZeroPadding2DLayerMetatype,
     layer_metatypes.TFZeroPadding3DLayerMetatype,
+    layer_metatypes.TFDropoutLayerMetatype,
     # TF_OP_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
     op_metatypes.TFIdentityOpMetatype,
     op_metatypes.TFPackOpMetatype,

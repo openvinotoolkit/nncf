@@ -70,6 +70,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
     ],
     QuantizationTrait.QUANTIZATION_AGNOSTIC: [
         operator_metatypes.PTThresholdMetatype,
+        operator_metatypes.PTDropoutMetatype,
         operator_metatypes.PTPadMetatype,
         operator_metatypes.PTCatMetatype,
         operator_metatypes.PTMaxMetatype,
@@ -80,7 +81,6 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTReshapeMetatype,
         operator_metatypes.PTSplitMetatype,
         operator_metatypes.PTExpandMetatype,
-        operator_metatypes.PTPixelShuffleMetatype,
         operator_metatypes.PTMaxPool1dMetatype,
         operator_metatypes.PTMaxPool2dMetatype,
         operator_metatypes.PTMaxPool3dMetatype,
@@ -88,6 +88,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTMaxUnpool2dMetatype,
         operator_metatypes.PTMaxUnpool3dMetatype,
         operator_metatypes.PTRepeatMetatype,
+        operator_metatypes.PTNoopMetatype,
     ],
     QuantizationTrait.CONCAT: [operator_metatypes.PTCatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [

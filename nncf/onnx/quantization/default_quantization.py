@@ -67,6 +67,7 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         onnx_metatypes.ONNXScatterNDMetatype,
         onnx_metatypes.ONNXScatterMetatype,
         onnx_metatypes.ONNXCastLikeMetatype,
+        onnx_metatypes.ONNXDropoutMetatype,
     ],
     QuantizationTrait.CONCAT: [onnx_metatypes.ONNXConcatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [],
