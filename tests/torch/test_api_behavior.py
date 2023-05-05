@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 
 from nncf import NNCFConfig
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.torch import create_compressed_model
 from nncf.torch import register_default_init_args
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionController
@@ -22,6 +23,7 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import OnesDatasetMock
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.test_nncf_network import SimplestModel
 
 INPUT_SAMPLE_SIZE = [1, 1, 4, 4]
 CONFIG_WITH_ALL_INIT_TYPES = {
@@ -126,3 +128,11 @@ def test_model_is_inited_with_own_device_by_default(nncf_config_with_default_ini
         pytest.skip("Skipping for CPU-only setups")
     model = DeviceCheckingModel(original_device)
     create_compressed_model_and_algo_for_test(model, nncf_config_with_default_init_args)
+
+
+def test_repeat_compression_fails():
+    model = SimplestModel()
+    nncf_config = NNCFConfig.from_dict({"input_info": {"sample_size": SimplestModel.INPUT_SIZE}})
+    _ = create_compressed_model(model, nncf_config)
+    with pytest.raises(RuntimeError, match="The model object has already been compressed."):
+        _ = create_compressed_model(model, nncf_config)

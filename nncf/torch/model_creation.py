@@ -93,6 +93,18 @@ def create_compressed_model(
         is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
         as an object of NNCFNetwork.
     """
+    if isinstance(model, NNCFNetwork):
+        raise RuntimeError(
+            "The model object has already been compressed.\n"
+            "NNCF for PyTorch modifies the model object in-place, and repeat calls to "
+            "`nncf.torch.create_compressed_model` with the same model object passed as argument "
+            "will lead to an incorrect attempt to compress the model twice.\n"
+            "Make sure that the model object you are passing has not already been compressed (for "
+            "instance, by testing `if isinstance(model, nncf.torch.nncf_network.NNCFNetwork)`).\n"
+            "If you are encountering this in a Jupyter notebook context - make sure that when "
+            "re-running cells involving `nncf.torch.create_compressed_model` the original model object "
+            "is also re-created (via constructor call)."
+        )
 
     set_debug_log_dir(config.get("log_dir", "."))
 
