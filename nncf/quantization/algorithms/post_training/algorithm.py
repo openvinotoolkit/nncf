@@ -183,7 +183,7 @@ class PostTrainingQuantization(Algorithm):
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
-                statistics_aggregator.register_stastistic_points(algo_statistic_points)
+                statistics_aggregator.register_statistic_points(algo_statistic_points)
 
             statistics_aggregator.collect_statistics(modified_model)
             statistic_points = statistics_aggregator.statistic_points
