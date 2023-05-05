@@ -158,7 +158,6 @@ class OVBiasInsertionCommand(TransformationCommand):
         """
         super().__init__(TransformationType.INSERT, target_point)
 
-
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()

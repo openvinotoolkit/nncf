@@ -57,7 +57,13 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
     def types_to_insert_bias(self):
-        return [OVConvolutionMetatype, OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype, OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype]
+        return [
+            OVConvolutionMetatype,
+            OVGroupConvolutionMetatype,
+            OVDepthwiseConvolutionMetatype,
+            OVConvolutionBackpropDataMetatype,
+            OVGroupConvolutionBackpropDataMetatype,
+        ]
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:

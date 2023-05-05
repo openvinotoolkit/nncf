@@ -49,7 +49,7 @@ class OVModelTransformer(ModelTransformer):
             (OVModelExtractionCommand, self._apply_model_extraction_transformation),
             (OVInplaceFnInsertionCommand, self._apply_insert_operation),
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
-            (OVBiasInsertionCommand, self._apply_bias_insertion_transformations)
+            (OVBiasInsertionCommand, self._apply_bias_insertion_transformations),
         ]
 
     @staticmethod
@@ -435,7 +435,9 @@ class OVModelTransformer(ModelTransformer):
         raise RuntimeError(f"Transform type {transform_type} is not supported")
 
     @staticmethod
-    def _apply_bias_insertion_transformations(model: ov.Model, transformations: List[OVBiasInsertionCommand]) -> ov.Model:
+    def _apply_bias_insertion_transformations(
+        model: ov.Model, transformations: List[OVBiasInsertionCommand]
+    ) -> ov.Model:
         """
         Inserts bias operation after corresponding layer.
 

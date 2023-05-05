@@ -520,7 +520,6 @@ class BiasCorrection(Algorithm):
             transformation_layout.register(bias_insertion_command)
         return model_transformer.transform(transformation_layout)
 
-
     def _get_biased_after_input_nodes(self, nncf_graph: NNCFGraph, model_inputs: List[NNCFNode]) -> Dict[str, str]:
         """
         This method finds and returns the first nodes with the bias in the model that follows after the input nodes.
