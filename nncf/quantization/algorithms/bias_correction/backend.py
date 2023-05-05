@@ -46,6 +46,13 @@ class BiasCorrectionAlgoBackend(ABC):
         Returns backend-specific list of the quantizer metatypes.
         """
 
+    @property
+    @abstractmethod
+    def types_to_insert_bias(self):
+        """
+        Returns backend-specific list of the metatypes that should be with bias.
+        """
+
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:

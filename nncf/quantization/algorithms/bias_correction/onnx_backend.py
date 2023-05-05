@@ -50,6 +50,10 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def quantizer_types(self) -> List[OperatorMetatype]:
         return [ONNXQuantizeLinearMetatype, ONNXDequantizeLinearMetatype]
 
+    @property
+    def types_to_insert_bias(self):
+        return []
+
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)

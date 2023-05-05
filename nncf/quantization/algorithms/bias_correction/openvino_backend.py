@@ -21,11 +21,17 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
+from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
@@ -49,6 +55,10 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def quantizer_types(self) -> List[OVOpMetatype]:
         return FAKE_QUANTIZE_OPERATIONS
 
+    @property
+    def types_to_insert_bias(self):
+        return [OVConvolutionMetatype, OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype, OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype]
+
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
         return OVTargetPoint(target_type, target_node_name, port_id)
@@ -62,6 +72,10 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
         return OVModelExtractionCommand(inputs, outputs)
+
+    @staticmethod
+    def create_bias_insertion_command(node: NNCFNode) -> OVBiasInsertionCommand:
+        return OVCommandCreator.create_command_to_insert_bias(node)
 
     @staticmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> OVOutputInsertionCommand:

@@ -134,6 +134,7 @@ class BiasCorrection(Algorithm):
         main_model_transformer = ModelTransformerFactory.create(model)
 
         model_copy = copy_model(model)
+        model_copy = self._insert_null_biases(model_copy)
         model_copy = self._remove_fq_from_inputs(model_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
 
@@ -156,7 +157,7 @@ class BiasCorrection(Algorithm):
 
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
 
-            current_bias = self._backend_entity.get_bias_value(node, model, nncf_graph)
+            current_bias = self._backend_entity.get_bias_value(node, model_copy, nncf_graph)
 
             channel_axis = node.metatype.output_channel_axis
             if current_bias.ndim > 1:
@@ -446,7 +447,8 @@ class BiasCorrection(Algorithm):
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         model_copy = self._remove_fq_from_inputs(copy_model(model))
-        nncf_graph = NNCFGraphFactory.create(model_copy) if self.nncf_graph is None else self.nncf_graph
+        model_copy = self._insert_null_biases(model_copy)
+        nncf_graph = NNCFGraphFactory.create(model_copy)
         statistic_container = StatisticPointsContainer()
 
         nodes_with_bias = [
@@ -498,6 +500,26 @@ class BiasCorrection(Algorithm):
                 )
 
         return statistic_container
+
+    def _insert_null_biases(self, model: TModel) -> TModel:
+        """
+        This method finds and inserts zero biases for the layers that should have it.
+
+        :param model: TModel instance.
+        :return: Updated TModel instance with zero biases
+        """
+        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
+        nodes_without_biases = nncf_graph.get_nodes_by_metatypes(self._backend_entity.types_to_insert_bias)
+        nodes_without_biases = [
+            node for node in nodes_without_biases if not self._backend_entity.is_node_with_bias(node, nncf_graph)
+        ]
+        transformation_layout = TransformationLayout()
+        model_transformer = ModelTransformerFactory.create(model)
+        for node_without_bias in nodes_without_biases:
+            bias_insertion_command = self._backend_entity.create_bias_insertion_command(node_without_bias)
+            transformation_layout.register(bias_insertion_command)
+        return model_transformer.transform(transformation_layout)
+
 
     def _get_biased_after_input_nodes(self, nncf_graph: NNCFGraph, model_inputs: List[NNCFNode]) -> Dict[str, str]:
         """
