@@ -106,11 +106,6 @@ def quantize_impl(
 
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
-    if not advanced_parameters.disable_bias_correction:
-        nncf_logger.warning(
-            "Bias correction and fast bias correction algorithms are not supported by Torch backend yet."
-        )
-        advanced_parameters.disable_bias_correction = True
 
     nncf_network = create_nncf_network(model.eval(), calibration_dataset)
 
