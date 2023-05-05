@@ -14,8 +14,10 @@ import multiprocessing
 import os
 from argparse import ArgumentParser
 from collections import OrderedDict
+from collections import defaultdict
 from dataclasses import asdict
 from enum import Enum
+from itertools import islice
 from typing import Iterable, Optional, TypeVar
 
 import numpy as np
@@ -597,16 +599,48 @@ def get_allow_reshape_input(accuracy_checker_config) -> bool:
     return False
 
 
-def maybe_reshape_model(model, accuracy_checker_config, transform_fn, dataset):
-    if not get_allow_reshape_input(accuracy_checker_config):
+def maybe_reshape_model(model, dataset, subset_size):
+    dataset_inputs_shapes = defaultdict(set)
+    for input_dict in islice(dataset.get_inference_data(), subset_size):
+        for name, tensor in input_dict.items():
+            dataset_inputs_shapes[name].add(tuple(tensor.shape))
+
+    model_inputs_shapes = {}
+    for input_ in model.inputs:
+        for name in input_.names:
+            model_inputs_shapes[name] = tuple(input_.shape)
+
+    dynamic_dims = defaultdict(list)
+    reshaped_static_dims = defaultdict(list)
+    for name, shapes in dataset_inputs_shapes.items():
+        shapes = list(shapes)
+        if len(set(len(shape) for shape in shapes)) != 1 or len(model_inputs_shapes[name]) != len(shapes[0]):
+            raise RuntimeError("calibrate.py does not support dataset with dynamic ranks")
+
+        for idx in range(len(shapes[0])):
+            if len(shapes) == 1:
+                if model_inputs_shapes[name][idx] != shapes[0][idx]:
+                    reshaped_static_dims[name].append(idx)
+
+            elif any(shapes[0][idx] != shape[idx] for shape in shapes[1:]):
+                dynamic_dims[name].append(idx)
+
+    if not any(any(dict_.values()) for dict_ in [dynamic_dims, reshaped_static_dims]):
         return model
 
-    inputs = transform_fn(next(iter(dataset)))
-    shapes = {name: tensor.shape for name, tensor in inputs.items()}
     partial_shapes = {}
-    for name, shape in shapes.items():
-        p_shape = PartialShape([Dimension(d) if not isinstance(d, tuple) else Dimension(d[0], d[1]) for d in shape])
-        partial_shapes[name] = p_shape
+    for name, shape in model_inputs_shapes.items():
+        dataset_first_shape = dataset_inputs_shapes[name].pop()
+        dims = []
+        for idx, d in enumerate(shape):
+            if idx in dynamic_dims[name]:
+                dim = Dimension(-1)
+            elif idx in reshaped_static_dims[name]:
+                dim = Dimension(dataset_first_shape[idx])
+            else:
+                dim = Dimension(d) if not isinstance(d, tuple) else Dimension(d[0], d[1])
+            dims.append(dim)
+        partial_shapes[name] = PartialShape(dims)
     model.reshape(partial_shapes)
     return model
 
@@ -636,7 +670,11 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_imp
         return input_data
 
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
-    ov_model = maybe_reshape_model(ov_model, accuracy_checker_config, transform_fn, model_evaluator.dataset)
+
+    if get_allow_reshape_input(accuracy_checker_config):
+        ov_model = maybe_reshape_model(ov_model, calibration_dataset, quantization_parameters.get("subset_size", 300))
+        model_evaluator.load_network([{"model": ov_model}])
+
     quantized_model = nncf.quantize(ov_model, calibration_dataset, **quantization_parameters)
     return quantized_model
 
@@ -658,7 +696,9 @@ def quantize_model_with_accuracy_control(
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
     validation_dataset = nncf.Dataset(list(range(model_evaluator.dataset.full_size)))
 
-    ov_model = maybe_reshape_model(ov_model, accuracy_checker_config, transform_fn, model_evaluator.dataset)
+    if get_allow_reshape_input(accuracy_checker_config):
+        ov_model = maybe_reshape_model(ov_model, calibration_dataset, quantization_parameters.get("subset_size", 300))
+        model_evaluator.load_network([{"model": ov_model}])
 
     metric_name = accuracy_checker_config["models"][0]["datasets"][0]["metrics"][0].get("name", None)
     if metric_name is None:
