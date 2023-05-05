@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 
@@ -42,8 +42,13 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
     :return: NNCFNetwork instance for the input model
     """
 
-    def wrap_inputs(args):
-        return wrap_nncf_model_inputs_with_objwalk(args, {})
+    def get_inputs(dataloader_output: Any) -> Tuple[Tuple, Dict]:
+        if not isinstance(dataloader_output, tuple):
+            dataloader_output = (dataloader_output,)
+        return dataloader_output, {}
+
+    def wrap_inputs(args, kwargs):
+        return wrap_nncf_model_inputs_with_objwalk(args, kwargs)
 
     def wrap_outputs(retval):
         return wrap_nncf_model_outputs_with_objwalk(retval)
@@ -52,14 +57,16 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
         def dummy_forward(model):
             with no_nncf_trace():
                 args = next(iter(dataset.get_inference_data()))
+                args, kwargs = get_inputs(args)
 
                 def send_to_device(tensor):
                     return tensor.to(device)
 
                 args = objwalk(args, is_tensor, send_to_device)
+                kwargs = objwalk(kwargs, is_tensor, send_to_device)
 
-            args = wrap_inputs(args)
-            retval = model(*args)
+            args, kwargs = wrap_inputs(args, kwargs)
+            retval = model(*args, **kwargs)
             retval = replicate_same_tensors(retval)
             return wrap_outputs(retval)
 

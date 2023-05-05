@@ -37,6 +37,7 @@ from tests.shared.config_factory import ConfigFactory
 from tests.shared.helpers import remove_line_breaks
 from tests.shared.paths import ROOT_PYTHONPATH_ENV
 from tests.shared.paths import TEST_ROOT
+from tests.shared.paths import get_accuracy_aware_checkpoint_dir_path
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import create_command_line
 
@@ -358,7 +359,7 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
     assert compression_stage in allowed_compression_stages
 
 
-def extract_compression_stage_from_checkpoint(last_checkpoint_path):
+def extract_compression_stage_from_checkpoint(last_checkpoint_path: str) -> CompressionStage:
     compression_state = torch.load(last_checkpoint_path)[COMPRESSION_STATE_ATTR]
     ctrl_state = compression_state[BaseController.CONTROLLER_STATE]
     compression_stage = next(iter(ctrl_state.values()))[BaseControllerStateNames.COMPRESSION_STAGE]
@@ -577,27 +578,16 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
     runner = Command(create_command_line(args, accuracy_aware_config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
     runner.run()
 
-    from glob import glob
+    checkpoint_save_dir = log_dir / get_run_name(config_factory.config)
+    aa_checkpoint_path = get_accuracy_aware_checkpoint_dir_path(checkpoint_save_dir)
+    last_checkpoint_path = aa_checkpoint_path / "acc_aware_checkpoint_last.pth"
 
-    time_dir_1 = glob(os.path.join(log_dir, get_run_name(config_factory.config), "*/"))[0].split("/")[-2]
-    time_dir_2 = glob(
-        os.path.join(log_dir, get_run_name(config_factory.config), time_dir_1, "accuracy_aware_training", "*/")
-    )[0].split("/")[-2]
-    last_checkpoint_path = os.path.join(
-        log_dir,
-        get_run_name(config_factory.config),
-        time_dir_1,
-        "accuracy_aware_training",
-        time_dir_2,
-        "acc_aware_checkpoint_last.pth",
-    )
-
-    assert os.path.exists(last_checkpoint_path)
+    assert last_checkpoint_path.exists()
     if "compression" in accuracy_aware_config["sample_config"]:
         allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
     else:
         allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
-    compression_stage = extract_compression_stage_from_checkpoint(last_checkpoint_path)
+    compression_stage = extract_compression_stage_from_checkpoint(str(last_checkpoint_path))
     assert compression_stage in allowed_compression_stages
 
 

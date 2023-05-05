@@ -28,6 +28,7 @@ from examples.tensorflow.segmentation import train as seg_train
 from tests.shared.config_factory import ConfigFactory
 from tests.shared.helpers import remove_line_breaks
 from tests.shared.paths import TEST_ROOT
+from tests.shared.paths import get_accuracy_aware_checkpoint_dir_path
 from tests.tensorflow.helpers import get_cifar10_dataset_builders
 from tests.tensorflow.helpers import get_coco_dataset_builders
 from tests.tensorflow.test_models import SequentialModel
@@ -440,14 +441,11 @@ def test_model_accuracy_aware_train(_accuracy_aware_config, tmp_path):
     main = get_sample_fn(_accuracy_aware_config["sample_type"], modes=["train"])
     main(convert_to_argv(args))
 
-    assert checkpoint_save_dir.is_dir()
     model_dirs = [x for x in checkpoint_save_dir.glob("*/") if x.is_dir()]
     assert len(model_dirs) == 1
-    time_dirs = [x for x in model_dirs[0].glob("*/") if x.is_dir()]
-    assert len(time_dirs) == 1
-    time_dirs_aa = [x for x in (time_dirs[0] / "accuracy_aware_training").glob("*/") if x.is_dir()]
-    assert len(time_dirs_aa) == 1
-    assert tf.train.latest_checkpoint(str(time_dirs_aa[0]))
+    model_specific_run_dir = model_dirs[0]
+    aa_checkpoint_path = get_accuracy_aware_checkpoint_dir_path(model_specific_run_dir)
+    assert tf.train.latest_checkpoint(str(aa_checkpoint_path))
 
 
 @pytest.mark.parametrize("sample_type", SAMPLE_TYPES)
