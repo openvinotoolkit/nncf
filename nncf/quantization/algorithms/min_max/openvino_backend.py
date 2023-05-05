@@ -93,6 +93,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [OVReadValueMetatype]
 
     @property
+    def unification_producing_metatypes(self) -> List[OperatorMetatype]:
+        return self.overflow_fix_metatypes
+
+    @property
     def hw_config(self) -> HWConfig:
         return OVHWConfig
 
