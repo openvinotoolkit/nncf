@@ -162,10 +162,10 @@ class TestONNXExport:
                 ov_weight_ratio=0.07,
                 recipe=Wav2Vec2RunRecipe().model_config_(
                     # stride, hidden size and num heads is selected to reproduce invalid parsing of reshape:
-                    # input_shape=[1, 4, 1, 2] and output shape = [4, 1, 2]. NGraph transformation eager finds extend and
-                    # shrink mode in the reshape at the same time:
-                    # [1, 4, 1] is mapped to [4] and [2] - to [1,2]. Such reshape is skipped from pruning and heads are not
-                    # removed. But this reshape is just unsqueeze and pruning should work fine.
+                    # input_shape=[1, 4, 1, 2] and output shape = [4, 1, 2]. NGraph transformation eager finds extend
+                    # and shrink mode in the reshape at the same time:
+                    # [1, 4, 1] is mapped to [4] and [2] - to [1,2]. Such reshape is skipped from pruning and heads are
+                    # not removed. But this reshape is just unsqueeze and pruning should work fine.
                     conv_stride=(5, 5),
                     hidden_size=8,
                     num_attention_heads=4,
