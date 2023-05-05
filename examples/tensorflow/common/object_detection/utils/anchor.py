@@ -1,26 +1,24 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import collections
 
 import tensorflow as tf
 
 from examples.tensorflow.common.object_detection.utils import argmax_matcher
+from examples.tensorflow.common.object_detection.utils import balanced_positive_negative_sampler
 from examples.tensorflow.common.object_detection.utils import box_list
 from examples.tensorflow.common.object_detection.utils import faster_rcnn_box_coder
 from examples.tensorflow.common.object_detection.utils import region_similarity_calculator
 from examples.tensorflow.common.object_detection.utils import target_assigner
-from examples.tensorflow.common.object_detection.utils import balanced_positive_negative_sampler
 
 
 class Anchor:
@@ -66,7 +64,7 @@ class Anchor:
             for scale in range(self.num_scales):
                 for aspect_ratio in self.aspect_ratios:
                     stride = 2**level
-                    intermediate_scale = 2**(scale / float(self.num_scales))
+                    intermediate_scale = 2 ** (scale / float(self.num_scales))
                     base_anchor_size = self.anchor_size * stride * intermediate_scale
                     aspect_x = aspect_ratio**0.5
                     aspect_y = aspect_ratio**-0.5
@@ -78,15 +76,22 @@ class Anchor:
                     xv = tf.cast(tf.reshape(xv, [-1]), tf.float32)
                     yv = tf.cast(tf.reshape(yv, [-1]), tf.float32)
                     # Tensor shape Nx4.
-                    boxes = tf.stack([yv - half_anchor_size_y, xv - half_anchor_size_x,
-                                      yv + half_anchor_size_y, xv + half_anchor_size_x], axis=1)
+                    boxes = tf.stack(
+                        [
+                            yv - half_anchor_size_y,
+                            xv - half_anchor_size_x,
+                            yv + half_anchor_size_y,
+                            xv + half_anchor_size_x,
+                        ],
+                        axis=1,
+                    )
                     boxes_l.append(boxes)
             # Concat anchors on the same level to tensor shape NxAx4.
             boxes_l = tf.stack(boxes_l, axis=1)
             boxes_l = tf.reshape(boxes_l, [-1, 4])
             boxes_all.append(boxes_l)
 
-        return tf.concat(boxes_all, 0) # axis=0
+        return tf.concat(boxes_all, 0)  # axis=0
 
     def unpack_labels(self, labels):
         """Unpacks an array of labels into multiscales labels."""
@@ -96,7 +101,7 @@ class Anchor:
             feat_size_y = tf.cast(self.image_size[0] / 2**level, tf.int32)
             feat_size_x = tf.cast(self.image_size[1] / 2**level, tf.int32)
             steps = feat_size_y * feat_size_x * self.anchors_per_location
-            unpacked_labels[level] = tf.reshape(labels[count:count + steps], [feat_size_y, feat_size_x, -1])
+            unpacked_labels[level] = tf.reshape(labels[count : count + steps], [feat_size_y, feat_size_x, -1])
             count += steps
 
         return unpacked_labels
@@ -126,8 +131,12 @@ class AnchorLabeler:
               with a score below the threshold is labeled negative.
         """
         similarity_calc = region_similarity_calculator.IouSimilarity()
-        matcher = argmax_matcher.ArgMaxMatcher(match_threshold, unmatched_threshold=unmatched_threshold,
-                                               negatives_lower_than_unmatched=True, force_match_for_each_row=True)
+        matcher = argmax_matcher.ArgMaxMatcher(
+            match_threshold,
+            unmatched_threshold=unmatched_threshold,
+            negatives_lower_than_unmatched=True,
+            force_match_for_each_row=True,
+        )
         box_coder = faster_rcnn_box_coder.FasterRcnnBoxCoder()
 
         self._target_assigner = target_assigner.TargetAssigner(similarity_calc, matcher, box_coder)
@@ -183,12 +192,9 @@ class AnchorLabeler:
 class RpnAnchorLabeler(AnchorLabeler):
     """Labeler for Region Proposal Network."""
 
-    def __init__(self,
-                 anchor,
-                 match_threshold=0.7,
-                 unmatched_threshold=0.3,
-                 rpn_batch_size_per_im=256,
-                 rpn_fg_fraction=0.5):
+    def __init__(
+        self, anchor, match_threshold=0.7, unmatched_threshold=0.3, rpn_batch_size_per_im=256, rpn_fg_fraction=0.5
+    ):
         super().__init__(anchor, match_threshold, unmatched_threshold)
         self._rpn_batch_size_per_im = rpn_batch_size_per_im
         self._rpn_fg_fraction = rpn_fg_fraction
@@ -211,9 +217,9 @@ class RpnAnchorLabeler(AnchorLabeler):
                 don't care (ignore).
         """
 
-        sampler = (balanced_positive_negative_sampler.BalancedPositiveNegativeSampler(
-            positive_fraction=self._rpn_fg_fraction,
-            is_static=False))
+        sampler = balanced_positive_negative_sampler.BalancedPositiveNegativeSampler(
+            positive_fraction=self._rpn_fg_fraction, is_static=False
+        )
 
         # indicator includes both positive and negative labels.
         # labels includes only positives labels.
@@ -227,11 +233,13 @@ class RpnAnchorLabeler(AnchorLabeler):
         positive_labels = tf.where(
             tf.logical_and(samples, labels),
             tf.constant(2, dtype=tf.int32, shape=match_results.shape),
-            tf.constant(0, dtype=tf.int32, shape=match_results.shape))
+            tf.constant(0, dtype=tf.int32, shape=match_results.shape),
+        )
         negative_labels = tf.where(
             tf.logical_and(samples, tf.logical_not(labels)),
             tf.constant(1, dtype=tf.int32, shape=match_results.shape),
-            tf.constant(0, dtype=tf.int32, shape=match_results.shape))
+            tf.constant(0, dtype=tf.int32, shape=match_results.shape),
+        )
         ignore_labels = tf.fill(match_results.shape, -1)
 
         return (ignore_labels + positive_labels + negative_labels, positive_labels, negative_labels)

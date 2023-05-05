@@ -1,20 +1,15 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -48,27 +43,27 @@ from nncf.tensorflow.quantization.algorithm import TFQuantizationPointStateNames
 from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 
-UNSUPPORTED_TF_OP_METATYPES = [
-]
+UNSUPPORTED_TF_OP_METATYPES = []
 
 
 class TFQuantizationPointV2StateNames(TFQuantizationPointStateNames):
-    IS_WEIGHT_QUANTIZATION = 'is_weight_quantization'
-    INPUT_SHAPE = 'input_shape'
-    CHANNEL_AXES = 'channel_axes'
+    IS_WEIGHT_QUANTIZATION = "is_weight_quantization"
+    INPUT_SHAPE = "input_shape"
+    CHANNEL_AXES = "channel_axes"
 
 
 class TFQuantizationPointV2(TFQuantizationPoint):
-
     _state_names = TFQuantizationPointV2StateNames
 
-    def __init__(self,
-                 op_name: str,
-                 quantizer_spec: TFQuantizerSpec,
-                 target_point: TargetPoint,
-                 is_weight_quantization: bool,
-                 input_shape: Optional[List[int]] = None,
-                 channel_axes: Optional[List[int]] = None):
+    def __init__(
+        self,
+        op_name: str,
+        quantizer_spec: TFQuantizerSpec,
+        target_point: TargetPoint,
+        is_weight_quantization: bool,
+        input_shape: Optional[List[int]] = None,
+        channel_axes: Optional[List[int]] = None,
+    ):
         super().__init__(op_name, quantizer_spec, target_point)
         self.is_weight_quantization = is_weight_quantization
         self.input_shape = input_shape
@@ -86,7 +81,7 @@ class TFQuantizationPointV2(TFQuantizationPoint):
         return state
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'TFQuantizationPointV2':
+    def from_state(cls, state: Dict[str, Any]) -> "TFQuantizationPointV2":
         target_point_cls = TF_STATEFUL_CLASSES.get_registered_class(state[cls._state_names.TARGET_POINT_CLASS_NAME])
         kwargs = {
             cls._state_names.OP_NAME: state[cls._state_names.OP_NAME],
@@ -100,9 +95,8 @@ class TFQuantizationPointV2(TFQuantizationPoint):
 
 
 class TFQuantizationSetupV2(TFQuantizationSetup):
-
     @classmethod
-    def from_state(cls, state: Dict) -> 'TFQuantizationSetupV2':
+    def from_state(cls, state: Dict) -> "TFQuantizationSetupV2":
         setup = TFQuantizationSetupV2()
         for quantization_point_state in state[cls._state_names.QUANTIZATION_POINTS]:
             quantization_point = TFQuantizationPointV2.from_state(quantization_point_state)
@@ -115,18 +109,16 @@ class TFQuantizationSetupV2(TFQuantizationSetup):
 
 
 def _get_quantizer_op_name(prefix: str, is_wq: bool, port_id: int, target_type) -> str:
-    pos = 'pre_hook' if target_type == TargetType.OPERATOR_PRE_HOOK else 'post_hook'
-    qtype = 'W' if is_wq else 'A'
-    name = '_'.join([pos, qtype, str(port_id)])
-    quantizer_op_name = f'{prefix}/{name}'
+    pos = "pre_hook" if target_type == TargetType.OPERATOR_PRE_HOOK else "post_hook"
+    qtype = "W" if is_wq else "A"
+    name = "_".join([pos, qtype, str(port_id)])
+    quantizer_op_name = f"{prefix}/{name}"
     return quantizer_op_name
 
 
-def _get_tensor_specs(node: NNCFNode,
-                      nncf_graph: NNCFGraph,
-                      port_ids: List[int],
-                      is_input_tensors: bool,
-                      is_weight_tensors: bool):
+def _get_tensor_specs(
+    node: NNCFNode, nncf_graph: NNCFGraph, port_ids: List[int], is_input_tensors: bool, is_weight_tensors: bool
+):
     """
     Returns specification of tensors for `node` according to `port_ids`.
     """
@@ -144,14 +136,12 @@ def _get_tensor_specs(node: NNCFNode,
         tensor_specs.append((weight_shape, channel_axes))
     else:
         data_format = node.layer_attributes.get_data_format()
-        channel_axes = [-1] if data_format == 'channels_last' else [1]
+        channel_axes = [-1] if data_format == "channels_last" else [1]
 
         if is_input_tensors:
             edges = nncf_graph.get_input_edges(node)
             for input_port_id in port_ids:
-                tensor_specs.extend(
-                    (e.tensor_shape, channel_axes) for e in edges if e.input_port_id == input_port_id
-                )
+                tensor_specs.extend((e.tensor_shape, channel_axes) for e in edges if e.input_port_id == input_port_id)
         else:
             edges = nncf_graph.get_output_edges(node)
             for output_port_id in port_ids:
@@ -168,9 +158,8 @@ def _get_tensor_specs(node: NNCFNode,
     return tensor_specs
 
 
-@TF_COMPRESSION_ALGORITHMS.register('experimental_quantization')
+@TF_COMPRESSION_ALGORITHMS.register("experimental_quantization")
 class QuantizationBuilderV2(QuantizationBuilder):
-
     def _load_state_without_name(self, state_without_name: Dict[str, Any]):
         quantizer_setup_state = state_without_name[self._state_names.QUANTIZER_SETUP]
         self._quantizer_setup = TFQuantizationSetupV2.from_state(quantizer_setup_state)
@@ -179,8 +168,9 @@ class QuantizationBuilderV2(QuantizationBuilder):
         range_init_params = extract_range_init_params(self.config, self.name)
         return TFRangeInitParamsV2(**range_init_params) if range_init_params is not None else None
 
-    def _build_insertion_commands_for_quantizer_setup(self, quantizer_setup: TFQuantizationSetupV2) \
-             -> List[TFInsertionCommand]:
+    def _build_insertion_commands_for_quantizer_setup(
+        self, quantizer_setup: TFQuantizationSetupV2
+    ) -> List[TFInsertionCommand]:
         insertion_commands = []
         quantization_points = quantizer_setup.get_quantization_points()
         # quantization point id is her index inside the `quantization_points` list
@@ -189,18 +179,18 @@ class QuantizationBuilderV2(QuantizationBuilder):
         for unified_scales_group in quantizer_setup.get_unified_scale_groups():
             qp = quantization_points[unified_scales_group[0]]
             quantizer = create_quantizer(
-                f'{qp.op_name}/unified_scale_group',
+                f"{qp.op_name}/unified_scale_group",
                 qp.quantizer_spec,
                 qp.is_weight_quantization,
                 qp.input_shape,
-                qp.channel_axes
+                qp.channel_axes,
             )
 
             self._op_names.append(quantizer.name)
 
             for qp_id in unified_scales_group:
                 if was_processed[qp_id]:
-                    raise RuntimeError('Unexpected behavior')
+                    raise RuntimeError("Unexpected behavior")
                 was_processed[qp_id] = True
 
                 curr_qp = quantization_points[qp_id]
@@ -210,9 +200,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
                 assert curr_qp.channel_axes == qp.channel_axes
 
                 command = TFInsertionCommand(
-                    curr_qp.target_point,
-                    quantizer,
-                    TransformationPriority.QUANTIZATION_PRIORITY
+                    curr_qp.target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY
                 )
                 insertion_commands.append(command)
 
@@ -221,20 +209,12 @@ class QuantizationBuilderV2(QuantizationBuilder):
                 continue
 
             quantizer = create_quantizer(
-                qp.op_name,
-                qp.quantizer_spec,
-                qp.is_weight_quantization,
-                qp.input_shape,
-                qp.channel_axes
+                qp.op_name, qp.quantizer_spec, qp.is_weight_quantization, qp.input_shape, qp.channel_axes
             )
 
             self._op_names.append(quantizer.name)
 
-            command = TFInsertionCommand(
-                qp.target_point,
-                quantizer,
-                TransformationPriority.QUANTIZATION_PRIORITY
-            )
+            command = TFInsertionCommand(qp.target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
             insertion_commands.append(command)
 
         return insertion_commands
@@ -248,7 +228,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
             transformations.register(command)
         return transformations
 
-    def _build_controller(self, model: NNCFNetwork) -> 'QuantizationControllerV2':
+    def _build_controller(self, model: NNCFNetwork) -> "QuantizationControllerV2":
         return QuantizationControllerV2(model, self.config, self._op_names)
 
     def _run_range_initialization(self, model: NNCFNetwork) -> None:
@@ -266,22 +246,21 @@ class QuantizationBuilderV2(QuantizationBuilder):
         for node in nncf_graph.get_all_nodes():
             if node.metatype in UNSUPPORTED_TF_OP_METATYPES:
                 nncf_logger.warning(
-                    'The operation {} is unsupported by the quantization algorithm.'.format(node.node_name)
+                    "The operation {} is unsupported by the quantization algorithm.".format(node.node_name)
                 )
 
         # Possible configurations of quantizer for nodes with weights.
         possible_qconfigs_for_nodes_with_weight = self._get_quantizable_weighted_layer_nodes(nncf_graph)
-        qp_solution = self._get_quantizer_propagation_solution(nncf_graph,
-                                                               possible_qconfigs_for_nodes_with_weight,
-                                                               [],
-                                                               model)
+        qp_solution = self._get_quantizer_propagation_solution(
+            nncf_graph, possible_qconfigs_for_nodes_with_weight, [], model
+        )
 
         # Logic of the TFQuantizationSetupV2 creation
 
         quantization_setup = TFQuantizationSetupV2()
         node_name_to_qconfig_map = {}  # type: Dict[str, QuantizerConfig]
         qp_id_to_setup_index_map = {}  # type: Dict[QuantizationPointId, int]
-        first_conv_nodes = get_first_nodes_of_type(nncf_graph, ['Conv2D', 'Conv3D'])
+        first_conv_nodes = get_first_nodes_of_type(nncf_graph, ["Conv2D", "Conv3D"])
 
         for idx, (qp_id, qp) in enumerate(qp_solution.quantization_points.items()):
             qp_id_to_setup_index_map[qp_id] = idx
@@ -292,10 +271,12 @@ class QuantizationBuilderV2(QuantizationBuilder):
                 if target_node.node_name in node_name_to_qconfig_map:
                     assigned_qconfig = node_name_to_qconfig_map[target_node.node_name]
                     if qp.qconfig != assigned_qconfig:
-                        raise RuntimeError('Inconsistent quantizer configurations selected by solver for one '
-                                            f'and the same quantizable op! Tried to assign {qp.qconfig} to '
-                                            f'{target_node.node_name} as specified by QP {qp_id}, but the op '
-                                            f'already has quantizer config {assigned_qconfig} assigned to it!')
+                        raise RuntimeError(
+                            "Inconsistent quantizer configurations selected by solver for one "
+                            f"and the same quantizable op! Tried to assign {qp.qconfig} to "
+                            f"{target_node.node_name} as specified by QP {qp_id}, but the op "
+                            f"already has quantizer config {assigned_qconfig} assigned to it!"
+                        )
                     continue  # The operation has already been quantized
                 node_name_to_qconfig_map[target_node.node_name] = qp.qconfig
 
@@ -304,7 +285,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
                 narrow_range = not half_range
                 target_type = TargetType.OPERATOR_PRE_HOOK
                 if not issubclass(target_node.metatype, TFOpWithWeightsMetatype):
-                    raise RuntimeError(f'Unexpected type of metatype: {type(target_node.metatype)}')
+                    raise RuntimeError(f"Unexpected type of metatype: {type(target_node.metatype)}")
                 port_ids = [weight_def.port_id for weight_def in target_node.metatype.weight_definitions]
 
             else:
@@ -312,7 +293,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
                 # Check correctness
                 if not isinstance(qp.insertion_point, ActivationQuantizationInsertionPoint):
-                    raise RuntimeError(f'Unexpected type of insertion point: {type(qp.insertion_point)}')
+                    raise RuntimeError(f"Unexpected type of insertion point: {type(qp.insertion_point)}")
 
                 # Parameters
                 half_range = False
@@ -329,28 +310,29 @@ class QuantizationBuilderV2(QuantizationBuilder):
                 nncf_graph,
                 port_ids,
                 target_type == TargetType.OPERATOR_PRE_HOOK,
-                qp.is_weight_quantization_point()
+                qp.is_weight_quantization_point(),
             )
 
             for port_id, (tensor_shape, channel_axes) in zip(port_ids, tensor_specs):
                 quantizer_op_name = _get_quantizer_op_name(
-                    target_node.node_name,
-                    qp.is_weight_quantization_point(),
-                    port_id,
-                    target_type
+                    target_node.node_name, qp.is_weight_quantization_point(), port_id, target_type
                 )
                 quantizer_spec = TFQuantizerSpec.from_config(qp.qconfig, narrow_range, half_range)
                 target_point = TFTargetPoint(target_node.node_name, target_node.node_type, port_id, target_type)
-                qpoint = TFQuantizationPointV2(quantizer_op_name, quantizer_spec, target_point,
-                                               qp.is_weight_quantization_point(), tensor_shape, channel_axes)
+                qpoint = TFQuantizationPointV2(
+                    quantizer_op_name,
+                    quantizer_spec,
+                    target_point,
+                    qp.is_weight_quantization_point(),
+                    tensor_shape,
+                    channel_axes,
+                )
 
                 quantization_setup.add_quantization_point(qpoint)
 
         # Registration of unified scale groups
         for unified_group in qp_solution.unified_scale_groups.values():
-            us_group = [
-                qp_id_to_setup_index_map[qp_id] for qp_id in unified_group
-            ]
+            us_group = [qp_id_to_setup_index_map[qp_id] for qp_id in unified_group]
             quantization_setup.register_unified_scale_group(us_group)
 
         return quantization_setup

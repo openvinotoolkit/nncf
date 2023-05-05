@@ -1,36 +1,34 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Union, Deque, List
+from typing import Any, Callable, Deque, List, Optional, Union
 
 import numpy as np
 import tensorflow as tf
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
+from nncf.tensorflow.tensor import TFNNCFTensor
+from nncf.tensorflow.tensor_statistics.reduction import convert_rs_to_pt_type
+from nncf.tensorflow.tensor_statistics.statistics import TFMedianMADTensorStatistic
 from nncf.tensorflow.tensor_statistics.statistics import TFMinMaxTensorStatistic
 from nncf.tensorflow.tensor_statistics.statistics import TFPercentileTensorStatistic
-from nncf.tensorflow.tensor_statistics.statistics import TFMedianMADTensorStatistic
-from nncf.tensorflow.tensor_statistics.reduction import convert_rs_to_pt_type
-from nncf.tensorflow.tensor import TFNNCFTensor
 
 
 class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -39,12 +37,12 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
-        return TFNNCFTensor(tf.reduce_min(x.tensor, axis=axis))
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+        return TFNNCFTensor(tf.reduce_min(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
-        return TFNNCFTensor(tf.reduce_max(x.tensor, axis=axis))
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+        return TFNNCFTensor(tf.reduce_max(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def abs(x: NNCFTensor) -> NNCFTensor:
@@ -59,8 +57,20 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return TFNNCFTensor(tf.math.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
-        return TFNNCFTensor(tf.math.reduce_mean(x.tensor, axis=axis))
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.reduce_mean(x.tensor, axis=axis, keepdims=keepdims))
+
+    @staticmethod
+    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
 
     @staticmethod
     def stack(x: Union[List[tf.Tensor], Deque[tf.Tensor]], axis: int = 0) -> NNCFTensor:
@@ -70,7 +80,7 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         tensor = x.tensor
-        if list(tensor.shape) == []: #pylint: disable=C1803
+        if list(tensor.shape) == []:  # pylint: disable=C1803
             tensor = tf.expand_dims(tensor, 0)
         tensor_list = tf.unstack(tensor, axis=axis)
         return [TFNNCFTensor(t) for t in tensor_list]
@@ -78,6 +88,22 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return tf.reduce_sum(tensor.tensor).numpy()
+
+    @staticmethod
+    def quantile(
+        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list], keepdims: bool = False
+    ) -> List[NNCFTensor]:
+        raise NotImplementedError()
+
+    @staticmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @classmethod
+    def no_outliers_map(
+        cls, x: NNCFTensor, fn: Callable[[NNCFTensor, Optional[int]], Any], axis: int = 0, alpha: float = 0.01
+    ):
+        raise NotImplementedError()
 
 
 class TFMinMaxStatisticCollector(MinMaxStatisticCollector):

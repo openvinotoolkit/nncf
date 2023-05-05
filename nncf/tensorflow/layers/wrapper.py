@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from collections import OrderedDict
 from inspect import getfullargspec
@@ -17,8 +15,8 @@ from typing import Dict
 
 import tensorflow as tf
 
-from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
+from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.operation import NNCFOperation
 
@@ -29,6 +27,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
     This wrapper augments a keras layer so the NNCF Operations may be applied to weights,
     callable attributes (like activations), input and output of the wrapped layer.
     """
+
     def __init__(self, layer, **kwargs):
         """
         Create a pruning wrapper for a keras layer.
@@ -37,20 +36,19 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         :param kwargs: additional keyword arguments to be passed to the keras layer.
         """
         if layer is None:
-            raise ValueError('`layer` cannot be None.')
+            raise ValueError("`layer` cannot be None.")
 
-        if not isinstance(layer, tf.keras.layers.Layer) or \
-                isinstance(layer, tf.keras.Model):
+        if not isinstance(layer, tf.keras.layers.Layer) or isinstance(layer, tf.keras.Model):
             raise ValueError(
-                '`layer` can only be a `tf.keras.layers.Layer` instance. '
-                'You passed an instance of type: {input}.'.format(
-                    input=layer.__class__.__name__))
+                "`layer` can only be a `tf.keras.layers.Layer` instance. "
+                "You passed an instance of type: {input}.".format(input=layer.__class__.__name__)
+            )
 
-        if 'name' not in kwargs:
-            kwargs['name'] = layer.name
+        if "name" not in kwargs:
+            kwargs["name"] = layer.name
 
         super().__init__(layer, **kwargs)
-        self._track_trackable(layer, name='layer')
+        self._track_trackable(layer, name="layer")
 
         self.weights_attr_ops = {}  # type: Dict[str, Dict[str, NNCFOperation]]
 
@@ -159,7 +157,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
 
     @property
     def data_format(self):
-        return getattr(self.layer, 'data_format', 'channels_last')
+        return getattr(self.layer, "data_format", "channels_last")
 
     @property
     def ops_weights(self):
@@ -174,8 +172,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         for weight_attr, ops in self.weights_attr_ops.items():
             weight = self.get_layer_weight(weight_attr)
             for op_name, op in ops.items():
-                self._ops_weights[op_name] = op.build(
-                    weight.shape, InputType.WEIGHTS, weight_attr, self)
+                self._ops_weights[op_name] = op.build(weight.shape, InputType.WEIGHTS, weight_attr, self)
             self._layer_weights[weight_attr] = weight
             self._trainable_weights.append(weight)
         self._op_build = True
@@ -196,9 +193,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         for weight_attr, ops in self.weights_attr_ops.items():
             layer_weight = self._layer_weights[weight_attr]
             for op_name, op in ops.items():
-                layer_weight = op(layer_weight,
-                                  self._ops_weights[op_name],
-                                  training)
+                layer_weight = op(layer_weight, self._ops_weights[op_name], training)
             self.set_layer_weight(weight_attr, layer_weight)
 
     def registry_weight_operation(self, weights_attr: str, op: NNCFOperation):
@@ -206,7 +201,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             self.weights_attr_ops[weights_attr] = OrderedDict()
 
         if op.name in self.weights_attr_ops[weights_attr]:
-            raise RuntimeError(f'Attempt to apply an operation with the same name {op.name} on layer weight twice')
+            raise RuntimeError(f"Attempt to apply an operation with the same name {op.name} on layer weight twice")
 
         self.weights_attr_ops[weights_attr][op.name] = op
 
@@ -236,7 +231,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
     @staticmethod
     def _get_call_fn_args(call_full_argspec):
         all_args = call_full_argspec.args + call_full_argspec.kwonlyargs
-        if all_args and all_args[0] == 'self':
+        if all_args and all_args[0] == "self":
             return all_args[1:]
         return all_args
 
@@ -259,25 +254,22 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             for op_name in ops:
                 op_config = tf.keras.utils.serialize_keras_object(ops[op_name])
                 weights_attr_ops[weights_attr].append(op_config)
-        config['weights_attr_operations'] = weights_attr_ops
+        config["weights_attr_operations"] = weights_attr_ops
         return config
 
     @classmethod
     def from_config(cls, config, custom_objects=None):
         config = config.copy()
 
-        weights_attr_ops_config = config.pop('weights_attr_operations')
+        weights_attr_ops_config = config.pop("weights_attr_operations")
 
-        layer = tf.keras.layers.deserialize(config.pop('layer'), custom_objects=custom_objects)
+        layer = tf.keras.layers.deserialize(config.pop("layer"), custom_objects=custom_objects)
         wrapper = cls(layer=layer, **config)
 
         for weights_attr, operations in weights_attr_ops_config.items():
             for op_config in operations:
                 wrapper.registry_weight_operation(
-                    weights_attr,
-                    tf.keras.layers.deserialize(
-                        op_config,
-                        custom_objects=get_nncf_custom_objects())
+                    weights_attr, tf.keras.layers.deserialize(op_config, custom_objects=get_nncf_custom_objects())
                 )
 
         return wrapper

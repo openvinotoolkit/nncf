@@ -1,19 +1,14 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-from typing import Callable
-from typing import List
-from typing import Optional
-from typing import Type
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from typing import Callable, List, Optional, Type
 
 import pytest
 from torch import Size
@@ -43,19 +38,20 @@ from nncf.torch.nncf_network import NNCFNetwork
 
 
 class RefNodeDesc:
-    def __init__(self,
-                 metatype_cls: Type[OperatorMetatype],
-                 layer_attributes: Optional[BaseLayerAttributes] = None,
-                 layer_attributes_comparator: Optional[
-                     Callable[[BaseLayerAttributes, BaseLayerAttributes], bool]] = None):
+    def __init__(
+        self,
+        metatype_cls: Type[OperatorMetatype],
+        layer_attributes: Optional[BaseLayerAttributes] = None,
+        layer_attributes_comparator: Optional[Callable[[BaseLayerAttributes, BaseLayerAttributes], bool]] = None,
+    ):
         self.metatype_cls = metatype_cls
         self.layer_attributes = layer_attributes
         self.layer_attributes_comparator = layer_attributes_comparator
 
-    def __eq__(self, other: 'RefNodeDesc'):
+    def __eq__(self, other: "RefNodeDesc"):
         eq_metatype = self.metatype_cls == other.metatype_cls
         if not eq_metatype:
-            print('metatype classes are different: {} vs {}'.format(self.metatype_cls, other.metatype_cls))
+            print("metatype classes are different: {} vs {}".format(self.metatype_cls, other.metatype_cls))
         eq_layer_attributes = self.layer_attributes == other.layer_attributes
         if self.layer_attributes_comparator is not None:
             eq_layer_attributes = self.layer_attributes_comparator(self.layer_attributes, other.layer_attributes)
@@ -66,13 +62,16 @@ def default_comparator(first_attr: BaseLayerAttributes, second_attr: BaseLayerAt
     if first_attr is None and second_attr is None:
         return True
     if first_attr is None or second_attr is None:
-        print('attributes are different, because one of them is equal to None, another - not')
+        print("attributes are different, because one of them is equal to None, another - not")
         return False
     are_equal = first_attr.__dict__ == second_attr.__dict__
     if not are_equal:
-        pairs = ['  vs  '.join([f'{f[0]}:{f[1]}', f'{s[0]}:{s[1]}']) for f, s in
-                 zip(first_attr.__dict__.items(), second_attr.__dict__.items()) if f[1] != s[1]]
-        print('attributes are different:\n{}'.format('\n'.join(pairs)))
+        pairs = [
+            "  vs  ".join([f"{f[0]}:{f[1]}", f"{s[0]}:{s[1]}"])
+            for f, s in zip(first_attr.__dict__.items(), second_attr.__dict__.items())
+            if f[1] != s[1]
+        ]
+        print("attributes are different:\n{}".format("\n".join(pairs)))
     return are_equal
 
 
@@ -80,12 +79,14 @@ COMPARATOR_TYPE = Callable[[BaseLayerAttributes, BaseLayerAttributes], bool]
 
 
 class LayerAttributesTestDesc:
-    def __init__(self,
-                 module: nn.Module,
-                 model_input_info_list: List[ModelInputInfo],
-                 layer_attributes: BaseLayerAttributes,
-                 metatype_cls: Type[OperatorMetatype],
-                 layer_attributes_comparator: COMPARATOR_TYPE = default_comparator):
+    def __init__(
+        self,
+        module: nn.Module,
+        model_input_info_list: List[ModelInputInfo],
+        layer_attributes: BaseLayerAttributes,
+        metatype_cls: Type[OperatorMetatype],
+        layer_attributes_comparator: COMPARATOR_TYPE = default_comparator,
+    ):
         self.module = module
         self.layer_attributes = layer_attributes
         self.model_input_info_list = model_input_info_list
@@ -96,36 +97,33 @@ class LayerAttributesTestDesc:
         return str(self.metatype_cls.__name__)
 
 
-BATCH_NORM_REF_ATTR = GenericWeightedLayerAttributes(weight_requires_grad=True,
-                                                     weight_shape=Size([1]),
-                                                     filter_dimension_idx=0)
+BATCH_NORM_REF_ATTR = GenericWeightedLayerAttributes(
+    weight_requires_grad=True, weight_shape=Size([1]), filter_dimension_idx=0
+)
 LIST_TEST_DESCS = [
     LayerAttributesTestDesc(
         module=nn.GroupNorm(1, 2),
         model_input_info_list=[ModelInputInfo([1, 2, 1, 1])],
-        layer_attributes=GroupNormLayerAttributes(
-            weight_requires_grad=True,
-            num_channels=2,
-            num_groups=1),
-        metatype_cls=PTGroupNormMetatype
+        layer_attributes=GroupNormLayerAttributes(weight_requires_grad=True, num_channels=2, num_groups=1),
+        metatype_cls=PTGroupNormMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.BatchNorm2d(1),
         model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
         layer_attributes=BATCH_NORM_REF_ATTR,
-        metatype_cls=PTBatchNormMetatype
+        metatype_cls=PTBatchNormMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.BatchNorm3d(1),
         model_input_info_list=[ModelInputInfo([1, 1, 1, 1, 1])],
         layer_attributes=BATCH_NORM_REF_ATTR,
-        metatype_cls=PTBatchNormMetatype
+        metatype_cls=PTBatchNormMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.BatchNorm1d(1),
         model_input_info_list=[ModelInputInfo([1, 1, 1])],
         layer_attributes=BATCH_NORM_REF_ATTR,
-        metatype_cls=PTBatchNormMetatype
+        metatype_cls=PTBatchNormMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.Conv2d(1, 1, 1),
@@ -138,8 +136,9 @@ LIST_TEST_DESCS = [
             stride=(1, 1),
             groups=1,
             transpose=False,
-            padding_values=(0, 0)),
-        metatype_cls=PTConv2dMetatype
+            padding_values=(0, 0),
+        ),
+        metatype_cls=PTConv2dMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.Conv2d(2, 2, 1, groups=2),
@@ -152,8 +151,9 @@ LIST_TEST_DESCS = [
             stride=(1, 1),
             groups=2,
             transpose=False,
-            padding_values=(0, 0)),
-        metatype_cls=PTConv2dMetatype
+            padding_values=(0, 0),
+        ),
+        metatype_cls=PTConv2dMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.Conv1d(1, 1, 1),
@@ -166,8 +166,9 @@ LIST_TEST_DESCS = [
             stride=(1,),
             groups=1,
             transpose=False,
-            padding_values=(0,)),
-        metatype_cls=PTConv1dMetatype
+            padding_values=(0,),
+        ),
+        metatype_cls=PTConv1dMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.Conv3d(1, 1, 1),
@@ -180,8 +181,9 @@ LIST_TEST_DESCS = [
             stride=(1, 1, 1),
             groups=1,
             transpose=False,
-            padding_values=(0, 0, 0)),
-        metatype_cls=PTConv3dMetatype
+            padding_values=(0, 0, 0),
+        ),
+        metatype_cls=PTConv3dMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.ConvTranspose1d(1, 1, 1),
@@ -194,8 +196,9 @@ LIST_TEST_DESCS = [
             stride=(1,),
             groups=1,
             transpose=True,
-            padding_values=(0,)),
-        metatype_cls=PTConvTranspose1dMetatype
+            padding_values=(0,),
+        ),
+        metatype_cls=PTConvTranspose1dMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.ConvTranspose2d(1, 1, 1),
@@ -208,8 +211,9 @@ LIST_TEST_DESCS = [
             stride=(1, 1),
             groups=1,
             transpose=True,
-            padding_values=(0, 0)),
-        metatype_cls=PTConvTranspose2dMetatype
+            padding_values=(0, 0),
+        ),
+        metatype_cls=PTConvTranspose2dMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.ConvTranspose3d(1, 1, 1),
@@ -222,50 +226,42 @@ LIST_TEST_DESCS = [
             stride=(1, 1, 1),
             groups=1,
             transpose=True,
-            padding_values=(0, 0, 0)),
-        metatype_cls=PTConvTranspose3dMetatype
+            padding_values=(0, 0, 0),
+        ),
+        metatype_cls=PTConvTranspose3dMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.Linear(1, 1),
         model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
-        layer_attributes=LinearLayerAttributes(
-            weight_requires_grad=True,
-            in_features=1,
-            out_features=1),
-        metatype_cls=PTLinearMetatype
+        layer_attributes=LinearLayerAttributes(weight_requires_grad=True, in_features=1, out_features=1),
+        metatype_cls=PTLinearMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.Linear(1, 1, bias=False),
         model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
-        layer_attributes=LinearLayerAttributes(
-            weight_requires_grad=True,
-            in_features=1,
-            out_features=1,
-            bias=False),
-        metatype_cls=PTLinearMetatype
+        layer_attributes=LinearLayerAttributes(weight_requires_grad=True, in_features=1, out_features=1, bias=False),
+        metatype_cls=PTLinearMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.Embedding(2, 1),
-        model_input_info_list=[ModelInputInfo([1, 1], type_str='long')],
+        model_input_info_list=[ModelInputInfo([1, 1], type_str="long")],
         layer_attributes=GenericWeightedLayerAttributes(
-            weight_requires_grad=True,
-            weight_shape=Size([2, 1]),
-            filter_dimension_idx=0),
-        metatype_cls=PTEmbeddingMetatype
+            weight_requires_grad=True, weight_shape=Size([2, 1]), filter_dimension_idx=0
+        ),
+        metatype_cls=PTEmbeddingMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.EmbeddingBag(1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1], type_str='long', filler='zeros')],
+        model_input_info_list=[ModelInputInfo([1, 1], type_str="long", filler="zeros")],
         layer_attributes=GenericWeightedLayerAttributes(
-            weight_requires_grad=True,
-            weight_shape=Size([1, 1]),
-            filter_dimension_idx=0),
-        metatype_cls=PTEmbeddingBagMetatype
+            weight_requires_grad=True, weight_shape=Size([1, 1]), filter_dimension_idx=0
+        ),
+        metatype_cls=PTEmbeddingBagMetatype,
     ),
 ]
 
 
-@pytest.mark.parametrize('desc', LIST_TEST_DESCS, ids=map(str, LIST_TEST_DESCS))
+@pytest.mark.parametrize("desc", LIST_TEST_DESCS, ids=map(str, LIST_TEST_DESCS))
 def test_can_set_valid_layer_attributes(desc: LayerAttributesTestDesc):
     single_layer_model = desc.module
 

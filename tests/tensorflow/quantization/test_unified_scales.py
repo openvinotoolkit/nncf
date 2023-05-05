@@ -1,19 +1,17 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import itertools
-import pytest
 
+import pytest
 import tensorflow as tf
 from tensorflow.keras import layers
 
@@ -26,7 +24,7 @@ from tests.tensorflow.quantization.utils import get_basic_quantization_config
 def get_single_concat_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):
-        inputs.append(tf.keras.Input(shape=input_shape[1:], name='input_{}'.format(i + 1)))
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
     # pylint: disable=unbalanced-tuple-unpacking
     input_1, input_2 = inputs
 
@@ -41,7 +39,7 @@ def get_single_concat_test_model(input_shapes):
 def get_double_concat_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):
-        inputs.append(tf.keras.Input(shape=input_shape[1:], name='input_{}'.format(i + 1)))
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
     # pylint: disable=unbalanced-tuple-unpacking
     input_1, input_2 = inputs
 
@@ -50,14 +48,14 @@ def get_double_concat_test_model(input_shapes):
 
     cat_1 = layers.Concatenate(1)([x_1, x_2])
     cat_2 = layers.Concatenate(1)([x_1, cat_1])
-    outputs = layers.Conv2D(filters=3, kernel_size=3, strides=2, padding='same')(cat_2)
+    outputs = layers.Conv2D(filters=3, kernel_size=3, strides=2, padding="same")(cat_2)
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
 def get_unet_like_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):
-        inputs.append(tf.keras.Input(shape=input_shape[1:], name='input_{}'.format(i + 1)))
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
     # pylint: disable=unbalanced-tuple-unpacking
     input_1, _ = inputs
 
@@ -74,22 +72,26 @@ def get_unet_like_test_model(input_shapes):
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-CAT_UNIFIED_SCALE_TEST_STRUCTS = [(get_single_concat_test_model, 3, 4),
-                                  (get_double_concat_test_model, 3, 4),
-                                  (get_unet_like_test_model, 4, 6)
-                                  ]
+CAT_UNIFIED_SCALE_TEST_STRUCTS = [
+    (get_single_concat_test_model, 3, 4),
+    (get_double_concat_test_model, 3, 4),
+    (get_unet_like_test_model, 4, 6),
+]
 
 
 def get_total_quantizations(model: tf.keras.Model) -> int:
-    fq_layers = [layer for layer in model.get_config()['layers'] if layer['class_name'] == 'FakeQuantize']
-    total_quantizations  = sum(len(layer['inbound_nodes']) for layer in fq_layers)
+    fq_layers = [layer for layer in model.get_config()["layers"] if layer["class_name"] == "FakeQuantize"]
+    total_quantizations = sum(len(layer["inbound_nodes"]) for layer in fq_layers)
     return total_quantizations
 
 
-@pytest.mark.parametrize("target_device, model_creator, ref_aq_module_count, ref_quantizations",
-                         [(t_dev, ) + rest for t_dev, rest in
-                             itertools.product([x.value for x in HWConfigType],
-                                               CAT_UNIFIED_SCALE_TEST_STRUCTS)])
+@pytest.mark.parametrize(
+    "target_device, model_creator, ref_aq_module_count, ref_quantizations",
+    [
+        (t_dev,) + rest
+        for t_dev, rest in itertools.product([x.value for x in HWConfigType], CAT_UNIFIED_SCALE_TEST_STRUCTS)
+    ],
+)
 def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_count, ref_quantizations):
     nncf_config = get_basic_quantization_config()
     x_shape = [1, 4, 1, 1]
@@ -107,37 +109,23 @@ def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_
 
 
 def get_shared_conv_test_model():
-    rpn_conv = tf.keras.layers.Conv2D(
-                    filters=1,
-                    kernel_size=(3, 3),
-                    activation=None,
-                    padding='same',
-                    name='rpn')
+    rpn_conv = tf.keras.layers.Conv2D(filters=1, kernel_size=(3, 3), activation=None, padding="same", name="rpn")
 
-    rpn_box_conv = tf.keras.layers.Conv2D(
-                        filters=12,
-                        kernel_size=(3, 3),
-                        padding='same',
-                        name='rpn-box')
+    rpn_box_conv = tf.keras.layers.Conv2D(filters=12, kernel_size=(3, 3), padding="same", name="rpn-box")
 
-    rpn_class_conv = tf.keras.layers.Conv2D(
-                        filters=3,
-                        kernel_size=(1, 1),
-                        padding='valid',
-                        name='rpn-class')
+    rpn_class_conv = tf.keras.layers.Conv2D(filters=3, kernel_size=(1, 1), padding="valid", name="rpn-class")
 
     inputs = []
     for i in range(1, 3):
-        inputs.append(tf.keras.Input(shape=(i* 5, i * 5, 3)))
+        inputs.append(tf.keras.Input(shape=(i * 5, i * 5, 3)))
 
     rois = []
     for inp in inputs:
         rpn = rpn_conv(inp)
         box_conv = rpn_box_conv(rpn)
-        class_conv= rpn_class_conv(rpn)
+        class_conv = rpn_class_conv(rpn)
 
-        _, feature_h, feature_w, num_anchors_per_location = (
-            class_conv.get_shape().as_list())
+        _, feature_h, feature_w, num_anchors_per_location = class_conv.get_shape().as_list()
 
         num_boxes = feature_h * feature_w * num_anchors_per_location
         this_level_scores = tf.reshape(class_conv, [-1, num_boxes, 1])
@@ -175,7 +163,7 @@ def test_shared_op_unified_scales(target_device):
 def get_eltwise_quantizer_linking_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):
-        inputs.append(tf.keras.Input(shape=input_shape[1:], name='input_{}'.format(i + 1)))
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
     # pylint: disable=unbalanced-tuple-unpacking
     input_1, input_2 = inputs
 

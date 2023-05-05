@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from collections import OrderedDict
 
 import pytest
@@ -36,19 +34,22 @@ class ModelForNameTest(Module):
         self.norm10 = BatchNorm2d(size)
         self.norm20 = BatchNorm2d(size)
         self.avgpool = AvgPool2d(size)
-        self.layer1 = Sequential(OrderedDict([
-            ('conv01', self.conv0),
-            ('norm01', self.norm10),
-            ('relu01', ReLU()),
-            ('pool01', MaxPool2d(size))
-        ]))
-        self.layer2 = Sequential(OrderedDict([
-            ('layer1', self.layer1),
-            ('conv02', self.conv0),
-            ('relu02', ReLU()),
-            ('norm02', self.norm20),
-            ('pool02', MaxPool2d(size))
-        ]))
+        self.layer1 = Sequential(
+            OrderedDict(
+                [("conv01", self.conv0), ("norm01", self.norm10), ("relu01", ReLU()), ("pool01", MaxPool2d(size))]
+            )
+        )
+        self.layer2 = Sequential(
+            OrderedDict(
+                [
+                    ("layer1", self.layer1),
+                    ("conv02", self.conv0),
+                    ("relu02", ReLU()),
+                    ("norm02", self.norm20),
+                    ("pool02", MaxPool2d(size)),
+                ]
+            )
+        )
 
     def forward(self, x):
         x = self.conv1(x)
@@ -63,52 +64,56 @@ class ModelForNameTest(Module):
 
 def test_get_all_modules_by_type__for_standard_type():
     model = ModelForNameTest()
-    act_bn = get_all_modules_by_type(model, 'BatchNorm2d')
+    act_bn = get_all_modules_by_type(model, "BatchNorm2d")
     act_bn = OrderedDict((str(k), v) for k, v in act_bn.items())
     ref_bn = {
-        'ModelForNameTest/BatchNorm2d[bn1]': model.bn1,
-        'ModelForNameTest/BatchNorm2d[bn2]': model.bn2,
-        'ModelForNameTest/BatchNorm2d[norm10]': model.norm10,
-        'ModelForNameTest/BatchNorm2d[norm20]': model.norm20,
+        "ModelForNameTest/BatchNorm2d[bn1]": model.bn1,
+        "ModelForNameTest/BatchNorm2d[bn2]": model.bn2,
+        "ModelForNameTest/BatchNorm2d[norm10]": model.norm10,
+        "ModelForNameTest/BatchNorm2d[norm20]": model.norm20,
     }
     assert act_bn == ref_bn
 
 
 def test_get_all_modules_by_type__for_multiple_type():
     model = ModelForNameTest()
-    act_bn = get_all_modules_by_type(model, ['ReLU', 'AvgPool2d'])
+    act_bn = get_all_modules_by_type(model, ["ReLU", "AvgPool2d"])
     act_bn = OrderedDict((str(k), v) for k, v in act_bn.items())
     ref_bn = [
-        'ModelForNameTest/AvgPool2d[avgpool]',
-        'ModelForNameTest/Sequential[layer1]/ReLU[relu01]',
-        'ModelForNameTest/Sequential[layer2]/ReLU[relu02]']
+        "ModelForNameTest/AvgPool2d[avgpool]",
+        "ModelForNameTest/Sequential[layer1]/ReLU[relu01]",
+        "ModelForNameTest/Sequential[layer2]/ReLU[relu02]",
+    ]
     assert list(act_bn.keys()) == ref_bn
     assert isinstance(act_bn, OrderedDict)
 
 
 def test_get_all_modules_by_type__for_not_exact_type():
     model = ModelForNameTest()
-    l = get_all_modules_by_type(model, 'Avg')
+    l = get_all_modules_by_type(model, "Avg")
     assert not l
 
 
 def test_get_all_modules_by_type__for_subtype():
     model = ModelForNameTest()
-    l = get_all_modules_by_type(model, 'AvgPool2d_dummy')
+    l = get_all_modules_by_type(model, "AvgPool2d_dummy")
     assert not l
 
 
 IGNORED_SCOPES = [
-    ("single", ['ModelForNameTest/Sequential[layer2]/Sequential[layer1]/ReLU[relu01]']),
-    ("multiple", ['ModelForNameTest/Sequential[layer2]/Sequential[layer1]/ReLU[relu01]',
-                  'ModelForNameTest/Sequential[layer2]/Conv2d[conv02]']),
-    ("common", ['ModelForNameTest/Sequential[layer1]'])
-    ]
+    ("single", ["ModelForNameTest/Sequential[layer2]/Sequential[layer1]/ReLU[relu01]"]),
+    (
+        "multiple",
+        [
+            "ModelForNameTest/Sequential[layer2]/Sequential[layer1]/ReLU[relu01]",
+            "ModelForNameTest/Sequential[layer2]/Conv2d[conv02]",
+        ],
+    ),
+    ("common", ["ModelForNameTest/Sequential[layer1]"]),
+]
 
 
-@pytest.mark.parametrize(
-    "ignored_scopes", [s[1] for s in IGNORED_SCOPES], ids=[s[0] for s in IGNORED_SCOPES]
-)
+@pytest.mark.parametrize("ignored_scopes", [s[1] for s in IGNORED_SCOPES], ids=[s[0] for s in IGNORED_SCOPES])
 def test_get_all_modules_by_type__with_ignored_scope(ignored_scopes):
     model = ModelForNameTest()
 

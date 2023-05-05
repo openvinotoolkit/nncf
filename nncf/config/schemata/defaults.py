@@ -1,17 +1,15 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-TARGET_DEVICE = 'ANY'
+TARGET_DEVICE = "ANY"
 
 NUM_BN_ADAPTATION_SAMPLES = 2000
 NUM_INIT_SAMPLES = 256
@@ -30,11 +28,11 @@ AUTOQ_COMPRESSION_RATIO = 0.15  # TODO (vshampor) do autoq and hawq follow the s
 AUTOQ_EVAL_SUBSET_RATIO = 1.0
 AUTOQ_WARMUP_ITER_NUMBER = 20
 
-QUANTIZATION_PRESET = 'performance'
+QUANTIZATION_PRESET = "performance"
 QUANTIZE_INPUTS = True
 QUANTIZE_OUTPUTS = False
 QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS = False
-QUANTIZATION_OVERFLOW_FIX = 'enable'
+QUANTIZATION_OVERFLOW_FIX = "enable"
 QUANTIZATION_BITS = 8
 QUANTIZATION_PER_CHANNEL = False
 QUANTIZATION_LOGARITHM_SCALE = False
@@ -45,15 +43,15 @@ LR_POLY_DURATION_EPOCHS = 30
 STAGED_QUANTIZATION_BASE_LR = 1e-3
 STAGED_QUANTIZATION_BASE_WD = 1e-5
 
-BINARIZATION_MODE = 'xnor'
+BINARIZATION_MODE = "xnor"
 
 PRUNING_INIT = 0.0
-PRUNING_SCHEDULE = 'exponential'
+PRUNING_SCHEDULE = "exponential"
 PRUNING_TARGET = 0.5
 PRUNING_NUM_INIT_STEPS = 0
 PRUNING_STEPS = 100
-PRUNING_FILTER_IMPORTANCE = 'L2'
-PRUNING_INTERLAYER_RANKING_TYPE = 'unweighted_ranking'
+PRUNING_FILTER_IMPORTANCE = "L2"
+PRUNING_INTERLAYER_RANKING_TYPE = "unweighted_ranking"
 PRUNING_ALL_WEIGHTS = False
 PRUNE_FIRST_CONV = False
 PRUNE_BATCH_NORMS = True
@@ -65,9 +63,9 @@ PRUNING_LEGR_MAX_PRUNING = 0.8
 PRUNING_LEGR_RANDOM_SEED = 42
 
 SPARSITY_INIT = 0.0
-MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE = 'normed_abs'
-SPARSITY_SCHEDULER = 'polynomial'
-RB_SPARSITY_SCHEDULER = 'exponential'
+MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE = "normed_abs"
+SPARSITY_SCHEDULER = "polynomial"
+RB_SPARSITY_SCHEDULER = "exponential"
 SPARSITY_SCHEDULER_PATIENCE = 1
 SPARSITY_SCHEDULER_POWER = 0.9
 SPARSITY_SCHEDULER_CONCAVE = True
@@ -77,7 +75,7 @@ SPARSITY_FREEZE_EPOCH = 100
 SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZER_STEP = False
 SPARSITY_MULTISTEP_STEPS = [90]
 SPARSITY_MULTISTEP_SPARSITY_LEVELS = [0.1, 0.5]
-SPARSITY_LEVEL_SETTING_MODE = 'global'
+SPARSITY_LEVEL_SETTING_MODE = "global"
 
 KNOWLEDGE_DISTILLATION_SCALE = 1.0
 KNOWLEDGE_DISTILLATION_TEMPERATURE = 1.0

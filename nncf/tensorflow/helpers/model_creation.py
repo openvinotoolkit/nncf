@@ -1,27 +1,23 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import types
-from typing import Any
-from typing import Dict
-from typing import Optional
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.utils.api_marker import api
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.config.utils import is_experimental_quantization
@@ -36,8 +32,7 @@ from nncf.tensorflow.graph.utils import is_keras_layer_model
 from nncf.tensorflow.helpers.utils import get_built_model
 
 
-def create_compression_algorithm_builder(config: NNCFConfig,
-                                         should_init: bool) -> TFCompressionAlgorithmBuilder:
+def create_compression_algorithm_builder(config: NNCFConfig, should_init: bool) -> TFCompressionAlgorithmBuilder:
     """
     Factory to create an instance of the compression algorithm builder
     by NNCFConfig.
@@ -59,11 +54,16 @@ def create_compression_algorithm_builder(config: NNCFConfig,
     return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 
 
-@tracked_function(NNCF_TF_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
-def create_compressed_model(model: tf.keras.Model,
-                            config: NNCFConfig,
-                            compression_state: Optional[Dict[str, Any]] = None) \
-        -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
+@api(canonical_alias="nncf.tensorflow.create_compressed_model")
+@tracked_function(
+    NNCF_TF_CATEGORY,
+    [
+        CompressionStartedFromConfig(argname="config"),
+    ],
+)
+def create_compressed_model(
+    model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[Dict[str, Any]] = None
+) -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
     """
     The main function used to produce a model ready for compression fine-tuning
     from an original TensorFlow Keras model and a configuration object.
@@ -72,6 +72,7 @@ def create_compressed_model(model: tf.keras.Model,
         from a checkpoint or another source.
     :param config: A configuration object used to determine the exact compression
         modifications to be applied to the model.
+    :type config: nncf.NNCFConfig
     :param compression_state: compression state to unambiguously restore the compressed model.
         Includes builder and controller states. If it is specified, trainable parameter initialization will be skipped
         during building.
@@ -82,10 +83,13 @@ def create_compressed_model(model: tf.keras.Model,
     """
     if is_experimental_quantization(config):
         if is_keras_layer_model(model):
-            raise ValueError('Experimental quantization algorithm has not supported models with '
-                             '`tensorflow_hub.KerasLayer` layer yet.')
+            raise ValueError(
+                "Experimental quantization algorithm has not supported models with "
+                "`tensorflow_hub.KerasLayer` layer yet."
+            )
 
-        from nncf.experimental.tensorflow.nncf_network import NNCFNetwork #pylint: disable=cyclic-import
+        from nncf.experimental.tensorflow.nncf_network import NNCFNetwork  # pylint: disable=cyclic-import
+
         input_signature = get_input_signature(config)
         model = NNCFNetwork(model, input_signature)
         model.compute_output_signature(model.input_signature)
@@ -104,18 +108,18 @@ def create_compressed_model(model: tf.keras.Model,
 
 
 def get_input_signature(config: NNCFConfig):
-    input_info = config.get('input_info', {})
+    input_info = config.get("input_info", {})
     samples_sizes = []
 
     if isinstance(input_info, dict):
-        sample_size = input_info['sample_size']
+        sample_size = input_info["sample_size"]
         samples_sizes.append(sample_size)
     elif isinstance(input_info, list):
         for info in input_info:
-            sample_size = info['sample_size']
+            sample_size = info["sample_size"]
             samples_sizes.append(sample_size)
     else:
-        raise RuntimeError('sample_size must be provided in configuration file')
+        raise RuntimeError("sample_size must be provided in configuration file")
 
     input_signature = []
     for sample_size in samples_sizes:

@@ -1,19 +1,21 @@
-import pytest
-import torch
-from torch import nn
-import torch.multiprocessing as mp
 import time
 from typing import Tuple
+
+import pytest
+import torch
+import torch.multiprocessing as mp
+from torch import nn
+
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model
 from nncf.torch import register_default_init_args
-
 from tests.torch.helpers import create_random_mock_dataloader
 
 
 class ModelWithChangedTrain(nn.Module):
-    def __init__(self, in_out_channels: Tuple[Tuple[int, int]] = ((1, 3), (3, 5), (5, 7), (7, 10)),
-                 freezing_stages: int = -1):
+    def __init__(
+        self, in_out_channels: Tuple[Tuple[int, int]] = ((1, 3), (3, 5), (5, 7), (7, 10)), freezing_stages: int = -1
+    ):
         super().__init__()
         self.freezing_stages = freezing_stages
         self.features = nn.ModuleList()
@@ -39,29 +41,26 @@ class ModelWithChangedTrain(nn.Module):
 
 
 def worker(rank: int, world_size: int) -> None:
-    torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8999',
-                                         world_size=world_size, rank=rank)
+    torch.distributed.init_process_group(
+        backend="nccl", init_method="tcp://127.0.0.1:8999", world_size=world_size, rank=rank
+    )
     model = ModelWithChangedTrain(freezing_stages=1)
     model.cuda()
     model.to(rank)
 
     nncf_config = NNCFConfig()
-    nncf_config.update({
-        "input_info": {
-            "sample_size": [1, 1, 30, 30]
-        },
-        "compression": {
-            "algorithm": "quantization",
-            "initializer": {
-                "range": {
-                    "num_init_samples": 10
+    nncf_config.update(
+        {
+            "input_info": {"sample_size": [1, 1, 30, 30]},
+            "compression": {
+                "algorithm": "quantization",
+                "initializer": {
+                    "range": {"num_init_samples": 10},
+                    "batchnorm_adaptation": {"num_bn_adaptation_samples": 10},
                 },
-                "batchnorm_adaptation": {
-                    "num_bn_adaptation_samples": 10
-                }
-            }
+            },
         }
-    })
+    )
     dataloader = create_random_mock_dataloader(nncf_config, num_samples=10)
     register_default_init_args(nncf_config, dataloader)
 
@@ -72,7 +71,7 @@ def worker(rank: int, world_size: int) -> None:
     _ = torch.nn.parallel.DistributedDataParallel(compressed_model, device_ids=[rank])
 
 
-@pytest.mark.parametrize('waiting_time', [20.0])
+@pytest.mark.parametrize("waiting_time", [20.0])
 def test_is_ddp_freezing(waiting_time: float) -> None:
     # Number of processes the same as GPU count
     n_procs = torch.cuda.device_count()

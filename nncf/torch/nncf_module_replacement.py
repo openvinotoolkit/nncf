@@ -1,25 +1,16 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from copy import deepcopy
-from typing import Callable
-from typing import Dict
-from typing import Set
-from typing import Tuple
-
-from typing import List
-from typing import Optional
-from typing import Type
+from typing import Callable, Dict, List, Optional, Set, Tuple, Type
 
 import torch
 from torch import nn
@@ -31,8 +22,8 @@ from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.layers import NNCF_MODULES
 from nncf.torch.layers import NNCF_MODULES_DICT
 from nncf.torch.layers import NNCF_MODULES_MAP
-from nncf.torch.layers import UNWRAPPED_USER_MODULES
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.torch.layers import UNWRAPPED_USER_MODULES
 from nncf.torch.layers import add_nncf_functionality_to_user_module
 
 
@@ -59,17 +50,20 @@ def collect_all_scopes_for_extendable_and_extended_modules(module: nn.Module) ->
     return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
 
 
-def collect_modules_and_scopes_by_predicate(module: nn.Module,
-        predicate: Callable[[torch.nn.Module], bool]) -> Dict[nn.Module, Set[Scope]]:
+def collect_modules_and_scopes_by_predicate(
+    module: nn.Module, predicate: Callable[[torch.nn.Module], bool]
+) -> Dict[nn.Module, Set[Scope]]:
     retval = {}
     return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
 
 
-def _collect_modules_and_scopes_recursive_helper(current_module: nn.Module,
-                                     current_scope: Scope,
-                                     collect_predicate: Callable[[torch.nn.Module], bool],
-                                     retval: Dict[nn.Module, Set[Scope]],
-                                     visited_scopes: Set[Scope] = None) -> Dict[nn.Module, Set[Scope]]:
+def _collect_modules_and_scopes_recursive_helper(
+    current_module: nn.Module,
+    current_scope: Scope,
+    collect_predicate: Callable[[torch.nn.Module], bool],
+    retval: Dict[nn.Module, Set[Scope]],
+    visited_scopes: Set[Scope] = None,
+) -> Dict[nn.Module, Set[Scope]]:
     if visited_scopes is None:
         visited_scopes = set()
         current_scope = Scope()
@@ -90,8 +84,9 @@ def _collect_modules_and_scopes_recursive_helper(current_module: nn.Module,
                 retval[child_module] = {child_scope}
             else:
                 retval[child_module].add(child_scope)
-        _ = _collect_modules_and_scopes_recursive_helper(child_module,
-                child_scope, collect_predicate, retval, visited_scopes)
+        _ = _collect_modules_and_scopes_recursive_helper(
+            child_module, child_scope, collect_predicate, retval, visited_scopes
+        )
 
     return retval
 
@@ -102,8 +97,10 @@ def _can_extend(module: nn.Module) -> bool:
     :param module: Candidate module for replacement
     :return: Whether the module should be replaced.
     """
-    return module.__class__ in NNCF_MODULES_DICT.values() or \
-           module.__class__ in UNWRAPPED_USER_MODULES.registry_dict.values()
+    return (
+        module.__class__ in NNCF_MODULES_DICT.values()
+        or module.__class__ in UNWRAPPED_USER_MODULES.registry_dict.values()
+    )
 
 
 def nncf_module_from(module: nn.Module) -> nn.Module:
@@ -126,11 +123,12 @@ def nncf_module_from(module: nn.Module) -> nn.Module:
 
 
 def replace_modules_by_nncf_modules(
-        model: nn.Module,
-        ignored_scopes: Optional[List[str]] = None,
-        target_scopes: Optional[List[str]] = None,
-        eval_op_scopes: Optional[List[Scope]] = None,
-        custom_replacer: Callable[[nn.Module], None] = None) -> Tuple[nn.Module, Dict[torch.nn.Module, List[Scope]]]:
+    model: nn.Module,
+    ignored_scopes: Optional[List[str]] = None,
+    target_scopes: Optional[List[str]] = None,
+    eval_op_scopes: Optional[List[Scope]] = None,
+    custom_replacer: Callable[[nn.Module], None] = None,
+) -> Tuple[nn.Module, Dict[torch.nn.Module, List[Scope]]]:
     """
     Replaces certain modules in the model hierarchy with NNCF-wrapped versions of the same modules.
     The modules to be replaced are statically defined in `nncf.torch.layers.NNCF_MODULES_DICT` and dynamically
@@ -166,8 +164,9 @@ def replace_modules_by_nncf_modules(
             # The module has already been extended, track it in the return value
             ret_dict[module] = list(sorted(scope_set, key=str))
             continue
-        should_process = _is_scopes_allow_replacement(scope_set, ignored_scopes, target_scopes, eval_op_scopes) and \
-                not _is_module_only_in_user_module(scope_set)
+        should_process = _is_scopes_allow_replacement(
+            scope_set, ignored_scopes, target_scopes, eval_op_scopes
+        ) and not _is_module_only_in_user_module(scope_set)
         if should_process:
             if custom_replacer is not None:
                 replaced_module = custom_replacer(module)
@@ -205,8 +204,9 @@ def _is_module_only_in_user_module(scope_set: Set[Scope]) -> bool:
     for scope in scope_set:
         has_at_least_one_user_module = False
         for user_module_class in UNWRAPPED_USER_MODULES.registry_dict.values():
-            if _has_user_module(scope, user_module_class) or \
-               _has_user_module(scope, NNCF_WRAPPED_USER_MODULES_DICT[user_module_class]):
+            if _has_user_module(scope, user_module_class) or _has_user_module(
+                scope, NNCF_WRAPPED_USER_MODULES_DICT[user_module_class]
+            ):
                 has_at_least_one_user_module = True
         if not has_at_least_one_user_module:
             # At least one scope from the input scope_set is located outside user module
@@ -221,8 +221,7 @@ def _has_user_module(scope: Scope, user_module_class: Type[torch.nn.Module]) -> 
     return False
 
 
-def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope,
-                             replaced_module: torch.nn.Module):
+def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope, replaced_module: torch.nn.Module):
     """
     Accesses the module pointed to by scope in the base model and replaces it with an NNCF-extended module.
 
@@ -237,10 +236,11 @@ def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope,
         # pylint: disable=protected-access
         child_module = curr_module._modules.get(scope_element.calling_field_name)
         if child_module is None:
-            raise RuntimeError("Could not find a {} module member in {} module of scope {} during module replacement"
-                               .format(scope_element.calling_field_name,
-                                       scope_element.calling_module_class_name,
-                                       str(scope)))
+            raise RuntimeError(
+                "Could not find a {} module member in {} module of scope {} during module replacement".format(
+                    scope_element.calling_field_name, scope_element.calling_module_class_name, str(scope)
+                )
+            )
         owning_module = curr_module
         curr_module = child_module
 
@@ -252,22 +252,24 @@ def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope,
     nncf_logger.debug(f"Extending module at {str(scope)}...")
     last_calling_field_name = scope[-1].calling_field_name
     if isinstance(owning_module, nn.Sequential):
-        #pylint:disable=protected-access
+        # pylint:disable=protected-access
         owning_module._modules[last_calling_field_name] = replaced_module
     else:
         setattr(owning_module, last_calling_field_name, replaced_module)
 
 
-
-def _is_scopes_allow_replacement(scope_set_for_module: Set[Scope],
-                                 ignored_scopes: Optional[List[str]] = None,
-                                 target_scopes: Optional[List[str]] = None,
-                                 eval_op_scopes: Optional[List[Scope]] = None) -> bool:
+def _is_scopes_allow_replacement(
+    scope_set_for_module: Set[Scope],
+    ignored_scopes: Optional[List[str]] = None,
+    target_scopes: Optional[List[str]] = None,
+    eval_op_scopes: Optional[List[Scope]] = None,
+) -> bool:
     used_in_eval = False
     for scope in scope_set_for_module:
         if matches_any(str(scope), ignored_scopes):
-            nncf_logger.info(f"Not processing a module that matched to an ignored scope in config; "
-                             f"module scope = {str(scope)}")
+            nncf_logger.info(
+                f"Not processing a module that matched to an ignored scope in config; " f"module scope = {str(scope)}"
+            )
             return False
         if eval_op_scopes is not None:
             for eval_op_scope in eval_op_scopes:
@@ -287,8 +289,10 @@ def _is_scopes_allow_replacement(scope_set_for_module: Set[Scope],
                 is_any_scope_in_target = True
                 break
         if not is_any_scope_in_target:
-            nncf_logger.info(f"Not processing a module outside target scope specified in config; "
-                             f"module known under scope(s) = {';'.join([str(x) for x in scope_set_for_module])}")
+            nncf_logger.info(
+                f"Not processing a module outside target scope specified in config; "
+                f"module known under scope(s) = {';'.join([str(x) for x in scope_set_for_module])}"
+            )
             return False
 
     return True

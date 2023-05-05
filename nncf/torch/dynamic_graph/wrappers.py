@@ -1,31 +1,27 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import functools
 from copy import deepcopy
-from typing import Callable
-from typing import List
-from typing import Tuple
+from typing import Callable, List, Tuple
 
 from torch.nn import DataParallel
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
-from nncf.common.utils.debug import is_debug
 from nncf.common.logging import nncf_logger
-from nncf.torch.dynamic_graph.layer_attributes_handlers import OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS
-from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_module
-from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
+from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
+from nncf.torch.dynamic_graph.layer_attributes_handlers import OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS
+from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
+from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_module
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
@@ -36,11 +32,13 @@ _IGNORED_SCOPES = []
 
 
 def _warn_data_parallel():
-    if getattr(_warn_data_parallel, 'warned_once', False):
+    if getattr(_warn_data_parallel, "warned_once", False):
         return
     _warn_data_parallel.warned_once = True
-    nncf_logger.warning("You are using DataParallel, which may cause significant performance issues with dynamic graph "
-                        "building. Consider using distributed training (DistributedDataParallel) instead.")
+    nncf_logger.warning(
+        "You are using DataParallel, which may cause significant performance issues with dynamic graph "
+        "building. Consider using distributed training (DistributedDataParallel) instead."
+    )
 
 
 def ignore_scope(cls):
@@ -49,7 +47,7 @@ def ignore_scope(cls):
     return cls
 
 
-def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
+def wrap_operator(operator, operator_info: "PatchedOperatorInfo"):
     """
     Wraps the input callable object (`operator`) with the functionality that allows the calls to this object
     to be tracked by the currently set global TracingContext. The wrapped functions can be then intercepted,
@@ -64,7 +62,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
              the unwrapped version, but within a TracingContext is able to be tracked and hooked.
     """
     # do not wrap function twice
-    _orig_op = getattr(operator, '_original_op', None)
+    _orig_op = getattr(operator, "_original_op", None)
     if _orig_op is not None:
         nncf_logger.debug(f"Operator: {_orig_op.__name__} is already wrapped")
         return operator
@@ -72,7 +70,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
     @functools.wraps(operator)
     def wrapped(*args, **kwargs):
         ctx = get_current_context()
-        if not ctx or getattr(ctx, 'in_operator', False) or not ctx.is_tracing:
+        if not ctx or getattr(ctx, "in_operator", False) or not ctx.is_tracing:
             op1 = operator(*args, **kwargs)
             return op1
 
@@ -82,7 +80,8 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
             if operator_info.skip_trace:
                 result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only #pylint: disable=cyclic-import
+                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only  # pylint: disable=cyclic-import
+
                 result = forward_trace_only(operator, *args, **kwargs)
             else:
                 op_name = operator_info.name
@@ -99,7 +98,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                     assert ctx.in_skipped_block is True
                     ctx.in_skipped_block = False
                 if str_op_address in ctx.start_node_name_of_skipped_block:
-                    assert ctx.in_skipped_block is False, 'skipping of overlapping blocks'
+                    assert ctx.in_skipped_block is False, "skipping of overlapping blocks"
                     ctx.in_skipped_block = True
                     ctx.tensor_cache = result
         except:
@@ -119,7 +118,8 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
 
 def wrap_module_call(module_call):
-    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS #pylint: disable=cyclic-import
+    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS  # pylint: disable=cyclic-import
+
     NAMES_ORIGINAL_OPERATORS = [op.name for op in ORIGINAL_OPERATORS]
 
     @functools.wraps(module_call)
@@ -145,7 +145,7 @@ def wrap_module_call(module_call):
                 assert ctx.in_skipped_block is True
                 ctx.in_skipped_block = False
             if str_op_address in ctx.start_node_name_of_skipped_block:
-                assert ctx.in_skipped_block is False, 'skipping of overlapping blocks'
+                assert ctx.in_skipped_block is False, "skipping of overlapping blocks"
                 ctx.in_skipped_block = True
         else:
             retval = module_call(self, *args, **kwargs)
@@ -158,12 +158,14 @@ def wrap_module_call(module_call):
     return wrapped
 
 
-def _execute_op(op_address: 'OperationAddress',
-                operator_info: 'PatchedOperatorInfo',
-                operator: Callable,
-                ctx: 'TracingContext',
-                *args,
-                **kwargs):
+def _execute_op(
+    op_address: "OperationAddress",
+    operator_info: "PatchedOperatorInfo",
+    operator: Callable,
+    ctx: "TracingContext",
+    *args,
+    **kwargs,
+):
     op_name = operator_info.name
 
     op_input = OperatorInput(list(args), kwargs)
@@ -180,8 +182,9 @@ def _execute_op(op_address: 'OperationAddress',
         if node is None:
             layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name, args, kwargs)
             is_called_inside_nncf_module = isinstance(ctx.get_current_module(), _NNCFModuleMixin)
-            node = ctx.maybe_add_node(processed_input, tensor_metas, op_address,
-                                      layer_attrs, ignored_algos, is_called_inside_nncf_module)
+            node = ctx.maybe_add_node(
+                processed_input, tensor_metas, op_address, layer_attrs, ignored_algos, is_called_inside_nncf_module
+            )
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
@@ -190,17 +193,19 @@ def _execute_op(op_address: 'OperationAddress',
     return result
 
 
-def _collect_module_attrs_and_ignored_algorithms(ctx: TracingContext,
-                                                 op_name: str,
-                                                 args, kwargs) -> Tuple[BaseLayerAttributes, List[str]]:
+def _collect_module_attrs_and_ignored_algorithms(
+    ctx: TracingContext, op_name: str, args, kwargs
+) -> Tuple[BaseLayerAttributes, List[str]]:
     layer_attrs = None
     ignored_algos = []
-    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS  #pylint:disable=cyclic-import
+    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS  # pylint:disable=cyclic-import
+
     if op_name in OP_NAMES_WITH_WEIGHTS:
         curr_module = ctx.get_current_module()
         if curr_module is None:
-            raise RuntimeError(f"Operation {op_name} requires module attributes, "
-                               f"but it was executed outside any module")
+            raise RuntimeError(
+                f"Operation {op_name} requires module attributes, " f"but it was executed outside any module"
+            )
         layer_attrs = get_layer_attributes_from_module(curr_module, op_name)
         if isinstance(curr_module, _NNCFModuleMixin):
             ignored_algos = deepcopy(curr_module.ignored_algorithms)

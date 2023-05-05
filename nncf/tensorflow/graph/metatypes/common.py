@@ -1,18 +1,15 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import List
-from typing import Type
+from typing import List, Type
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
@@ -75,7 +72,7 @@ DEPTHWISE_CONV_LAYER_METATYPES = [
 DECONV_LAYER_METATYPES = [
     layer_metatypes.TFConv1DTransposeLayerMetatype,
     layer_metatypes.TFConv2DTransposeLayerMetatype,
-    layer_metatypes.TFConv3DTransposeLayerMetatype
+    layer_metatypes.TFConv3DTransposeLayerMetatype,
 ]
 
 LINEAR_LAYER_METATYPES = [
@@ -133,14 +130,13 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS = [
     op_metatypes.TFMinimumOpMetatype,
 ]
 
-LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS = [
-    op_metatypes.TFSplitOpMetatype
-]
+LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS = [op_metatypes.TFSplitOpMetatype]
 
-LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION = \
-    LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT + \
-    LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS + \
-    LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION = (
+    LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
+    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS
+    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+)
 
 ELEMENTWISE_LAYER_METATYPES = [
     layer_metatypes.TFAddLayerMetatype,
@@ -169,10 +165,16 @@ DIMENSION_PERMUTATION_METATYPES = [
     layer_metatypes.TFPermuteLayerMetatype,
 ]
 
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     keras_metatypes_list = list(layer_metatypes.KERAS_LAYER_METATYPES.registry_dict.values())
     tf_metatypes_list = list(op_metatypes.TF_OPERATION_METATYPES.registry_dict.values())
-    return list(set(keras_metatypes_list + tf_metatypes_list + \
-                    list(INPUT_NOOP_METATYPES.registry_dict.values()) +
-                    list(OUTPUT_NOOP_METATYPES.registry_dict.values()) +
-                    list(NOOP_METATYPES.registry_dict.values())))
+    return list(
+        set(
+            keras_metatypes_list
+            + tf_metatypes_list
+            + list(INPUT_NOOP_METATYPES.registry_dict.values())
+            + list(OUTPUT_NOOP_METATYPES.registry_dict.values())
+            + list(NOOP_METATYPES.registry_dict.values())
+        )
+    )

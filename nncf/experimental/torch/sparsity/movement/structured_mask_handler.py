@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from functools import reduce
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -430,11 +428,13 @@ class StructuredMaskHandler:
                             is_group_matched = False
                             break
                     prune_grid = (block.size, -1) if prune_by_row else (-1, block.size)
-                    ctx = StructuredMaskContext(sparsifier, minfo.module_node_name, prune_grid, prune_by_row)
+                    ctx = StructuredMaskContext(minfo.operand, minfo.module_node_name, prune_grid, prune_by_row)
                     ctxes.append(ctx)
                 else:
-                    nncf_logger.warning(f"{prefix_warning}. No unstructured pruning for: {nncf_node.node_name}")
-                    is_group_matched = False
+                    nncf_logger.warning(
+                        f"Automatically found structured pruning group does not match the given "
+                        f"unstructured sparse structures:\n {group}"
+                    )
                     break
             if ctxes and is_group_matched:
                 result.append(StructuredMaskContextGroup(group_id, ctxes))

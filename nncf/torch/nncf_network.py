@@ -1,16 +1,14 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# pylint: disable=too-many-lines
 import functools
 import inspect
 import types
@@ -19,13 +17,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from enum import Enum
 from enum import IntEnum
-from typing import Callable
-from typing import Dict
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
+from typing import Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
 
 import torch
 from torch import nn
@@ -76,13 +68,13 @@ from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import training_mode_switcher
 
-LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
+LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME = "nncf_module"
 LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "external_quantizers"
 
 EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
 CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
 
-Module = TypeVar('Module', bound=nn.Module)
+Module = TypeVar("Module", bound=nn.Module)
 
 
 class PTInsertionType(IntEnum):
@@ -98,30 +90,33 @@ class PTInsertionPoint:
         TargetType.POST_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_POST_OP,
         TargetType.OPERATION_WITH_WEIGHTS: PTInsertionType.NNCF_MODULE_PRE_OP,
         TargetType.OPERATOR_PRE_HOOK: PTInsertionType.OPERATOR_PRE_HOOK,
-        TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK
+        TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK,
     }
 
     def _get_pt_insertion_type(self, target_type: TargetType) -> PTInsertionType:
-        if not isinstance(target_type, TargetType) or \
-                target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT:
+        if (
+            not isinstance(target_type, TargetType)
+            or target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT
+        ):
             raise RuntimeError("Unsupported target type for PyTorch: {}".format(target_type))
         return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
 
-    def __init__(self, target_type: TargetType, op_address: OperationAddress,
-                 input_port_id: int = None):
+    def __init__(self, target_type: TargetType, op_address: OperationAddress, input_port_id: int = None):
         self.insertion_type = self._get_pt_insertion_type(target_type)
         self.op_address = op_address
         self.module_scope = op_address.scope_in_model
         self.input_port_id = input_port_id
 
-    def __eq__(self, other: 'PTInsertionPoint'):
-        return self.insertion_type == other.insertion_type and \
-               self.op_address == other.op_address and \
-               self.module_scope == other.module_scope and \
-               self.input_port_id == other.input_port_id
+    def __eq__(self, other: "PTInsertionPoint"):
+        return (
+            self.insertion_type == other.insertion_type
+            and self.op_address == other.op_address
+            and self.module_scope == other.module_scope
+            and self.input_port_id == other.input_port_id
+        )
 
     def __str__(self):
-        return ' '.join([str(v) for v in self.__dict__.values()])
+        return " ".join([str(v) for v in self.__dict__.values()])
 
     def __hash__(self):
         return hash(str(self))
@@ -139,8 +134,9 @@ class NNCFNetworkInterface(torch.nn.Module):
     in the same manner as the original model parameters, and will also be eligible for state_dict-powered persistence
     when saving/loading checkpoints
     """
-    #pylint:disable=too-many-public-methods
-    MODEL_STATE_VERSION_ATTR = '_nncf_model_state_version'
+
+    # pylint:disable=too-many-public-methods
+    MODEL_STATE_VERSION_ATTR = "_nncf_model_state_version"
     MODEL_STATE_VERSION = 1
 
     def forward(self):
@@ -188,15 +184,17 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         self._original_unbound_forward = fwd_fn
 
-    def __init__(self,
-                 model: torch.nn.Module,
-                 input_infos: List[ModelInputInfo],
-                 dummy_forward_fn: Callable = None,
-                 wrap_inputs_fn: Callable = None,
-                 scopes_without_shape_matching: List[str] = None,
-                 ignored_scopes: List[str] = None,
-                 target_scopes: List[str] = None,
-                 wrap_outputs_fn: Callable = None):
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        input_infos: List[ModelInputInfo] = None,
+        dummy_forward_fn: Callable = None,
+        wrap_inputs_fn: Callable = None,
+        scopes_without_shape_matching: List[str] = None,
+        ignored_scopes: List[str] = None,
+        target_scopes: List[str] = None,
+        wrap_outputs_fn: Callable = None,
+    ):
         super().__init__()
 
         # Need this in order not to register owning module as sub-module of NNCFInterface and thus
@@ -229,11 +227,13 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
-        else:
-            self.__input_infos_based_input_wrapper = InputInfoWrapManager(self._input_infos,
-                                                                          self._forward_signature,
-                                                                          module_ref_for_device=model)
+        elif self._input_infos is not None:
+            self.__input_infos_based_input_wrapper = InputInfoWrapManager(
+                self._input_infos, self._forward_signature, module_ref_for_device=model
+            )
             self._wrap_inputs_fn = self.__input_infos_based_input_wrapper.wrap_inputs
+        else:
+            raise ValueError("wrap_inputs_fn or input_infos should be passed.")
 
         if wrap_outputs_fn is not None:
             self._wrap_outputs_fn = wrap_outputs_fn
@@ -244,14 +244,15 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._scopes_without_shape_matching = scopes_without_shape_matching
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
         self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
-        # pylint:disable=line-too-long
-        self._insertions_into_original_graph = {}  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
+        self._insertions_into_original_graph = (
+            {}
+        )  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
 
-        _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True,
-                                                                                     with_output_tracing=True)
+        _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(
+            with_input_tracing=True, with_output_tracing=True
+        )
 
-        eval_op_scopes = self._collect_eval_op_scopes(model,
-                                                      _orig_graph_build_forward_fn)
+        eval_op_scopes = self._collect_eval_op_scopes(model, _orig_graph_build_forward_fn)
 
         # all modules called in eval mode should be replaced prior to graph building
         self._replace_modules_by_nncf_modules(model, device, eval_op_scopes)
@@ -261,53 +262,52 @@ class NNCFNetworkInterface(torch.nn.Module):
         _orig_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         _orig_context.add_node_comparators([MODEL_OUTPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         if self._scopes_without_shape_matching:
-            _orig_context.add_node_comparators(scopes_without_shape_matching,
-                                               ShapeIgnoringTensorMetaComparator())
+            _orig_context.add_node_comparators(scopes_without_shape_matching, ShapeIgnoringTensorMetaComparator())
 
         if isinstance(model, NNCFNetwork):
             self._original_dynamic_graph = model.nncf._original_dynamic_graph
             self._original_graph = model.nncf._original_graph
         else:
-            self._original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(model,
-                                                                                                 _orig_context,
-                                                                                                 as_eval=True)
-            self._original_graph = GraphConverter.convert(self._original_dynamic_graph,
-                                                          input_infos=self._input_infos)
+            self._original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(
+                model, _orig_context, as_eval=True
+            )
+            self._original_graph = GraphConverter.convert(self._original_dynamic_graph, input_infos=self._input_infos)
         self._compressed_graph = None  # type: PTNNCFGraph
 
         self._compressed_context = TracingContext()
 
-        self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
-                                                                               with_output_tracing=False)
+        self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(
+            with_input_tracing=False, with_output_tracing=False
+        )
         self._in_user_dummy_forward = False
 
         self._compressed_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         self._compressed_context.add_node_comparators([MODEL_OUTPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         if self._scopes_without_shape_matching:
-            self._compressed_context.add_node_comparators(scopes_without_shape_matching,
-                                                          ShapeIgnoringTensorMetaComparator())
+            self._compressed_context.add_node_comparators(
+                scopes_without_shape_matching, ShapeIgnoringTensorMetaComparator()
+            )
         self._load_listener = None
 
         self.compression_controller = None  # type: PTCompressionAlgorithmController
 
     @property
-    def _model_ref(self) -> 'NNCFNetwork':
+    def _model_ref(self) -> "NNCFNetwork":
         return object.__getattribute__(self, "__model_ref")
 
     @property
     def input_infos(self) -> List[ModelInputInfo]:
         return deepcopy(self._input_infos)
 
-
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
         """
-            Required to guard against new forward calls on tensors that have already passed
-            through NNCF's forward once and got turned into TracedTensors by reference access.
+        Required to guard against new forward calls on tensors that have already passed
+        through NNCF's forward once and got turned into TracedTensors by reference access.
         """
         is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
 
         def strip_fn(tensor: TracedTensor) -> torch.Tensor:
-            if hasattr(torch.Tensor, 'as_subclass'):
+            if hasattr(torch.Tensor, "as_subclass"):
                 return torch.Tensor.as_subclass(tensor, torch.Tensor)
             # Torch < 1.7.0 fallback
             return torch.tensor(tensor, device=tensor.device, requires_grad=tensor.requires_grad)
@@ -316,8 +316,9 @@ class NNCFNetworkInterface(torch.nn.Module):
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
 
-    def create_knowledge_distillation_loss_handler(self, kd_original_model: nn.Module, calculate_fn) \
-            -> KnowledgeDistillationLossHandler:
+    def create_knowledge_distillation_loss_handler(
+        self, kd_original_model: nn.Module, calculate_fn
+    ) -> KnowledgeDistillationLossHandler:
         """
         Creates KnowledgeDistillationLossHandler instance for enabling Knowledge Distillation feature.
             Also returns created KnowledgeDistillationLossHandler for control over Knowledge Distillation logic.
@@ -327,10 +328,9 @@ class NNCFNetworkInterface(torch.nn.Module):
         :return: KnowledgeDistillationLossHandler instance
         """
         device = get_model_device(self._model_ref)
-        self._kd_loss_handler = KnowledgeDistillationLossHandler(self._compressed_context,
-                                                                 kd_original_model,
-                                                                 calculate_fn,
-                                                                 device)
+        self._kd_loss_handler = KnowledgeDistillationLossHandler(
+            self._compressed_context, kd_original_model, calculate_fn, device
+        )
         return self._kd_loss_handler
 
     def reset_nncf_modules(self):
@@ -341,16 +341,23 @@ class NNCFNetworkInterface(torch.nn.Module):
             module = self.get_module_by_scope(some_scope)
             module.reset()
 
-    def get_clean_shallow_copy(self) -> 'NNCFNetwork':
+    def get_clean_shallow_copy(self) -> "NNCFNetwork":
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
-        from nncf.torch.utils import save_module_state, load_module_state  # pylint: disable=cyclic-import
+        from nncf.torch.utils import load_module_state  # pylint: disable=cyclic-import
+        from nncf.torch.utils import save_module_state
+
         saved_state = save_module_state(self._model_ref)
-        new_interface = NNCFNetworkInterface(self._model_ref, self._input_infos,
-                                             self._user_dummy_forward_fn, self._wrap_inputs_fn,
-                                             self._scopes_without_shape_matching, self._ignored_scopes,
-                                             self._target_scopes,
-                                             wrap_outputs_fn=self._wrap_outputs_fn)
+        new_interface = NNCFNetworkInterface(
+            self._model_ref,
+            self._input_infos,
+            self._user_dummy_forward_fn,
+            self._wrap_inputs_fn,
+            self._scopes_without_shape_matching,
+            self._ignored_scopes,
+            self._target_scopes,
+            wrap_outputs_fn=self._wrap_outputs_fn,
+        )
         self._model_ref._nncf = new_interface  # pylint:disable=protected-access
         self._model_ref.nncf.reset_nncf_modules()
         load_module_state(self._model_ref, saved_state)
@@ -370,17 +377,17 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._compressed_context.register_pre_hooks(fn_list, point.op_address, point.input_port_id)
         elif point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
             self._compressed_context.register_post_hooks(fn_list, point.op_address)
-        elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP,
-                                      PTInsertionType.NNCF_MODULE_POST_OP]:
+        elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP, PTInsertionType.NNCF_MODULE_POST_OP]:
             nncf_module = self.get_module_by_scope(point.module_scope)
             if not isinstance(nncf_module, _NNCFModuleMixin):
                 raise RuntimeError(
-                    f'Failed to insert pre/post op for not registered custom module {point.module_scope}. NNCF only '
-                    f'supports native PyTorch modules with respect to trainable parameter (weight) compressed, such '
-                    f'as `torch.nn.Conv2d`. If your model contains a custom, non-PyTorch standard module with trainable'
-                    f' weights that should be compressed, you can register it using the '
-                    f'`@nncf.register_module` decorator. Please refer to `Compression of custom modules` section in '
-                    f'docs/Usage.md for more details.')
+                    f"Failed to insert pre/post op for not registered custom module {point.module_scope}. NNCF only "
+                    f"supports native PyTorch modules with respect to trainable parameter (weight) compressed, such "
+                    f"as `torch.nn.Conv2d`. If your model contains a custom, non-PyTorch standard module with trainable"
+                    f" weights that should be compressed, you can register it using the "
+                    f"`@nncf.register_module` decorator. Please refer to `Compression of custom modules` section in "
+                    f"docs/Usage.md for more details."
+                )
 
             norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
             norm_nncf_scopes = []
@@ -418,11 +425,13 @@ class NNCFNetworkInterface(torch.nn.Module):
 
     def _get_dummy_forward_fn_for_graph_building(self, with_input_tracing, with_output_tracing):
         if self._user_dummy_forward_fn is None:
-            return create_dummy_forward_fn(self._input_infos,
-                                           with_input_tracing=with_input_tracing,
-                                           wrap_inputs_fn=self._wrap_inputs_fn,
-                                           wrap_outputs_fn=self._wrap_outputs_fn,
-                                           with_output_tracing=with_output_tracing)
+            return create_dummy_forward_fn(
+                self._input_infos,
+                with_input_tracing=with_input_tracing,
+                wrap_inputs_fn=self._wrap_inputs_fn,
+                wrap_outputs_fn=self._wrap_outputs_fn,
+                with_output_tracing=with_output_tracing,
+            )
 
         def wrapped_user_dummy_forward_fn(*args, **kwargs):
             self._in_user_dummy_forward = True
@@ -432,11 +441,12 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         return wrapped_user_dummy_forward_fn
 
-    def _replace_modules_by_nncf_modules(self, model: torch.nn.Module,
-                                         device: torch.device, eval_op_scopes: List[Scope] = None):
+    def _replace_modules_by_nncf_modules(
+        self, model: torch.nn.Module, device: torch.device, eval_op_scopes: List[Scope] = None
+    ):
         _, self._nncf_replaced_modules = replace_modules_by_nncf_modules(
-            model, ignored_scopes=self._ignored_scopes,
-            target_scopes=self._target_scopes, eval_op_scopes=eval_op_scopes)
+            model, ignored_scopes=self._ignored_scopes, target_scopes=self._target_scopes, eval_op_scopes=eval_op_scopes
+        )
         model.to(device)
         return model
 
@@ -467,13 +477,15 @@ class NNCFNetworkInterface(torch.nn.Module):
 
     def rebuild_graph(self, *input_args):
         self._compressed_context.reset_graph()
-        dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
-                                                                         with_output_tracing=False)
+        dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(
+            with_input_tracing=False, with_output_tracing=False
+        )
         builder = GraphBuilder(dummy_forward_fn)
 
         with training_mode_switcher(self._model_ref, is_training=False):
-            self._compressed_graph = builder.build_graph(self._model_ref, self._compressed_context,
-                                                         input_infos=self._input_infos)
+            self._compressed_graph = builder.build_graph(
+                self._model_ref, self._compressed_context, input_infos=self._input_infos
+            )
 
     def is_scope_in_nncf_module_scope(self, scope: Scope) -> bool:
         norm_nncf_scopes = []
@@ -493,8 +505,9 @@ class NNCFNetworkInterface(torch.nn.Module):
         self.__setattr__(attr_name, nn.ModuleDict())
         self._extra_module_types.append(compression_module_type)
 
-    def add_compression_module(self, module_key: str, module: nn.Module,
-                               compression_module_type: ExtraCompressionModuleType):
+    def add_compression_module(
+        self, module_key: str, module: nn.Module, compression_module_type: ExtraCompressionModuleType
+    ):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError(f"Module type {compression_module_type} was not registered")
@@ -536,8 +549,11 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         ret_scope = scope.copy()
         for scope_element in ret_scope:
-            if scope_element.calling_module_class_name in ["Recurrent", "VariableRecurrent",
-                                                           "VariableRecurrentReverse"]:
+            if scope_element.calling_module_class_name in [
+                "Recurrent",
+                "VariableRecurrent",
+                "VariableRecurrentReverse",
+            ]:
                 scope_element.calling_module_class_name = "NormalizedName_Recurrent"
         return ret_scope
 
@@ -569,8 +585,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             in_edges = nncf_graph.get_input_edges(node)
             for edge in in_edges:
                 port_id = edge.input_port_id
-                pre_hook_ip = PreHookInsertionPoint(target_node_name=node.node_name,
-                                                    input_port_id=port_id)
+                pre_hook_ip = PreHookInsertionPoint(target_node_name=node.node_name, input_port_id=port_id)
                 pre_hooks.append(pre_hook_ip)
 
             if issubclass(node.metatype, PTSplitMetatype):
@@ -587,9 +602,12 @@ class NNCFNetworkInterface(torch.nn.Module):
         weighted_nodes = self.get_weighted_original_graph_nodes()
         weighted_node_names = [weighted_node.node_name for weighted_node in weighted_nodes]
 
-        ip_graph = InsertionPointGraph(self._original_graph, weight_modifiable_node_names=weighted_node_names,
-                                       allowed_pre_hook_insertion_points=pre_hooks,
-                                       allowed_post_hook_insertion_points=post_hooks)
+        ip_graph = InsertionPointGraph(
+            self._original_graph,
+            weight_modifiable_node_names=weighted_node_names,
+            allowed_pre_hook_insertion_points=pre_hooks,
+            allowed_post_hook_insertion_points=post_hooks,
+        )
         return ip_graph
 
     def get_module_by_scope(self, scope: Scope) -> Optional[torch.nn.Module]:
@@ -601,9 +619,11 @@ class NNCFNetworkInterface(torch.nn.Module):
             try:
                 scope = self._compressed_graph.get_scope_by_node_name(node_name)
             except RuntimeError:
-                nncf_logger.debug(f"Node {node_name} not found in compressed graph when trying to determine "
-                                  f"the containing module, trying the original graph to see if the node was "
-                                  f"present there during graph building")
+                nncf_logger.debug(
+                    f"Node {node_name} not found in compressed graph when trying to determine "
+                    f"the containing module, trying the original graph to see if the node was "
+                    f"present there during graph building"
+                )
                 scope = self._original_graph.get_scope_by_node_name(node_name)
         else:
             scope = self._original_graph.get_scope_by_node_name(node_name)
@@ -617,8 +637,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         flops_count_dict = {}
 
         def get_hook(name):
-            return functools.partial(compute_FLOPs_hook, dict_to_save=flops_count_dict,
-                                     module_node_name=name)
+            return functools.partial(compute_FLOPs_hook, dict_to_save=flops_count_dict, module_node_name=name)
 
         hook_list = []
         for nncf_node in self._original_graph.get_all_nodes():
@@ -632,7 +651,7 @@ class NNCFNetworkInterface(torch.nn.Module):
 
     def get_MACs_in_model(self):
         """
-            Calculates MAC units count for model.
+        Calculates MAC units count for model.
         """
         flops_count_dict = self.nncf.get_flops_per_module()
         total_MACs_count = sum(v // 2 for v in flops_count_dict.values())
@@ -644,9 +663,9 @@ class NNCFNetworkInterface(torch.nn.Module):
             retval[module_scope] = (deepcopy(nncf_module.pre_ops), deepcopy(nncf_module.post_ops))
         return retval
 
-    def load_nncf_module_additions(self,
-                                   scope_vs_pre_post_ops_dict: Dict[Scope, Tuple[torch.nn.ModuleDict,
-                                                                                 torch.nn.ModuleDict]]):
+    def load_nncf_module_additions(
+        self, scope_vs_pre_post_ops_dict: Dict[Scope, Tuple[torch.nn.ModuleDict, torch.nn.ModuleDict]]
+    ):
         for nncf_module, module_scope in self.get_nncf_modules().items():
             nncf_module.pre_ops = scope_vs_pre_post_ops_dict[module_scope][0]
             nncf_module.post_ops = scope_vs_pre_post_ops_dict[module_scope][1]
@@ -686,7 +705,6 @@ class NNCFNetworkInterface(torch.nn.Module):
                 result.append(scope_in_model)
         return result
 
-
     def get_node_to_op_address_mapping(self) -> Dict[NNCFNodeName, OperationAddress]:
         # The IDs of corresponding nodes of the original dynamic graph and original NNCF graph
         # must be equal for this to work.
@@ -698,7 +716,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             retval[nncf_node.node_name] = op_address
         return retval
 
-    def set_compression_controller(self, ctrl: 'PTCompressionAlgorithmController'):
+    def set_compression_controller(self, ctrl: "PTCompressionAlgorithmController"):
         self.compression_controller = ctrl
 
 
@@ -709,15 +727,18 @@ class NNCFNetworkMeta(type):
     syntax and at the same time retain its original class so that downstream class-based checks for the original
     model type don't fail.
     """
-    def __call__(cls,
-                 original_model: torch.nn.Module,
-                 input_infos: List[ModelInputInfo],
-                 dummy_forward_fn: Callable = None,
-                 wrap_inputs_fn: Callable[..., None] = None,
-                 scopes_without_shape_matching: List[str] = None,
-                 ignored_scopes: List[str] = None,
-                 target_scopes: List[str] = None,
-                 wrap_outputs_fn: Callable[..., None] = None) -> 'NNCFNetwork':
+
+    def __call__(
+        cls,
+        original_model: torch.nn.Module,
+        input_infos: List[ModelInputInfo] = None,
+        dummy_forward_fn: Callable = None,
+        wrap_inputs_fn: Callable[..., None] = None,
+        scopes_without_shape_matching: List[str] = None,
+        ignored_scopes: List[str] = None,
+        target_scopes: List[str] = None,
+        wrap_outputs_fn: Callable[..., None] = None,
+    ) -> "NNCFNetwork":
         """
         This function plays the role of a "constructor" call in the `nncf_network = NNCFNetwork(original_model, ...)`
         syntax. *_scopes arguments are to be passed as string representation of either
@@ -745,30 +766,34 @@ class NNCFNetworkMeta(type):
         checks.
         """
         original_class = original_model.__class__
-        original_model._nncf = NNCFNetworkInterface(original_model,
-                                                    input_infos,
-                                                    dummy_forward_fn,
-                                                    wrap_inputs_fn,
-                                                    scopes_without_shape_matching,
-                                                    ignored_scopes,
-                                                    target_scopes,
-                                                    wrap_outputs_fn)  # pylint:disable=protected-access
+        original_model._nncf = NNCFNetworkInterface(
+            original_model,
+            input_infos,
+            dummy_forward_fn,
+            wrap_inputs_fn,
+            scopes_without_shape_matching,
+            ignored_scopes,
+            target_scopes,
+            wrap_outputs_fn,
+        )  # pylint:disable=protected-access
         # The new class will also have an adjusted metaclass to avoid a "metaclass conflict" upon
         # class creation
         original_metaclass = type(original_model.__class__)
         class_creation_kwds = {}
         if original_metaclass is not type:
-            new_metaclass = types.new_class(name=original_metaclass.__name__, bases=(NNCFNetworkMeta,
-                                                                                     original_metaclass))
+            new_metaclass = types.new_class(
+                name=original_metaclass.__name__, bases=(NNCFNetworkMeta, original_metaclass)
+            )
             class_creation_kwds["metaclass"] = new_metaclass
-        new_class = types.new_class(name=original_model.__class__.__name__,
-                                    bases=(NNCFNetwork, original_model.__class__),
-                                    kwds=class_creation_kwds)
+        new_class = types.new_class(
+            name=original_model.__class__.__name__,
+            bases=(NNCFNetwork, original_model.__class__),
+            kwds=class_creation_kwds,
+        )
         # Make the signature of the forward on the resulting object same as for
         # the original forward.
         fn = NNCFNetwork.forward
-        new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__,
-                                         fn.__defaults__, fn.__closure__)
+        new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
         new_forward.__dict__.update(fn.__dict__)
         new_forward.__signature__ = inspect.signature(original_class.forward)
         if is_debug():
@@ -822,6 +847,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
     """
     A mixin-like class to dynamically extend the original model object's class with.
     """
+
     def __init__(self, *args, **kwargs):
         """
         In normal situations, the __init__ of the NNCFNetwork will never be called. The constructor-like syntax is
@@ -842,7 +868,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         Wraps the original forward call, doing additional actions before and after the call to facilitate model
         graph tracing and calling compression-related hooks.
         """
-        #pylint:disable=protected-access
+        # pylint:disable=protected-access
         with self.nncf._compressed_context as ctx:  # type: TracingContext
             ctx.base_module_thread_local_replica = self
             args, kwargs = replicate_same_tensors((args, kwargs))
@@ -857,8 +883,10 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
             if self.nncf._bound_original_forward is None:
                 retval = wrap_module_call(self.nncf._original_unbound_forward)(self, *args, **kwargs)
             else:
+
                 def _unbound_like_original_forward(_self, *args, **kwargs):
                     return self.nncf._bound_original_forward(*args, **kwargs)
+
                 retval = wrap_module_call(_unbound_like_original_forward)(self, *args, **kwargs)
 
             retval = replicate_same_tensors(retval)
@@ -885,30 +913,34 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
             return super().__getattr__(key)
         except AttributeError as e:
             if hasattr(self._nncf, key):
-                warning_deprecated("Old style of accessing NNCF-specific attributes and methods on NNCFNetwork "
-                                   "objects is deprecated. "
-                                   "Access the NNCF-specific attrs through the NNCFInterface, which is "
-                                   "set up as an `nncf` attribute on the compressed model object.\n"
-                                   "For instance, instead of `compressed_model.get_graph()` "
-                                   "you should now write `compressed_model.nncf.get_graph()`.\n"
-                                   "The old style will be removed after NNCF v2.5.0")
+                warning_deprecated(
+                    "Old style of accessing NNCF-specific attributes and methods on NNCFNetwork "
+                    "objects is deprecated. "
+                    "Access the NNCF-specific attrs through the NNCFInterface, which is "
+                    "set up as an `nncf` attribute on the compressed model object.\n"
+                    "For instance, instead of `compressed_model.get_graph()` "
+                    "you should now write `compressed_model.nncf.get_graph()`.\n"
+                    "The old style will be removed after NNCF v2.5.0"
+                )
                 return getattr(self._nncf, key)
             raise e
 
     def __setattr__(self, key, value):
         # If setting `forward`, set it on the original model.
-        if key == 'forward':
-            nncf_logger.warning("You are setting `forward` on an NNCF-processed model object.\n"
-                                "NNCF relies on custom-wrapping the `forward` call in order to function properly.\n"
-                                "Arbitrary adjustments to the forward function on an NNCFNetwork object have undefined "
-                                "behaviour.\n"
-                                "If you need to replace the underlying forward function of the original model so that "
-                                "NNCF should be using that instead of the original forward function that NNCF saved "
-                                "during the compressed model creation, you can do this by calling:\n"
-                                "model.nncf.set_original_unbound_forward(fn)\n"
-                                "if `fn` has an unbound 0-th `self` argument, or\n"
-                                "with model.nncf.temporary_bound_original_forward(fn): ...\n"
-                                "if `fn` already had 0-th `self` argument bound or never had it in the first place.")
+        if key == "forward":
+            nncf_logger.warning(
+                "You are setting `forward` on an NNCF-processed model object.\n"
+                "NNCF relies on custom-wrapping the `forward` call in order to function properly.\n"
+                "Arbitrary adjustments to the forward function on an NNCFNetwork object have undefined "
+                "behaviour.\n"
+                "If you need to replace the underlying forward function of the original model so that "
+                "NNCF should be using that instead of the original forward function that NNCF saved "
+                "during the compressed model creation, you can do this by calling:\n"
+                "model.nncf.set_original_unbound_forward(fn)\n"
+                "if `fn` has an unbound 0-th `self` argument, or\n"
+                "with model.nncf.temporary_bound_original_forward(fn): ...\n"
+                "if `fn` already had 0-th `self` argument bound or never had it in the first place."
+            )
         super().__setattr__(key, value)
 
 
@@ -916,6 +948,7 @@ class NNCFSkippingIter:
     """
     An iterator over the regular torch.nn.Module iterator that will skip NNCFInterface objects if they come up.
     """
+
     def __init__(self, iter_to_wrap: Iterator[Module]):
         self._iter_to_wrap = iter_to_wrap
 
@@ -924,6 +957,7 @@ class NNCFSkippingIter:
         if isinstance(item, NNCFNetworkInterface):
             item = next(self._iter_to_wrap)
         return item
+
 
 class LoadStateListener:
     """
@@ -934,13 +968,23 @@ class LoadStateListener:
     restores model state by calling this method.
     """
 
-    def __init__(self, model: 'NNCFNetwork', all_quantizations: Dict[str, torch.nn.Module]):
+    def __init__(self, model: "NNCFNetwork", all_quantizations: Dict[str, torch.nn.Module]):
         # pylint: disable=protected-access
         self.hook = model._register_load_state_dict_pre_hook(
-            functools.partial(self.hook_fn, quantize_modules=list(all_quantizations.values())))
+            functools.partial(self.hook_fn, quantize_modules=list(all_quantizations.values()))
+        )
 
-    def hook_fn(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs,
-                quantize_modules: List[torch.nn.Module]):
+    def hook_fn(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+        quantize_modules: List[torch.nn.Module],
+    ):
         for module in quantize_modules:
             module.initialized = False
 
@@ -958,9 +1002,11 @@ class PTModelTransformer(ModelTransformer):
         for transformation_command in transformation_layout.transformations:  # type: PTInsertionCommand
             target_point = transformation_command.target_point  # type: PTTargetPoint
             target_node_name = target_point.target_node_name
-            pt_ip = PTInsertionPoint(target_type=target_point.target_type,
-                                     op_address=self._node_to_op_address_mapping[target_node_name],
-                                     input_port_id=target_point.input_port_id)
+            pt_ip = PTInsertionPoint(
+                target_type=target_point.target_type,
+                op_address=self._node_to_op_address_mapping[target_node_name],
+                input_port_id=target_point.input_port_id,
+            )
             fn = transformation_command.fn
             if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
                 fn = UpdateWeight(fn)

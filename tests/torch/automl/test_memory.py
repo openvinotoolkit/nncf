@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # Modification Notes:
 # This unit test is adapted from:
@@ -18,12 +16,14 @@
 
 import numpy as np
 from numpy.testing import assert_allclose
-from nncf.torch.automl.agent.ddpg.memory import Memory, SequentialMemory
 
+from nncf.torch.automl.agent.ddpg.memory import Memory
+from nncf.torch.automl.agent.ddpg.memory import SequentialMemory
 
 WINDOW_LENGTH = 5
 LIMIT = 5
 MAX_LEN = 10
+
 
 def test_can_create_memory():
     Memory(WINDOW_LENGTH)
@@ -56,42 +56,42 @@ def test_get_recent_state_with_episode_boundaries():
 
     state = np.array(memory.get_recent_state(obs0))
     assert state.shape == (2,) + obs_size
-    assert np.allclose(state[0], 0.)
+    assert np.allclose(state[0], 0.0)
     assert np.all(state[1] == obs0)
 
     # memory.append takes the current observation, the reward after taking an action and if
     # the *new* observation is terminal, thus `obs0` and `terminal1` is correct.
-    memory.append(obs0, 0, 0., terminal1)
+    memory.append(obs0, 0, 0.0, terminal1)
     state = np.array(memory.get_recent_state(obs1))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs0)
     assert np.all(state[1] == obs1)
 
-    memory.append(obs1, 0, 0., terminal2)
+    memory.append(obs1, 0, 0.0, terminal2)
     state = np.array(memory.get_recent_state(obs2))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs1)
     assert np.all(state[1] == obs2)
 
-    memory.append(obs2, 0, 0., terminal3)
+    memory.append(obs2, 0, 0.0, terminal3)
     state = np.array(memory.get_recent_state(obs3))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs2)
     assert np.all(state[1] == obs3)
 
-    memory.append(obs3, 0, 0., terminal4)
+    memory.append(obs3, 0, 0.0, terminal4)
     state = np.array(memory.get_recent_state(obs4))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == np.zeros(obs_size))
     assert np.all(state[1] == obs4)
 
-    memory.append(obs4, 0, 0., terminal5)
+    memory.append(obs4, 0, 0.0, terminal5)
     state = np.array(memory.get_recent_state(obs5))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs4)
     assert np.all(state[1] == obs5)
 
-    memory.append(obs5, 0, 0., terminal6)
+    memory.append(obs5, 0, 0.0, terminal6)
     state = np.array(memory.get_recent_state(obs6))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == np.zeros(obs_size))
@@ -114,11 +114,11 @@ def test_training_flag():
 
         state = np.array(memory.get_recent_state(obs0))
         assert state.shape == (2,) + obs_size
-        assert np.allclose(state[0], 0.)
+        assert np.allclose(state[0], 0.0)
         assert np.all(state[1] == obs0)
         assert memory.nb_entries == 0
 
-        memory.append(obs0, 0, 0., terminal1, training=training)
+        memory.append(obs0, 0, 0.0, terminal1, training=training)
         state = np.array(memory.get_recent_state(obs1))
         assert state.shape == (2,) + obs_size
         assert np.all(state[0] == obs0)
@@ -128,10 +128,10 @@ def test_training_flag():
         else:
             assert memory.nb_entries == 0
 
-        memory.append(obs1, 0, 0., terminal2, training=training)
+        memory.append(obs1, 0, 0.0, terminal2, training=training)
         state = np.array(memory.get_recent_state(obs2))
         assert state.shape == (2,) + obs_size
-        assert np.allclose(state[0], 0.)
+        assert np.allclose(state[0], 0.0)
         assert np.all(state[1] == obs2)
         if training:
             assert memory.nb_entries == 2
@@ -165,42 +165,42 @@ def test_get_recent_state_without_episode_boundaries():
 
     state = np.array(memory.get_recent_state(obs0))
     assert state.shape == (2,) + obs_size
-    assert np.allclose(state[0], 0.)
+    assert np.allclose(state[0], 0.0)
     assert np.all(state[1] == obs0)
 
     # memory.append takes the current observation, the reward after taking an action and if
     # the *new* observation is terminal, thus `obs0` and `terminal1` is correct.
-    memory.append(obs0, 0, 0., terminal1)
+    memory.append(obs0, 0, 0.0, terminal1)
     state = np.array(memory.get_recent_state(obs1))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs0)
     assert np.all(state[1] == obs1)
 
-    memory.append(obs1, 0, 0., terminal2)
+    memory.append(obs1, 0, 0.0, terminal2)
     state = np.array(memory.get_recent_state(obs2))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs1)
     assert np.all(state[1] == obs2)
 
-    memory.append(obs2, 0, 0., terminal3)
+    memory.append(obs2, 0, 0.0, terminal3)
     state = np.array(memory.get_recent_state(obs3))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs2)
     assert np.all(state[1] == obs3)
 
-    memory.append(obs3, 0, 0., terminal4)
+    memory.append(obs3, 0, 0.0, terminal4)
     state = np.array(memory.get_recent_state(obs4))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs3)
     assert np.all(state[1] == obs4)
 
-    memory.append(obs4, 0, 0., terminal5)
+    memory.append(obs4, 0, 0.0, terminal5)
     state = np.array(memory.get_recent_state(obs5))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs4)
     assert np.all(state[1] == obs5)
 
-    memory.append(obs5, 0, 0., terminal6)
+    memory.append(obs5, 0, 0.0, terminal6)
     state = np.array(memory.get_recent_state(obs6))
     assert state.shape == (2,) + obs_size
     assert np.all(state[0] == obs5)

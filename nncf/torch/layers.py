@@ -1,21 +1,16 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-from typing import Dict
-
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import math
 import numbers
-from typing import Optional
-from typing import Tuple
+from typing import Dict, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -25,12 +20,13 @@ from torch.nn.utils.rnn import PackedSequence
 from torch.nn.utils.weight_norm import WeightNorm
 
 from nncf import nncf_logger
-from nncf.torch.dynamic_graph.context import forward_nncf_trace
-from nncf.torch.utils import no_jit_trace
-from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
+from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
+from nncf.torch.dynamic_graph.context import forward_nncf_trace
 from nncf.torch.layer_utils import _NNCFModuleMixin
+from nncf.torch.utils import no_jit_trace
 
 
 def dict_update(src: Dict, dst: Dict, recursive: bool = True):
@@ -42,7 +38,7 @@ def dict_update(src: Dict, dst: Dict, recursive: bool = True):
 
 
 def maybe_reapply_weight_norm(src: torch.nn.Module, dst: torch.nn.Module) -> torch.nn.Module:
-    #pylint:disable=protected-access
+    # pylint:disable=protected-access
     for k, hook in src._forward_pre_hooks.items():
         if isinstance(hook, WeightNorm):
             # The code below presumes that the `hook` object does not
@@ -70,8 +66,14 @@ class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
     def from_module(module):
         assert module.__class__.__name__ == nn.Conv1d.__name__
         nncf_conv = NNCFConv1d(
-            module.in_channels, module.out_channels, module.kernel_size, module.stride,
-            module.padding, module.dilation, module.groups, hasattr(module, 'bias')
+            module.in_channels,
+            module.out_channels,
+            module.kernel_size,
+            module.stride,
+            module.padding,
+            module.dilation,
+            module.groups,
+            hasattr(module, "bias"),
         )
         nncf_conv = align_module_internals(module, nncf_conv)
         return nncf_conv
@@ -84,17 +86,25 @@ class NNCFConvTranspose1d(_NNCFModuleMixin, nn.ConvTranspose1d):
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.ConvTranspose1d.__name__
-        args = [module.in_channels, module.out_channels, module.kernel_size, module.stride,
-                module.padding, module.output_padding, module.groups, hasattr(module, 'bias'),
-                module.dilation]
-        if hasattr(module, 'padding_mode'):
+        args = [
+            module.in_channels,
+            module.out_channels,
+            module.kernel_size,
+            module.stride,
+            module.padding,
+            module.output_padding,
+            module.groups,
+            hasattr(module, "bias"),
+            module.dilation,
+        ]
+        if hasattr(module, "padding_mode"):
             args.append(module.padding_mode)
         nncf_conv_transpose1d = NNCFConvTranspose1d(*args)
         nncf_conv_transpose1d = align_module_internals(module, nncf_conv_transpose1d)
         return nncf_conv_transpose1d
 
 
-NNCF_PADDING_VALUE_ATTR_NAME = 'nncf_padding_value'
+NNCF_PADDING_VALUE_ATTR_NAME = "nncf_padding_value"
 OPTIONAL_PARAMETERS_REGISTRY.register(NNCF_PADDING_VALUE_ATTR_NAME)
 
 
@@ -111,10 +121,9 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
         dilation=1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: str = 'zeros'
+        padding_mode: str = "zeros",
     ):
-        super().__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups,
-                         bias, padding_mode)
+        super().__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode)
         self.register_buffer(NNCF_PADDING_VALUE_ATTR_NAME, torch.zeros([1]))
 
     def get_padding_value_ref(self):
@@ -127,8 +136,14 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
     def from_module(module):
         assert module.__class__.__name__ == nn.Conv2d.__name__
         nncf_conv = NNCFConv2d(
-            module.in_channels, module.out_channels, module.kernel_size, module.stride,
-            module.padding, module.dilation, module.groups, hasattr(module, 'bias')
+            module.in_channels,
+            module.out_channels,
+            module.kernel_size,
+            module.stride,
+            module.padding,
+            module.dilation,
+            module.groups,
+            hasattr(module, "bias"),
         )
         nncf_conv = align_module_internals(module, nncf_conv)
         return nncf_conv
@@ -140,8 +155,9 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
         proxy_bias = self.bias
         proxy_padding = self.padding
         proxy_num_groups = self.groups
-        return self._conv_forward_proxy(input_,
-                                  proxy_weight, proxy_bias, proxy_padding_value, proxy_padding, proxy_num_groups)
+        return self._conv_forward_proxy(
+            input_, proxy_weight, proxy_bias, proxy_padding_value, proxy_padding, proxy_num_groups
+        )
 
     def _conv_forward_proxy(self, input_, weight, bias, padding_value, padding, num_groups):
         with no_jit_trace():
@@ -158,16 +174,27 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
             return tuple(x for x in reversed(t) for _ in range(n))
 
         reversed_padding_repeated_twice = _reverse_repeat_tuple(self.padding, 2)
-        if self.padding_mode != 'zeros':
-            return F.conv2d(F.pad(input_, reversed_padding_repeated_twice, mode=self.padding_mode,
-                                  value=padding_val),
-                            weight, bias, self.stride,
-                            (0, 0), self.dilation, self.groups)
+        if self.padding_mode != "zeros":
+            return F.conv2d(
+                F.pad(input_, reversed_padding_repeated_twice, mode=self.padding_mode, value=padding_val),
+                weight,
+                bias,
+                self.stride,
+                (0, 0),
+                self.dilation,
+                self.groups,
+            )
         if padding_val == 0:
             return F.conv2d(input_, weight, bias, self.stride, padding, self.dilation, self.groups)
-        return F.conv2d(F.pad(input_, reversed_padding_repeated_twice, value=padding_val),
-                        weight, bias, self.stride,
-                        (0, 0), self.dilation, self.groups)
+        return F.conv2d(
+            F.pad(input_, reversed_padding_repeated_twice, value=padding_val),
+            weight,
+            bias,
+            self.stride,
+            (0, 0),
+            self.dilation,
+            self.groups,
+        )
 
 
 class NNCFLinear(_NNCFModuleMixin, nn.Linear):
@@ -177,14 +204,14 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
     def from_module(module):
         assert module.__class__.__name__ == nn.Linear.__name__
 
-        nncf_linear = NNCFLinear(module.in_features, module.out_features, hasattr(module, 'bias'))
+        nncf_linear = NNCFLinear(module.in_features, module.out_features, hasattr(module, "bias"))
         nncf_linear = align_module_internals(module, nncf_linear)
         return nncf_linear
 
 
 class NNCFBatchNorm1d(_NNCFModuleMixin, nn.BatchNorm1d):
     op_func_name = "batch_norm"
-    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+    ignored_algorithms = ["magnitude_sparsity", "rb_sparsity", "const_sparsity", "quantization"]
 
     @staticmethod
     def from_module(module):
@@ -197,7 +224,7 @@ class NNCFBatchNorm1d(_NNCFModuleMixin, nn.BatchNorm1d):
 
 class NNCFBatchNorm2d(_NNCFModuleMixin, nn.BatchNorm2d):
     op_func_name = "batch_norm"
-    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+    ignored_algorithms = ["magnitude_sparsity", "rb_sparsity", "const_sparsity", "quantization"]
 
     @staticmethod
     def from_module(module):
@@ -210,7 +237,7 @@ class NNCFBatchNorm2d(_NNCFModuleMixin, nn.BatchNorm2d):
 
 class NNCFBatchNorm3d(_NNCFModuleMixin, nn.BatchNorm3d):
     op_func_name = "batch_norm"
-    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+    ignored_algorithms = ["magnitude_sparsity", "rb_sparsity", "const_sparsity", "quantization"]
 
     @staticmethod
     def from_module(module):
@@ -223,29 +250,28 @@ class NNCFBatchNorm3d(_NNCFModuleMixin, nn.BatchNorm3d):
 
 class NNCFGroupNorm(_NNCFModuleMixin, nn.GroupNorm):
     op_func_name = "group_norm"
-    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+    ignored_algorithms = ["magnitude_sparsity", "rb_sparsity", "const_sparsity", "quantization"]
 
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.GroupNorm.__name__
 
-        nncf_bn = NNCFGroupNorm(num_groups=module.num_groups,
-                                num_channels=module.num_channels,
-                                eps=module.eps,
-                                affine=module.affine)
+        nncf_bn = NNCFGroupNorm(
+            num_groups=module.num_groups, num_channels=module.num_channels, eps=module.eps, affine=module.affine
+        )
         nncf_bn = align_module_internals(module, nncf_bn)
         return nncf_bn
 
 
 class NNCFLayerNorm(_NNCFModuleMixin, nn.LayerNorm):
     op_func_name = "layer_norm"
-    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+    ignored_algorithms = ["magnitude_sparsity", "rb_sparsity", "const_sparsity", "quantization"]
 
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.LayerNorm.__name__
 
-        nncf_ln = NNCFLayerNorm(module.normalized_shape, hasattr(module, 'eps'))
+        nncf_ln = NNCFLayerNorm(module.normalized_shape, hasattr(module, "eps"))
         nncf_ln = align_module_internals(module, nncf_ln)
         return nncf_ln
 
@@ -257,10 +283,18 @@ class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.ConvTranspose2d.__name__
-        args = [module.in_channels, module.out_channels, module.kernel_size, module.stride,
-                module.padding, module.output_padding, module.groups, hasattr(module, 'bias'),
-                module.dilation]
-        if hasattr(module, 'padding_mode'):
+        args = [
+            module.in_channels,
+            module.out_channels,
+            module.kernel_size,
+            module.stride,
+            module.padding,
+            module.output_padding,
+            module.groups,
+            hasattr(module, "bias"),
+            module.dilation,
+        ]
+        if hasattr(module, "padding_mode"):
             args.append(module.padding_mode)
         nncf_conv_transpose2d = NNCFConvTranspose2d(*args)
         nncf_conv_transpose2d = align_module_internals(module, nncf_conv_transpose2d)
@@ -275,11 +309,18 @@ class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
         assert module.__class__.__name__ == nn.Conv3d.__name__
 
         nncf_conv3d = NNCFConv3d(
-            module.in_channels, module.out_channels, module.kernel_size, module.stride,
-            module.padding, module.dilation, module.groups, hasattr(module, 'bias')
+            module.in_channels,
+            module.out_channels,
+            module.kernel_size,
+            module.stride,
+            module.padding,
+            module.dilation,
+            module.groups,
+            hasattr(module, "bias"),
         )
         nncf_conv3d = align_module_internals(module, nncf_conv3d)
         return nncf_conv3d
+
 
 class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
     op_func_name = "conv_transpose3d"
@@ -288,10 +329,18 @@ class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.ConvTranspose3d.__name__
-        args = [module.in_channels, module.out_channels, module.kernel_size, module.stride,
-                module.padding, module.output_padding, module.groups, hasattr(module, 'bias'),
-                module.dilation]
-        if hasattr(module, 'padding_mode'):
+        args = [
+            module.in_channels,
+            module.out_channels,
+            module.kernel_size,
+            module.stride,
+            module.padding,
+            module.output_padding,
+            module.groups,
+            hasattr(module, "bias"),
+            module.dilation,
+        ]
+        if hasattr(module, "padding_mode"):
             args.append(module.padding_mode)
         nncf_conv_transpose3d = NNCFConvTranspose3d(*args)
         nncf_conv_transpose3d = align_module_internals(module, nncf_conv_transpose3d)
@@ -306,13 +355,19 @@ class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
     def from_module(module):
         assert module.__class__.__name__ == nn.Embedding.__name__
 
-        args = [module.num_embeddings, module.embedding_dim, module.padding_idx,
-                module.max_norm, module.norm_type, module.scale_grad_by_freq,
-                module.sparse, module.weight]
+        args = [
+            module.num_embeddings,
+            module.embedding_dim,
+            module.padding_idx,
+            module.max_norm,
+            module.norm_type,
+            module.scale_grad_by_freq,
+            module.sparse,
+            module.weight,
+        ]
         nncf_embedding = NNCFEmbedding(*args)
         nncf_embedding = align_module_internals(module, nncf_embedding)
         return nncf_embedding
-
 
 
 class NNCFEmbeddingBag(_NNCFModuleMixin, nn.EmbeddingBag):
@@ -322,13 +377,21 @@ class NNCFEmbeddingBag(_NNCFModuleMixin, nn.EmbeddingBag):
     def from_module(module):
         assert module.__class__.__name__ == nn.EmbeddingBag.__name__
 
-        args = [module.num_embeddings, module.embedding_dim,
-                module.max_norm, module.norm_type, module.scale_grad_by_freq,
-                module.mode, module.sparse, module.weight,
-                module.include_last_offset]
+        args = [
+            module.num_embeddings,
+            module.embedding_dim,
+            module.max_norm,
+            module.norm_type,
+            module.scale_grad_by_freq,
+            module.mode,
+            module.sparse,
+            module.weight,
+            module.include_last_offset,
+        ]
         nncf_embedding_bag = NNCFEmbeddingBag(*args)
         nncf_embedding_bag = align_module_internals(module, nncf_embedding_bag)
         return nncf_embedding_bag
+
 
 NNCF_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
@@ -344,7 +407,7 @@ NNCF_MODULES_DICT = {
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
     NNCFEmbedding: nn.Embedding,
-    NNCFEmbeddingBag: nn.EmbeddingBag
+    NNCFEmbeddingBag: nn.EmbeddingBag,
 }
 
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}
@@ -381,19 +444,21 @@ NNCF_PRUNING_MODULES_DICT = {
 NNCF_PRUNING_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_CONV_MODULES_DICT.items()}
 NNCF_PRUNING_MODULES = list(NNCF_CONV_MODULES_MAP.keys())
 
-UNWRAPPED_USER_MODULES = Registry('user_modules')
+UNWRAPPED_USER_MODULES = Registry("user_modules")
 NNCF_WRAPPED_USER_MODULES_DICT = {}
 
 
+@api(canonical_alias="nncf.torch.register_module")
 def register_module(*quantizable_field_names: str, ignored_algorithms: list = None):
     # quantizable_field_names will work for `weight` attributes only. Should later extend to registering
     # customly named attributes if it becomes necessary
     def wrap(cls):
         UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
-        nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
+        nncf_wrapped_module_class_name = "NNCFUser{}".format(cls.__name__)
         NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
-        get_base_attributes_fn = lambda self: GenericWeightedLayerAttributes(self.weight.requires_grad,
-                                                                             self.weight.shape)
+        get_base_attributes_fn = lambda self: GenericWeightedLayerAttributes(
+            self.weight.requires_grad, self.weight.shape
+        )
         setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "get_weight_shape", get_base_attributes_fn)
         if ignored_algorithms:
             setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "ignored_algorithms", ignored_algorithms)
@@ -411,7 +476,7 @@ def add_nncf_functionality_to_user_module(module: torch.nn.Module):
 
 
 class RNNCellBaseNNCF(nn.Module):
-    __constants__ = ['input_size', 'hidden_size', 'bias']
+    __constants__ = ["input_size", "hidden_size", "bias"]
 
     def __init__(self, input_size, hidden_size, bias, num_chunks):
         super().__init__()
@@ -428,30 +493,34 @@ class RNNCellBaseNNCF(nn.Module):
         self.reset_parameters()
 
     def extra_repr(self):
-        s = '{input_size}, {hidden_size}'
-        if 'bias' in self.__dict__ and self.bias is not True:
-            s += ', bias={bias}'
-        if 'nonlinearity' in self.__dict__ and self.nonlinearity != "tanh":
-            s += ', nonlinearity={nonlinearity}'
+        s = "{input_size}, {hidden_size}"
+        if "bias" in self.__dict__ and self.bias is not True:
+            s += ", bias={bias}"
+        if "nonlinearity" in self.__dict__ and self.nonlinearity != "tanh":
+            s += ", nonlinearity={nonlinearity}"
         return s.format(**self.__dict__)
 
     def check_forward_input(self, input_):
         if input_.size(1) != self.input_size:
             raise RuntimeError(
-                "input_ has inconsistent input_size: got {}, expected {}".format(
-                    input_.size(1), self.input_size))
+                "input_ has inconsistent input_size: got {}, expected {}".format(input_.size(1), self.input_size)
+            )
 
-    def check_forward_hidden(self, input_, hx, hidden_label=''):
+    def check_forward_hidden(self, input_, hx, hidden_label=""):
         # type: (Tensor, Tensor, str) -> None
         if input_.size(0) != hx.size(0):
             raise RuntimeError(
                 "Input batch size {} doesn't match hidden{} batch size {}".format(
-                    input_.size(0), hidden_label, hx.size(0)))
+                    input_.size(0), hidden_label, hx.size(0)
+                )
+            )
 
         if hx.size(1) != self.hidden_size:
             raise RuntimeError(
                 "hidden{} has inconsistent hidden_size: got {}, expected {}".format(
-                    hidden_label, hx.size(1), self.hidden_size))
+                    hidden_label, hx.size(1), self.hidden_size
+                )
+            )
 
     def reset_parameters(self):
         stdv = 1.0 / math.sqrt(self.hidden_size)
@@ -462,7 +531,7 @@ class RNNCellBaseNNCF(nn.Module):
         raise NotImplementedError
 
 
-ITERATION_MODULES = Registry('iteration_modules')
+ITERATION_MODULES = Registry("iteration_modules")
 
 
 @ITERATION_MODULES.register()
@@ -499,8 +568,8 @@ class LSTMCellNNCF(RNNCellBaseNNCF):
         if hidden is None:
             zeros = torch.zeros(input_.size(0), self.hidden_size, dtype=input_.dtype, device=input_.device)
             hidden = (zeros, zeros)
-        self.check_forward_hidden(input_, hidden[0], '[0]')
-        self.check_forward_hidden(input_, hidden[1], '[1]')
+        self.check_forward_hidden(input_, hidden[0], "[0]")
+        self.check_forward_hidden(input_, hidden[1], "[1]")
 
         return self.cell(input_, hidden)
 
@@ -548,11 +617,10 @@ class StackedRNN(nn.Module):
             next_h, next_c = zip(*next_hidden)
             next_hidden = (
                 torch.cat(next_h, 0).view(self.total_layers, *next_h[0].size()),
-                torch.cat(next_c, 0).view(self.total_layers, *next_c[0].size())
+                torch.cat(next_c, 0).view(self.total_layers, *next_c[0].size()),
             )
         else:
-            next_hidden = torch.cat(next_hidden, 0).view(
-                self.total_layers, *next_hidden[0].size())
+            next_hidden = torch.cat(next_hidden, 0).view(self.total_layers, *next_hidden[0].size())
         return next_hidden, input_
 
 
@@ -603,10 +671,10 @@ class VariableRecurrent(nn.Module):
         if flat_hidden:
             hidden = (hidden,)
         with forward_nncf_trace():
-            #pylint:disable=unnecessary-comprehension
+            # pylint:disable=unnecessary-comprehension
             batch_size_elements = [b for b in batch_sizes]
         for batch_size in batch_size_elements:
-            step_input = input_[input_offset:input_offset + batch_size]
+            step_input = input_[input_offset : input_offset + batch_size]
             input_offset += batch_size
 
             bs_decrease = last_batch_size - batch_size
@@ -655,12 +723,12 @@ class VariableRecurrentReverse(nn.Module):
         if flat_hidden:
             hidden = (hidden,)
             initial_hidden = (initial_hidden,)
-        hidden = tuple(h[:batch_sizes[-1]] for h in hidden)
+        hidden = tuple(h[: batch_sizes[-1]] for h in hidden)
         for batch_size in reversed(batch_sizes):
             inc = batch_size - last_batch_size
             hidden = self.ReverseResetPoint()(batch_size, hidden, inc, initial_hidden, last_batch_size)
             last_batch_size = batch_size
-            step_input = input_[input_offset - batch_size:input_offset]
+            step_input = input_[input_offset - batch_size : input_offset]
             input_offset -= batch_size
 
             if flat_hidden:
@@ -684,16 +752,26 @@ class VariableRecurrentReverse(nn.Module):
 
         def forward(self, batch_size, hidden, inc, initial_hidden, last_batch_size):
             if inc > 0:
-                hidden = tuple(torch.cat((h, ih[last_batch_size:batch_size]), 0)
-                               for h, ih in zip(hidden, initial_hidden))
+                hidden = tuple(
+                    torch.cat((h, ih[last_batch_size:batch_size]), 0) for h, ih in zip(hidden, initial_hidden)
+                )
             return hidden
 
 
 class NNCF_RNN(nn.Module):
     """Common class for RNN modules. Currently, LSTM is supported only"""
 
-    def __init__(self, mode='LSTM', input_size=1, hidden_size=1, num_layers=1, batch_first=False,
-                 dropout=0, bidirectional=False, bias=True):
+    def __init__(
+        self,
+        mode="LSTM",
+        input_size=1,
+        hidden_size=1,
+        num_layers=1,
+        batch_first=False,
+        dropout=0,
+        bidirectional=False,
+        bias=True,
+    ):
         super().__init__()
         self.mode = mode
         self.input_size = input_size
@@ -705,18 +783,20 @@ class NNCF_RNN(nn.Module):
         self.bidirectional = bidirectional
         self.num_directions = 2 if bidirectional else 1
 
-        if not isinstance(dropout, numbers.Number) or not 0 <= dropout <= 1 or \
-            isinstance(dropout, bool):
-            raise ValueError("dropout should be a number in range [0, 1] "
-                             "representing the probability of an element being "
-                             "zeroed")
+        if not isinstance(dropout, numbers.Number) or not 0 <= dropout <= 1 or isinstance(dropout, bool):
+            raise ValueError(
+                "dropout should be a number in range [0, 1] "
+                "representing the probability of an element being "
+                "zeroed"
+            )
         if dropout > 0 and num_layers == 1:
             nncf_logger.debug(
                 f"dropout option adds dropout after all but last recurrent layer, "
                 f"so non-zero dropout expects num_layers greater than 1, "
-                f"but got dropout={dropout} and num_layers={num_layers}")
+                f"but got dropout={dropout} and num_layers={num_layers}"
+            )
 
-        if mode == 'LSTM':
+        if mode == "LSTM":
             gate_size = 4 * hidden_size
             self.cell_type = LSTMCellForwardNNCF
         else:
@@ -738,10 +818,10 @@ class NNCF_RNN(nn.Module):
                 linear_hh = nn.Linear(hidden_size, gate_size, bias)
                 self.cells.append(self.cell_type(linear_ih, linear_hh))
                 params = (linear_ih.weight, linear_hh.weight, linear_ih.bias, linear_hh.bias)
-                suffix = '_reverse' if direction == 1 else ''
-                weight_names = ['weight_ih_l{}{}', 'weight_hh_l{}{}']
+                suffix = "_reverse" if direction == 1 else ""
+                weight_names = ["weight_ih_l{}{}", "weight_hh_l{}{}"]
                 if bias:
-                    weight_names += ['bias_ih_l{}{}', 'bias_hh_l{}{}']
+                    weight_names += ["bias_ih_l{}{}", "bias_hh_l{}{}"]
                 weight_names = [x.format(layer, suffix) for x in weight_names]
                 for name, param in zip(weight_names, params):
                     setattr(self, name, param)
@@ -762,24 +842,23 @@ class NNCF_RNN(nn.Module):
             if self.bidirectional:
                 layer_inners = [rec_factory(cells[idx]), rec_factory(cells[idx + 1], reverse=True)]
             else:
-                layer_inners = [rec_factory(cells[idx]), ]
+                layer_inners = [
+                    rec_factory(cells[idx]),
+                ]
             inners.extend(layer_inners)
-        return StackedRNN(inners,
-                          self.num_layers,
-                          (self.mode == 'LSTM'),
-                          dropout=self.dropout)
+        return StackedRNN(inners, self.num_layers, (self.mode == "LSTM"), dropout=self.dropout)
 
     def check_forward_args(self, input_, hidden, batch_sizes):
         is_input_packed = batch_sizes is not None
         expected_input_dim = 2 if is_input_packed else 3
         if input_.dim() != expected_input_dim:
-            raise RuntimeError(
-                'input_ must have {} dimensions, got {}'.format(
-                    expected_input_dim, input_.dim()))
+            raise RuntimeError("input_ must have {} dimensions, got {}".format(expected_input_dim, input_.dim()))
         if self.input_size != input_.size(-1):
             raise RuntimeError(
-                'input_.size(-1) must be equal to input_size. Expected {}, got {}'.format(
-                    self.input_size, input_.size(-1)))
+                "input_.size(-1) must be equal to input_size. Expected {}, got {}".format(
+                    self.input_size, input_.size(-1)
+                )
+            )
 
         if is_input_packed:
             mini_batch = int(batch_sizes[0])
@@ -788,19 +867,17 @@ class NNCF_RNN(nn.Module):
 
         expected_hidden_size = (mini_batch, self.hidden_size)
 
-        def check_hidden_size(hx, expected_hidden_size, msg='Expected hidden size {}, got {}'):
+        def check_hidden_size(hx, expected_hidden_size, msg="Expected hidden size {}, got {}"):
             expected_size = self.num_layers * self.num_directions
             if expected_size != len(hx):
-                raise RuntimeError('Expected number of hidden states {}, got {}'.format(expected_size, len(hx)))
+                raise RuntimeError("Expected number of hidden states {}, got {}".format(expected_size, len(hx)))
             for element in hx:
                 if tuple(element.size()) != expected_hidden_size:
                     raise RuntimeError(msg.format(expected_hidden_size, tuple(element.size())))
 
-        if self.mode == 'LSTM':
-            check_hidden_size(hidden[0], expected_hidden_size,
-                              'Expected hidden[0] size {}, got {}')
-            check_hidden_size(hidden[1], expected_hidden_size,
-                              'Expected hidden[1] size {}, got {}')
+        if self.mode == "LSTM":
+            check_hidden_size(hidden[0], expected_hidden_size, "Expected hidden[0] size {}, got {}")
+            check_hidden_size(hidden[1], expected_hidden_size, "Expected hidden[1] size {}, got {}")
         else:
             check_hidden_size(hidden, expected_hidden_size)
 
@@ -851,11 +928,14 @@ class NNCF_RNN(nn.Module):
 
         if hidden is None:
             num_directions = 2 if self.bidirectional else 1
-            hidden = torch.zeros(self.num_layers * num_directions,
-                                 max_batch_size, self.hidden_size,
-                                 requires_grad=False,
-                                 device=input_.device)
-            if self.mode == 'LSTM':
+            hidden = torch.zeros(
+                self.num_layers * num_directions,
+                max_batch_size,
+                self.hidden_size,
+                requires_grad=False,
+                device=input_.device,
+            )
+            if self.mode == "LSTM":
                 hidden = (hidden, hidden)
         else:
             # Each batch of the hidden state should match the input sequence that

@@ -1,18 +1,14 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-from typing import Callable
-from typing import List
-from typing import Optional
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from typing import Callable, List, Optional
 
 import numpy as np
 import pytest
@@ -39,7 +35,7 @@ def zero_grad(variables):
 
 def idfn(val):
     if isinstance(val, list):
-        return '[{}]'.format('-'.join([str(v) for v in val]))
+        return "[{}]".format("-".join([str(v) for v in val]))
 
     return None
 
@@ -47,56 +43,63 @@ def idfn(val):
 RQ = ReferenceQuantize(backend_type=ReferenceBackendType.NUMPY)
 
 
-def generate_one_channel_input(input_low: np.ndarray,
-                               input_range: np.ndarray,
-                               ch_idx: Optional[List[int]],
-                               input_size: List[int],
-                               bits: int,
-                               get_deviation: Callable[[], int],
-                               min_deviation: float):
+def generate_one_channel_input(
+    input_low: np.ndarray,
+    input_range: np.ndarray,
+    ch_idx: Optional[List[int]],
+    input_size: List[int],
+    bits: int,
+    get_deviation: Callable[[], int],
+    min_deviation: float,
+):
     if np.prod(input_low.shape) == 1:
-        input_low_ch, input_range_ch = \
-            map(lambda x: x.squeeze(), [input_low, input_range])
+        input_low_ch, input_range_ch = map(lambda x: x.squeeze(), [input_low, input_range])
     else:
-        input_low_ch, input_range_ch = \
-            map(lambda x: x[tuple(ch_idx)].squeeze(), [input_low, input_range])
+        input_low_ch, input_range_ch = map(lambda x: x[tuple(ch_idx)].squeeze(), [input_low, input_range])
 
-    quant_len_ch = input_range_ch / (2 ** bits - 1)
-    points = np.array([input_low_ch + (i // 2 + get_deviation()) * quant_len_ch
-                       for i in range(2 ** (bits + 1) - 2)])
+    quant_len_ch = input_range_ch / (2**bits - 1)
+    points = np.array([input_low_ch + (i // 2 + get_deviation()) * quant_len_ch for i in range(2 ** (bits + 1) - 2)])
     input_elems = np.prod(input_size)
     if input_elems > len(points):
         points = np.tile(points, int(np.ceil(input_elems / len(points) + 0.5)))
     points = points[:input_elems]
     out_range_fraction = 0.5
     out_range_elems = int(input_elems * out_range_fraction)
-    points[:out_range_elems] = \
-        np.hstack([input_low_ch - np.random.random_sample(out_range_elems // 2 + out_range_elems % 2) - min_deviation,
-                   input_low_ch + input_range_ch + np.random.random_sample(out_range_elems // 2) + min_deviation])
+    points[:out_range_elems] = np.hstack(
+        [
+            input_low_ch - np.random.random_sample(out_range_elems // 2 + out_range_elems % 2) - min_deviation,
+            input_low_ch + input_range_ch + np.random.random_sample(out_range_elems // 2) + min_deviation,
+        ]
+    )
     return np.random.permutation(points).reshape(input_size)
 
 
-def generate_input(input_size: List[int],
-                   input_low: np.ndarray,
-                   input_range: np.ndarray,
-                   bits: int,
-                   scale_mode: str,
-                   is_weights: bool,
-                   middle_points: bool = False,
-                   min_deviation: float = 0.,
-                   max_deviation: float = 0.4):
+def generate_input(
+    input_size: List[int],
+    input_low: np.ndarray,
+    input_range: np.ndarray,
+    bits: int,
+    scale_mode: str,
+    is_weights: bool,
+    middle_points: bool = False,
+    min_deviation: float = 0.0,
+    max_deviation: float = 0.4,
+):
     def assert_input_size(input_size):
-        assert np.prod(input_size) >= 4, \
-            'amount of input elements is to low to cover all corner cases'
+        assert np.prod(input_size) >= 4, "amount of input elements is to low to cover all corner cases"
 
     if abs(min_deviation - max_deviation) < 1e-5:
+
         def random_deviation():
             return min_deviation
+
     else:
+
         def random_deviation():
             return min_deviation + np.random.random_sample() * (max_deviation - min_deviation)
 
     if middle_points:
+
         def get_deviation():
             get_deviation.state += 1
             if get_deviation.state % 2:
@@ -105,14 +108,13 @@ def generate_input(input_size: List[int],
 
         get_deviation.state = 0
     else:
+
         def get_deviation():
             return random_deviation()
 
     if scale_mode == "single_scale":
         assert_input_size(input_size)
-        return generate_one_channel_input(input_low, input_range,
-                                          None, input_size, bits, get_deviation,
-                                          min_deviation)
+        return generate_one_channel_input(input_low, input_range, None, input_size, bits, get_deviation, min_deviation)
     inputs = None
     if scale_mode == "per_channel_scale":
         if is_weights:
@@ -124,9 +126,9 @@ def generate_input(input_size: List[int],
             inputs = np.empty(input_size)
             for idx in range(0, channel_count):
                 ch_idx[0] = idx
-                inputs[idx] = generate_one_channel_input(input_low, input_range,
-                                                         ch_idx, input_size[1:], bits, get_deviation,
-                                                         min_deviation)
+                inputs[idx] = generate_one_channel_input(
+                    input_low, input_range, ch_idx, input_size[1:], bits, get_deviation, min_deviation
+                )
         else:
             assert_input_size(input_size[0:1] + input_size[2:])
             channel_count = input_size[1]
@@ -137,9 +139,8 @@ def generate_input(input_size: List[int],
             for idx in range(0, channel_count):
                 ch_idx[1] = idx
                 inputs[:, idx] = generate_one_channel_input(
-                    input_low, input_range,
-                    ch_idx, input_size[0:1] + input_size[2:], bits, get_deviation,
-                    min_deviation)
+                    input_low, input_range, ch_idx, input_size[0:1] + input_size[2:], bits, get_deviation, min_deviation
+                )
     return inputs
 
 
@@ -161,12 +162,13 @@ def get_test_data(data_list, is_cuda=False, is_backward=False, is_fp16=False):
 
 def skip_if_half_on_cpu(is_fp16, use_cuda):
     if is_fp16 and not use_cuda:
-        pytest.skip("As of PyTorch 1.5, the 'abs' operation is not supported on CPU for half and therefore"
-                    " symmetric quantize fails. Remove this once this is fixed in PyTorch.")
+        pytest.skip(
+            "As of PyTorch 1.5, the 'abs' operation is not supported on CPU for half and therefore"
+            " symmetric quantize fails. Remove this once this is fixed in PyTorch."
+        )
 
 
-def check_quant_moved(test_input, test_val, ref_val, quant_len,
-                      input_low, input_range, is_fp16, rtol, atol=1e-10):
+def check_quant_moved(test_input, test_val, ref_val, quant_len, input_low, input_range, is_fp16, rtol, atol=1e-10):
     """
     Checks values in `test_val` are inside of closest quant and
     values in `test_val` and `ref_val` elementwise eather equal with given rtol/atol or
@@ -188,10 +190,11 @@ def check_quant_moved(test_input, test_val, ref_val, quant_len,
     quant_len_broadcasted = torch.masked_select(to_tensor(quant_len), mask_in)
     # Due to FP16 arithmetic difference could be equal to
     # one quant. 0.05 is added as an eps diff between two fp16 values
-    inp_out_deviation_mult = 1.05 if is_fp16 else 1.
+    inp_out_deviation_mult = 1.05 if is_fp16 else 1.0
     inp_out_abs_diff = (test_input[mask_in] - test_val[mask_in]).abs()
-    assert (inp_out_abs_diff < inp_out_deviation_mult * quant_len_broadcasted).all(), \
-        'quantized values are outside of closest quant'
+    assert (
+        inp_out_abs_diff < inp_out_deviation_mult * quant_len_broadcasted
+    ).all(), "quantized values are outside of closest quant"
 
     t_numpy = test_val.cpu().detach().numpy()
     bad_elems = ~np.isclose(t_numpy, ref_val, rtol, atol)
@@ -207,22 +210,18 @@ def check_quant_moved(test_input, test_val, ref_val, quant_len,
     assert np.all(moved_quant_elems)
 
 
-def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np.ndarray,
-                                             rtol=1e-4, atol=1e-10):
+def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np.ndarray, rtol=1e-4, atol=1e-10):
     PTTensorListComparator.check_equal(test_val, ref_val, rtol, atol)
 
 
-@pytest.mark.parametrize('input_size',
-                         [[1, 48, 112, 112],
-                          [1, 96, 28, 28],
-                          [1, 288, 14, 14],
-                          [16, 96, 112, 112],
-                          [16, 192, 28, 28],
-                          [16, 576, 14, 14]],
-                         ids=idfn)
-@pytest.mark.parametrize('bits', (8, 4), ids=('8bit', '4bit'))
-@pytest.mark.parametrize('scale_mode', ["single_scale", "per_channel_scale"])
-@pytest.mark.parametrize("is_fp16", (True, False), ids=('fp16', 'fp32'))
+@pytest.mark.parametrize(
+    "input_size",
+    [[1, 48, 112, 112], [1, 96, 28, 28], [1, 288, 14, 14], [16, 96, 112, 112], [16, 192, 28, 28], [16, 576, 14, 14]],
+    ids=idfn,
+)
+@pytest.mark.parametrize("bits", (8, 4), ids=("8bit", "4bit"))
+@pytest.mark.parametrize("scale_mode", ["single_scale", "per_channel_scale"])
+@pytest.mark.parametrize("is_fp16", (True, False), ids=("fp16", "fp32"))
 class TestParametrized:
     class TestSymmetric:
         @staticmethod
@@ -230,11 +229,14 @@ class TestParametrized:
             assert scale_mode in ["single_scale", "per_channel_scale"]
 
             if fixed is not None:
+
                 def calc_scale():
                     return fixed
+
             else:
+
                 def calc_scale():
-                    min_scale = 1. if is_fp16 else 0.1
+                    min_scale = 1.0 if is_fp16 else 0.1
                     return min_scale + np.random.random_sample((1,)) * (1 - min_scale)
 
             if scale_mode == "single_scale":
@@ -263,7 +265,7 @@ class TestParametrized:
 
         @staticmethod
         def get_range_level(is_signed, bits):
-            levels = 2 ** bits
+            levels = 2**bits
             if is_signed:
                 level_high = (levels // 2) - 1
                 level_low = -(levels // 2)
@@ -272,8 +274,9 @@ class TestParametrized:
                 level_low = 0
             return level_low, level_high, levels
 
-        def test_quantize_symmetric_forward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
-                                            scale_mode):
+        def test_quantize_symmetric_forward(
+            self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda, scale_mode
+        ):
             if not torch.cuda.is_available() and use_cuda is True:
                 pytest.skip("Skipping CUDA test cases for CPU only setups")
             skip_if_half_on_cpu(is_fp16, use_cuda)
@@ -291,9 +294,9 @@ class TestParametrized:
             ref_input_low = ref_scale * (level_low / level_high)
             ref_input_range = ref_scale - ref_input_low
 
-            ref_input = generate_input(input_size, ref_input_low, ref_input_range,
-                                       bits, scale_mode, is_weights,
-                                       middle_points=True).astype(np_dtype)
+            ref_input = generate_input(
+                input_size, ref_input_low, ref_input_range, bits, scale_mode, is_weights, middle_points=True
+            ).astype(np_dtype)
             test_input = get_test_data([ref_input], use_cuda, is_fp16=is_fp16)
 
             for array_ in (ref_input, ref_input_low, ref_input_range):
@@ -304,16 +307,25 @@ class TestParametrized:
             ref_value = RQ.forward(ref_input, ref_input_low, ref_input_range, levels)
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
             if use_cuda:
-                quant_len = ref_input_range / (2 ** bits - 1)
-                check_quant_moved(test_input, test_value, ref_value, quant_len,
-                                  ref_input_low, ref_input_range, is_fp16, rtol=1e-2 if is_fp16 else 1e-3)
+                quant_len = ref_input_range / (2**bits - 1)
+                check_quant_moved(
+                    test_input,
+                    test_value,
+                    ref_value,
+                    quant_len,
+                    ref_input_low,
+                    ref_input_range,
+                    is_fp16,
+                    rtol=1e-2 if is_fp16 else 1e-3,
+                )
             else:
                 # Note: this will fail in case CPU reference quantization implementations had to be used instead of the
                 # compiled extensions, since they don't work well with middle-of-quanta values.
                 check_outputs_for_quantization_functions(test_value, ref_value, rtol=1e-2 if is_fp16 else 1e-3)
 
-        def test_quantize_symmetric_backward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
-                                             scale_mode):
+        def test_quantize_symmetric_backward(
+            self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda, scale_mode
+        ):
             if not torch.cuda.is_available() and use_cuda is True:
                 pytest.skip("Skipping CUDA test cases for CPU only setups")
             skip_if_half_on_cpu(is_fp16, use_cuda)
@@ -335,8 +347,7 @@ class TestParametrized:
                 # so input is small and scale is big, small FP16 input multiplies big fp16 scale,
                 # deviation is significant.
                 fixed = 2 ** (bits - 1) - 1
-            ref_scale = self.generate_scale(input_size, scale_mode, is_weights,
-                                            is_fp16, fixed=fixed).astype(np_dtype)
+            ref_scale = self.generate_scale(input_size, scale_mode, is_weights, is_fp16, fixed=fixed).astype(np_dtype)
             test_scale = get_test_data([ref_scale], use_cuda, is_backward=True, is_fp16=is_fp16)
             level_low, level_high, levels = self.get_range_level(is_signed, bits)
 
@@ -351,11 +362,19 @@ class TestParametrized:
             # Different results in forward leads to high deviations on backward pass.
             # To prevent this, input values are put into [min_deviation, max_deviation]
             # section of quantum, so small deviation won't change the quantum on forward pass
-            min_deviation = 0.1 if is_fp16 else 0.
+            min_deviation = 0.1 if is_fp16 else 0.0
             max_deviation = 0.35 if is_fp16 else 0.4
-            ref_input = generate_input(input_size, ref_input_low, ref_input_range,
-                                       bits, scale_mode, is_weights, not use_cuda,
-                                       min_deviation, max_deviation).astype(np_dtype)
+            ref_input = generate_input(
+                input_size,
+                ref_input_low,
+                ref_input_range,
+                bits,
+                scale_mode,
+                is_weights,
+                not use_cuda,
+                min_deviation,
+                max_deviation,
+            ).astype(np_dtype)
             test_input = get_test_data([ref_input], use_cuda, is_backward=True, is_fp16=is_fp16)
 
             for array_ in (ref_input, ref_input_low, ref_input_range):
@@ -366,35 +385,39 @@ class TestParametrized:
             ref_output = RQ.forward(ref_input, ref_input_low, ref_input_range, levels)
 
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
-            ref_grads = RQ.backward(mock_prev_output_grads, ref_input, ref_input_low,
-                                    ref_input_range, ref_output, level_low, level_high)
+            ref_grads = RQ.backward(
+                mock_prev_output_grads, ref_input, ref_input_low, ref_input_range, ref_output, level_low, level_high
+            )
             del ref_grads[1]
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
             test_value.sum().backward()
             test_grads = get_grads([test_input, test_scale])
 
-            check_outputs_for_quantization_functions(test_value, ref_output,
-                                                     rtol=1e-2 if is_fp16 else 1e-3)
-            check_outputs_for_quantization_functions(test_grads, ref_grads,
-                                                     rtol=1e-2 if is_fp16 else 1e-3)
+            check_outputs_for_quantization_functions(test_value, ref_output, rtol=1e-2 if is_fp16 else 1e-3)
+            check_outputs_for_quantization_functions(test_grads, ref_grads, rtol=1e-2 if is_fp16 else 1e-3)
 
     class TestAsymmetric:
         @classmethod
         def generate_range(cls, input_size, scale_mode, is_weights, is_fp16, fixed=None):
             np_dtype = np.float16 if is_fp16 else np.float32
-            return map(lambda x: x.astype(np_dtype),
-                       cls.generate_range_fp64(input_size, scale_mode, is_weights, fixed, is_fp16))
+            return map(
+                lambda x: x.astype(np_dtype),
+                cls.generate_range_fp64(input_size, scale_mode, is_weights, fixed, is_fp16),
+            )
 
         @staticmethod
         def generate_range_fp64(input_size, scale_mode, is_weights, fixed, is_fp16):
             assert scale_mode in ["single_scale", "per_channel_scale"]
 
             if fixed is not None:
+
                 def calc_low_and_range():
-                    return fixed['input_low'], fixed['input_range']
+                    return fixed["input_low"], fixed["input_range"]
+
             else:
+
                 def calc_low_and_range():
-                    min_range = 1. if is_fp16 else 0.1
+                    min_range = 1.0 if is_fp16 else 0.1
                     input_low = np.random.random_sample() * 3 - 1.5
                     input_range = min_range + np.random.random_sample() * 3
                     return input_low, input_range
@@ -429,13 +452,14 @@ class TestParametrized:
 
         @staticmethod
         def get_range_level(bits):
-            levels = 2 ** bits
+            levels = 2**bits
             level_low = 0
             level_high = levels - 1
             return level_low, level_high, levels
 
-        def test_quantize_asymmetric_forward(self, request, _seed, input_size, bits, use_cuda, is_weights,
-                                             is_fp16, scale_mode):
+        def test_quantize_asymmetric_forward(
+            self, request, _seed, input_size, bits, use_cuda, is_weights, is_fp16, scale_mode
+        ):
             if not torch.cuda.is_available() and use_cuda is True:
                 pytest.skip("Skipping CUDA test cases for CPU only setups")
 
@@ -448,14 +472,15 @@ class TestParametrized:
             level_low, level_high, levels = self.get_range_level(bits)
             ref_input_low, ref_input_range = self.generate_range(input_size, scale_mode, is_weights, is_fp16)
             test_input_low, test_input_range = get_test_data(
-                [ref_input_low, ref_input_range], use_cuda, is_fp16=is_fp16)
+                [ref_input_low, ref_input_range], use_cuda, is_fp16=is_fp16
+            )
 
             ref_input_range = abs(ref_input_range) + EPS
-            ref_input_low, ref_input_range = RQ.tune_range(
-                ref_input_low, ref_input_range, levels)
+            ref_input_low, ref_input_range = RQ.tune_range(ref_input_low, ref_input_range, levels)
 
-            ref_input = generate_input(input_size, ref_input_low, ref_input_range,
-                                       bits, scale_mode, is_weights, True).astype(np_dtype)
+            ref_input = generate_input(
+                input_size, ref_input_low, ref_input_range, bits, scale_mode, is_weights, True
+            ).astype(np_dtype)
             test_input = get_test_data([ref_input], use_cuda, is_fp16=is_fp16)
 
             for array_ in (ref_input, ref_input_low, ref_input_range):
@@ -463,22 +488,29 @@ class TestParametrized:
             for tensor_ in (test_input, test_input_low, test_input_range):
                 assert tensor_.dtype == torch.half if is_fp16 else torch.float
 
-            ref_value = RQ.forward(
-                ref_input, ref_input_low, ref_input_range, levels)
-            test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low,
-                                             test_input_range, EPS)
+            ref_value = RQ.forward(ref_input, ref_input_low, ref_input_range, levels)
+            test_value = asymmetric_quantize(
+                test_input, levels, level_low, level_high, test_input_low, test_input_range, EPS
+            )
 
             if use_cuda:
-                quant_len = ref_input_range / (2 ** bits - 1)
-                check_quant_moved(test_input, test_value, ref_value, quant_len,
-                                  ref_input_low, ref_input_range, is_fp16, rtol=1e-2 if is_fp16 else 1e-3)
+                quant_len = ref_input_range / (2**bits - 1)
+                check_quant_moved(
+                    test_input,
+                    test_value,
+                    ref_value,
+                    quant_len,
+                    ref_input_low,
+                    ref_input_range,
+                    is_fp16,
+                    rtol=1e-2 if is_fp16 else 1e-3,
+                )
             else:
                 # Note: this will fail in case CPU reference quantization implementations had to be used instead of the
                 # compiled extensions, since they don't work well with middle-of-quanta values.
                 check_outputs_for_quantization_functions(test_value, ref_value, rtol=1e-2 if is_fp16 else 1e-3)
 
-        def test_quantize_asymmetric_backward(self, _seed, input_size, bits, use_cuda, is_weights,
-                                              is_fp16, scale_mode):
+        def test_quantize_asymmetric_backward(self, _seed, input_size, bits, use_cuda, is_weights, is_fp16, scale_mode):
             if not torch.cuda.is_available() and use_cuda is True:
                 pytest.skip("Skipping CUDA test cases for CPU only setups")
             skip_if_half_on_cpu(is_fp16, use_cuda)
@@ -500,16 +532,15 @@ class TestParametrized:
                 # so input is small and scale is big, small FP16 input multiplies big fp16 scale,
                 # deviation is significant.
                 fixed = {}
-                fixed['input_low'] = - 2 ** (bits - 1)
-                fixed['input_range'] = 2 ** bits - 1
-            ref_input_low, ref_input_range = self.generate_range(input_size, scale_mode, is_weights,
-                                                                 is_fp16, fixed)
+                fixed["input_low"] = -(2 ** (bits - 1))
+                fixed["input_range"] = 2**bits - 1
+            ref_input_low, ref_input_range = self.generate_range(input_size, scale_mode, is_weights, is_fp16, fixed)
             test_input_low, test_input_range = get_test_data(
-                [ref_input_low, ref_input_range], use_cuda, is_backward=True, is_fp16=is_fp16)
+                [ref_input_low, ref_input_range], use_cuda, is_backward=True, is_fp16=is_fp16
+            )
 
             ref_input_range = abs(ref_input_range) + EPS
-            ref_input_low, ref_input_range = RQ.tune_range(
-                ref_input_low, ref_input_range, levels)
+            ref_input_low, ref_input_range = RQ.tune_range(ref_input_low, ref_input_range, levels)
 
             for tensor_ in (test_input_low, test_input_range):
                 assert tensor_.dtype == torch.half if is_fp16 else torch.float
@@ -520,11 +551,19 @@ class TestParametrized:
             # Different results in forward leads to high deviations on backward pass.
             # To prevent this, input values are put into [min_deviation, max_deviation]
             # section of quant, so small deviation won't change the quant on forward pass
-            min_deviation = 0.1 if is_fp16 else 0.
+            min_deviation = 0.1 if is_fp16 else 0.0
             max_deviation = 0.35 if is_fp16 else 0.4
-            ref_input = generate_input(input_size, ref_input_low, ref_input_range,
-                                       bits, scale_mode, is_weights, not use_cuda,
-                                       min_deviation, max_deviation).astype(np_dtype)
+            ref_input = generate_input(
+                input_size,
+                ref_input_low,
+                ref_input_range,
+                bits,
+                scale_mode,
+                is_weights,
+                not use_cuda,
+                min_deviation,
+                max_deviation,
+            ).astype(np_dtype)
             test_input = get_test_data([ref_input], use_cuda, is_fp16=is_fp16, is_backward=True)
 
             for array_ in (ref_input, ref_input_low, ref_input_range):
@@ -536,26 +575,25 @@ class TestParametrized:
 
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
             ref_grads = RQ.backward(
-                mock_prev_output_grads, ref_input, ref_input_low, ref_input_range, ref_output, level_low,
-                level_high)
+                mock_prev_output_grads, ref_input, ref_input_low, ref_input_range, ref_output, level_low, level_high
+            )
 
-            test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low,
-                                             test_input_range, eps=EPS)
+            test_value = asymmetric_quantize(
+                test_input, levels, level_low, level_high, test_input_low, test_input_range, eps=EPS
+            )
             test_value.sum().backward()
             test_grads = get_grads([test_input, test_input_low, test_input_range])
 
-            check_outputs_for_quantization_functions(test_value, ref_output,
-                                                     rtol=1e-2 if is_fp16 else 1e-3)
+            check_outputs_for_quantization_functions(test_value, ref_output, rtol=1e-2 if is_fp16 else 1e-3)
 
-            check_outputs_for_quantization_functions(test_grads, ref_grads,
-                                                     rtol=1e-2 if is_fp16 else 1e-3)
+            check_outputs_for_quantization_functions(test_grads, ref_grads, rtol=1e-2 if is_fp16 else 1e-3)
 
 
-@pytest.mark.parametrize('device', ['cuda', 'cpu'])
+@pytest.mark.parametrize("device", ["cuda", "cpu"])
 def test_mapping_to_zero(quantization_mode, device):
     torch.manual_seed(42)
 
-    if not torch.cuda.is_available() and device == 'cuda':
+    if not torch.cuda.is_available() and device == "cuda":
         pytest.skip("Skipping CUDA test cases for CPU only setups")
     x_zero = torch.zeros([1]).to(torch.device(device))
     levels = 256

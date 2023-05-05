@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from nncf import NNCFConfig
 
@@ -21,14 +19,14 @@ def is_accuracy_aware_training(nncf_config: NNCFConfig) -> bool:
 
 
 def is_experimental_quantization(nncf_config: NNCFConfig) -> bool:
-    compression_section = nncf_config.get('compression', [])
+    compression_section = nncf_config.get("compression", [])
     algorithms_names = []
 
     if isinstance(compression_section, dict):
-        algorithms_names.append(compression_section['algorithm'])
+        algorithms_names.append(compression_section["algorithm"])
 
     if isinstance(compression_section, list):
         for sec in compression_section:
-            algorithms_names.append(sec['algorithm'])
+            algorithms_names.append(sec["algorithm"])
 
-    return 'experimental_quantization' in algorithms_names
+    return "experimental_quantization" in algorithms_names

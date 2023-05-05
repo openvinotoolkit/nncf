@@ -1,37 +1,22 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import Any
 
 import torch
+from torch.onnx.symbolic_helper import _is_constant  # pylint:disable=protected-access
 
 from nncf.common.logging import nncf_logger
-from nncf.torch.utils import add_domain
 from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
-
-from torch import _C  # pylint:disable=protected-access
-
-
-def _is_value(x: Any) -> bool:
-    return isinstance(x, _C.Value)
-
-# Implementation is copy-pasted from torch.onnx.symbolic_helper.
-# It's need to support torch < 1.9, since there's no such function in such versions of torch.
-def _is_constant(value: Any) -> bool:
-    return not _is_value(value) or value.node().kind() in {
-        "onnx::Constant",
-        "prim::Constant",
-    }
+from nncf.torch.utils import add_domain
 
 
 def _unsqueeze_helper(g, input_, axes_i):
@@ -53,12 +38,13 @@ def _unsqueeze_helper(g, input_, axes_i):
 
 # pylint:disable=abstract-method
 class XNORBinarizeFn(torch.autograd.Function):
-    """ Binarizes x into `scale` * { +1; -1}, where +1 or -1 are chosen based
-        on whether the x element value is >0 or <0. `scale` is determined as mean of absolute
-        values, per input channel (0-th dimension of x). """
+    """Binarizes x into `scale` * { +1; -1}, where +1 or -1 are chosen based
+    on whether the x element value is >0 or <0. `scale` is determined as mean of absolute
+    values, per input channel (0-th dimension of x)."""
+
     @staticmethod
     def symbolic(g, x):
-        zero = g.constant(0, [1], 'float')
+        zero = g.constant(0, [1], "float")
         zero = _unsqueeze_helper(g, zero, [1, 2, 3])
         scale = g.op("Abs", x)
         scale = g.op("ReduceMean", scale, axes_i=[1, 2, 3])
@@ -72,7 +58,7 @@ class XNORBinarizeFn(torch.autograd.Function):
         else:
             # Current CPU kernel implementations do not improve performance
             norm = x.abs().mean([1, 2, 3], keepdim=True)
-            sign = ((x > 0).type(x.dtype) * 2 - 1)
+            sign = (x > 0).type(x.dtype) * 2 - 1
             output = sign * norm
             return output
         return output
@@ -84,12 +70,13 @@ class XNORBinarizeFn(torch.autograd.Function):
 
 # pylint:disable=abstract-method
 class DOREFABinarizeFn(torch.autograd.Function):
-    """ Binarizes x into `scale` * { +1; -1}, where +1 or -1 are chosen based
-        on whether the x element value is >0 or <0. `scale` is determined as mean of absolute
-        values of the entire x tensor. """
+    """Binarizes x into `scale` * { +1; -1}, where +1 or -1 are chosen based
+    on whether the x element value is >0 or <0. `scale` is determined as mean of absolute
+    values of the entire x tensor."""
+
     @staticmethod
     def symbolic(g, x):
-        zero = g.constant(0, [1], 'float')
+        zero = g.constant(0, [1], "float")
         zero = _unsqueeze_helper(g, zero, [1, 2, 3])
         scale = g.op("Abs", x)
         scale = g.op("ReduceMean", scale, axes_i=[0, 1, 2, 3])
@@ -103,7 +90,7 @@ class DOREFABinarizeFn(torch.autograd.Function):
         else:
             # Current CPU kernel implementations do not improve performance
             norm = x.abs().mean()
-            sign = ((x > 0).type(x.dtype) * 2 - 1)
+            sign = (x > 0).type(x.dtype) * 2 - 1
             output_flat = sign * norm
             return output_flat.view_as(x)
         return output
@@ -118,7 +105,7 @@ class DOREFABinarizeFn(torch.autograd.Function):
 class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
     @staticmethod
     def symbolic(g, x, scale, threshold):
-        zero = g.constant(0, [1], 'float')
+        zero = g.constant(0, [1], "float")
         zero = _unsqueeze_helper(g, zero, [0, 2, 3])
         threshold = g.op("Mul", threshold, scale)
         scale = _unsqueeze_helper(g, scale, [0, 2, 3])
@@ -150,9 +137,8 @@ class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
 
         if input_.is_cuda:
             grad_input, grad_scale, grad_threshold = BinarizedFunctionsCUDA.get("ActivationBinarize_backward")(
-                grad_output,
-                input_,
-                scale, output)
+                grad_output, input_, scale, output
+            )
         else:
             # Current CPU kernel implementations do not improve performance
             # grad_input, grad_scale, grad_threshold = BinarizedFunctionsCPU.ActivationBinarize_backward(grad_output,

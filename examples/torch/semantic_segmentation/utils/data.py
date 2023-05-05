@@ -1,26 +1,24 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 from collections import OrderedDict
-from tqdm import tqdm
 
-from PIL import Image
 import numpy as np
 import torch
 import torchvision
-from torchvision.transforms import ToPILImage
 import torchvision.transforms as T
+from PIL import Image
+from torchvision.transforms import ToPILImage
+from tqdm import tqdm
 
 
 def get_files(folder, name_filter=None, extension_filter=None):
@@ -36,7 +34,7 @@ def get_files(folder, name_filter=None, extension_filter=None):
 
     """
     if not os.path.isdir(folder):
-        raise RuntimeError("\"{0}\" is not a folder.".format(folder))
+        raise RuntimeError('"{0}" is not a folder.'.format(folder))
 
     # Filename filter: if not specified don't filter (condition always true);
     # otherwise, use a lambda expression to filter out files that do not
@@ -90,8 +88,7 @@ def remap(image, old_values, new_values):
     assert isinstance(image, (Image.Image, np.ndarray)), "image must be of type PIL.Image or numpy.ndarray"
     assert isinstance(new_values, tuple), "new_values must be of type tuple"
     assert isinstance(old_values, tuple), "old_values must be of type tuple"
-    assert len(new_values) == len(
-        old_values), "new_values and old_values must have the same length"
+    assert len(new_values) == len(old_values), "new_values and old_values must have the same length"
 
     # If image is a PIL.Image convert it to a numpy array
     if isinstance(image, Image.Image):
@@ -218,6 +215,7 @@ class LongTensorToRGBPIL:
     values, class names, and class colors.
 
     """
+
     def __init__(self, rgb_encoding):
         self.rgb_encoding = rgb_encoding
 
@@ -233,12 +231,10 @@ class LongTensorToRGBPIL:
         """
         # Check if label_tensor is a LongTensor
         if not isinstance(tensor, torch.LongTensor):
-            raise TypeError("label_tensor should be torch.LongTensor. Got {}"
-                            .format(type(tensor)))
+            raise TypeError("label_tensor should be torch.LongTensor. Got {}".format(type(tensor)))
         # Check if encoding is a ordered dictionary
         if not isinstance(self.rgb_encoding, OrderedDict):
-            raise TypeError("encoding should be an OrderedDict. Got {}".format(
-                type(self.rgb_encoding)))
+            raise TypeError("encoding should be an OrderedDict. Got {}".format(type(self.rgb_encoding)))
 
         # label_tensor might be an image without a channel dimension, in this
         # case unsqueeze it
@@ -255,7 +251,6 @@ class LongTensorToRGBPIL:
                 color_tensor[channel].masked_fill_(mask, color_value)
 
         return ToPILImage()(color_tensor)
-
 
 
 def batch_transform(batch, transform):
@@ -293,6 +288,7 @@ def imshow_batch(images, labels):
     labels = torchvision.utils.make_grid(labels).numpy()
 
     import matplotlib.pyplot as plt
+
     _, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 7))
     ax1.imshow(np.transpose(images, (1, 2, 0)))
     ax2.imshow(np.transpose(labels, (1, 2, 0)))
@@ -301,15 +297,12 @@ def imshow_batch(images, labels):
 
 
 def label_to_color(label, class_encoding):
-    label_to_rgb = T.Compose([
-        LongTensorToRGBPIL(class_encoding),
-        T.ToTensor()
-    ])
+    label_to_rgb = T.Compose([LongTensorToRGBPIL(class_encoding), T.ToTensor()])
     return batch_transform(label.cpu(), label_to_rgb)
 
 
 def color_to_label(color_labels: Image, class_encoding: OrderedDict):
-    color_labels = np.array(color_labels.convert('RGB'))
+    color_labels = np.array(color_labels.convert("RGB"))
     # pylint: disable=unsubscriptable-object
     labels = np.zeros((color_labels.shape[0], color_labels.shape[1]), dtype=np.int64)
 
@@ -321,24 +314,26 @@ def color_to_label(color_labels: Image, class_encoding: OrderedDict):
         target_area = (red == color[0]) & (green == color[1]) & (blue == color[2])
         labels[target_area] = index
 
-    labels = Image.fromarray(labels.astype(np.uint8), mode='L')
+    labels = Image.fromarray(labels.astype(np.uint8), mode="L")
     return labels
+
 
 def show_ground_truth_vs_prediction(images, gt_labels, color_predictions, class_encoding):
     """Displays three grids of images. The top grid displays ``images``
-        the middle grid - ``gt_labels`` and the bottom grid - ``labels``
+    the middle grid - ``gt_labels`` and the bottom grid - ``labels``
 
-        Keyword arguments:
-        - images (``Tensor``): a 4D mini-batch tensor of shape
-        (B, C, H, W)
-        - gt_labels (``Tensor``): a 4D mini-batch tensor of shape
-        (B, C, H, W)
-        - labels (``Tensor``): a 4D mini-batch tensor of shape
-        (B, C, H, W)
+    Keyword arguments:
+    - images (``Tensor``): a 4D mini-batch tensor of shape
+    (B, C, H, W)
+    - gt_labels (``Tensor``): a 4D mini-batch tensor of shape
+    (B, C, H, W)
+    - labels (``Tensor``): a 4D mini-batch tensor of shape
+    (B, C, H, W)
 
-        """
+    """
 
     import matplotlib.pyplot as plt
+
     # Make a grid with the images and labels and convert it to numpy
     images = torchvision.utils.make_grid(images).numpy()
     color_predictions = torchvision.utils.make_grid(color_predictions).numpy()
@@ -389,7 +384,7 @@ def cat_list(images, fill_value=0):
     batch_shape = (len(images),) + max_size
     batched_imgs = images[0].new(*batch_shape).fill_(fill_value)
     for img, pad_img in zip(images, batched_imgs):
-        pad_img[..., :img.shape[-2], :img.shape[-1]].copy_(img)
+        pad_img[..., : img.shape[-2], : img.shape[-1]].copy_(img)
     return batched_imgs
 
 

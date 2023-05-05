@@ -1,22 +1,19 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 import builtins
 import collections
 import importlib
 import pickle  # nosec
-
 
 # Regular unpickling is prone to arbitrary code execution attacks.
 # This module implements the objects required by torch.load from a
@@ -32,29 +29,19 @@ load = pickle.load
 
 
 class Unpickler(pickle.Unpickler):
-    safe_builtins = {
-        'range',
-        'complex',
-        'set',
-        'frozenset',
-        'slice',
-        'dict'
-    }
-    safe_collections = {'OrderedDict', 'defaultdict'}
+    safe_builtins = {"range", "complex", "set", "frozenset", "slice", "dict"}
+    safe_collections = {"OrderedDict", "defaultdict"}
 
-    #pylint:disable=protected-access
+    # pylint:disable=protected-access
     allowed_classes = {
-        'torch': {'Tensor', 'FloatStorage', 'LongStorage', 'IntStorage'},
-        'torch._utils': {'_rebuild_tensor', '_rebuild_tensor_v2', '_rebuild_parameter'},
-        'torch.nn': {'Module'},
-        'torch.optim.adam': {'Adam'},
-
-        'nncf.api.compression': {'CompressionStage', 'CompressionLevel'},
-
-        'numpy.core.multiarray': {'scalar'},
-        'numpy': {'dtype'},
-
-        '_codecs': {'encode'}
+        "torch": {"Tensor", "FloatStorage", "LongStorage", "IntStorage"},
+        "torch._utils": {"_rebuild_tensor", "_rebuild_tensor_v2", "_rebuild_parameter"},
+        "torch.nn": {"Module"},
+        "torch.optim.adam": {"Adam"},
+        "nncf.api.compression": {"CompressionStage", "CompressionLevel"},
+        "numpy.core.multiarray": {"scalar"},
+        "numpy": {"dtype"},
+        "_codecs": {"encode"},
     }
 
     def find_class(self, module_name, class_name):
@@ -69,5 +56,4 @@ class Unpickler(pickle.Unpickler):
                 return getattr(module, class_name)
 
         # Forbid everything else.
-        raise pickle.UnpicklingError("global '%s.%s' is forbidden" %
-                                     (module_name, class_name))
+        raise pickle.UnpicklingError("global '%s.%s' is forbidden" % (module_name, class_name))

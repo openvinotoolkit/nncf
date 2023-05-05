@@ -1,29 +1,27 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import functools
 import inspect
-
 from typing import List
 
 import torch
 import torch.utils.cpp_extension
-from torch.jit import is_tracing
 from torch._jit_internal import createResolutionCallbackFromFrame
+from torch.jit import is_tracing
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
 from nncf import nncf_logger
+from nncf.common.utils.api_marker import api
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
@@ -68,34 +66,110 @@ class PatchedOperatorInfo:
 
 
 class FunctionsToPatchWithoutTracing:
-    TENSOR_CREATING_FUNCTIONS = ['arange', 'as_subclass', 'as_tensor', 'copysign', 'copysign_', 'detach', 'detach_',
-                                 'empty', 'ones', 'ones_like', 'rad2deg', 'rad2deg_', 'rand', 'randn', 'randn_like',
-                                 'tensor', 'zeros']
-    TENSOR_UTILITY_FUNCTIONS = ['all', 'allclose', 'any', 'assert_int_or_pair',
-                                'backward', 'broadcast_to', 'cpu', 'cuda', 'data_ptr', 'dequantize', 'dim',
-                                'handle_torch_function', 'has_names', 'has_torch_function', 'has_torch_function_unary',
-                                'has_torch_function_variadic', 'is_contiguous', 'item', 'names', 'numel', 'numpy',
-                                'q_per_channel_axis', 'q_per_channel_scales', 'q_per_channel_zero_points', 'q_scale',
-                                'q_zero_point', 'qr', 'qscheme', 'random_', 'record_stream', 'refine_names',
-                                'register_hook', 'rename', 'rename_', 'shape', 'size', 'sort', 'storage',
-                                'storage_offset', 'stride', 'to', 'get_device']
+    TENSOR_CREATING_FUNCTIONS = [
+        "arange",
+        "as_subclass",
+        "as_tensor",
+        "copysign",
+        "copysign_",
+        "detach",
+        "detach_",
+        "empty",
+        "ones",
+        "ones_like",
+        "rad2deg",
+        "rad2deg_",
+        "rand",
+        "randn",
+        "randn_like",
+        "tensor",
+        "zeros",
+    ]
+    TENSOR_UTILITY_FUNCTIONS = [
+        "all",
+        "allclose",
+        "any",
+        "assert_int_or_pair",
+        "backward",
+        "broadcast_to",
+        "cpu",
+        "cuda",
+        "data_ptr",
+        "dequantize",
+        "dim",
+        "handle_torch_function",
+        "has_names",
+        "has_torch_function",
+        "has_torch_function_unary",
+        "has_torch_function_variadic",
+        "is_contiguous",
+        "item",
+        "names",
+        "numel",
+        "numpy",
+        "q_per_channel_axis",
+        "q_per_channel_scales",
+        "q_per_channel_zero_points",
+        "q_scale",
+        "q_zero_point",
+        "qr",
+        "qscheme",
+        "random_",
+        "record_stream",
+        "refine_names",
+        "register_hook",
+        "rename",
+        "rename_",
+        "shape",
+        "size",
+        "sort",
+        "storage",
+        "storage_offset",
+        "stride",
+        "to",
+        "get_device",
+    ]
 
     FUNCTIONS_TO_PATCH_WITHOUT_TRACING = TENSOR_CREATING_FUNCTIONS + TENSOR_UTILITY_FUNCTIONS
 
 
 class MagicFunctionsToPatch:
     MAGIC_FUNCTIONS_TO_PATCH = {
-        NamespaceTarget.TORCH_TENSOR: ["__add__", "__iadd__", "__radd__", "__sub__", "__isub__",
-                                       "__rsub__", "__mul__", "__matmul__", "__rmatmul__",
-                                       "__imul__", "__rmul__", "__div__", "__idiv__",
-                                       "__truediv__", "__floordiv__",
-                                       "__ifloordiv__", "__rfloordiv__", "__getitem__",
-                                       "__lt__", "__le__", "__gt__",
-                                       "__ge__", "__mod__", "__eq__", "__ne__", "__or__",
-                                       "__xor__", "__and__", "__pow__"]
+        NamespaceTarget.TORCH_TENSOR: [
+            "__add__",
+            "__iadd__",
+            "__radd__",
+            "__sub__",
+            "__isub__",
+            "__rsub__",
+            "__mul__",
+            "__matmul__",
+            "__rmatmul__",
+            "__imul__",
+            "__rmul__",
+            "__div__",
+            "__idiv__",
+            "__truediv__",
+            "__floordiv__",
+            "__ifloordiv__",
+            "__rfloordiv__",
+            "__getitem__",
+            "__lt__",
+            "__le__",
+            "__gt__",
+            "__ge__",
+            "__mod__",
+            "__eq__",
+            "__ne__",
+            "__or__",
+            "__xor__",
+            "__and__",
+            "__pow__",
+        ]
     }
 
 
+@api(canonical_alias="nncf.torch.register_operator")
 def register_operator(name=None):
     def wrap(operator):
         op_name = name
@@ -131,7 +205,7 @@ def torch_jit_script_wrapper(*args, **kwargs):
     else:
         # For some reason resolution callback may return patched methods, so we wrap it to avoid this
         if "_rcb" in kwargs:
-            rcb = kwargs['_rcb']
+            rcb = kwargs["_rcb"]
 
             def rcb_wrapper(name):
                 value = rcb(name)
@@ -139,7 +213,7 @@ def torch_jit_script_wrapper(*args, **kwargs):
                     value = value._original_op  # pylint: disable=protected-access
                 return value
 
-            kwargs['_rcb'] = rcb_wrapper
+            kwargs["_rcb"] = rcb_wrapper
 
         retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
 
@@ -232,7 +306,7 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
     def remove_private_functions(names: List[str]) -> List[str]:
         filtered_names = []
         for name in names:
-            if name.startswith('_'):
+            if name.startswith("_"):
                 continue
             filtered_names.append(name)
         return filtered_names
@@ -241,8 +315,12 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
     all_torch_function_names = []
     members = inspect.getmembers(patched_namespace)
     for member in members:
-        if inspect.isfunction(member[1]) or inspect.isbuiltin(member[1]) or inspect.ismethod(
-                member[1]) or inspect.ismethoddescriptor(member[1]):
+        if (
+            inspect.isfunction(member[1])
+            or inspect.isbuiltin(member[1])
+            or inspect.ismethod(member[1])
+            or inspect.ismethoddescriptor(member[1])
+        ):
             all_torch_function_names.append(member[0])
     if do_filter:
         filtered_function_names = remove_private_functions(all_torch_function_names)
@@ -288,7 +366,7 @@ def patch_torch_operators():
     # which we've already wrapped. So we don't have to wrap Relu in torch.nn.functional
     # to be able to differ what torch.relu or torch.relu was called exactly inside Relu
 
-    functions_to_patch[NamespaceTarget.TORCH_NN_FUNCTIONAL].remove('relu')
+    functions_to_patch[NamespaceTarget.TORCH_NN_FUNCTIONAL].remove("relu")
 
     magic_functions_to_patch = MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH
     for namespace, function_names in magic_functions_to_patch.items():

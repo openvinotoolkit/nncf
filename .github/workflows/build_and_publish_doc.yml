@@ -1,0 +1,43 @@
+name: Build complete docs and publish to GH Pages
+on:
+  push:
+    branches:
+      - develop
+
+env:
+  GH_PAGES_BRANCH: doc_pages
+
+concurrency:
+  group: ci-${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+jobs:
+  call-build-html-doc:
+    uses: ./.github/workflows/build_html_doc.yml
+    with:
+      ref: ${{ github.ref }}
+  call-build-schema-page:
+    uses: ./.github/workflows/build_schema_page.yml
+  publish:
+    needs: [call-build-html-doc, call-build-schema-page]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repo  # the github-pages-deploy-action seems to require this step
+        uses: actions/checkout@v3
+      - name: Download HTML doc build artifact
+        uses: alehechka/download-tartifact@v2
+        with:
+          name: html_doc_artifact
+      - name: Download schema doc build artifact
+        uses: alehechka/download-tartifact@v2
+        with:
+          name: schema_doc_artifact
+          path: html_build/html
+      - name: Publish built docs on Github Pages branch ${{ env.GH_PAGES_BRANCH }}
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: html_build/html
+          token: ${{ secrets.PUSH_TO_GH_PAGES_BRANCH }}
+          branch: ${{ env.GH_PAGES_BRANCH }}

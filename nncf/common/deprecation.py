@@ -13,9 +13,7 @@
 import functools
 import inspect
 import warnings
-from typing import Callable
-from typing import Type
-from typing import TypeVar
+from typing import Callable, Type, TypeVar
 
 from pkg_resources import parse_version
 
@@ -25,7 +23,7 @@ def warning_deprecated(msg):
     warnings.warn(msg, FutureWarning, stacklevel=2)
 
 
-ClassOrFn = TypeVar('ClassOrFn', Callable, Type)
+ClassOrFn = TypeVar("ClassOrFn", Callable, Type)
 
 
 class deprecated:
@@ -34,6 +32,7 @@ class deprecated:
     instantiation of an object of the marked class will trigger a `FutureWarning`. If a class is marked as
     @deprecated, only the instantiations will trigger a warning, but static attribute accesses or method calls will not.
     """
+
     def __init__(self, msg: str = None, start_version: str = None, end_version: str = None):
         """
         :param msg: Custom message to be added after the boilerplate deprecation text.
@@ -43,7 +42,7 @@ class deprecated:
         self.end_version = parse_version(end_version) if end_version is not None else None
 
     def __call__(self, fn_or_class: ClassOrFn) -> ClassOrFn:
-        name = fn_or_class.__module__ + '.' + fn_or_class.__name__
+        name = fn_or_class.__module__ + "." + fn_or_class.__name__
         if inspect.isclass(fn_or_class):
             fn_or_class.__init__ = self._get_wrapper(fn_or_class.__init__, name)
             return fn_or_class
@@ -61,7 +60,8 @@ class deprecated:
             else:
                 msg += "a future NNCF version."
             if self.msg is not None:
-                msg += '\n' + self.msg
+                msg += "\n" + self.msg
             warning_deprecated(msg)
             return fn_to_wrap(*args, **kwargs)
+
         return wrapped

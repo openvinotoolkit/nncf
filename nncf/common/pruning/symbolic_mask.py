@@ -1,20 +1,18 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import List, Union
 
-from nncf.common.tensor import NNCFTensor
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
+from nncf.common.tensor import NNCFTensor
 
 
 class SymbolicMaskProducer:
@@ -37,13 +35,14 @@ class SymbolicMaskProducer:
         return self._id
 
     @classmethod
-    def merge_producers(cls, masks: List['SymbolicMask']) -> List['SymbolicMaskProducer']:
+    def merge_producers(cls, masks: List["SymbolicMask"]) -> List["SymbolicMaskProducer"]:
         merged_producers = {}
         for mask in masks:
             for mask_producer in mask.mask_producers:
                 if mask_producer.id in merged_producers:
-                    assert mask_producer.sparse_multiplier == merged_producers[mask_producer.id].sparse_multiplier, \
-                        f"Inconsistent sparse multiplier for NNCF node with id={mask_producer.id}"
+                    assert (
+                        mask_producer.sparse_multiplier == merged_producers[mask_producer.id].sparse_multiplier
+                    ), f"Inconsistent sparse multiplier for NNCF node with id={mask_producer.id}"
             merged_producers.update({p.id: p for p in mask.mask_producers})
         return list(merged_producers.values())
 
@@ -110,7 +109,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     def ones(cls, shape: Union[int, List[int]], device) -> SymbolicMask:
         if isinstance(shape, list):
             if len(shape) != 1:
-                raise RuntimeError(f'Unexpected shape = {shape} for 1D symbolic mask')
+                raise RuntimeError(f"Unexpected shape = {shape} for 1D symbolic mask")
             shape = shape[0]
 
         return SymbolicMask(shape)
@@ -125,7 +124,8 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         updated_mask_producers = []
         for mask_producer in tensor.mask_producers:
             updated_mask_producers.append(
-                SymbolicMaskProducer(mask_producer.id, mask_producer.sparse_multiplier * repeats))
+                SymbolicMaskProducer(mask_producer.id, mask_producer.sparse_multiplier * repeats)
+            )
         return SymbolicMask(tensor.shape[0] * repeats, updated_mask_producers)
 
     @classmethod
@@ -147,8 +147,10 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     @classmethod
     def split(cls, tensor: SymbolicMask, output_shapes: List[int]) -> List[SymbolicMask]:
         if any(shape <= 0 for shape in output_shapes) or tensor.shape[0] != sum(output_shapes):
-            raise AssertionError('Symbolic mask split was called with'\
-                f'invalid parammeters: input mask shape: {tensor.shape[0]}, output masks shapes: {output_shapes}')
+            raise AssertionError(
+                "Symbolic mask split was called with"
+                f"invalid parammeters: input mask shape: {tensor.shape[0]}, output masks shapes: {output_shapes}"
+            )
 
         producers = tensor.mask_producers
         return [SymbolicMask(output_shape, producers) for output_shape in output_shapes]

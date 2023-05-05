@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import List
 
@@ -22,11 +20,7 @@ class SparsifiedLayerSummary:
     Contains information about the sparsified layer.
     """
 
-    def __init__(self,
-                 name: str,
-                 weight_shape: List[int],
-                 sparsity_level: float,
-                 weight_percentage: float):
+    def __init__(self, name: str, weight_shape: List[int], sparsity_level: float, weight_percentage: float):
         """
         Initializes a summary about the sparsified layer.
 
@@ -46,10 +40,12 @@ class SparsifiedModelStatistics(Statistics):
     Contains statistics of the sparsified model.
     """
 
-    def __init__(self,
-                 sparsity_level: float,
-                 sparsity_level_for_layers: float,
-                 sparsified_layers_summary: List[SparsifiedLayerSummary]):
+    def __init__(
+        self,
+        sparsity_level: float,
+        sparsity_level_for_layers: float,
+        sparsified_layers_summary: List[SparsifiedLayerSummary],
+    ):
         """
         Initializes statistics of the sparsified model.
 
@@ -65,23 +61,23 @@ class SparsifiedModelStatistics(Statistics):
 
     def to_str(self) -> str:
         model_string = create_table(
-            header=['Statistic\'s name', 'Value'],
+            header=["Statistic's name", "Value"],
             rows=[
-                ['Sparsity level of the whole model', self.sparsity_level],
-                ['Sparsity level of all sparsified layers', self.sparsity_level_for_layers],
-            ]
+                ["Sparsity level of the whole model", self.sparsity_level],
+                ["Sparsity level of all sparsified layers", self.sparsity_level_for_layers],
+            ],
         )
 
         layers_string = create_table(
-            header=['Layer\'s name', 'Weight\'s shape', 'Sparsity level', 'Weight\'s percentage'],
+            header=["Layer's name", "Weight's shape", "Sparsity level", "Weight's percentage"],
             rows=[
                 [s.name, s.weight_shape, s.sparsity_level, s.weight_percentage] for s in self.sparsified_layers_summary
-            ]
+            ],
         )
 
         pretty_string = (
-            f'Statistics of the sparsified model:\n{model_string}\n\n'
-            f'Statistics by sparsified layers:\n{layers_string}'
+            f"Statistics of the sparsified model:\n{model_string}\n\n"
+            f"Statistics by sparsified layers:\n{layers_string}"
         )
         return pretty_string
 
@@ -97,10 +93,12 @@ class MagnitudeSparsityStatistics(Statistics):
     Contains statistics of the magnitude sparsity algorithm.
     """
 
-    def __init__(self,
-                 model_statistics: SparsifiedModelStatistics,
-                 thresholds: List[LayerThreshold],
-                 target_sparsity_level: float):
+    def __init__(
+        self,
+        model_statistics: SparsifiedModelStatistics,
+        thresholds: List[LayerThreshold],
+        target_sparsity_level: float,
+    ):
         """
         Initializes statistics of the magnitude sparsity algorithm.
 
@@ -115,20 +113,19 @@ class MagnitudeSparsityStatistics(Statistics):
 
     def to_str(self) -> str:
         thresholds_string = create_table(
-            ['Layer\'s name', 'Sparsity threshold'],
-            [[s.name, s.threshold] for s in self.thresholds]
+            ["Layer's name", "Sparsity threshold"], [[s.name, s.threshold] for s in self.thresholds]
         )
 
         algorithm_string = create_table(
-            header=['Statistic\'s name', 'Value'],
+            header=["Statistic's name", "Value"],
             rows=[
-                ['A target level of the sparsity for the algorithm for the current epoch', self.target_sparsity_level],
-            ]
+                ["A target level of the sparsity for the algorithm for the current epoch", self.target_sparsity_level],
+            ],
         )
 
         pretty_string = (
-            f'{self.model_statistics.to_str()}\n\n'
-            f'Statistics of the magnitude sparsity algorithm:\n{algorithm_string}\n{thresholds_string}'
+            f"{self.model_statistics.to_str()}\n\n"
+            f"Statistics of the magnitude sparsity algorithm:\n{algorithm_string}\n{thresholds_string}"
         )
         return pretty_string
 
@@ -156,10 +153,9 @@ class RBSparsityStatistics(Statistics):
     Contains statistics of the RB-sparsity algorithm.
     """
 
-    def __init__(self,
-                 model_statistics: SparsifiedModelStatistics,
-                 target_sparsity_level: float,
-                 mean_sparse_prob: float):
+    def __init__(
+        self, model_statistics: SparsifiedModelStatistics, target_sparsity_level: float, mean_sparse_prob: float
+    ):
         """
         Initializes statistics of the RB-sparsity algorithm.
 
@@ -175,16 +171,15 @@ class RBSparsityStatistics(Statistics):
 
     def to_str(self) -> str:
         algorithm_string = create_table(
-            header=['Statistic\'s name', 'Value'],
+            header=["Statistic's name", "Value"],
             rows=[
-                ['A target level of the sparsity for the algorithm for the current epoch', self.target_sparsity_level],
-                ['The probability that one weight will be zeroed', self.mean_sparse_prob],
-            ]
+                ["A target level of the sparsity for the algorithm for the current epoch", self.target_sparsity_level],
+                ["The probability that one weight will be zeroed", self.mean_sparse_prob],
+            ],
         )
 
         pretty_string = (
-            f'{self.model_statistics.to_str()}\n\n'
-            f'Statistics of the RB-sparsity algorithm:\n{algorithm_string}'
+            f"{self.model_statistics.to_str()}\n\n" f"Statistics of the RB-sparsity algorithm:\n{algorithm_string}"
         )
         return pretty_string
 
@@ -194,10 +189,12 @@ class MovementSparsityStatistics(Statistics):
     Contains statistics of the movement-sparsity algorithm.
     """
 
-    def __init__(self,
-                 model_statistics: SparsifiedModelStatistics,
-                 importance_threshold: float,
-                 importance_regularization_factor: float):
+    def __init__(
+        self,
+        model_statistics: SparsifiedModelStatistics,
+        importance_threshold: float,
+        importance_regularization_factor: float,
+    ):
         """
         Initializes statistics of the movement-sparsity algorithm.
 
@@ -211,15 +208,15 @@ class MovementSparsityStatistics(Statistics):
 
     def to_str(self) -> str:
         algorithm_string = create_table(
-            header=['Statistic\'s name', 'Value'],
+            header=["Statistic's name", "Value"],
             rows=[
-                ['Mask Importance Threshold', self.importance_threshold],
-                ['Importance Regularization Factor', self.importance_regularization_factor],
-            ]
+                ["Mask Importance Threshold", self.importance_threshold],
+                ["Importance Regularization Factor", self.importance_regularization_factor],
+            ],
         )
 
         pretty_string = (
-            f'{self.model_statistics.to_str()}\n\n'
-            f'Statistics of the movement-sparsity algorithm:\n{algorithm_string}'
+            f"{self.model_statistics.to_str()}\n\n"
+            f"Statistics of the movement-sparsity algorithm:\n{algorithm_string}"
         )
         return pretty_string

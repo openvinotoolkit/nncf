@@ -1,27 +1,26 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2022 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from enum import Enum
 from typing import TypeVar
 
 import numpy as np
 import torch
 
-GeneralizedTensor = TypeVar('GeneralizedTensor', torch.Tensor, np.ndarray)
+GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
 
 
 class ReferenceBackendType(Enum):
-    NUMPY = 'numpy'
-    TORCH = 'torch'
+    NUMPY = "numpy"
+    TORCH = "torch"
 
 
 class ReferenceBase:
@@ -37,7 +36,7 @@ class ReferenceBase:
 class ReferenceXNORBinarize(ReferenceBase):
     def forward(self, x: GeneralizedTensor) -> GeneralizedTensor:
         norm = self.backend.abs(x).mean((1, 2, 3), keepdims=True)
-        sign = ((x > 0).astype(x.dtype) * 2 - 1)
+        sign = (x > 0).astype(x.dtype) * 2 - 1
         output = sign * norm
         return output
 
@@ -49,7 +48,7 @@ class ReferenceXNORBinarize(ReferenceBase):
 class ReferenceDOREFABinarize(ReferenceBase):
     def forward(self, x: GeneralizedTensor) -> GeneralizedTensor:
         norm = self.backend.abs(x).mean()
-        sign = ((x > 0).astype(x.dtype) * 2 - 1)
+        sign = (x > 0).astype(x.dtype) * 2 - 1
         return sign * norm
 
     @staticmethod
@@ -68,7 +67,6 @@ class ReferenceActivationBinarize(ReferenceBase):
 
     @staticmethod
     def backward(grad_output, x, scale, output):
-
         # calc gradient for input
         mask_lower = (x <= scale).astype(x.dtype)
         grad_input = grad_output * (x >= 0).astype(x.dtype) * mask_lower

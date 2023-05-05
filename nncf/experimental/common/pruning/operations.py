@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import copy
 from collections import defaultdict
@@ -237,11 +235,11 @@ class ElementwisePruningOp(BasePruningOp):
         output_mask = None
         if len(input_masks) == 1:
             nncf_logger.warning(
-                "ElementWise with a single input is not properly supported. "
+                f"ElementWise with a single input is not properly supported. "
                 "The second input might be a constant without node in the graph. "
                 "The constant should be in the graph or in the node attributes. "
                 "It's also should be pruned in accordance with an input mask. "
-                f"node_name={node.node_name}"
+                "node_name={node.node_name}"
             )
             output_mask = input_masks[0]
         elif any(m is None for m in input_masks):
