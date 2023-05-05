@@ -105,20 +105,25 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
     layer_metatypes.TFZeroPadding2DLayerMetatype,
     layer_metatypes.TFZeroPadding3DLayerMetatype,
     layer_metatypes.TFDropoutLayerMetatype,
+    layer_metatypes.TFSlicingOpLambdaMetatype,
+    layer_metatypes.TFPermuteLayerMetatype,
     # TF_OP_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
     op_metatypes.TFIdentityOpMetatype,
     op_metatypes.TFPackOpMetatype,
     op_metatypes.TFPadOpMetatype,
     op_metatypes.TFStridedSliceOpMetatype,
+    op_metatypes.TFSliceOpMetatype,
     op_metatypes.TFReshapeOpMetatype,
     op_metatypes.TFShapeOpMetatype,
     op_metatypes.TFMaxOpMetatype,
     op_metatypes.TFMaxPoolOpMetatype,
     op_metatypes.TFExpandDimsOpMetatype,
     op_metatypes.TFSqueezeOpMetatype,
+    op_metatypes.TFGatherOpMetatype,
     op_metatypes.TFMaxPool3DOpMetatype,
     op_metatypes.TFTileOpMetatype,
     op_metatypes.TFSplitOpMetatype,
+    op_metatypes.TFTransposeOpMetatype,
 ]
 
 LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS = [
@@ -131,12 +136,16 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS = [
     op_metatypes.TFMinimumOpMetatype,
 ]
 
-LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS = [op_metatypes.TFSplitOpMetatype]
+LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS = [
+    op_metatypes.TFSplitOpMetatype,
+    op_metatypes.TFUnPackOpMetatype,
+]
 
 LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION = (
     LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
     + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS
     + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS
 )
 
 ELEMENTWISE_LAYER_METATYPES = [
