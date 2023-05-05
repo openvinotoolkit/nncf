@@ -599,6 +599,7 @@ def get_allow_reshape_input(accuracy_checker_config) -> bool:
     return False
 
 
+# pylint:disable=too-many-branches
 def maybe_reshape_model(model, dataset, subset_size):
     dataset_inputs_shapes = defaultdict(set)
     for input_dict in islice(dataset.get_inference_data(), subset_size):
