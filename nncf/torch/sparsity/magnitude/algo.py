@@ -56,6 +56,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
     """
     Controller for the magnitude sparsity algorithm in PT.
     """
+
     def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config: NNCFConfig):
         super().__init__(target_model, sparsified_module_info)
         self._config = config

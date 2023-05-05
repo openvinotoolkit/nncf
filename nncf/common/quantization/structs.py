@@ -28,6 +28,7 @@ class QuantizationMode:
     :param SYMMETRIC:
     :param ASYMMETRIC:
     """
+
     SYMMETRIC = "symmetric"
     ASYMMETRIC = "asymmetric"
 
@@ -321,6 +322,7 @@ class QuantizationPreset(Enum):
     """
     An enum with values corresponding to the available quantization presets.
     """
+
     PERFORMANCE = "performance"
     MIXED = "mixed"
 

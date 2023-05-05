@@ -19,10 +19,12 @@ from nncf.tensorflow.sparsity.callbacks import UpdateMask
 
 
 @api(canonical_alias="nncf.tensorflow.create_compression_callbacks")
-def create_compression_callbacks(compression_ctrl: CompressionAlgorithmController,
-                                 log_tensorboard: bool = True,
-                                 log_text: bool = True,
-                                 log_dir: bool = None):
+def create_compression_callbacks(
+    compression_ctrl: CompressionAlgorithmController,
+    log_tensorboard: bool = True,
+    log_text: bool = True,
+    log_dir: bool = None,
+):
     compression_controllers = (
         compression_ctrl.child_ctrls
         if isinstance(compression_ctrl, CompositeCompressionAlgorithmController)

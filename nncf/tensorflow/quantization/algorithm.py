@@ -696,6 +696,7 @@ class QuantizationController(BaseCompressionAlgorithmController):
     """
     Controller for the quantization algorithm in TensorFlow.
     """
+
     def __init__(self, target_model, config: NNCFConfig, op_names: List[str]):
         super().__init__(target_model)
         self._scheduler = BaseCompressionScheduler()

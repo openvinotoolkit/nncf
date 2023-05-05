@@ -326,6 +326,7 @@ class CompressionAlgorithmController(ABC):
         Returns the maximal model compression rate supported by the compression controller.
         """
 
+
 @api()
 class CompressionAlgorithmBuilder(ABC):
     """

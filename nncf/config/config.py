@@ -11,8 +11,7 @@
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict
-from typing import List, Optional, Type
+from typing import Dict, List, Optional, Type
 
 import jsonschema
 import jstyleson as json

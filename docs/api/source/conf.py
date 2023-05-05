@@ -5,8 +5,7 @@ import pkgutil
 import sys
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Any
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from sphinx.ext.autodoc import mock
 
@@ -17,9 +16,7 @@ copyright = "2023, Intel Corporation"
 author = "Intel Corporation"
 release = "v2.4.0"
 
-extensions = ["autoapi.extension",
-              "sphinx.ext.autodoc",
-              "sphinx.ext.linkcode"]
+extensions = ["autoapi.extension", "sphinx.ext.autodoc", "sphinx.ext.linkcode"]
 
 # The below line in conjunction with specifying the 'sphinx.ext.autodoc' as extension
 # makes the type hints from the function signature disappear from the signature in the HTML and instead
@@ -30,11 +27,7 @@ extensions = ["autoapi.extension",
 autodoc_typehints = "description"
 
 autoapi_dirs = ["../../../nncf"]
-autoapi_options = ["members",
-                   "show-inheritance",
-                   "show-module-summary",
-                   "special-members",
-                   "imported-members"]
+autoapi_options = ["members", "show-inheritance", "show-module-summary", "special-members", "imported-members"]
 
 autoapi_template_dir = "_autoapi_templates"
 autoapi_keep_files = True
@@ -161,21 +154,21 @@ def linkcode_resolve(domain, info):
     # sphinx.ext.linkcode interface; will link to Github here.
     target_ref = "develop"
     base_url = f"https://github.com/openvinotoolkit/nncf/blob/{target_ref}/"
-    if not info['module']:
+    if not info["module"]:
         return None
-    fullname = info["module"] + '.' + info["fullname"]
+    fullname = info["module"] + "." + info["fullname"]
 
     if fullname not in api_info.api_names_vs_obj_dict:
         # Got a method/property description, info["fullname"] contained class.method_name
-        fullname = fullname.rpartition('.')[0]
+        fullname = fullname.rpartition(".")[0]
 
     if fullname in api_info.canonical_name_vs_fqn:
         fullname = api_info.canonical_name_vs_fqn[fullname]
-        module_name = fullname.rpartition('.')[0]
+        module_name = fullname.rpartition(".")[0]
     else:
         module_name = info["module"]
-    filename = module_name.replace('.', '/')
-    complete_url = base_url + filename + '.py'
+    filename = module_name.replace(".", "/")
+    complete_url = base_url + filename + ".py"
     return complete_url
 
 

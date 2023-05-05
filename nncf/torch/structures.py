@@ -59,7 +59,7 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
         self.data_loader = data_loader
         self.device = device
 
-    @classmethod                                
+    @classmethod
     def get_id(cls) -> str:
         return "quantization_precision_init_args"
 

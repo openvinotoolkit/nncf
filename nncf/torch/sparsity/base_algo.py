@@ -100,6 +100,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     """
     Base class for sparsity algorithm controllers in PT.
     """
+
     def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(get_model_device(target_model))

@@ -113,6 +113,7 @@ class RBSparsityController(BaseSparsityController):
     """
     Controller class for regularization-based (RB) sparsity in TF.
     """
+
     def __init__(self, target_model, config: NNCFConfig, op_names: List[str]):
         super().__init__(target_model, op_names)
         algo_config = extract_algo_specific_config(config, "rb_sparsity")

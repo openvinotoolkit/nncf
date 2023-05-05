@@ -90,6 +90,7 @@ class ModelEvaluationArgs(NNCFExtraConfigStruct):
     :param eval_fn: A function accepting a single argument - the model object - and returning the model's metric on
         the evaluation split of the dataset corresponding to the model.
     """
+
     def __init__(self, eval_fn: Callable):
         self.eval_fn = eval_fn
 

@@ -15,10 +15,7 @@ import pathlib
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable
-from typing import Optional
-from typing import TypeVar
-from typing import Union
+from typing import Callable, Optional, TypeVar, Union
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -91,23 +88,24 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
     """
     Base class to generalize functionality of derived training loop classes.
     """
+
     def __init__(self, compression_controller: CompressionAlgorithmController):
         self.runner = None  # type: BaseAccuracyAwareTrainingRunner
         self.compression_controller = compression_controller
         self._current_compression_rate = None
 
     def run(
-            self,
-            model: TModel,
-            train_epoch_fn: Callable,
-            validate_fn: Callable,
-            configure_optimizers_fn: Callable = None,
-            dump_checkpoint_fn: Callable = None,
-            load_checkpoint_fn: Callable = None,
-            early_stopping_fn: Callable = None,
-            tensorboard_writer: Optional[TensorboardWriterType] = None,
-            log_dir: Union[pathlib.Path, str] = None,
-            update_learning_rate_fn: Callable = None,
+        self,
+        model: TModel,
+        train_epoch_fn: Callable,
+        validate_fn: Callable,
+        configure_optimizers_fn: Callable = None,
+        dump_checkpoint_fn: Callable = None,
+        load_checkpoint_fn: Callable = None,
+        early_stopping_fn: Callable = None,
+        tensorboard_writer: Optional[TensorboardWriterType] = None,
+        log_dir: Union[pathlib.Path, str] = None,
+        update_learning_rate_fn: Callable = None,
     ):
         self.runner.initialize_training_loop_fns(
             train_epoch_fn,
@@ -275,7 +273,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         verbose: bool = True,
         minimal_compression_rate: float = 0.0,
         maximal_compression_rate: float = 0.95,
-        dump_checkpoints: bool = True
+        dump_checkpoints: bool = True,
     ):
         super().__init__(compression_controller)
         self.adaptive_controller = self._get_adaptive_compression_ctrl(compression_controller)
@@ -334,17 +332,17 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         )
 
     def run(
-            self,
-            model: TModel,
-            train_epoch_fn: Callable,
-            validate_fn: Callable,
-            configure_optimizers_fn: Callable = None,
-            dump_checkpoint_fn: Callable = None,
-            load_checkpoint_fn: Callable = None,
-            early_stopping_fn: Callable = None,
-            tensorboard_writer: Optional[TensorboardWriterType] = None,
-            log_dir: Union[pathlib.Path, str] = None,
-            update_learning_rate_fn: Callable = None,
+        self,
+        model: TModel,
+        train_epoch_fn: Callable,
+        validate_fn: Callable,
+        configure_optimizers_fn: Callable = None,
+        dump_checkpoint_fn: Callable = None,
+        load_checkpoint_fn: Callable = None,
+        early_stopping_fn: Callable = None,
+        tensorboard_writer: Optional[TensorboardWriterType] = None,
+        log_dir: Union[pathlib.Path, str] = None,
+        update_learning_rate_fn: Callable = None,
     ):
         self.runner.initialize_training_loop_fns(
             train_epoch_fn,
