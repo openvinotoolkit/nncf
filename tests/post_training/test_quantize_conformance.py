@@ -34,6 +34,9 @@ from torchvision.transforms import InterpolationMode
 
 import nncf
 from nncf.experimental.torch.quantization.quantize_model import quantize_impl as pt_impl_experimental
+from nncf.experimental.torch.replace_custom_modules.replace_custom_modules import (
+    replace_custom_modules_with_torch_native,
+)
 from nncf.openvino.quantization.quantize_model import quantize_impl as ov_quantize_impl
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.post_training.conftest import PipelineType
@@ -47,6 +50,7 @@ DEFAULT_VAL_THREADS = 4
 
 def create_timm_model(name):
     model = timm.create_model(name, num_classes=1000, in_chans=3, pretrained=True, checkpoint_path="")
+    model = replace_custom_modules_with_torch_native(model)
     return model
 
 
