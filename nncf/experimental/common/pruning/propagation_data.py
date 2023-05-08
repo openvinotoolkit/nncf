@@ -147,12 +147,14 @@ class PropagationGroup:
         block: PruningBlock,
         producers: Optional[Set[ProducerInfo]] = None,
         consumers: Optional[Set[ConsumerInfo]] = None,
+        is_mixed: bool = False,
     ) -> None:
         self.block = block
         self._children: List["PropagationGroup"] = []
         self._is_invalid = False
         self._producers = set() if producers is None else producers
         self._consumers = set() if consumers is None else consumers
+        self.is_mixed = is_mixed
 
     @property
     def is_invalid(self):
@@ -190,10 +192,12 @@ class PropagationGroup:
         )
 
         new_group = PropagationGroup(block=first_block)
+        is_mixed = any(group.is_mixed for group in args)
         for group in args:
             group.add_child(new_group)
             new_group.add_producers(group.get_producers())
             new_group.add_consumers(group.get_consumers())
+        new_group.is_mixed = is_mixed
         return new_group
 
     def add_consumers(self, consumers: Set[ConsumerInfo]):

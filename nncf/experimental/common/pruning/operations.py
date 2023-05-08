@@ -408,7 +408,7 @@ class ReshapePruningOp(BasePruningOp):
         mask = masks[0]
         output_mask = PropagationMask()
         if mask is not None and node.layer_attributes:
-            in_map, _, mode = cls.parse_reshape(node.layer_attributes)
+            in_map, out_map, mode = cls.parse_reshape(node.layer_attributes)
             input_shape = node.layer_attributes.input_shape
             output_shape = node.layer_attributes.output_shape
 
@@ -440,14 +440,26 @@ class ReshapePruningOp(BasePruningOp):
                         group = groups[0]
                         if group.has_children():
                             raise NotImplementedError("Splitting BlockGroup with children is not implemented yet")
-                        child_groups = cls._split_group(group, input_channels, list_output_channels)
-                        for child_group, in_dim in zip(child_groups, in_map[dim]):
-                            output_mask.dim_groups_map[in_dim] = [child_group]
+                        if group.is_mixed:
+                            nncf_logger.warning("Found shrink-extend reshape pattern")
+                            # TODO: hardcode
+                            shifted_dim = in_map[dim][1]
+                            output_mask.dim_groups_map[shifted_dim] = groups
+                        else:
+                            child_groups = cls._split_group(group, input_channels, list_output_channels)
+                            for child_group, in_dim in zip(child_groups, in_map[dim]):
+                                output_mask.dim_groups_map[in_dim] = [child_group]
             elif mode == ReshapeMode.SHRINK:
                 # shrinking like: [A,B,C,D] -> S, just combine all groups under the same dimension
                 grouping = defaultdict(list)
+                in_pruning_dims = list(mask.dim_groups_map.keys())
                 for in_idx, groups in mask.dim_groups_map.items():
                     assert len(in_map[in_idx]) == 1, "assume a mapping to single int by definition of shrink"
+                    out_idx = in_map[in_idx][0]
+                    is_mixed = any(idx not in in_pruning_dims for idx in out_map[out_idx])
+                    if is_mixed:
+                        for group in groups:
+                            group.is_mixed = True
                     grouping[in_map[in_idx][0]].extend(groups)
                 output_mask.dim_groups_map = dict(grouping)
 
@@ -660,7 +672,9 @@ class ReshapePruningOp(BasePruningOp):
         new_groups: List[PropagationGroup] = []
         new_blocks = cls._split_block(group.block, list_output_channels)
         for block in new_blocks:
-            new_group = PropagationGroup(block=block, producers=group.get_producers(), consumers=group.get_consumers())
+            new_group = PropagationGroup(
+                block=block, producers=group.get_producers(), consumers=group.get_consumers(), is_mixed=group.is_mixed
+            )
             group.add_child(new_group)
             new_groups.append(new_group)
         return new_groups

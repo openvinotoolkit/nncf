@@ -426,7 +426,7 @@ AUDIO_DESCS = [
     GroupTestDesc(
         model_desc=GeneralModelDesc(
             model_name="Wave2Vec 2.0",
-            input_info=dict(sample_size=[1, 400]),
+            input_info=dict(sample_size=[3, 400]),
             model_builder=partial(
                 AutoModelForAudioClassification.from_config,
                 Wav2Vec2Config(
