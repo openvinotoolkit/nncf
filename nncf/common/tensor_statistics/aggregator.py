@@ -57,7 +57,7 @@ class StatisticsAggregator(ABC):
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, merged_statistics)
 
-    def register_stastistic_points(self, statistic_points: StatisticPointsContainer) -> None:
+    def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
         Register statistic points for statistics collection and recalculates the maximum number samples
         for collecting statistics, based on the maximum value from the all algorithms.
