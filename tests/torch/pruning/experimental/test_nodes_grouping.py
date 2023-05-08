@@ -18,6 +18,27 @@ import numpy as np
 import pytest
 import torch
 from torch import nn
+
+from nncf import NNCFConfig
+from nncf.torch.model_creation import create_nncf_network
+from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.torch.test_compressed_graph import GeneralModelDesc
+from tests.torch.test_compressed_graph import IModelDesc
+from tests.torch.test_compressed_graph import get_full_path_to_the_graph
+from tests.torch.test_models.swin import SwinTransformerBlock
+
+# isort: off
+from nncf.experimental.common.pruning.block_hierarchy import BlockHierarchy
+from nncf.experimental.common.pruning.nodes_grouping import PruningBlock
+from nncf.experimental.common.pruning.nodes_grouping import PruningGroup
+from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
+from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
+from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
+from nncf.experimental.common.pruning.propagation_data import ProducerInfo
+from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
+
+# NNCF Torch should be imported before transformers in order to patch all operations before they added to some global vars,
+# otherwise test may fail with some error (e.g. IndexError: list index out of range).
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
 from transformers import AutoModelForQuestionAnswering
@@ -31,25 +52,6 @@ from transformers import RobertaConfig
 from transformers import SwinConfig
 from transformers import ViTConfig
 from transformers import Wav2Vec2Config
-
-from nncf import NNCFConfig
-from nncf.experimental.common.pruning.block_hierarchy import BlockHierarchy
-from nncf.experimental.common.pruning.nodes_grouping import PruningBlock
-from nncf.experimental.common.pruning.nodes_grouping import PruningGroup
-from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
-from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
-from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
-from nncf.experimental.common.pruning.propagation_data import ProducerInfo
-from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
-
-# NNCF Torch should be imported before transformers in order to patch all operations before they added to some global vars,
-# otherwise test may fail with some error (e.g. IndexError: list index out of range).
-from nncf.torch.model_creation import create_nncf_network
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.torch.test_compressed_graph import GeneralModelDesc
-from tests.torch.test_compressed_graph import IModelDesc
-from tests.torch.test_compressed_graph import get_full_path_to_the_graph
-from tests.torch.test_models.swin import SwinTransformerBlock
 
 
 class SelfAttention(nn.Module):
