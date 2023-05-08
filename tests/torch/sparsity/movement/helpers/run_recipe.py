@@ -280,6 +280,27 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
         return AutoModelForAudioClassification.from_config(self.model_config)
 
 
+class Wav2Vec2RunRecipeBatched(Wav2Vec2RunRecipe):
+    default_model_config = Wav2Vec2Config(
+        vocab_size=2,
+        hidden_size=4,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        conv_dim=(4, 4),
+        conv_stride=(1, 1),
+        conv_kernel=(3, 3),
+        num_conv_pos_embeddings=3,
+        num_conv_pos_embedding_groups=1,
+        proj_codevector_dim=4,
+        classifier_proj_size=3,
+        num_labels=2,
+    )
+
+    @property
+    def model_input_info(self) -> List[ModelInputInfo]:
+        return [ModelInputInfo(shape=[3, 32], keyword="input_values")]
+
+
 class BertRunRecipe(BaseMockRunRecipe):
     model_family = "huggingface_bert"
     supports_structured_masking = True

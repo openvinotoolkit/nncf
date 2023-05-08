@@ -44,6 +44,7 @@ from tests.torch.sparsity.movement.helpers import Wav2Vec2RunRecipe
 from tests.torch.sparsity.movement.helpers import build_compression_trainer
 from tests.torch.sparsity.movement.helpers import force_update_sparsifier_binary_masks_by_threshold
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
+from tests.torch.sparsity.movement.helpers.run_recipe import Wav2Vec2RunRecipeBatched
 
 
 class TestONNXExport:
@@ -177,6 +178,11 @@ class TestONNXExport:
                 ),
             ),
             Dict(
+                nncf_weight_ratio=0.74,
+                ov_weight_ratio=0.74,
+                recipe=Wav2Vec2RunRecipeBatched().model_config_(),
+            ),
+            Dict(
                 nncf_weight_ratio=0.43,
                 ov_weight_ratio=0.29,
                 recipe=SwinRunRecipe().model_config_(
@@ -239,7 +245,7 @@ class TestONNXExport:
         ctrl.resolve_structured_mask()
         ctrl.populate_structured_mask()
         compression_rate = ctrl.statistics().movement_sparsity.model_statistics.sparsity_level
-
+        print(ctrl.statistics().to_str())
         onnx_model_path = str(tmp_path / "structured.onnx")
         ctrl.export_model(onnx_model_path)
         core = Core()
