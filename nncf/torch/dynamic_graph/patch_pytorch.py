@@ -365,8 +365,13 @@ def patch_torch_operators():
     # Relu function from torch.nn.functional uses torch.relu or torch.relu_ inside,
     # which we've already wrapped. So we don't have to wrap Relu in torch.nn.functional
     # to be able to differ what torch.relu or torch.relu was called exactly inside Relu
-
     functions_to_patch[NamespaceTarget.TORCH_NN_FUNCTIONAL].remove("relu")
+
+    # nn.MultiheadAttention uses multi_head_attention_forward from torch.nn.functional inside, which
+    # leads to adding a single node to the graph. In turn, it makes impossible to quantize internals of the multi head
+    # attention which is required for better speed-up. So multi_head_attention_forward is skipped from wrapping and
+    # tracing goes inside and finds internal operations in it: bmm, linear, softmax and etc.
+    functions_to_patch[NamespaceTarget.TORCH_NN_FUNCTIONAL].remove("multi_head_attention_forward")
 
     magic_functions_to_patch = MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH
     for namespace, function_names in magic_functions_to_patch.items():

@@ -62,6 +62,7 @@ from tests.torch.test_models.synthetic import GatherModel
 from tests.torch.test_models.synthetic import ManyNonEvalModules
 from tests.torch.test_models.synthetic import MaskedFillModel
 from tests.torch.test_models.synthetic import MatMulDivConv
+from tests.torch.test_models.synthetic import MHA_single_input
 from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import ModelWithDummyParameter
 from tests.torch.test_models.synthetic import MultiOutputSameTensorModel
@@ -724,6 +725,13 @@ SYNTHETIC_MODEL_DESC_LIST = [
     GeneralModelDesc(model_builder=ConvBNLeakyReLU, input_sample_sizes=([1, 1, 5, 5],)),
     GeneralModelDesc(model_builder=FC_ConstMul, input_sample_sizes=[1, 3, 6]),
     GeneralModelDesc(model_builder=ConvGeluGetItem, input_sample_sizes=([1, 6, 6],)),
+    SingleLayerModelDesc(
+        model_name="MHA",
+        layer=nn.MultiheadAttention(embed_dim=4, num_heads=2),
+        input_sample_sizes=([1, 2, 4], [1, 2, 4], [1, 2, 4]),
+        wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
+    ),
+    GeneralModelDesc(model_builder=MHA_single_input, input_sample_sizes=(MHA_single_input.INPUT_SIZES,)),
 ]
 
 
