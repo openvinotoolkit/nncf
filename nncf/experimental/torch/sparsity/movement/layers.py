@@ -171,6 +171,7 @@ class MovementSparsifier(nn.Module):
         self.weight_ctx = BinaryMask(weight_shape)
         self.sparse_factors = self._get_sparse_factors(weight_shape, sparse_cfg)
         self.sparse_structure = sparse_cfg.mode
+        self.sparse_cfg = sparse_cfg
 
         weight_importance_shape = self._get_weight_importance_shape(
             weight_shape, self.sparse_factors, self.sparse_structure

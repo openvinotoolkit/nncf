@@ -116,7 +116,7 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
         return MovementSparsityController(model, self._sparsified_module_info, self.config)
 
 
-MODEL_FAMILIES = ["bert", "wav2vec2", "swin"]
+MODEL_FAMILIES = ["bert", "wav2vec2", "swin", "mobilebert", "distilbert", "clip", "vit"]
 
 
 def is_supported_model_family(model: NNCFNetwork) -> None:
