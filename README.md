@@ -60,16 +60,38 @@ _Preview means that this is a work in progress and NNCF does not guarantee the f
 
 ### Post-Training Quantization
 
-The NNCF PTQ is the simplest way to apply 8-bit quantization. To run the algorithm you only need your model and a small (~300 samples) calibration no-label dataset. The basic workflow steps:
-1) Load a model and a data source.
-2) Create an instance of `nncf.Dataset` class by passing two parameters:
-   * `data_source` — Iterable object containing data items for model calibration.
-   * `transform_fn` — [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function), if your data source returns both images and labels.
-3) Run the quantization pipeline. It will return the quantized model for faster inference when exported to OpenVINO Intermediate Representation format.
+The NNCF PTQ is the simplest way to apply 8-bit quantization. To run the algorithm you only need your model and a small (~300 samples) calibration dataset.
 
-Below are the usage examples for every backend.
+[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run PTQ with, and PyTorch, TensorFlow and ONNX are also supported.
 
-<details open><summary><b>PyTorch</b></summary>
+<details open><summary><b>OpenVINO</b></summary>
+
+```python
+import nncf
+import openvino.runtime as ov
+import torch
+from torchvision import datasets
+
+# Instantiate your uncompressed model
+model = ov.Core().read_model("/model_path")
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
+val_dataset = datasets.ImageFolder("/path")
+dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
+
+# Step 1: Initialize transformation function
+def transform_fn(data_item):
+    images, _ = data_item
+    return images
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
+# Step 3: Run the quantization pipeline
+quantized_model = nncf.quantize(model, calibration_dataset)
+```
+
+</details>
+
+<details><summary><b>PyTorch</b></summary>
 
 ```python
 import nncf
@@ -106,7 +128,7 @@ import tensorflow_datasets as tfds
 # Instantiate your uncompressed model
 model = tf.keras.applications.MobileNetV2()
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = tfds.load('/path', split='validation', 
+val_dataset = tfds.load("/path", split="validation", 
                         shuffle_files=False, as_supervised=True)
 
 # Step 1: Initialize transformation function
@@ -131,7 +153,7 @@ import torch
 from torchvision import datasets
 
 # Instantiate your uncompressed model
-onnx_model = onnx.load_model('/model_path')
+onnx_model = onnx.load_model("/model_path")
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
 val_dataset = datasets.ImageFolder("/path")
 dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
@@ -150,45 +172,12 @@ quantized_model = nncf.quantize(onnx_model, calibration_dataset)
 
 </details>
 
-<details><summary><b>OpenVINO</b></summary>
-
-```python
-import nncf
-import openvino.runtime as ov
-import torch
-from torchvision import datasets
-
-# Instantiate your uncompressed model
-model = ov.Core().read_model('/model_path')
-# Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = datasets.ImageFolder("/path")
-dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
-
-# Step 1: Initialize transformation function
-def transform_fn(data_item):
-    images, _ = data_item
-    return images
-
-# Step 2: Initialize NNCF Dataset
-calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
-# Step 3: Run the quantization pipeline
-quantized_model = nncf.quantize(model, calibration_dataset)
-```
-
-</details>
-
 
 [//]: # (NNCF provides full  [samples]&#40;#post-training-quantization-samples&#41;, which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.)
 
 ### Training-Time Compression
 
-Training-Time Compression pipeline allows to fine-tune the quantized model in order to improve on the possible accuracy drop introduced by quantization. The basic workflow steps are:
-1) Create an NNCF config object from (a) JSON configuration file and (b) initialization dataloader.
-2) Pass your model together with the config to the `create_compressed_model()` function which returns (a) compression controller and (b) compressed model.
-3) Finetune the compressed model as a regular PyTorch/Tensorflow module.
-4) Export the finetuned model using the compression controller.
-
-Expand the blocks below for PyTorch and Tensorflow usage examples: 
+Below is an example of Accuracy Aware Quantization pipeline where model weights and compression parameters may be fine-tuned to achieve a higher accuracy.
 
 <details><summary><b>PyTorch</b></summary>
 
@@ -257,7 +246,7 @@ compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
 # ... the rest of the usual TensorFlow-powered training pipeline
 
 # Export to Frozen Graph, TensorFlow SavedModel or .h5  when done fine-tuning 
-compression_ctrl.export_model("compressed_model.pb", save_format='frozen_graph')
+compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
 ```
 
 </details>
@@ -282,7 +271,7 @@ Compact scripts demonstrating quantization and corresponding inference speed boo
 - [ONNX Post-Training Quantization sample](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
 - [OpenVINO Post-Training Quantization sample](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 
-### Compression-Aware Training Samples
+### Training-Time Compression Samples
 These examples provide full pipelines including compression, training and inference for classification, object detection and segmentation tasks.
 - PyTorch samples:
   - [Image Classification sample](examples/torch/classification/README.md)
