@@ -14,4 +14,5 @@ transformers==4.23.1
 # Required for movement_sparsity tests
 datasets==2.6.2
 evaluate==0.3.0
-timm
+timm==0.6.13
+openvino-dev~=2023.0.0.dev
