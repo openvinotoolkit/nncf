@@ -600,16 +600,28 @@ def get_allow_reshape_input(accuracy_checker_config) -> bool:
 
 
 # pylint:disable=too-many-branches
-def maybe_reshape_model(model, dataset, subset_size):
+def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     dataset_inputs_shapes = defaultdict(set)
     for input_dict in islice(dataset.get_inference_data(), subset_size):
         for name, tensor in input_dict.items():
             dataset_inputs_shapes[name].add(tuple(tensor.shape))
 
     model_inputs_shapes = {}
-    for input_ in model.inputs:
-        for name in input_.names:
-            model_inputs_shapes[name] = tuple(input_.shape)
+    for input_output in model.inputs:
+        input_node = input_output.get_node()
+        model_inputs_shapes[input_to_tensor_name[input_node.friendly_name]] = tuple(input_node.partial_shape)
+
+    if len(dataset_inputs_shapes) != len(model_inputs_shapes):
+        raise RuntimeError(
+            f"Model inputs: {list(model_inputs_shapes.keys())}"
+            f" and dataset inputs {list(dataset_inputs_shapes.keys())} are not compatible"
+        )
+
+    for name in model_inputs_shapes:
+        if name not in dataset_inputs_shapes:
+            raise RuntimeError(
+                f"Model input {name} is not present in dataset inputs: {list(dataset_inputs_shapes.keys())}"
+            )
 
     dynamic_dims = defaultdict(list)
     reshaped_static_dims = defaultdict(list)
@@ -620,7 +632,8 @@ def maybe_reshape_model(model, dataset, subset_size):
 
         for idx in range(len(shapes[0])):
             if len(shapes) == 1:
-                if model_inputs_shapes[name][idx] != shapes[0][idx]:
+                model_dim = model_inputs_shapes[name][idx]
+                if model_dim.is_static and model_dim.get_length() != shapes[0][idx]:
                     reshaped_static_dims[name].append(idx)
 
             elif any(shapes[0][idx] != shape[idx] for shape in shapes[1:]):
@@ -639,7 +652,12 @@ def maybe_reshape_model(model, dataset, subset_size):
             elif idx in reshaped_static_dims[name]:
                 dim = Dimension(dataset_first_shape[idx])
             else:
-                dim = Dimension(d) if not isinstance(d, tuple) else Dimension(d[0], d[1])
+                if isinstance(d, Dimension):
+                    dim = d
+                elif isinstance(d, tuple):
+                    dim = Dimension(d[0], d[1])
+                else:
+                    dim = Dimension(d)
             dims.append(dim)
         partial_shapes[name] = PartialShape(dims)
     model.reshape(partial_shapes)
@@ -673,7 +691,12 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_imp
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
 
     if get_allow_reshape_input(accuracy_checker_config):
-        ov_model = maybe_reshape_model(ov_model, calibration_dataset, quantization_parameters.get("subset_size", 300))
+        ov_model = maybe_reshape_model(
+            ov_model,
+            calibration_dataset,
+            quantization_parameters.get("subset_size", 300),
+            model_evaluator.launcher.input_to_tensor_name,
+        )
         model_evaluator.load_network([{"model": ov_model}])
 
     quantized_model = nncf.quantize(ov_model, calibration_dataset, **quantization_parameters)
@@ -698,7 +721,12 @@ def quantize_model_with_accuracy_control(
     validation_dataset = nncf.Dataset(list(range(model_evaluator.dataset.full_size)))
 
     if get_allow_reshape_input(accuracy_checker_config):
-        ov_model = maybe_reshape_model(ov_model, calibration_dataset, quantization_parameters.get("subset_size", 300))
+        ov_model = maybe_reshape_model(
+            ov_model,
+            calibration_dataset,
+            quantization_parameters.get("subset_size", 300),
+            model_evaluator.launcher.input_to_tensor_name,
+        )
         model_evaluator.load_network([{"model": ov_model}])
 
     metric_name = accuracy_checker_config["models"][0]["datasets"][0]["metrics"][0].get("name", None)
