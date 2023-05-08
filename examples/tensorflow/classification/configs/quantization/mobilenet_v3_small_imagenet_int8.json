@@ -17,8 +17,6 @@
         }
     },
 
-    "disable_tensor_float_32_execution": true,
-
     "dataset": "imagenet2012",
     "dataset_type": "tfds",
 
@@ -29,14 +27,6 @@
             "batchnorm_adaptation": {
                 "num_bn_adaptation_samples": 2048
             }
-        },
-        "weights": {
-           "bits": 8,
-           "per_channel": true
-       },
-        "activations": {
-            "bits": 8,
-            "per_channel": false
         }
    }
 }
