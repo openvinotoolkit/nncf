@@ -448,11 +448,12 @@ class OVModelTransformer(ModelTransformer):
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
             node = name_to_node_mapping[node_name]
+            node_shape = node.output(0).partial_shape.get_max_shape()
             node_output_port = node.output(transformation.target_point.port_id)
             node_output_source_ports = node_output_port.get_target_inputs()
 
-            bias_shape = [1] * len(node.shape)
-            bias_shape[1] = node.shape[1]
+            bias_shape = [1] * len(node_shape)
+            bias_shape[1] = node_shape[1]
             const_value = np.zeros(bias_shape, dtype=node.get_element_type().to_dtype())
             bias_const_node = opset.constant(const_value, dtype=node.get_element_type())
             bias_const_output_port = bias_const_node.output(0)
