@@ -492,6 +492,8 @@ class AsymmetricQuantizer(Quantizer):
         return _default_quantize()
 
     def apply_range_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
+        min_values = tf.minimum(min_values, 0)
+        max_values = tf.maximum(max_values, 0)
         ranges = max_values - min_values
         max_range = tf.reduce_max(ranges)
         lower_threshold = tf.maximum(eps * max_range, min_range)
