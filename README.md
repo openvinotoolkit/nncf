@@ -38,10 +38,12 @@ _Preview means that this is a work in progress and NNCF does not guarantee the f
 |Compression algorithm|PyTorch|TensorFlow|
 | :--- | :---: | :---: |
 |[Quantization](./docs/compression_algorithms/Quantization.md) | Supported | Supported |
-|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported | Not supported |
-|[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported | Not supported |
-|[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported | Not supported |
-|[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported | Not supported |
+|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported |
+|[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported |
+|[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |
+|[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
+|[Movement pruning](./nncf/experimental/torch/sparsity/movement/MovementSparsity.md) | Experimental | Not supported |
+
 
 
 
@@ -52,7 +54,7 @@ _Preview means that this is a work in progress and NNCF does not guarantee the f
 - GPU-accelerated layers for faster compressed model fine-tuning.
 - Distributed training support.
 - Configuration file examples for each supported compression algorithm.
-- Git patches for prominent third-party repositories ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
+- Git patch for prominent third-party repository ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai/latest/home.html).
 - Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
