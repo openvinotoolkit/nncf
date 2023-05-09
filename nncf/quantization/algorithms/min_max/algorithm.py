@@ -460,18 +460,6 @@ class MinMaxQuantization(Algorithm):
             unified_scale_groups.append(unified_scale_group)
         return unified_scale_groups
 
-    def _get_graph_pattern(self, model: TModel) -> GraphPattern:
-        """
-        Returns full graph pattern for quantizer setup calculation.
-
-        :param model: Backend-specific model.
-        :return: GraphPattern instance.
-        """
-        backend = get_backend(model)
-        return PatternsManager.get_full_pattern_graph(
-            backend=backend, device=self._target_device, model_type=self._model_type
-        )
-
     def _topological_sort_quantization_points(
         self, quantization_points: List[SingleConfigQuantizationPoint], nncf_graph: NNCFGraph
     ) -> List[SingleConfigQuantizationPoint]:
