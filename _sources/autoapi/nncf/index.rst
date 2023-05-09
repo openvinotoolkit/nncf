@@ -14,6 +14,7 @@ Classes
 
    nncf.NNCFConfig
    nncf.Dataset
+   nncf.DropType
    nncf.ModelType
    nncf.TargetDevice
    nncf.QuantizationPreset
@@ -99,6 +100,19 @@ Functions
 
 
 
+.. py:class:: DropType
+
+   Bases: :py:obj:`enum.Enum`
+
+   Describes the accuracy drop type, which determines how the accuracy drop between
+   the original model and the compressed model is calculated.
+
+   :param ABSOLUTE: The accuracy drop is calculated as the absolute drop with respect
+       to the results of the original model.
+   :param RELATIVE: The accuracy drop is calculated relative to the results of
+       the original model.
+
+
 .. py:class:: ModelType
 
    Bases: :py:obj:`enum.Enum`
@@ -164,7 +178,7 @@ Functions
    :rtype: TModel
 
 
-.. py:function:: quantize_with_accuracy_control(model, calibration_dataset, validation_dataset, validation_fn, max_drop = 0.01, preset = QuantizationPreset.PERFORMANCE, target_device = TargetDevice.ANY, subset_size = 300, fast_bias_correction = True, model_type = None, ignored_scope = None, advanced_quantization_parameters = None, advanced_accuracy_restorer_parameters = None)
+.. py:function:: quantize_with_accuracy_control(model, calibration_dataset, validation_dataset, validation_fn, max_drop = 0.01, drop_type = DropType.ABSOLUTE, preset = QuantizationPreset.PERFORMANCE, target_device = TargetDevice.ANY, subset_size = 300, fast_bias_correction = True, model_type = None, ignored_scope = None, advanced_quantization_parameters = None, advanced_accuracy_restorer_parameters = None)
 
    Applies post-training quantization algorithm with accuracy control to provided model.
 
@@ -181,7 +195,9 @@ Functions
              validate the provided model.
        The function should return the value of the metric with the following meaning:
        A higher value corresponds to better performance of the model.
-   :param max_drop: The maximum absolute accuracy drop that should be achieved after the quantization.
+   :param max_drop: The maximum accuracy drop that should be achieved after the quantization.
+   :param drop_type: The accuracy drop type, which determines how the maximum accuracy
+       drop between the original model and the compressed model is calculated.
    :param preset: A preset that controls the quantization mode.
    :type preset: nncf.QuantizationPreset
    :param target_device: A target device the specificity of which will be taken
