@@ -31,6 +31,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.experimental.openvino.quantization.quantize_model import (
     quantize_with_accuracy_control as pot_quantize_with_native_accuracy_control,
 )
+from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
@@ -71,7 +72,9 @@ def parse_args():
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, (TargetDevice, ModelType, QuantizationPreset, OverflowFix, StatisticsType, AggregatorType)):
+        if isinstance(
+            o, (TargetDevice, ModelType, QuantizationPreset, OverflowFix, StatisticsType, AggregatorType, DropType)
+        ):
             return o.value
         if isinstance(o, (IgnoredScope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
             return asdict(o)
@@ -202,16 +205,23 @@ def set_algorithm_parameters_context(ctx):
 
 def map_target_device(target_device):
     target_device = target_device.upper()
-    if target_device not in [t.value for t in nncf.TargetDevice]:
+    if target_device not in [t.value for t in TargetDevice]:
         raise ValueError(f"{target_device} target device is not supported")
-    return {"target_device": nncf.TargetDevice(target_device)}
+    return {"target_device": TargetDevice(target_device)}
 
 
 def map_model_type(model_type):
     model_type = model_type.lower()
-    if model_type not in [m.value for m in nncf.ModelType]:
+    if model_type not in [m.value for m in ModelType]:
         raise ValueError(f"{model_type} model type is not supported")
-    return {"model_type": nncf.ModelType(model_type)}
+    return {"model_type": ModelType(model_type)}
+
+
+def map_drop_type(drop_type):
+    drop_type = drop_type.lower()
+    if drop_type not in [m.value for m in DropType]:
+        raise ValueError(f"{drop_type} drop type is not supported")
+    return {"drop_type": DropType(drop_type)}
 
 
 def map_ignored_scope(ignored):
@@ -225,14 +235,14 @@ def map_ignored_scope(ignored):
             if op.get("attributes") is not None:
                 raise ValueError('"attributes" in the ignored operations ' "are not supported")
             ignored_operations.append(op["type"])
-    return {"ignored_scope": nncf.IgnoredScope(names=ignored.get("scope"), types=ignored_operations)}
+    return {"ignored_scope": IgnoredScope(names=ignored.get("scope"), types=ignored_operations)}
 
 
 def map_preset(preset):
     preset = preset.lower()
-    if preset not in [p.value for p in nncf.QuantizationPreset]:
+    if preset not in [p.value for p in QuantizationPreset]:
         raise ValueError(f"{preset} preset is not supported")
-    return {"preset": nncf.QuantizationPreset(preset)}
+    return {"preset": QuantizationPreset(preset)}
 
 
 def map_inplace_statistics(inplace_statistics):
@@ -511,18 +521,18 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
 
     supported_parameters.update(
         {
-            "maximal_drop": lambda x, _: {"max_drop": x},
+            "maximal_drop": lambda x: {"max_drop": x},
             "max_iter_num": map_max_iter_num,
             "ranking_subset_size": map_ranking_subset_size,
             "tune_hyperparams": map_tune_hyperparams,
             "convert_to_mixed_preset": map_convert_to_mixed_preset,
+            "drop_type": map_drop_type,
         }
     )
 
     default_parameters.update(
         {
             "use_prev_if_drop_increase": True,
-            "drop_type": "absolute",
             "base_algorithm": "DefaultQuantization",
             "annotation_free": False,
         }

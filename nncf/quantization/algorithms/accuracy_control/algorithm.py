@@ -22,6 +22,7 @@ from nncf.common.quantization.quantizer_removal import revert_operations_to_floa
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data.dataset import Dataset
+from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
 from nncf.quantization.algorithms.accuracy_control.ranker import LogitsBasedRanker
@@ -98,16 +99,26 @@ class QuantizationAccuracyRestorer:
     Implementation of the accuracy-aware loop.
     """
 
-    def __init__(self, ranking_subset_size: int = 300, max_num_iterations: int = sys.maxsize, max_drop: float = 0.01):
+    def __init__(
+        self,
+        ranking_subset_size: int = 300,
+        max_num_iterations: int = sys.maxsize,
+        max_drop: float = 0.01,
+        drop_type: DropType = DropType.ABSOLUTE,
+    ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
             the dataset to rank groups of quantizers.
         :param max_num_iterations: A maximal number of iterations.
-        :param max_drop: The maximum absolute accuracy drop that should be achieved.
+        :param max_drop: The maximum accuracy drop that should be achieved.
+        :param drop_type: The accuracy drop type, which determines how the maximum
+            accuracy drop between the original model and the compressed model is
+            calculated.
         """
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations
         self.max_drop = max_drop
+        self.drop_type = drop_type
 
     def restore_accuracy(
         self,
@@ -134,16 +145,14 @@ class QuantizationAccuracyRestorer:
                 validate the provided model.
             The function should return the value of the metric with the following meaning:
             A higher value corresponds to better performance of the model.
-        :return: The quantized model whose metric `final_metric` is satisfied the following condition
-
-            initial_metric - final_metric <= max_drop.
+        :return: The quantized model whose metric `final_metric` is satisfied
+            the maximum accuracy drop condition.
         """
-
         backend = get_backend(initial_model)
         algo_backend = get_algo_backend(backend)
 
-        accuracy_drop = initial_metric - quantized_metric
-        nncf_logger.info(f"Accuracy drop: {accuracy_drop}")
+        accuracy_drop = self.calculate_accuracy_drop(initial_metric, quantized_metric)
+        nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({self.drop_type})")
 
         if accuracy_drop <= self.max_drop:
             return quantized_model
@@ -206,8 +215,10 @@ class QuantizationAccuracyRestorer:
             current_metric = validation_fn(
                 algo_backend.prepare_for_inference(current_model), validation_dataset.get_data()
             )
-            current_accuracy_drop = initial_metric - current_metric
-            nncf_logger.info("Accuracy drop with the new quantization scope is %s", float(current_accuracy_drop))
+            current_accuracy_drop = self.calculate_accuracy_drop(initial_metric, current_metric)
+            nncf_logger.info(
+                f"Accuracy drop with the new quantization scope is {float(current_accuracy_drop)} ({self.drop_type})"
+            )
 
             if not ranked_groups:
                 nncf_logger.info(
@@ -247,6 +258,23 @@ class QuantizationAccuracyRestorer:
         QuantizationAccuracyRestorer._print_report(report, self.max_num_iterations)
 
         return current_model
+
+    def calculate_accuracy_drop(self, initial_metric, quantized_metric):
+        """
+        Calculates accuracy drop.
+
+        :param initial_metric: Metric value for initial model.
+        :param quantized_metric: Metric value for quantized model.
+        :return: Accuracy drop value.
+        """
+        if self.drop_type == DropType.ABSOLUTE:
+            accuracy_drop = initial_metric - quantized_metric
+        elif self.drop_type == DropType.RELATIVE:
+            accuracy_drop = 1 - quantized_metric / initial_metric
+        else:
+            raise ValueError(f"{self.drop_type} drop type is not supported.")
+
+        return accuracy_drop
 
     @staticmethod
     def _collect_original_biases_and_weights(
