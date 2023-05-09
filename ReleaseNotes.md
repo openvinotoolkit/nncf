@@ -4,30 +4,26 @@
 Post-training Quantization:
 
 - Features:
-  - Added Post-training Quantization full support for OpenVINO IR based on NGraph.
-  - Added `"overflow_fix"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support & functionality. It improves accuracy for optimized model for affected devices.
-  - Added `"model_type"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support that allows reach better accuracy for specific model architectures (e.g. transformers).
-  - Added support for in-place statistics collection (reduce memory footprint during optimization).
-  - Added `nncf.parameters.IgnoredScope` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support that allows exclude layers from optimization scope in different ways.
+  - Official release of OpenVINO framework support.
+    - Ported NNCF OpenVINO backend to use the [nGraph](https://docs.openvino.ai/2021.3/openvino_docs_nGraph_DG_Introduction.html) representation of OpenVINO models.
+    - Changed dependecies of NNCF OpenVINO backend. It now depends on `openvino` package and not on the `openvino-dev` package.
+    - Added GRU/LSTM quantization support.
+    - Added quantizer scales unification.
+    - Added support for models with 3D and 5D Depthwise convolution.
+    - Added FP16 OpenVINO models support.
+  - Added `"overflow_fix"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support & functionality. It improves accuracy for optimized model for affected devices. More details in [Quantization section](docs/compression_algorithms/Quantization.md).
+  - (OpenVINO) Added support for in-place statistics collection (reduce memory footprint during optimization).
   - (OpenVINO) Added Quantization with accuracy control algorithm.
-  - (OpenVINO) Added weights compression after quantization (reduced .bin size of the optimized model).
-  - (OpenVINO) Added support of the Depthwise & GroupConvolution layers support for correct quantization.
   - (OpenVINO) Added YOLOv8 examples for [`quantize(...)`](examples/post_training_quantization/openvino/yolov8) & [`quantize_with_accuracy_control(...)`](examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control) methods.
-  - (OpenVINO) Added support for dynamic-shape models.
-  - (OpenVINO) Added GRU/LSTM quantization support.
-  - (OpenVINO) Added quantizer scales unification.
-  - (OpenVINO, ONNX) Added BiasCorrection algorithm support.
-  - (PyTorch) Added MinMaxAlgorithm support.
+  - (PyTorch) Added min-max quantization algorithm as experimental.
 
 - Fixes:
   - Fixed `ignored_scope` attribute behaviour for weights. Now, the weighted layers excludes from optimization scope correctly.
-  - (ONNX) Checking correct ONNX opset version via the `nncf.quantize(...)`. For now, models with opset < 13 are optimized correctly in per-tensor quantization.
+  - (ONNX) Checking correct ONNX opset version via the `nncf.quantize(...)`. Now, models with opset < 13 are optimized correctly in per-tensor quantization.
 
 - Improvements:
-  - Added improvements for statistic collection process (collect statistics only once).
+  - Added improvements for statistic collection process (collect weights statistics only once).
   - (PyTorch, OpenVINO, ONNX) Introduced unified quantizer parameters calculation.
-  - (OpenVINO) Added support for per-tensor & per-channel quantization.
-  - (OpenVINO) Aligned parameters for FP16 models.
 
 Compression-aware training:
 
@@ -56,7 +52,7 @@ Compression-aware training:
   - Updated ONNX version (1.13)
   - Updated Tensorflow version (2.11)
 
-- Breaking changes:
+- General changes:
   - Added Windows support for NNCF.
 
 ## New in Release 2.4.0
