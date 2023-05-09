@@ -148,21 +148,13 @@ class QuantizationAccuracyRestorer:
         :return: The quantized model whose metric `final_metric` is satisfied
             the maximum accuracy drop condition.
         """
-        if self.drop_type == DropType.ABSOLUTE:
-            max_absolute_drop = self.max_drop
-        elif self.drop_type == DropType.RELATIVE:
-            max_absolute_drop = self.max_drop * initial_metric
-        else:
-            raise ValueError(f"{self.drop_type} drop type is not supported.")
-        nncf_logger.info(f"Maximum absolute accuracy drop: {max_absolute_drop}")
-
         backend = get_backend(initial_model)
         algo_backend = get_algo_backend(backend)
 
-        accuracy_drop = initial_metric - quantized_metric
-        nncf_logger.info(f"Absolute accuracy drop: {accuracy_drop}")
+        accuracy_drop = self.calculate_accuracy_drop(initial_metric, quantized_metric)
+        nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({self.drop_type})")
 
-        if accuracy_drop <= max_absolute_drop:
+        if accuracy_drop <= self.max_drop:
             return quantized_model
 
         initial_model_graph = NNCFGraphFactory.create(initial_model)
@@ -223,8 +215,10 @@ class QuantizationAccuracyRestorer:
             current_metric = validation_fn(
                 algo_backend.prepare_for_inference(current_model), validation_dataset.get_data()
             )
-            current_accuracy_drop = initial_metric - current_metric
-            nncf_logger.info("Accuracy drop with the new quantization scope is %s", float(current_accuracy_drop))
+            current_accuracy_drop = self.calculate_accuracy_drop(initial_metric, current_metric)
+            nncf_logger.info(
+                f"Accuracy drop with the new quantization scope is {float(current_accuracy_drop)} ({self.drop_type})"
+            )
 
             if not ranked_groups:
                 nncf_logger.info(
@@ -235,12 +229,12 @@ class QuantizationAccuracyRestorer:
                 break
 
             # Accuracy was restored to the acceptable drop.
-            if current_accuracy_drop <= max_absolute_drop:
+            if current_accuracy_drop <= self.max_drop:
                 report.reached_required_drop = True
                 break
 
             # Continue greedy quantizer remove
-            if max_absolute_drop < current_accuracy_drop <= previous_accuracy_drop or (
+            if self.max_drop < current_accuracy_drop <= previous_accuracy_drop or (
                 current_accuracy_drop > previous_accuracy_drop and is_step_back
             ):
                 is_step_back = False
@@ -264,6 +258,23 @@ class QuantizationAccuracyRestorer:
         QuantizationAccuracyRestorer._print_report(report, self.max_num_iterations)
 
         return current_model
+
+    def calculate_accuracy_drop(self, initial_metric, quantized_metric):
+        """
+        Calculates accuracy drop.
+
+        :param initial_metric: Metric value for initial model.
+        :param quantized_metric: Metric value for quantized model.
+        :return: Accuracy drop value.
+        """
+        if self.drop_type == DropType.ABSOLUTE:
+            accuracy_drop = initial_metric - quantized_metric
+        elif self.drop_type == DropType.RELATIVE:
+            accuracy_drop = 1 - quantized_metric / initial_metric
+        else:
+            raise ValueError(f"{self.drop_type} drop type is not supported.")
+
+        return accuracy_drop
 
     @staticmethod
     def _collect_original_biases_and_weights(
