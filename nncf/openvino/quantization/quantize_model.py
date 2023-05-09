@@ -28,6 +28,7 @@ from nncf.openvino.pot.quantization.quantize_model import (
 )
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
+from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
@@ -122,13 +123,16 @@ def native_quantize_impl(
     return quantized_model
 
 
-@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop"])
+@tracked_function(
+    NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop", "drop_type"]
+)
 def native_quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
+    drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -201,6 +205,7 @@ def native_quantize_with_accuracy_control_impl(
         ranking_subset_size=ranking_subset_size,
         max_num_iterations=advanced_accuracy_restorer_parameters.max_num_iterations,
         max_drop=max_drop,
+        drop_type=drop_type,
     )
     quantized_model = accuracy_aware_loop.restore_accuracy(
         model, initial_metric, quantized_model, quantized_metric, validation_dataset, validation_fn
@@ -218,6 +223,7 @@ def native_quantize_with_accuracy_control_impl(
             "model_type": model_type,
             "ignored_scope": ignored_scope,
             "max_drop": max_drop,
+            "drop_type": drop_type.value,
             "advanced_quantization_parameters": convert_to_dict_recursively(advanced_quantization_parameters),
             "advanced_accuracy_restorer_parameters": convert_to_dict_recursively(advanced_accuracy_restorer_parameters),
         },
@@ -263,6 +269,7 @@ def quantize_with_accuracy_control_impl(
     validation_dataset: Dataset,
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
+    drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -285,6 +292,7 @@ def quantize_with_accuracy_control_impl(
         validation_dataset,
         validation_fn,
         max_drop,
+        drop_type,
         preset,
         target_device,
         subset_size,
