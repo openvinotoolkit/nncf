@@ -55,7 +55,6 @@ class IgnoredScope:
     **Note:** Operation types must be specified according to the model framework.
 
     :param names: List of ignored node names.
-    :param names: List of ignored node names.
     :type names: List[str]
     :param patterns: List of regular expressions that define patterns for names of ignored nodes.
     :type patterns: List[str]

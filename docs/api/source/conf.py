@@ -11,10 +11,10 @@ from sphinx.ext.autodoc import mock
 
 sys.path.insert(0, os.path.abspath("../../.."))
 
-project = "nncf"
+project = "NNCF"
+html_title = "NNCF"
 copyright = "2023, Intel Corporation"
 author = "Intel Corporation"
-release = "v2.4.0"
 
 extensions = ["autoapi.extension", "sphinx.ext.autodoc", "sphinx.ext.linkcode"]
 
@@ -176,5 +176,6 @@ def setup(sphinx):
     sphinx.connect("autoapi-skip-member", skip_non_api)
 
 
-html_theme = "sphinx_book_theme"
+html_show_sphinx = False
+html_theme = "furo"
 html_static_path = ["_static"]
