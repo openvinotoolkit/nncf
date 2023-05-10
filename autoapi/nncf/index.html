@@ -1,365 +1,490 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="nncf.api" href="api/index.html" /><link rel="prev" title="NNCF" href="../../index.html" />
 
-
-<!DOCTYPE html>
-
-
-<html lang="en" >
-
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
-
-    <title>nncf &#8212; nncf v2.4.0 documentation</title>
-  
-  
-  
-  <script data-cfasync="false">
-    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
-    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
-  </script>
-  
-  <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
-
-  
-  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=14f4ca6b54d191a8c7657f6c759bf11a5fb86285" type="text/css" />
+    <!-- Generated with Sphinx 6.1.3 and Furo 2023.03.27 -->
+        <title>nncf - NNCF</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?digest=fad236701ea90a88636c2a8c73b44ae642ed2a53" />
     <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
-  
-  <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
+    
+    
 
-    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/doctools.js"></script>
-    <script src="../../_static/sphinx_highlight.js"></script>
-    <script src="../../_static/scripts/sphinx-book-theme.js?digest=5a5c038af52cf7bc1a1ec88eea08e6366ee68824"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'autoapi/nncf/index';</script>
-    <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" />
-    <link rel="prev" title="NNCF documentation" href="../../index.html" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="en"/>
-  </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
 
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
   
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
   
-  <a class="skip-link" href="#main-content">Skip to main content</a>
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          name="__primary"
-          id="__primary"/>
-  <label class="overlay overlay-primary" for="__primary"></label>
-  
-  <input type="checkbox"
-          class="sidebar-toggle"
-          name="__secondary"
-          id="__secondary"/>
-  <label class="overlay overlay-secondary" for="__secondary"></label>
-  
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
-<form class="bd-search d-flex align-items-center"
-      action="../../search.html"
-      method="get">
-  <i class="fa-solid fa-magnifying-glass"></i>
-  <input type="search"
-         class="form-control"
-         name="q"
-         id="search-input"
-         placeholder="Search..."
-         aria-label="Search..."
-         autocomplete="off"
-         autocorrect="off"
-         autocapitalize="off"
-         spellcheck="false"/>
-  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
-  
-    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
-    </nav>
-  
-  <div class="bd-container">
-    <div class="bd-container__inner bd-page-width">
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">NNCF</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
       
-      <div class="bd-sidebar-primary bd-sidebar">
-        
-
-  
-  <div class="sidebar-header-items sidebar-primary__section">
-    
-    
-    
-    
-  </div>
-  
-    <div class="sidebar-primary-items__start sidebar-primary__section">
-        <div class="sidebar-primary-item">
-  
-
-<a class="navbar-brand logo" href="../../index.html">
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
   
+  <span class="sidebar-brand-text">NNCF</span>
   
-  
-  
-    <p class="title logo__title">nncf v2.4.0 documentation</p>
-  
-</a></div>
-        <div class="sidebar-primary-item"><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
-    <div class="bd-toc-item navbar-nav active">
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">API Reference</a></li>
-
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">API Reference</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/compression/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api.compression</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api.statistics</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="common/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="common/accuracy_aware_training/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.accuracy_aware_training</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="common/accuracy_aware_training/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.accuracy_aware_training.statistics</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="common/accuracy_aware_training/training_loop/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.accuracy_aware_training.training_loop</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="common/initialization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="common/initialization/dataloader/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization.dataloader</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="common/pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.pruning</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="common/pruning/schedulers/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.pruning.schedulers</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="common/pruning/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.pruning.statistics</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="common/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="common/quantization/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.statistics</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="common/quantization/structs/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.structs</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="common/sparsity/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.sparsity</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="common/sparsity/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.sparsity.statistics</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="common/compression/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.compression</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="common/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.statistics</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="config/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.config</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="config/structures/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.config.structures</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="quantization/advanced_parameters/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.advanced_parameters</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantization/range_estimator/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.range_estimator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="tensorflow/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="tensorflow/pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.pruning</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="tensorflow/pruning/filter_pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.pruning.filter_pruning</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="tensorflow/pruning/filter_pruning/algorithm/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.pruning.filter_pruning.algorithm</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="tensorflow/pruning/base_algorithm/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.pruning.base_algorithm</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="tensorflow/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="tensorflow/quantization/algorithm/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.quantization.algorithm</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="tensorflow/sparsity/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.sparsity</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-15" name="toctree-checkbox-15" role="switch" type="checkbox"/><label for="toctree-checkbox-15"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="tensorflow/sparsity/magnitude/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.sparsity.magnitude</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" role="switch" type="checkbox"/><label for="toctree-checkbox-16"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="tensorflow/sparsity/magnitude/algorithm/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.sparsity.magnitude.algorithm</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4 has-children"><a class="reference internal" href="tensorflow/sparsity/rb/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.sparsity.rb</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" role="switch" type="checkbox"/><label for="toctree-checkbox-17"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="tensorflow/sparsity/rb/algorithm/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.sparsity.rb.algorithm</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="torch/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-18" name="toctree-checkbox-18" role="switch" type="checkbox"/><label for="toctree-checkbox-18"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="torch/knowledge_distillation/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.knowledge_distillation</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-19" name="toctree-checkbox-19" role="switch" type="checkbox"/><label for="toctree-checkbox-19"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="torch/knowledge_distillation/algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.knowledge_distillation.algo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="torch/pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.pruning</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-20" name="toctree-checkbox-20" role="switch" type="checkbox"/><label for="toctree-checkbox-20"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="torch/pruning/filter_pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.pruning.filter_pruning</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-21" name="toctree-checkbox-21" role="switch" type="checkbox"/><label for="toctree-checkbox-21"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="torch/pruning/filter_pruning/algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.pruning.filter_pruning.algo</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="torch/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-22" name="toctree-checkbox-22" role="switch" type="checkbox"/><label for="toctree-checkbox-22"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="torch/quantization/algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.quantization.algo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="torch/sparsity/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-23" name="toctree-checkbox-23" role="switch" type="checkbox"/><label for="toctree-checkbox-23"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="torch/sparsity/const/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.const</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-24" name="toctree-checkbox-24" role="switch" type="checkbox"/><label for="toctree-checkbox-24"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="torch/sparsity/const/algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.const.algo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4 has-children"><a class="reference internal" href="torch/sparsity/magnitude/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.magnitude</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-25" name="toctree-checkbox-25" role="switch" type="checkbox"/><label for="toctree-checkbox-25"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="torch/sparsity/magnitude/algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.magnitude.algo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4 has-children"><a class="reference internal" href="torch/sparsity/rb/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.rb</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-26" name="toctree-checkbox-26" role="switch" type="checkbox"/><label for="toctree-checkbox-26"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="torch/sparsity/rb/algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.rb.algo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="torch/sparsity/base_algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.base_algo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="torch/structures/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.structures</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference external" href="./schema#http://">JSON configuration file schema</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/openvinotoolkit/nncf">Github</a></li>
 </ul>
 
-    </div>
-</nav></div>
-    </div>
-  
-  
-  <div class="sidebar-primary-items__end sidebar-primary__section">
-  </div>
-  
-  <div id="rtd-footer-container"></div>
-
+</div>
+</div>
 
       </div>
       
-      <main id="main-content" class="bd-main">
-        
-        
-
-<div class="sbt-scroll-pixel-helper"></div>
-
-          <div class="bd-content">
-            <div class="bd-article-container">
-              
-              <div class="bd-header-article">
-<div class="header-article-items header-article__inner">
-  
-    <div class="header-article-items__start">
-      
-        <div class="header-article-item"><label class="sidebar-toggle primary-toggle btn btn-sm" for="__primary" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <span class="fa-solid fa-bars"></span>
-</label></div>
-      
     </div>
-  
-  
-    <div class="header-article-items__end">
-      
-        <div class="header-article-item">
-
-<div class="article-header-buttons">
-
-
-
-
-
-<div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
-    <i class="fas fa-download"></i>
-  </button>
-  <ul class="dropdown-menu">
-      
-      
-      
-      <li><a href="../../_sources/autoapi/nncf/index.rst" target="_blank"
-   class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Download source file"
-   data-bs-placement="left" data-bs-toggle="tooltip"
->
-  
-
-<span class="btn__icon-container">
-  <i class="fas fa-file"></i>
-  </span>
-<span class="btn__text-container">.rst</span>
-</a>
-</li>
-      
-      
-      
-      
-      <li>
-<button onclick="window.print()"
-  class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Print to PDF"
-  data-bs-placement="left" data-bs-toggle="tooltip"
->
-  
-
-<span class="btn__icon-container">
-  <i class="fas fa-file-pdf"></i>
-  </span>
-<span class="btn__text-container">.pdf</span>
-</button>
-</li>
-      
-  </ul>
-</div>
-
-
-
-
-<button onclick="toggleFullScreen()"
-  class="btn btn-sm btn-fullscreen-button"
-  title="Fullscreen mode"
-  data-bs-placement="bottom" data-bs-toggle="tooltip"
->
-  
-
-<span class="btn__icon-container">
-  <i class="fas fa-expand"></i>
-  </span>
-
-</button>
-
-
-<script>
-document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
-  </button>
-`);
-</script>
-
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
-<label class="sidebar-toggle secondary-toggle btn btn-sm" for="__secondary"title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</label>
-</div></div>
-      
-    </div>
-  
-</div>
-</div>
-              
-              
-
-<div id="jb-print-docs-body" class="onlyprint">
-    <h1>nncf</h1>
-    <!-- Table of contents -->
-    <div id="print-main-content">
-        <div id="jb-print-toc">
-            
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.NNCFConfig"><code class="docutils literal notranslate"><span class="pre">NNCFConfig</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.NNCFConfig.from_dict"><code class="docutils literal notranslate"><span class="pre">NNCFConfig.from_dict()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.NNCFConfig.get_redefinable_global_param_value_for_algo"><code class="docutils literal notranslate"><span class="pre">NNCFConfig.get_redefinable_global_param_value_for_algo()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.Dataset"><code class="docutils literal notranslate"><span class="pre">Dataset</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.Dataset.get_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_data()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.Dataset.get_inference_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_inference_data()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.DropType"><code class="docutils literal notranslate"><span class="pre">DropType</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.ModelType"><code class="docutils literal notranslate"><span class="pre">ModelType</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.QuantizationPreset"><code class="docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.quantize_with_accuracy_control"><code class="docutils literal notranslate"><span class="pre">quantize_with_accuracy_control()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
-</ul>
-</li>
-</ul>
-            </nav>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
         </div>
-    </div>
-</div>
-
-              
-                
-<div id="searchbox"></div>
-                <article class="bd-article" role="main">
-                  
-  <section id="module-nncf">
+        <article role="main">
+          <section id="module-nncf">
 <span id="nncf"></span><h1><a class="reference internal" href="#module-nncf" title="nncf"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf</span></code></a><a class="headerlink" href="#module-nncf" title="Permalink to this heading">#</a></h1>
+<p>Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.</p>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/compression/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api.compression</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api.statistics</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="common/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="common/accuracy_aware_training/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.accuracy_aware_training</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="common/accuracy_aware_training/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.accuracy_aware_training.statistics</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="common/accuracy_aware_training/training_loop/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.accuracy_aware_training.training_loop</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="common/initialization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="common/initialization/dataloader/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization.dataloader</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="common/pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.pruning</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="common/pruning/schedulers/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.pruning.schedulers</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="common/pruning/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.pruning.statistics</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="common/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="common/quantization/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.statistics</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="common/quantization/structs/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.structs</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="common/sparsity/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.sparsity</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="common/sparsity/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.sparsity.statistics</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="common/compression/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.compression</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="common/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.statistics</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.config</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="config/structures/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.config.structures</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quantization/advanced_parameters/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.advanced_parameters</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="quantization/range_estimator/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.range_estimator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tensorflow/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tensorflow/pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.pruning</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tensorflow/pruning/filter_pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.pruning.filter_pruning</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="tensorflow/pruning/base_algorithm/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.pruning.base_algorithm</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tensorflow/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.quantization</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tensorflow/quantization/algorithm/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.quantization.algorithm</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tensorflow/sparsity/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.sparsity</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tensorflow/sparsity/magnitude/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.sparsity.magnitude</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="tensorflow/sparsity/rb/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.tensorflow.sparsity.rb</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="torch/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="torch/knowledge_distillation/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.knowledge_distillation</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="torch/knowledge_distillation/algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.knowledge_distillation.algo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="torch/pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.pruning</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="torch/pruning/filter_pruning/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.pruning.filter_pruning</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="torch/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.quantization</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="torch/quantization/algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.quantization.algo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="torch/sparsity/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="torch/sparsity/const/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.const</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="torch/sparsity/magnitude/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.magnitude</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="torch/sparsity/rb/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.rb</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="torch/sparsity/base_algo/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.base_algo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="torch/structures/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.structures</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
 <section id="classes">
-<h2>Classes<a class="headerlink" href="#classes" title="Permalink to this heading">#</a></h2>
-<table class="autosummary longtable table autosummary">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this heading">#</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.NNCFConfig" title="nncf.NNCFConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NNCFConfig</span></code></a></p></td>
-<td><p>A regular dictionary object extended with some utility functions.</p></td>
+<td><p>Contains the configuration parameters required for NNCF to apply the selected algorithms.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dataset</span></code></a></p></td>
-<td><p>The <cite>nncf.Dataset</cite> class defines the interface by which compression algorithms</p></td>
+<td><p>Wrapper for passing custom user datasets into NNCF algorithms.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.DropType" title="nncf.DropType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DropType</span></code></a></p></td>
 <td><p>Describes the accuracy drop type, which determines how the accuracy drop between</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ModelType</span></code></a></p></td>
-<td><p>Describes the model type the specificity of which will be taken into</p></td>
+<td><p>Describes the model type the specificity of which will be taken into account during compression.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
-<td><p>Describes the target device the specificity of which will be taken</p></td>
+<td><p>Target device architecture for compression.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
-<td><p>Generic enumeration.</p></td>
+<td><p>An enum with values corresponding to the available quantization presets.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
-<td><p>Dataclass that contains description of the ignored scope.</p></td>
+<td><p>Provides an option to specify portions of model to be excluded from compression.</p></td>
 </tr>
 </tbody>
 </table>
+</div>
 </section>
 <section id="functions">
-<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h2>
-<table class="autosummary longtable table autosummary">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset[, preset, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset[, preset, ...])</p></td>
 <td><p>Applies post-training quantization to the provided model.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantize_with_accuracy_control" title="nncf.quantize_with_accuracy_control"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize_with_accuracy_control</span></code></a>(model, ...[, max_drop, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantize_with_accuracy_control" title="nncf.quantize_with_accuracy_control"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize_with_accuracy_control</span></code></a>(model, ...[, max_drop, ...])</p></td>
 <td><p>Applies post-training quantization algorithm with accuracy control to provided model.</p></td>
 </tr>
 </tbody>
 </table>
+</div>
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.NNCFConfig">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">NNCFConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nncf.NNCFConfig" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">NNCFConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/config/config.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.NNCFConfig" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></p>
-<p>A regular dictionary object extended with some utility functions.</p>
+<p>Contains the configuration parameters required for NNCF to apply the selected algorithms.</p>
+<p>This is a regular dictionary object extended with some utility functions, such as the ability to attach well-defined
+structures to pass non-serializable objects as parameters. It is primarily built from a .json file, or from a
+Python JSON-like dictionary - both data types will be checked against a JSONSchema. See the definition of the
+schema at <a class="reference external" href="https://openvinotoolkit.github.io/nncf/schema/">https://openvinotoolkit.github.io/nncf/schema/</a>, or by calling NNCFConfig.schema().</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.NNCFConfig.from_dict">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nncf_dict</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nncf.NNCFConfig.from_dict" title="Permalink to this definition">#</a></dt>
-<dd><p>Load NNCF config from dict;
-The dict must contain only json supported primitives.</p>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nncf_dict</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/config/config.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.NNCFConfig.from_dict" title="Permalink to this definition">#</a></dt>
+<dd><p>Load NNCF config from a Python dictionary. The dict must contain only JSON-supported primitives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>nncf_dict</strong> (<em>Dict</em>) – A Python dict with the JSON-style configuration for NNCF.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#nncf.NNCFConfig" title="nncf.NNCFConfig">NNCFConfig</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nncf.NNCFConfig.from_json">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/config/config.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.NNCFConfig.from_json" title="Permalink to this definition">#</a></dt>
+<dd><p>Load NNCF config from a JSON file at <cite>path</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – Path to the .json file containing the NNCF configuration.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#nncf.NNCFConfig" title="nncf.NNCFConfig">NNCFConfig</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nncf.NNCFConfig.register_extra_structs">
+<span class="sig-name descname"><span class="pre">register_extra_structs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">struct_list</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/config/config.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.NNCFConfig.register_extra_structs" title="Permalink to this definition">#</a></dt>
+<dd><p>Attach the supplied list of extra configuration structures to this configuration object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>struct_list</strong> (<em>List</em><em>[</em><em>nncf.config.structures.NNCFExtraConfigStruct</em><em>]</em>) – List of extra configuration structures.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.NNCFConfig.get_redefinable_global_param_value_for_algo">
-<span class="sig-name descname"><span class="pre">get_redefinable_global_param_value_for_algo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algo_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nncf.NNCFConfig.get_redefinable_global_param_value_for_algo" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_redefinable_global_param_value_for_algo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algo_name</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/config/config.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.NNCFConfig.get_redefinable_global_param_value_for_algo" title="Permalink to this definition">#</a></dt>
 <dd><p>Some parameters can be specified both on the global NNCF config .json level (so that they apply
 to all algos), and at the same time overridden in the algorithm-specific section of the .json.
 This function returns the value that should apply for a given algorithm name, considering the
@@ -383,16 +508,28 @@ the resolution of the redefinable parameter should occur.</p></li>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="nncf.NNCFConfig.schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/config/config.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.NNCFConfig.schema" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the JSONSchema against which the input data formats (.json or Python dict) are validated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.Dataset">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">Dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nncf.Dataset" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">Dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">DataItem</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">ModelInput</span></code>]</p>
-<p>The <cite>nncf.Dataset</cite> class defines the interface by which compression algorithms
+<p>Wrapper for passing custom user datasets into NNCF algorithms.</p>
+<p>This class defines the interface by which compression algorithms
 retrieve data items from the passed data source object. These data items are used
-for different purposes, for example, model inference and model validation. It depends
-on the compression algorithm.</p>
+for different purposes, for example, model inference and model validation, based
+on the choice of the exact compression algorithm.</p>
 <p>If the data item has been returned from the data source per iteration and it cannot be
 used as input for model inference, the transformation function is used to extract the
 model’s input from this data item. For example, in supervised learning, the data item
@@ -401,14 +538,18 @@ the examples from the data item.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data_source</strong> (<em>Iterable</em><em>[</em><em>DataItem</em><em>]</em>) – </p></li>
-<li><p><strong>transform_func</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>DataItem</em><em>]</em><em>, </em><em>ModelInput</em><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>data_source</strong> (<em>Iterable</em><em>[</em><em>DataItem</em><em>]</em>) – The iterable object serving as the source of data items.</p></li>
+<li><p><strong>transform_func</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>DataItem</em><em>]</em><em>, </em><em>ModelInput</em><em>]</em><em>]</em>) – The function that is used to extract the model’s input
+from the data item. The data item here is the data item that is returned from
+the data source per iteration. This function should be passed when
+the data item cannot be directly used as model’s input. If this is not specified, then the data item
+will be passed into the model as-is.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.Dataset.get_data">
-<span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nncf.Dataset.get_data" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_data" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the iterable object that contains selected data items from the data source as-is.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -427,7 +568,7 @@ not passed all data items are selected from the data source.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.Dataset.get_inference_data">
-<span class="sig-name descname"><span class="pre">get_inference_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nncf.Dataset.get_inference_data" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_inference_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_inference_data" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the iterable object that contains selected data items from the data source, for which
 the transformation function was applied. The item, which was returned per iteration from this
 iterable, can be used as the model’s input for model inference.</p>
@@ -451,7 +592,7 @@ the transformation function was applied.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.DropType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">DropType</span></span><a class="headerlink" href="#nncf.DropType" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">DropType</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.DropType" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
 <p>Describes the accuracy drop type, which determines how the accuracy drop between
 the original model and the compressed model is calculated.</p>
@@ -469,10 +610,9 @@ the original model.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.ModelType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">ModelType</span></span><a class="headerlink" href="#nncf.ModelType" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">ModelType</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.ModelType" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
-<p>Describes the model type the specificity of which will be taken into
-account during compression.</p>
+<p>Describes the model type the specificity of which will be taken into account during compression.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>TRANSFORMER</strong> – Transformer-based models
@@ -483,24 +623,23 @@ account during compression.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.TargetDevice">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">TargetDevice</span></span><a class="headerlink" href="#nncf.TargetDevice" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">TargetDevice</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.TargetDevice" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
-<p>Describes the target device the specificity of which will be taken
-into account while compressing in order to obtain the best performance
+<p>Target device architecture for compression.</p>
+<p>Compression will take into account the value of this parameter in order to obtain the best performance
 for this type of device.</p>
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.QuantizationPreset">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">QuantizationPreset</span></span><a class="headerlink" href="#nncf.QuantizationPreset" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">QuantizationPreset</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/quantization/structs.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.QuantizationPreset" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
-<p>Generic enumeration.</p>
-<p>Derive from this class to define new enumerations.</p>
+<p>An enum with values corresponding to the available quantization presets.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.quantize">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">QuantizationPreset.PERFORMANCE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nncf.quantize" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">QuantizationPreset.PERFORMANCE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantize" title="Permalink to this definition">#</a></dt>
 <dd><p>Applies post-training quantization to the provided model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -543,7 +682,7 @@ fine-tuning the quantization algorithm.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.quantize_with_accuracy_control">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize_with_accuracy_control</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_drop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DropType.ABSOLUTE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">QuantizationPreset.PERFORMANCE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_quantization_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_accuracy_restorer_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nncf.quantize_with_accuracy_control" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize_with_accuracy_control</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_drop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DropType.ABSOLUTE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">QuantizationPreset.PERFORMANCE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_quantization_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_accuracy_restorer_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantize_with_accuracy_control" title="Permalink to this definition">#</a></dt>
 <dd><p>Applies post-training quantization algorithm with accuracy control to provided model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -579,7 +718,7 @@ in the model. Supported only <cite>transformer</cite> now.</p></li>
 flow graph nodes to be ignored during quantization.</p></li>
 <li><p><strong>advanced_quantization_parameters</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>nncf.quantization.advanced_parameters.AdvancedQuantizationParameters</em></a><em>]</em>) – Advanced quantization parameters for
 fine-tuning the quantization algorithm.</p></li>
-<li><p><strong>advanced_accuracy_restorer_parameters</strong> (<em>Optional</em><em>[</em><em>nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters</em><em>]</em>) – Advanced parameters for fine-tuning
+<li><p><strong>advanced_accuracy_restorer_parameters</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><em>AdvancedAccuracyRestorerParameters</em></a><em>]</em>) – Advanced parameters for fine-tuning
 the accuracy restorer algorithm.</p></li>
 </ul>
 </dd>
@@ -594,36 +733,39 @@ the accuracy restorer algorithm.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.IgnoredScope">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">IgnoredScope</span></span><a class="headerlink" href="#nncf.IgnoredScope" title="Permalink to this definition">#</a></dt>
-<dd><p>Dataclass that contains description of the ignored scope.</p>
-<p>The ignored scope defines model sub-graphs that should be excluded from
-the compression process such as quantization, pruning and etc.</p>
-<p>Examples:</p>
-<p>``
-import nncf</p>
-<p># Exclude by node name:
-node_names = [‘node_1’, ‘node_2’, ‘node_3’]
-ignored_scope = nncf.IgnoredScope(names=node_names)</p>
-<p># Exclude using regular expressions:
-patterns = [’<a href="#id3"><span class="problematic" id="id4">node_</span></a>d’]
-ignored_scope = nncf.IgnoredScope(patterns=patterns)</p>
-<p># Exclude by operation type:</p>
-<p># OpenVINO opset <a class="reference external" href="https://docs.openvino.ai/latest/openvino_docs_ops_opset.html">https://docs.openvino.ai/latest/openvino_docs_ops_opset.html</a>
-operation_types = [‘Multiply’, ‘GroupConvolution’, ‘Interpolate’]
-ignored_scope = nncf.IgnoredScope(types=operation_types)</p>
-<p># ONNX opset <a class="github reference external" href="https://github.com/onnx/onnx/blob/main/docs/Operators.md">onnx/onnx</a>
-operation_types = [‘Mul’, ‘Conv’, ‘Resize’]
-ignored_scope = nncf.IgnoredScope(types=operation_types)</p>
-<p>…</p>
-<p><a href="#id1"><span class="problematic" id="id2">``</span></a></p>
-<p><strong>Note</strong> Operation types must be specified according to the model framework.</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">IgnoredScope</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/scopes.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.IgnoredScope" title="Permalink to this definition">#</a></dt>
+<dd><p>Provides an option to specify portions of model to be excluded from compression.</p>
+<p>The ignored scope defines model sub-graphs that should be excluded from the compression process such as
+quantization, pruning and etc.</p>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nncf</span>
+
+<span class="c1"># Exclude by node name:</span>
+<span class="n">node_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;node_1&#39;</span><span class="p">,</span> <span class="s1">&#39;node_2&#39;</span><span class="p">,</span> <span class="s1">&#39;node_3&#39;</span><span class="p">]</span>
+<span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="n">node_names</span><span class="p">)</span>
+
+<span class="c1"># Exclude using regular expressions:</span>
+<span class="n">patterns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;node_\d&#39;</span><span class="p">]</span>
+<span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">patterns</span><span class="o">=</span><span class="n">patterns</span><span class="p">)</span>
+
+<span class="c1"># Exclude by operation type:</span>
+
+<span class="c1"># OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html</span>
+<span class="n">operation_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Multiply&#39;</span><span class="p">,</span> <span class="s1">&#39;GroupConvolution&#39;</span><span class="p">,</span> <span class="s1">&#39;Interpolate&#39;</span><span class="p">]</span>
+<span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">types</span><span class="o">=</span><span class="n">operation_types</span><span class="p">)</span>
+
+<span class="c1"># ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md</span>
+<span class="n">operation_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Mul&#39;</span><span class="p">,</span> <span class="s1">&#39;Conv&#39;</span><span class="p">,</span> <span class="s1">&#39;Resize&#39;</span><span class="p">]</span>
+<span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">types</span><span class="o">=</span><span class="n">operation_types</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Note:</strong> Operation types must be specified according to the model framework.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>names</strong> – List of ignored node names.</p></li>
-<li><p><strong>patterns</strong> – List of regular expressions that define patterns for names of
-ignored nodes.</p></li>
-<li><p><strong>types</strong> – List of ignored operation types.</p></li>
+<li><p><strong>names</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of ignored node names.</p></li>
+<li><p><strong>patterns</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of regular expressions that define patterns for names of ignored nodes.</p></li>
+<li><p><strong>types</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of ignored operation types.</p></li>
 </ul>
 </dd>
 </dl>
@@ -631,118 +773,104 @@ ignored nodes.</p></li>
 
 </section>
 </section>
+</section>
 
-
-                </article>
-              
-
-              
-              
-                <footer class="bd-footer-article">
-                  
-<div class="footer-article-items footer-article__inner">
-  
-    <div class="footer-article-item"><!-- Previous / next buttons -->
-<div class="prev-next-area">
-    <a class="left-prev"
-       href="../../index.html"
-       title="previous page">
-      <i class="fa-solid fa-angle-left"></i>
-      <div class="prev-next-info">
-        <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">NNCF documentation</p>
+        </article>
       </div>
-    </a>
-</div></div>
-  
-</div>
-
-                </footer>
-              
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="api/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../../index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Home</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2023, Intel Corporation
             </div>
-            
-            
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.NNCFConfig"><code class="docutils literal notranslate"><span class="pre">NNCFConfig</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.NNCFConfig.from_dict"><code class="docutils literal notranslate"><span class="pre">NNCFConfig.from_dict()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.NNCFConfig.get_redefinable_global_param_value_for_algo"><code class="docutils literal notranslate"><span class="pre">NNCFConfig.get_redefinable_global_param_value_for_algo()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.Dataset"><code class="docutils literal notranslate"><span class="pre">Dataset</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.Dataset.get_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_data()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.Dataset.get_inference_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_inference_data()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.DropType"><code class="docutils literal notranslate"><span class="pre">DropType</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.ModelType"><code class="docutils literal notranslate"><span class="pre">ModelType</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.QuantizationPreset"><code class="docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.quantize_with_accuracy_control"><code class="docutils literal notranslate"><span class="pre">quantize_with_accuracy_control()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
-</ul>
-</li>
-</ul>
-  </nav></div>
-
-</div></div>
-              
+            Made with 
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
             
           </div>
-          <footer class="bd-footer-content">
+          <div class="right-details">
             
-<div class="bd-footer-content__inner container">
-  
-  <div class="footer-item">
-    
-<p class="component-author">
-By Intel Corporation
-</p>
-
-  </div>
-  
-  <div class="footer-item">
-    
-  <p class="copyright">
-    
-      © Copyright 2023, Intel Corporation.
-      <br/>
-    
-  </p>
-
-  </div>
-  
-  <div class="footer-item">
-    
-  </div>
-  
-  <div class="footer-item">
-    
-  </div>
-  
-</div>
-          </footer>
+          </div>
+        </div>
         
-
-      </main>
+      </footer>
     </div>
-  </div>
-  
-  <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf</span></code></a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li><a class="reference internal" href="#classes">Classes</a></li>
+<li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#nncf.NNCFConfig"><code class="docutils literal notranslate"><span class="pre">NNCFConfig</span></code></a><ul>
+<li><a class="reference internal" href="#nncf.NNCFConfig.from_dict"><code class="docutils literal notranslate"><span class="pre">NNCFConfig.from_dict()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.NNCFConfig.from_json"><code class="docutils literal notranslate"><span class="pre">NNCFConfig.from_json()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.NNCFConfig.register_extra_structs"><code class="docutils literal notranslate"><span class="pre">NNCFConfig.register_extra_structs()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.NNCFConfig.get_redefinable_global_param_value_for_algo"><code class="docutils literal notranslate"><span class="pre">NNCFConfig.get_redefinable_global_param_value_for_algo()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.NNCFConfig.schema"><code class="docutils literal notranslate"><span class="pre">NNCFConfig.schema()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#nncf.Dataset"><code class="docutils literal notranslate"><span class="pre">Dataset</span></code></a><ul>
+<li><a class="reference internal" href="#nncf.Dataset.get_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_data()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.Dataset.get_inference_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_inference_data()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#nncf.DropType"><code class="docutils literal notranslate"><span class="pre">DropType</span></code></a></li>
+<li><a class="reference internal" href="#nncf.ModelType"><code class="docutils literal notranslate"><span class="pre">ModelType</span></code></a></li>
+<li><a class="reference internal" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
+<li><a class="reference internal" href="#nncf.QuantizationPreset"><code class="docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></li>
+<li><a class="reference internal" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.quantize_with_accuracy_control"><code class="docutils literal notranslate"><span class="pre">quantize_with_accuracy_control()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
 
-  <footer class="bd-footer">
-  </footer>
-  </body>
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/scripts/furo.js"></script>
+    </body>
 </html>
