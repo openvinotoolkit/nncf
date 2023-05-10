@@ -42,7 +42,6 @@ except ImportError:
 
 try:
     import openvino.runtime as ov_runtime
-    import openvino.tools.pot as ov_pot
 except ImportError:
     _LOADED_FRAMEWORKS["openvino"] = False
 
