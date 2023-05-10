@@ -21,6 +21,7 @@ EXCLUDED_MODULES_PATTERNS = (
     ".*?onnx_[^\\.]*",
     ".*?torch_[^\\.]*",
     ".*?tf_[^\\.]*",
+    "nncf\\.openvino\\.pot.*",
 )
 
 load_nncf_modules(EXCLUDED_MODULES_PATTERNS)
