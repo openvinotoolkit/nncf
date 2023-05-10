@@ -13,7 +13,6 @@ from typing import Any, Dict, Optional, Tuple
 
 import torch
 
-from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import ModelType
