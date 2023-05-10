@@ -448,7 +448,8 @@ class OVModelTransformer(ModelTransformer):
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
             node = name_to_node_mapping[node_name]
-            # Since layers that may have biases mostly are Convolution or MatMul variations, we may use only 0 output port.
+            # Since layers that may have biases mostly are Convolution or MatMul variations, 
+            # we may use only 0 output port.
             node_shape = node.output(0).partial_shape.get_max_shape()
             node_output_port = node.output(transformation.target_point.port_id)
             node_output_source_ports = node_output_port.get_target_inputs()
