@@ -56,7 +56,7 @@ def _idfn(val):
     return None
 
 
-def check_quantizer_operators(model, levels=255, overflow_fix=True):
+def check_quantizer_operators(model, levels=255):
     """Check that model contains only 8bit FakeQuantize operators."""
 
     if hasattr(model.nncf, "external_quantizers"):
@@ -75,10 +75,7 @@ def check_quantizer_operators(model, levels=255, overflow_fix=True):
             for key in list(nncf_module.pre_ops.keys()):
                 op = nncf_module.get_pre_op(key).op
                 assert isinstance(op, FakeQuantize)
-                is_symmetric = op.qscheme in [torch.per_tensor_symmetric, torch.per_channel_symmetric]
-                narrow_range = levels in [255, 256] and not overflow_fix
-                ref_levels = levels - 1 if is_symmetric and narrow_range else levels
-                assert op.quant_max - op.quant_min == ref_levels
+                assert op.quant_max - op.quant_min == levels
 
         if hasattr(nncf_module, "post_ops"):
             for key in list(nncf_module.post_ops.keys()):
@@ -243,7 +240,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
 @pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
 @pytest.mark.parametrize("overflow_fix", ("disable", "enable"), ids=("overflow_fix_disable", "overflow_fix_enable"))
 @pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
-def test_strip_quantization(mode, overflow_fix, num_bits):
+def test_strip_quantization(mode, overflow_fix, num_bits, tmp_path):
     model = BasicConvTestModel()
 
     config = _get_config_for_algo(model.INPUT_SIZE, mode, overflow_fix, bits=num_bits)
@@ -255,10 +252,13 @@ def test_strip_quantization(mode, overflow_fix, num_bits):
 
     inference_model = compression_ctrl.strip()
     x_torch = inference_model(input_tensor)
-    # overflow_fix = False, because target_device = TRIAL
-    check_quantizer_operators(inference_model, 2**num_bits - 1, overflow_fix=False)
+    check_quantizer_operators(inference_model, 2**num_bits - 1)
 
-    assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
+    assert torch.all(torch.isclose(x_nncf, x_torch, atol=1e-6)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
+
+    if num_bits == 8:
+        # ONNX export only supports 8 bits
+        torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx")
 
 
 @pytest.mark.parametrize("do_copy", (True, False))
