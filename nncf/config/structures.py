@@ -8,7 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Structures for passing live Python objects into NNCF algorithms.
+"""
 from typing import Callable, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
@@ -30,17 +32,13 @@ class NNCFExtraConfigStruct:
 class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
     """
     Stores additional arguments for quantization range initialization algorithms.
+
+    :param data_loader: Provides an iterable over the given dataset.
+    :param device: Device to perform initialization. If `device` is `None`
+        then the device of the model parameters will be used.
     """
 
     def __init__(self, data_loader: NNCFDataLoader, device: Optional[str] = None):
-        """
-        Initializes additional arguments for quantization range initialization
-        algorithms.
-
-        :param data_loader: Provides an iterable over the given dataset.
-        :param device: Device to perform initialization. If `device` is `None`
-            then the device of the model parameters will be used.
-        """
         self._data_loader = data_loader
         self._device = device
 
@@ -61,17 +59,13 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
 class BNAdaptationInitArgs(NNCFExtraConfigStruct):
     """
     Stores additional arguments for batchnorm statistics adaptation algorithm.
+
+    :param data_loader: Provides an iterable over the given dataset.
+    :param device: Device to perform initialization. If `device` is `None`
+        then the device of the model parameters will be used.
     """
 
     def __init__(self, data_loader: NNCFDataLoader, device: Optional[str] = None):
-        """
-        Initializes additional arguments for batchnorm statistics adaptation
-        algorithm.
-
-        :param data_loader: Provides an iterable over the given dataset.
-        :param device: Device to perform initialization. If `device` is `None`
-            then the device of the model parameters will be used.
-        """
         self._data_loader = data_loader
         self._device = device
 
@@ -90,6 +84,13 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
 
 @api()
 class ModelEvaluationArgs(NNCFExtraConfigStruct):
+    """
+    Stores additional arguments for running the model in the evaluation mode, should this be required for an algorithm.
+
+    :param eval_fn: A function accepting a single argument - the model object - and returning the model's metric on
+        the evaluation split of the dataset corresponding to the model.
+    """
+
     def __init__(self, eval_fn: Callable):
         self.eval_fn = eval_fn
 

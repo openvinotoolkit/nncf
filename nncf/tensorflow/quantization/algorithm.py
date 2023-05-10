@@ -693,7 +693,11 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
 @api()
 class QuantizationController(BaseCompressionAlgorithmController):
-    def __init__(self, target_model, config, op_names: List[str]):
+    """
+    Controller for the quantization algorithm in TensorFlow.
+    """
+
+    def __init__(self, target_model, config: NNCFConfig, op_names: List[str]):
         super().__init__(target_model)
         self._scheduler = BaseCompressionScheduler()
         self._loss = TFZeroCompressionLoss()
@@ -706,6 +710,10 @@ class QuantizationController(BaseCompressionAlgorithmController):
 
     @property
     def loss(self) -> CompressionLoss:
+        """
+        Returns the loss that is always zero since the quantization algorithm is driven by the original loss and does
+        not require additional losses.
+        """
         return self._loss
 
     def strip_model(self, model: tf.keras.Model, do_copy: bool = False) -> tf.keras.Model:
