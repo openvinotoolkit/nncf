@@ -72,7 +72,6 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTThresholdMetatype,
         operator_metatypes.PTDropoutMetatype,
         operator_metatypes.PTPadMetatype,
-        operator_metatypes.PTCatMetatype,
         operator_metatypes.PTMaxMetatype,
         operator_metatypes.PTMinMetatype,
         operator_metatypes.PTTransposeMetatype,

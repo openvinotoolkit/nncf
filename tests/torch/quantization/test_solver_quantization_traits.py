@@ -61,8 +61,6 @@ def test_set_quantization_traits_for_quant_prop_graph_nodes():
 def test_quantization_traits_are_unambiguous_for_op_names():
     op_name_to_trait_dict = {}  # type: Dict[str, QuantizationTrait]
     for trait, arches in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT.items():
-        if trait == QuantizationTrait.CONCAT:
-            continue
         for op_meta in arches:
             aliases = op_meta.get_all_aliases()
             for alias in aliases:
@@ -70,10 +68,3 @@ def test_quantization_traits_are_unambiguous_for_op_names():
                     assert op_name_to_trait_dict[alias] == trait
                 else:
                     op_name_to_trait_dict[alias] = trait
-
-    # Concat metatype belongs to QuantizationTrait.QUANTIZATION_AGNOSTIC and QuantizationTrait.CONCAT
-    for op_meta in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.CONCAT]:
-        aliases = op_meta.get_all_aliases()
-        for alias in aliases:
-            assert alias in op_name_to_trait_dict
-            assert op_name_to_trait_dict[alias] == QuantizationTrait.QUANTIZATION_AGNOSTIC
