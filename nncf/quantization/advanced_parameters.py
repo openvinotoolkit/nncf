@@ -8,7 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Structures and functions for passing advanced parameters to NNCF post-training quantization APIs.
+"""
 import sys
 from dataclasses import dataclass
 from dataclasses import field
@@ -24,6 +26,7 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 
+@api()
 class OverflowFix(Enum):
     """
     This option controls whether to apply the overflow issue fix for the 8-bit
@@ -53,24 +56,34 @@ class OverflowFix(Enum):
     DISABLE = "disable"
 
 
+@api()
 @dataclass
 class QuantizationParameters:
     """
     Contains quantization parameters for weights or activations.
 
     :param num_bits: The number of bits to use for quantization.
+    :type num_bits: Optional[int]
     :param mode: The quantization mode to use, such as 'symmetric', 'asymmetric', etc.
+    :type mode: nncf.common.quantization.structs.QuantizationMode
     :param signedness_to_force: Whether to force the weights or activations to be
         signed (True), unsigned (False)
+    :type signedness_to_force: Optional[bool]
     :param per_channel: True if per-channel quantization is used, and False if
         per-tensor quantization is used.
-    :param narrow_range: Whether to use a narrow quantization range. If narrow range is
-        False then the input will be quantized into quantizaiton range
-        [0; 2^num_bits - 1] for unsigned qunatization and
-        [-2^(num_bits - 1); 2^(num_bits - 1) - 1] for signed quantization, otherwise
-        [0; 2^num_bits - 2] for unsigned qunatization and
-        [-2^(num_bits - 1) + 1; 2^(num_bits - 1) - 1] for signed quantization
-        when it is True.
+    :type per_channel: Optional[bool]
+    :param narrow_range: Whether to use a narrow quantization range.
+
+        If False, then the input will be quantized into quantization range
+
+        * [0; 2^num_bits - 1] for unsigned quantization and
+        * [-2^(num_bits - 1); 2^(num_bits - 1) - 1] for signed quantization
+
+        If True, then the ranges would be:
+
+        * [0; 2^num_bits - 2] for unsigned quantization and
+        * [-2^(num_bits - 1) + 1; 2^(num_bits - 1) - 1] for signed quantization
+    :type narrow_range: Optional[bool]
     """
 
     num_bits: Optional[int] = None
@@ -80,6 +93,7 @@ class QuantizationParameters:
     narrow_range: Optional[bool] = None
 
 
+@api()
 @dataclass
 class AdvancedBiasCorrectionParameters:
     """
@@ -87,8 +101,10 @@ class AdvancedBiasCorrectionParameters:
 
     :param apply_for_all_nodes: Whether to apply the correction to all nodes in the
         model, or only to nodes that have a bias.
+    :type apply_for_all_nodes: bool
     :param threshold: The threshold value determines the maximum bias correction value.
         The bias correction are skipped If the value is higher than threshold.
+    :type threshold: Optional[float]
     """
 
     apply_for_all_nodes: bool = False
@@ -103,18 +119,27 @@ class AdvancedQuantizationParameters:
 
     :param overflow_fix: This option controls whether to apply the overflow issue fix
         for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
+    :type overflow_fix: nncf.quantization.advanced_parameters.OverflowFix
     :param quantize_outputs: Whether to insert additional quantizers right before each
         of the model outputs.
-    :param inplace_statistics: Defines wheather to calculate quantizers statistics by
+    :type quantize_outputs: bool
+    :param inplace_statistics: Defines whether to calculate quantizers statistics by
         backend graph operations or by default Python implementation, defaults to True.
+    :type inplace_statistics: bool
     :param disable_bias_correction: Whether to disable the bias correction.
+    :type disable_bias_correction: bool
     :param activations_quantization_params: Quantization parameters for activations.
+    :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
-    :param activations_range_estimator_params: Range estimator parameters for
-        activations.
+    :type weights_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
+    :param activations_range_estimator_params: Range estimator parameters for activations.
+    :type activations_range_estimator_params: nncf.quantization.range_estimator.RangeEstimatorParameters
     :param weights_range_estimator_params: Range estimator parameters for weights.
-    :param bias_correction_params: Advanced bias correction paramters.
+    :type weights_range_estimator_params: nncf.quantization.range_estimator.RangeEstimatorParameters
+    :param bias_correction_params: Advanced bias correction parameters.
+    :type bias_correction_params: nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters
     :param backend_params: Backend-specific parameters.
+    :type backend_params: Dict[str, Any]
     """
 
     # General parameters
@@ -138,6 +163,7 @@ class AdvancedQuantizationParameters:
     backend_params: Dict[str, Any] = field(default_factory=dict)
 
 
+@api()
 @dataclass
 class AdvancedAccuracyRestorerParameters:
     """
@@ -147,15 +173,19 @@ class AdvancedAccuracyRestorerParameters:
         In other words, the maximum number of layers that may be reverted back to
         floating-point precision. By default, it is limited by the overall number of
         quantized layers.
+    :type max_num_iterations: int
     :param tune_hyperparams: Whether to tune of quantization parameters as a
         preliminary step before reverting layers back to the floating-point precision.
         It can bring an additional boost in performance and accuracy, at the cost of
         increased overall quantization time. The default value is `False`.
+    :type tune_hyperparams: int
     :param convert_to_mixed_preset: Whether to convert the model to mixed mode if
         the accuracy criteria of the symmetrically quantized model are not satisfied.
         The default value is `False`.
+    :type convert_to_mixed_preset: bool
     :param ranking_subset_size: Size of a subset that is used to rank layers by their
         contribution to the accuracy drop.
+    :type ranking_subset_size: Optional[int]
     """
 
     max_num_iterations: int = sys.maxsize

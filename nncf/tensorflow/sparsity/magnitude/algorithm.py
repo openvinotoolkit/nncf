@@ -136,10 +136,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register("tf_magnitude_sparsity")
 class MagnitudeSparsityController(BaseSparsityController):
     """
-    Serves as a handle to the additional modules, parameters and hooks inserted
-    into the original uncompressed model in order to enable algorithm-specific compression.
-    Hosts entities that are to be used during the training process, such as compression scheduler and
-    compression loss.
+    Controller class for magnitude sparsity in TF.
     """
 
     def __init__(self, target_model, config: NNCFConfig, op_names):
@@ -178,6 +175,12 @@ class MagnitudeSparsityController(BaseSparsityController):
         self._frozen = freeze
 
     def set_sparsity_level(self, sparsity_level, run_batchnorm_adaptation: bool = False):
+        """
+        Sets the sparsity level that should be applied to the model's weights.
+
+        :param sparsity_level: Sparsity level that should be applied to the model's weights.
+        :param run_batchnorm_adaptation: Whether to run batchnorm adaptation after setting the sparsity level.
+        """
         if not self._frozen:
             if sparsity_level >= 1 or sparsity_level < 0:
                 raise AttributeError(

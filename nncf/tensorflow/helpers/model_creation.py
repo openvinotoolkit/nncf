@@ -76,10 +76,8 @@ def create_compressed_model(
     :param compression_state: compression state to unambiguously restore the compressed model.
         Includes builder and controller states. If it is specified, trainable parameter initialization will be skipped
         during building.
-    :return: A tuple (compression_ctrl, compressed_model) where
-        - compression_ctrl: The controller of the compression algorithm.
-        - compressed_model: The model with additional modifications
-            necessary to enable algorithm-specific compression during fine-tuning.
+    :return: A tuple of the compression controller for the requested algorithm(s) and the model object with additional
+     modifications necessary to enable algorithm-specific compression during fine-tuning.
     """
     if is_experimental_quantization(config):
         if is_keras_layer_model(model):

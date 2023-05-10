@@ -18,8 +18,10 @@ from nncf.common.sparsity.statistics import ConstSparsityStatistics
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.sparsity.statistics import RBSparsityStatistics
+from nncf.common.utils.api_marker import api
 
 
+@api()
 class NNCFStatistics(Statistics):
     """
     Groups statistics for all available NNCF compression algorithms.
@@ -94,25 +96,20 @@ class NNCFStatistics(Statistics):
 
     @property
     def binarization(self) -> None:
-        """
-        Returns statistics of the binarization algorithm. If statistics
-        have not been collected, `None` will be returned.
-
-        :return: `None`.
-        """
-        return self._storage.get("binarization")
+        raise NotImplementedError
 
     def register(self, algorithm_name: str, stats: Statistics):
         """
         Registers statistics for the algorithm.
 
         :param algorithm_name: Name of the algorithm. Should be one of the following
-            - magnitude_sparsity
-            - rb_sparsity
-            - const_sparsity
-            - quantization
-            - filter_pruning
-            - binarization
+            * magnitude_sparsity
+            * rb_sparsity
+            * const_sparsity
+            * quantization
+            * filter_pruning
+            * binarization
+
         :param stats: Statistics of the algorithm.
         """
 

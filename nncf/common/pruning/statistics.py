@@ -12,6 +12,7 @@
 from typing import List
 
 from nncf.api.statistics import Statistics
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.helpers import create_table
 
 
@@ -111,9 +112,15 @@ class PrunedModelStatistics(Statistics):
         return pretty_string
 
 
+@api()
 class FilterPruningStatistics(Statistics):
     """
     Contains statistics of the filter pruning algorithm.
+
+    :param model_statistics: Statistics of the pruned model.
+    :param current_pruning_level: A current level of the pruning for the algorithm for the current epoch.
+    :param target_pruning_level: A target level of the pruning for the algorithm.
+    :param prune_flops: Is pruning algo sets flops pruning level or not (filter pruning level).
     """
 
     def __init__(
@@ -123,17 +130,6 @@ class FilterPruningStatistics(Statistics):
         target_pruning_level: float,
         prune_flops: bool,
     ):
-        """
-        Initializes statistics of the filter pruning algorithm.
-
-        :param model_statistics: Statistics of the pruned model.
-        :param current_pruning_level: A current level of the pruning
-            for the algorithm for the current epoch.
-        :param target_pruning_level: A target level of the pruning
-            for the algorithm.
-        :param prune_flops: Is pruning algo sets flops pruning level or
-            not (filter pruning level).
-        """
         self.model_statistics = model_statistics
         self.current_pruning_level = current_pruning_level
         self.target_pruning_level = target_pruning_level

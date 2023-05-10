@@ -12,16 +12,18 @@
 from abc import ABC
 from abc import abstractmethod
 
+from nncf.common.utils.api_marker import api
 
+
+@api()
 class Statistics(ABC):
     """
-    Contains a data collection and provides a way for its human-readable representation.
+    Contains a collection of model- or compression-related data and provides a way for its human-readable
+    representation.
     """
 
     @abstractmethod
     def to_str(self) -> str:
         """
         Returns a representation of the statistics as a human-readable string.
-
-        :return: A representation of the statistics as a human-readable string.
         """
