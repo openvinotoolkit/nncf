@@ -16,8 +16,8 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.command_creation import CommandCreator
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
+from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 
@@ -51,6 +51,6 @@ class OVCommandCreator(CommandCreator):
         return OVWeightUpdateCommand(target_point, weight_value)
 
     @staticmethod
-    def create_command_to_insert_bias(node_without_bias: NNCFNode) -> OVBiasInsertionCommand:
+    def create_command_to_insert_bias(node_without_bias: NNCFNode) -> OVNullBiasInsertionCommand:
         target_point = OVTargetPoint(TargetType.POST_LAYER_OPERATION, node_without_bias.node_name, 0)
-        return OVBiasInsertionCommand(target_point)
+        return OVNullBiasInsertionCommand(target_point)

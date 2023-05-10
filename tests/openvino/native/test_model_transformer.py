@@ -28,9 +28,9 @@ from nncf.openvino.graph.node_utils import get_inplace_min_op
 from nncf.openvino.graph.node_utils import get_reduce_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -534,7 +534,7 @@ def test_null_biases_insertion(model_with_parameters):
     model = model_with_parameters["model"]
     layers = model_with_parameters["layers"]
 
-    transformed_model = create_transformed_model(model, layers, TargetType.LAYER, OVBiasInsertionCommand, port_id=0)
+    transformed_model = create_transformed_model(model, layers, TargetType.LAYER, OVNullBiasInsertionCommand, port_id=0)
     ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
 
     for layer_name in layers:

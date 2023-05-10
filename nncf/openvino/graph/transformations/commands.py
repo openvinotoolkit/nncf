@@ -147,7 +147,7 @@ class OVModelExtractionCommand(Command):
         raise NotImplementedError()
 
 
-class OVBiasInsertionCommand(TransformationCommand):
+class OVNullBiasInsertionCommand(TransformationCommand):
     """
     Inserts null bias for the corresponding node.
     """

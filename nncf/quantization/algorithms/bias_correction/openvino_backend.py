@@ -31,9 +31,9 @@ from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
@@ -80,7 +80,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return OVModelExtractionCommand(inputs, outputs)
 
     @staticmethod
-    def create_bias_insertion_command(node: NNCFNode) -> OVBiasInsertionCommand:
+    def create_bias_insertion_command(node: NNCFNode) -> OVNullBiasInsertionCommand:
         return OVCommandCreator.create_command_to_insert_bias(node)
 
     @staticmethod
