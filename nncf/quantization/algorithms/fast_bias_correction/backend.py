@@ -40,6 +40,13 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def types_to_insert_bias(self):
+        """
+        Returns backend-specific list of the metatypes that should be with bias.
+        """
+
+    @property
+    @abstractmethod
     def tensor_processor(self):
         """
         Returns backend-specific instance of the NNCFCollectorTensorProcessor.
@@ -59,7 +66,19 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph):
+    def create_bias_insertion_command(node: NNCFNode) -> TransformationCommand:
+        """
+        Returns backend-specific command that inserts null bias.
+
+        :param node: The node for which bias should be inserted.
+        :return: Backend-specific command that inserts output.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+    ) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 

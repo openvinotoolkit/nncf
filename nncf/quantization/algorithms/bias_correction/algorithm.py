@@ -130,11 +130,11 @@ class BiasCorrection(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
+        model = self._insert_null_biases(model)
         main_transformations_layout = TransformationLayout()
         main_model_transformer = ModelTransformerFactory.create(model)
 
         model_copy = copy_model(model)
-        model_copy = self._insert_null_biases(model_copy)
         model_copy = self._remove_fq_from_inputs(model_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
 

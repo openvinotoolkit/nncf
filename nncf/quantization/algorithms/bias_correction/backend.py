@@ -89,6 +89,16 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def create_bias_insertion_command(node: NNCFNode) -> TransformationCommand:
+        """
+        Returns backend-specific command that inserts null bias.
+
+        :param node: The node for which bias should be inserted.
+        :return: Backend-specific command that inserts output.
+        """
+
+    @staticmethod
+    @abstractmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: TargetPoint) -> TransformationCommand:
         """
         Returns backend-specific command that inserts output.

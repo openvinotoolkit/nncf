@@ -122,16 +122,15 @@ class FastBiasCorrection(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        model_copy = copy_model(model)
-        model_copy = self._insert_null_biases(model_copy)
+        model = self._insert_null_biases(model)
 
-        nncf_graph = NNCFGraphFactory.create(model_copy)
+        nncf_graph = NNCFGraphFactory.create(model)
         node_and_bias_value = (
-            (node, self._backend_entity.get_bias_value(node, nncf_graph, model_copy))
+            (node, self._backend_entity.get_bias_value(node, nncf_graph, model))
             for node in nncf_graph.get_all_nodes()
             if self._backend_entity.is_node_with_bias(node, nncf_graph)
         )
-        model_transformer = ModelTransformerFactory.create(model_copy)
+        model_transformer = ModelTransformerFactory.create(model)
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []

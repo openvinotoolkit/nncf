@@ -28,6 +28,7 @@ from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -67,6 +68,10 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:
         return ONNXModelExtractionCommand(inputs, outputs)
+
+    @staticmethod
+    def create_bias_insertion_command(node: NNCFNode) -> ONNXNullBiasInsertionCommand:
+        return ONNXNullBiasInsertionCommand(node)
 
     @staticmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> ONNXOutputInsertionCommand:
