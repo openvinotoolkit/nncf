@@ -192,6 +192,7 @@ def quantize_with_accuracy_control(
         fine-tuning the quantization algorithm.
     :param advanced_accuracy_restorer_parameters: Advanced parameters for fine-tuning
         the accuracy restorer algorithm.
+    :type advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters]
     :return: The quantized model.
     :rtype: TModel
     """

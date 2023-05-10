@@ -20,7 +20,15 @@ from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
 
 
+@api()
 class QuantizationMode:
+    """
+    Basic enumeration for quantization mode specification.
+
+    :param SYMMETRIC:
+    :param ASYMMETRIC:
+    """
+
     SYMMETRIC = "symmetric"
     ASYMMETRIC = "asymmetric"
 
@@ -311,6 +319,10 @@ class UnifiedScaleType(Enum):
 
 @api(canonical_alias="nncf.QuantizationPreset")
 class QuantizationPreset(Enum):
+    """
+    An enum with values corresponding to the available quantization presets.
+    """
+
     PERFORMANCE = "performance"
     MIXED = "mixed"
 

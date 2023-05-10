@@ -3,18 +3,21 @@ import inspect
 import os
 import pkgutil
 import sys
-from typing import Dict, List
+from dataclasses import dataclass
+from dataclasses import field
+from typing import Any, Dict, List
 
 from sphinx.ext.autodoc import mock
 
 sys.path.insert(0, os.path.abspath("../../.."))
 
-project = "nncf"
+project = "NNCF"
+html_title = "NNCF"
 copyright = "2023, Intel Corporation"
 author = "Intel Corporation"
-release = "v2.4.0"
 
-extensions = ["autoapi.extension", "sphinx.ext.autodoc"]
+extensions = ["autoapi.extension", "sphinx.ext.autodoc", "sphinx.ext.linkcode"]
+
 # The below line in conjunction with specifying the 'sphinx.ext.autodoc' as extension
 # makes the type hints from the function signature disappear from the signature in the HTML and instead
 # show up in the function's documentation body. We use this to make the argument types in the documentation
@@ -37,12 +40,22 @@ html_theme_options = {
 exclude_patterns = []
 
 
-def collect_api_entities() -> List[str]:
+class APIInfo:
+    def __init__(self):
+        self.api_names_vs_obj_dict: Dict[str, Any] = {}
+        self.fqn_vs_canonical_name: Dict[str, str] = {}
+        self.canonical_name_vs_fqn: Dict[str, str] = {}
+
+
+def collect_api_entities() -> APIInfo:
     """
     Collects the fully qualified names of symbols in NNCF package that contain a special attribute (set via
     `nncf.common.api_marker.api` decorator) marking them as API entities.
-    :return: A list of fully qualified names of API symbols.
+
+    :return: A struct with API information, such as fully qualified names of API symbols and canonical name matching
+      information.
     """
+    retval = APIInfo()
     modules = {}
     skipped_modules = {}  # type: Dict[str, str]
     import nncf
@@ -57,8 +70,6 @@ def collect_api_entities() -> List[str]:
 
     from nncf.common.utils.api_marker import api
 
-    api_fqns = dict()
-    aliased_fqns = {}  # type: Dict[str, str]
     canonical_imports_seen = set()
     for modname, module in modules.items():
         print(f"{modname}")
@@ -78,18 +89,19 @@ def collect_api_entities() -> List[str]:
                             canonical_import_name = getattr(obj, api.CANONICAL_ALIAS_ATTR)
                             if canonical_import_name in canonical_imports_seen:
                                 assert False, f"Duplicate canonical_alias detected: {canonical_import_name}"
-                            aliased_fqns[fqn] = canonical_import_name
+                            retval.fqn_vs_canonical_name[fqn] = canonical_import_name
+                            retval.canonical_name_vs_fqn[canonical_import_name] = fqn
                             canonical_imports_seen.add(canonical_import_name)
                             if canonical_import_name == fqn:
                                 print(f"\t{obj_name}")
                             else:
                                 print(f"\t{obj_name} -> {canonical_import_name}")
-                        api_fqns[fqn] = obj
+                        retval.api_names_vs_obj_dict[fqn] = obj
 
     print()
     skipped_str = "\n".join([f"{k}: {v}" for k, v in skipped_modules.items()])
     print(f"Skipped: {skipped_str}\n")
-    for fqn, canonical_alias in aliased_fqns.items():
+    for fqn, canonical_alias in retval.fqn_vs_canonical_name.items():
         try:
             module_name, _, function_name = canonical_alias.rpartition(".")
             getattr(importlib.import_module(module_name), function_name)
@@ -99,20 +111,20 @@ def collect_api_entities() -> List[str]:
                 f"Adjust the __init__.py files so that the symbol is available for import as {canonical_alias}."
             )
             raise e
-        api_fqns[canonical_alias] = api_fqns.pop(fqn)
+        retval.api_names_vs_obj_dict[canonical_alias] = retval.api_names_vs_obj_dict.pop(fqn)
 
     print("API entities:")
-    for api_fqn in api_fqns:
+    for api_fqn in retval.api_names_vs_obj_dict:
         print(api_fqn)
-    return list(api_fqns.keys())
+    return retval
 
 
 with mock(["torch", "torchvision", "onnx", "onnxruntime", "openvino", "tensorflow", "tensorflow_addons"]):
-    api_fqns = collect_api_entities()
+    api_info = collect_api_entities()
 
 module_fqns = set()
 
-for fqn in api_fqns:
+for fqn in api_info.api_names_vs_obj_dict:
     path_elements = fqn.split(".")
     for i in range(1, len(path_elements)):
         intermediate_module_path = ".".join(path_elements[:i])
@@ -125,12 +137,12 @@ def skip_non_api(app, what, name, obj, skip, options):
     # non-private symbol available in NNCF)
     if what in ["module", "package"] and name in module_fqns:
         print(f"skip_non_api: keeping module {name}")
-        return skip
-    if what in ["method", "attribute"]:
+        return False
+    if what in ["method", "attribute", "property"]:
         class_name = name.rpartition(".")[0]
-        if class_name in api_fqns:
+        if class_name in api_info.api_names_vs_obj_dict:
             return skip
-    if name not in api_fqns:
+    if name not in api_info.api_names_vs_obj_dict:
         skip = True
     else:
         print(f"skip_non_api: keeping API entity {name}")
@@ -138,9 +150,32 @@ def skip_non_api(app, what, name, obj, skip, options):
     return skip
 
 
+def linkcode_resolve(domain, info):
+    # sphinx.ext.linkcode interface; will link to Github here.
+    target_ref = "develop"
+    base_url = f"https://github.com/openvinotoolkit/nncf/blob/{target_ref}/"
+    if not info["module"]:
+        return None
+    fullname = info["module"] + "." + info["fullname"]
+
+    if fullname not in api_info.api_names_vs_obj_dict:
+        # Got a method/property description, info["fullname"] contained class.method_name
+        fullname = fullname.rpartition(".")[0]
+
+    if fullname in api_info.canonical_name_vs_fqn:
+        fullname = api_info.canonical_name_vs_fqn[fullname]
+        module_name = fullname.rpartition(".")[0]
+    else:
+        module_name = info["module"]
+    filename = module_name.replace(".", "/")
+    complete_url = base_url + filename + ".py"
+    return complete_url
+
+
 def setup(sphinx):
     sphinx.connect("autoapi-skip-member", skip_non_api)
 
 
-html_theme = "sphinx_book_theme"
+html_show_sphinx = False
+html_theme = "furo"
 html_static_path = ["_static"]

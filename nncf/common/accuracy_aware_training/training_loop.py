@@ -8,11 +8,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Implementations of training loops to be used for accuracy aware training.
+"""
+import pathlib
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import TypeVar
+from typing import Callable, Optional, TypeVar, Union
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -30,56 +33,62 @@ from nncf.config.extractors import extract_accuracy_aware_training_params
 from nncf.config.structures import ModelEvaluationArgs
 
 TModel = TypeVar("TModel")
+TensorboardWriterType = TypeVar("TensorboardWriterType")
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry("adaptive_compression_controllers")
 
 
+@api()
 class TrainingLoop(ABC):
     """
-    The training loop object is instantiated by the user, the training process
-    is launched via the `run` method.
+    The training loop object that launches the training process via the `run` method.
     """
 
     @abstractmethod
     def run(
         self,
         model: TModel,
-        train_epoch_fn,
-        validate_fn,
-        configure_optimizers_fn=None,
-        dump_checkpoint_fn=None,
-        load_checkpoint_fn=None,
-        early_stopping_fn=None,
-        tensorboard_writer=None,
-        log_dir=None,
+        train_epoch_fn: Callable,
+        validate_fn: Callable,
+        configure_optimizers_fn: Callable = None,
+        dump_checkpoint_fn: Callable = None,
+        load_checkpoint_fn: Callable = None,
+        early_stopping_fn: Callable = None,
+        tensorboard_writer: Optional[TensorboardWriterType] = None,
+        log_dir: Union[pathlib.Path, str] = None,
+        update_learning_rate_fn: Callable = None,
     ):
         """
-        Implements the custom logic to run a training loop for model fine-tuning
-        by using the provided `train_epoch_fn`, `validate_fn` and `configure_optimizers_fn` methods.
-        The passed methods are registered in the `TrainingRunner` instance and the training logic
-        is implemented by calling the corresponding `TrainingRunner` methods
+        Implements the custom logic to run a training loop for model fine-tuning by using the provided
+        `train_epoch_fn`, `validate_fn` and `configure_optimizers_fn` methods.
 
         :param model: The model instance before fine-tuning
-        :param train_epoch_fn: a method to fine-tune the model for a single epoch
-        (to be called inside the `train_epoch` of the TrainingRunner)
-        :param validate_fn: a method to evaluate the model on the validation dataset
-        (to be called inside the `train_epoch` of the TrainingRunner)
-        :param configure_optimizers_fn: a method to instantiate an optimizer and a learning
-        rate scheduler (to be called inside the `configure_optimizers` of the TrainingRunner)
-        :param dump_checkpoint_fn: a method to dump a checkpoint
-        :param load_checkpoint_fn: a method to load a checkpoint
-        :param early_stopping_fn: a method to check for an early stopping condition
-        :return: The fine-tuned model
+        :param train_epoch_fn: a callback to fine-tune the model for a single epoch
+        :param validate_fn: a callback to evaluate the model on the validation dataset
+        :param configure_optimizers_fn: a callback to instantiate an optimizer and a learning rate scheduler
+        :param dump_checkpoint_fn: a callback to dump a checkpoint
+        :param load_checkpoint_fn: a callback to load a checkpoint
+        :param early_stopping_fn: a callback to check for an early stopping condition
+        :param tensorboard_writer: The tensorboard object to be used for logging.
+        :param log_dir: The path to be used for logging and checkpoint saving.
+        :param update_learning_rate_fn: The callback to update the learning rate after each epoch
+          of the training loop.
+        :return: The fine-tuned model.
         """
 
     @property
     @abstractmethod
-    def statistics(self):
+    def statistics(self) -> TrainingLoopStatistics:
         """
         Returns statistics of the compressed model.
         """
 
 
+@api()
 class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
+    """
+    Base class to generalize functionality of derived training loop classes.
+    """
+
     def __init__(self, compression_controller: CompressionAlgorithmController):
         self.runner = None  # type: BaseAccuracyAwareTrainingRunner
         self.compression_controller = compression_controller
@@ -88,15 +97,15 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
     def run(
         self,
         model: TModel,
-        train_epoch_fn,
-        validate_fn,
-        configure_optimizers_fn=None,
-        dump_checkpoint_fn=None,
-        load_checkpoint_fn=None,
-        early_stopping_fn=None,
-        tensorboard_writer=None,
-        log_dir=None,
-        update_learning_rate_fn=None,
+        train_epoch_fn: Callable,
+        validate_fn: Callable,
+        configure_optimizers_fn: Callable = None,
+        dump_checkpoint_fn: Callable = None,
+        load_checkpoint_fn: Callable = None,
+        early_stopping_fn: Callable = None,
+        tensorboard_writer: Optional[TensorboardWriterType] = None,
+        log_dir: Union[pathlib.Path, str] = None,
+        update_learning_rate_fn: Callable = None,
     ):
         self.runner.initialize_training_loop_fns(
             train_epoch_fn,
@@ -198,9 +207,19 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
 @api()
 class EarlyExitCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     """
-    Adaptive compression training loop allows an accuracy-aware training process
-    to reach the maximal accuracy drop
-    (the maximal allowed accuracy degradation criterion is satisfied).
+    Training loop that does not modify compression parameters and exits as soon as (and if) the accuracy drop criterion
+    is reached.
+
+    :param nncf_config: The configuration object.
+    :type nncf_config: nncf.NNCFConfig
+    :param compression_controller: The controller for the compression algorithm that is currently applied to the model
+        to be trained.
+    :param uncompressed_model_accuracy: The uncompressed model accuracy, measured outside of this training loop to
+        serve as the point of reference for fine-tuning the compressed model.
+    :param lr_updates_needed:
+    :param verbose: Whether to post additional data to TensorBoard.
+    :param dump_checkpoints: If true, will dump all checkpoints obtained during the training process, otherwise will
+      only keep the best checkpoint (accuracy-wise).
     """
 
     def __init__(
@@ -229,10 +248,20 @@ class EarlyExitCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
 @api()
 class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     """
-    Adaptive compression training loop allows an accuracy-aware training process whereby
-    the compression rate is automatically varied during training to reach the maximal
-    possible compression rate with a positive accuracy budget
-    (the maximal allowed accuracy degradation criterion is satisfied).
+    A training loop that automatically adjusts compression rate to reach maximum compression within accuracy budget.
+
+    :param nncf_config: The configuration object.
+    :type nncf_config: nncf.NNCFConfig
+    :param compression_controller: The controller for the compression algorithm that is currently applied to the model
+        to be trained.
+    :param uncompressed_model_accuracy: The uncompressed model accuracy, measured outside of this training loop to
+        serve as the point of reference for fine-tuning the compressed model.
+    :param lr_updates_needed:
+    :param verbose: Whether to post additional data to TensorBoard.
+    :param minimal_compression_rate: Sets the minimal compression rate to be considered during the training loop.
+    :param maximal_compression_rate: Sets the maximal compression rate to be considered during the training loop.
+    :param dump_checkpoints: If true, will dump all checkpoints obtained during the training process, otherwise will
+      only keep the best checkpoint (accuracy-wise).
     """
 
     def __init__(
@@ -240,11 +269,11 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         nncf_config: NNCFConfig,
         compression_controller: CompressionAlgorithmController,
         uncompressed_model_accuracy: float,
-        lr_updates_needed=True,
-        verbose=True,
-        minimal_compression_rate=0.0,
-        maximal_compression_rate=0.95,
-        dump_checkpoints=True,
+        lr_updates_needed: bool = True,
+        verbose: bool = True,
+        minimal_compression_rate: float = 0.0,
+        maximal_compression_rate: float = 0.95,
+        dump_checkpoints: bool = True,
     ):
         super().__init__(compression_controller)
         self.adaptive_controller = self._get_adaptive_compression_ctrl(compression_controller)
@@ -305,15 +334,15 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     def run(
         self,
         model: TModel,
-        train_epoch_fn,
-        validate_fn,
-        configure_optimizers_fn=None,
-        dump_checkpoint_fn=None,
-        load_checkpoint_fn=None,
-        early_stopping_fn=None,
-        tensorboard_writer=None,
-        log_dir=None,
-        update_learning_rate_fn=None,
+        train_epoch_fn: Callable,
+        validate_fn: Callable,
+        configure_optimizers_fn: Callable = None,
+        dump_checkpoint_fn: Callable = None,
+        load_checkpoint_fn: Callable = None,
+        early_stopping_fn: Callable = None,
+        tensorboard_writer: Optional[TensorboardWriterType] = None,
+        log_dir: Union[pathlib.Path, str] = None,
+        update_learning_rate_fn: Callable = None,
     ):
         self.runner.initialize_training_loop_fns(
             train_epoch_fn,

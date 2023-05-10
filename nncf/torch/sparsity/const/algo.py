@@ -37,6 +37,10 @@ class ConstSparsityBuilder(BaseSparsityAlgoBuilder):
 
 @api()
 class ConstSparsityController(BaseSparsityAlgoController):
+    """
+    Controller for the auxiliary constant sparsity algorithm in PT.
+    """
+
     def freeze(self):
         pass
 
