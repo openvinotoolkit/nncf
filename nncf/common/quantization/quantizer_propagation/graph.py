@@ -754,7 +754,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self, insertion_point_node_key: str
     ) -> List[PropagationPath]:
         group_dict = self.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-            insertion_point_node_key, set(), list()
+            insertion_point_node_key, set(), []
         )
         return group_dict[None]
 

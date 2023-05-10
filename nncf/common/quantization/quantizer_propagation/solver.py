@@ -479,6 +479,8 @@ class QuantizerPropagationSolver:
         self._quantizable_layer_nodes = quantizable_layer_nodes
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
         self._unification_producing_metatypes = unification_producing_metatypes
+        if self._unification_producing_metatypes is None:
+            self._unification_producing_metatypes = []
 
     def _filter_by_weight_ignored_target_scopes(
         self,
