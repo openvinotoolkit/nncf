@@ -18,6 +18,16 @@ from timm.models.layers.norm_act import LayerNormAct
 from torch import nn
 
 
+def copy_parameters(src_module: nn.Module, trg_module: nn.Module):
+    """
+    Copies parameters of a source module to a target module.
+    :param src_module: The source module to copy parameters from.
+    :param trg_module: The target module to copy parameters to.
+    """
+    for name, param in src_module.named_parameters():
+        setattr(trg_module, name, deepcopy(param))
+
+
 def convert_liner(module: Linear) -> nn.Linear:
     """
     Convert Linear module to torch.nn.Linear.
@@ -33,9 +43,7 @@ def convert_liner(module: Linear) -> nn.Linear:
         device=module.weight.device,
         dtype=module.weight.dtype,
     )
-    new_ln.weight = deepcopy(module.weight)
-    if with_bias:
-        new_ln.bias = deepcopy(module.weight)
+    copy_parameters(module, new_ln)
     return new_ln
 
 
@@ -52,13 +60,13 @@ def convert_batch_norm_act_2d(module: BatchNormAct2d) -> nn.Sequential:
         eps=module.eps,
         momentum=module.momentum,
         affine=module.affine,
+        track_running_stats=module.track_running_stats,
         device=module.weight.device,
         dtype=module.weight.dtype,
     )
-    new_bn.bias = deepcopy(module.weight)
+    copy_parameters(module, new_bn)
     new_bn.running_mean = deepcopy(module.running_mean)
     new_bn.running_var = deepcopy(module.running_var)
-    new_bn.weight = deepcopy(module.weight)
 
     new_drop = deepcopy(module.drop)
     new_act = deepcopy(module.act)
@@ -81,8 +89,7 @@ def convert_group_norm_act(module: GroupNormAct) -> nn.Sequential:
         device=module.weight.device,
         dtype=module.weight.dtype,
     )
-    new_gn.bias = deepcopy(module.weight)
-    new_gn.weight = deepcopy(module.weight)
+    copy_parameters(module, new_gn)
     new_drop = deepcopy(module.drop)
     new_act = deepcopy(module.act)
     return nn.Sequential(new_gn, new_drop, new_act)
@@ -96,17 +103,14 @@ def convert_layer_norm_act(module: LayerNormAct) -> nn.Sequential:
     :param module: The module to convert.
     :return nn.Sequential: A new nn.Sequential module containing nn.LayerNorm, dropout, and activation functions.
     """
-    with_bias = module.bias is not None
     new_norm = nn.LayerNorm(
         normalized_shape=module.normalized_shape,
-        eps=module.normalized_shape,
+        eps=module.eps,
         elementwise_affine=module.elementwise_affine,
         device=module.weight.device,
         dtype=module.weight.dtype,
     )
-    new_norm.weight = deepcopy(module.weight)
-    if with_bias:
-        new_norm.bias = deepcopy(module.weight)
+    copy_parameters(module, new_norm)
     new_drop = deepcopy(module.drop)
     new_act = deepcopy(module.act)
     return nn.Sequential(new_norm, new_drop, new_act)

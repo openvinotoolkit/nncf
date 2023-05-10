@@ -45,16 +45,20 @@ def replace_modules(target_module: nn.Module):
                 replace_modules(target_module[idx])
             else:
                 replaced_module = try_convert_module(target_module[idx])
-                if replaced_module:
-                    target_module[idx]
+                if replaced_module is not None:
+                    target_module[idx] = replaced_module
+                else:
+                    replace_modules(target_module[idx])
     else:
         for name_child_module, child_module in target_module.named_children():
             if type(child_module) == nn.Sequential:
                 replace_modules(child_module)
             else:
                 replaced_module = try_convert_module(child_module)
-                if replace_modules:
+                if replaced_module is not None:
                     setattr(target_module, name_child_module, replaced_module)
+                else:
+                    replace_modules(child_module)
 
 
 def replace_custom_modules_with_torch_native(model: nn.Module) -> nn.Module:
@@ -65,5 +69,10 @@ def replace_custom_modules_with_torch_native(model: nn.Module) -> nn.Module:
     :return nn.Module: Transformed model.
     """
     new_model = deepcopy(model)
+
+    replaced_module = try_convert_module(model)
+    if replaced_module is not None:
+        return replaced_module
+
     replace_modules(new_model)
     return new_model
