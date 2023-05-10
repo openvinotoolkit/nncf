@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import importlib
 from copy import deepcopy
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
@@ -22,10 +23,6 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data import Dataset
-from nncf.openvino.pot.quantization.quantize_model import quantize_impl as pot_quantize_impl
-from nncf.openvino.pot.quantization.quantize_model import (
-    quantize_with_accuracy_control_impl as pot_quantize_with_accuracy_control_impl,
-)
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.parameters import ModelType
@@ -50,10 +47,24 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
 
     :param advanced_parameters: Advanced quantization parameters.
     :return: True if POT should be used, False otherwise.
+    :raises ImportError if POT is not found in the Python environment.
     """
-    if advanced_parameters is None:
-        return USE_POT_AS_DEFAULT
-    return advanced_parameters.backend_params.get(BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
+    use_pot = USE_POT_AS_DEFAULT
+    if advanced_parameters is not None:
+        use_pot = advanced_parameters.backend_params.get(BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
+
+    if not use_pot:
+        return False
+
+    try:
+        importlib.import_module("openvino.tools.pot")
+    except ImportError:
+        nncf_logger.error(
+            "OpenVINO POT was not found in your Python environment.\n"
+            "Please install the openvino-dev package, e.g. via pypi: pip install openvino-dev.\n"
+        )
+
+    return True
 
 
 def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = None) -> None:
@@ -240,6 +251,8 @@ def quantize_impl(
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
     if should_use_pot(advanced_parameters):
+        from nncf.openvino.pot.quantization.quantize_model import quantize_impl as pot_quantize_impl
+
         quantize_fn = pot_quantize_impl
     else:
         quantize_fn = native_quantize_impl
@@ -276,6 +289,10 @@ def quantize_with_accuracy_control_impl(
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
     """
     if should_use_pot(advanced_quantization_parameters):
+        from nncf.openvino.pot.quantization.quantize_model import (
+            quantize_with_accuracy_control_impl as pot_quantize_with_accuracy_control_impl,
+        )
+
         quantize_with_accuracy_control_fn = pot_quantize_with_accuracy_control_impl
     else:
         quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
