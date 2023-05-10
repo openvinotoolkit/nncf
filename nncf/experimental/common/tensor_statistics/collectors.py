@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
 from collections import deque
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Dict, Hashable, List, Optional, Set, Tuple, TypeVar, Union
 
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
@@ -39,6 +39,7 @@ class TensorReducerBase(ABC):
 
         """
         self._reduction_shape = reduction_shape
+        self._init_reduction_shape = reduction_shape
         self._tensor_processor: NNCFCollectorTensorProcessor = self._get_processor()
         self._inplace = inplace
 
@@ -50,9 +51,9 @@ class TensorReducerBase(ABC):
     def output_port_id(self) -> int:
         return 0
 
-    @classmethod
-    def name(cls):
-        return cls.__name__
+    @property
+    def name(self):
+        return self.__class__.__name__ + str(self.__hash__())
 
     @staticmethod
     @abstractmethod
@@ -102,7 +103,7 @@ class TensorReducerBase(ABC):
         )
 
     def __hash__(self) -> int:
-        return hash((self.name(), self._inplace))
+        return hash((self.__class__.__name__, self.inplace, self._init_reduction_shape))
 
 
 class TensorAggregatorBase:
@@ -127,10 +128,6 @@ class TensorAggregatorBase:
     @property
     def num_samples(self) -> int:
         return self._num_samples
-
-    @classmethod
-    def name(cls):
-        return cls.__name__
 
     def register_reduced_input(self, x: TensorType):
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
@@ -162,7 +159,7 @@ class TensorAggregatorBase:
         return isinstance(__o, self.__class__) and self._num_samples == __o.num_samples
 
     def __hash__(self) -> int:
-        return hash((self.name()))
+        return hash(self.__class__.__name__)
 
 
 class TensorCollector:
@@ -439,14 +436,14 @@ class QuantileReducerBase(TensorReducerBase):
         quantile: Union[float, List[float]] = [0.01, 0.99],
         inplace: bool = False,
     ):
-        super().__init__(reduction_shape, inplace)
+        super().__init__(reduction_shape, False)
         self._quantile = quantile
 
     def __eq__(self, __o: object) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile
 
     def __hash__(self) -> int:
-        return hash((self.name(), self._inplace, tuple(self._quantile)))
+        return hash((self.__class__.__name__, self.inplace, self._init_reduction_shape, tuple(self._quantile)))
 
 
 class QuantileReducer(QuantileReducerBase):
@@ -461,7 +458,7 @@ class AbsQuantileReducer(QuantileReducerBase):
         quantile: Union[float, List[float]] = 0.99,
         inplace: bool = False,
     ):
-        super().__init__(reduction_shape, quantile, inplace)
+        super().__init__(reduction_shape, quantile, False)
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = self._tensor_processor.abs(x[0])
@@ -582,7 +579,7 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase):
         return super().__eq__(__o) and self._quantile == __o._quantile
 
     def __hash__(self) -> int:
-        return hash((self.name(), self._quantile))
+        return hash((self.__class__.__name__, self._quantile))
 
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):

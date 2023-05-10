@@ -124,26 +124,26 @@ def get_result_node_name(output_name: str, port_id: int) -> str:
     return f"Result_{output_name}.{port_id}"
 
 
-def get_reduce_node_name(output_name: str, node_type: str, port_id: int) -> str:
+def get_ov_model_reduce_node_name(output_name: str, reduce_node_name: str, port_id: int) -> str:
     """
     Returns name of reduce node based on output name, node type and port id.
 
-    :param output_name: Node name.
-    :param node_type: String that describes reduce node type.
+    :param output_name: Target node name.
+    :param node_type: Reduce node name.
     :param port_id: Target port id of the target node.
     :return: Reduce node name.
     """
-    return f"{output_name}_{node_type}.{port_id}"
+    return f"{output_name}_{reduce_node_name}.{port_id}"
 
 
 def get_inplace_reduce_op(
-    op: Type[ov.Node], node_type: str, reduction_axes: Optional[Tuple[int, ...]], use_abs: bool
+    op: Type[ov.Node], reduce_node_name: str, reduction_axes: Optional[Tuple[int, ...]], use_abs: bool
 ) -> InplaceInsertionFnType:
     """
     Returns inplace insertion function that adds reduce node to a passed node.
 
     :param op: OpenVINO reduction operation type to insert.
-    :param node_type: String that describes reduce node type.
+    :param reduce_node_name: Reduce node name.
     :param reduction_axes: Target reduction axes for the reduction node.
     :param use_abs: Wheather reduce absolute values of input tensors or not.
     :returns: Inplace insertion function to use in ModelTransformer.
@@ -159,7 +159,8 @@ def get_inplace_reduce_op(
 
         if use_abs:
             op_input = opset.abs(
-                node.output(output_port_id), name=get_reduce_node_name(output_name, "abs", name_output_port_id)
+                node.output(output_port_id),
+                name=get_ov_model_reduce_node_name(output_name, "abs" + reduce_node_name, name_output_port_id),
             )
             output_port_id = 0
         else:
@@ -169,53 +170,53 @@ def get_inplace_reduce_op(
             op_input.output(output_port_id),
             reduction_axes=reduction_axes_,
             keep_dims=True,
-            name=get_reduce_node_name(output_name, node_type, name_output_port_id),
+            name=get_ov_model_reduce_node_name(output_name, reduce_node_name, name_output_port_id),
         )
 
     return get_reduce_op
 
 
-def get_inplace_min_op(node_type: str, reduction_shape: Tuple[int, ...]) -> InplaceInsertionFnType:
+def get_inplace_min_op(node_name: str, reduction_shape: Tuple[int, ...]) -> InplaceInsertionFnType:
     """
     Returns inplace min function that adds reduce min node to a passed node.
 
-    :param node_type: String that describes reduce node type.
+    :param node_name: Min reduce node name.
     :param reduction_shape: Target reduction axes for the reduction node.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
-    return get_inplace_reduce_op(opset.reduce_min, node_type, reduction_shape, False)
+    return get_inplace_reduce_op(opset.reduce_min, node_name, reduction_shape, False)
 
 
-def get_inplace_max_op(node_type: str, reduction_shape: Tuple[int, ...], use_abs_max: bool) -> InplaceInsertionFnType:
+def get_inplace_max_op(node_name: str, reduction_shape: Tuple[int, ...], use_abs_max: bool) -> InplaceInsertionFnType:
     """
     Returns inplace max function that adds reduce max node to a passed node.
 
-    :param node_type: String that describes reduce node type.
+    :param node_name: Max reduce node name.
     :param reduction_shape: Target reduction axes for the reduction node.
     :param use_abs: Wheather reduce absolute values of input tensors or not.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
-    return get_inplace_reduce_op(opset.reduce_max, node_type, reduction_shape, use_abs_max)
+    return get_inplace_reduce_op(opset.reduce_max, node_name, reduction_shape, use_abs_max)
 
 
-def get_inplace_mean_op(node_type: str, reduction_shape: Tuple[int, ...]) -> InplaceInsertionFnType:
+def get_inplace_mean_op(node_name: str, reduction_shape: Tuple[int, ...]) -> InplaceInsertionFnType:
     """
     Returns inplace mean function that adds reduce mean node to a passed node.
 
-    :param node_type: String that describes reduce node type.
+    :param node_name: Mean reduce node name.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
-    return get_inplace_reduce_op(opset.reduce_mean, node_type, reduction_shape, False)
+    return get_inplace_reduce_op(opset.reduce_mean, node_name, reduction_shape, False)
 
 
-def get_inplace_batch_mean_op(node_type: str) -> InplaceInsertionFnType:
+def get_inplace_batch_mean_op(node_name: str) -> InplaceInsertionFnType:
     """
     Returns inplace batch mean function that adds reduce batch mean node to a passed node.
 
-    :param node_type: String that describes reduce node type.
+    :param node_name: Last node of batch mean subgraph name.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
-    return get_inplace_reduce_op(opset.reduce_mean, node_type, np.array(0), False)
+    return get_inplace_reduce_op(opset.reduce_mean, node_name, np.array(0), False)
 
 
 def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
@@ -223,7 +224,7 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
     Returns inplace mean per channel function that adds reduce mean per channel node
     to a passed node.
 
-    :param node_type: String that describes reduce node type.
+    :param node_name: Last node of mean per channel subgraph name.
     :param axis: Channel axis.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
@@ -238,7 +239,7 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
                 node.output(output_port_id),
                 reduction_axes=0,
                 keep_dims=False,
-                name=get_reduce_node_name(output_name, op_type, name_output_port_id),
+                name=get_ov_model_reduce_node_name(output_name, op_type, name_output_port_id),
             )
 
         ch_dim = 1
@@ -271,7 +272,7 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
             reshape_op,
             reduction_axes=np.array((0, 2)),
             keep_dims=False,
-            name=get_reduce_node_name(output_name, op_type, name_output_port_id),
+            name=get_ov_model_reduce_node_name(output_name, op_type, name_output_port_id),
         )
 
     return get_reduce_op
@@ -301,6 +302,6 @@ def get_reducer_output_node_names(
     :return: Output names to feed to a reducer node.
     """
     if inplace:
-        target_node_name = get_reduce_node_name(target_node_name, node_type, port_id)
+        target_node_name = get_ov_model_reduce_node_name(target_node_name, node_type, port_id)
         return [get_result_node_name(target_node_name, fn_output_port_id)]
     return [get_result_node_name(target_node_name, port_id)]
