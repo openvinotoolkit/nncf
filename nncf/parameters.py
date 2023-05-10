@@ -42,3 +42,19 @@ class ModelType(Enum):
     """
 
     TRANSFORMER = "transformer"
+
+
+@api(canonical_alias="nncf.DropType")
+class DropType(Enum):
+    """
+    Describes the accuracy drop type, which determines how the accuracy drop between
+    the original model and the compressed model is calculated.
+
+    :param ABSOLUTE: The accuracy drop is calculated as the absolute drop with respect
+        to the results of the original model.
+    :param RELATIVE: The accuracy drop is calculated relative to the results of
+        the original model.
+    """
+
+    ABSOLUTE = "absolute"
+    RELATIVE = "relative"
