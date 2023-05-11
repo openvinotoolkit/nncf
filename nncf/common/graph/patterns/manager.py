@@ -8,12 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import HWFusedPatterns
 from nncf.common.graph.patterns.patterns import PatternNames
 from nncf.common.utils.backend import BackendType
+from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
 
@@ -46,19 +47,25 @@ class PatternsManager:
         raise ValueError(f"Hardware-fused patterns not implemented for {backend} backend.")
 
     @staticmethod
-    def get_full_pattern_graph(backend: BackendType, device: TargetDevice) -> GraphPattern:
+    def get_full_pattern_graph(
+        backend: BackendType, device: TargetDevice, model_type: Optional[ModelType] = None
+    ) -> GraphPattern:
         """
-        Returns the backend- & device-specific HWFusedPatterns instance.
+        Returns the backend-, device- & model_type-specific HWFusedPatterns instance.
 
         :param backend: BackendType instance.
         :param device: TargetDevice instance.
-        :return: Completed GraphPattern value based on the backend & device.
+        :param model_type: ModelType instance.
+        :return: Completed GraphPattern value based on the backend, device & model_type.
         """
         backend_registry_map = PatternsManager.get_backend_patterns_map(backend)
         hw_fused_patterns = HWFusedPatterns()
 
         for pattern_desc, pattern in backend_registry_map.items():
             pattern_desc_devices = pattern_desc.value.devices
-            if pattern_desc_devices is None or device in pattern_desc_devices:
+            pattern_desc_model_types = pattern_desc.value.model_types
+            devices_condition = pattern_desc_devices is None or device in pattern_desc_devices
+            model_types_condition = pattern_desc_model_types is None or model_type in pattern_desc_model_types
+            if devices_condition and model_types_condition:
                 hw_fused_patterns.register(pattern(), pattern_desc.value.name)
         return hw_fused_patterns.get_full_pattern_graph()

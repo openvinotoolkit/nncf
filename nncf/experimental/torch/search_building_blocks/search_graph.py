@@ -256,7 +256,7 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph, hw_fused_ops:
     if not hw_fused_ops:
         return merged_graph
     # pylint: disable=protected-access
-    pattern_fusing_graph = PatternsManager.get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
+    pattern_fusing_graph = PatternsManager.get_full_pattern_graph(backend=BackendType.TORCH, device=TargetDevice.ANY)
     matches = find_subgraphs_matching_pattern(orig_graph, pattern_fusing_graph)
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_DUMMY_NODE_ATTR)
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_MERGED_NODE_ATTR)
