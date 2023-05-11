@@ -435,6 +435,7 @@ class StructuredMaskHandler:
                         f"Automatically found structured pruning group does not match the given "
                         f"unstructured sparse structures:\n {group}"
                     )
+                    is_group_matched = False
                     break
             if ctxes and is_group_matched:
                 result.append(StructuredMaskContextGroup(group_id, ctxes))
