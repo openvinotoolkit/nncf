@@ -176,13 +176,16 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         return self._original_unbound_forward
 
-    def set_original_unbound_forward(self, fwd_fn: Callable):
+    def set_custom_original_unbound_forward(self, fwd_fn: Callable):
         """
         Allows to set the function that is treated by NNCF as "original" model forward to another function.
         :param fwd_fn: The new original forward function. The signature w.r.t. activation tensors must be the same,
         and the function must leave its 0-th `self` argument unbound.
         """
-        self._original_unbound_forward = fwd_fn
+        self._custom_original_unbound_forward = fwd_fn
+
+    def reset_custom_original_unbound_forward(self):
+        self._custom_original_unbound_forward = None
 
     def __init__(
         self,
@@ -203,8 +206,9 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         if isinstance(model, NNCFNetwork):
             # Got an NNCFNetwork already, probably during shallow copying.
-            self._original_unbound_forward = model.nncf._original_unbound_forward
+            self._original_class = model.nncf._original_class
             self._bound_original_forward = model.nncf._bound_original_forward
+            self._custom_original_unbound_forward = model.nncf._custom_original_unbound_forward
         else:
             # We need the version of the method that has the `self` parameter
             # not set, otherwise we will be indirectly capturing a reference to the
@@ -212,8 +216,9 @@ class NNCFNetworkInterface(torch.nn.Module):
             # because the bound original forward call during NNCFNetwork.forward
             # would then call forward on the original non-replica module even if NNCFNetwork itself was
             # replicated.
-            self._original_unbound_forward = model.__class__.forward
+            self._original_class = model.__class__
             self._bound_original_forward = None
+            self._custom_original_unbound_forward = None
 
         self._forward_signature = inspect.signature(self.get_original_forward())
         self._input_infos = input_infos
@@ -290,6 +295,13 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._load_listener = None
 
         self.compression_controller = None  # type: PTCompressionAlgorithmController
+
+    @property
+    def _original_unbound_forward(self):
+        custom_unbound_forward = self._custom_original_unbound_forward
+        result = custom_unbound_forward if custom_unbound_forward is not None else self._original_class.forward
+
+        return result
 
     @property
     def _model_ref(self) -> "NNCFNetwork":
@@ -936,7 +948,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
                 "If you need to replace the underlying forward function of the original model so that "
                 "NNCF should be using that instead of the original forward function that NNCF saved "
                 "during the compressed model creation, you can do this by calling:\n"
-                "model.nncf.set_original_unbound_forward(fn)\n"
+                "model.nncf.set_custom_original_unbound_forward(fn)\n"
                 "if `fn` has an unbound 0-th `self` argument, or\n"
                 "with model.nncf.temporary_bound_original_forward(fn): ...\n"
                 "if `fn` already had 0-th `self` argument bound or never had it in the first place."
