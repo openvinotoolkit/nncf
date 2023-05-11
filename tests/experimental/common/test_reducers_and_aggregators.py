@@ -229,11 +229,12 @@ class TemplateTestReducersAggreagtors:
         "reducer_name",
         ["noop", "min", "max", "abs_max", "mean", "quantile", "abs_quantile", "batch_mean", "mean_per_ch"],
     )
-    def test_reducers_hash_equal(self, reducer_name, reducers):
+    def test_reducers_name_hash_equal(self, reducer_name, reducers):
         if reducer_name == "noop":
             reducers_instances = [reducers[reducer_name]() for _ in range(2)]
             assert hash(reducers_instances[0]) == hash(reducers_instances[1])
             assert reducers_instances[0] == reducers_instances[1]
+            assert reducers_instances[0].name == reducers_instances[1].name
             assert len(set(reducers_instances)) == 1
             return
 
@@ -266,7 +267,8 @@ class TemplateTestReducersAggreagtors:
             reducers_instances.append(reducer_cls(**params_))
 
         assert len(set(reducers_instances)) == len(reducers_instances)
-        assert all(hash(reducers_instances[0]) != instns for instns in reducers_instances[1:])
+        assert len({hash(reducer) for reducer in reducers_instances}) == len(reducers_instances)
+        assert len({reducer.name for reducer in reducers_instances}) == len(reducers_instances)
 
         hashes = [hash(reducer) for reducer in reducers_instances]
         test_input = [self.get_nncf_tensor(np.empty((1, 3, 4, 4)))]
