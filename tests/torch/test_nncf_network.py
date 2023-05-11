@@ -1056,6 +1056,7 @@ def test_wrap_original_forward():
         def wrapper(*args, **kwargs):
             new_args = (args[0], args[1] + 1, *args[2:])
             return fun(*new_args, **kwargs)
+
         return wrapper
 
     inp = torch.zeros((1,))
