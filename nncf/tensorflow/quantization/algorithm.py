@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple
 
@@ -695,7 +693,11 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
 @api()
 class QuantizationController(BaseCompressionAlgorithmController):
-    def __init__(self, target_model, config, op_names: List[str]):
+    """
+    Controller for the quantization algorithm in TensorFlow.
+    """
+
+    def __init__(self, target_model, config: NNCFConfig, op_names: List[str]):
         super().__init__(target_model)
         self._scheduler = BaseCompressionScheduler()
         self._loss = TFZeroCompressionLoss()
@@ -708,6 +710,10 @@ class QuantizationController(BaseCompressionAlgorithmController):
 
     @property
     def loss(self) -> CompressionLoss:
+        """
+        Returns the loss that is always zero since the quantization algorithm is driven by the original loss and does
+        not require additional losses.
+        """
         return self._loss
 
     def strip_model(self, model: tf.keras.Model, do_copy: bool = False) -> tf.keras.Model:

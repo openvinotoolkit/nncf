@@ -1,16 +1,14 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from abc import ABC
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
@@ -19,6 +17,7 @@ from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.registry import Registry
@@ -39,7 +38,8 @@ class BaseControllerStateNames:
     COMPRESSION_LEVEL = "compression_level"
 
 
-class BaseCompressionAlgorithmController(CompressionAlgorithmController):
+@api()
+class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
     """
     Contains the implementation of the basic functionality of the compression controller.
     """

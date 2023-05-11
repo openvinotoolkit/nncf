@@ -1,22 +1,23 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from dataclasses import dataclass
 from dataclasses import field
 from enum import Enum
 from typing import Optional
 
+from nncf.common.utils.api_marker import api
 
+
+@api()
 class StatisticsType(Enum):
     """
     Enumeration of different types of statistics that are used to collect per sample
@@ -38,6 +39,7 @@ class StatisticsType(Enum):
     MEAN = "mean"
 
 
+@api()
 class AggregatorType(Enum):
     """
     Enumeration of different types of aggregators that are used to aggregate per sample
@@ -59,17 +61,21 @@ class AggregatorType(Enum):
     MEDIAN_NO_OUTLIERS = "median_no_outliers"
 
 
+@api()
 @dataclass
 class StatisticsCollectorParameters:
     """
-    Contains parameters for collecting statistics for activations and weights of
-    the model.
+    Contains parameters for collecting statistics for activations and weights of the model.
 
     :param statistics_type: The type of per sample statistics to collect.
+    :type statistics_type: Optional[nncf.quantization.range_estimator.StatisticsType]
     :param aggregator_type: The type of aggregator of per sample statistics.
+    :type aggregator_type: Optional[nncf.quantization.range_estimator.AggregatorType]
     :param clipping_value: The value to use for clipping the input tensors before
         collecting statistics.
+    :type clipping_value: Optional[float]
     :param quantile_outlier_prob: The outlier probability for quantile statistics.
+    :type quantile_outlier_prob: float
     """
 
     statistics_type: Optional[StatisticsType] = None
@@ -78,14 +84,16 @@ class StatisticsCollectorParameters:
     quantile_outlier_prob: float = 1e-4
 
 
+@api()
 @dataclass
 class RangeEstimatorParameters:
     """
-    Contains parameters for estimating the range of activations and weights of
-    the model.
+    Contains parameters for estimating the range of activations and weights of the model.
 
     :param min: The parameters for estimating the lower bound of the range.
+    :type min: nncf.quantization.range_estimator.StatisticsCollectorParameters
     :param max: The Parameters for estimating the upper bound of the range.
+    :type max: nncf.quantization.range_estimator.StatisticsCollectorParameters
     """
 
     min: StatisticsCollectorParameters = field(default_factory=StatisticsCollectorParameters)

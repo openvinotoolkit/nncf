@@ -1,16 +1,14 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from abc import ABC
 from typing import Dict, List, Tuple
 
 import tensorflow as tf
@@ -31,6 +29,7 @@ from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.scopes import check_scopes_in_graph
+from nncf.common.utils.api_marker import api
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
 from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
@@ -270,10 +269,10 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         return f"{layer_name}_{weight_attr_name}_pruning_binary_mask"
 
 
-class BasePruningAlgoController(BaseCompressionAlgorithmController):
+@api()
+class BasePruningAlgoController(BaseCompressionAlgorithmController, ABC):
     """
-    Serves as a handle to the additional modules, parameters and hooks inserted
-    into the original uncompressed model to enable pruning.
+    Base class for TF pruning algorithm controllers.
     """
 
     def __init__(

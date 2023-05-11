@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from copy import deepcopy
 from typing import List
 
@@ -58,6 +56,10 @@ class RBSparsityBuilder(BaseSparsityAlgoBuilder):
 @api()
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register("pt_rb_sparsity")
 class RBSparsityController(BaseSparsityAlgoController):
+    """
+    Controller for the regularization-based (RB) sparsity algorithm in PT.
+    """
+
     def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config: NNCFConfig):
         super().__init__(target_model, sparsified_module_info)
         algo_config = extract_algo_specific_config(config, "rb_sparsity")

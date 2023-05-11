@@ -1,5 +1,7 @@
-NNCF documentation
+NNCF
 ================================
+
+Neural Network Compression Framework (NNCF) provides a suite of advanced algorithms for Neural Networks inference optimization in `OpenVINO™ <https://github.com/openvinotoolkit/openvino>`_ with minimal accuracy drop.
 
 .. toctree::
    :caption: Contents:
@@ -7,4 +9,5 @@ NNCF documentation
 
    API Reference<autoapi/nncf/index>
    JSON configuration file schema<./schema#http://>
+   Github<https://github.com/openvinotoolkit/nncf>
 
