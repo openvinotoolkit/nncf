@@ -813,9 +813,11 @@ class TemplateTestStatisticsAggregator:
             params["reduction_shape"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif statistics_type == "batch_mean":
+            pytest.skip("Inplace statistic woun't work until openvino==2023.0.0 release")
             params["inplace"] = [False, True]
         elif statistics_type == "mean_per_ch":
-            params["inplace"] = [False, True]
+            # TODO(dlyakhov) uncoment when nncf will switch to openvino==2023.0.0
+            # params["inplace"] = [False, True]
             params["channel_dim"] = [1, 2]
 
         def product_dict(**kwargs):
