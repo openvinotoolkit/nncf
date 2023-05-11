@@ -10,7 +10,7 @@
 # limitations under the License.
 from dataclasses import dataclass
 from functools import partial
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pytest
@@ -50,6 +50,7 @@ from transformers import RobertaConfig
 from transformers import SwinConfig
 from transformers import ViTConfig
 from transformers import Wav2Vec2Config
+from transformers import AutoConfig
 
 
 class SelfAttention(nn.Module):
@@ -123,10 +124,20 @@ class ReshapeReshape0Block(nn.Module):
         return o2, o4
 
 
+def get_swin_tiny_model():
+    config = AutoConfig.from_pretrained("microsoft/swin-base-patch4-window7-224")
+    return AutoModelForImageClassification.from_config(config)
+
+
+def get_mobile_bert_big_model():
+    config = AutoConfig.from_pretrained("google/mobilebert-uncased")
+    return AutoModelForQuestionAnswering.from_config(config)
+
+
 @dataclass
 class GroupTestDesc:
     model_desc: IModelDesc
-    ref_groups: List[PruningGroup]
+    ref_groups: Optional[List[PruningGroup]] = None
 
     def __str__(self) -> str:
         return self.model_desc.model_name
@@ -455,7 +466,7 @@ TEST_DESCS = [*SYNTHETIC_DESCS, *NLP_DESCS, *CV_DESCS, *AUDIO_DESCS]
 
 
 @pytest.mark.parametrize("desc", TEST_DESCS, ids=map(str, TEST_DESCS))
-def test_groups(desc: GroupTestDesc, tmp_path, mocker):
+def test_groups(desc: GroupTestDesc, mocker, tmp_path):
     model_desc = desc.model_desc
     model = model_desc.get_model()
     config = NNCFConfig({"input_info": model_desc.create_input_info()})
@@ -472,3 +483,36 @@ def test_groups(desc: GroupTestDesc, tmp_path, mocker):
 
     filtered_groups = select_largest_groups(not_filtered_groups)
     assert filtered_groups == desc.ref_groups
+
+
+BIG_MODEL_DESCS = [
+    GroupTestDesc(
+        model_desc=GeneralModelDesc(
+            model_name="MobileBERT big",
+            input_info=[dict(sample_size=[1, 128], type="long")] * 4,
+            model_builder=get_mobile_bert_big_model,
+        ),
+    ),
+    GroupTestDesc(
+        model_desc=GeneralModelDesc(
+            model_name="Swin big",
+            input_info=dict(sample_size=[1, 3, 224, 224]),
+            model_builder=get_swin_tiny_model,
+        )
+    ),
+]
+
+
+@pytest.mark.parametrize("desc", BIG_MODEL_DESCS, ids=map(str, BIG_MODEL_DESCS))
+def test_all_groups_valid(desc: GroupTestDesc):
+    model_desc = desc.model_desc
+    model = model_desc.get_model()
+    config = NNCFConfig({"input_info": model_desc.create_input_info()})
+    nncf_network = create_nncf_network(model, config)
+    pruning_producing_types = ["linear"]
+    all_groups = get_pruning_groups(
+        nncf_network.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types
+    )
+    for group in all_groups:
+        assert group.consumers
+        assert group.producers
