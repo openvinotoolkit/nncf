@@ -15,7 +15,6 @@ QUANTIZE_AGNOSTIC_OPERATIONS = [
     ov_metatypes.OVMaxPoolMetatype,
     ov_metatypes.OVReduceMaxMetatype,
     ov_metatypes.OVReshapeMetatype,
-    ov_metatypes.OVConcatMetatype,
     ov_metatypes.OVSqueezeMetatype,
     ov_metatypes.OVUnsqueezeMetatype,
     ov_metatypes.OVSplitMetatype,
