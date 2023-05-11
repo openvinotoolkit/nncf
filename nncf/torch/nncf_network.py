@@ -299,9 +299,7 @@ class NNCFNetworkInterface(torch.nn.Module):
     @property
     def _original_unbound_forward(self):
         custom_unbound_forward = self._custom_original_unbound_forward
-        result = custom_unbound_forward if custom_unbound_forward is not None else self._original_class.forward
-
-        return result
+        return custom_unbound_forward if custom_unbound_forward is not None else self._original_class.forward
 
     @property
     def _model_ref(self) -> "NNCFNetwork":
