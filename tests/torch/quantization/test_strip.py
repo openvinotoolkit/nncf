@@ -14,6 +14,8 @@ import pytest
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
+from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
+from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.config import NNCFConfig
 from nncf.torch.quantization.layers import AsymmetricQuantizer
@@ -26,7 +28,6 @@ from tests.common.quantization.data_generators import generate_random_low_and_ra
 from tests.common.quantization.data_generators import generate_random_scale_by_input_size
 from tests.common.quantization.data_generators import generate_sweep_data
 from tests.common.quantization.data_generators import get_quant_len_by_range
-from tests.common.quantization.data_generators import get_symmetric_range_level
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -46,7 +47,6 @@ def _get_config_for_algo(input_size, quant_mode="symmetric", overflow_fix="enabl
             "overflow_fix": overflow_fix,
         }
     )
-
     return config
 
 
@@ -106,7 +106,9 @@ def test_converting_symmetric_quantizer(
     np_scale = generate_random_scale_by_input_size(input_size, is_per_channel, is_weights)
     tensor_scale = get_test_data([np_scale], use_cuda)
 
-    level_low, level_high, _ = get_symmetric_range_level(is_signed, real_num_bits)
+    level_low, level_high, levels = calculate_symmetric_level_ranges(
+        num_bits=real_num_bits, signed=is_signed, narrow_range=False
+    )
 
     input_low = np_scale * (level_low / level_high)
     input_range = np_scale - input_low
@@ -136,7 +138,12 @@ def test_converting_symmetric_quantizer(
     tuned_input_range = tuned_input_high - tuned_input_low
 
     np_input, np_is_near_mid_point, quant_lens = generate_sweep_data(
-        input_size, tuned_input_low, tuned_input_range, real_num_bits, is_per_channel, is_weights
+        input_size=input_size,
+        input_low=tuned_input_low,
+        input_range=tuned_input_range,
+        levels=levels,
+        is_per_channel=is_per_channel,
+        is_weights=is_weights,
     )
     test_input = get_test_data([np_input], use_cuda)
 
@@ -175,10 +182,10 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
     real_num_bits = num_bits - 1 if is_half_range else num_bits
 
     input_low, input_range = generate_random_low_and_range_by_input_size(input_size, is_per_channel, is_weights)
-
+    level_low, level_high, levels = calculate_asymmetric_level_ranges(num_bits=real_num_bits, narrow_range=False)
     ######################################################################
     # TODO: Workaround for issue 105241 (remove after fix)
-    get_quant_len = get_quant_len_by_range(input_range, real_num_bits)
+    get_quant_len = get_quant_len_by_range(input_range=input_range, levels=levels)
     input_low[(input_low > -get_quant_len / 2) & (input_low < 0)] = 0
     ######################################################################
 
@@ -210,7 +217,12 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
     tuned_input_range = tuned_input_high - tuned_input_low
 
     np_input, np_is_near_mid_point, quant_lens = generate_sweep_data(
-        input_size, tuned_input_low, tuned_input_range, real_num_bits, is_per_channel, is_weights
+        input_size=input_size,
+        input_low=tuned_input_low,
+        input_range=tuned_input_range,
+        levels=levels,
+        is_per_channel=is_per_channel,
+        is_weights=is_weights,
     )
     test_input = get_test_data([np_input], use_cuda)
 
