@@ -88,6 +88,7 @@ from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import UNIFICATION_PRODUCING_METATYPES
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -373,6 +374,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             global_constraints=self.global_quantizer_constraints,
             additional_unified_scale_op_scopes=self._unified_scale_ops,
             quantize_outputs=self._quantize_outputs,
+            unification_producing_metatypes=UNIFICATION_PRODUCING_METATYPES,
         )
 
         merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(

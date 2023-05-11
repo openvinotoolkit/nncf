@@ -623,6 +623,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             quantizable_layer_nodes=quantizable_weighted_layer_nodes,
             global_constraints=self.global_quantizer_constraints,
             quantize_outputs=self.quantize_outputs,
+            unification_producing_metatypes=GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES,
         )
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)

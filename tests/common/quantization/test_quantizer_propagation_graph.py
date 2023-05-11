@@ -35,6 +35,7 @@ from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertion
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
+from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
 from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.mock_graphs import get_ip_graph_for_test
 from tests.common.quantization.mock_graphs import get_mock_nncf_node_attrs
@@ -285,7 +286,7 @@ class TestQuantizerPropagationStateGraph:
         ref_groups_vs_paths = start_ip_node_and_dom_node_grouped_paths.ref_groups_vs_paths
         test_groups_vs_paths = (
             mock_qp_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-                start_node_key, {CatTestMetatype}, []
+                start_node_key, {CatTestMetatype}, WEIGHT_LAYER_METATYPES
             )
         )
 
