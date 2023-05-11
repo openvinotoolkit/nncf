@@ -421,8 +421,9 @@ class MinMaxQuantization(Algorithm):
         if self._quantization_target_points_to_qconfig:
             return self._quantization_target_points_to_qconfig, self._unified_scale_groups
         backend = get_backend(model)
-        device = self._target_device
-        pattern = PatternsManager.get_full_pattern_graph(backend, device)
+        pattern = PatternsManager.get_full_pattern_graph(
+            backend=backend, device=self._target_device, model_type=self._model_type
+        )
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         self._apply_model_type_pass(self._model_type, quantizer_setup, nncf_graph)
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup)
@@ -458,17 +459,6 @@ class MinMaxQuantization(Algorithm):
                     raise RuntimeError("Only activation quantizers can be unified.")
             unified_scale_groups.append(unified_scale_group)
         return unified_scale_groups
-
-    def _get_graph_pattern(self, model: TModel) -> GraphPattern:
-        """
-        Returns full graph pattern for quantizer setup calculation.
-
-        :param model: Backend-specific model.
-        :return: GraphPattern instance.
-        """
-        backend = get_backend(model)
-        device = self._target_device
-        return PatternsManager.get_full_pattern_graph(backend, device)
 
     def _topological_sort_quantization_points(
         self, quantization_points: List[SingleConfigQuantizationPoint], nncf_graph: NNCFGraph
