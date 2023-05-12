@@ -11,6 +11,7 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
+from collections import Counter
 from enum import Enum
 from typing import Any, Type, Union
 
@@ -366,15 +367,10 @@ class TemplateTestStatisticsAggregator:
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
-        algo_backend = self.get_min_max_algo_backend_cls()
         model = self.get_backend_model(dataset_samples)
-        nncf_graph = NNCFGraphFactory.create(model)
-
         quantizer_config = QuantizerConfig(
             mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
         )
-        target_point = self.get_target_point(test_parameters.target_type)
-
         is_standart_estimator = test_parameters.range_estimator_params in [
             RangeEstimatorParametersSet.MINMAX,
             RangeEstimatorParametersSet.MEAN_MINMAX,
@@ -382,20 +378,20 @@ class TemplateTestStatisticsAggregator:
         if not is_standart_estimator and not is_backend_support_custom_estimators:
             pytest.skip("Custom estimators are not supported for this backend yet")
 
-        tensor_collector = algo_backend.get_statistic_collector(
-            test_parameters.range_estimator_params,
-            nncf_graph=nncf_graph,
-            target_point=target_point,
-            quantizer_config=quantizer_config,
-            num_samples=len(dataset_samples),
-            inplace=inplace_statistics,
-        )
-
-        statistics_points = StatisticPointsContainer()
+        target_point = self.get_target_point(test_parameters.target_type)
         algorithm_name = "TestAlgo"
-        statistics_points.add_statistic_point(
-            StatisticPoint(target_point=target_point, tensor_collector=tensor_collector, algorithm=algorithm_name)
+        statistic_point = self.create_statistics_point(
+            model,
+            quantizer_config,
+            target_point,
+            len(dataset_samples),
+            algorithm_name,
+            inplace_statistics,
+            test_parameters.range_estimator_params,
         )
+        statistics_points = StatisticPointsContainer()
+        statistics_points.add_statistic_point(statistic_point)
+        
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
@@ -615,61 +611,48 @@ class TemplateTestStatisticsAggregator:
                     assert ref.shape == val.shape
                 assert np.allclose(val, ref)
 
-    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics):
+    def create_statistics_point(
+        self, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator
+    ):
         algo_backend = self.get_min_max_algo_backend_cls()
-        model = self.get_backend_model(dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
+        tensor_collector = algo_backend.get_statistic_collector(
+            range_estimator,
+            nncf_graph=nncf_graph,
+            target_point=target_point,
+            quantizer_config=q_config,
+            num_samples=subset_size,
+            inplace=inplace_statistics,
+        )
+        return StatisticPoint(target_point=target_point, tensor_collector=tensor_collector, algorithm=algorithm_name)
 
+    @pytest.mark.parametrize(
+        'statistic_point_params',
+        (
+            (
+                ('AAA', RangeEstimatorParametersSet.MINMAX, TargetType.PRE_LAYER_OPERATION, -128.0, 128),
+                ('BBB', RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION, -128.0, 128),
+                ('CCC', RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION, -63.5, 64.5),
+            ),
+        ),
+    )
+    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics, statistic_point_params):
+        model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
-        pre_layer_target_point = self.get_target_point(TargetType.PRE_LAYER_OPERATION)
-        pre_tensor_collector = algo_backend.get_statistic_collector(
-            RangeEstimatorParametersSet.MINMAX,
-            nncf_graph=nncf_graph,
-            target_point=pre_layer_target_point,
-            quantizer_config=quantizer_config,
-            num_samples=len(dataset_samples),
-            inplace=inplace_statistics,
-        )
-
-        post_layer_target_point = self.get_target_point(TargetType.POST_LAYER_OPERATION)
-        post_tensor_collector = algo_backend.get_statistic_collector(
-            RangeEstimatorParametersSet.MINMAX,
-            nncf_graph=nncf_graph,
-            target_point=post_layer_target_point,
-            quantizer_config=quantizer_config,
-            num_samples=len(dataset_samples),
-            inplace=inplace_statistics,
-        )
-        unique_post_tensor_collector = algo_backend.get_statistic_collector(
-            RangeEstimatorParametersSet.MEAN_MINMAX,
-            nncf_graph=nncf_graph,
-            target_point=post_layer_target_point,
-            quantizer_config=quantizer_config,
-            num_samples=len(dataset_samples),
-            inplace=inplace_statistics,
-        )
+        subset_size = len(dataset_samples)
 
         statistics_points = StatisticPointsContainer()
-        algorithm_names = ["AAA", "BBB", "CCC"]
-        statistics_points.add_statistic_point(
-            StatisticPoint(
-                target_point=pre_layer_target_point, tensor_collector=pre_tensor_collector, algorithm=algorithm_names[0]
+        ref_val = {}
+
+        for statistic_point_param in statistic_point_params:
+            algorithm_name, range_estimator, target_point_type, ref_min_val, ref_max_val = statistic_point_param
+            ref_val[algorithm_name] = (ref_min_val, ref_max_val)
+            target_point = self.get_target_point(target_point_type)
+            statistics_point = self.create_statistics_point(
+                model, quantizer_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator
             )
-        )
-        statistics_points.add_statistic_point(
-            StatisticPoint(
-                target_point=post_layer_target_point,
-                tensor_collector=post_tensor_collector,
-                algorithm=algorithm_names[1],
-            )
-        )
-        statistics_points.add_statistic_point(
-            StatisticPoint(
-                target_point=post_layer_target_point,
-                tensor_collector=unique_post_tensor_collector,
-                algorithm=algorithm_names[2],
-            )
-        )
+            statistics_points.add_statistic_point(statistics_point)
+
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
@@ -677,11 +660,9 @@ class TemplateTestStatisticsAggregator:
 
         tensor_collectors = list(statistics_points.get_tensor_collectors())
         assert len(tensor_collectors) == 3
-        for _, _, tensor_collector in tensor_collectors:
+        for algorithm, _, tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
-            ref_min_val, ref_max_val = -128.0, 128
-            if tensor_collector is unique_post_tensor_collector:
-                ref_min_val, ref_max_val = -63.5, 64.5
+            ref_min_val, ref_max_val = ref_val[algorithm]
             assert np.allclose(stat.min_values, ref_min_val)
             assert np.allclose(stat.max_values, ref_max_val)
 
@@ -799,3 +780,41 @@ class TemplateTestStatisticsAggregator:
             if isinstance(ref[0], np.ndarray):
                 assert stat.min_values.shape == ref[0].shape
                 assert stat.max_values.shape == ref[1].shape
+
+    @pytest.mark.parametrize(
+        'statistic_point_params',
+        (
+            (
+                ('AAA', RangeEstimatorParametersSet.MINMAX, TargetType.PRE_LAYER_OPERATION, 100),
+                ('BBB', RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION, 10),
+                ('CCC', RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, None),
+                ('CCC', RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, -1),
+            ),
+        ),
+    )
+    def test_register_statistics(self, dataset_samples, statistic_point_params):
+        model = self.get_backend_model(dataset_samples)
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
+        statistics_points = StatisticPointsContainer()
+        ref_val = {}
+
+        for statistic_point_param in statistic_point_params:
+            algorithm_name, range_estimator, target_point_type, subset_size = statistic_point_param
+            ref_val[algorithm_name] = subset_size
+            target_point = self.get_target_point(target_point_type)
+            statistics_point = self.create_statistics_point(
+                model, quantizer_config, target_point, subset_size, algorithm_name, True, range_estimator
+            )
+            statistics_points.add_statistic_point(statistics_point)
+
+        dataset = self.get_dataset(dataset_samples)
+        statistics_aggregator = self.get_statistics_aggregator(dataset)
+        statistics_aggregator.register_statistic_points(statistics_points)
+        assert Counter(statistics_points) == Counter(statistics_aggregator.statistic_points)
+        ref_subset_size = None
+        for subset_size in ref_val.values():
+            if subset_size and ref_subset_size:
+                ref_subset_size = max(ref_subset_size, subset_size)
+            else:
+                ref_subset_size = subset_size
+        assert statistics_aggregator.stat_subset_size == ref_subset_size

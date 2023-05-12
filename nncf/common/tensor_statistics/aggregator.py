@@ -72,7 +72,10 @@ class StatisticsAggregator(ABC):
             for _statistic_point in _statistic_points:
                 for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
-                        self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
+                        if tensor_collector.num_samples:
+                            self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
+        if not self.stat_subset_size:
+            self.stat_subset_size = len(self.dataset)
 
     @abstractmethod
     def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:

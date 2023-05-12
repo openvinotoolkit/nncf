@@ -183,8 +183,14 @@ class TensorCollector:
         self._enabled = True
 
     @property
-    def num_samples(self) -> int:
-        return max(aggregator.num_samples for aggregator in self._aggregators.values())
+    def num_samples(self) -> Optional[int]:
+        output = None
+        for aggregator in self._aggregators.values():
+            if aggregator.num_samples and output:
+                output = max(output, aggregator.num_samples)
+            else:
+                output = aggregator.num_samples
+        return output
 
     @property
     def enabled(self) -> bool:
