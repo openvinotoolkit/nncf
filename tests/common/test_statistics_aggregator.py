@@ -398,7 +398,7 @@ class TemplateTestStatisticsAggregator:
         )
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
-        statistics_aggregator.register_stastistic_points(statistics_points)
+        statistics_aggregator.register_statistic_points(statistics_points)
         statistics_aggregator.collect_statistics(model)
 
         def filter_func(point):
@@ -584,7 +584,7 @@ class TemplateTestStatisticsAggregator:
         )
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
-        statistics_aggregator.register_stastistic_points(statistics_points)
+        statistics_aggregator.register_statistic_points(statistics_points)
         model = self.get_backend_model(dataset_samples)
         statistics_aggregator.collect_statistics(model)
 
@@ -672,7 +672,7 @@ class TemplateTestStatisticsAggregator:
         )
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
-        statistics_aggregator.register_stastistic_points(statistics_points)
+        statistics_aggregator.register_statistic_points(statistics_points)
         statistics_aggregator.collect_statistics(model)
 
         tensor_collectors = list(statistics_points.get_tensor_collectors())
@@ -788,7 +788,7 @@ class TemplateTestStatisticsAggregator:
         }
         merged_stats_checkers_map[key](merged_statistics)
 
-        statistics_aggregator.register_stastistic_points(statistics_points)
+        statistics_aggregator.register_statistic_points(statistics_points)
         statistics_aggregator.collect_statistics(model)
 
         for collector, ref in collectors_and_refs:

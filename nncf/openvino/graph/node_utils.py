@@ -281,7 +281,7 @@ def get_partial_shape_safe(node, port_id) -> int:
     partial_shape = node.get_output_partial_shape(port_id)
     if partial_shape.rank.is_dynamic or not partial_shape.all_non_negative:
         raise RuntimeError(
-            f"Could not collect statistics for the node {node}" f"because its output shape rank is dynamic or negative"
+            f"Could not collect statistics for the node {node} because its output shape rank is dynamic or negative"
         )
     return partial_shape
 

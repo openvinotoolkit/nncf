@@ -14,12 +14,16 @@ import multiprocessing
 import os
 from argparse import ArgumentParser
 from collections import OrderedDict
+from collections import defaultdict
 from dataclasses import asdict
 from enum import Enum
+from itertools import islice
 from typing import Iterable, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
+from openvino.runtime import Dimension
+from openvino.runtime import PartialShape
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
 from openvino.tools.pot.configs.config import Config
@@ -31,6 +35,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.experimental.openvino.quantization.quantize_model import (
     quantize_with_accuracy_control as pot_quantize_with_native_accuracy_control,
 )
+from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
@@ -71,7 +76,9 @@ def parse_args():
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, (TargetDevice, ModelType, QuantizationPreset, OverflowFix, StatisticsType, AggregatorType)):
+        if isinstance(
+            o, (TargetDevice, ModelType, QuantizationPreset, OverflowFix, StatisticsType, AggregatorType, DropType)
+        ):
             return o.value
         if isinstance(o, (IgnoredScope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
             return asdict(o)
@@ -202,16 +209,23 @@ def set_algorithm_parameters_context(ctx):
 
 def map_target_device(target_device):
     target_device = target_device.upper()
-    if target_device not in [t.value for t in nncf.TargetDevice]:
+    if target_device not in [t.value for t in TargetDevice]:
         raise ValueError(f"{target_device} target device is not supported")
-    return {"target_device": nncf.TargetDevice(target_device)}
+    return {"target_device": TargetDevice(target_device)}
 
 
 def map_model_type(model_type):
     model_type = model_type.lower()
-    if model_type not in [m.value for m in nncf.ModelType]:
+    if model_type not in [m.value for m in ModelType]:
         raise ValueError(f"{model_type} model type is not supported")
-    return {"model_type": nncf.ModelType(model_type)}
+    return {"model_type": ModelType(model_type)}
+
+
+def map_drop_type(drop_type):
+    drop_type = drop_type.lower()
+    if drop_type not in [m.value for m in DropType]:
+        raise ValueError(f"{drop_type} drop type is not supported")
+    return {"drop_type": DropType(drop_type)}
 
 
 def map_ignored_scope(ignored):
@@ -225,14 +239,14 @@ def map_ignored_scope(ignored):
             if op.get("attributes") is not None:
                 raise ValueError('"attributes" in the ignored operations ' "are not supported")
             ignored_operations.append(op["type"])
-    return {"ignored_scope": nncf.IgnoredScope(names=ignored.get("scope"), types=ignored_operations)}
+    return {"ignored_scope": IgnoredScope(names=ignored.get("scope"), types=ignored_operations)}
 
 
 def map_preset(preset):
     preset = preset.lower()
-    if preset not in [p.value for p in nncf.QuantizationPreset]:
+    if preset not in [p.value for p in QuantizationPreset]:
         raise ValueError(f"{preset} preset is not supported")
-    return {"preset": nncf.QuantizationPreset(preset)}
+    return {"preset": QuantizationPreset(preset)}
 
 
 def map_inplace_statistics(inplace_statistics):
@@ -511,18 +525,18 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
 
     supported_parameters.update(
         {
-            "maximal_drop": lambda x, _: {"max_drop": x},
+            "maximal_drop": lambda x: {"max_drop": x},
             "max_iter_num": map_max_iter_num,
             "ranking_subset_size": map_ranking_subset_size,
             "tune_hyperparams": map_tune_hyperparams,
             "convert_to_mixed_preset": map_convert_to_mixed_preset,
+            "drop_type": map_drop_type,
         }
     )
 
     default_parameters.update(
         {
             "use_prev_if_drop_increase": True,
-            "drop_type": "absolute",
             "base_algorithm": "DefaultQuantization",
             "annotation_free": False,
         }
@@ -577,10 +591,83 @@ def get_nncf_algorithms_config(compression_config):
     return nncf_algorithms
 
 
+def get_allow_reshape_input(accuracy_checker_config) -> bool:
+    for model_config in accuracy_checker_config["models"]:
+        for launcher_config in model_config["launchers"]:
+            if "allow_reshape_input" in launcher_config:
+                return launcher_config["allow_reshape_input"]
+    return False
+
+
+# pylint:disable=too-many-branches
+def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
+    dataset_inputs_shapes = defaultdict(set)
+    for input_dict in islice(dataset.get_inference_data(), subset_size):
+        for name, tensor in input_dict.items():
+            dataset_inputs_shapes[name].add(tuple(tensor.shape))
+
+    model_inputs_shapes = {}
+    for input_output in model.inputs:
+        input_node = input_output.get_node()
+        model_inputs_shapes[input_to_tensor_name[input_node.friendly_name]] = tuple(input_node.partial_shape)
+
+    if len(dataset_inputs_shapes) != len(model_inputs_shapes):
+        raise RuntimeError(
+            f"Model inputs: {list(model_inputs_shapes.keys())}"
+            f" and dataset inputs {list(dataset_inputs_shapes.keys())} are not compatible"
+        )
+
+    for name in model_inputs_shapes:
+        if name not in dataset_inputs_shapes:
+            raise RuntimeError(
+                f"Model input {name} is not present in dataset inputs: {list(dataset_inputs_shapes.keys())}"
+            )
+
+    dynamic_dims = defaultdict(list)
+    reshaped_static_dims = defaultdict(list)
+    for name, shapes in dataset_inputs_shapes.items():
+        shapes = list(shapes)
+        if len(set(len(shape) for shape in shapes)) != 1 or len(model_inputs_shapes[name]) != len(shapes[0]):
+            raise RuntimeError("calibrate.py does not support dataset with dynamic ranks")
+
+        for idx in range(len(shapes[0])):
+            if len(shapes) == 1:
+                model_dim = model_inputs_shapes[name][idx]
+                if model_dim.is_static and model_dim.get_length() != shapes[0][idx]:
+                    reshaped_static_dims[name].append(idx)
+
+            elif any(shapes[0][idx] != shape[idx] for shape in shapes[1:]):
+                dynamic_dims[name].append(idx)
+
+    if not any(any(dict_.values()) for dict_ in [dynamic_dims, reshaped_static_dims]):
+        return model
+
+    partial_shapes = {}
+    for name, shape in model_inputs_shapes.items():
+        dataset_first_shape = dataset_inputs_shapes[name].pop()
+        dims = []
+        for idx, d in enumerate(shape):
+            if idx in dynamic_dims[name]:
+                dim = Dimension(-1)
+            elif idx in reshaped_static_dims[name]:
+                dim = Dimension(dataset_first_shape[idx])
+            else:
+                if isinstance(d, Dimension):
+                    dim = d
+                elif isinstance(d, tuple):
+                    dim = Dimension(d[0], d[1])
+                else:
+                    dim = Dimension(d)
+            dims.append(dim)
+        partial_shapes[name] = PartialShape(dims)
+    model.reshape(partial_shapes)
+    return model
+
+
 # pylint: disable=protected-access
-def quantize_model(xml_path, bin_path, accuracy_checcker_config, quantization_impl, quantization_parameters):
+def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_impl, quantization_parameters):
     ov_model = ov.Core().read_model(model=xml_path, weights=bin_path)
-    model_evaluator = create_model_evaluator(accuracy_checcker_config)
+    model_evaluator = create_model_evaluator(accuracy_checker_config)
     model_evaluator.load_network([{"model": ov_model}])
     model_evaluator.select_dataset("")
 
@@ -602,16 +689,26 @@ def quantize_model(xml_path, bin_path, accuracy_checcker_config, quantization_im
         return input_data
 
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
+
+    if get_allow_reshape_input(accuracy_checker_config):
+        ov_model = maybe_reshape_model(
+            ov_model,
+            calibration_dataset,
+            quantization_parameters.get("subset_size", 300),
+            model_evaluator.launcher.input_to_tensor_name,
+        )
+        model_evaluator.load_network([{"model": ov_model}])
+
     quantized_model = nncf.quantize(ov_model, calibration_dataset, **quantization_parameters)
     return quantized_model
 
 
 # pylint: disable=protected-access
 def quantize_model_with_accuracy_control(
-    xml_path: str, bin_path: str, accuracy_checcker_config, quantization_impl: str, quantization_parameters
+    xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str, quantization_parameters
 ):
     ov_model = ov.Core().read_model(xml_path, bin_path)
-    model_evaluator = create_model_evaluator(accuracy_checcker_config)
+    model_evaluator = create_model_evaluator(accuracy_checker_config)
     model_evaluator.load_network_from_ir([{"model": xml_path, "weights": bin_path}])
     model_evaluator.select_dataset("")
 
@@ -623,9 +720,18 @@ def quantize_model_with_accuracy_control(
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
     validation_dataset = nncf.Dataset(list(range(model_evaluator.dataset.full_size)))
 
-    metric_name = accuracy_checcker_config["models"][0]["datasets"][0]["metrics"][0].get("name", None)
+    if get_allow_reshape_input(accuracy_checker_config):
+        ov_model = maybe_reshape_model(
+            ov_model,
+            calibration_dataset,
+            quantization_parameters.get("subset_size", 300),
+            model_evaluator.launcher.input_to_tensor_name,
+        )
+        model_evaluator.load_network([{"model": ov_model}])
+
+    metric_name = accuracy_checker_config["models"][0]["datasets"][0]["metrics"][0].get("name", None)
     if metric_name is None:
-        metric_name = accuracy_checcker_config["models"][0]["datasets"][0]["metrics"][0]["type"]
+        metric_name = accuracy_checker_config["models"][0]["datasets"][0]["metrics"][0]["type"]
     validation_fn = ACValidationFunction(model_evaluator, metric_name)
 
     name_to_quantization_impl_map = {
@@ -657,7 +763,7 @@ def main():
     config.configure_params()
 
     xml_path, bin_path = get_model_paths(config.model)
-    accuracy_checcker_config = get_accuracy_checker_config(config.engine)
+    accuracy_checker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression)
 
     set_log_file(f"{args.output_dir}/log.txt")
@@ -675,7 +781,7 @@ def main():
             quantize_model_arguments = {
                 "xml_path": xml_path,
                 "bin_path": bin_path,
-                "accuracy_checcker_config": accuracy_checcker_config,
+                "accuracy_checker_config": accuracy_checker_config,
                 "quantization_impl": args.impl,
                 "quantization_parameters": algo_config["parameters"],
             }

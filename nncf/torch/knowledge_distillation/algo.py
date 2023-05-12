@@ -8,6 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Contains builder and controller class definitions for the knowledge distillation.
+"""
 
 from copy import deepcopy
 
@@ -55,6 +58,10 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
 
 @api()
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
+    """
+    Controller for the knowledge distillation in PT.
+    """
+
     def __init__(
         self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str, scale: float, temperature: float
     ):

@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Optional, Type
+from typing import Dict, List, Optional, Type
 
 import jsonschema
 import jstyleson as json
@@ -28,30 +28,46 @@ from nncf.config.structures import NNCFExtraConfigStruct
 
 @api(canonical_alias="nncf.NNCFConfig")
 class NNCFConfig(dict):
-    """A regular dictionary object extended with some utility functions."""
+    """Contains the configuration parameters required for NNCF to apply the selected algorithms.
+
+    This is a regular dictionary object extended with some utility functions, such as the ability to attach well-defined
+    structures to pass non-serializable objects as parameters. It is primarily built from a .json file, or from a
+    Python JSON-like dictionary - both data types will be checked against a JSONSchema. See the definition of the
+    schema at https://openvinotoolkit.github.io/nncf/schema/, or by calling NNCFConfig.schema()."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__nncf_extra_structs = {}  # type: dict[str, NNCFExtraConfigStruct]
 
     @classmethod
-    def from_dict(cls, nncf_dict):
+    def from_dict(cls, nncf_dict: Dict) -> "NNCFConfig":
         """
-        Load NNCF config from dict;
-        The dict must contain only json supported primitives.
+        Load NNCF config from a Python dictionary. The dict must contain only JSON-supported primitives.
+
+        :param nncf_dict: A Python dict with the JSON-style configuration for NNCF.
         """
 
         NNCFConfig.validate(nncf_dict)
         return cls(deepcopy(nncf_dict))
 
     @classmethod
-    def from_json(cls, path) -> "NNCFConfig":
+    def from_json(cls, path: str) -> "NNCFConfig":
+        """
+        Load NNCF config from a JSON file at `path`.
+
+        :param path: Path to the .json file containing the NNCF configuration.
+        """
         file_path = Path(path).resolve()
         with safe_open(file_path) as f:
             loaded_json = json.load(f)
         return cls.from_dict(loaded_json)
 
     def register_extra_structs(self, struct_list: List[NNCFExtraConfigStruct]):
+        """
+        Attach the supplied list of extra configuration structures to this configuration object.
+
+        :param struct_list: List of extra configuration structures.
+        """
         for struct in struct_list:
             struct_id = struct.get_id()
             if struct_id in self.__nncf_extra_structs:
@@ -91,7 +107,10 @@ class NNCFConfig(dict):
         return param
 
     @staticmethod
-    def schema():
+    def schema() -> Dict:
+        """
+        Returns the JSONSchema against which the input data formats (.json or Python dict) are validated.
+        """
         return NNCF_CONFIG_SCHEMA
 
     @staticmethod

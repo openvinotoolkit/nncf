@@ -26,6 +26,7 @@ from nncf.openvino.pot.quantization.accuracy_aware import NMSEBasedAccuracyAware
 from nncf.openvino.pot.telemetry_extractors import POTImplementation
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
+from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
@@ -367,19 +368,22 @@ def quantize_impl(
 
 
 def _create_accuracy_restorer_config(
-    max_drop: float, advanced_parameters: Optional[AdvancedAccuracyRestorerParameters]
+    max_drop: float, drop_type: DropType, advanced_parameters: Optional[AdvancedAccuracyRestorerParameters]
 ) -> Dict[str, Any]:
     """
     Creates a accuracy restorer configuration.
 
-    :param max_drop: The maximum absolute accuracy drop that should be achieved
-        after the quantization.
+    :param max_drop: The maximum accuracy drop that should be achieved after
+        the quantization.
+    :param drop_type: The accuracy drop type, which determines how the maximum accuracy
+        drop between the original model and the compressed model is calculated.
     :param advanced_parameters: Advanced parameters for fine-tuning the accuracy
         restorer algorithm.
     :return: A POT accuracy restorer configuration as dict.
     """
     config = {
         "maximal_drop": max_drop,
+        "drop_type": drop_type.value,
         "metric_subset_ratio": 0.5,
     }
 
@@ -403,6 +407,7 @@ def _create_accuracy_restorer_config(
         "target_device",
         "preset",
         "max_drop",
+        "drop_type",
     ],
 )
 def quantize_with_accuracy_control_impl(
@@ -411,6 +416,7 @@ def quantize_with_accuracy_control_impl(
     validation_dataset: Dataset,
     validation_fn: Callable[[ov.CompiledModel, Iterable[Any]], float],
     max_drop: float = 0.01,
+    drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -456,7 +462,7 @@ def quantize_with_accuracy_control_impl(
     if "NMSEBasedAccuracyAware" not in compression_algorithms.registry_dict:
         compression_algorithms.register("NMSEBasedAccuracyAware")(NMSEBasedAccuracyAware)
 
-    algotrithm_parameters = _create_accuracy_restorer_config(max_drop, advanced_accuracy_restorer_parameters)
+    algotrithm_parameters = _create_accuracy_restorer_config(max_drop, drop_type, advanced_accuracy_restorer_parameters)
 
     algotrithm_parameters.update(
         _create_quantization_config(

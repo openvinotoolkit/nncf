@@ -9,6 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # pylint:disable=too-many-lines
+"""
+Contains builder and controller class definitions for the quantization algorithm.
+"""
 
 import shutil
 from collections import Counter
@@ -336,7 +339,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             quant_config, target_model, precision_init_type, precision_init_params, range_init_params, hw_config
         )
 
-        self._pattern_fusing_graph = PatternsManager.get_full_pattern_graph(BackendType.TORCH, device)
+        self._pattern_fusing_graph = PatternsManager.get_full_pattern_graph(backend=BackendType.TORCH, device=device)
 
         self._hw_precision_constraints = HardwareQuantizationConstraints()
         self._debug_interface = debug_interface
@@ -1284,6 +1287,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
 
 class QuantizationControllerBase(PTCompressionAlgorithmController):
+    """
+    Base controller class for the quantization controllers in PT.
+    """
+
     def enable_activation_quantization(self):
         raise NotImplementedError
 
@@ -1302,6 +1309,10 @@ class QuantizationControllerBase(PTCompressionAlgorithmController):
 
 @api()
 class QuantizationController(QuantizationControllerBase):
+    """
+    Controller for the quantization algorithm in PT.
+    """
+
     def __init__(
         self,
         target_model: NNCFNetwork,

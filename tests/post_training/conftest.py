@@ -13,18 +13,30 @@ from abc import abstractclassmethod
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict
+from typing import Callable, Dict, Optional
 
 import numpy as np
 import pytest
 
 from tests.shared.paths import TEST_ROOT
 
+NOT_AVAILABLE_MESSAGE = "N/A"
+
 
 def pytest_addoption(parser):
     parser.addoption("--data", action="store")
     parser.addoption("--output", action="store", default="./tmp/")
     parser.addoption("--backends", action="store", default="TORCH,TORCH_PTQ,ONNX,OV_NATIVE,OV")
+    parser.addoption(
+        "--eval_fp32",
+        action="store_true",
+        help="Evaluation fp32 model, by defaults used cached metric.",
+    )
+    parser.addoption(
+        "--skip_bench",
+        action="store_true",
+        help="Skip the collection of performance statistics.",
+    )
 
 
 def pytest_configure(config):
@@ -42,8 +54,8 @@ class PipelineType(Enum):
 
 @dataclass
 class RunInfo:
-    top_1: float
-    FPS: float
+    top_1: Optional[float]
+    fps: Optional[float]
     status: str = None
 
 
@@ -64,28 +76,46 @@ class TableColumn:
         Is statistic applicable for given pipeline type.
 
         :param pipeline_type: Given pipeline type.
-        :returns: Eather given pipeline type applicable or not.
+        :returns: Either given pipeline type applicable or not.
         """
 
     @classmethod
     @abstractclassmethod
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         """
-        Metod describes how to retrieve column info out of RunInfo.
+        Method describes how to retrieve column info out of RunInfo.
 
-        :param info: Runinfo to retrive column info.
+        :param info: Runinfo to retrieve column info.
         :param target_pipeline_type: Target type of the pipeline.
         :returns: Column info.
         """
 
     @staticmethod
-    def assign_default_value(func):
+    def assign_default_value(func: Callable):
+        """
+        Return '-' for pipeline types that does not runs.
+        """
+
         def wrapped_get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType):
             if target_pipeline_type not in info:
                 return "-"
             return func(cls, info, target_pipeline_type)
 
         return wrapped_get_value
+
+    @staticmethod
+    def na_msg(func: Callable):
+        """
+        Replace return value of function from None to NOT_AVAILABLE_MESSAGE.
+        """
+
+        def wrapped_na_msg(*args, **kwargs):
+            result = func(*args, **kwargs)
+            if result is None:
+                return NOT_AVAILABLE_MESSAGE
+            return result
+
+        return wrapped_na_msg
 
 
 class Top1Column(TableColumn):
@@ -99,6 +129,7 @@ class Top1Column(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
+    @TableColumn.na_msg
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
         return info[target_pipeline_type].top_1
 
@@ -114,8 +145,9 @@ class FPSColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
+    @TableColumn.na_msg
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
-        return info[target_pipeline_type].FPS
+        return info[target_pipeline_type].fps
 
 
 class Top1DiffColumn(TableColumn):
@@ -129,7 +161,10 @@ class Top1DiffColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
+    @TableColumn.na_msg
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
+        if info[target_pipeline_type].top_1 is None or info[PipelineType.FP32].top_1 is None:
+            return None
         return info[PipelineType.FP32].top_1 - info[target_pipeline_type].top_1
 
 
@@ -144,10 +179,13 @@ class FPSSpeedupColumn(TableColumn):
 
     @classmethod
     @TableColumn.assign_default_value
+    @TableColumn.na_msg
     def get_value(cls, info: Dict[PipelineType, RunInfo], target_pipeline_type: PipelineType) -> str:
-        if info[PipelineType.FP32].FPS > 1e-5:
-            return info[target_pipeline_type].FPS / info[PipelineType.FP32].FPS
-        return "inf"
+        if info[target_pipeline_type].fps is None or info[PipelineType.FP32].fps is None:
+            return None
+        if info[PipelineType.FP32].fps > 1e-5:
+            return info[target_pipeline_type].fps / info[PipelineType.FP32].fps
+        return None
 
 
 class StatusColumn(TableColumn):
@@ -174,6 +212,16 @@ class StatusColumn(TableColumn):
 @pytest.fixture
 def backends_list(request):
     return request.config.getoption("--backends")
+
+
+@pytest.fixture
+def eval_fp32(request):
+    return request.config.getoption("--eval_fp32")
+
+
+@pytest.fixture
+def skip_bench(request):
+    return request.config.getoption("--skip_bench")
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -211,3 +259,4 @@ def pytest_runtest_makereport(item, call):
 
 PTQ_TEST_ROOT = TEST_ROOT / "post_training"
 FQ_CALCULATED_PARAMETERS_PATH = PTQ_TEST_ROOT / "data" / "fq_params" / "fq_params.json"
+MODELS_SCOPE_PATH = PTQ_TEST_ROOT / "model_scope.json"

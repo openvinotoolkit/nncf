@@ -315,7 +315,7 @@ def test_quantizer_parameters_export(tmp_path: Path):
     nncf_config = NNCFConfig({"input_info": {"sample_size": [1, 3, 32, 32]}})
     nncf_network = create_nncf_network(model, nncf_config)
     statistic_points = min_max_algo.get_statistic_points(nncf_network)
-    statistics_aggregator.register_stastistic_points(statistic_points)
+    statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(model)
     torch_quantized_model = min_max_algo._apply(model, statistics_aggregator.statistic_points)
 

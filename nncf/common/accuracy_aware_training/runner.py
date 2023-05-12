@@ -486,6 +486,8 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self._compressed_training_history.append((compression_rate, accuracy_budget))
 
         if IMG_PACKAGES_AVAILABLE:
+            backend = plt.get_backend()
+            plt.switch_backend("agg")
             plt.ioff()
             fig = plt.figure()
             plt.plot(self.compressed_training_history.keys(), self.compressed_training_history.values())
@@ -497,6 +499,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
                 "compression/accuracy_aware/acc_budget_vs_comp_rate", image, len(self.compressed_training_history)
             )
             plt.close(fig)
+            plt.switch_backend(backend)
 
     @property
     def compressed_training_history(self):

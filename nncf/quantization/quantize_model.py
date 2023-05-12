@@ -17,6 +17,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
@@ -141,6 +142,7 @@ def quantize_with_accuracy_control(
     validation_dataset: Dataset,
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
+    drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -166,7 +168,9 @@ def quantize_with_accuracy_control(
               validate the provided model.
         The function should return the value of the metric with the following meaning:
         A higher value corresponds to better performance of the model.
-    :param max_drop: The maximum absolute accuracy drop that should be achieved after the quantization.
+    :param max_drop: The maximum accuracy drop that should be achieved after the quantization.
+    :param drop_type: The accuracy drop type, which determines how the maximum accuracy
+        drop between the original model and the compressed model is calculated.
     :param preset: A preset that controls the quantization mode.
     :type preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
@@ -188,6 +192,7 @@ def quantize_with_accuracy_control(
         fine-tuning the quantization algorithm.
     :param advanced_accuracy_restorer_parameters: Advanced parameters for fine-tuning
         the accuracy restorer algorithm.
+    :type advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters]
     :return: The quantized model.
     :rtype: TModel
     """
@@ -201,6 +206,7 @@ def quantize_with_accuracy_control(
             validation_dataset,
             validation_fn,
             max_drop,
+            drop_type,
             preset,
             target_device,
             subset_size,
