@@ -34,5 +34,6 @@
                 "compression_ratio": 1.5
             }
         }
-    }
+    },
+    "use_ctrl_export": true
 }

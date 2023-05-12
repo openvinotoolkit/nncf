@@ -34,5 +34,6 @@
                 "type": "min_max"
             }
         }
-    }
+    },
+    "use_ctrl_export": true
 }

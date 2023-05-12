@@ -170,5 +170,6 @@
                 ]
             }
         }
-    }
+    },
+    "use_ctrl_export": true
 }
