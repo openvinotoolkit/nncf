@@ -552,8 +552,7 @@ class TestSotaCheckpoints:
         mean_val = eval_test_struct.mean_val_
         scale_val = eval_test_struct.scale_val_
         mo_cmd_tail_template = (
-            "--framework=onnx --compress_to_fp16 --reverse_input_channels"
-            " --mean_values={} --scale_values={} --output_dir {}"
+            "--framework=onnx --reverse_input_channels  --mean_values={} --scale_values={} --output_dir {}"
         )
         if onnx_type == "q_dq":
             model_folder = q_dq_ir_model_folder
