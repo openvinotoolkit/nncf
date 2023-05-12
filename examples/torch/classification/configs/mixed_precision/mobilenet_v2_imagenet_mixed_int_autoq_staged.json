@@ -40,5 +40,5 @@
             "lr_poly_drop_duration_epochs": 10
         }
     },
-    "use_ctrl_export": true
+    "no_strip_on_export": true
 }

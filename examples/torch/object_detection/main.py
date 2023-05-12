@@ -221,8 +221,8 @@ def main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
-        if config.use_ctrl_export:
-            compression_ctrl.export_model(config.to_onnx)
+        if config.no_strip_on_export:
+            export_model(net, config.to_onnx)
         else:
             export_model(compression_ctrl.strip(), config.to_onnx)
         logger.info(f"Saved to {config.to_onnx}")
@@ -300,8 +300,8 @@ def main_worker(current_gpu, config):
                     write_metrics(mAp, config.metrics_dump)
 
     if "export" in config.mode:
-        if config.use_ctrl_export:
-            compression_ctrl.export_model(config.to_onnx)
+        if config.no_strip_on_export:
+            export_model(net, config.to_onnx)
         else:
             export_model(compression_ctrl.strip(), config.to_onnx)
         logger.info(f"Saved to {config.to_onnx}")

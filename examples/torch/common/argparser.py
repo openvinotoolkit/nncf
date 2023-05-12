@@ -104,12 +104,7 @@ def get_common_argument_parser():
     parser.add_argument("--dist-url", default="tcp://127.0.0.1:8899", help="URL used to set up distributed training")
     parser.add_argument("--rank", default=0, type=int, help="Node rank for distributed training")
     parser.add_argument("--dist-backend", default="nccl", type=str, help="Distributed backend")
-    parser.add_argument(
-        "--use_ctrl_export",
-        help="Use controller export, to export with FakeQuantize operations. "
-        "Default: use torch.export for ctrl.strip().",
-        action="store_true",
-    )
+    parser.add_argument("--no_strip_on_export", help="Set to export not stripped model.", action="store_true")
 
     # Hyperparameters
     parser.add_argument(

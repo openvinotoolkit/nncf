@@ -534,7 +534,7 @@ class TestSotaCheckpoints:
 
         if onnx_type == "fq":
             # By default use torch.export and ctrl.strip(), that export to ONNX via torch native FQ.
-            onnx_cmd += " --use_ctrl_export"
+            onnx_cmd += " --no_strip_on_export"
 
         exit_code, err_str = self.run_cmd(onnx_cmd, cwd=PROJECT_ROOT)
         if exit_code != 0 and err_str is not None:

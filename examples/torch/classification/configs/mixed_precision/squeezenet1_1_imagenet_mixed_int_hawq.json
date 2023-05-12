@@ -35,5 +35,5 @@
             }
         }
     },
-    "use_ctrl_export": true
+    "no_strip_on_export": true
 }
