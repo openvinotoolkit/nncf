@@ -1050,7 +1050,7 @@ def test_can_wrap_models_with_metaclass():
 def test_reset_original_unbound_forward():
     model = ModelWithAttr()
     nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
-    inp = torch.zeros((1,))
+    inp = torch.ones((1,))
     assert nncf_network.forward(inp) == inp
 
     nncf_network.set_original_unbound_forward(model.__class__.other_forward)
@@ -1072,7 +1072,7 @@ def test_wrap_original_forward():
 
         return wrapper
 
-    inp = torch.zeros((1,))
+    inp = torch.ones((1,))
 
     original_model = Model()
     assert str(inspect.signature(original_model.forward)) == "(x)"
