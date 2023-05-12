@@ -305,7 +305,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         #   replicated.
         # (2) We access the unbound forward from a reference to the original model class instead
         #   of storing the reference to the unbound forward itself because the original class forward
-        #   may be overriden by some 3rd party logic. For example, during export of mm-based models to ONNX
+        #   may be overridden by some 3rd party logic. For example, during export of mm-based models to ONNX
         #   using mmdeploy library, the original forward method of the model is temporarily replaced
         #   during export. Moreover, in such case the forward signature needs to be hidden by a user
         #   beforehand by wrapping it with a function with (*args, **kwargs) as its arguments.
