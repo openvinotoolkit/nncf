@@ -15,10 +15,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
-from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.backend import get_backend
-from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
@@ -29,7 +26,6 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
-from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Output
 from nncf.scopes import IgnoredScope
 
