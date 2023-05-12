@@ -203,7 +203,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
     real_num_bits = num_bits - 1 if is_half_range else num_bits
 
     input_low, input_range = generate_random_low_and_range_by_input_size(input_size, is_per_channel, is_weights)
-    levels = calculate_asymmetric_level_ranges(real_num_bits)
+    _, _, levels = calculate_asymmetric_level_ranges(real_num_bits)
 
     ######################################################################
     # TODO: Workaround for issue 105241 (remove after fix)
