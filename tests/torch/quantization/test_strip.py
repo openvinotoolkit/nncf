@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import numpy as np
 import pytest
 import torch
@@ -90,10 +92,27 @@ INPUT_TEST_SCALES = (
 )
 
 
+def range_mode_to_args(range_mode: str) -> Tuple[bool, bool]:
+    """
+    Get overflow_fix and narrow_range parameters by range_mode.
+
+    :param range_mode: The type of range mode.
+    :return Tuple[bool, bool]: overflow_fix, narrow_range
+    """
+    if range_mode == "full_range":
+        return False, False
+    if range_mode == "half_range":
+        return True, False
+    if range_mode == "narrow_range":
+        return False, True
+    raise ValueError(f"{range_mode} is not supported.")
+
+
 @pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)
 @pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
+@pytest.mark.parametrize("range_mode", ["full_range", "half_range", "narrow_range"])
 def test_converting_symmetric_quantizer(
-    input_size, num_bits, is_per_channel, is_weights, is_half_range, is_signed, use_cuda
+    input_size, num_bits, is_per_channel, is_weights, range_mode, is_signed, use_cuda
 ):
     if not torch.cuda.is_available() and use_cuda is True:
         pytest.skip("Skipping CUDA test cases for CPU only setups")
@@ -101,13 +120,15 @@ def test_converting_symmetric_quantizer(
     if is_per_channel and input_size[0 if is_weights else 1] == 1:
         pytest.skip("Same case as for per_tensor case")
 
+    is_half_range, narrow_range = range_mode_to_args(range_mode)
+
     np.random.seed(42)
     real_num_bits = num_bits - 1 if is_half_range else num_bits
     np_scale = generate_random_scale_by_input_size(input_size, is_per_channel, is_weights)
     tensor_scale = get_test_data([np_scale], use_cuda)
 
     level_low, level_high, levels = calculate_symmetric_level_ranges(
-        num_bits=real_num_bits, signed=is_signed, narrow_range=False
+        num_bits=real_num_bits, signed=is_signed, narrow_range=narrow_range
     )
 
     input_low = np_scale * (level_low / level_high)
@@ -120,7 +141,7 @@ def test_converting_symmetric_quantizer(
         num_bits=num_bits,
         mode=QuantizationMode.SYMMETRIC,
         signedness_to_force=is_signed,
-        narrow_range=False,
+        narrow_range=narrow_range,
         scale_shape=tuple(tensor_scale.shape),
         logarithm_scale=False,
         half_range=is_half_range,
@@ -155,7 +176,7 @@ def test_converting_symmetric_quantizer(
     assert fq_levels == 2**num_bits - 1, "Levels in converted FQ should be 2**num_bits-1"
 
     fq_test_input = test_input
-    if is_half_range:
+    if is_half_range or narrow_range:
         # Required clamp of input for half range
         fq_input_low, fq_input_high = quantizer.get_input_low_input_high()
         fq_test_input = torch.min(torch.max(fq_test_input, fq_input_low), fq_input_high)
@@ -182,7 +203,8 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
     real_num_bits = num_bits - 1 if is_half_range else num_bits
 
     input_low, input_range = generate_random_low_and_range_by_input_size(input_size, is_per_channel, is_weights)
-    level_low, level_high, levels = calculate_asymmetric_level_ranges(num_bits=real_num_bits, narrow_range=False)
+    levels = calculate_asymmetric_level_ranges(real_num_bits)
+
     ######################################################################
     # TODO: Workaround for issue 105241 (remove after fix)
     get_quant_len = get_quant_len_by_range(input_range=input_range, levels=levels)
@@ -266,7 +288,7 @@ def test_strip_quantization(mode, overflow_fix, num_bits, tmp_path):
     x_torch = inference_model(input_tensor)
     check_quantizer_operators(inference_model, 2**num_bits - 1)
 
-    assert torch.all(torch.isclose(x_nncf, x_torch, atol=1e-6)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
+    assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
     if num_bits == 8:
         # ONNX export only supports 8 bits

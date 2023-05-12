@@ -403,7 +403,7 @@ def scatter_plot(
     fig = px.scatter(data_frame=df, x="X", y=column_names)
     fig.update_traces(marker={"size": 2})
 
-    if vertical_lines:
+    if vertical_lines is not None:
         for x_line in vertical_lines:
             fig.add_vline(x=x_line, line_width=1)
 
