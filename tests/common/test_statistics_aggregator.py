@@ -34,6 +34,7 @@ from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 
+# pylint:disable=too-many-public-methods
 class TemplateTestStatisticsAggregator:
     @abstractmethod
     def get_min_max_algo_backend_cls(self) -> Type[MinMaxAlgoBackend]:
