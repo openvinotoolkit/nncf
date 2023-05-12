@@ -18,20 +18,20 @@ import numpy as np
 import pytest
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.graph.transformations.commands import TargetPoint, TargetType
-from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig
-from nncf.common.tensor_statistics.statistic_point import (
-    StatisticPoint, StatisticPointsContainer)
-from nncf.quantization.algorithms.bias_correction.backend import \
-    BiasCorrectionAlgoBackend
-from nncf.quantization.algorithms.fast_bias_correction.backend import \
-    FastBiasCorrectionAlgoBackend
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
+from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
-from nncf.quantization.range_estimator import (AggregatorType,
-                                               RangeEstimatorParameters,
-                                               RangeEstimatorParametersSet,
-                                               StatisticsCollectorParameters,
-                                               StatisticsType)
+from nncf.quantization.range_estimator import AggregatorType
+from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.range_estimator import StatisticsCollectorParameters
+from nncf.quantization.range_estimator import StatisticsType
 
 
 class TemplateTestStatisticsAggregator:
@@ -626,12 +626,12 @@ class TemplateTestStatisticsAggregator:
         return StatisticPoint(target_point=target_point, tensor_collector=tensor_collector, algorithm=algorithm_name)
 
     @pytest.mark.parametrize(
-        'statistic_point_params',
+        "statistic_point_params",
         (
             (
-                ('AAA', RangeEstimatorParametersSet.MINMAX, TargetType.PRE_LAYER_OPERATION, -128.0, 128),
-                ('BBB', RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION, -128.0, 128),
-                ('CCC', RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION, -63.5, 64.5),
+                ("AAA", RangeEstimatorParametersSet.MINMAX, TargetType.PRE_LAYER_OPERATION, -128.0, 128),
+                ("BBB", RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION, -128.0, 128),
+                ("CCC", RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION, -63.5, 64.5),
             ),
         ),
     )
@@ -781,13 +781,13 @@ class TemplateTestStatisticsAggregator:
                 assert stat.max_values.shape == ref[1].shape
 
     @pytest.mark.parametrize(
-        'statistic_point_params',
+        "statistic_point_params",
         (
             (
-                ('AAA', RangeEstimatorParametersSet.MINMAX, TargetType.PRE_LAYER_OPERATION, 100),
-                ('BBB', RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION, 10),
-                ('CCC', RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, None),
-                ('CCC', RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, -1),
+                ("AAA", RangeEstimatorParametersSet.MINMAX, TargetType.PRE_LAYER_OPERATION, 100),
+                ("BBB", RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION, 10),
+                ("CCC", RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, None),
+                ("CCC", RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, -1),
             ),
         ),
     )
