@@ -21,11 +21,9 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from tests.post_training.helpers import ConvBNTestModel
 from tests.post_training.helpers import ConvTestModel
-from tests.post_training.helpers import FCTestModel
 from tests.post_training.helpers import StaticDatasetMock
 
 TModel = TypeVar("TModel")
@@ -43,12 +41,15 @@ class TemplateTestFBCAlgorithm:
 
         :return TTensor: Converted data.
         """
-        pass
 
     @staticmethod
     @abstractmethod
     def get_backend() -> FastBiasCorrectionAlgoBackend:
-        pass
+        """
+        Get backend specific FastBiasCorrectionAlgoBackend
+
+        :return FastBiasCorrectionAlgoBackend: Backend specific FastBiasCorrectionAlgoBackend
+        """
 
     @pytest.mark.parametrize(
         "bias_value, bias_shift, channel_axis, ref_shape",
@@ -117,7 +118,6 @@ class TemplateTestFBCAlgorithm:
         (
             (ConvTestModel, [0.01984841, 1.0838453]),
             (ConvBNTestModel, [0.08396978, 1.1676897]),
-            # (FCTestModel, [0.9995632, 1.1002693]),
         ),
     )
     def test_update_bias(self, model_cls, ref_bias, tmpdir):
