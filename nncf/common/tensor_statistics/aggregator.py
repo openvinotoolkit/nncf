@@ -8,17 +8,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from itertools import islice
 from typing import Any, Dict, TypeVar
 
 from tqdm import tqdm
 
-from nncf.common.factory import EngineFactory, ModelTransformerFactory
+from nncf.common.factory import EngineFactory
+from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.statistic_point import \
-    StatisticPointsContainer
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
 
 TensorType = TypeVar("TensorType")
