@@ -598,5 +598,5 @@ AGGREGATORS_MAP = {
     AggregatorType.MEAN: MeanAggregator,
     AggregatorType.MEAN_NO_OUTLIERS: MeanNoOutliersAggregator,
     AggregatorType.MEDIAN: MedianAggregator,
-    AggregatorType.MEAN_NO_OUTLIERS: MedianNoOutliersAggregator,
+    AggregatorType.MEDIAN_NO_OUTLIERS: MedianNoOutliersAggregator,
 }
