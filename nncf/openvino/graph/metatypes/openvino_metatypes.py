@@ -296,7 +296,7 @@ class OVLSTMSequenceMetatype(OVOpMetatype):
     name = "LSTMSequenceOp"
     op_names = ["LSTMSequence"]
     hw_config_names = [HWConfigOpName.LSTMSEQUENCE]
-    const_channel_axis = [0]  # const layout: [num_directions, 4 \* hidden_size, input_size]
+    const_channel_axis = [1]  # const layout: [num_directions, 4 \* hidden_size, input_size]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -304,7 +304,7 @@ class OVGRUSequenceMetatype(OVOpMetatype):
     name = "GRUSequenceOp"
     op_names = ["GRUSequence"]
     hw_config_names = [HWConfigOpName.GRUSEQUENCE]
-    const_channel_axis = [0]  # const layout: [num_directions, 3 \* hidden_size, input_size]
+    const_channel_axis = [1]  # const layout: [num_directions, 3 \* hidden_size, input_size]
 
 
 @OV_OPERATOR_METATYPES.register()
