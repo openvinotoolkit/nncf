@@ -1047,6 +1047,19 @@ def test_can_wrap_models_with_metaclass():
     _ = NNCFNetwork(ConcreteMetaModel(), [ModelInputInfo([1, 1, 1, 1])])
 
 
+def test_reset_original_unbound_forward():
+    model = ModelWithAttr()
+    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
+    inp = torch.zeros((1,))
+    assert nncf_network.forward(inp) == inp
+
+    nncf_network.set_original_unbound_forward(model.__class__.other_forward)
+    assert nncf_network.forward(inp) == inp * 2
+
+    nncf_network.reset_original_unbound_forward()
+    assert nncf_network.forward(inp) == inp
+
+
 def test_wrap_original_forward():
     class Model(torch.nn.Module):
         def forward(self, x):
@@ -1072,4 +1085,6 @@ def test_wrap_original_forward():
 
     assert inspect.signature(original_model.forward) != inspect.signature(nncf_model.forward)
     assert original_model.forward(inp) == nncf_model.forward(inp) == inp + 1
-    # assert inspect.signature(original_model.forward) == inspect.signature(nncf_model.forward)
+
+    # Ideally, the condition below should fail but currently there is no means to implement it
+    assert inspect.signature(original_model.forward) != inspect.signature(nncf_model.forward)

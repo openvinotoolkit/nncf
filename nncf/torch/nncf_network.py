@@ -176,7 +176,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         return self._original_unbound_forward
 
-    def set_custom_original_unbound_forward(self, fwd_fn: Callable):
+    def set_original_unbound_forward(self, fwd_fn: Callable):
         """
         Allows to set the function that is treated by NNCF as "original" model forward to another function.
         :param fwd_fn: The new original forward function. The signature w.r.t. activation tensors must be the same,
@@ -184,7 +184,11 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         self._custom_original_unbound_forward = fwd_fn
 
-    def reset_custom_original_unbound_forward(self):
+    def reset_original_unbound_forward(self):
+        """
+        Reset the forward which was set with set_original_unbound_forward() method.
+        After this NNCF will fall back to the unbound forward of the original model.
+        """
         self._custom_original_unbound_forward = None
 
     def __init__(
@@ -210,12 +214,6 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._bound_original_forward = model.nncf._bound_original_forward
             self._custom_original_unbound_forward = model.nncf._custom_original_unbound_forward
         else:
-            # We need the version of the method that has the `self` parameter
-            # not set, otherwise we will be indirectly capturing a reference to the
-            # model object in NNCFInterface - this will lead to failures in DataParallel
-            # because the bound original forward call during NNCFNetwork.forward
-            # would then call forward on the original non-replica module even if NNCFNetwork itself was
-            # replicated.
             self._original_class = model.__class__
             self._bound_original_forward = None
             self._custom_original_unbound_forward = None
@@ -298,8 +296,21 @@ class NNCFNetworkInterface(torch.nn.Module):
 
     @property
     def _original_unbound_forward(self):
+        # Notes:
+        # (1) We rely on an "unbound" forward which is the version of the method that has the
+        #   `self` parameter not set, otherwise we will be indirectly capturing a reference to the
+        #   model object in NNCFInterface - this will lead to failures in DataParallel
+        #   because the bound original forward call during NNCFNetwork.forward
+        #   would then call forward on the original non-replica module even if NNCFNetwork itself was
+        #   replicated.
+        # (2) We access the unbound forward from a reference to the original model class instead
+        #   of storing the reference to the unbound forward itself because the original class forward
+        #   may be overriden by some 3rd party logic. For example, during export of mm-based models to ONNX
+        #   using mmdeploy library, the original forward method of the model is temporarily replaced
+        #   during export. Moreover, in such case the forward signature needs to be hidden by a user
+        #   beforehand by wrapping it with a function with (*args, **kwargs) as its arguments.
         custom_unbound_forward = self._custom_original_unbound_forward
-        return custom_unbound_forward if custom_unbound_forward is not None else self._original_class.forward
+        return self._original_class.forward if custom_unbound_forward is None else custom_unbound_forward
 
     @property
     def _model_ref(self) -> "NNCFNetwork":
@@ -946,7 +957,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
                 "If you need to replace the underlying forward function of the original model so that "
                 "NNCF should be using that instead of the original forward function that NNCF saved "
                 "during the compressed model creation, you can do this by calling:\n"
-                "model.nncf.set_custom_original_unbound_forward(fn)\n"
+                "model.nncf.set_original_unbound_forward(fn)\n"
                 "if `fn` has an unbound 0-th `self` argument, or\n"
                 "with model.nncf.temporary_bound_original_forward(fn): ...\n"
                 "if `fn` already had 0-th `self` argument bound or never had it in the first place."
