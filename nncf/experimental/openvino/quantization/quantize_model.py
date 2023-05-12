@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -30,6 +30,7 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
+from nncf.quantization.algorithms.accuracy_control.evaluator import Output
 from nncf.scopes import IgnoredScope
 
 
@@ -71,7 +72,7 @@ def quantize_with_accuracy_control(
     model: ov.Model,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], float],
+    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[List[float], List[Output], None]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
@@ -123,21 +124,6 @@ def quantize_with_accuracy_control(
     # the error otherwise.
     _match_const_nodes_names(model, quantized_model)
 
-    backend = get_backend(model)
-    algo_backend = get_algo_backend(backend)
-
-    nncf_logger.info("Validation of initial model was started")
-    with timer():
-        initial_metric = validation_fn(algo_backend.prepare_for_inference(model), validation_dataset.get_data())
-    nncf_logger.info(f"Metric of initial model: {initial_metric}")
-
-    nncf_logger.info("Validation of quantized model was started")
-    with timer():
-        quantized_metric = validation_fn(
-            algo_backend.prepare_for_inference(quantized_model), validation_dataset.get_data()
-        )
-    nncf_logger.info(f"Metric of quantized model: {quantized_metric}")
-
     ranking_subset_size = subset_size
     if advanced_accuracy_restorer_parameters.ranking_subset_size is not None:
         ranking_subset_size = advanced_accuracy_restorer_parameters.ranking_subset_size
@@ -148,9 +134,7 @@ def quantize_with_accuracy_control(
         max_drop=max_drop,
         drop_type=drop_type,
     )
-    quantized_model = accuracy_aware_loop.restore_accuracy(
-        model, initial_metric, quantized_model, quantized_metric, validation_dataset, validation_fn
-    )
+    quantized_model = accuracy_aware_loop.apply(model, quantized_model, validation_dataset, validation_fn)
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
