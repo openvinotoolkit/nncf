@@ -8,10 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from abc import abstractmethod
-from dataclasses import dataclass
 from collections import Counter
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Type, Union
 
@@ -19,20 +18,20 @@ import numpy as np
 import pytest
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
-from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
+from nncf.common.graph.transformations.commands import TargetPoint, TargetType
+from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig
+from nncf.common.tensor_statistics.statistic_point import (
+    StatisticPoint, StatisticPointsContainer)
+from nncf.quantization.algorithms.bias_correction.backend import \
+    BiasCorrectionAlgoBackend
+from nncf.quantization.algorithms.fast_bias_correction.backend import \
+    FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
-from nncf.quantization.range_estimator import AggregatorType
-from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.quantization.range_estimator import RangeEstimatorParametersSet
-from nncf.quantization.range_estimator import StatisticsCollectorParameters
-from nncf.quantization.range_estimator import StatisticsType
+from nncf.quantization.range_estimator import (AggregatorType,
+                                               RangeEstimatorParameters,
+                                               RangeEstimatorParametersSet,
+                                               StatisticsCollectorParameters,
+                                               StatisticsType)
 
 
 class TemplateTestStatisticsAggregator:
@@ -391,7 +390,7 @@ class TemplateTestStatisticsAggregator:
         )
         statistics_points = StatisticPointsContainer()
         statistics_points.add_statistic_point(statistic_point)
-        
+
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
