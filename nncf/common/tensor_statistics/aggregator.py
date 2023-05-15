@@ -51,8 +51,9 @@ class StatisticsAggregator(ABC):
         engine = EngineFactory.create(model_with_outputs)
 
         for input_data in tqdm(
-            islice(self.dataset.get_inference_data(), self.stat_subset_size), total=self.stat_subset_size,
-            desc='Statistics collection'
+            islice(self.dataset.get_inference_data(), self.stat_subset_size),
+            total=self.stat_subset_size,
+            desc="Statistics collection",
         ):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
