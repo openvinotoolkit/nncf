@@ -175,6 +175,9 @@ DIMENSION_PERMUTATION_METATYPES = [
     layer_metatypes.TFPermuteLayerMetatype,
 ]
 
+CAST_METATYPES = [
+    op_metatypes.TFCastOpMetatype,
+]
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     keras_metatypes_list = list(layer_metatypes.KERAS_LAYER_METATYPES.registry_dict.values())
