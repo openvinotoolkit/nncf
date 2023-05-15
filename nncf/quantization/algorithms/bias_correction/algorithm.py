@@ -251,7 +251,9 @@ class BiasCorrection(Algorithm):
             # If we found a node with bias, we have to collect it as a statistic node,
             # and its input for _collected_stat_inputs_map,
             # which will be used during the collection of statistics for the next node.
-            if self._backend_entity.is_node_with_bias(node, nncf_graph):
+            if self._backend_entity.is_quantized_weights(node, nncf_graph) and self._backend_entity.is_node_with_bias(
+                node, nncf_graph
+            ):
                 statistic_nodes.append(node)
                 activation_node, output_port_id = self._get_activation_node_and_port(node, nncf_graph)
                 subgraph_output_nodes.append(activation_node)
