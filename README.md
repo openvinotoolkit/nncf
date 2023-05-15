@@ -55,6 +55,8 @@ _Preview means that this is a work in progress and NNCF does not guarantee the f
 - Distributed training support.
 - Configuration file examples for each supported compression algorithm.
 - Git patch for prominent third-party repository ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
+- Seamless combination of pruning, sparsity and quantization algorithms. Please refer [optimum-intel](https://github.com/huggingface/optimum-intel/tree/main/examples/openvino) for examples of 
+joint (movement) pruning, quantization and distillation (JPQD), end-to-end from NNCF optimization to compressed OpenVINO IR.
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai/latest/home.html).
 - Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
