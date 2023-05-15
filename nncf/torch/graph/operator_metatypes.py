@@ -42,8 +42,8 @@ class PTOperatorMetatype(OperatorMetatype):
     certain operation groups.
 
     Attributes:
-        external_op_names (List[str]): Names of functions registered as operators via @register_operator to be associated
-            with this metatype.
+        external_op_names (List[str]): Names of functions registered as operators via @register_operator
+            to be associated with this metatype.
         module_to_function_names (Dict[NamespaceTarget, List[str]]): Names of functions from 'torch.nn.function',
             'torch.tensor' and 'torch' modules respectively, which are associated with this metatype.
         subtypes (List[Type[PTOperatorMetatype]]): List of subtypes of PyTorch operator.
