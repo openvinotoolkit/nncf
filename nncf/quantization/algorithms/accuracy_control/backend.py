@@ -72,12 +72,13 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> bool:
         """
         Checks if the node has a bias or not.
 
         :param node: The node to check.
         :param nncf_graph: The NNCF graph.
+        :param model: TModel instance.
         :return: True` if `node` corresponds to the operation with bias
             (bias is added to the output tensor of that operation), `False` otherwise.
         """

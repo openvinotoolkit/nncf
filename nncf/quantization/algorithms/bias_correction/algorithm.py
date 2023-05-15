@@ -568,25 +568,6 @@ class BiasCorrection(Algorithm):
         port_id = nncf_graph.get_edge(activation_node, node).output_port_id
         return activation_node, port_id
 
-    def _insert_null_biases(self, model: TModel) -> TModel:
-        """
-        This method finds and inserts zero biases for the layers that should have it.
-
-        :param model: TModel instance.
-        :return: Updated TModel instance with zero biases
-        """
-        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
-        nodes_without_biases = nncf_graph.get_nodes_by_metatypes(self._backend_entity.types_to_insert_bias)
-        nodes_without_biases = [
-            node for node in nodes_without_biases if not self._backend_entity.is_node_with_bias(node, nncf_graph, model)
-        ]
-        transformation_layout = TransformationLayout()
-        model_transformer = ModelTransformerFactory.create(model)
-        for node_without_bias in nodes_without_biases:
-            bias_insertion_command = self._backend_entity.create_bias_insertion_command(node_without_bias)
-            transformation_layout.register(bias_insertion_command)
-        return model_transformer.transform(transformation_layout)
-
     def _get_biased_after_nodes(self, nncf_graph: NNCFGraph, nodes: List[NNCFNode], model: TModel) -> List[NNCFNode]:
         """
         This method finds and returns nodes with the bias in the model that follows after the input nodes.

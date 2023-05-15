@@ -293,7 +293,7 @@ class QuantizationAccuracyRestorer:
         :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         """
         for node in initial_model_graph.get_all_nodes():
-            if algo_backend.is_node_with_bias(node, initial_model_graph):
+            if algo_backend.is_node_with_bias(node, initial_model_graph, initial_model):
                 node_with_bias = quantized_model_graph.get_node_by_name(node.node_name)
                 node_with_bias.data["original_bias"] = algo_backend.get_bias_value(
                     node, initial_model_graph, initial_model

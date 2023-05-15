@@ -49,4 +49,4 @@ def test_is_node_with_bias(model_to_create, is_with_bias, node_name):
     model = model_to_create().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
     node = nncf_graph.get_node_by_name(node_name)
-    assert is_node_with_bias(node, nncf_graph) == is_with_bias
+    assert is_node_with_bias(node, nncf_graph, model) == is_with_bias
