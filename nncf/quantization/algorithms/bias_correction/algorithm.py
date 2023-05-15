@@ -177,7 +177,7 @@ class BiasCorrection(Algorithm):
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
             if magnitude < self.threshold:
-                nncf_logger.info(f"{node_name} bias would be changed. Magnitude: {magnitude}")
+                nncf_logger.debug(f"{node_name} bias would be changed. Magnitude: {magnitude}")
                 bias_correction_command = self._backend_entity.create_bias_correction_command(
                     node, updated_bias, nncf_graph
                 )
@@ -185,7 +185,7 @@ class BiasCorrection(Algorithm):
                 model_copy = self._correct_bias(model_copy, bias_correction_command)
                 main_transformations_layout.register(bias_correction_command)
             else:
-                nncf_logger.info(f"{node_name} bias skipped by threshold. Magnitude: {magnitude}")
+                nncf_logger.debug(f"{node_name} bias skipped by threshold. Magnitude: {magnitude}")
 
             # After collecting data to change the bias value, we need to collect statistics for subsequent nodes,
             # but already take into account the bias update made earlier.
@@ -435,7 +435,7 @@ class BiasCorrection(Algorithm):
         for node_input_name in node_inputs_name:
             activation_name, _ = self._collected_stat_inputs_map[node_input_name]
             if node_input_name not in needed_stats_list and activation_name in self._fp_inputs:
-                nncf_logger.info(f"Dropped {node_input_name} input statistics.")
+                nncf_logger.debug(f"Dropped {node_input_name} input statistics.")
                 self._fp_inputs[activation_name] = []
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
@@ -596,7 +596,7 @@ class BiasCorrection(Algorithm):
         biased_nodes = set()
         visited_nodes = []
         for node in nodes:
-            nncf_logger.info(f"Looking for biased nodes after {node.node_name} layer.")
+            nncf_logger.debug(f"Looking for biased nodes after {node.node_name} layer.")
             traverse_to_biased(node, condition_container=biased_nodes)
 
         dependant_nodes = set()
@@ -604,7 +604,7 @@ class BiasCorrection(Algorithm):
         # that the found nodes really only depend on the main layers, and not on each other.
         for biased_node in biased_nodes:
             visited_nodes = []
-            nncf_logger.info(f"Filtering biased nodes after {biased_node.node_name} layer.")
+            nncf_logger.debug(f"Filtering biased nodes after {biased_node.node_name} layer.")
             for next_node in nncf_graph.get_next_nodes(biased_node):
                 traverse_to_biased(next_node, condition_container=dependant_nodes)
 
