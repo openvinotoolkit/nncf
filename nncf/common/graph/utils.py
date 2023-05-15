@@ -1,19 +1,16 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from functools import partial
-from typing import List
-from typing import Set
+from typing import List, Set
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -42,7 +39,7 @@ def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]
     if axis is None:
         if none_dim is None:
             axis = -1
-            nncf_logger.debug('Identity concat node detected')
+            nncf_logger.debug("Identity concat node detected")
         else:
             axis = none_dim
 
@@ -62,9 +59,7 @@ def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFN
     graph_roots = graph.get_input_nodes()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_ids()}
-    partial_traverse_function = partial(traverse_function,
-                                        type_check_fn=lambda x: x in op_types,
-                                        visited=visited)
+    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in op_types, visited=visited)
 
     first_nodes_of_type = []
     for root in graph_roots:
@@ -88,14 +83,14 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
 
     if axis is None:
         axis = -1
-        nncf_logger.debug('Identity split/concat node detected')
+        nncf_logger.debug("Identity split/concat node detected")
 
     return axis
 
 
-def get_number_of_quantized_ops(graph: NNCFGraph,
-                                quantizer_metatypes: List[OperatorMetatype],
-                                quantizable_metatypes: List[OperatorMetatype]) -> int:
+def get_number_of_quantized_ops(
+    graph: NNCFGraph, quantizer_metatypes: List[OperatorMetatype], quantizable_metatypes: List[OperatorMetatype]
+) -> int:
     """
     Returns the number of quantized operations in the graph.
 

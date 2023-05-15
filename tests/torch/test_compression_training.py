@@ -22,9 +22,9 @@ import pytest
 from pytest import approx
 
 from nncf import NNCFConfig
+from tests.shared.helpers import get_cli_dict_args
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
-from tests.shared.helpers import get_cli_dict_args
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import BaseSampleTestCaseDescriptor
 from tests.torch.sample_test_validator import BaseSampleValidator
@@ -33,7 +33,7 @@ from tests.torch.test_sanity_sample import update_compression_algo_dict_with_leg
 
 
 class CompressionTrainingValidator(BaseSampleValidator):
-    def __init__(self, desc: 'CompressionTrainingTestDescriptor'):
+    def __init__(self, desc: "CompressionTrainingTestDescriptor"):
         self._desc = desc
         self._sample_handler = desc.sample_handler
 
@@ -46,47 +46,45 @@ class CompressionTrainingValidator(BaseSampleValidator):
     def validate_sample(self, args, mocker):
         cli_args = get_cli_dict_args(args)
         cmd = self._create_command_line(cli_args)
-        runner = Command(cmd)
         env_with_cuda_reproducibility = os.environ.copy()
-        env_with_cuda_reproducibility['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
-        runner.kwargs.update(env=env_with_cuda_reproducibility)
+        env_with_cuda_reproducibility["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+        env_with_cuda_reproducibility["PYTHONPATH"] = str(PROJECT_ROOT)
+        runner = Command(cmd, env=env_with_cuda_reproducibility)
         runner.run(timeout=self._desc.timeout_)
 
     def get_default_args(self, tmp_path):
         args = {
-            'mode': 'train',
-            'data': str(self._desc.dataset_dir),
-            'config': str(self._desc.config_path),
-            'log-dir': str(tmp_path),
-            'workers': 0  # Workaround for PyTorch MultiprocessingDataLoader issues
+            "mode": "train",
+            "data": str(self._desc.dataset_dir),
+            "config": str(self._desc.config_path),
+            "log-dir": str(tmp_path),
+            "workers": 0,  # Workaround for PyTorch MultiprocessingDataLoader issues
         }
         if self._desc.seed is not None:
-            args['seed'] = self._desc.seed
+            args["seed"] = self._desc.seed
         if self._desc.weights_filename_ is not None:
-            args['weights'] = self._desc.weights_path
+            args["weights"] = self._desc.weights_path
         if self._desc.checkpoint_save_dir is not None:
-            args['checkpoint-save-dir'] = self._desc.checkpoint_save_dir
+            args["checkpoint-save-dir"] = self._desc.checkpoint_save_dir
         if self._desc.execution_arg:
             args[self._desc.execution_arg] = None
         if self._desc.mixed_precision:
-            args['mixed-precision'] = None
+            args["mixed-precision"] = None
         return args
 
     def _create_command_line(self, args):
-        python_path = PROJECT_ROOT.as_posix()
         executable = self._sample_handler.get_executable()
         cli_args = " ".join(
-            key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
-        return "PYTHONPATH={path} {python_exe} {main_py} {args}".format(
-            path=python_path, main_py=executable, args=cli_args, python_exe=sys.executable
+            key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()
         )
+        return f"{sys.executable} {executable} {cli_args}"
 
 
 class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
     def __init__(self):
         super().__init__()
         self.sample_type(SampleType.CLASSIFICATION)
-        self.real_dataset('cifar100')
+        self.real_dataset("cifar100")
         self.execution_arg = None
         self.distributed_data_parallel()
         self.expected_accuracy_ = None
@@ -102,11 +100,11 @@ class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         self.timeout_ = 30 * 60  # 30 min
 
     def __str__(self):
-        config_name = self.config_name_.replace('.json', '')
+        config_name = self.config_name_.replace(".json", "")
         execution_arg = self.execution_arg
         if not execution_arg:
-            execution_arg = 'data_parallel'
-        return '_'.join([config_name, self.dataset_name, execution_arg])
+            execution_arg = "data_parallel"
+        return "_".join([config_name, self.dataset_name, execution_arg])
 
     @property
     def config_directory(self) -> Path:
@@ -114,7 +112,7 @@ class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         return TEST_ROOT / "torch" / "data" / "configs" / "weekly" / sample_dir_name / self.dataset_name
 
     def get_main_filename(self) -> str:
-        return self.sample_handler.get_main_location().split('.')[-1] + '.py'
+        return self.sample_handler.get_main_location().split(".")[-1] + ".py"
 
     def get_checkpoint_path(self) -> str:
         return self.sample_handler.get_checkpoint_path(self.checkpoint_save_dir, self.checkpoint_name, self.config_path)
@@ -139,11 +137,11 @@ class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         return self
 
     def distributed_data_parallel(self):
-        self.execution_arg = 'multiprocessing-distributed'
+        self.execution_arg = "multiprocessing-distributed"
         return self
 
     def cpu_only(self):
-        self.execution_arg = 'cpu-only'
+        self.execution_arg = "cpu-only"
         return self
 
     @property
@@ -154,7 +152,7 @@ class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         self._mixed_precision = True
 
     def data_parallel(self):
-        self.execution_arg = ''
+        self.execution_arg = ""
         return self
 
     def no_seed(self):
@@ -165,18 +163,16 @@ class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         self.timeout_ = num_seconds
         return self
 
-    def finalize(self,
-                 dataset_dir,
-                 tmp_path_factory,
-                 weekly_models_path) -> 'CompressionTrainingTestDescriptor':
+    def finalize(self, dataset_dir, tmp_path_factory, weekly_models_path) -> "CompressionTrainingTestDescriptor":
         if self.dataset_dir is None:
             self.dataset_dir = Path(
-                dataset_dir if dataset_dir else os.path.join(tempfile.gettempdir(), self.dataset_name))
+                dataset_dir if dataset_dir else os.path.join(tempfile.gettempdir(), self.dataset_name)
+            )
         self.weights_path = self._get_weight_path(weekly_models_path)
         if self.weights_path is not None:
-            assert os.path.exists(self.weights_path), 'Weights file does not exist: {}'.format(self.weights_path)
-        checkpoint_save_dir = str(tmp_path_factory.mktemp('models'))
-        self.checkpoint_save_dir = os.path.join(checkpoint_save_dir, self.execution_arg.replace('-', '_'))
+            assert os.path.exists(self.weights_path), "Weights file does not exist: {}".format(self.weights_path)
+        checkpoint_save_dir = str(tmp_path_factory.mktemp("models"))
+        self.checkpoint_save_dir = os.path.join(checkpoint_save_dir, self.execution_arg.replace("-", "_"))
         return self
 
     def get_metric(self):
@@ -204,26 +200,27 @@ class LEGRTrainingTestDescriptor(CompressionTrainingTestDescriptor):
     def update_compression_config_with_legr_save_load_params(self, tmp_path, save=True):
         nncf_config_path = str(super().config_path)
         nncf_config = NNCFConfig.from_json(nncf_config_path)
-        updated_nncf_config = update_compression_algo_dict_with_legr_save_load_params(deepcopy(nncf_config), tmp_path,
-                                                                                      save)
+        updated_nncf_config = update_compression_algo_dict_with_legr_save_load_params(
+            deepcopy(nncf_config), tmp_path, save
+        )
         new_nncf_config_path = nncf_config_path
         if updated_nncf_config != nncf_config:
             new_nncf_config_path = os.path.join(tmp_path, os.path.basename(nncf_config_path))
-            with open(str(new_nncf_config_path), 'w', encoding='utf8') as f:
+            with open(str(new_nncf_config_path), "w", encoding="utf8") as f:
                 json.dump(updated_nncf_config, f)
         self._config_path = Path(new_nncf_config_path)
         return new_nncf_config_path
 
 
 class NASTrainingValidator(CompressionTrainingValidator):
-    def __init__(self, desc: 'NASTrainingTestDescriptor'):
+    def __init__(self, desc: "NASTrainingTestDescriptor"):
         super().__init__(desc)
         self._desc = desc  # to override typehint to a child class
 
     def get_default_args(self, tmp_path):
         args = super().get_default_args(tmp_path)
         if self._desc.num_train_steps_:
-            args['train-steps'] = self._desc.num_train_steps_
+            args["train-steps"] = self._desc.num_train_steps_
         return args
 
     def validate_subnet(self):
@@ -238,15 +235,15 @@ class NASTrainingTestDescriptor(CompressionTrainingTestDescriptor):
         self.sample_type(SampleType.CLASSIFICATION_NAS)
         self.data_parallel()
         self.num_train_steps_ = None
-        self.checkpoint_name = 'supernet'
+        self.checkpoint_name = "supernet"
         self.subnet_expected_accuracy_ = None
-        self.subnet_checkpoint_name = 'subnetwork'
+        self.subnet_checkpoint_name = "subnetwork"
 
     def num_train_steps(self, num_steps: int):
         self.num_train_steps_ = num_steps
         return self
 
-    def get_validator(self) -> 'NASTrainingValidator':
+    def get_validator(self) -> "NASTrainingValidator":
         return NASTrainingValidator(self)
 
     def subnet_expected_accuracy(self, subnet_expected_accuracy: float):
@@ -259,89 +256,92 @@ class NASTrainingTestDescriptor(CompressionTrainingTestDescriptor):
         )
 
     def _get_weight_path(self, weekly_models_path):
-        return os.path.join(weekly_models_path, SampleType.CLASSIFICATION.value, self.dataset_name,
-                            self.weights_filename_)
+        return os.path.join(
+            weekly_models_path, SampleType.CLASSIFICATION.value, self.dataset_name, self.weights_filename_
+        )
 
 
 # No seed to workaround PyTorch 1.9.1 multiprocessing issue related to determinism and asym quantization.
 # https://github.com/pytorch/pytorch/issues/61032
-MOBILENET_V2_ASYM_INT8 = CompressionTrainingTestDescriptor(). \
-    config_name('mobilenet_v2_asym_int8.json'). \
-    expected_accuracy(68.11). \
-    weights_filename('mobilenet_v2_32x32_cifar100_68.11.pth'). \
-    absolute_tolerance_train(1.0). \
-    absolute_tolerance_eval(2e-1). \
-    no_seed()
+MOBILENET_V2_ASYM_INT8 = (
+    CompressionTrainingTestDescriptor()
+    .config_name("mobilenet_v2_asym_int8.json")
+    .expected_accuracy(68.11)
+    .weights_filename("mobilenet_v2_32x32_cifar100_68.11.pth")
+    .absolute_tolerance_train(1.0)
+    .absolute_tolerance_eval(2e-1)
+    .no_seed()
+)
 
-MOBILENET_V2_MAGNITUDE_SPARSITY_INT8 = CompressionTrainingTestDescriptor(). \
-    config_name('mobilenet_v2_magnitude_sparsity_int8.json'). \
-    expected_accuracy(68.11). \
-    weights_filename('mobilenet_v2_32x32_cifar100_68.11.pth'). \
-    absolute_tolerance_train(1.5). \
-    absolute_tolerance_eval(2e-1)
+MOBILENET_V2_MAGNITUDE_SPARSITY_INT8 = (
+    CompressionTrainingTestDescriptor()
+    .config_name("mobilenet_v2_magnitude_sparsity_int8.json")
+    .expected_accuracy(68.11)
+    .weights_filename("mobilenet_v2_32x32_cifar100_68.11.pth")
+    .absolute_tolerance_train(1.5)
+    .absolute_tolerance_eval(2e-1)
+)
 
 QUANTIZATION_DESCRIPTORS = [
     CompressionTrainingTestDescriptor()
-        .config_name('mobilenet_v2_sym_int8.json')
-        .expected_accuracy(68.11)
-        .weights_filename('mobilenet_v2_32x32_cifar100_68.11.pth')
-        .absolute_tolerance_train(1.0)
-        .absolute_tolerance_eval(2e-1),
+    .config_name("mobilenet_v2_sym_int8.json")
+    .expected_accuracy(68.11)
+    .weights_filename("mobilenet_v2_32x32_cifar100_68.11.pth")
+    .absolute_tolerance_train(1.0)
+    .absolute_tolerance_eval(2e-1),
     MOBILENET_V2_ASYM_INT8,
     deepcopy(MOBILENET_V2_ASYM_INT8).cpu_only(),
     CompressionTrainingTestDescriptor()
-        .config_name('inceptionV3_int8.json')
-        .expected_accuracy(77.53)
-        .weights_filename('inceptionV3_77.53.sd')
-        .data_parallel()
-        .absolute_tolerance_eval(2e-1)
-        .timeout_seconds(60 * 60),  # 1 hour
+    .config_name("inceptionV3_int8.json")
+    .expected_accuracy(77.53)
+    .weights_filename("inceptionV3_77.53.sd")
+    .data_parallel()
+    .absolute_tolerance_eval(2e-1)
+    .timeout_seconds(60 * 60),  # 1 hour
     CompressionTrainingTestDescriptor()
-        .config_name('resnet50_int8.json')
-        .expected_accuracy(67.93)
-        .data_parallel()
-        .weights_filename('resnet50_cifar100_67.93.pth')
-        .absolute_tolerance_eval(2e-1),
+    .config_name("resnet50_int8.json")
+    .expected_accuracy(67.93)
+    .data_parallel()
+    .weights_filename("resnet50_cifar100_67.93.pth")
+    .absolute_tolerance_eval(2e-1),
 ]
 
 SPARSITY_DESCRIPTORS = [
     MOBILENET_V2_MAGNITUDE_SPARSITY_INT8,
-    deepcopy(MOBILENET_V2_MAGNITUDE_SPARSITY_INT8)
-        .data_parallel()
-        .timeout_seconds(60 * 60),  # 1 hour,
+    deepcopy(MOBILENET_V2_MAGNITUDE_SPARSITY_INT8).data_parallel().timeout_seconds(60 * 60),  # 1 hour,
     CompressionTrainingTestDescriptor()
-        .config_name('mobilenet_v2_rb_sparsity_int8.json')
-        .expected_accuracy(68.11)
-        .weights_filename('mobilenet_v2_32x32_cifar100_68.11.pth')
-        .absolute_tolerance_eval(1.5e-1)
-        .timeout_seconds(2 * 60 * 60),  # 2 hours
+    .config_name("mobilenet_v2_rb_sparsity_int8.json")
+    .expected_accuracy(68.11)
+    .weights_filename("mobilenet_v2_32x32_cifar100_68.11.pth")
+    .absolute_tolerance_eval(1.5e-1)
+    .timeout_seconds(2 * 60 * 60),  # 2 hours
 ]
 
 NAS_DESCRIPTORS = [
     NASTrainingTestDescriptor()
-        .real_dataset('cifar10')
-        .config_name('mobilenet_v2_nas_SMALL.json')
-        .expected_accuracy(80.95)
-        .subnet_expected_accuracy(88.67)
-        .weights_filename('mobilenet_v2_cifar10_93.91.pth')
-        .absolute_tolerance_train(1.0)
-        .absolute_tolerance_eval(2e-2),
+    .real_dataset("cifar10")
+    .config_name("mobilenet_v2_nas_SMALL.json")
+    .expected_accuracy(80.95)
+    .subnet_expected_accuracy(88.67)
+    .weights_filename("mobilenet_v2_cifar10_93.91.pth")
+    .absolute_tolerance_train(1.0)
+    .absolute_tolerance_eval(2e-2),
     NASTrainingTestDescriptor()
-        .real_dataset('cifar10')
-        .config_name('resnet50_nas_SMALL.json')
-        .subnet_expected_accuracy(88.67)
-        .expected_accuracy(87.25)
-        .weights_filename('resnet50_cifar10_93.65.pth')
-        .absolute_tolerance_train(2.0)
-        .absolute_tolerance_eval(2e-2),
+    .real_dataset("cifar10")
+    .config_name("resnet50_nas_SMALL.json")
+    .subnet_expected_accuracy(88.67)
+    .expected_accuracy(87.25)
+    .weights_filename("resnet50_cifar10_93.65.pth")
+    .absolute_tolerance_train(2.0)
+    .absolute_tolerance_eval(2e-2),
     NASTrainingTestDescriptor()
-        .real_dataset('cifar10')
-        .config_name('vgg11_bn_nas_SMALL.json')
-        .subnet_expected_accuracy(85.09)
-        .expected_accuracy(89.43)
-        .weights_filename('vgg11_bn_cifar10_92.39.pth')
-        .absolute_tolerance_train(2.0)
-        .absolute_tolerance_eval(2e-2),
+    .real_dataset("cifar10")
+    .config_name("vgg11_bn_nas_SMALL.json")
+    .subnet_expected_accuracy(85.09)
+    .expected_accuracy(89.43)
+    .weights_filename("vgg11_bn_cifar10_92.39.pth")
+    .absolute_tolerance_train(2.0)
+    .absolute_tolerance_eval(2e-2),
     # NASTrainingTestDescriptor()
     #     .real_dataset('cifar100')
     #     .config_name('efficient_net_b0_nas_SMALL.json')
@@ -354,29 +354,29 @@ NAS_DESCRIPTORS = [
 
 IMAGENET_DESCRIPTORS = [
     CompressionTrainingTestDescriptor()
-        .config_name('mobilenet_v2_sym_int8.json')
-        .real_dataset('imagenet')
-        .expected_accuracy(100)
-        .data_parallel()
-        .weights_filename('mobilenet_v2.pth.tar'),
+    .config_name("mobilenet_v2_sym_int8.json")
+    .real_dataset("imagenet")
+    .expected_accuracy(100)
+    .data_parallel()
+    .weights_filename("mobilenet_v2.pth.tar"),
     CompressionTrainingTestDescriptor()
-        .config_name('mobilenet_v2_sym_int8.json')
-        .real_dataset('imagenet')
-        .expected_accuracy(100)
-        .weights_filename('mobilenet_v2.pth.tar'),
+    .config_name("mobilenet_v2_sym_int8.json")
+    .real_dataset("imagenet")
+    .expected_accuracy(100)
+    .weights_filename("mobilenet_v2.pth.tar"),
     CompressionTrainingTestDescriptor()
-        .config_name('mobilenet_v2_asym_int8.json')
-        .real_dataset('imagenet')
-        .expected_accuracy(100)
-        .weights_filename('mobilenet_v2.pth.tar'),
+    .config_name("mobilenet_v2_asym_int8.json")
+    .real_dataset("imagenet")
+    .expected_accuracy(100)
+    .weights_filename("mobilenet_v2.pth.tar"),
     CompressionTrainingTestDescriptor()
-        .config_name('resnet50_sym_int8.json')
-        .real_dataset('imagenet')
-        .expected_accuracy(100),
+    .config_name("resnet50_sym_int8.json")
+    .real_dataset("imagenet")
+    .expected_accuracy(100),
     CompressionTrainingTestDescriptor()
-        .config_name('resnet50_asym_int8.json')
-        .real_dataset('imagenet')
-        .expected_accuracy(100),
+    .config_name("resnet50_asym_int8.json")
+    .real_dataset("imagenet")
+    .expected_accuracy(100),
 ]
 
 TEST_CASE_DESCRIPTORS = [
@@ -387,11 +387,11 @@ TEST_CASE_DESCRIPTORS = [
 
 LEGR_TEST_CASE_DESCRIPTORS = [
     LEGRTrainingTestDescriptor()
-        .config_name('mobilenet_v2_learned_ranking.json')
-        .expected_accuracy(68.11)
-        .weights_filename('mobilenet_v2_32x32_cifar100_68.11.pth')
-        .absolute_tolerance_train(1.5)
-        .absolute_tolerance_eval(2e-2),
+    .config_name("mobilenet_v2_learned_ranking.json")
+    .expected_accuracy(68.11)
+    .weights_filename("mobilenet_v2_32x32_cifar100_68.11.pth")
+    .absolute_tolerance_train(1.5)
+    .absolute_tolerance_eval(2e-2),
 ]
 
 
@@ -404,31 +404,29 @@ def fixture_case_common_dirs(tmp_path_factory):
 
 def finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet):
     if weekly_models_path is None:
-        pytest.skip('Path to models weights for weekly testing is not set, use --weekly-models option.')
-    if 'imagenet' in desc.dataset_name and not enable_imagenet:
-        pytest.skip('ImageNet tests were intentionally skipped as it takes a lot of time')
+        pytest.skip("Path to models weights for weekly testing is not set, use --weekly-models option.")
+    if "imagenet" in desc.dataset_name and not enable_imagenet:
+        pytest.skip("ImageNet tests were intentionally skipped as it takes a lot of time")
     return desc.finalize(dataset_dir, tmp_path_factory, weekly_models_path)
 
 
-@pytest.fixture(name='desc', scope='module',
-                params=TEST_CASE_DESCRIPTORS, ids=map(str, TEST_CASE_DESCRIPTORS))
-def fixture_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet,
-                 mixed_precision):
+@pytest.fixture(name="desc", scope="module", params=TEST_CASE_DESCRIPTORS, ids=map(str, TEST_CASE_DESCRIPTORS))
+def fixture_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet, mixed_precision):
     desc: CompressionTrainingTestDescriptor = request.param
     if mixed_precision:
         desc.use_mixed_precision()
     return finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet)
 
 
-@pytest.fixture(name='legr_desc', scope='module',
-                params=LEGR_TEST_CASE_DESCRIPTORS, ids=map(str, LEGR_TEST_CASE_DESCRIPTORS))
+@pytest.fixture(
+    name="legr_desc", scope="module", params=LEGR_TEST_CASE_DESCRIPTORS, ids=map(str, LEGR_TEST_CASE_DESCRIPTORS)
+)
 def fixture_legr_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet):
     desc: LEGRTrainingTestDescriptor = request.param
     return finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet)
 
 
-@pytest.fixture(name='nas_desc', scope='module',
-                params=NAS_DESCRIPTORS, ids=map(str, NAS_DESCRIPTORS))
+@pytest.fixture(name="nas_desc", scope="module", params=NAS_DESCRIPTORS, ids=map(str, NAS_DESCRIPTORS))
 def fixture_nas_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet):
     desc: NASTrainingTestDescriptor = request.param
     return finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet)
@@ -459,7 +457,7 @@ class TestCompression:
     def test_compression_legr_train(self, legr_desc: LEGRTrainingTestDescriptor, tmp_path, mocker, case_common_dirs):
         validator = legr_desc.get_validator()
         args = validator.get_default_args(tmp_path)
-        args['config'] = legr_desc.update_compression_config_with_legr_save_load_params(
+        args["config"] = legr_desc.update_compression_config_with_legr_save_load_params(
             case_common_dirs["save_coeffs_path"], True
         )
 
@@ -472,7 +470,7 @@ class TestCompression:
         validator = legr_desc.get_validator()
         args = validator.get_default_args(tmp_path)
         metric_file_path = self._add_args_for_eval(args, legr_desc, tmp_path)
-        args['config'] = legr_desc.update_compression_config_with_legr_save_load_params(
+        args["config"] = legr_desc.update_compression_config_with_legr_save_load_params(
             case_common_dirs["save_coeffs_path"], False
         )
 
@@ -502,20 +500,20 @@ class TestCompression:
 
     @staticmethod
     def _validate_eval_metric(desc, metric_file_path):
-        with open(str(metric_file_path), encoding='utf8') as metric_file:
+        with open(str(metric_file_path), encoding="utf8") as metric_file:
             metrics = json.load(metric_file)
-            ref_metric = metrics['Accuracy']
+            ref_metric = metrics["Accuracy"]
             assert desc.get_metric() == approx(ref_metric, abs=desc.absolute_tolerance_eval_)
 
     @staticmethod
     def _add_args_for_eval(args, desc, tmp_path):
-        args['mode'] = 'test'
+        args["mode"] = "test"
         checkpoint_path = desc.get_checkpoint_path()
-        args['resume'] = checkpoint_path
-        if 'weights' in args:
-            del args['weights']
-        metric_file_path = tmp_path / 'metrics.json'
-        args['metrics-dump'] = tmp_path / metric_file_path
+        args["resume"] = checkpoint_path
+        if "weights" in args:
+            del args["weights"]
+        metric_file_path = tmp_path / "metrics.json"
+        args["metrics-dump"] = tmp_path / metric_file_path
         return metric_file_path
 
     @staticmethod

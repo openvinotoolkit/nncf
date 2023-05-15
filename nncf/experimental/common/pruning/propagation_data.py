@@ -1,24 +1,18 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from dataclasses import dataclass
 import json
-from typing import (
-    Dict,
-    Optional,
-    Set,
-    List
-)
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Set
+
 
 @dataclass
 class ProducerInfo:
@@ -30,6 +24,7 @@ class ProducerInfo:
     :param pruning_dimension: axis number from 0 to N-1 in weights along which the pruning structure is defined.
         N is total number of dimensions.
     """
+
     node_id: int
     pruning_dimension: int = 0
 
@@ -38,6 +33,10 @@ class ProducerInfo:
 
     def __str__(self) -> str:
         return str(self.node_id)
+
+    def __lt__(self, other: "ProducerInfo"):
+        return self.node_id < other.node_id
+
 
 @dataclass
 class ConsumerInfo:
@@ -59,6 +58,10 @@ class ConsumerInfo:
 
     def __str__(self) -> str:
         return str(self.node_id)
+
+    def __lt__(self, other: "ConsumerInfo"):
+        return self.node_id < other.node_id
+
 
 @dataclass
 class PruningBlock:
@@ -138,12 +141,15 @@ class PropagationGroup:
     Defines a group of propagation blocks and links it with the list of children groups.
     The group is initialized on producers of pruning and is propagated until consumers within PropagationMask.
     """
-    def __init__(self,
-                 block: PruningBlock,
-                 producers: Optional[Set[ProducerInfo]] = None,
-                 consumers: Optional[Set[ConsumerInfo]] = None) -> None:
+
+    def __init__(
+        self,
+        block: PruningBlock,
+        producers: Optional[Set[ProducerInfo]] = None,
+        consumers: Optional[Set[ConsumerInfo]] = None,
+    ) -> None:
         self.block = block
-        self._children: List['PropagationGroup'] = []
+        self._children: List["PropagationGroup"] = []
         self._is_invalid = False
         self._producers = set() if producers is None else producers
         self._consumers = set() if consumers is None else consumers
@@ -152,18 +158,15 @@ class PropagationGroup:
     def is_invalid(self):
         return self._is_invalid
 
-
     def __str__(self) -> str:
-        producers = ','.join(map(str, self._producers))
-        consumers = ','.join(map(str, self._consumers))
-        return f'Block: {self.block}\n'\
-               f'Producers: {producers}\n'\
-               f'Consumers: {consumers}'
+        producers = ",".join(map(str, sorted(self._producers)))
+        consumers = ",".join(map(str, sorted(self._consumers)))
+        return f"Block: {self.block}\n" f"Producers: {producers}\n" f"Consumers: {consumers}"
 
     def __repr__(self) -> str:
-        producers = ','.join(map(str, self.get_producers()))
-        consumers = ','.join(map(str, self.get_consumers()))
-        return f'{str(self.block)}__P{producers}__C{consumers}'
+        producers = ",".join(map(str, self.get_producers()))
+        consumers = ",".join(map(str, self.get_consumers()))
+        return f"{str(self.block)}__P{producers}__C{consumers}"
 
     def invalidate(self) -> None:
         """
@@ -174,15 +177,17 @@ class PropagationGroup:
             child.invalidate()
 
     @staticmethod
-    def join_groups(*args: 'PropagationGroup') -> 'PropagationGroup':
+    def join_groups(*args: "PropagationGroup") -> "PropagationGroup":
         """
         Join block groups into a new one. The group combines all block and child groups from the given list of groups.
 
         :return: a new block group.
         """
         first_block = args[0].block
-        assert all(first_block == group.block for group in args), 'joining groups with different blocks is not '\
-            'supported. Need to implement merging of multiple block by choosing smallest common divisor as size.`'
+        assert all(first_block == group.block for group in args), (
+            "joining groups with different blocks is not "
+            "supported. Need to implement merging of multiple block by choosing smallest common divisor as size.`"
+        )
 
         new_group = PropagationGroup(block=first_block)
         for group in args:
@@ -205,7 +210,7 @@ class PropagationGroup:
     def add_producers(self, producers: Set[ProducerInfo]) -> None:
         self._producers.update(producers)
 
-    def add_child(self, child: 'PropagationGroup') -> None:
+    def add_child(self, child: "PropagationGroup") -> None:
         self._children.append(child)
 
     def get_consumers(self) -> Set[ConsumerInfo]:
@@ -214,7 +219,7 @@ class PropagationGroup:
     def get_producers(self) -> Set[ProducerInfo]:
         return self._producers.copy()
 
-    def get_children(self) -> List['PropagationGroup']:
+    def get_children(self) -> List["PropagationGroup"]:
         return self._children.copy()
 
     def has_children(self) -> bool:
@@ -235,13 +240,15 @@ class PropagationMask:
     with retaining it in the consumers.
     """
 
-    def __init__(self,
-                 dim_groups_map: Dict[int, List[PropagationGroup]] = None) -> None:
+    def __init__(self, dim_groups_map: Dict[int, List[PropagationGroup]] = None) -> None:
         self.dim_groups_map = dim_groups_map if dim_groups_map is not None else {}
 
     def __str__(self) -> str:
         state = {dim: list(map(repr, groups)) for dim, groups in self.dim_groups_map.items()}
         return json.dumps(state)
+
+    def __bool__(self):
+        return bool(self.dim_groups_map)
 
     def invalidate_groups(self) -> None:
         """

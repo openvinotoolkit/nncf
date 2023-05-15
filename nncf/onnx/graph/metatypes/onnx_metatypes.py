@@ -1,25 +1,24 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import List, Type, Optional
 from dataclasses import dataclass
+from typing import List, Optional, Type
 
 import onnx
+
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
 
-ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry('onnx_operator_metatypes')
+ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry("onnx_operator_metatypes")
 
 
 class ONNXOpMetatype(OperatorMetatype):
@@ -45,8 +44,7 @@ class ONNXOpMetatype(OperatorMetatype):
             if subtype.matches(model, node):
                 matches.append(subtype)
         if len(matches) > 1:
-            raise RuntimeError('Multiple subtypes match operator call - '
-                               'cannot determine single subtype.')
+            raise RuntimeError("Multiple subtypes match operator call - cannot determine single subtype.")
         if not matches:
             return None
         return matches[0]
@@ -63,6 +61,7 @@ class OpWeightDef:
     :param bias_port_id: Input port of the node's bias.
     If the value is None it means that the Metatype does not have bias.
     """
+
     weight_channel_axis: int
     weight_port_id: Optional[int] = None
     bias_port_id: Optional[int] = None
@@ -74,8 +73,8 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
-    name = 'DepthwiseConvOp'
-    op_names = ['Conv']
+    name = "DepthwiseConvOp"
+    op_names = ["Conv"]
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
     output_channel_axis = 1
@@ -87,8 +86,8 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
-    name = 'ConvOp'
-    op_names = ['Conv']
+    name = "ConvOp"
+    op_names = ["Conv"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
     output_channel_axis = 1
@@ -97,8 +96,8 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
-    name = 'ConvTransposeOp'
-    op_names = ['ConvTranspose']
+    name = "ConvTransposeOp"
+    op_names = ["ConvTranspose"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     weight_definitions = OpWeightDef(weight_channel_axis=1, weight_port_id=1, bias_port_id=2)
     output_channel_axis = 1
@@ -106,8 +105,8 @@ class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXLinearMetatype(ONNXOpWithWeightsMetatype):
-    name = 'LinearOp'
-    op_names = ['Gemm']
+    name = "LinearOp"
+    op_names = ["Gemm"]
     hw_config_names = [HWConfigOpName.MATMUL]
     # TODO(kshpv): ticket:95156
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
@@ -116,369 +115,399 @@ class ONNXLinearMetatype(ONNXOpWithWeightsMetatype):
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXReluMetatype(ONNXOpMetatype):
-    name = 'ReluOp'
-    op_names = ['Relu', 'Clip']
+    name = "ReluOp"
+    op_names = ["Relu", "Clip"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXLeakyReluMetatype(ONNXOpMetatype):
-    name = 'LeakyReluOp'
-    op_names = ['LeakyRelu']
+    name = "LeakyReluOp"
+    op_names = ["LeakyRelu"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXThresholdedReluMetatype(ONNXOpMetatype):
-    name = 'ThresholdedReluOp'
-    op_names = ['ThresholdedRelu']
+    name = "ThresholdedReluOp"
+    op_names = ["ThresholdedRelu"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXEluMetatype(ONNXOpMetatype):
-    name = 'EluOp'
-    op_names = ['Elu']
+    name = "EluOp"
+    op_names = ["Elu"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXPReluMetatype(ONNXOpMetatype):
-    name = 'PReluOp'
-    op_names = ['PRelu']
+    name = "PReluOp"
+    op_names = ["PRelu"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXSigmoidMetatype(ONNXOpMetatype):
-    name = 'SigmoidOp'
-    op_names = ['Sigmoid']
+    name = "SigmoidOp"
+    op_names = ["Sigmoid"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXHardSigmoidMetatype(ONNXOpMetatype):
-    name = 'HardSigmoidOp'
-    op_names = ['HardSigmoid']
+    name = "HardSigmoidOp"
+    op_names = ["HardSigmoid"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXHardSwishMetatype(ONNXOpMetatype):
-    name = 'HardSwishOp'
-    op_names = ['HardSwish']
+    name = "HardSwishOp"
+    op_names = ["HardSwish"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXGlobalAveragePoolMetatype(ONNXOpMetatype):
-    name = 'GlobalAveragePoolOp'
-    op_names = ['GlobalAveragePool']
+    name = "GlobalAveragePoolOp"
+    op_names = ["GlobalAveragePool"]
     hw_config_names = [HWConfigOpName.AVGPOOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXAveragePoolMetatype(ONNXOpMetatype):
-    name = 'AveragePoolOp'
-    op_names = ['AveragePool']
+    name = "AveragePoolOp"
+    op_names = ["AveragePool"]
     hw_config_names = [HWConfigOpName.AVGPOOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXMaxPoolMetatype(ONNXOpMetatype):
-    name = 'MaxPoolOp'
-    op_names = ['MaxPool']
+    name = "MaxPoolOp"
+    op_names = ["MaxPool"]
     hw_config_names = [HWConfigOpName.MAXPOOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXConstantMetatype(ONNXOpMetatype):
-    name = 'ConstantOp'
-    op_names = ['Constant']
+    name = "ConstantOp"
+    op_names = ["Constant"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXAddLayerMetatype(ONNXOpMetatype):
-    name = 'AddOp'
-    op_names = ['Add', 'Sum']
+    name = "AddOp"
+    op_names = ["Add", "Sum"]
     hw_config_names = [HWConfigOpName.ADD]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXSubMetatype(ONNXOpMetatype):
-    name = 'SubOp'
-    op_names = ['Sub']
+    name = "SubOp"
+    op_names = ["Sub"]
     hw_config_names = [HWConfigOpName.SUBTRACT]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXMulLayerMetatype(ONNXOpMetatype):
-    name = 'MulOp'
-    op_names = ['Mul']
+    name = "MulOp"
+    op_names = ["Mul"]
     hw_config_names = [HWConfigOpName.MULTIPLY]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXDivLayerMetatype(ONNXOpMetatype):
-    name = 'DivOp'
-    op_names = ['Div']
+    name = "DivOp"
+    op_names = ["Div"]
     hw_config_names = [HWConfigOpName.DIVIDE]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXConcatLayerMetatype(ONNXOpMetatype):
-    name = 'ConcatOp'
-    op_names = ['Concat']
+    name = "ConcatOp"
+    op_names = ["Concat"]
     hw_config_names = [HWConfigOpName.CONCAT]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXBatchNormMetatype(ONNXOpMetatype):
-    name = 'BatchNormalizationOp'
-    op_names = ['BatchNormalization']
+    name = "BatchNormalizationOp"
+    op_names = ["BatchNormalization"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXResizeMetatype(ONNXOpMetatype):
-    name = 'ResizeOp'
-    op_names = ['Resize']
+    name = "ResizeOp"
+    op_names = ["Resize"]
     hw_config_names = [HWConfigOpName.INTERPOLATE]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXReshapeMetatype(ONNXOpMetatype):
-    name = 'ReshapeOp'
-    op_names = ['Reshape']
+    name = "ReshapeOp"
+    op_names = ["Reshape"]
     hw_config_names = [HWConfigOpName.RESHAPE]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXUpsampleMetatype(ONNXOpMetatype):
-    name = 'UpsampleOp'
-    op_names = ['Upsample']
+    name = "UpsampleOp"
+    op_names = ["Upsample"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXConstantOfShapeMetatype(ONNXOpMetatype):
-    name = 'ConstantOfShapeOp'
-    op_names = ['ConstantOfShape']
+    name = "ConstantOfShapeOp"
+    op_names = ["ConstantOfShape"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXShapeMetatype(ONNXOpMetatype):
-    name = 'ShapeOp'
-    op_names = ['Shape']
+    name = "ShapeOp"
+    op_names = ["Shape"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXExpandMetatype(ONNXOpMetatype):
-    name = 'ExpandOp'
-    op_names = ['Expand']
+    name = "ExpandOp"
+    op_names = ["Expand"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXNonZeroMetatype(ONNXOpMetatype):
-    name = 'NonZeroOp'
-    op_names = ['NonZero']
+    name = "NonZeroOp"
+    op_names = ["NonZero"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXSplitMetatype(ONNXOpMetatype):
-    name = 'SplitOp'
-    op_names = ['Split']
+    name = "SplitOp"
+    op_names = ["Split"]
     hw_config_names = [HWConfigOpName.SPLIT]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXLessMetatype(ONNXOpMetatype):
-    name = 'LessOp'
-    op_names = ['Less']
+    name = "LessOp"
+    op_names = ["Less"]
     hw_config_names = [HWConfigOpName.LESS]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXGreaterMetatype(ONNXOpMetatype):
-    name = 'GreaterOp'
-    op_names = ['Greater']
+    name = "GreaterOp"
+    op_names = ["Greater"]
     hw_config_names = [HWConfigOpName.GREATER]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXEqualMetatype(ONNXOpMetatype):
-    name = 'EqualOp'
-    op_names = ['Equal']
+    name = "EqualOp"
+    op_names = ["Equal"]
     hw_config_names = [HWConfigOpName.EQUAL]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXNotMetatype(ONNXOpMetatype):
-    name = 'NotOp'
-    op_names = ['Not']
+    name = "NotOp"
+    op_names = ["Not"]
     hw_config_names = [HWConfigOpName.LOGICALNOT]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXAndMetatype(ONNXOpMetatype):
-    name = 'AndOp'
-    op_names = ['And']
+    name = "AndOp"
+    op_names = ["And"]
     hw_config_names = [HWConfigOpName.LOGICALAND]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXOrMetatype(ONNXOpMetatype):
-    name = 'OrOp'
-    op_names = ['Or']
+    name = "OrOp"
+    op_names = ["Or"]
     hw_config_names = [HWConfigOpName.LOGICALOR]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXFloorMetatype(ONNXOpMetatype):
-    name = 'FloorOp'
-    op_names = ['Floor']
+    name = "FloorOp"
+    op_names = ["Floor"]
     hw_config_names = [HWConfigOpName.FLOORMOD]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXPowMetatype(ONNXOpMetatype):
-    name = 'SqrtOp'
-    op_names = ['Sqrt', 'Pow']
+    name = "PowOp"
+    op_names = ["Pow"]
+    hw_config_names = [HWConfigOpName.POWER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSqrtMetatype(ONNXOpMetatype):
+    name = "SqrtOp"
+    op_names = ["Sqrt"]
+    hw_config_names = [HWConfigOpName.POWER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXReciprocalMetatype(ONNXOpMetatype):
+    name = "ReciprocalOp"
+    op_names = ["Reciprocal"]
     hw_config_names = [HWConfigOpName.POWER]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXLogMetatype(ONNXOpMetatype):
-    name = 'LogOp'
-    op_names = ['Log']
+    name = "LogOp"
+    op_names = ["Log"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXAbsMetatype(ONNXOpMetatype):
+    name = "AbsOp"
+    op_names = ["Abs"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXScatterElementslMetatype(ONNXOpMetatype):
-    name = 'ScatterElementsOp'
-    op_names = ['ScatterElements']
+    name = "ScatterElementsOp"
+    op_names = ["ScatterElements"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXRoiAlignMetatype(ONNXOpMetatype):
-    name = 'RoiAlignOp'
-    op_names = ['RoiAlign']
+    name = "RoiAlignOp"
+    op_names = ["RoiAlign"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXMatMulMetatype(ONNXOpMetatype):
-    name = 'MatMulOp'
-    op_names = ['MatMul']
+    name = "MatMulOp"
+    op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXGatherMetatype(ONNXOpMetatype):
-    name = 'GatherOp'
-    op_names = ['Gather']
+    name = "GatherOp"
+    op_names = ["Gather"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXUnsqueezeMetatype(ONNXOpMetatype):
-    name = 'UnsqueezeOp'
-    op_names = ['Unsqueeze']
+    name = "UnsqueezeOp"
+    op_names = ["Unsqueeze"]
     hw_config_names = [HWConfigOpName.UNSQUEEZE]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXSqueezeMetatype(ONNXOpMetatype):
-    name = 'SqueezeOp'
-    op_names = ['Squeeze']
+    name = "SqueezeOp"
+    op_names = ["Squeeze"]
     hw_config_names = [HWConfigOpName.SQUEEZE]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXNonMaxSuppressionMetatype(ONNXOpMetatype):
-    name = 'NonMaxSuppressionOp'
-    op_names = ['NonMaxSuppression']
+    name = "NonMaxSuppressionOp"
+    op_names = ["NonMaxSuppression"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXCastMetatype(ONNXOpMetatype):
-    name = 'CastOp'
-    op_names = ['Cast']
+    name = "CastOp"
+    op_names = ["Cast"]
     hw_config_names = [HWConfigOpName.SQUEEZE]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXReduceMinMetatype(ONNXOpMetatype):
-    name = 'ReduceMinOp'
-    op_names = ['ReduceMin']
+    name = "ReduceMinOp"
+    op_names = ["ReduceMin"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXReduceMeanMetatype(ONNXOpMetatype):
-    name = 'ReduceMeanOp'
-    op_names = ['ReduceMean']
+    name = "ReduceMeanOp"
+    op_names = ["ReduceMean"]
     hw_config_names = [HWConfigOpName.REDUCEMEAN]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXTopKMetatype(ONNXOpMetatype):
-    name = 'TopKOp'
-    op_names = ['TopK']
+    name = "TopKOp"
+    op_names = ["TopK"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXSliceMetatype(ONNXOpMetatype):
-    name = 'SliceOp'
-    op_names = ['Slice']
+    name = "SliceOp"
+    op_names = ["Slice"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXExpMetatype(ONNXOpMetatype):
-    name = 'ExpOp'
-    op_names = ['Exp']
+    name = "ExpOp"
+    op_names = ["Exp"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXTransposeMetatype(ONNXOpMetatype):
-    name = 'TransposeOp'
-    op_names = ['Transpose']
+    name = "TransposeOp"
+    op_names = ["Transpose"]
     hw_config_names = [HWConfigOpName.TRANSPOSE]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXFlattenMetatype(ONNXOpMetatype):
-    name = 'FlattenOp'
-    op_names = ['Flatten']
+    name = "FlattenOp"
+    op_names = ["Flatten"]
     hw_config_names = [HWConfigOpName.FLATTEN]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXSoftmaxMetatype(ONNXOpMetatype):
-    name = 'SoftmaxOp'
-    op_names = ['Softmax']
+    name = "SoftmaxOp"
+    op_names = ["Softmax"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXPadMetatype(ONNXOpMetatype):
-    name = 'PadOp'
-    op_names = ['Pad']
+    name = "PadOp"
+    op_names = ["Pad"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXIdentityMetatype(ONNXOpMetatype):
-    name = 'IdentityOp'
-    op_names = ['Identity']
+    name = "IdentityOp"
+    op_names = ["Identity"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXQuantizeLinearMetatype(ONNXOpMetatype):
-    name = 'QuantizeLinearOp'
-    op_names = ['QuantizeLinear']
+    name = "QuantizeLinearOp"
+    op_names = ["QuantizeLinear"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXDequantizeLinearMetatype(ONNXOpMetatype):
-    name = 'DequantizeLinearOp'
-    op_names = ['DequantizeLinear']
+    name = "DequantizeLinearOp"
+    op_names = ["DequantizeLinear"]
 
 
-WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
-                          ONNXDepthwiseConvolutionMetatype,
-                          ONNXConvolutionTransposeMetatype,
-                          ONNXLinearMetatype]
+@ONNX_OPERATION_METATYPES.register()
+class ONNXDeformableConvolutionMetatype(ONNXOpMetatype):
+    name = "DeformConvOp"
+    op_names = ["DeformConv"]
+
+
+WEIGHT_LAYER_METATYPES = [
+    ONNXConvolutionMetatype,
+    ONNXDepthwiseConvolutionMetatype,
+    ONNXConvolutionTransposeMetatype,
+    ONNXLinearMetatype,
+]
 
 # Contains the operation metatypes for which bias can be applied.
-OPERATIONS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
-                                  ONNXDepthwiseConvolutionMetatype,
-                                  ONNXConvolutionTransposeMetatype]
+OPERATIONS_WITH_BIAS_METATYPES = [
+    ONNXConvolutionMetatype,
+    ONNXDepthwiseConvolutionMetatype,
+    ONNXConvolutionTransposeMetatype,
+]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
@@ -504,7 +533,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     """
     conv_group = None
     for attribute in node.attribute:
-        if attribute.name == 'group':
+        if attribute.name == "group":
             conv_group = onnx.helper.get_attribute_value(attribute)
     if conv_group is None:
         return False
@@ -517,7 +546,10 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         return False
     conv_out_channels = weight_tensor_value.shape[0]
     conv_in_channels = weight_tensor_value.shape[1] * conv_group
-    if conv_out_channels % conv_in_channels == 0 and conv_out_channels // conv_in_channels > 0 and \
-            conv_group == conv_in_channels:
+    if (
+        conv_out_channels % conv_in_channels == 0
+        and conv_out_channels // conv_in_channels > 0
+        and conv_group == conv_in_channels
+    ):
         return True
     return False

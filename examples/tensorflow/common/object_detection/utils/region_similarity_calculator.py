@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from abc import ABCMeta
 from abc import abstractmethod
@@ -28,7 +26,7 @@ def area(boxlist, scope=None):
       a tensor with shape [N] representing box areas.
     """
     if not scope:
-        scope = 'Area'
+        scope = "Area"
     with tf.name_scope(scope):
         y_min, x_min, y_max, x_max = tf.split(boxlist.get(), 4, 1)
         return tf.squeeze((y_max - y_min) * (x_max - x_min), [1])
@@ -46,7 +44,7 @@ def intersection(boxlist1, boxlist2, scope=None):
       a tensor with shape [N, M] representing pairwise intersections
     """
     if not scope:
-        scope = 'Intersection'
+        scope = "Intersection"
     with tf.name_scope(scope):
         y_min1, x_min1, y_max1, x_max1 = tf.split(boxlist1.get(), 4, 1)
         y_min2, x_min2, y_max2, x_max2 = tf.split(boxlist2.get(), 4, 1)
@@ -71,20 +69,18 @@ def iou(boxlist1, boxlist2, scope=None):
       a tensor with shape [N, M] representing pairwise iou scores.
     """
     if not scope:
-        scope = 'IOU'
+        scope = "IOU"
     with tf.name_scope(scope):
         intersections = intersection(boxlist1, boxlist2)
         areas1 = area(boxlist1)
         areas2 = area(boxlist2)
-        unions = (
-            tf.expand_dims(areas1, 1) + tf.expand_dims(areas2, 0) - intersections)
-        return tf.where(
-            tf.equal(intersections, 0.0), tf.zeros_like(intersections),
-            tf.truediv(intersections, unions))
+        unions = tf.expand_dims(areas1, 1) + tf.expand_dims(areas2, 0) - intersections
+        return tf.where(tf.equal(intersections, 0.0), tf.zeros_like(intersections), tf.truediv(intersections, unions))
 
 
 class RegionSimilarityCalculator:
     """Abstract base class for region similarity calculator."""
+
     __metaclass__ = ABCMeta
 
     def compare(self, boxlist1, boxlist2, scope=None):
@@ -105,7 +101,7 @@ class RegionSimilarityCalculator:
           a (float32) tensor of shape [N, M] with pairwise similarity score.
         """
         if not scope:
-            scope = 'Compare'
+            scope = "Compare"
         with tf.name_scope(scope):
             return self._compare(boxlist1, boxlist2)
 

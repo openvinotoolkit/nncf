@@ -1,28 +1,26 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from typing import Any
 
 import torch
 from torch import nn
 from torch.nn import init
 
+from nncf.torch import register_module
 from nncf.torch.utils import add_domain
 from nncf.torch.utils import no_jit_trace
-from nncf.torch import register_module
 
 
 @register_module(
-    ignored_algorithms=['quantization', 'binarization', 'const_sparsity', 'magnitude_sparsity', 'rb_sparsity']
+    ignored_algorithms=["quantization", "binarization", "const_sparsity", "magnitude_sparsity", "rb_sparsity"]
 )
 class L2Norm(nn.Module):
     def __init__(self, n_channels, scale, eps, across_spatial=0, channel_shared=0):
@@ -68,5 +66,11 @@ class L2NormFunction(torch.autograd.Function):
 
     @staticmethod
     def symbolic(g, x, weight, l2NormParams):
-        return g.op(add_domain("Normalize"), x, weight, eps_f=l2NormParams.eps,
-                    across_spatial_i=l2NormParams.across_spatial, channel_shared_i=l2NormParams.channel_shared)
+        return g.op(
+            add_domain("Normalize"),
+            x,
+            weight,
+            eps_f=l2NormParams.eps,
+            across_spatial_i=l2NormParams.across_spatial,
+            channel_shared_i=l2NormParams.channel_shared,
+        )

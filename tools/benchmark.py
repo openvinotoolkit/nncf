@@ -5,7 +5,7 @@ import torch
 import torch.distributed as dist
 from torch import nn
 
-TIME_SCALES = {'ms': 1000}
+TIME_SCALES = {"ms": 1000}
 
 
 def warmup(layer, input_, runs, forward_only=False):
@@ -34,10 +34,9 @@ def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float,
     fbtime = elapsed / runs * scale
 
     if is_print:
-        print('Forward&Backward: {0:.3f} {1}'.format(
-            fbtime, ctime))
+        print("Forward&Backward: {0:.3f} {1}".format(fbtime, ctime))
     if output is not None:
-        output.append({'forward + backward': fbtime})
+        output.append({"forward + backward": fbtime})
 
 
 def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torch.float, output=None):
@@ -77,18 +76,27 @@ def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torc
     forward_average = forward_time / runs * scale
     backward_average = backward_time / runs * scale
 
-    print('Forward: min {0:.3f}{4} / avg {1:.3f}{4} | Backward: min {2:.3f}{4} / avg {3:.3f}{4}'.format(
-        forward_min, forward_average, backward_min, backward_average, ctime))
+    print(
+        "Forward: min {0:.3f}{4} / avg {1:.3f}{4} | Backward: min {2:.3f}{4} / avg {3:.3f}{4}".format(
+            forward_min, forward_average, backward_min, backward_average, ctime
+        )
+    )
 
     if output is not None:
-        output.append({'forward_min': forward_min, 'forward_avg': forward_average,
-                       'backward_min': backward_min, 'backward_avg': backward_average})
+        output.append(
+            {
+                "forward_min": forward_min,
+                "forward_avg": forward_average,
+                "backward_min": backward_min,
+                "backward_avg": backward_average,
+            }
+        )
+
 
 def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, output=None):
-    dist.init_process_group(backend='nccl', init_method="tcp://127.0.0.1:8899",
-                            world_size=world_size, rank=gpu)
+    dist.init_process_group(backend="nccl", init_method="tcp://127.0.0.1:8899", world_size=world_size, rank=gpu)
 
-    device = torch.device('cuda:%d' % gpu)
+    device = torch.device("cuda:%d" % gpu)
     torch.cuda.set_device(gpu)
 
     batch = (int)(input_size_[0] / world_size)

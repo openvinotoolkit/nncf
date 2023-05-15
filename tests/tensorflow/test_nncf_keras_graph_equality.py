@@ -1,18 +1,15 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import pytest
-
 import tensorflow as tf
 
 from tests.tensorflow import test_models
@@ -39,10 +36,16 @@ def get_test_model_pairs():
         (test_models.ResNet50V2, tf.keras.applications.resnet_v2.ResNet50V2),
         (test_models.VGG16, tf.keras.applications.vgg16.VGG16),
         (test_models.Xception, tf.keras.applications.xception.Xception),
-        pytest.param(test_models.MobileNetV3Small, tf.keras.applications.MobileNetV3Small,
-                     marks=pytest.mark.skip(reason="model definition differ")),
-        pytest.param(test_models.MobileNetV3Large, tf.keras.applications.MobileNetV3Large,
-                     marks=pytest.mark.skip(reason="model definition differ"))
+        pytest.param(
+            test_models.MobileNetV3Small,
+            tf.keras.applications.MobileNetV3Small,
+            marks=pytest.mark.skip(reason="model definition differ"),
+        ),
+        pytest.param(
+            test_models.MobileNetV3Large,
+            tf.keras.applications.MobileNetV3Large,
+            marks=pytest.mark.skip(reason="model definition differ"),
+        ),
     ]
 
 

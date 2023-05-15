@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import json
 from copy import deepcopy
 
@@ -17,7 +15,7 @@ import numpy as np
 import openvino.runtime as ov
 
 from nncf import Dataset
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
@@ -33,19 +31,20 @@ def get_dataset_for_test(model):
     input_data = {}
     for param in model.get_parameters():
         input_shape = param.partial_shape.get_max_shape()
-        input_data[param.get_friendly_name()] = rng.uniform(0, 1, input_shape)
+        input_data[param.get_output_tensor(0).get_any_name()] = rng.uniform(0, 1, input_shape)
 
     dataset = Dataset([input_data])
     return dataset
 
 
 def load_json(stats_path):
-    with open(stats_path, 'r', encoding='utf8') as json_file:
+    with open(stats_path, "r", encoding="utf8") as json_file:
         return json.load(json_file)
 
 
 class NumpyEncoder(json.JSONEncoder):
-    """ Special json encoder for numpy types """
+    """Special json encoder for numpy types"""
+
     # pylint: disable=W0221, E0202
 
     def default(self, o):
@@ -59,5 +58,5 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 def dump_to_json(local_path, data):
-    with open(local_path, 'w', encoding='utf8') as file:
+    with open(local_path, "w", encoding="utf8") as file:
         json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)

@@ -1,23 +1,18 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import datetime
 import itertools
 import os
 import os.path as osp
-import datetime
-
-from typing import Dict
-from typing import Hashable
-from typing import List, Any
+from typing import Any, Dict, Hashable, List
 
 from texttable import Texttable
 
@@ -42,9 +37,8 @@ def configure_accuracy_aware_paths(log_dir: str) -> str:
     :return: Path to the accuracy-aware training subdirectory.
     """
     d = datetime.datetime.now()
-    run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
-    acc_aware_log_dir = osp.join(log_dir,
-                                 'accuracy_aware_training/{run_id}'.format(run_id=run_id))
+    run_id = "{:%Y-%m-%d__%H-%M-%S}".format(d)
+    acc_aware_log_dir = osp.join(log_dir, "accuracy_aware_training/{run_id}".format(run_id=run_id))
     os.makedirs(acc_aware_log_dir, exist_ok=True)
     return acc_aware_log_dir
 

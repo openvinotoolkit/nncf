@@ -1,19 +1,17 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-from typing import Any
-from typing import Tuple
-from functools import partial
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from copy import copy
+from functools import partial
+from typing import Any, Tuple
+
 import torch
 from torch.onnx import OperatorExportTypes
 
@@ -24,19 +22,21 @@ from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.torch.nested_objects_traversal import objwalk
-from nncf.torch.utils import is_tensor, get_model_device
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_tensor
 
 
 def generate_input_names_list(num_inputs: int):
-    return [f'input.{idx}' for idx in range(0, num_inputs)]
+    return [f"input.{idx}" for idx in range(0, num_inputs)]
 
 
 def generate_output_names_list(num_outputs: int):
-    return [f'output.{idx}' for idx in range(0, num_outputs)]
+    return [f"output.{idx}" for idx in range(0, num_outputs)]
 
 
 def count_tensors(model_retval: Any) -> int:
     count = 0
+
     def counter_fn(x: torch.Tensor) -> torch.Tensor:
         nonlocal count
         count += 1
@@ -47,7 +47,7 @@ def count_tensors(model_retval: Any) -> int:
 
 
 class PTExportFormat:
-    ONNX = 'onnx'
+    ONNX = "onnx"
 
 
 class PTExporter(Exporter):
@@ -56,7 +56,6 @@ class PTExporter(Exporter):
     """
 
     _ONNX_DEFAULT_OPSET = 13
-
 
     @staticmethod
     def parse_format(save_format: str) -> Tuple[str, dict]:
@@ -70,7 +69,7 @@ class PTExporter(Exporter):
             dict: additional arguments for exporter
         """
         if save_format.startswith(PTExportFormat.ONNX):
-            split_format = save_format.split('_')
+            split_format = save_format.split("_")
             opset = None
 
             if len(split_format) == 1:
@@ -82,10 +81,12 @@ class PTExporter(Exporter):
                 raise ValueError("Incorrect save_format, expected 'onnx' or 'onnx_<opset_version>'.")
 
             if opset != PTExporter._ONNX_DEFAULT_OPSET:
-                nncf_logger.warning(f'Exporting to ONNX opset {opset}, which is not guaranteed to work with NNCF. '
-                                    f'Recommended opset export version is {PTExporter._ONNX_DEFAULT_OPSET}.')
+                nncf_logger.warning(
+                    f"Exporting to ONNX opset {opset}, which is not guaranteed to work with NNCF. "
+                    f"Recommended opset export version is {PTExporter._ONNX_DEFAULT_OPSET}."
+                )
 
-            return PTExportFormat.ONNX, {'opset_version': opset}
+            return PTExportFormat.ONNX, {"opset_version": opset}
         return save_format, {}
 
     @tracked_function(NNCF_PT_CATEGORY, ["save_format"])
@@ -101,7 +102,7 @@ class PTExporter(Exporter):
             The ONNX format will be used if `save_format` is not specified.
         """
 
-        fn_args = {'save_path': save_path}
+        fn_args = {"save_path": save_path}
 
         save_format, extra_args = PTExporter.parse_format(save_format)
         fn_args.update(extra_args)
@@ -114,8 +115,7 @@ class PTExporter(Exporter):
 
         if export_fn is None:
             available_formats = list(format_to_export_fn.keys())
-            raise ValueError(f'Unsupported saving format: \'{save_format}\'. '
-                             f'Available formats: {available_formats}')
+            raise ValueError(f"Unsupported saving format: '{save_format}'. " f"Available formats: {available_formats}")
 
         export_fn(**fn_args)
 
@@ -132,7 +132,7 @@ class PTExporter(Exporter):
             single_batch_info = copy(info)
             input_shape = tuple([1] + list(info.shape)[1:])
             single_batch_info.shape = input_shape
-            input_tensor_list.append(create_mock_tensor(single_batch_info, 'cpu'))
+            input_tensor_list.append(create_mock_tensor(single_batch_info, "cpu"))
 
         full_arg_forward = model.nncf.get_original_forward()
         args = self._model_args[:-1]
@@ -171,12 +171,16 @@ class PTExporter(Exporter):
         :param output_names: Names to be assigned to the output tensors of the model.
         :param opset_version: the version of the onnx opset.
         """
-        fn = partial(torch.onnx.export,
-                model, tuple(input_tensor_list), save_path,
-                input_names=input_names,
-                output_names=output_names,
-                opset_version=opset_version,
-                training=torch.onnx.TrainingMode.EVAL)
+        fn = partial(
+            torch.onnx.export,
+            model,
+            tuple(input_tensor_list),
+            save_path,
+            input_names=input_names,
+            output_names=output_names,
+            opset_version=opset_version,
+            training=torch.onnx.TrainingMode.EVAL,
+        )
         try:
             fn()
         except torch.onnx.errors.SymbolicValueError:
@@ -185,5 +189,6 @@ class PTExporter(Exporter):
             nncf_logger.warning(
                 "Encountered shape inferencing failures during ONNX export. "
                 "The model was exported with a workaround - some of the operations may have been exported using "
-                "the `org.pytorch.aten` domain.")
+                "the `org.pytorch.aten` domain."
+            )
             fn(operator_export_type=OperatorExportTypes.ONNX_ATEN_FALLBACK)

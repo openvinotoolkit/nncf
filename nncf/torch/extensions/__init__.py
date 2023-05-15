@@ -12,17 +12,19 @@ from torch.utils.cpp_extension import _get_build_directory
 
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import extension_is_loading_info_log
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
 
-EXTENSIONS = Registry('extensions')
+EXTENSIONS = Registry("extensions")
 
 
 class ExtensionsType(enum.Enum):
     CPU = 0
     CUDA = 1
 
+
 def get_build_directory_for_extension(name: str) -> Path:
-    build_dir = Path(_get_build_directory('nncf/' + name, verbose=False)) / torch.__version__
+    build_dir = Path(_get_build_directory("nncf/" + name, verbose=False)) / torch.__version__
     if not build_dir.exists():
         nncf_logger.debug(f"Creating build directory: {str(build_dir)}")
         build_dir.mkdir(parents=True, exist_ok=True)
@@ -53,6 +55,7 @@ class ExtensionLoader(ABC):
 class ExtensionLoaderTimeoutException(Exception):
     """Raises an exception if it takes too long time to load the extension"""
 
+
 NNCF_TIME_LIMIT_TO_LOAD_EXTENSION = "NNCF_TIME_LIMIT_TO_LOAD_EXTENSION"
 
 
@@ -60,6 +63,7 @@ class ExtensionNamespace:
     """
     Provides lazy loading of the underlying extension, i.e. on the first request of a function from the extension.
     """
+
     def __init__(self, loader: ExtensionLoader):
         """
         :param loader: The extension loader.
@@ -110,15 +114,19 @@ def _force_build_extensions(ext_type: ExtensionsType):
         class_type.load()
 
 
+@api(canonical_alias="nncf.torch.force_build_cpu_extensions")
 def force_build_cpu_extensions():
     _force_build_extensions(ExtensionsType.CPU)
 
 
+@api(canonical_alias="nncf.torch.force_build_cuda_extensions")
 def force_build_cuda_extensions():
     _force_build_extensions(ExtensionsType.CUDA)
 
 
 class CudaNotAvailableStub:
     def __getattr__(self, item):
-        raise RuntimeError(f"CUDA is not available on this machine. Check that the machine has a GPU and a proper "
-                           f"driver supporting CUDA {torch.version.cuda} is installed.")
+        raise RuntimeError(
+            f"CUDA is not available on this machine. Check that the machine has a GPU and a proper "
+            f"driver supporting CUDA {torch.version.cuda} is installed."
+        )

@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from importlib import import_module
 from typing import Callable, List
@@ -26,6 +24,7 @@ def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable:
     :param dependencies: A list of dependencies
     :return: A decorator
     """
+
     def wrap(func: Callable[..., None]) -> Callable[..., None]:
         def wrapped_f(*args, **kwargs):
             for libname in dependencies:
@@ -38,14 +37,17 @@ def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable:
                     IMPORTED_DEPENDENCIES[libname] = True
                 except ImportError as ex:
                     nncf_logger.warning(
-                        f'{ex.msg} Please install NNCF package with dev '
-                        'extra. Use one of the following commands '
+                        f"{ex.msg} Please install NNCF package with dev "
+                        "extra. Use one of the following commands "
                         '"pip install .[dev]" running from the repository '
-                        'root directory or "pip install nncf[dev]"')
+                        'root directory or "pip install nncf[dev]"'
+                    )
                     IMPORTED_DEPENDENCIES[libname] = False
                     break
             else:
                 return func(*args, **kwargs)
             return None
+
         return wrapped_f
+
     return wrap

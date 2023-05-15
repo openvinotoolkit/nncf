@@ -1,40 +1,39 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
-import pytest
-import onnx
-import torch
-from torch import nn
 from dataclasses import dataclass
 from pathlib import Path
+
 import numpy as np
+import onnx
+import pytest
+import torch
+from torch import nn
 
 from nncf import Dataset
 from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerGroup
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
+from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
+from tests.post_training.test_calculate_quantizer_parameters import TemplateTestFQParams
 from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
 
@@ -51,46 +50,59 @@ class CaseSymParams:
     ref_scale: np.ndarray
 
 
-SYM_CASES = (CaseSymParams(fq_params=FakeQuantizeParameters(
-                                     np.array(-0.49920455, dtype=np.float32),
-                                     np.array(0.49530452, dtype=np.float32),
-                                     np.array(-0.49920455, dtype=np.float32),
-                                     np.array(0.49530452, dtype=np.float32),
-                                     256),
-                           per_channel=False,
-                           quant_group=QuantizerGroup.ACTIVATIONS,
-                           ref_scale=0.49530452),
-             CaseSymParams(fq_params=FakeQuantizeParameters(
-                                     np.array(-0.49530452, dtype=np.float32),
-                                     np.array(0.49530452, dtype=np.float32),
-                                     np.array(-0.49530452, dtype=np.float32),
-                                     np.array(0.49530452, dtype=np.float32),
-                                     255),
-                           per_channel=False,
-                           quant_group=QuantizerGroup.WEIGHTS,
-                           ref_scale=0.49530452),
-             CaseSymParams(fq_params=FakeQuantizeParameters(
-                                      np.array([-0.4835594, -0.49530452, -0.49221927], dtype=np.float32).reshape(1, 3, 1, 1),
-                                      np.array([0.4797816, 0.49920455, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
-                                      np.array([-0.4835594, -0.49530452, -0.49221927], dtype=np.float32).reshape(1, 3, 1, 1),
-                                      np.array([0.4797816, 0.49920455, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
-                                      256),
-                            per_channel=True,
-                            quant_group=QuantizerGroup.ACTIVATIONS,
-                            ref_scale=np.array([0.4797816, 0.49920455, 0.48837382]).reshape(1, 3, 1, 1)),
-             CaseSymParams(fq_params=FakeQuantizeParameters(
-                                     np.array([-0.48837382, -0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
-                                     np.array([0.48837382, 0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
-                                     np.array([-0.48837382, -0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
-                                     np.array([0.48837382, 0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
-                                     255),
-                           per_channel=True,
-                           quant_group=QuantizerGroup.WEIGHTS,
-                           ref_scale=np.array([0.48837382, 0.49530452]).reshape(2, 1, 1, 1)),
+SYM_CASES = (
+    CaseSymParams(
+        fq_params=FakeQuantizeParameters(
+            np.array(-0.49920455, dtype=np.float32),
+            np.array(0.49530452, dtype=np.float32),
+            np.array(-0.49920455, dtype=np.float32),
+            np.array(0.49530452, dtype=np.float32),
+            256,
+        ),
+        per_channel=False,
+        quant_group=QuantizerGroup.ACTIVATIONS,
+        ref_scale=0.49530452,
+    ),
+    CaseSymParams(
+        fq_params=FakeQuantizeParameters(
+            np.array(-0.49530452, dtype=np.float32),
+            np.array(0.49530452, dtype=np.float32),
+            np.array(-0.49530452, dtype=np.float32),
+            np.array(0.49530452, dtype=np.float32),
+            255,
+        ),
+        per_channel=False,
+        quant_group=QuantizerGroup.WEIGHTS,
+        ref_scale=0.49530452,
+    ),
+    CaseSymParams(
+        fq_params=FakeQuantizeParameters(
+            np.array([-0.4835594, -0.49530452, -0.49221927], dtype=np.float32).reshape(1, 3, 1, 1),
+            np.array([0.4797816, 0.49920455, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
+            np.array([-0.4835594, -0.49530452, -0.49221927], dtype=np.float32).reshape(1, 3, 1, 1),
+            np.array([0.4797816, 0.49920455, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
+            256,
+        ),
+        per_channel=True,
+        quant_group=QuantizerGroup.ACTIVATIONS,
+        ref_scale=np.array([0.4797816, 0.49920455, 0.48837382]).reshape(1, 3, 1, 1),
+    ),
+    CaseSymParams(
+        fq_params=FakeQuantizeParameters(
+            np.array([-0.48837382, -0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
+            np.array([0.48837382, 0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
+            np.array([-0.48837382, -0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
+            np.array([0.48837382, 0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
+            255,
+        ),
+        per_channel=True,
+        quant_group=QuantizerGroup.WEIGHTS,
+        ref_scale=np.array([0.48837382, 0.49530452]).reshape(2, 1, 1, 1),
+    ),
 )
 
 
-@pytest.mark.parametrize('case_to_test', SYM_CASES)
+@pytest.mark.parametrize("case_to_test", SYM_CASES)
 def test_quantizer_params_sym(case_to_test):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
@@ -104,8 +116,9 @@ def test_quantizer_params_sym(case_to_test):
         axis = 0 if quant_group == QuantizerGroup.WEIGHTS else 1
         scale_shape[axis] = INPUT_SHAPE[axis]
 
-    target_type = TargetType.OPERATION_WITH_WEIGHTS if quant_group == QuantizerGroup.WEIGHTS \
-         else TargetType.PRE_LAYER_OPERATION
+    target_type = (
+        TargetType.OPERATION_WITH_WEIGHTS if quant_group == QuantizerGroup.WEIGHTS else TargetType.PRE_LAYER_OPERATION
+    )
     quantizer = PTMinMaxAlgoBackend._create_quantizer(qconfig, scale_shape, fq_params, target_type)
 
     assert quantizer.levels == fq_params.levels
@@ -123,50 +136,63 @@ class CaseAsymParams:
     ref_inp_range: np.ndarray
 
 
-ASYM_CASES = (CaseAsymParams(fq_params=FakeQuantizeParameters(
-                                       np.array(-0.49530452, dtype=np.float32),
-                                       np.array(0.49143496, dtype=np.float32),
-                                       np.array(-0.49530452, dtype=np.float32),
-                                       np.array(0.49143496, dtype=np.float32),
-                                       256),
-                             per_channel=False,
-                             quant_group=QuantizerGroup.WEIGHTS,
-                             ref_inp_low=-0.49530452,
-                             ref_inp_range=0.98673948),
-              CaseAsymParams(fq_params=FakeQuantizeParameters(
-                                       np.array(-0.49530452, dtype=np.float32),
-                                       np.array(0.49143496, dtype=np.float32),
-                                       np.array(-0.49530452, dtype=np.float32),
-                                       np.array(0.49143496, dtype=np.float32),
-                                       256),
-                             per_channel=False,
-                             quant_group=QuantizerGroup.ACTIVATIONS,
-                             ref_inp_low=-0.49530452,
-                             ref_inp_range=0.98673948),
-              CaseAsymParams(fq_params=FakeQuantizeParameters(
-                                       np.array([-0.48051512, -0.49776307, -0.44099426], dtype=np.float32).reshape(1, 3, 1, 1),
-                                       np.array([0.4767611, 0.47861832, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
-                                       np.array([-0.48051512, -0.49776307, -0.44099426], dtype=np.float32).reshape(1, 3, 1, 1),
-                                       np.array([0.4767611, 0.47861832, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
-                                       256),
-                             per_channel=True,
-                             quant_group=QuantizerGroup.ACTIVATIONS,
-                             ref_inp_low=np.array([-0.48051512, -0.49776307, -0.44099426]).reshape(1, 3, 1, 1),
-                             ref_inp_range=np.array([0.9572762, 0.9763814, 0.9293681]).reshape(1, 3, 1, 1)),
-              CaseAsymParams(fq_params=FakeQuantizeParameters(
-                                       np.array([-0.4845584, -0.49583155], dtype=np.float32).reshape(2, 1, 1, 1),
-                                       np.array([0.48837382, 0.4767611], dtype=np.float32).reshape(2, 1, 1, 1),
-                                       np.array([-0.4845584, -0.49583155], dtype=np.float32).reshape(2, 1, 1, 1),
-                                       np.array([0.48837382, 0.4767611], dtype=np.float32).reshape(2, 1, 1, 1),
-                                       256),
-                             per_channel=True,
-                             quant_group=QuantizerGroup.WEIGHTS,
-                             ref_inp_low=np.array([-0.4845584, -0.49583155]).reshape(2, 1, 1, 1),
-                             ref_inp_range=np.array([0.97293222, 0.97259265]).reshape(2, 1, 1, 1)),
+ASYM_CASES = (
+    CaseAsymParams(
+        fq_params=FakeQuantizeParameters(
+            np.array(-0.49530452, dtype=np.float32),
+            np.array(0.49143496, dtype=np.float32),
+            np.array(-0.49530452, dtype=np.float32),
+            np.array(0.49143496, dtype=np.float32),
+            256,
+        ),
+        per_channel=False,
+        quant_group=QuantizerGroup.WEIGHTS,
+        ref_inp_low=-0.49530452,
+        ref_inp_range=0.98673948,
+    ),
+    CaseAsymParams(
+        fq_params=FakeQuantizeParameters(
+            np.array(-0.49530452, dtype=np.float32),
+            np.array(0.49143496, dtype=np.float32),
+            np.array(-0.49530452, dtype=np.float32),
+            np.array(0.49143496, dtype=np.float32),
+            256,
+        ),
+        per_channel=False,
+        quant_group=QuantizerGroup.ACTIVATIONS,
+        ref_inp_low=-0.49530452,
+        ref_inp_range=0.98673948,
+    ),
+    CaseAsymParams(
+        fq_params=FakeQuantizeParameters(
+            np.array([-0.48051512, -0.49776307, -0.44099426], dtype=np.float32).reshape(1, 3, 1, 1),
+            np.array([0.4767611, 0.47861832, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
+            np.array([-0.48051512, -0.49776307, -0.44099426], dtype=np.float32).reshape(1, 3, 1, 1),
+            np.array([0.4767611, 0.47861832, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
+            256,
+        ),
+        per_channel=True,
+        quant_group=QuantizerGroup.ACTIVATIONS,
+        ref_inp_low=np.array([-0.48051512, -0.49776307, -0.44099426]).reshape(1, 3, 1, 1),
+        ref_inp_range=np.array([0.9572762, 0.9763814, 0.9293681]).reshape(1, 3, 1, 1),
+    ),
+    CaseAsymParams(
+        fq_params=FakeQuantizeParameters(
+            np.array([-0.4845584, -0.49583155], dtype=np.float32).reshape(2, 1, 1, 1),
+            np.array([0.48837382, 0.4767611], dtype=np.float32).reshape(2, 1, 1, 1),
+            np.array([-0.4845584, -0.49583155], dtype=np.float32).reshape(2, 1, 1, 1),
+            np.array([0.48837382, 0.4767611], dtype=np.float32).reshape(2, 1, 1, 1),
+            256,
+        ),
+        per_channel=True,
+        quant_group=QuantizerGroup.WEIGHTS,
+        ref_inp_low=np.array([-0.4845584, -0.49583155]).reshape(2, 1, 1, 1),
+        ref_inp_range=np.array([0.97293222, 0.97259265]).reshape(2, 1, 1, 1),
+    ),
 )
 
 
-@pytest.mark.parametrize('case_to_test', ASYM_CASES)
+@pytest.mark.parametrize("case_to_test", ASYM_CASES)
 def test_quantizer_params_asym(case_to_test):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
@@ -180,8 +206,9 @@ def test_quantizer_params_asym(case_to_test):
         axis = 0 if quant_group == QuantizerGroup.WEIGHTS else 1
         scale_shape[axis] = INPUT_SHAPE[axis]
 
-    target_type = TargetType.OPERATION_WITH_WEIGHTS if quant_group == QuantizerGroup.WEIGHTS \
-         else TargetType.PRE_LAYER_OPERATION
+    target_type = (
+        TargetType.OPERATION_WITH_WEIGHTS if quant_group == QuantizerGroup.WEIGHTS else TargetType.PRE_LAYER_OPERATION
+    )
     quantizer = PTMinMaxAlgoBackend._create_quantizer(qconfig, scale_shape, fq_params, target_type)
     assert quantizer.levels == fq_params.levels
     assert np.allclose(quantizer.input_low.detach().numpy(), case_to_test.ref_inp_low)
@@ -232,7 +259,7 @@ class SyntheticDataset(torch.utils.data.Dataset):
         return self._length
 
 
-def calculate_statistics(data, mode, qgroup):
+def calculate_statistics(data, mode, qgroup, half_range=False):
     data = data.detach().numpy()
     per_ch = qgroup == QuantizerGroup.WEIGHTS
     axes = (1, 2, 3) if per_ch else None
@@ -242,12 +269,14 @@ def calculate_statistics(data, mode, qgroup):
     else:
         max_values = np.amax(data, axes)
 
-    statistics = PTMinMaxTensorStatistic(min_values=torch.from_numpy(np.array(min_values)),
-                                         max_values=torch.from_numpy(np.array(max_values)))
+    statistics = PTMinMaxTensorStatistic(
+        min_values=torch.from_numpy(np.array(min_values)), max_values=torch.from_numpy(np.array(max_values))
+    )
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
     qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)
-    fq_params = calculate_quantizer_parameters(statistics, qconfig, qgroup)
-    return {'input_low': fq_params.input_low, 'input_high': fq_params.input_high}
+    narrow_range = get_quantizer_narrow_range(qconfig, qgroup)
+    fq_params = calculate_quantizer_parameters(statistics, qconfig, qgroup, narrow_range, half_range)
+    return {"input_low": fq_params.input_low, "input_high": fq_params.input_high}
 
 
 def calculate_fq_params(model, input_data):
@@ -258,15 +287,17 @@ def calculate_fq_params(model, input_data):
     conv2_stats = calculate_statistics(relu, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
 
     conv1_w = model.conv1.weight
-    conv1_w_stats = calculate_statistics(conv1_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS)
+    conv1_w_stats = calculate_statistics(conv1_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS, True)
     conv2_w = model.conv2.weight
     conv2_w_stats = calculate_statistics(conv2_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS)
-    return {'FakeQuantize_6': conv1_stats,
-            'relu/FakeQuantize': bn1_stats,
-            'avg_pool/FakeQuantize': avg_pool_stats,
-            'bn1/FakeQuantize': conv2_stats,
-            'conv1/pre_ops.0/op/FakeQuantize': conv1_w_stats,
-            'conv2/pre_ops.0/op/FakeQuantize': conv2_w_stats}
+    return {
+        "FakeQuantize_6": conv1_stats,
+        "relu/FakeQuantize": bn1_stats,
+        "avg_pool/FakeQuantize": avg_pool_stats,
+        "bn1/FakeQuantize": conv2_stats,
+        "conv1/pre_ops.0/op/FakeQuantize": conv1_w_stats,
+        "conv2/pre_ops.0/op/FakeQuantize": conv2_w_stats,
+    }
 
 
 def test_quantizer_parameters_export(tmp_path: Path):
@@ -278,19 +309,17 @@ def test_quantizer_parameters_export(tmp_path: Path):
     fq_params = calculate_fq_params(model, input_data)
 
     dataset = Dataset(data_loader)
-    min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1,
-                                                                   preset=QuantizationPreset.PERFORMANCE,
-                                                                   inplace_statistics=False))
+    min_max_algo = MinMaxQuantization(subset_size=1, preset=QuantizationPreset.PERFORMANCE, inplace_statistics=False)
     statistics_aggregator = PTStatisticsAggregator(dataset)
 
-    nncf_config = NNCFConfig({'input_info': {'sample_size': [1, 3, 32, 32]}})
+    nncf_config = NNCFConfig({"input_info": {"sample_size": [1, 3, 32, 32]}})
     nncf_network = create_nncf_network(model, nncf_config)
     statistic_points = min_max_algo.get_statistic_points(nncf_network)
-    statistics_aggregator.register_stastistic_points(statistic_points)
+    statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(model)
     torch_quantized_model = min_max_algo._apply(model, statistics_aggregator.statistic_points)
 
-    path = str(tmp_path / 'torch_ptq_model.onnx')
+    path = str(tmp_path / "torch_ptq_model.onnx")
     torch.onnx.export(
         torch_quantized_model,
         input_data,
@@ -301,15 +330,21 @@ def test_quantizer_parameters_export(tmp_path: Path):
     )
 
     onnx_model = onnx.load(path)
-    fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
+    fq_nodes = get_nodes_by_type(onnx_model, "FakeQuantize")
     inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
     torch_ptq_params = {}
     for fq_node, fq_input in zip(fq_nodes, inputs):
         fq_input = list(fq_input.values())
         input_low, input_high = fq_input[-2].flatten(), fq_input[-1].flatten()
-        torch_ptq_params[fq_node.name] = {'input_low': input_low, 'input_high': input_high}
+        torch_ptq_params[fq_node.name] = {"input_low": input_low, "input_high": input_high}
 
     for name in fq_params:
         assert name in torch_ptq_params
-        assert np.allclose(fq_params[name]['input_low'], torch_ptq_params[name]['input_low'])
-        assert np.allclose(fq_params[name]['input_high'], torch_ptq_params[name]['input_high'])
+        assert np.allclose(fq_params[name]["input_low"], torch_ptq_params[name]["input_low"])
+        assert np.allclose(fq_params[name]["input_high"], torch_ptq_params[name]["input_high"])
+
+
+class TestFQParams(TemplateTestFQParams):
+    @property
+    def tensor_statistic(self):
+        return PTMinMaxTensorStatistic

@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from abc import ABCMeta
 from abc import abstractmethod
@@ -17,14 +15,15 @@ from abc import abstractmethod
 import tensorflow as tf
 
 # Box coder types.
-FASTER_RCNN = 'faster_rcnn'
-KEYPOINT = 'keypoint'
-MEAN_STDDEV = 'mean_stddev'
-SQUARE = 'square'
+FASTER_RCNN = "faster_rcnn"
+KEYPOINT = "keypoint"
+MEAN_STDDEV = "mean_stddev"
+SQUARE = "square"
 
 
 class BoxCoder:
     """Abstract base class for box coder."""
+
     __metaclass__ = ABCMeta
 
     @property
@@ -51,7 +50,7 @@ class BoxCoder:
         Returns:
           a tensor representing N relative-encoded boxes
         """
-        with tf.name_scope('Encode'):
+        with tf.name_scope("Encode"):
             return self._encode(boxes, anchors)
 
     def decode(self, rel_codes, anchors):
@@ -65,7 +64,7 @@ class BoxCoder:
           boxlist: BoxList holding N boxes encoded in the ordinary way (i.e.,
             with corners y_min, x_min, y_max, x_max)
         """
-        with tf.name_scope('Decode'):
+        with tf.name_scope("Decode"):
             return self._decode(rel_codes, anchors)
 
     @abstractmethod
@@ -120,14 +119,12 @@ def batch_decode(encoded_boxes, box_coder, anchors):
     encoded_boxes.get_shape().assert_has_rank(3)
     if encoded_boxes.get_shape()[1].value != anchors.num_boxes_static():
         raise ValueError(
-            'The number of anchors inferred from encoded_boxes'
-            ' and anchors are inconsistent: shape[1] of encoded_boxes'
-            ' %s should be equal to the number of anchors: %s.' %
-            (encoded_boxes.get_shape()[1].value, anchors.num_boxes_static()))
+            "The number of anchors inferred from encoded_boxes"
+            " and anchors are inconsistent: shape[1] of encoded_boxes"
+            " %s should be equal to the number of anchors: %s."
+            % (encoded_boxes.get_shape()[1].value, anchors.num_boxes_static())
+        )
 
-    decoded_boxes = tf.stack([
-        box_coder.decode(boxes, anchors).get()
-        for boxes in tf.unstack(encoded_boxes)
-    ])
+    decoded_boxes = tf.stack([box_coder.decode(boxes, anchors).get() for boxes in tf.unstack(encoded_boxes)])
 
     return decoded_boxes

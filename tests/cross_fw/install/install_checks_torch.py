@@ -1,30 +1,28 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
-# Do not remove - these imports are for testing purposes.
-#pylint:disable=unused-import
-import nncf
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import sys
 
 import torch
+
+# Do not remove - these imports are for testing purposes.
+# pylint:disable=unused-import
+import nncf
 
 if len(sys.argv) != 3:
     raise RuntimeError("Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type")
 execution_type = sys.argv[1]
 package_type = sys.argv[2]
 
-if package_type == 'pip_pypi':
+if package_type == "pip_pypi":
     try:
         from nncf.torch import create_compressed_model
     except ImportError:
@@ -40,7 +38,7 @@ threshold_tensor = torch.zeros([1, 1, 1, 1])
 levels = 256
 
 if execution_type == "cpu":
-    if package_type == 'pip_pypi':
+    if package_type == "pip_pypi":
         try:
             from nncf.torch.binarization.extensions import BinarizedFunctionsCPU
             from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
@@ -50,8 +48,12 @@ if execution_type == "cpu":
     else:
         from nncf.torch.binarization.extensions import BinarizedFunctionsCPU
         from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
-    output_tensor = QuantizedFunctionsCPU.get("Quantize_forward")(input_tensor, input_low_tensor, input_high_tensor, levels)
-    output_tensor = BinarizedFunctionsCPU.get("ActivationBinarize_forward")(output_tensor, scale_tensor, threshold_tensor)
+    output_tensor = QuantizedFunctionsCPU.get("Quantize_forward")(
+        input_tensor, input_low_tensor, input_high_tensor, levels
+    )
+    output_tensor = BinarizedFunctionsCPU.get("ActivationBinarize_forward")(
+        output_tensor, scale_tensor, threshold_tensor
+    )
     output_tensor = BinarizedFunctionsCPU.get("WeightBinarize_forward")(output_tensor, True)
 elif execution_type == "gpu":
     input_tensor = input_tensor.cuda()
@@ -59,7 +61,7 @@ elif execution_type == "gpu":
     input_high_tensor = input_high_tensor.cuda()
     scale_tensor = scale_tensor.cuda()
     threshold_tensor = threshold_tensor.cuda()
-    if package_type == 'pip_pypi':
+    if package_type == "pip_pypi":
         try:
             from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
             from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
@@ -69,8 +71,12 @@ elif execution_type == "gpu":
     else:
         from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
         from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
-    output_tensor = QuantizedFunctionsCUDA.get("Quantize_forward")(input_tensor, input_low_tensor, input_high_tensor, levels)
-    output_tensor = BinarizedFunctionsCUDA.get("ActivationBinarize_forward")(output_tensor, scale_tensor, threshold_tensor)
+    output_tensor = QuantizedFunctionsCUDA.get("Quantize_forward")(
+        input_tensor, input_low_tensor, input_high_tensor, levels
+    )
+    output_tensor = BinarizedFunctionsCUDA.get("ActivationBinarize_forward")(
+        output_tensor, scale_tensor, threshold_tensor
+    )
     output_tensor = BinarizedFunctionsCUDA.get("WeightBinarize_forward")(output_tensor, True)
 else:
     raise RuntimeError("Invalid execution type!")

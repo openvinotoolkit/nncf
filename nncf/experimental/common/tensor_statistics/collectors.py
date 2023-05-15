@@ -1,39 +1,37 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from abc import ABC
 from abc import abstractmethod
-from collections import deque
 from collections import defaultdict
-from typing import TypeVar, Tuple, Optional, List, Set, Dict, Any, Union
+from collections import deque
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
-from nncf.common.tensor_statistics.statistics import TensorStatistic
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor import TensorType
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
+from nncf.common.tensor_statistics.collectors import NNCFTensor
+from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.statistics import TensorStatistic
+from nncf.quantization.advanced_parameters import AggregatorType
 
-InplaceInsertionFNType = TypeVar('InplaceInsertionFNType')
+InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
 
 
 class TensorReducerBase(ABC):
     """
-    Tensor reducer is a callable object that reduces given tensor according to
+    Tensor reducer is a callable object that reduces tensors according to
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(self,
-                 reduction_shape: Optional[ReductionShape] = None,
-                 inplace: bool = False):
+    def __init__(self, reduction_shape: Optional[ReductionShape] = None, inplace: bool = False):
         """
         :param reduction_shape: Reduction shape for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
@@ -62,7 +60,7 @@ class TensorReducerBase(ABC):
         pass
 
     @abstractmethod
-    def _reduce_out_of_place(self, x: TensorType) -> TensorType:
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
         """
         Specifies the reduction rule in terms of NNCFCollectorTensorProcessor.
 
@@ -70,15 +68,14 @@ class TensorReducerBase(ABC):
         """
 
     @abstractmethod
-    def get_output_name(self, target_node_name: str,
-                        port_id: int) -> str:
+    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         """
-        Returns target output name from target model that is
+        Returns target output names from target model that is
             modified for statistic collection.
 
         :param target_node_name: Target node name for reducer.
         :param port_id: Target port id for target node name for reducer.
-        :return: Target output name for reducer.
+        :return: Target output names for reducer.
         """
 
     @abstractmethod
@@ -89,18 +86,20 @@ class TensorReducerBase(ABC):
         :return: Inplace operation builder if possible else None.
         """
 
-    def __call__(self, x: TensorType):
+    def __call__(self, x: List[NNCFTensor]):
         if self.inplace:
             return x
 
         if self._reduction_shape is None:
-            self._reduction_shape = tuple(range(len(x.shape)))
+            self._reduction_shape = tuple(range(len(x[0].shape)))
         return self._reduce_out_of_place(x)
 
     def __eq__(self, __o: object) -> bool:
-        return isinstance(__o, self.__class__) and\
-            self._reduction_shape == __o._reduction_shape and\
-            self._inplace == __o.inplace
+        return (
+            isinstance(__o, self.__class__)
+            and self._reduction_shape == __o._reduction_shape
+            and self._inplace == __o.inplace
+        )
 
     def __hash__(self) -> int:
         return hash((self.name(), self._inplace))
@@ -112,8 +111,7 @@ class TensorAggregatorBase:
     aggregate them in terms of NNCFCollectorTensorProcessor operations.
     """
 
-    def __init__(self, tensor_processor: NNCFCollectorTensorProcessor,
-                 num_samples: Optional[int]):
+    def __init__(self, tensor_processor: NNCFCollectorTensorProcessor, num_samples: Optional[int] = None):
         """
         :param tensor_processor: Backend-specific tensor processor.
         :param num_samples: Maximum number of samples to collect. Aggregator
@@ -135,8 +133,7 @@ class TensorAggregatorBase:
         return cls.__name__
 
     def register_reduced_input(self, x: TensorType):
-        if self._num_samples is not None and \
-            self._collected_samples >= self._num_samples:
+        if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return
         self._register_reduced_input_impl(x)
         self._collected_samples += 1
@@ -162,8 +159,7 @@ class TensorAggregatorBase:
         self._container = []
 
     def __eq__(self, __o: object) -> bool:
-        return isinstance(__o, self.__class__) and \
-            self._num_samples == __o.num_samples
+        return isinstance(__o, self.__class__) and self._num_samples == __o.num_samples
 
     def __hash__(self) -> int:
         return hash((self.name()))
@@ -173,15 +169,13 @@ class TensorCollector:
     """
     Calculates statistics at given tensors according to registered statistic branches.
     Statistic branch consists of one reducer and one aggregator instance. TensorCollector
-    applies a reducer on a correspondent input and then passes the reduced tensor to
-    a correspondent aggregator for each registered statistic branch.
+    applies a reducer on a correspondent inputs and then passes the one of the reduced tensors
+    chosen by output port id to a correspondent aggregator for each registered statistic branch.
     Receives tesnors by `register_input` method. Aggregated values as a TensorStatistic instance or
     a dict could be collected by `get_statistics` call.
     """
 
-    def __init__(self,
-                 statistic_container: Optional[TensorStatistic] = None
-                 ) -> None:
+    def __init__(self, statistic_container: Optional[TensorStatistic] = None) -> None:
         self._reducers: Set[TensorReducerBase] = set()
         self._aggregators: Dict[Tuple[int, int], TensorAggregatorBase] = {}
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int]] = {}
@@ -189,8 +183,14 @@ class TensorCollector:
         self._enabled = True
 
     @property
-    def num_samples(self) -> int:
-        return max(aggregator.num_samples for aggregator in self._aggregators.values())
+    def num_samples(self) -> Optional[int]:
+        output = None
+        for aggregator in self._aggregators.values():
+            if aggregator.num_samples and output:
+                output = max(output, aggregator.num_samples)
+            else:
+                output = aggregator.num_samples
+        return output
 
     @property
     def enabled(self) -> bool:
@@ -210,8 +210,13 @@ class TensorCollector:
     def disable(self):
         self._enabled = False
 
-    def register_statistic_branch(self, container_key: str,
-                                  reducer: TensorReducerBase, aggregator: TensorAggregatorBase) -> None:
+    def register_statistic_branch(
+        self,
+        container_key: str,
+        reducer: TensorReducerBase,
+        aggregator: TensorAggregatorBase,
+        reducer_output_port_id: int = 0,
+    ) -> None:
         """
         Registers statistic collection branch for a container key. Correspondent input will be reduced
         by given reducer and reduced value will be registered and aggregated by given aggregator.
@@ -221,22 +226,23 @@ class TensorCollector:
         :param container_key: Container key to pass aggregated statistic to.
         :param reducer: TensorReducer instance for the statistic collection branch.
         :param aggregator: TensorAggergator instance for the statistic collection branch.
+        :reducer_output_port_id: Reducer target output port id.
         """
         if container_key in self._stat_container_kwargs_map:
-            raise RuntimeError(f'Two differend statistic branches for one'
-                               f' container key {container_key} are encountered')
+            raise RuntimeError(
+                f"Two differend statistic branches for one" f" container key {container_key} are encountered"
+            )
         if any(aggr is aggregator for aggr in self._aggregators.values()):
-            raise RuntimeError(f'One aggregator instance {aggregator} '
-                               f' for different branches is encountered')
+            raise RuntimeError(f"One aggregator instance {aggregator} " f" for different branches is encountered")
 
         self._reducers.add(reducer)
-        key = (hash(reducer), hash(aggregator))
+        key = (hash(reducer), reducer_output_port_id, hash(aggregator))
 
         if key not in self._aggregators:
             self._aggregators[key] = aggregator
         self._stat_container_kwargs_map[container_key] = key
 
-    def get_output_info(self, target_node_name: str, port_id: int) -> List[Tuple[int, str]]:
+    def get_output_info(self, target_node_name: str, port_id: int) -> List[Tuple[int, List[str]]]:
         """
         Returns list of pairs of reducers names and correspondent output names.
 
@@ -246,10 +252,10 @@ class TensorCollector:
         """
         retval = []
         for reducer in self._reducers:
-            retval.append((hash(reducer), reducer.get_output_name(target_node_name, port_id)))
+            retval.append((hash(reducer), reducer.get_output_names(target_node_name, port_id)))
         return retval
 
-    def register_inputs(self, inputs: Dict[str, TensorType]) -> None:
+    def register_inputs(self, inputs: Dict[int, List[NNCFTensor]]) -> None:
         """
         Registers given input in TensorCollector.
 
@@ -263,14 +269,23 @@ class TensorCollector:
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
+            if any([tensor.is_empty() for tensor in input_]):
+                continue
             reduced_inputs[reducer_hash] = reducer(input_)
 
-        for (reducer_hash, _), aggregator, in self._aggregators.items():
-            aggregator.register_reduced_input(reduced_inputs[reducer_hash])
+        for (
+            (reducer_hash, reducer_port_id, _),
+            aggregator,
+        ) in self._aggregators.items():
+            if reducer_hash in reduced_inputs:
+                aggregator.register_reduced_input(reduced_inputs[reducer_hash][reducer_port_id])
 
     def _aggregate(self) -> None:
         result = {}
-        for key, aggregator, in self._aggregators.items():
+        for (
+            key,
+            aggregator,
+        ) in self._aggregators.items():
             val = aggregator.aggregate()
             result[key] = val
         return result
@@ -313,7 +328,7 @@ class TensorCollector:
         """
         return any(not reducer.inplace for reducer in self._reducers)
 
-    def replace_aggregator(self, key: Tuple[int, int], aggregator: TensorAggregatorBase) -> None:
+    def replace_aggregator(self, key: Tuple[int, int, int], aggregator: TensorAggregatorBase) -> None:
         """
         Friend method that replaces aggregator instance on equivalent one.
         Key shoud be valid for for given aggregator and a statistic branch
@@ -323,12 +338,30 @@ class TensorCollector:
         :param aggregator: Aggregator instance to replace existing instance by given key.
         """
         assert key in self._aggregators
-        assert key[1] == hash(aggregator)
+        assert key[2] == hash(aggregator)
         self._aggregators[key] = aggregator
 
     def reset(self):
         for aggregator in self._aggregators.values():
             aggregator.reset()
+
+    @staticmethod
+    def get_tensor_collector_inputs(
+        outputs: Dict[str, NNCFTensor], output_info: List[Tuple[int, List[str]]]
+    ) -> Dict[int, List[NNCFTensor]]:
+        """
+        Static method that converts all model outputs and collected output_info
+        to a layout required for `register_input` method. This method is not a part of
+        `register_input` to avoid all inputs passing to `TensorCollector.register_input` method.
+
+        :param outputs: Target model outputs.
+        :param output_info: Output info collected by a `TensorCollector.get_output_info` method.
+        :returns: Model outputs in a format required by `TensorCollector.register_input` method.
+        """
+        target_inputs = {}
+        for reducer, names in output_info:
+            target_inputs[reducer] = [outputs[name] for name in names]
+        return target_inputs
 
 
 class MergedTensorCollector(TensorCollector):
@@ -345,8 +378,7 @@ class MergedTensorCollector(TensorCollector):
         :param tensor_collectors: Tensor collectors to merge.
         """
         super().__init__()
-        aggregators: Dict[Tuple[int, int], List[Tuple[TensorCollector, TensorAggregatorBase]]] =\
-            defaultdict(list)
+        aggregators: Dict[Tuple[int, int], List[Tuple[TensorCollector, TensorAggregatorBase]]] = defaultdict(list)
         for tensor_collector in tensor_collectors:
             if not tensor_collector.enabled:
                 continue
@@ -375,33 +407,81 @@ class NoopReducer(TensorReducerBase):
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
 
-    def _reduce_out_of_place(self, x: TensorType) -> TensorType:
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
         return x
 
 
 class MinReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: TensorType) -> TensorType:
-        return self._tensor_processor.reduce_min(x, self._reduction_shape)
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
+        return [self._tensor_processor.reduce_min(x[0], self._reduction_shape, keepdims=True)]
 
 
 class MaxReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: TensorType) -> TensorType:
-        return self._tensor_processor.reduce_max(x, self._reduction_shape)
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
+        return [self._tensor_processor.reduce_max(x[0], self._reduction_shape, keepdims=True)]
 
 
 class AbsMaxReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: TensorType) -> TensorType:
-        x = self._tensor_processor.abs(x)
-        return self._tensor_processor.reduce_max(x, self._reduction_shape)
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
+        x = self._tensor_processor.abs(x[0])
+        return [self._tensor_processor.reduce_max(x, self._reduction_shape, keepdims=True)]
+
+
+class MeanReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
+        return [self._tensor_processor.mean(x[0], self._reduction_shape, keepdims=True)]
+
+
+class QuantileReducerBase(TensorReducerBase):
+    def __init__(
+        self,
+        reduction_shape: Optional[ReductionShape] = None,
+        quantile: Union[float, List[float]] = [0.01, 0.99],
+        inplace: bool = False,
+    ):
+        super().__init__(reduction_shape, inplace)
+        self._quantile = quantile
+
+    def __eq__(self, __o: object) -> bool:
+        return super().__eq__(__o) and self._quantile == __o._quantile
+
+    def __hash__(self) -> int:
+        return hash((self.name(), self._inplace, tuple(self._quantile)))
+
+
+class QuantileReducer(QuantileReducerBase):
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
+        return self._tensor_processor.quantile(x[0], self._quantile, self._reduction_shape, keepdims=True)
+
+
+class AbsQuantileReducer(QuantileReducerBase):
+    def __init__(
+        self,
+        reduction_shape: Optional[ReductionShape] = None,
+        quantile: Union[float, List[float]] = 0.99,
+        inplace: bool = False,
+    ):
+        super().__init__(reduction_shape, quantile, inplace)
+
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
+        x = self._tensor_processor.abs(x[0])
+        return self._tensor_processor.quantile(x, [self._quantile], self._reduction_shape, keepdims=True)
+
 
 class BatchMeanReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: TensorType) -> TensorType:
-        return self._tensor_processor.batch_mean(x)
+    def __init__(self, inplace: bool = False):
+        super().__init__(None, inplace)
+
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
+        return [self._tensor_processor.batch_mean(x[0])]
 
 
 class MeanPerChReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: TensorType) -> TensorType:
-        return self._tensor_processor.mean_per_channel(x, self._reduction_shape)
+    def __init__(self, channel_dim: int = 1, inplace: bool = False):
+        super().__init__(channel_dim, inplace)
+
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
+        return [self._tensor_processor.mean_per_channel(x[0], self._reduction_shape)]
 
 
 ##################################################Aggregators##################################################
@@ -418,7 +498,18 @@ class NoopAggregator(TensorAggregatorBase):
         return self._container
 
 
-class OnlineMinAggregator(TensorAggregatorBase):
+class ShapeAggregator(TensorAggregatorBase):
+    def __init__(self):
+        super().__init__(None, 1)
+
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
+        self._container = x
+
+    def aggregate(self):
+        return self._container.shape
+
+
+class MinAggregator(TensorAggregatorBase):
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         if not self._container:
             self._container = x
@@ -429,7 +520,7 @@ class OnlineMinAggregator(TensorAggregatorBase):
         return self._container.tensor
 
 
-class OnlineMaxAggregator(TensorAggregatorBase):
+class MaxAggregator(TensorAggregatorBase):
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         if not self._container:
             self._container = x
@@ -440,20 +531,10 @@ class OnlineMaxAggregator(TensorAggregatorBase):
         return self._container.tensor
 
 
-class ShapeAggregator(TensorAggregatorBase):
-    def __init__(self):
-        super().__init__(None, 1)
-
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
-        self._container = x
-
-    def aggregate(self):
-        return self._container.tensor.shape
-
-
-class OfflineMinMaxAggregatorBase(TensorAggregatorBase):
-    def __init__(self, tensor_processor, use_per_sample_stats: bool,
-                 num_samples: Optional[int], window_size=None):
+class OfflineAggregatorBase(TensorAggregatorBase):
+    def __init__(
+        self, tensor_processor, use_per_sample_stats: bool = False, num_samples: Optional[int] = None, window_size=None
+    ):
         super().__init__(tensor_processor, num_samples)
         self._window_size = window_size
         self._container = deque(maxlen=window_size)
@@ -465,20 +546,60 @@ class OfflineMinMaxAggregatorBase(TensorAggregatorBase):
         else:
             self._container.append(x)
 
-
-class OfflineMinAggregator(OfflineMinMaxAggregatorBase):
-    def aggregate(self):
+    def _aggregate(self, fn):
         stacked_val = self._tensor_processor.stack(self._container)
-        return self._tensor_processor.reduce_min(stacked_val, axis=0).tensor
+        return fn(stacked_val, axis=0, keepdims=False).tensor
 
 
-class OfflineMaxAggregator(OfflineMinMaxAggregatorBase):
+class MeanAggregator(OfflineAggregatorBase):
     def aggregate(self):
-        stacked_val = self._tensor_processor.stack(self._container)
-        return self._tensor_processor.reduce_max(stacked_val, axis=0).tensor
+        return self._aggregate(self._tensor_processor.mean)
 
 
-class OfflineMeanAggregator(OfflineMinMaxAggregatorBase):
+class MedianAggregator(OfflineAggregatorBase):
     def aggregate(self):
+        return self._aggregate(self._tensor_processor.median)
+
+
+class NoOutliersAggregatorBase(OfflineAggregatorBase):
+    def __init__(
+        self,
+        tensor_processor,
+        use_per_sample_stats: bool = False,
+        num_samples: Optional[int] = None,
+        window_size=None,
+        quantile: float = 0.01,
+    ):
+        super().__init__(tensor_processor, use_per_sample_stats, num_samples, window_size)
+        self._quantile = quantile
+
+    def _aggregate(self, fn) -> List[NNCFTensor]:
         stacked_val = self._tensor_processor.stack(self._container)
-        return self._tensor_processor.mean(stacked_val, axis=0).tensor
+        result = self._tensor_processor.no_outliers_map(stacked_val, fn, axis=0, alpha=self._quantile)
+        return result.tensor
+
+    def __eq__(self, __o: object) -> bool:
+        return super().__eq__(__o) and self._quantile == __o._quantile
+
+    def __hash__(self) -> int:
+        return hash((self.name(), self._quantile))
+
+
+class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
+    def aggregate(self) -> Any:
+        return self._aggregate(self._tensor_processor.masked_mean)
+
+
+class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
+    def aggregate(self) -> Any:
+        return self._aggregate(self._tensor_processor.masked_median)
+
+
+AGGREGATORS_MAP = {
+    AggregatorType.MIN: MinAggregator,
+    AggregatorType.MAX: MaxAggregator,
+    AggregatorType.MEAN: MeanAggregator,
+    AggregatorType.MEAN_NO_OUTLIERS: MeanNoOutliersAggregator,
+    AggregatorType.MEDIAN: MedianAggregator,
+    AggregatorType.MEAN_NO_OUTLIERS: MedianNoOutliersAggregator,
+}

@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-# pylint: disable=redefined-outer-name
-from typing import List, Dict, Optional
-
 import json
 import math
 import os
@@ -25,28 +22,30 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+# pylint: disable=redefined-outer-name
+from typing import Dict, List, Optional
+
 import pandas as pd
+import pytest
+from pytest_dependency import depends
 from yattag import Doc
 from yattag import indent
 
-import pytest
-from pytest_dependency import depends
-
 from nncf.common.logging.logger import nncf_logger
-from tests.shared.paths import PROJECT_ROOT
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.shared.paths import DATASET_DEFINITIONS_PATH
+from tests.shared.paths import PROJECT_ROOT
 
-BG_COLOR_GREEN_HEX = 'ccffcc'
-BG_COLOR_YELLOW_HEX = 'ffffcc'
-BG_COLOR_RED_HEX = 'ffcccc'
+BG_COLOR_GREEN_HEX = "ccffcc"
+BG_COLOR_YELLOW_HEX = "ffffcc"
+BG_COLOR_RED_HEX = "ffcccc"
 
 BENCHMARKING_DIR = ONNX_TEST_ROOT / "benchmarking"
 
 OV_EP_COL_NAME = "OpenVINOExecutionProvider"
 OV_COL_NAME = "OpenVINO"
 CPU_EP_COL_NAME = "CPUExecutionProvider"
-REPORT_NAME = 'report.html'
+REPORT_NAME = "report.html"
 
 ENV_VARS = os.environ.copy()
 if "PYTHONPATH" in ENV_VARS:
@@ -55,43 +54,44 @@ else:
     ENV_VARS["PYTHONPATH"] = str(PROJECT_ROOT)
 
 TASKS = ["classification", "object_detection_segmentation"]
-ALL_MODELS = [(task, os.path.splitext(model)[0]) for task in TASKS for model in
-              os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")]
+ALL_MODELS = [
+    (task, os.path.splitext(model)[0])
+    for task in TASKS
+    for model in os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")
+]
 # Default E2E Scope of Models
 E2E_MODELS = [(task_type, model_name) for task_type, model_name in ALL_MODELS if model_name in
               ['densenet-12', 'mobilenetv2-12', 'resnet50-v2-7', 'shufflenet-v2-12', 'squeezenet1.0-12',
-               'efficientnet-lite4-11', 'inception-v1-12',
-               'ssd-12', 'yolov3-12', 'yolov4', 'ResNet101-DUC-12', 'FasterRCNN-12', 'MaskRCNN-12', 'retinanet-9']]
+               'efficientnet-lite4-11', 'inception-v1-12', 'ssd-12', 'yolov3-12', 'yolov4', 'ResNet101-DUC-12',
+               'FasterRCNN-12', 'MaskRCNN-12', 'retinanet-9']]  # fmt: skip
 # Fail Model and Reason of Failure
 XFAIL_MODELS = {
     # model name: reason of skipping
-    'MaskRCNN-12': 'ticket 102051',
-    'yolov4': 'ticket 99211',
-    'yolov3-12': 'ticket 99211'
+    "MaskRCNN-12": "ticket 102051",
+    "yolov4": "ticket 99211",
+    "yolov3-12": "ticket 99211",
 }
 
 
 def check_skip_model(model_name: str, model_names_to_test: Optional[List[str]]):
     if model_names_to_test is not None and model_name not in model_names_to_test:
-        pytest.skip(f'The model {model_name} is skipped, because it was not included in --model-names.')
+        pytest.skip(f"The model {model_name} is skipped, because it was not included in --model-names.")
     if model_name in XFAIL_MODELS:
-        pytest.xfail(f'The model {model_name} is skipped, {XFAIL_MODELS[model_name]}')
+        pytest.xfail(f"The model {model_name} is skipped, {XFAIL_MODELS[model_name]}")
 
 
 def remove_prefix_if_exist(line: str, prefix: str) -> str:
     if line.startswith(prefix):
-        return line[len(prefix):]
+        return line[len(prefix) :]
     return line
 
 
 def run_command(command: List[str]):
-    com_str = ' '.join(command)
+    com_str = " ".join(command)
     print(f"Run command: {com_str}")
-    with subprocess.Popen(command,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
-                          cwd=PROJECT_ROOT,
-                          env=ENV_VARS) as result:
+    with subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=PROJECT_ROOT, env=ENV_VARS
+    ) as result:
         outs, _ = result.communicate()
 
         if result.returncode != 0:
@@ -111,9 +111,9 @@ def model_dir(request):
 def model_names_to_test(request):
     option = request.config.getoption("--model-names")
     if option is None:
-        nncf_logger.info('All models will be tested')
+        nncf_logger.info("All models will be tested")
         return option
-    option = option.split(' ')
+    option = option.split(" ")
     return option
 
 
@@ -197,7 +197,7 @@ def _read_accuracy_checker_result(root_dir: Path, key: str) -> pd.DataFrame:
     df = df.set_index("model")
     df["model_accuracy"] = df["metric_value"] * 100.0
     df = df[["model_accuracy", "metric_name", "tags"]]
-    df = df.pivot_table('model_accuracy', ['model', 'metric_name'], 'tags')
+    df = df.pivot_table("model_accuracy", ["model", "metric_name"], "tags")
     return df
 
 
@@ -223,7 +223,7 @@ def _read_reference_json(fpath: Path) -> pd.DataFrame:
 
     df["model_accuracy"] = round(df["target_fp32"] * 100.0, 3)
     df["metric_name"] = df["metric_type"]
-    df = df.drop(columns='metric_type')
+    df = df.drop(columns="metric_type")
 
     return df
 
@@ -241,9 +241,18 @@ def quantized_model_accuracy(output_dir, scope="function"):
     return _read_accuracy_checker_result(root_dir, "quantized")
 
 
-def configure_paths(task_type: str, model_name: str, model_dir: Path,
-                    data_dir: Path, anno_dir: Path, output_dir: Path,
-                    anno_size: int, program: str, is_ov_configs: bool, is_quantized: bool):
+def configure_paths(
+    task_type: str,
+    model_name: str,
+    model_dir: Path,
+    data_dir: Path,
+    anno_dir: Path,
+    output_dir: Path,
+    anno_size: int,
+    program: str,
+    is_ov_configs: bool,
+    is_quantized: bool,
+):
     program_path = BENCHMARKING_DIR / program
 
     task_path = BENCHMARKING_DIR / task_type
@@ -271,12 +280,21 @@ def configure_paths(task_type: str, model_name: str, model_dir: Path,
 class TestPTQ:
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
-    def test_ptq_model(self, task_type: str, model_name: str, model_names_to_test: Optional[List[str]], model_dir: Path,
-                       data_dir: Path, anno_dir: Path, output_dir: Path, ptq_size: int):
+    def test_ptq_model(
+        self,
+        task_type: str,
+        model_name: str,
+        model_names_to_test: Optional[List[str]],
+        model_dir: Path,
+        data_dir: Path,
+        anno_dir: Path,
+        output_dir: Path,
+        ptq_size: int,
+    ):
         check_skip_model(model_name, model_names_to_test)
-        program_path, config_path, model_path, output_dir, data_dir, anno_dir = \
-            configure_paths(task_type, model_name, model_dir, data_dir,
-                            anno_dir, output_dir, ptq_size, 'run_ptq.py', False, False)
+        program_path, config_path, model_path, output_dir, data_dir, anno_dir = configure_paths(
+            task_type, model_name, model_dir, data_dir, anno_dir, output_dir, ptq_size, "run_ptq.py", False, False
+        )
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
@@ -287,7 +305,7 @@ class TestPTQ:
             "-a", str(anno_dir),
             "-ss", str(ptq_size),
             "--target_tags", CPU_EP_COL_NAME  # This need to not quantize twice, because two targets in AC config
-        ]
+        ]  # fmt: skip
 
         run_command(com_line)
 
@@ -304,8 +322,15 @@ class TestBenchmark:
         return output_dir / out_file_name
 
     @staticmethod
-    def _get_com_line(program_path: Path, config_path: Path, model_path: Path,
-                      data_dir: Path, anno_dir: Path, out_file_name: Path, eval_size: Optional[int]) -> List[str]:
+    def _get_com_line(
+        program_path: Path,
+        config_path: Path,
+        model_path: Path,
+        data_dir: Path,
+        anno_dir: Path,
+        out_file_name: Path,
+        eval_size: Optional[int],
+    ) -> List[str]:
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
@@ -314,119 +339,185 @@ class TestBenchmark:
             "-s", str(data_dir),
             "-a", str(anno_dir),
             "--csv_result", str(out_file_name)
-        ]
+        ]  # fmt: skip
         if eval_size is not None:
             com_line += ["-ss", str(eval_size)]
         return com_line
 
     @staticmethod
-    def get_onnx_rt_ac_command(task_type: str, model_name: str, model_dir: Path,
-                               data_dir: Path, anno_dir: Path, output_dir: Path,
-                               eval_size: int, program: str, is_quantized: bool,
-                               is_ov_ep: bool, is_cpu_ep: bool) -> List[str]:
-        program_path, config_path, model_path, output_dir, data_dir, anno_dir = \
-            configure_paths(task_type, model_name, model_dir, data_dir, anno_dir,
-                            output_dir, eval_size, program, False, is_quantized)
+    def get_onnx_rt_ac_command(
+        task_type: str,
+        model_name: str,
+        model_dir: Path,
+        data_dir: Path,
+        anno_dir: Path,
+        output_dir: Path,
+        eval_size: int,
+        program: str,
+        is_quantized: bool,
+        is_ov_ep: bool,
+        is_cpu_ep: bool,
+    ) -> List[str]:
+        program_path, config_path, model_path, output_dir, data_dir, anno_dir = configure_paths(
+            task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size, program, False, is_quantized
+        )
 
         out_file_name = TestBenchmark._get_out_file_path(output_dir, program, is_quantized)
-        com_line = TestBenchmark._get_com_line(program_path, config_path, model_path,
-                                               data_dir, anno_dir, out_file_name, eval_size)
+        com_line = TestBenchmark._get_com_line(
+            program_path, config_path, model_path, data_dir, anno_dir, out_file_name, eval_size
+        )
         if is_ov_ep and not is_cpu_ep:
-            com_line += ["--target_tags", 'OpenVINOExecutionProvider']
+            com_line += ["--target_tags", "OpenVINOExecutionProvider"]
         if not is_ov_ep and is_cpu_ep:
-            com_line += ["--target_tags", 'CPUExecutionProvider']
+            com_line += ["--target_tags", "CPUExecutionProvider"]
         return com_line
 
     @staticmethod
-    def get_ov_ac_command(task_type: str, model_name: str, model_dir: Path,
-                          data_dir: Path, anno_dir: Path, output_dir: Path,
-                          eval_size: int, program: str, is_quantized: bool) -> List[str]:
-        program_path, config_path, model_path, output_dir, data_dir, anno_dir = \
-            configure_paths(task_type, model_name, model_dir, data_dir, anno_dir,
-                            output_dir, eval_size, program, True, is_quantized)
+    def get_ov_ac_command(
+        task_type: str,
+        model_name: str,
+        model_dir: Path,
+        data_dir: Path,
+        anno_dir: Path,
+        output_dir: Path,
+        eval_size: int,
+        program: str,
+        is_quantized: bool,
+    ) -> List[str]:
+        program_path, config_path, model_path, output_dir, data_dir, anno_dir = configure_paths(
+            task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size, program, True, is_quantized
+        )
 
         out_file_name = TestBenchmark._get_out_file_path(output_dir, program, is_quantized)
-        com_line = TestBenchmark._get_com_line(program_path, config_path, model_path,
-                                               data_dir, anno_dir, out_file_name, eval_size)
+        com_line = TestBenchmark._get_com_line(
+            program_path, config_path, model_path, data_dir, anno_dir, out_file_name, eval_size
+        )
         return com_line
 
     @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
-    def test_reference_model_accuracy(self, task_type, model_name, model_names_to_test, model_dir,
-                                      data_dir, anno_dir, output_dir, eval_size):
+    def test_reference_model_accuracy(
+        self, task_type, model_name, model_names_to_test, model_dir, data_dir, anno_dir, output_dir, eval_size
+    ):
         # Reference accuracy validation is performed on CPUExecutionProvider
-        command = self.get_onnx_rt_ac_command(task_type, model_name, model_dir, data_dir, anno_dir,
-                                              output_dir, eval_size, program="accuracy_checker.py", is_quantized=False,
-                                              is_ov_ep=False, is_cpu_ep=True)
+        command = self.get_onnx_rt_ac_command(
+            task_type,
+            model_name,
+            model_dir,
+            data_dir,
+            anno_dir,
+            output_dir,
+            eval_size,
+            program="accuracy_checker.py",
+            is_quantized=False,
+            is_ov_ep=False,
+            is_cpu_ep=True,
+        )
         run_command(command)
 
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
-    def test_onnx_rt_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test,
-                                              data_dir, anno_dir, output_dir, eval_size,
-                                              is_ov_ep, is_cpu_ep):
+    def test_onnx_rt_quantized_model_accuracy(
+        self,
+        request,
+        task_type,
+        model_name,
+        model_names_to_test,
+        data_dir,
+        anno_dir,
+        output_dir,
+        eval_size,
+        is_ov_ep,
+        is_cpu_ep,
+    ):
         if not (is_ov_ep or is_cpu_ep):
-            pytest.skip('Skip accuracy validation on ONNXRuntime.')
+            pytest.skip("Skip accuracy validation on ONNXRuntime.")
         # Run PTQ first
 
-        depends(request,
-                ["TestPTQ::test_ptq_model" + remove_prefix_if_exist(request.node.name,
-                                                                    "test_onnx_rt_quantized_model_accuracy")])
+        depends(
+            request,
+            [
+                "TestPTQ::test_ptq_model"
+                + remove_prefix_if_exist(request.node.name, "test_onnx_rt_quantized_model_accuracy")
+            ],
+        )
 
-        command = self.get_onnx_rt_ac_command(task_type, model_name, output_dir, data_dir, anno_dir,
-                                              output_dir, eval_size, program="accuracy_checker.py", is_quantized=True,
-                                              is_ov_ep=is_ov_ep, is_cpu_ep=is_cpu_ep)
+        command = self.get_onnx_rt_ac_command(
+            task_type,
+            model_name,
+            output_dir,
+            data_dir,
+            anno_dir,
+            output_dir,
+            eval_size,
+            program="accuracy_checker.py",
+            is_quantized=True,
+            is_ov_ep=is_ov_ep,
+            is_cpu_ep=is_cpu_ep,
+        )
         run_command(command)
 
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
-    def test_ov_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, data_dir,
-                                         anno_dir, output_dir, eval_size, is_ov):
+    def test_ov_quantized_model_accuracy(
+        self, request, task_type, model_name, model_names_to_test, data_dir, anno_dir, output_dir, eval_size, is_ov
+    ):
         if not is_ov:
-            pytest.skip('Skip accuracy validation on OpenVINO.')
+            pytest.skip("Skip accuracy validation on OpenVINO.")
         # Run PTQ first
-        depends(request,
-                ["TestPTQ::test_ptq_model" + remove_prefix_if_exist(request.node.name,
-                                                                    "test_ov_quantized_model_accuracy")])
+        depends(
+            request,
+            ["TestPTQ::test_ptq_model" + remove_prefix_if_exist(request.node.name, "test_ov_quantized_model_accuracy")],
+        )
 
-        command = self.get_ov_ac_command(task_type, model_name, output_dir, data_dir, anno_dir,
-                                         output_dir, eval_size, program="accuracy_checker.py", is_quantized=True)
+        command = self.get_ov_ac_command(
+            task_type,
+            model_name,
+            output_dir,
+            data_dir,
+            anno_dir,
+            output_dir,
+            eval_size,
+            program="accuracy_checker.py",
+            is_quantized=True,
+        )
         run_command(command)
 
 
 @pytest.mark.run(order=3)
 class TestBenchmarkResult:
-    def join_reference_and_quantized_frames(self, reference_model_accuracy: pd.DataFrame,
-                                            quantized_model_accuracy: pd.DataFrame) -> pd.DataFrame:
+    def join_reference_and_quantized_frames(
+        self, reference_model_accuracy: pd.DataFrame, quantized_model_accuracy: pd.DataFrame
+    ) -> pd.DataFrame:
         df = reference_model_accuracy.join(quantized_model_accuracy)
 
-        df.insert(0, 'Model', '')
-        df['Model'] = [df.iloc[i].name[0] for i in range(len(df.index))]
+        df.insert(0, "Model", "")
+        df["Model"] = [df.iloc[i].name[0] for i in range(len(df.index))]
         df = df.reset_index(drop=True)
-        df = df.rename({"metric_name": "Metrics type",
-                        "model_accuracy": "FP32"}, axis=1)
+        df = df.rename({"metric_name": "Metrics type", "model_accuracy": "FP32"}, axis=1)
         if OV_EP_COL_NAME in df.columns:
             df = df.rename({"OpenVINOExecutionProvider": "OV-EP_INT8"}, axis=1)
             df["Diff OV-EP FP32"] = df["OV-EP_INT8"] - df["FP32"]
-            df["Diff OV-EP Expected"] = df['target_int8'] * 100 - df["FP32"]
+            df["Diff OV-EP Expected"] = df["target_int8"] * 100 - df["FP32"]
         if CPU_EP_COL_NAME in df.columns:
             df = df.rename({"CPUExecutionProvider": "CPU-EP_INT8"}, axis=1)
             df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
         if OV_COL_NAME in df.columns:
             df = df.rename({"OpenVINO": "OV_INT8"}, axis=1)
             df["Diff OV FP32"] = df["OV_INT8"] - df["FP32"]
-            df["Diff OV Expected"] = df['target_int8'] * 100 - df["FP32"]
+            df["Diff OV Expected"] = df["target_int8"] * 100 - df["FP32"]
         df["Expected FP32"] = df["target_fp32"] * 100
         return df
 
-    def get_row_colors(self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame,
-                       int8_col_name: str) -> Dict[int, str]:
+    def get_row_colors(
+        self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame, int8_col_name: str
+    ) -> Dict[int, str]:
         row_colors = {}
         for idx, row in df.iterrows():
             for i, model_name in enumerate(reference_model_accuracy.index):
-                if model_name == row['Model']:
+                if model_name == row["Model"]:
                     diff_target_min = reference_model_accuracy.iloc[i]["diff_target_min"]
                     diff_target_max = reference_model_accuracy.iloc[i]["diff_target_max"]
                     target_int8 = reference_model_accuracy.iloc[i]["target_int8"] * 100
@@ -445,9 +536,9 @@ class TestBenchmarkResult:
 
     def generate_final_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:
         # Add parentheses, because FP32 metrics were taken from reference.
-        df['FP32'] = df['FP32'].astype(str)
+        df["FP32"] = df["FP32"].astype(str)
         for idx, row in df.iterrows():
-            df.at[idx, 'FP32'] = f"({row['FP32']})"
+            df.at[idx, "FP32"] = f"({row['FP32']})"
         df = df.fillna("-")
         is_cpu_ep = "CPU-EP_INT8" in df.columns
         is_ov_ep = "OV-EP_INT8" in df.columns
@@ -457,33 +548,36 @@ class TestBenchmarkResult:
         column_names = ["Model", "Metrics type", "Expected FP32", "FP32"]
         if is_ov:
             new_columns_order.extend(["OV_INT8", "Diff OV FP32", "Diff OV Expected"])
-            column_names.extend(['INT8', 'Diff FP32', 'Diff Expected'])
+            column_names.extend(["INT8", "Diff FP32", "Diff Expected"])
         if is_cpu_ep:
             new_columns_order.extend(["CPU-EP_INT8", "Diff CPU-EP FP32"])
-            column_names.extend(['INT8', 'Diff FP32'])
+            column_names.extend(["INT8", "Diff FP32"])
         if is_ov_ep:
             new_columns_order.extend(["OV-EP_INT8", "Diff OV-EP FP32", "Diff OV-EP Expected"])
-            column_names.extend(['INT8', 'Diff FP32', 'Diff Expected'])
+            column_names.extend(["INT8", "Diff FP32", "Diff Expected"])
         df = df[new_columns_order]
         df.columns = column_names
         if is_cpu_ep and is_ov_ep:
             if is_ov:
                 df.columns = pd.MultiIndex.from_tuples(
-                    [("", col) for col in df.columns[:4]] + [(OV_COL_NAME, col) for col in df.columns[4:7]] + [
-                        (CPU_EP_COL_NAME, col) for col in df.columns[7:9]] + [
-                        (OV_EP_COL_NAME, col) for col in df.columns[6:]]
+                    [("", col) for col in df.columns[:4]]
+                    + [(OV_COL_NAME, col) for col in df.columns[4:7]]
+                    + [(CPU_EP_COL_NAME, col) for col in df.columns[7:9]]
+                    + [(OV_EP_COL_NAME, col) for col in df.columns[6:]]
                 )
             else:
                 df.columns = pd.MultiIndex.from_tuples(
-                    [("", col) for col in df.columns[:4]] + [(CPU_EP_COL_NAME, col) for col in df.columns[4:6]] + [
-                        (OV_EP_COL_NAME, col) for col in df.columns[6:]]
+                    [("", col) for col in df.columns[:4]]
+                    + [(CPU_EP_COL_NAME, col) for col in df.columns[4:6]]
+                    + [(OV_EP_COL_NAME, col) for col in df.columns[6:]]
                 )
             return df
         provider_name = CPU_EP_COL_NAME if is_cpu_ep else OV_EP_COL_NAME
         if is_ov:
             df.columns = pd.MultiIndex.from_tuples(
-                [("", col) for col in df.columns[:4]] + [(OV_COL_NAME, col) for col in df.columns[4:7]] + [
-                    (provider_name, col) for col in df.columns[7:]]
+                [("", col) for col in df.columns[:4]]
+                + [(OV_COL_NAME, col) for col in df.columns[4:7]]
+                + [(provider_name, col) for col in df.columns[7:]]
             )
         else:
             df.columns = pd.MultiIndex.from_tuples(
@@ -491,68 +585,74 @@ class TestBenchmarkResult:
             )
         return df
 
-    def generate_html(self, df: pd.DataFrame, cpu_ep_row_colors: Dict[int, str], ov_ep_row_colors: Dict[int, str],
-                      ov_row_colors: Dict[int, str], output_fp: str) -> None:
+    def generate_html(
+        self,
+        df: pd.DataFrame,
+        cpu_ep_row_colors: Dict[int, str],
+        ov_ep_row_colors: Dict[int, str],
+        ov_row_colors: Dict[int, str],
+        output_fp: str,
+    ) -> None:
         doc, tag, text = Doc().tagtext()
-        doc.asis('<!DOCTYPE html>')
-        with tag('head'):
-            with tag('style'):
+        doc.asis("<!DOCTYPE html>")
+        with tag("head"):
+            with tag("style"):
                 doc.asis("green_text" + "{Background-color: " + f"#{BG_COLOR_GREEN_HEX}" + "}")
                 doc.asis("yellow_text" + "{Background-color: " + f"#{BG_COLOR_YELLOW_HEX}" + "}")
                 doc.asis("red_text" + "{Background-color: " + f"#{BG_COLOR_RED_HEX}" + "}")
                 doc.asis("report_table" + " border-collapse: collapse; border: 1px solid;")
-        with tag('p'):
-            text('legend: ')
-        with tag('p'):
-            with tag('green_text'):
-                text('Thresholds for FP32 and Expected are passed')
-        with tag('p'):
-            with tag('yellow_text'):
-                text('Thresholds for Expected is failed, but for FP32 passed')
-        with tag('p'):
-            with tag('red_text'):
-                text('Thresholds for FP32 and Expected are failed')
-        with tag('p'):
+        with tag("p"):
+            text("legend: ")
+        with tag("p"):
+            with tag("green_text"):
+                text("Thresholds for FP32 and Expected are passed")
+        with tag("p"):
+            with tag("yellow_text"):
+                text("Thresholds for Expected is failed, but for FP32 passed")
+        with tag("p"):
+            with tag("red_text"):
+                text("Thresholds for FP32 and Expected are failed")
+        with tag("p"):
             text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
-        with tag('report_table'):
-            with tag('table', border="1", cellpadding="5"):
+        with tag("report_table"):
+            with tag("table", border="1", cellpadding="5"):
                 # First row with merging cells with the same name
-                with tag('tr'):
+                with tag("tr"):
                     prev_el, _ = df.columns[0]
                     cnt = 1
                     for up_col, _ in df.columns[1:]:
                         if up_col != prev_el:
-                            with tag('td', colspan=cnt):
+                            with tag("td", colspan=cnt):
                                 text(prev_el)
                             cnt = 0
                         prev_el = up_col
                         cnt += 1
-                    with tag('td', colspan=cnt):
+                    with tag("td", colspan=cnt):
                         text(prev_el)
                 # Second row
-                with tag('tr'):
+                with tag("tr"):
                     for _, bot_col in df.columns:
-                        with tag('td'):
+                        with tag("td"):
                             text(bot_col)
                 # Data cells
-                with tag('tr'):
+                with tag("tr"):
                     for idx, row in df.iterrows():
-                        with tag('tr'):
+                        with tag("tr"):
                             for i, elem in enumerate(row):
                                 additional_attrs = {}
                                 up_col, bot_col = df.columns[i]
                                 if up_col == OV_EP_COL_NAME:
-                                    additional_attrs = {'bgcolor': f'{ov_ep_row_colors[idx]}'}
+                                    additional_attrs = {"bgcolor": f"{ov_ep_row_colors[idx]}"}
                                 elif up_col == CPU_EP_COL_NAME:
-                                    additional_attrs = {'bgcolor': f'{cpu_ep_row_colors[idx]}'}
+                                    additional_attrs = {"bgcolor": f"{cpu_ep_row_colors[idx]}"}
                                 elif up_col == OV_COL_NAME:
-                                    additional_attrs = {'bgcolor': f'{ov_row_colors[idx]}'}
-                                with tag('td', **additional_attrs):
+                                    additional_attrs = {"bgcolor": f"{ov_row_colors[idx]}"}
+                                with tag("td", **additional_attrs):
                                     if isinstance(elem, float):
                                         elem = round(elem, 2)
                                     text(elem)
 
-        with open(output_fp, 'w', encoding='utf8') as f:
+        with open(output_fp, "w", encoding="utf8") as f:
             f.write(indent(doc.getvalue(), indent_text=True))
 
     @pytest.mark.e2e_ptq

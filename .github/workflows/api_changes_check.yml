@@ -1,0 +1,63 @@
+name: API changes check
+on:
+  pull_request_target:
+    branches:
+      - develop
+
+env:
+  API_DOC_HTML_ROOT_RELATIVE_PATH: autoapi
+
+concurrency:
+  group: ci-${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  call-build-api-doc:
+    uses: ./.github/workflows/build_html_doc.yml
+    with:
+      ref: "refs/pull/${{ github.event.number }}/merge"
+  compare-api-doc-with-develop:
+    needs: call-build-api-doc
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Download built HTML doc as artifact from previous step
+        uses: alehechka/download-tartifact@v2
+        with:
+          name: html_doc_artifact
+      - name: Checkout latest doc_pages branch tip
+        uses: actions/checkout@v3
+        with:
+          ref: doc_pages
+          path: previous_doc_state
+      - name: Get changed file names in API doc path
+        id: diff
+        run: |
+          cd html_build/html/$API_DOC_HTML_ROOT_RELATIVE_PATH
+          CHANGED_FILES=$(find . -name "*.html" -exec diff -qrBZ {} $GITHUB_WORKSPACE/previous_doc_state/$API_DOC_HTML_ROOT_RELATIVE_PATH/{} \;)
+          echo ${CHANGED_FILES}
+          CHANGED_FILES=$(echo $CHANGED_FILES | tr '\n' ' ')
+          echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
+      - uses: actions/github-script@v6
+        if: ${{ !(contains(steps.diff.outputs.changed_files, 'differ'))  && contains(github.event.pull_request.labels.*.name, 'API') }}
+        with:
+          github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
+          script: |
+            github.rest.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "API"
+            })
+      - uses: actions/github-script@v6
+        if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}
+        with:
+          github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ["API"]
+            })

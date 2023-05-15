@@ -1,23 +1,21 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from pycocotools import cocoeval
 
-from examples.tensorflow.common.object_detection.evaluation import coco_utils
 from examples.tensorflow.common.logger import logger
+from examples.tensorflow.common.object_detection.evaluation import coco_utils
 
 
 class MetricWrapper:
@@ -69,27 +67,45 @@ class COCOEvaluator:
               to absolute values (`image_info` is needed in this case).
         """
         if annotation_file:
-            self._coco_gt = coco_utils.COCOWrapper(eval_type=('mask' if include_mask else 'box'),
-                                                   annotation_file=annotation_file)
+            self._coco_gt = coco_utils.COCOWrapper(
+                eval_type=("mask" if include_mask else "box"), annotation_file=annotation_file
+            )
 
         self._annotation_file = annotation_file
         self._include_mask = include_mask
-        self._metric_names = ['AP', 'AP50', 'AP75', 'APs', 'APm', 'APl', 'ARmax1', 'ARmax10',
-                              'ARmax100', 'ARs', 'ARm', 'ARl']
+        self._metric_names = [
+            "AP",
+            "AP50",
+            "AP75",
+            "APs",
+            "APm",
+            "APl",
+            "ARmax1",
+            "ARmax10",
+            "ARmax100",
+            "ARs",
+            "ARm",
+            "ARl",
+        ]
 
-        self._required_prediction_fields = ['source_id', 'num_detections', 'detection_classes',
-                                            'detection_scores', 'detection_boxes']
+        self._required_prediction_fields = [
+            "source_id",
+            "num_detections",
+            "detection_classes",
+            "detection_scores",
+            "detection_boxes",
+        ]
 
         self._need_rescale_bboxes = need_rescale_bboxes
         if self._need_rescale_bboxes:
-            self._required_prediction_fields.append('image_info')
-        self._required_groundtruth_fields = ['source_id', 'height', 'width', 'classes', 'boxes']
+            self._required_prediction_fields.append("image_info")
+        self._required_groundtruth_fields = ["source_id", "height", "width", "classes", "boxes"]
 
         if self._include_mask:
-            mask_metric_names = ['mask_' + x for x in self._metric_names]
+            mask_metric_names = ["mask_" + x for x in self._metric_names]
             self._metric_names.extend(mask_metric_names)
-            self._required_prediction_fields.extend(['detection_masks'])
-            self._required_groundtruth_fields.extend(['masks'])
+            self._required_prediction_fields.extend(["detection_masks"])
+            self._required_groundtruth_fields.extend(["masks"])
 
         self.reset()
 
@@ -107,19 +123,18 @@ class COCOEvaluator:
               coco-style evaluation metrics (box and mask).
         """
         if not self._annotation_file:
-            logger.info('There is no annotation_file in COCOEvaluator.')
+            logger.info("There is no annotation_file in COCOEvaluator.")
             gt_dataset = coco_utils.convert_groundtruths_to_coco_dataset(self._groundtruths)
-            coco_gt = coco_utils.COCOWrapper(eval_type=('mask' if self._include_mask else 'box'),
-                                             gt_dataset=gt_dataset)
+            coco_gt = coco_utils.COCOWrapper(eval_type=("mask" if self._include_mask else "box"), gt_dataset=gt_dataset)
         else:
-            logger.info('Using annotation file: %s', self._annotation_file)
+            logger.info("Using annotation file: %s", self._annotation_file)
             coco_gt = self._coco_gt
 
         coco_predictions = coco_utils.convert_predictions_to_coco_annotations(self._predictions)
         coco_dt = coco_gt.load_res(predictions=coco_predictions)
-        image_ids = [ann['image_id'] for ann in coco_predictions]
+        image_ids = [ann["image_id"] for ann in coco_predictions]
 
-        coco_eval = cocoeval.COCOeval(coco_gt, coco_dt, iouType='bbox')
+        coco_eval = cocoeval.COCOeval(coco_gt, coco_dt, iouType="bbox")
         coco_eval.params.imgIds = image_ids
         coco_eval.evaluate()
         coco_eval.accumulate()
@@ -127,7 +142,7 @@ class COCOEvaluator:
         coco_metrics = coco_eval.stats
 
         if self._include_mask:
-            mcoco_eval = cocoeval.COCOeval(coco_gt, coco_dt, iouType='segm')
+            mcoco_eval = cocoeval.COCOeval(coco_gt, coco_dt, iouType="segm")
             mcoco_eval.params.imgIds = image_ids
             mcoco_eval.evaluate()
             mcoco_eval.accumulate()
@@ -149,13 +164,13 @@ class COCOEvaluator:
         return metrics_dict
 
     def _process_predictions(self, predictions):
-        image_scale = np.tile(predictions['image_info'][:, 2:3, :], (1, 1, 2))
-        predictions['detection_boxes'] = (predictions['detection_boxes'].astype(np.float32))
-        predictions['detection_boxes'] /= image_scale
+        image_scale = np.tile(predictions["image_info"][:, 2:3, :], (1, 1, 2))
+        predictions["detection_boxes"] = predictions["detection_boxes"].astype(np.float32)
+        predictions["detection_boxes"] /= image_scale
 
-        if 'detection_outer_boxes' in predictions:
-            predictions['detection_outer_boxes'] = (predictions['detection_outer_boxes'].astype(np.float32))
-            predictions['detection_outer_boxes'] /= image_scale
+        if "detection_outer_boxes" in predictions:
+            predictions["detection_outer_boxes"] = predictions["detection_outer_boxes"].astype(np.float32)
+            predictions["detection_outer_boxes"] /= image_scale
 
     def update(self, predictions, groundtruths=None):
         """Update and aggregate detection results and groundtruth data.
@@ -199,7 +214,7 @@ class COCOEvaluator:
 
         for k in self._required_prediction_fields:
             if k not in predictions:
-                raise ValueError('Missing the required key `{}` in predictions!'.format(k))
+                raise ValueError("Missing the required key `{}` in predictions!".format(k))
 
         if self._need_rescale_bboxes:
             self._process_predictions(predictions)
@@ -212,15 +227,15 @@ class COCOEvaluator:
         if not self._annotation_file:
             assert groundtruths
 
-            if 'height' not in groundtruths and 'width' not in groundtruths:
-                sizes = groundtruths['image_info'][:, 0:1, :]
+            if "height" not in groundtruths and "width" not in groundtruths:
+                sizes = groundtruths["image_info"][:, 0:1, :]
                 sizes = np.squeeze(sizes)
-                groundtruths['height'] = sizes[:, 0]
-                groundtruths['width'] =  sizes[:, 1]
+                groundtruths["height"] = sizes[:, 0]
+                groundtruths["width"] = sizes[:, 1]
 
             for k in self._required_groundtruth_fields:
                 if k not in groundtruths:
-                    raise ValueError('Missing the required key `{}` in groundtruths!'.format(k))
+                    raise ValueError("Missing the required key `{}` in groundtruths!".format(k))
 
             for k, v in groundtruths.items():
                 if k not in self._groundtruths:

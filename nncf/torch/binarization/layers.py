@@ -1,29 +1,28 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import torch
 from torch import nn
 
-from nncf.torch.dynamic_graph.patch_pytorch import register_operator
-from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
-from nncf.common.utils.registry import Registry
-from nncf.torch.quantization.layers import get_per_channel_scale_shape
-from nncf.torch.binarization.binarize_functions import XNORBinarizeFn, DOREFABinarizeFn
-from nncf.torch.binarization.binarize_functions import ActivationBinarizationScaleThresholdFn
-
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.registry import Registry
+from nncf.torch.binarization.binarize_functions import ActivationBinarizationScaleThresholdFn
+from nncf.torch.binarization.binarize_functions import DOREFABinarizeFn
+from nncf.torch.binarization.binarize_functions import XNORBinarizeFn
+from nncf.torch.dynamic_graph.patch_pytorch import register_operator
+from nncf.torch.layer_utils import COMPRESSION_MODULES
+from nncf.torch.layer_utils import CompressionParameter
+from nncf.torch.quantization.layers import get_per_channel_scale_shape
 
-BINARIZATION_MODULES = Registry('binarization_modules')
+BINARIZATION_MODULES = Registry("binarization_modules")
 
 
 class BinarizationMode:
@@ -34,7 +33,7 @@ class BinarizationMode:
 class BaseBinarizer(nn.Module):
     def __init__(self, enabled=False):
         super().__init__()
-        self.register_buffer('enabled', torch.IntTensor([0]))
+        self.register_buffer("enabled", torch.IntTensor([0]))
         if enabled:
             self.enable()
 
@@ -54,6 +53,7 @@ class BaseBinarizer(nn.Module):
 
     def is_enabled(self):
         return self.enabled[0] == 1
+
 
 class WeightBinarizer(BaseBinarizer):
     def binarize(self, x):
@@ -96,16 +96,18 @@ class ActivationBinarizationScaleThreshold(ActivationBinarizer):
 
         self.input_shape = input_shape
 
-        self.scale = CompressionParameter(torch.Tensor([0]), requires_grad=enabled,
-                                          compression_lr_multiplier=compression_lr_multiplier)
+        self.scale = CompressionParameter(
+            torch.Tensor([0]), requires_grad=enabled, compression_lr_multiplier=compression_lr_multiplier
+        )
         self.scale.data.zero_()
 
         # Need scale_initialized as buffer for it to appear in the model state dict
-        self.register_buffer('scale_initialized', torch.IntTensor([0]))
+        self.register_buffer("scale_initialized", torch.IntTensor([0]))
 
         threshold_shape = get_per_channel_scale_shape(self.input_shape, is_weights=False)
-        self.threshold = CompressionParameter(torch.ones(threshold_shape), requires_grad=enabled,
-                                              compression_lr_multiplier=compression_lr_multiplier)
+        self.threshold = CompressionParameter(
+            torch.ones(threshold_shape), requires_grad=enabled, compression_lr_multiplier=compression_lr_multiplier
+        )
         self.threshold.data.zero_()
         self.bin = activation_bin_scale_threshold_op
 
@@ -121,7 +123,7 @@ class ActivationBinarizationScaleThreshold(ActivationBinarizer):
         if self.training and not self.is_scale_initialized:
             # init scale using nonbinarized activation statistics
             d = x.detach().data.contiguous().view(-1)
-            top_num = max(1, round(d.shape[0]*0.001))
+            top_num = max(1, round(d.shape[0] * 0.001))
             topk_res = d.topk(top_num)
             scale = topk_res[0].min()
             nncf_logger.debug(f"Binarized activation scale set to: {scale.item()}")

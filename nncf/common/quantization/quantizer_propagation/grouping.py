@@ -1,20 +1,16 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from copy import copy
-from typing import Dict
-from typing import Optional
-from typing import Set
+from typing import Dict, Optional, Set
 
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 
@@ -43,8 +39,9 @@ class UnifiedScalePropagatingQuantizerGroupManager:
         """
         for pq in prop_quants:
             for gid, group in self._group_vs_prop_quants_dict.items():
-                assert pq not in group, 'Propagating quantizer #{} is already registered in a group {}!'.format(pq.id,
-                                                                                                                gid)
+                assert pq not in group, "Propagating quantizer #{} is already registered in a group {}!".format(
+                    pq.id, gid
+                )
         gid = self._get_next_gid()
         self._group_vs_prop_quants_dict[gid] = prop_quants
         return gid
@@ -59,10 +56,10 @@ class UnifiedScalePropagatingQuantizerGroupManager:
         """
         for gid, group in self._group_vs_prop_quants_dict.items():
             if target_gid != gid:
-                assert prop_quant not in group, 'Tried to add propagating quantizer #{} to group #{}, ' \
-                                                'but it is already registered in a group {}!'.format(prop_quant.id,
-                                                                                                     target_gid,
-                                                                                                     gid)
+                assert prop_quant not in group, (
+                    "Tried to add propagating quantizer #{} to group #{}, "
+                    "but it is already registered in a group {}!".format(prop_quant.id, target_gid, gid)
+                )
         self._group_vs_prop_quants_dict[target_gid].add(prop_quant)
 
     def remove_from_group(self, group: int, prop_quant: PropagatingQuantizer):

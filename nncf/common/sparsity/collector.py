@@ -1,24 +1,22 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import List
 from abc import abstractmethod
+from typing import List
 
 import numpy as np
 
 from nncf.common.collector import StatisticsCollector
-from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.common.sparsity.statistics import SparsifiedLayerSummary
+from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 
 
 class WeightDescription:
@@ -120,14 +118,10 @@ class BaseSparseModelStatisticsCollector(StatisticsCollector):
                 continue
 
             weight_percentage = 100 * (w.num_params / total_params)
-            sparse_layers_summary.append(
-                SparsifiedLayerSummary(w.name, w.shape, w.sparsity_level, weight_percentage)
-            )
+            sparse_layers_summary.append(SparsifiedLayerSummary(w.name, w.shape, w.sparsity_level, weight_percentage))
 
         sparse_model_stats = SparsifiedModelStatistics(
-            sparsity_level_for_model,
-            sparsity_level_for_sparse_layers,
-            sparse_layers_summary
+            sparsity_level_for_model, sparsity_level_for_sparse_layers, sparse_layers_summary
         )
 
         return sparse_model_stats

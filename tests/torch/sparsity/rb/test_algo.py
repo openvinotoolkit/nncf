@@ -1,59 +1,62 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from copy import deepcopy
 
 import pytest
 import torch
-from copy import deepcopy
 from pytest import approx
 from torch import nn
 
 from nncf.api.compression import CompressionStage
+from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
 from nncf.config import NNCFConfig
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.sparsity.rb.algo import RBSparsityController
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
-from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
-from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
-from tests.torch.helpers import MockModel, BasicConvTestModel, TwoConvTestModel, \
-    create_compressed_model_and_algo_for_test, check_correct_nncf_modules_replacement, get_empty_config
+from nncf.torch.sparsity.rb.loss import SparseLoss
+from nncf.torch.sparsity.rb.loss import SparseLossForPerLayerSparsity
+from tests.torch.helpers import BasicConvTestModel
+from tests.torch.helpers import MockModel
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import check_correct_nncf_modules_replacement
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.helpers import get_empty_config
 
 
-def get_basic_sparsity_config(input_sample_size=None,
-                              sparsity_init=0.02, sparsity_target=0.5, sparsity_target_epoch=2,
-                              sparsity_freeze_epoch=3):
+def get_basic_sparsity_config(
+    input_sample_size=None, sparsity_init=0.02, sparsity_target=0.5, sparsity_target_epoch=2, sparsity_freeze_epoch=3
+):
     if input_sample_size is None:
         input_sample_size = [1, 1, 4, 4]
 
     config = NNCFConfig()
-    config.update({
-        "model": "basic_sparse_conv",
-        "input_info":
-            {
+    config.update(
+        {
+            "model": "basic_sparse_conv",
+            "input_info": {
                 "sample_size": input_sample_size,
             },
-        "compression":
-            {
+            "compression": {
                 "algorithm": "rb_sparsity",
                 "sparsity_init": sparsity_init,
-                "params":
-                    {
-                        "schedule": "polynomial",
-                        "sparsity_target": sparsity_target,
-                        "sparsity_target_epoch": sparsity_target_epoch,
-                        "sparsity_freeze_epoch": sparsity_freeze_epoch
-                    },
-            }
-    })
+                "params": {
+                    "schedule": "polynomial",
+                    "sparsity_target": sparsity_target,
+                    "sparsity_target_epoch": sparsity_target_epoch,
+                    "sparsity_freeze_epoch": sparsity_freeze_epoch,
+                },
+            },
+        }
+    )
     return config
 
 
@@ -167,17 +170,17 @@ def test_sparse_algo_can_calc_sparsity_rate__for_2_conv_model():
 
 def test_scheduler_can_do_epoch_step__with_rb_algo():
     config = NNCFConfig()
-    config['input_info'] = [{"sample_size": [1, 1, 32, 32]}]
-    config['compression'] = {
-        'algorithm': 'rb_sparsity',
-        'sparsity_init': 0.2,
+    config["input_info"] = [{"sample_size": [1, 1, 32, 32]}]
+    config["compression"] = {
+        "algorithm": "rb_sparsity",
+        "sparsity_init": 0.2,
         "params": {
-            'schedule': 'polynomial',
-            'power': 1,
-            'sparsity_target_epoch': 2,
-            'sparsity_target': 0.6,
-            'sparsity_freeze_epoch': 3
-        }
+            "schedule": "polynomial",
+            "power": 1,
+            "sparsity_target_epoch": 2,
+            "sparsity_target": 0.6,
+            "sparsity_freeze_epoch": 3,
+        },
     }
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
@@ -215,7 +218,7 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
 
 def test_create_rb_algo_with_per_layer_loss():
     config = get_empty_config()
-    config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
+    config["compression"] = {"algorithm": "rb_sparsity", "params": {"sparsity_level_setting_mode": "local"}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
 
     # pylint: disable=protected-access
@@ -224,7 +227,7 @@ def test_create_rb_algo_with_per_layer_loss():
 
 def test_rb_sparsity__can_set_sparsity_level_for_module():
     config = get_empty_config()
-    config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
+    config["compression"] = {"algorithm": "rb_sparsity", "params": {"sparsity_level_setting_mode": "local"}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
 
     # pylint: disable=protected-access
@@ -236,7 +239,7 @@ def test_rb_sparsity__can_set_sparsity_level_for_module():
 
 def test_create_rb_algo_with_local_sparsity_mode():
     config = get_empty_config()
-    config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
+    config["compression"] = {"algorithm": "rb_sparsity", "params": {"sparsity_level_setting_mode": "local"}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
     assert compression_ctrl.compression_stage() == CompressionStage.FULLY_COMPRESSED
 

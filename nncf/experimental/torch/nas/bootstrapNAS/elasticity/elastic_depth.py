@@ -1,29 +1,24 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import random
 from itertools import combinations
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.logging import nncf_logger
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_PARAMS
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
@@ -43,19 +38,23 @@ ElasticDepthSearchSpace = List[ElasticDepthConfig]  # grouped list of block inde
 
 
 class EDHandlerStateNames:
-    DEPTH_INDICATOR = 'depth_indicator'
+    DEPTH_INDICATOR = "depth_indicator"
 
 
 class ElasticDepthHandler(SingleElasticityHandler):
     """
     An interface for handling elastic depth dimension in the network, i.e. skip some layers in the model.
     """
+
     _depth_state_names = EDHandlerStateNames
 
-    def __init__(self, target_model: NNCFNetwork,
-                 skipped_blocks: BuildingBlocks,
-                 skip_dependencies: GroupedBlockIDs,
-                 node_names_per_block: Dict[int, List[NNCFNodeName]]):
+    def __init__(
+        self,
+        target_model: NNCFNetwork,
+        skipped_blocks: BuildingBlocks,
+        skip_dependencies: GroupedBlockIDs,
+        node_names_per_block: Dict[int, List[NNCFNodeName]],
+    ):
         """
         Constructor
 
@@ -191,9 +190,9 @@ class ElasticDepthHandler(SingleElasticityHandler):
         config = self._remove_inconsistent_blocks(config)
         self._tracing_context.set_active_skipped_block(config)
 
-    def resolve_conflicts_with_other_elasticities(self,
-                                                  config: ElasticDepthConfig,
-                                                  elasticity_handlers: ELASTICITY_HANDLERS_MAP) -> ElasticDepthConfig:
+    def resolve_conflicts_with_other_elasticities(
+        self, config: ElasticDepthConfig, elasticity_handlers: ELASTICITY_HANDLERS_MAP
+    ) -> ElasticDepthConfig:
         """
         Resolves a conflict between the given elasticity config and active elasticity configs of the given handlers.
         For example, elastic width configuration may contradict to elastic depth one. When we activate some
@@ -216,7 +215,8 @@ class ElasticDepthHandler(SingleElasticityHandler):
                 if indexes_of_pairs:
                     result = [element for idx, element in enumerate(config) if idx not in indexes_of_pairs]
                     nncf_logger.debug(
-                        f'The blocks with indexes {indexes_of_pairs} are not skipped to avoid inconsistency with width')
+                        f"The blocks with indexes {indexes_of_pairs} are not skipped to avoid inconsistency with width"
+                    )
         return result
 
     def get_names_of_skipped_nodes(self) -> List[NNCFNodeName]:
@@ -234,7 +234,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         return self._remove_blocks_skipped_non_progressively(config)
 
     def _remove_blocks_skipped_non_progressively(self, config: ElasticDepthConfig) -> ElasticDepthConfig:
-        assert self._skip_dependencies is not None, 'Please include depth dependencies in conf. Pending automation.'
+        assert self._skip_dependencies is not None, "Please include depth dependencies in conf. Pending automation."
         block_indexes_to_remove = []
         for block_index in config:
             tmp_block_indexes_to_remove = self._get_block_indexes_to_remove(block_index, config)
@@ -242,7 +242,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
 
         for block_index in block_indexes_to_remove:
             config.remove(block_index)
-            nncf_logger.debug(f'The block #{block_index} is not skipped to not violate progressive shrinking')
+            nncf_logger.debug(f"The block #{block_index} is not skipped to not violate progressive shrinking")
         return config
 
     def _get_block_indexes_to_remove(self, block_index: int, config: ElasticDepthConfig) -> ElasticDepthConfig:
@@ -253,7 +253,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
             if group_index is not None:
                 found = True
                 if len(group) - group_index > self.depth_indicator:
-                    nncf_logger.debug(f'The block with {block_index} did not pass the depth_indicator test')
+                    nncf_logger.debug(f"The block with {block_index} did not pass the depth_indicator test")
                     block_indexes_to_remove.append(block_index)
                     break
                 valid_block_indexes = [group[group_index]]
@@ -261,8 +261,10 @@ class ElasticDepthHandler(SingleElasticityHandler):
                     if group[i] in config:
                         valid_block_indexes.append(group[i])
                     else:
-                        nncf_logger.debug(f'The block #{block_index} or #{valid_block_indexes} '
-                                          f'did not satisfy requirement of next static block')
+                        nncf_logger.debug(
+                            f"The block #{block_index} or #{valid_block_indexes} "
+                            f"did not satisfy requirement of next static block"
+                        )
                         for valid_block_index in valid_block_indexes:
                             block_indexes_to_remove.append(valid_block_index)
                         break
@@ -272,26 +274,28 @@ class ElasticDepthHandler(SingleElasticityHandler):
 
 
 class EDBuilderStateNames:
-    SKIPPED_BLOCKS = 'skipped_blocks'
-    SKIPPED_BLOCKS_DEPENDENCIES = 'skipped_blocks_dependencies'
+    SKIPPED_BLOCKS = "skipped_blocks"
+    SKIPPED_BLOCKS_DEPENDENCIES = "skipped_blocks_dependencies"
 
 
 class EDParamsStateNames:
-    MAX_BLOCK_SIZE = 'max_block_size'
-    MIN_BLOCK_SIZE = 'min_block_size'
-    HW_FUSED_OPS = 'hw_fused_ops'
-    SKIPPED_BLOCKS = 'skipped_blocks'
+    MAX_BLOCK_SIZE = "max_block_size"
+    MIN_BLOCK_SIZE = "min_block_size"
+    HW_FUSED_OPS = "hw_fused_ops"
+    SKIPPED_BLOCKS = "skipped_blocks"
 
 
 @ELASTICITY_PARAMS.register(ElasticityDim.DEPTH)
 class ElasticDepthParams(BaseElasticityParams):
     _state_names = EDParamsStateNames
 
-    def __init__(self,
-                 max_block_size: int,
-                 min_block_size: int,
-                 hw_fused_ops: bool = True,
-                 skipped_blocks: Optional[List[List[NNCFNodeName]]] = None):
+    def __init__(
+        self,
+        max_block_size: int,
+        min_block_size: int,
+        hw_fused_ops: bool = True,
+        skipped_blocks: Optional[List[List[NNCFNodeName]]] = None,
+    ):
         """
         Constructor
 
@@ -310,7 +314,7 @@ class ElasticDepthParams(BaseElasticityParams):
         self.skipped_blocks = skipped_blocks
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> 'ElasticDepthParams':
+    def from_config(cls, config: Dict[str, Any]) -> "ElasticDepthParams":
         """
         Creates the object from its config.
         """
@@ -323,7 +327,7 @@ class ElasticDepthParams(BaseElasticityParams):
         return cls(**kwargs)
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'ElasticDepthParams':
+    def from_state(cls, state: Dict[str, Any]) -> "ElasticDepthParams":
         """
         Creates the object from its state.
 
@@ -344,13 +348,15 @@ class ElasticDepthParams(BaseElasticityParams):
             self._state_names.SKIPPED_BLOCKS: self.skipped_blocks,
         }
 
-    def __eq__(self, other: 'ElasticDepthParams') -> bool:
+    def __eq__(self, other: "ElasticDepthParams") -> bool:
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return f"{self.__class__.__name__}: max_block_size: {self.max_block_size} " \
-               f"min_block_size: {self.min_block_size} " \
-               f"hw_fused_ops: {self.hw_fused_ops} skipped_blocks: {self.skipped_blocks}"
+        return (
+            f"{self.__class__.__name__}: max_block_size: {self.max_block_size} "
+            f"min_block_size: {self.min_block_size} "
+            f"hw_fused_ops: {self.hw_fused_ops} skipped_blocks: {self.skipped_blocks}"
+        )
 
 
 @ELASTICITY_BUILDERS.register(ElasticityDim.DEPTH)
@@ -359,12 +365,15 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
     Determines which modifications should be made to the original FP32 model in order to introduce elastic depth
     to the model.
     """
+
     _state_names = EDBuilderStateNames
 
-    def __init__(self,
-                 params: ElasticDepthParams,
-                 ignored_scopes: Optional[List[str]] = None,
-                 target_scopes: Optional[List[str]] = None):
+    def __init__(
+        self,
+        params: ElasticDepthParams,
+        ignored_scopes: Optional[List[str]] = None,
+        target_scopes: Optional[List[str]] = None,
+    ):
         """
         :param params: parameters to configure elastic depth.
         :param ignored_scopes: A list of strings to match against NNCFGraph node names
@@ -393,17 +402,16 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         tracing_context.elastic_depth = True
         blocks_for_info = self._skipped_blocks
         if self._skipped_blocks is None:
-            extended_blocks, self._skip_dependencies = \
-                get_building_blocks(
-                    target_model,
-                    max_block_size=self._params.max_block_size,
-                    min_block_size=self._params.min_block_size,
-                    hw_fused_ops=self._params.hw_fused_ops,
-                )
+            extended_blocks, self._skip_dependencies = get_building_blocks(
+                target_model,
+                max_block_size=self._params.max_block_size,
+                min_block_size=self._params.min_block_size,
+                hw_fused_ops=self._params.hw_fused_ops,
+            )
             self._skipped_blocks = [eb.basic_block for eb in extended_blocks]
             blocks_for_info = extended_blocks
         nncf_logger.info("Blocks for skipping (changing the depth of model):")
-        new_line = '\n'
+        new_line = "\n"
         str_bs = [str(block) for block in blocks_for_info]
         nncf_logger.info(f"\n[{new_line.join(str_bs)}]\n\n")
 
@@ -421,8 +429,10 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         params_from_state = state[SingleElasticityBuilder._state_names.ELASTICITY_PARAMS]
         params = ElasticDepthParams.from_state(params_from_state)
         if self._params and self._params != params:
-            nncf_logger.warning('Different elasticity parameters were provided in two places: on init and on loading '
-                                'state. The one from state is taken by ignoring the ones from init.')
+            nncf_logger.warning(
+                "Different elasticity parameters were provided in two places: on init and on loading "
+                "state. The one from state is taken by ignoring the ones from init."
+            )
         self._params = params
         skipped_blocks_from_state = state[self._state_names.SKIPPED_BLOCKS]
         self._skip_dependencies = state[self._state_names.SKIPPED_BLOCKS_DEPENDENCIES]

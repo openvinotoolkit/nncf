@@ -29,19 +29,15 @@ class PrecisionTestCaseDescriptor(SanityTestCaseDescriptor, ABC):
 
     def get_compression_section(self):
         quantization_section = {
-            'algorithm': 'quantization',
-            'initializer': {
-                'precision': self.get_precision_section(),
-                'range': {
-                    "num_init_samples": 2
-                },
-                "batchnorm_adaptation": {
-                    "num_bn_adaptation_samples": 1
-                }
+            "algorithm": "quantization",
+            "initializer": {
+                "precision": self.get_precision_section(),
+                "range": {"num_init_samples": 2},
+                "batchnorm_adaptation": {"num_bn_adaptation_samples": 1},
             },
         }
         if self.sample_type_ == SampleType.CLASSIFICATION_STAGED:
-            quantization_section.update({'params': {"activations_quant_start_epoch": 0}})
+            quantization_section.update({"params": {"activations_quant_start_epoch": 0}})
         return quantization_section
 
     def num_weight_quantizers(self, n: int):
@@ -84,17 +80,15 @@ class HAWQTestCaseDescriptor(PrecisionTestCaseDescriptor):
 
     def get_sample_params(self):
         result = super().get_sample_params()
-        result.update({'batch_size_init': self.batch_size_init_} if self.batch_size_init_ else {})
+        result.update({"batch_size_init": self.batch_size_init_} if self.batch_size_init_ else {})
         return result
 
     def get_precision_section(self) -> Dict:
-        return {"type": "hawq",
-                "num_data_points": 3,
-                "iter_number": 1}
+        return {"type": "hawq", "num_data_points": 3, "iter_number": 1}
 
     def __str__(self):
-        bs = f'_bs{self.batch_size_init_}' if self.batch_size_init_ else ''
-        return super().__str__() + '_hawq' + bs
+        bs = f"_bs{self.batch_size_init_}" if self.batch_size_init_ else ""
+        return super().__str__() + "_hawq" + bs
 
 
 class HAWQSampleValidator(PrecisionSampleValidator):
@@ -107,8 +101,10 @@ class HAWQSampleValidator(PrecisionSampleValidator):
     def setup_spy(self, mocker):
         super().setup_spy(mocker)
         from nncf.torch.quantization.init_precision import HAWQPrecisionInitializer
+
         self.get_qsetup_spy = mocker.spy(HAWQPrecisionInitializer, "get_quantizer_setup_for_qconfig_sequence")
         from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
+
         self.hessian_trace_estimator_spy = mocker.spy(HessianTraceEstimator, "__init__")
 
     def validate_spy(self):
@@ -143,17 +139,19 @@ class AutoQTestCaseDescriptor(PrecisionTestCaseDescriptor):
         return self
 
     def get_precision_section(self) -> Dict:
-        return {"type": "autoq",
-                "bits": self.BITS,
-                "iter_number": 2,
-                "compression_ratio": 0.15,
-                "eval_subset_ratio": self.subset_ratio_,
-                "dump_init_precision_data": self.debug_dump}
+        return {
+            "type": "autoq",
+            "bits": self.BITS,
+            "iter_number": 2,
+            "compression_ratio": 0.15,
+            "eval_subset_ratio": self.subset_ratio_,
+            "dump_init_precision_data": self.debug_dump,
+        }
 
     def __str__(self):
-        sr = f'_sr{self.subset_ratio_}' if self.subset_ratio_ else ''
-        dd = '_dump_debug' if self.debug_dump else ''
-        return super().__str__() + '_autoq' + sr + dd
+        sr = f"_sr{self.subset_ratio_}" if self.subset_ratio_ else ""
+        dd = "_dump_debug" if self.debug_dump else ""
+        return super().__str__() + "_autoq" + sr + dd
 
 
 class AutoQSampleValidator(PrecisionSampleValidator):
@@ -165,7 +163,8 @@ class AutoQSampleValidator(PrecisionSampleValidator):
     def setup_spy(self, mocker):
         super().setup_spy(mocker)
         from nncf.torch.quantization.algo import QuantizationBuilder
-        self.builder_spy = mocker.spy(QuantizationBuilder, 'build_controller')
+
+        self.builder_spy = mocker.spy(QuantizationBuilder, "build_controller")
 
     def validate_spy(self):
         super().validate_spy()
@@ -176,28 +175,58 @@ class AutoQSampleValidator(PrecisionSampleValidator):
 
 
 def resnet18_desc(x: PrecisionTestCaseDescriptor):
-    return x.config_name("resnet18_cifar10_mixed_int.json").sample_type(SampleType.CLASSIFICATION). \
-        mock_dataset('mock_32x32').batch_size(3).num_weight_quantizers(21).num_activation_quantizers(27)
+    return (
+        x.config_name("resnet18_cifar10_mixed_int.json")
+        .sample_type(SampleType.CLASSIFICATION)
+        .mock_dataset("mock_32x32")
+        .batch_size(3)
+        .num_weight_quantizers(21)
+        .num_activation_quantizers(27)
+    )
 
 
 def inception_v3_desc(x: PrecisionTestCaseDescriptor):
-    return x.config_name("inception_v3_cifar10_mixed_int.json").sample_type(SampleType.CLASSIFICATION). \
-        mock_dataset('mock_32x32').batch_size(3).num_weight_quantizers(95).num_activation_quantizers(105)
+    return (
+        x.config_name("inception_v3_cifar10_mixed_int.json")
+        .sample_type(SampleType.CLASSIFICATION)
+        .mock_dataset("mock_32x32")
+        .batch_size(3)
+        .num_weight_quantizers(95)
+        .num_activation_quantizers(105)
+    )
 
 
 def ssd300_vgg_desc(x: PrecisionTestCaseDescriptor):
-    return x.config_name("ssd300_vgg_voc_mixed_int.json").sample_type(SampleType.OBJECT_DETECTION). \
-        mock_dataset('voc').batch_size(3).num_weight_quantizers(35).num_activation_quantizers(27)
+    return (
+        x.config_name("ssd300_vgg_voc_mixed_int.json")
+        .sample_type(SampleType.OBJECT_DETECTION)
+        .mock_dataset("voc")
+        .batch_size(3)
+        .num_weight_quantizers(35)
+        .num_activation_quantizers(27)
+    )
 
 
 def unet_desc(x: PrecisionTestCaseDescriptor):
-    return x.config_name("unet_camvid_mixed_int.json").sample_type(SampleType.SEMANTIC_SEGMENTATION). \
-        mock_dataset('camvid').batch_size(3).num_weight_quantizers(23).num_activation_quantizers(23)
+    return (
+        x.config_name("unet_camvid_mixed_int.json")
+        .sample_type(SampleType.SEMANTIC_SEGMENTATION)
+        .mock_dataset("camvid")
+        .batch_size(3)
+        .num_weight_quantizers(23)
+        .num_activation_quantizers(23)
+    )
 
 
 def icnet_desc(x: PrecisionTestCaseDescriptor):
-    return x.config_name("icnet_camvid_mixed_int.json").sample_type(SampleType.SEMANTIC_SEGMENTATION). \
-        mock_dataset('camvid').batch_size(3).num_weight_quantizers(64).num_activation_quantizers(81)
+    return (
+        x.config_name("icnet_camvid_mixed_int.json")
+        .sample_type(SampleType.SEMANTIC_SEGMENTATION)
+        .mock_dataset("camvid")
+        .batch_size(3)
+        .num_weight_quantizers(64)
+        .num_activation_quantizers(81)
+    )
 
 
 TEST_CASE_DESCRIPTORS = [
@@ -215,17 +244,18 @@ TEST_CASE_DESCRIPTORS = [
     inception_v3_desc(AutoQTestCaseDescriptor()).batch_size(2),
     inception_v3_desc(AutoQTestCaseDescriptor()).sample_type(SampleType.CLASSIFICATION_STAGED),
     resnet18_desc(AutoQTestCaseDescriptor()).batch_size(2),
-    resnet18_desc(AutoQTestCaseDescriptor().dump_debug(True)).batch_size(2).sample_type(
-        SampleType.CLASSIFICATION_STAGED),
+    resnet18_desc(AutoQTestCaseDescriptor().dump_debug(True))
+    .batch_size(2)
+    .sample_type(SampleType.CLASSIFICATION_STAGED),
     resnet18_desc(AutoQTestCaseDescriptor().subset_ratio(0.2)).batch_size(2),
     resnet18_desc(AutoQTestCaseDescriptor().subset_ratio(0.2)).sample_type(SampleType.CLASSIFICATION_STAGED),
     ssd300_vgg_desc(AutoQTestCaseDescriptor().dump_debug(True)).batch_size(2),
     unet_desc(AutoQTestCaseDescriptor().dump_debug(True)),
-    icnet_desc(AutoQTestCaseDescriptor())
+    icnet_desc(AutoQTestCaseDescriptor()),
 ]
 
 
-@pytest.fixture(name='precision_desc', params=TEST_CASE_DESCRIPTORS, ids=map(str, TEST_CASE_DESCRIPTORS))
+@pytest.fixture(name="precision_desc", params=TEST_CASE_DESCRIPTORS, ids=map(str, TEST_CASE_DESCRIPTORS))
 def fixture_precision_desc(request, dataset_dir):
     desc: PrecisionTestCaseDescriptor = request.param
     return desc.finalize(dataset_dir)
@@ -246,7 +276,7 @@ class ExportTestCaseDescriptor(PrecisionTestCaseDescriptor):
 
     def get_sample_params(self):
         result = super().get_sample_params()
-        result.update({'pretrained': True})
+        result.update({"pretrained": True})
         return result
 
 
@@ -265,20 +295,20 @@ class ExportSampleValidator(PrecisionSampleValidator):
         sample_location = self._sample_handler.get_sample_location()
 
         if self._desc.sample_type_ == SampleType.OBJECT_DETECTION:
-            mocker.patch(sample_location + '.build_ssd')
+            mocker.patch(sample_location + ".build_ssd")
         else:
-            load_model_location = sample_location + '.load_model'
+            load_model_location = sample_location + ".load_model"
             mocker.patch(load_model_location)
 
         ctrl_mock = mocker.MagicMock(spec=QuantizationController)
         model_mock = mocker.MagicMock(spec=nn.Module)
-        create_model_location = sample_location + '.create_compressed_model'
+        create_model_location = sample_location + ".create_compressed_model"
         create_model_patch = mocker.patch(create_model_location)
 
-        self._torch_onn_export_mock = mocker.patch('torch.onnx.export')
+        self._torch_onn_export_mock = mocker.patch("torch.onnx.export")
 
         if self._desc.sample_type_ == SampleType.CLASSIFICATION_STAGED:
-            mocker.patch(sample_location + '.get_quantization_optimizer')
+            mocker.patch(sample_location + ".get_quantization_optimizer")
 
         def fn(*args, **kwargs):
             return ctrl_mock, model_mock
@@ -304,24 +334,21 @@ EXPORT_TEST_CASE_DESCRIPTORS = [
 ]
 
 
-@pytest.fixture(name='export_desc', params=EXPORT_TEST_CASE_DESCRIPTORS, ids=map(str, EXPORT_TEST_CASE_DESCRIPTORS))
+@pytest.fixture(name="export_desc", params=EXPORT_TEST_CASE_DESCRIPTORS, ids=map(str, EXPORT_TEST_CASE_DESCRIPTORS))
 def fixture_export_desc(request):
     desc: PrecisionTestCaseDescriptor = request.param
     return desc.finalize()
 
 
 @pytest.mark.parametrize(
-    ('extra_args', 'is_export_called'),
-    (
-        ({}, False),
-        ({"-m": 'export train'}, True)
-    ),
-    ids=['train_with_onnx_path', 'export_after_train']
+    ("extra_args", "is_export_called"),
+    (({}, False), ({"-m": ["export", "train"]}, True)),
+    ids=["train_with_onnx_path", "export_after_train"],
 )
 def test_export_behavior(export_desc: PrecisionTestCaseDescriptor, tmp_path, mocker, extra_args, is_export_called):
     validator = export_desc.get_validator()
     args = validator.get_default_args(tmp_path)
-    args["--to-onnx"] = tmp_path / 'model.onnx'
+    args["--to-onnx"] = tmp_path / "model.onnx"
     if extra_args is not None:
         args.update(extra_args)
     validator.is_export_called = is_export_called

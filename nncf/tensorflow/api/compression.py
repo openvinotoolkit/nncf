@@ -1,25 +1,21 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Any
-from typing import Dict
-from typing import TypeVar
+from typing import Any, Dict, TypeVar
 
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
 class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
@@ -30,11 +26,14 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        compression_lr_multiplier = \
-            config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier', self.name)
+        compression_lr_multiplier = config.get_redefinable_global_param_value_for_algo(
+            "compression_lr_multiplier", self.name
+        )
         if compression_lr_multiplier is not None:
-            raise Exception('compression_lr_multiplier is not supported when your work with a TF model in NNCF. '
-                            'Please remove the compression_lr_multiplier attribute from your NNCFConfig.')
+            raise Exception(
+                "compression_lr_multiplier is not supported when your work with a TF model in NNCF. "
+                "Please remove the compression_lr_multiplier attribute from your NNCFConfig."
+            )
 
     def _get_state_without_name(self) -> Dict[str, Any]:
         """

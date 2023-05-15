@@ -1,29 +1,32 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import Optional
+
 import numpy as np
 import scipy.optimize
 
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.common.schedulers import ExponentialDecaySchedule
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
-from nncf.common.schedulers import ExponentialDecaySchedule, BaseCompressionScheduler
 from nncf.config.schemata.defaults import PRUNING_NUM_INIT_STEPS
 from nncf.config.schemata.defaults import PRUNING_STEPS
 from nncf.config.schemata.defaults import PRUNING_TARGET
 
-PRUNING_SCHEDULERS = Registry('pruning_schedulers')
+PRUNING_SCHEDULERS = Registry("pruning_schedulers")
 
 
+@api()
 class PruningScheduler(BaseCompressionScheduler):
     """
     This is the class from which all pruning schedulers inherit.
@@ -34,34 +37,23 @@ class PruningScheduler(BaseCompressionScheduler):
     (some parameters required for current pruning level calculation)
     defined in the `__init__()` method.
 
-    :param initial_level: Pruning level which already has been
-        applied to the model. It is the level at which the schedule begins.
-    :param target_level: Pruning level at which the schedule ends.
-    :param num_warmup_epochs: Number of epochs for model pre-training before pruning.
-    :param num_pruning_epochs: Number of epochs during which the pruning level
-        is increased from `initial_level` to `target_level`.
-    :param freeze_epoch: Zero-based index of the epoch from which the pruning
-        mask will be frozen and will not be trained.
+    :param controller: Pruning algorithm controller.
+    :param params: Parameters of the scheduler in the JSON-like dictionary form. Passed as-is from the corresponding
+      section of the NNCF config file .json section (https://openvinotoolkit.github.io/nncf/schema).
     """
 
-    def __init__(self, controller, params: dict):
-        """
-        Initializes the internal state of the pruning scheduler.
-
-        :param controller: Pruning algorithm controller.
-        :param params: Parameters of the scheduler.
-        """
+    def __init__(self, controller: CompressionAlgorithmController, params: dict):
         super().__init__()
         self._controller = controller
         self.initial_level = self._controller.pruning_init
 
         if self._controller.prune_flops:
-            self.target_level = params.get('pruning_flops_target')
+            self.target_level = params.get("pruning_flops_target")
         else:
-            self.target_level = params.get('pruning_target', PRUNING_TARGET)
+            self.target_level = params.get("pruning_target", PRUNING_TARGET)
 
-        self.num_warmup_epochs = params.get('num_init_steps', PRUNING_NUM_INIT_STEPS)
-        self.num_pruning_epochs = params.get('pruning_steps', PRUNING_STEPS)
+        self.num_warmup_epochs = params.get("num_init_steps", PRUNING_NUM_INIT_STEPS)
+        self.num_pruning_epochs = params.get("pruning_steps", PRUNING_STEPS)
         self.freeze_epoch = self.num_warmup_epochs + self.num_pruning_epochs
 
     def _calculate_pruning_level(self) -> float:
@@ -71,8 +63,7 @@ class PruningScheduler(BaseCompressionScheduler):
 
         :return: Pruning level that should be applied to the model.
         """
-        raise NotImplementedError(
-            'PruningScheduler implementation must override _calculate_pruning_level method.')
+        raise NotImplementedError("PruningScheduler implementation must override _calculate_pruning_level method.")
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         """
@@ -110,7 +101,7 @@ class PruningScheduler(BaseCompressionScheduler):
         return 0
 
 
-@PRUNING_SCHEDULERS.register('baseline')
+@PRUNING_SCHEDULERS.register("baseline")
 class BaselinePruningScheduler(PruningScheduler):
     """
     Pruning scheduler which applies the same pruning level for each epoch.
@@ -119,7 +110,7 @@ class BaselinePruningScheduler(PruningScheduler):
     Then scheduler sets `target_level` and freezes the algorithm.
     """
 
-    def __init__(self, controller, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict):
         super().__init__(controller, params)
         self.freeze_epoch = self.num_warmup_epochs
 
@@ -127,7 +118,7 @@ class BaselinePruningScheduler(PruningScheduler):
         return self.target_level
 
 
-@PRUNING_SCHEDULERS.register('exponential')
+@PRUNING_SCHEDULERS.register("exponential")
 class ExponentialPruningScheduler(PruningScheduler):
     """
     Pruning scheduler with an exponential decay schedule.
@@ -139,7 +130,7 @@ class ExponentialPruningScheduler(PruningScheduler):
         current_density = 1.0 - current_level
     """
 
-    def __init__(self, controller, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict):
         """
         Initializes a pruning scheduler with an exponential decay schedule.
 
@@ -158,7 +149,7 @@ class ExponentialPruningScheduler(PruningScheduler):
         return min(current_level, self.target_level)
 
 
-@PRUNING_SCHEDULERS.register('exponential_with_bias')
+@PRUNING_SCHEDULERS.register("exponential_with_bias")
 class ExponentialWithBiasPruningScheduler(PruningScheduler):
     """
     Pruning scheduler which calculates pruning level for the current epoch
@@ -169,7 +160,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
     where a, b, k is a params.
     """
 
-    def __init__(self, controller, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict):
         """
         Initializes a pruning scheduler with an exponential (with bias) decay schedule.
 
@@ -198,6 +189,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         :param p_max: Target pruning level at which the schedule ends.
         :param factor: Hyperparameter.
         """
+
         def get_b(a):
             return p_min - a
 
@@ -207,7 +199,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         def f_to_solve(x):
             c = (0.75 * p_max - p_min) / (p_max - p_min)
             y = np.exp(-x * epoch_idx)
-            return y ** factor - c * y + c - 1
+            return y**factor - c * y + c - 1
 
         k = scipy.optimize.fsolve(f_to_solve, [1])[0]
         a = get_a(k)

@@ -1,29 +1,26 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import threading
 import weakref
 from collections import deque
 from contextlib import contextmanager
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Callable, Dict, List, Optional
 
 import torch
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
+from nncf.common.utils.patcher import PATCHER
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
 from nncf.torch.dynamic_graph.graph import DynamicGraphNodeParameters
@@ -32,19 +29,19 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
-from nncf.common.utils.patcher import PATCHER
+
 
 class ThreadLocalGlobalContext(threading.local):
     def __init__(self):
         super().__init__()
         self.context = None
 
+
 _CURRENT_CONTEXT = ThreadLocalGlobalContext()
 
 
 class PreHookId:
-    def __init__(self, op_address: OperationAddress,
-                 input_port_id: int):
+    def __init__(self, op_address: OperationAddress, input_port_id: int):
         self.op_address = op_address
         self.input_port_id = input_port_id
 
@@ -75,15 +72,17 @@ class TracingThreadLocals(threading.local):
 
 
 class CopySafeThreadingVars:
-    """ A class holding variables that are related to threading and
+    """A class holding variables that are related to threading and
     thus impossible to deepcopy. The deepcopy will simply return a
     new object without copying, but won't fail."""
+
     def __init__(self):
         self.thread_local = TracingThreadLocals()
         self.cond = threading.Condition()
 
     def __deepcopy__(self, memo):
         return CopySafeThreadingVars()
+
 
 # pylint: disable=too-many-public-methods
 class TracingContext:
@@ -142,8 +141,9 @@ class TracingContext:
         set_current_context(self._save_context)
         self._save_context = None
 
-    def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
-                           op_address: OperationAddress) -> Optional[DynamicGraphNode]:
+    def find_operator_node(
+        self, tensor_metas: List[Optional[TensorMeta]], op_address: OperationAddress
+    ) -> Optional[DynamicGraphNode]:
         with self._threading.cond:
             self._n_instances_searching_graph += 1
 
@@ -157,7 +157,7 @@ class TracingContext:
     def register_global_buffer(self, name: str, buffer):
         self.global_buffer_store[name] = buffer
 
-    def register_traced_tensor(self, tt: 'TracedTensor'):
+    def register_traced_tensor(self, tt: "TracedTensor"):
         """
         Registers a weak reference to a traced tensor in the context so that in case
         the block under context retains a reference to an intermediate tensor somewhere,
@@ -168,13 +168,15 @@ class TracingContext:
         wr = weakref.ref(tt)
         self._threading.thread_local.traced_tensor_weakrefs.append(wr)
 
-    def maybe_add_node(self,
-                       inputs: OperatorInput,
-                       tensor_metas: List[Optional[TensorMeta]],
-                       op_address: OperationAddress,
-                       module_attrs: BaseLayerAttributes = None,
-                       ignored_algorithms: List[str] = None,
-                       is_called_inside_nncf_module: bool = False) -> Optional[DynamicGraphNode]:
+    def maybe_add_node(
+        self,
+        inputs: OperatorInput,
+        tensor_metas: List[Optional[TensorMeta]],
+        op_address: OperationAddress,
+        module_attrs: BaseLayerAttributes = None,
+        ignored_algorithms: List[str] = None,
+        is_called_inside_nncf_module: bool = False,
+    ) -> Optional[DynamicGraphNode]:
         if not self._may_add_nodes:
             return None
         with self._threading.cond:
@@ -186,11 +188,14 @@ class TracingContext:
             if node is None:
                 mid = id(self.get_current_module())
                 node = self.graph.add_node(
-                    op_address, tensor_metas, self._input_comparators_per_scope, inputs,
-                    DynamicGraphNodeParameters(module_attrs,
-                                               ignored_algorithms,
-                                               is_called_inside_nncf_module,
-                                               calling_module_id=mid))
+                    op_address,
+                    tensor_metas,
+                    self._input_comparators_per_scope,
+                    inputs,
+                    DynamicGraphNodeParameters(
+                        module_attrs, ignored_algorithms, is_called_inside_nncf_module, calling_module_id=mid
+                    ),
+                )
         return node
 
     def get_caller_context(self, operator_name: str) -> OperationAddress:
@@ -207,9 +212,7 @@ class TracingContext:
 
         call_order = self.get_operator_call_count_in_scope(operator_name, self.scope)
 
-        op_address = OperationAddress(operator_name,
-                                      self.scope,
-                                      call_order)
+        op_address = OperationAddress(operator_name, self.scope, call_order)
         return op_address
 
     def reset_scope_operator_call_counters(self):
@@ -251,16 +254,14 @@ class TracingContext:
         self.relative_scopes_stack.pop()
         self.module_call_stack.pop()
 
-    def register_pre_hooks(self, fn_list: List[Callable], op_address: OperationAddress,
-                           input_port_id: int):
+    def register_pre_hooks(self, fn_list: List[Callable], op_address: OperationAddress, input_port_id: int):
         pre_hook_id = PreHookId(op_address, input_port_id)
         if pre_hook_id in self._pre_hooks:
             raise KeyError("Pre hook for context {} is already registered".format(str(pre_hook_id)))
         self._pre_hooks[pre_hook_id] = fn_list
 
-    def execute_pre_hooks(self, op_address: OperationAddress,
-                          op_inputs: OperatorInput) -> OperatorInput:
-        in_op = getattr(self, 'in_operator', False)
+    def execute_pre_hooks(self, op_address: OperationAddress, op_inputs: OperatorInput) -> OperatorInput:
+        in_op = getattr(self, "in_operator", False)
         self.in_operator = False
         self._threading.thread_local.num_nested_hooks += 1
 
@@ -281,7 +282,7 @@ class TracingContext:
         self._post_hooks[op_address] = fn_list
 
     def execute_post_hooks(self, op_address: OperationAddress, outputs):
-        in_op = getattr(self, 'in_operator', False)
+        in_op = getattr(self, "in_operator", False)
         self.in_operator = False
         self._threading.thread_local.num_nested_hooks += 1
         if op_address in self._post_hooks:
@@ -317,8 +318,7 @@ class TracingContext:
     def disable_node_additions(self):
         self._may_add_nodes = False
 
-    def add_node_comparators(self, scopes_to_apply: List[str],
-                             node_input_comparator: 'TensorMetaComparator' = None):
+    def add_node_comparators(self, scopes_to_apply: List[str], node_input_comparator: "TensorMetaComparator" = None):
         self._input_comparators_per_scope.append((node_input_comparator, scopes_to_apply))
 
     @property
@@ -364,7 +364,6 @@ class TracingContext:
     def _reset_thread_local(self):
         self._threading.thread_local.reset()
 
-
     def register_node_call(self, node: DynamicGraphNode):
         if node.node_id in self._threading.thread_local.node_call_tracker:
             self._threading.thread_local.node_call_tracker[node.node_id] += 1
@@ -381,7 +380,11 @@ class TracingContext:
     def _get_scope_relative_to_last_registered_module_call(self, module) -> Scope:
         module_class = module.__class__.__name__
         if not self.module_call_stack:
-            return Scope([ScopeElement(module_class), ])
+            return Scope(
+                [
+                    ScopeElement(module_class),
+                ]
+            )
         q = deque([(tuple(), self.module_call_stack[-1])])
         while q:
             scope_parts, top = q.popleft()
@@ -390,7 +393,11 @@ class TracingContext:
             for name, child in top.named_children():
                 scope_element = ScopeElement(child.__class__.__name__, name)
                 q.append((scope_parts + (scope_element,), child))
-        return Scope([ScopeElement(module_class), ])
+        return Scope(
+            [
+                ScopeElement(module_class),
+            ]
+        )
 
     @property
     def scope(self) -> Scope:
@@ -414,7 +421,7 @@ class TracingContext:
                 self.start_node_name_of_skipped_block.append(self.skipped_blocks[block_index].start_node_name)
                 self.end_node_name_of_skipped_block.append(self.skipped_blocks[block_index].end_node_name)
 
-    def set_elastic_blocks(self, blocks: List['BuildingBlock'] = None):
+    def set_elastic_blocks(self, blocks: List["BuildingBlock"] = None):
         if blocks is not None:
             if isinstance(blocks, list):
                 if len(blocks) == 0:
@@ -429,6 +436,7 @@ def set_current_context(c: TracingContext):
     _CURRENT_CONTEXT.context = c
 
 
+@api(canonical_alias="nncf.torch.no_nncf_trace")
 @contextmanager
 def no_nncf_trace():
     ctx = get_current_context()
@@ -440,6 +448,7 @@ def no_nncf_trace():
         yield
 
 
+@api(canonical_alias="nncf.torch.forward_nncf_trace")
 @contextmanager
 def forward_nncf_trace():
     ctx = get_current_context()
@@ -455,11 +464,13 @@ def get_current_context() -> TracingContext:
     return _CURRENT_CONTEXT.context
 
 
+@api(canonical_alias="nncf.torch.disable_tracing")
 def disable_tracing(method):
     """
     Patch a method so that it will be executed within no_nncf_trace context
     :param method: A method to patch.
     """
+
     def no_nncf_trace_wrapper(self, fn, *args, **kwargs):  # pylint: disable=unused-argument
         with no_nncf_trace():
             return fn(*args, **kwargs)
