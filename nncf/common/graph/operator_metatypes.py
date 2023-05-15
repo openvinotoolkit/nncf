@@ -18,10 +18,16 @@ from nncf.common.utils.registry import Registry
 class OperatorMetatype:
     """
     Base class for grouping framework operators based on their semantic meaning.
+
+    Attributes:
+        name (str): The name of the operator.
+        hw_config_names (List[str]): The names of the hardware configurations.
+        output_channel_axis (Optional[int]): The axis along which the output channels of the operator are arranged.
     """
 
-    name = ""  # type: str
-    hw_config_names = []  # type: List[str]
+    name: str = ""
+    hw_config_names: List[str] = []
+    output_channel_axis: Optional[int] = None
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:

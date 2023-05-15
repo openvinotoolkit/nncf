@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import Dict, List, Optional, Tuple
 
@@ -25,15 +23,15 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
-from nncf.torch.graph.node_utils import get_fused_bias_value
-from nncf.torch.graph.node_utils import get_potential_fused_node
-from nncf.torch.graph.node_utils import is_node_with_fused_bias
-from nncf.torch.graph.node_utils import is_quantized_weights
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.model_analyzer import get_fused_bias_value
+from nncf.torch.model_analyzer import get_potential_fused_node
+from nncf.torch.model_analyzer import is_node_with_fused_bias
+from nncf.torch.model_analyzer import is_quantized_weights
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.collectors import PTMeanStatisticCollector

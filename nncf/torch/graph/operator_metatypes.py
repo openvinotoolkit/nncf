@@ -40,21 +40,24 @@ class PTOperatorMetatype(OperatorMetatype):
     so that the entire group of operations is visible in the internal graph.
     Grouping also allows efficient application of HW specifics to compression of
     certain operation groups.
+
+    Attributes:
+        external_op_names (List[str]): Names of functions registered as operators via @register_operator to be associated
+            with this metatype.
+        module_to_function_names (Dict[NamespaceTarget, List[str]]): Names of functions from 'torch.nn.function',
+            'torch.tensor' and 'torch' modules respectively, which are associated with this metatype.
+        subtypes (List[Type[PTOperatorMetatype]]): List of subtypes of PyTorch operator.
     """
 
-    # Names of functions registered as operators via @register_operator to be associated
-    # with this metatype
-    external_op_names = []  # type: List[str]
+    external_op_names: List[str] = []
 
-    # Names of functions from 'torch.nn.function', 'torch.tensor' and 'torch' modules respectively,
-    # which are associated with this metatype.
-    module_to_function_names = {
+    module_to_function_names: Dict[NamespaceTarget, List[str]] = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
         NamespaceTarget.TORCH_TENSOR: [],
         NamespaceTarget.TORCH: [],
-    }  # type: Dict[NamespaceTarget, List[str]]
+    }
 
-    subtypes = []  # type: List[Type[PTOperatorMetatype]]
+    subtypes: List[Type["PTOperatorMetatype"]] = []
 
     @classmethod
     def get_subtypes(cls) -> List[Type["PTOperatorMetatype"]]:
@@ -313,6 +316,7 @@ class PTLinearMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["linear"], NamespaceTarget.TORCH: ["addmm"]}
     hw_config_names = [HWConfigOpName.MATMUL]
     subtypes = [PTModuleLinearMetatype]
+    output_channel_axis = -1
 
 
 @PT_OPERATOR_METATYPES.register()
