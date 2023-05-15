@@ -52,7 +52,7 @@ class StatisticsAggregator(ABC):
 
         for input_data in tqdm(
             islice(self.dataset.get_inference_data(), self.stat_subset_size), total=self.stat_subset_size,
-            desc='Statistics collection: '
+            desc='Statistics collection'
         ):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
