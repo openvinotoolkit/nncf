@@ -33,9 +33,9 @@ ALGO_BACKENDS = Registry("algo_backends")
 class FastBiasCorrectionAlgoBackend(ABC):
     @property
     @abstractmethod
-    def operation_metatypes(self):
+    def quantizer_types(self):
         """
-        Property for the backend-specific metatypes.
+        Returns backend-specific list of the quantizer metatypes.
         """
 
     @property
@@ -78,6 +78,16 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param inputs: List of the input names for sub-model beggining.
         :param outputs: List of the output names for sub-model end.
         :return: Backend-specific TransformationCommand for the model extraction.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def node_removing_command(target_point: TargetPoint) -> TransformationCommand:
+        """
+        Returns backend-specific command that removes node.
+
+        :param target_point: TargetPoint instance.
+        :return: Backend-specific command that remove node.
         """
 
     @staticmethod

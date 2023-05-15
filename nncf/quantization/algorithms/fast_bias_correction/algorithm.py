@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import deque
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
@@ -26,6 +27,7 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
@@ -122,13 +124,15 @@ class FastBiasCorrection(Algorithm):
     ) -> TModel:
         self._set_backend_entity(model)
 
+        model_copy = self._remove_fq_from_inputs(copy_model(model))
         nncf_graph = NNCFGraphFactory.create(model)
         node_and_bias_value = (
             (node, self._backend_entity.get_bias_value(node, nncf_graph, model))
             for node in nncf_graph.get_all_nodes()
             if self._backend_entity.is_node_with_bias(node, nncf_graph)
         )
-        model_transformer = ModelTransformerFactory.create(model)
+        main_model_transformer = ModelTransformerFactory.create(model)
+        model_transformer = ModelTransformerFactory.create(model_copy)
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []
@@ -178,7 +182,7 @@ class FastBiasCorrection(Algorithm):
             transformation_layout.register(
                 self._backend_entity.create_bias_correction_command(node, bias_value, nncf_graph)
             )
-        transformed_model = model_transformer.transform(transformation_layout)
+        transformed_model = main_model_transformer.transform(transformation_layout)
 
         return transformed_model
 
@@ -335,3 +339,34 @@ class FastBiasCorrection(Algorithm):
             self._add_statistic_point(statistic_container, post_layer_statistic_point, channel_axis)
 
         return statistic_container
+
+    def _remove_fq_from_inputs(self, model: TModel) -> TModel:
+        """
+        This method removes the activation Fake Quantize nodes (or Quantize-Dequantize pairs) from the model.
+        It's needed for the further bias shift calculation that relates on quantized weights.
+
+        :param model: Backend-specific model.
+        :return: Backend-specific model without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
+        """
+        transformation_layout = TransformationLayout()
+        nncf_graph = NNCFGraphFactory.create(model)
+
+        model_transformer = ModelTransformerFactory.create(model)
+
+        seen_nodes = []
+        nodes_queue = deque(nncf_graph.get_input_nodes())
+        while nodes_queue:
+            current_node = nodes_queue.popleft()
+            current_node_name = current_node.node_name
+
+            if current_node_name in seen_nodes:
+                continue
+
+            seen_nodes.append(current_node_name)
+            if current_node.metatype in self._backend_entity.quantizer_types:
+                target_point = self._backend_entity.target_point(TargetType.LAYER, current_node_name, 0)
+                command = self._backend_entity.node_removing_command(target_point)
+                transformation_layout.register(command)
+            nodes_queue.extend(nncf_graph.get_next_nodes(current_node))
+
+        return model_transformer.transform(transformation_layout)
