@@ -12,6 +12,7 @@
 from typing import Dict, List, Optional
 
 from nncf.api.statistics import Statistics
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.helpers import create_table
 
 
@@ -97,24 +98,31 @@ def _quantizers_counter_to_rows(counter: QuantizersCounter, qt: str) -> List[Lis
     return rows
 
 
+@api()
 class QuantizationStatistics(Statistics):
     """
-    Contains statistics of the quantization algorithm.
+    Contains statistics of the quantization algorithm. These statistics include:
 
-    These statistics include:
-        - Information about the share of the quantization. It includes following:
-            - Percentage of symmetric/asymmetric/per-channel/per-tensor weight
-            quantizers relative to the number of placed weight quantizers.
-            - Percentage of symmetric/asymmetric/per-channel/per-tensor non-weight
-            quantizers relative to the number of placed non weight quantizers.
-            - Percentage of weight quantizers and non-weight quantizers for each
-            precision relative to the number potential* quantizers/placed quantizers.
+    * Information about the share of the quantization, such as:
 
-            * The maximum possible number of potential quantizers depends on the presence
-            of ignored scopes and the mode of quantizer setup that is used at the time of
-            collecting the metric.
-        - Information about the distribution of the bitwidth of the quantizers.
-        - Ratio of enabled quantization.
+      * Percentage of symmetric/asymmetric/per-channel/per-tensor weight quantizers relative to the number of placed
+        weight quantizers.
+      * Percentage of symmetric/asymmetric/per-channel/per-tensor non-weight quantizers relative to the number of
+        placed non weight quantizers.
+      * Percentage of weight quantizers and non-weight quantizers for each precision relative to the number
+        of potential quantizers/placed quantizers.
+
+    * Information about the distribution of the bitwidth of the quantizers.
+    * Ratio of enabled quantization.
+
+    .. note:: The maximum possible number of potential quantizers depends on the presence of ignored scopes and the
+      mode of quantizer setup that is used at the time of collecting the metric.
+
+    :param wq_counter: Weight quantizers counter.
+    :param aq_counter: Activation quantizers counter.
+    :param num_wq_per_bitwidth: Number of weight quantizers per bit width.
+    :param num_aq_per_bitwidth: Number of activation quantizers per bit width.
+    :param ratio_of_enabled_quantizations: Ratio of enabled quantizations.
     """
 
     def __init__(
@@ -125,15 +133,6 @@ class QuantizationStatistics(Statistics):
         num_aq_per_bitwidth: Dict[int, int],
         ratio_of_enabled_quantizations: float,
     ):
-        """
-        Initializes statistics of the quantization algorithm.
-
-        :param wq_counter: Weight quantizers counter.
-        :param aq_counter: Activation quantizers counter.
-        :param num_wq_per_bitwidth: Number of weight quantizers per bit width.
-        :param num_aq_per_bitwidth: Number of activation quantizers per bit width.
-        :param ratio_of_enabled_quantizations: Ratio of enabled quantizations.
-        """
         self.wq_counter = wq_counter
         self.aq_counter = aq_counter
         self.num_wq_per_bitwidth = num_wq_per_bitwidth

@@ -8,6 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Base classes for NNCF PyTorch sparsity algorithm builder and controller objects.
+"""
 from typing import List
 
 import torch
@@ -94,6 +97,10 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
 @api()
 class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityController):
+    """
+    Base class for sparsity algorithm controllers in PT.
+    """
+
     def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(get_model_device(target_model))

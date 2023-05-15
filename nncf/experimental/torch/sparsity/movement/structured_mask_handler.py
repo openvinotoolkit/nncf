@@ -24,6 +24,7 @@ from nncf.experimental.common.pruning.nodes_grouping import select_largest_group
 from nncf.experimental.common.pruning.propagation_data import ProducerInfo
 from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
+from nncf.experimental.torch.sparsity.movement.layers import SparseStructure
 from nncf.torch.layers import NNCFLinear
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import SparseModuleInfo
@@ -172,14 +173,31 @@ class StructuredMaskContext:
         self.independent_structured_mask = structured_mask
         return structured_mask
 
+    def initialize_binary_mask(self):
+        """
+        Initialize binary mask by all ones. The inflated dependent mask will be applied via logical "and"
+        operation to it. It's needed for the case when 1 binary mask shared for 2 groups: in one group operator
+        can be pruned by input channels, i.e. be a consumer of pruning masks, and for another - can be pruned by
+        output channels, i.e. be a producer of pruning masks.
+        Initial  |  Mask 2 last input channels   |  Mask middle output channel    |     Result
+        --------------------------------------------------------------------------------------
+         1111                 1100                             1111                     1100
+         1111    &            1100               &             0000                =    0000
+         1111                 1100                             1111                     1100
+        """
+
+        self.sparsifier_operand.weight_ctx.binary_mask.fill_(1)
+        if self.sparsifier_operand.prune_bias:
+            self.sparsifier_operand.bias_ctx.binary_mask.fill_(1)
+
     def populate_dependent_structured_mask_to_operand(self):
         """
         Updates the actual binary masks in operand with `self.dependent_structured_mask`.
         """
         structured_mask_inflated = self._inflate_structured_mask(self.dependent_structured_mask, self.grid_size)
-        self.sparsifier_operand.weight_ctx.binary_mask = structured_mask_inflated
+        self.sparsifier_operand.weight_ctx.binary_mask *= structured_mask_inflated
         if self.sparsifier_operand.prune_bias:
-            self.sparsifier_operand.bias_ctx.binary_mask = structured_mask_inflated.amax(dim=1)
+            self.sparsifier_operand.bias_ctx.binary_mask *= structured_mask_inflated.amax(dim=1)
 
     def gather_statistics_from_operand(self) -> StructuredMaskContextStatistics:
         """
@@ -323,6 +341,9 @@ class StructuredMaskHandler:
         """
         for group in self._structured_mask_ctx_groups:
             for ctx in group.structured_mask_contexts:
+                ctx.initialize_binary_mask()
+        for group in self._structured_mask_ctx_groups:
+            for ctx in group.structured_mask_contexts:
                 ctx.populate_dependent_structured_mask_to_operand()
 
     def report_structured_sparsity(
@@ -383,7 +404,11 @@ class StructuredMaskHandler:
             for consumer in group.consumers:
                 if consumer.pruning_dimension is not None:
                     extended_producers.add(ProducerInfo(consumer.node_id, consumer.pruning_dimension))
-
+            is_group_matched = True
+            prefix_warning = (
+                "Automatically found structured pruning group does not match the given unstructured "
+                f"pruning structures: \n{group}\n."
+            )
             for producer_info in extended_producers:
                 nncf_node = nncf_graph.get_node_by_id(producer_info.node_id)
                 module = nncf_network.nncf.get_containing_module(nncf_node.node_name)
@@ -391,6 +416,17 @@ class StructuredMaskHandler:
                     # 0 dimension corresponds to row (output channels), 1st dimension - to column (input channels)
                     prune_by_row = not bool(producer_info.pruning_dimension)
                     minfo = module_vs_sparse_module_info_map[module]
+                    sparsifier: MovementSparsifier = minfo.operand
+                    if sparsifier.sparse_structure == SparseStructure.PER_DIM:
+                        sparse_axis = sparsifier.sparse_cfg.sparse_axis
+                        if sparse_axis != producer_info.pruning_dimension:
+                            nncf_logger.warning(
+                                f"{prefix_warning}. Unstructured pruning is defined for "
+                                f"{sparse_axis} axis, but structured one - for "
+                                f"{producer_info.pruning_dimension} axis."
+                            )
+                            is_group_matched = False
+                            break
                     prune_grid = (block.size, -1) if prune_by_row else (-1, block.size)
                     ctx = StructuredMaskContext(minfo.operand, minfo.module_node_name, prune_grid, prune_by_row)
                     ctxes.append(ctx)
@@ -399,7 +435,8 @@ class StructuredMaskHandler:
                         f"Automatically found structured pruning group does not match the given "
                         f"unstructured sparse structures:\n {group}"
                     )
+                    is_group_matched = False
                     break
-            if ctxes:
+            if ctxes and is_group_matched:
                 result.append(StructuredMaskContextGroup(group_id, ctxes))
         return result

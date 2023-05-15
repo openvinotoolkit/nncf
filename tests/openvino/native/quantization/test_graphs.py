@@ -20,6 +20,7 @@ from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import DepthwiseConv5DModel
+from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
@@ -69,4 +70,16 @@ def test_omz_models_fq_placement(model_name_params, tmp_path):
     quantized_model = quantize_model(model, q_params)
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"{model_name}.dot"
+    compare_nncf_graphs(quantized_model, path_ref_graph)
+
+
+@pytest.mark.parametrize("model_creator_func", [MatmulSoftmaxMatmulBlock])
+def test_transformer_models_fq_placement(model_creator_func):
+    model = model_creator_func()
+    quantized_model = quantize_model(
+        model.ov_model,
+        {"preset": QuantizationPreset.PERFORMANCE, "inplace_statistics": True, "model_type": ModelType.TRANSFORMER},
+    )
+
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
     compare_nncf_graphs(quantized_model, path_ref_graph)

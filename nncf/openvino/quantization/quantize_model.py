@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 from copy import deepcopy
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
@@ -20,12 +21,9 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data import Dataset
-from nncf.openvino.pot.quantization.quantize_model import quantize_impl as pot_quantize_impl
-from nncf.openvino.pot.quantization.quantize_model import (
-    quantize_with_accuracy_control_impl as pot_quantize_with_accuracy_control_impl,
-)
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
+from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
@@ -48,10 +46,24 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
 
     :param advanced_parameters: Advanced quantization parameters.
     :return: True if POT should be used, False otherwise.
+    :raises ImportError if POT is not found in the Python environment.
     """
-    if advanced_parameters is None:
-        return USE_POT_AS_DEFAULT
-    return advanced_parameters.backend_params.get(BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
+    use_pot = USE_POT_AS_DEFAULT
+    if advanced_parameters is not None:
+        use_pot = advanced_parameters.backend_params.get(BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
+
+    if not use_pot:
+        return False
+
+    try:
+        importlib.import_module("openvino.tools.pot")
+    except ImportError:
+        nncf_logger.error(
+            "OpenVINO POT was not found in your Python environment.\n"
+            "Please install the openvino-dev package, e.g. via pypi: pip install openvino-dev.\n"
+        )
+
+    return True
 
 
 def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = None) -> None:
@@ -120,13 +132,16 @@ def native_quantize_impl(
     return quantized_model
 
 
-@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop"])
+@tracked_function(
+    NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop", "drop_type"]
+)
 def native_quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
+    drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -199,6 +214,7 @@ def native_quantize_with_accuracy_control_impl(
         ranking_subset_size=ranking_subset_size,
         max_num_iterations=advanced_accuracy_restorer_parameters.max_num_iterations,
         max_drop=max_drop,
+        drop_type=drop_type,
     )
     quantized_model = accuracy_aware_loop.restore_accuracy(
         model, initial_metric, quantized_model, quantized_metric, validation_dataset, validation_fn
@@ -216,6 +232,7 @@ def native_quantize_with_accuracy_control_impl(
             "model_type": model_type,
             "ignored_scope": ignored_scope,
             "max_drop": max_drop,
+            "drop_type": drop_type.value,
             "advanced_quantization_parameters": convert_to_dict_recursively(advanced_quantization_parameters),
             "advanced_accuracy_restorer_parameters": convert_to_dict_recursively(advanced_accuracy_restorer_parameters),
         },
@@ -238,6 +255,8 @@ def quantize_impl(
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
     if should_use_pot(advanced_parameters):
+        from nncf.openvino.pot.quantization.quantize_model import quantize_impl as pot_quantize_impl
+
         quantize_fn = pot_quantize_impl
     else:
         quantize_fn = native_quantize_impl
@@ -261,6 +280,7 @@ def quantize_with_accuracy_control_impl(
     validation_dataset: Dataset,
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
+    drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -274,6 +294,10 @@ def quantize_with_accuracy_control_impl(
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
     """
     if should_use_pot(advanced_quantization_parameters):
+        from nncf.openvino.pot.quantization.quantize_model import (
+            quantize_with_accuracy_control_impl as pot_quantize_with_accuracy_control_impl,
+        )
+
         quantize_with_accuracy_control_fn = pot_quantize_with_accuracy_control_impl
     else:
         quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
@@ -283,6 +307,7 @@ def quantize_with_accuracy_control_impl(
         validation_dataset,
         validation_fn,
         max_drop,
+        drop_type,
         preset,
         target_device,
         subset_size,

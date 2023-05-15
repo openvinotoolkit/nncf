@@ -17,8 +17,9 @@ from nncf.common.utils.api_marker import api
 @api(canonical_alias="nncf.TargetDevice")
 class TargetDevice(Enum):
     """
-    Describes the target device the specificity of which will be taken
-    into account while compressing in order to obtain the best performance
+    Target device architecture for compression.
+
+    Compression will take into account the value of this parameter in order to obtain the best performance
     for this type of device.
     """
 
@@ -32,11 +33,26 @@ class TargetDevice(Enum):
 @api(canonical_alias="nncf.ModelType")
 class ModelType(Enum):
     """
-    Describes the model type the specificity of which will be taken into
-    account during compression.
+    Describes the model type the specificity of which will be taken into account during compression.
 
     :param TRANSFORMER: Transformer-based models
         (https://arxiv.org/pdf/1706.03762.pdf)
     """
 
     TRANSFORMER = "transformer"
+
+
+@api(canonical_alias="nncf.DropType")
+class DropType(Enum):
+    """
+    Describes the accuracy drop type, which determines how the accuracy drop between
+    the original model and the compressed model is calculated.
+
+    :param ABSOLUTE: The accuracy drop is calculated as the absolute drop with respect
+        to the results of the original model.
+    :param RELATIVE: The accuracy drop is calculated relative to the results of
+        the original model.
+    """
+
+    ABSOLUTE = "absolute"
+    RELATIVE = "relative"

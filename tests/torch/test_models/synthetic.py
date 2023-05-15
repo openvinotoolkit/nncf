@@ -320,3 +320,15 @@ class FC_ConstMul(torch.nn.Module):
 class Baddbmm(torch.nn.Module):
     def forward(self, x, y, z):
         return torch.baddbmm(x, y, z)
+
+
+class MHA_single_input(torch.nn.Module):
+    EMBED_DIM = 4
+    INPUT_SIZES = [2, 1, EMBED_DIM]
+
+    def __init__(self):
+        super().__init__()
+        self.mha = nn.MultiheadAttention(embed_dim=self.EMBED_DIM, num_heads=2)
+
+    def forward(self, x):
+        return self.mha(x, x, x)

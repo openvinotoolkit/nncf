@@ -56,6 +56,10 @@ class RBSparsityBuilder(BaseSparsityAlgoBuilder):
 @api()
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register("pt_rb_sparsity")
 class RBSparsityController(BaseSparsityAlgoController):
+    """
+    Controller for the regularization-based (RB) sparsity algorithm in PT.
+    """
+
     def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config: NNCFConfig):
         super().__init__(target_model, sparsified_module_info)
         algo_config = extract_algo_specific_config(config, "rb_sparsity")

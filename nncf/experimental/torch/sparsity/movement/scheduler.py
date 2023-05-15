@@ -279,7 +279,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
     @torch.no_grad()
     def _calc_init_threshold_from_controller(self, target_sparsity: float = 0.001) -> float:
-        # Calculate the k-th smallest value over all importance scores as the initial importance threhsold
+        # Calculate the k-th smallest value over all importance scores as the initial importance threshold
         # so that roughly k weight elements are masked and thus target sparsity is achieved. We conduct this on
         # CPU to (1) limit GPU memory usage; (2) avoid the non-deterministic behavior of `torch.Tensor.kthvalue`
         # on CUDA.

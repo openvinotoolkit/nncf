@@ -247,6 +247,9 @@ class PropagationMask:
         state = {dim: list(map(repr, groups)) for dim, groups in self.dim_groups_map.items()}
         return json.dumps(state)
 
+    def __bool__(self):
+        return bool(self.dim_groups_map)
+
     def invalidate_groups(self) -> None:
         """
         Invalidate all blocks in the group and do the same for child groups.

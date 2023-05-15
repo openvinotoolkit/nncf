@@ -46,11 +46,13 @@ def register_default_init_args(
     compression algorithms requires certain extra structures.
 
     :param nncf_config: An instance of the NNCFConfig class without extra structures.
+    :type nncf_config: nncf.NNCFConfig
     :param data_loader: Dataset used for initialization.
     :param batch_size: Batch size used for initialization.
     :param device: Device to perform initialization. If `device` is `None` then the device
         of the model parameters will be used.
     :return: An instance of the NNCFConfig class with extra structures.
+    :rtype: nncf.NNCFConfig
     """
     nncf_config.register_extra_structs(
         [

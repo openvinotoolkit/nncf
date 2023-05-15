@@ -25,6 +25,10 @@ from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
 from transformers import AutoModelForSequenceClassification
 from transformers import BertConfig
+from transformers import CLIPVisionConfig
+from transformers import CLIPVisionModel
+from transformers import DistilBertConfig
+from transformers import MobileBertConfig
 from transformers import PretrainedConfig
 from transformers import PreTrainedModel
 from transformers import SwinConfig
@@ -351,6 +355,102 @@ class BertRunRecipe(BaseMockRunRecipe):
                 block.intermediate.dense.bias = None
                 block.output.dense.bias = None
         return model
+
+
+class DistilBertRunRecipe(BaseMockRunRecipe):
+    model_family = "huggingface_distilbert"
+    supports_structured_masking = True
+    default_model_config = DistilBertConfig(
+        vocab_size=2,
+        max_position_embeddings=2,
+        n_layers=1,
+        n_heads=4,
+        dim=4,
+        hidden_dim=4,
+    )
+    default_algo_config = MovementAlgoConfig()
+
+    @property
+    def model_input_info(self) -> List[ModelInputInfo]:
+        dim = self.model_config.max_position_embeddings
+        return [ModelInputInfo(shape=[1, dim], type_str="long")] * 2
+
+    @staticmethod
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+        pass
+
+    def _create_model(self) -> torch.nn.Module:
+        return AutoModelForSequenceClassification.from_config(self.model_config)
+
+    @property
+    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+        pass
+
+
+class MobileBertRunRecipe(BaseMockRunRecipe):
+    model_family = "huggingface_distilbert"
+    supports_structured_masking = True
+    default_model_config = MobileBertConfig(
+        hidden_size=4,
+        intermediate_size=4,
+        max_position_embeddings=2,
+        num_attention_heads=4,
+        num_hidden_layers=1,
+        vocab_size=2,
+        num_labels=2,
+        embedding_size=1,
+        intra_bottleneck_size=4,
+    )
+    default_algo_config = MovementAlgoConfig()
+
+    @property
+    def model_input_info(self) -> List[ModelInputInfo]:
+        dim = self.model_config.max_position_embeddings
+        return [ModelInputInfo(shape=[1, dim], type_str="long")] * 4
+
+    @staticmethod
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+        pass
+
+    def _create_model(self) -> torch.nn.Module:
+        return AutoModelForSequenceClassification.from_config(self.model_config)
+
+    @property
+    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+        pass
+
+
+class ClipVisionRunRecipe(BaseMockRunRecipe):
+    model_family = "huggingface_clip"
+    supports_structured_masking = True
+    default_model_config = CLIPVisionConfig(
+        hidden_size=4,
+        intermediate_size=4,
+        num_hidden_layers=1,
+        num_attention_heads=4,
+        num_channels=3,
+        image_size=1,
+        patch_size=1,
+        max_position_embeddings=1,
+    )
+    default_algo_config = MovementAlgoConfig()
+
+    @property
+    def model_input_info(self) -> List[ModelInputInfo]:
+        num_channels = self.model_config.num_channels
+        image_size = self.model_config.image_size
+        return [ModelInputInfo(shape=[1, num_channels, image_size, image_size], type_str="float")]
+
+    @staticmethod
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+        pass
+
+    def _create_model(self) -> torch.nn.Module:
+        return CLIPVisionModel(self.model_config)
+
+    @property
+    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+        pass
 
 
 class SwinRunRecipe(BaseMockRunRecipe):

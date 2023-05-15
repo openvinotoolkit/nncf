@@ -194,6 +194,7 @@ def compare_stats(expected: Dict[str, np.ndarray], actual: Dict[str, np.ndarray]
         stats = actual[ref_name]
         for param in param_names:
             ref_param, actual_param = ref_stats.get(param), stats.get(param)
+            assert np.array(ref_param).shape == np.array(actual_param).shape
             assert np.allclose(ref_param, actual_param, atol=1e-6)
 
 

@@ -99,8 +99,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register("tf_filter_pruning")
 class FilterPruningController(BasePruningAlgoController):
     """
-    Serves as a handle to the additional modules, parameters and hooks inserted
-    into the original uncompressed model to enable filter pruning.
+    Controller class for the filter pruning algorithm.
     """
 
     def __init__(
@@ -233,9 +232,10 @@ class FilterPruningController(BasePruningAlgoController):
 
     def set_pruning_level(self, pruning_level: float, run_batchnorm_adaptation: bool = False):
         """
-        Setup pruning masks in accordance to provided pruning level
-        :param pruning_level: pruning ratio
-        :return:
+        Setup pruning masks in accordance to provided pruning level.
+
+        :param pruning_level: Pruning level to be set.
+        :param run_batchnorm_adaptation: Whether to run batchnorm adaptation after setting the pruning level.
         """
         # Pruning level from scheduler can be percentage of params that should be pruned
         self.pruning_level = pruning_level

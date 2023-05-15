@@ -8,10 +8,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.
+"""
 from nncf.common.logging.logger import disable_logging
 from nncf.common.logging.logger import set_log_level
 from nncf.config import NNCFConfig
 from nncf.data import Dataset
+from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization import QuantizationPreset
@@ -39,7 +43,6 @@ except ImportError:
 
 try:
     import openvino.runtime as ov_runtime
-    import openvino.tools.pot as ov_pot
 except ImportError:
     _LOADED_FRAMEWORKS["openvino"] = False
 

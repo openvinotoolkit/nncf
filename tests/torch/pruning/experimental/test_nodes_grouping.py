@@ -10,12 +10,33 @@
 # limitations under the License.
 from dataclasses import dataclass
 from functools import partial
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pytest
 import torch
 from torch import nn
+
+from nncf import NNCFConfig
+from nncf.torch.model_creation import create_nncf_network
+from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.torch.test_compressed_graph import GeneralModelDesc
+from tests.torch.test_compressed_graph import IModelDesc
+from tests.torch.test_compressed_graph import get_full_path_to_the_graph
+from tests.torch.test_models.swin import SwinTransformerBlock
+
+# isort: off
+from nncf.experimental.common.pruning.block_hierarchy import BlockHierarchy
+from nncf.experimental.common.pruning.nodes_grouping import PruningBlock
+from nncf.experimental.common.pruning.nodes_grouping import PruningGroup
+from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
+from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
+from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
+from nncf.experimental.common.pruning.propagation_data import ProducerInfo
+from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
+
+# NNCF Torch should be imported before transformers in order to patch all operations before they added to some global vars,
+# otherwise test may fail with some error (e.g. IndexError: list index out of range).
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
 from transformers import AutoModelForQuestionAnswering
@@ -29,25 +50,7 @@ from transformers import RobertaConfig
 from transformers import SwinConfig
 from transformers import ViTConfig
 from transformers import Wav2Vec2Config
-
-from nncf import NNCFConfig
-from nncf.experimental.common.pruning.block_hierarchy import BlockHierarchy
-from nncf.experimental.common.pruning.nodes_grouping import PruningBlock
-from nncf.experimental.common.pruning.nodes_grouping import PruningGroup
-from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
-from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
-from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
-from nncf.experimental.common.pruning.propagation_data import ProducerInfo
-from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
-
-# NNCF Torch should be imported before transformers in order to patch all operations before they added to some global vars,
-# otherwise test may fail with some error (e.g. IndexError: list index out of range).
-from nncf.torch.model_creation import create_nncf_network
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.torch.test_compressed_graph import GeneralModelDesc
-from tests.torch.test_compressed_graph import IModelDesc
-from tests.torch.test_compressed_graph import get_full_path_to_the_graph
-from tests.torch.test_models.swin import SwinTransformerBlock
+from transformers import AutoConfig
 
 
 class SelfAttention(nn.Module):
@@ -121,10 +124,20 @@ class ReshapeReshape0Block(nn.Module):
         return o2, o4
 
 
+def get_swin_tiny_model():
+    config = AutoConfig.from_pretrained("microsoft/swin-base-patch4-window7-224")
+    return AutoModelForImageClassification.from_config(config)
+
+
+def get_mobile_bert_big_model():
+    config = AutoConfig.from_pretrained("google/mobilebert-uncased")
+    return AutoModelForQuestionAnswering.from_config(config)
+
+
 @dataclass
 class GroupTestDesc:
     model_desc: IModelDesc
-    ref_groups: List[PruningGroup]
+    ref_groups: Optional[List[PruningGroup]] = None
 
     def __str__(self) -> str:
         return self.model_desc.model_name
@@ -453,7 +466,7 @@ TEST_DESCS = [*SYNTHETIC_DESCS, *NLP_DESCS, *CV_DESCS, *AUDIO_DESCS]
 
 
 @pytest.mark.parametrize("desc", TEST_DESCS, ids=map(str, TEST_DESCS))
-def test_groups(desc: GroupTestDesc, tmp_path, mocker):
+def test_groups(desc: GroupTestDesc, mocker, tmp_path):
     model_desc = desc.model_desc
     model = model_desc.get_model()
     config = NNCFConfig({"input_info": model_desc.create_input_info()})
@@ -470,3 +483,36 @@ def test_groups(desc: GroupTestDesc, tmp_path, mocker):
 
     filtered_groups = select_largest_groups(not_filtered_groups)
     assert filtered_groups == desc.ref_groups
+
+
+BIG_MODEL_DESCS = [
+    GroupTestDesc(
+        model_desc=GeneralModelDesc(
+            model_name="MobileBERT big",
+            input_info=[dict(sample_size=[1, 128], type="long")] * 4,
+            model_builder=get_mobile_bert_big_model,
+        ),
+    ),
+    GroupTestDesc(
+        model_desc=GeneralModelDesc(
+            model_name="Swin big",
+            input_info=dict(sample_size=[1, 3, 224, 224]),
+            model_builder=get_swin_tiny_model,
+        )
+    ),
+]
+
+
+@pytest.mark.parametrize("desc", BIG_MODEL_DESCS, ids=map(str, BIG_MODEL_DESCS))
+def test_all_groups_valid(desc: GroupTestDesc):
+    model_desc = desc.model_desc
+    model = model_desc.get_model()
+    config = NNCFConfig({"input_info": model_desc.create_input_info()})
+    nncf_network = create_nncf_network(model, config)
+    pruning_producing_types = ["linear"]
+    all_groups = get_pruning_groups(
+        nncf_network.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types
+    )
+    for group in all_groups:
+        assert group.consumers
+        assert group.producers

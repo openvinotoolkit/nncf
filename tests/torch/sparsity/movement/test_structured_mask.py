@@ -221,12 +221,41 @@ class TestStructuredMaskContext:
     def test_populate_dependent_structured_mask(self, desc: dict):
         sparsifier = Mock()
         sparsifier.prune_bias = True
-        sparsifier.weight_ctx.binary_mask = torch.zeros_like(desc["ref_binary_mask"])
+        ref_weight_mask = desc["ref_binary_mask"]
+        ref_bias_mask = ref_weight_mask.amax(dim=1)
+        sparsifier.weight_ctx.binary_mask = torch.ones_like(ref_weight_mask)
+        sparsifier.bias_ctx.binary_mask = torch.ones_like(ref_bias_mask)
         ctx = StructuredMaskContext(sparsifier, "linear", desc["prune_grid"], True)
         ctx.dependent_structured_mask = desc["mask"]
         ctx.populate_dependent_structured_mask_to_operand()
-        assert torch.equal(sparsifier.weight_ctx.binary_mask, desc["ref_binary_mask"])
-        assert torch.equal(sparsifier.bias_ctx.binary_mask, desc["ref_binary_mask"].amax(dim=1))
+        assert torch.equal(sparsifier.weight_ctx.binary_mask, ref_weight_mask)
+        assert torch.equal(sparsifier.bias_ctx.binary_mask, ref_bias_mask)
+
+    def test_populate_dependent_structured_mask_by_row_and_column(self):
+        mask_1 = torch.FloatTensor([[1, 0, 1]])
+        prune_grid_1 = (2, 1)
+        mask_2 = torch.FloatTensor([[0], [1]])
+        prune_grid_2 = (1, 3)
+        ref_weight_mask = torch.FloatTensor([[0, 0, 0], [1, 0, 1]])
+        ref_bias_mask = ref_weight_mask.amax(dim=1)
+
+        sparsifier = Mock()
+        sparsifier.prune_bias = True
+
+        ref_bias_mask = ref_weight_mask.amax(dim=1)
+        sparsifier.weight_ctx.binary_mask = torch.ones_like(ref_weight_mask)
+        sparsifier.bias_ctx.binary_mask = torch.ones_like(ref_bias_mask)
+
+        ctx = StructuredMaskContext(sparsifier, "linear", prune_grid_1, True)
+        ctx.dependent_structured_mask = mask_1
+        ctx.populate_dependent_structured_mask_to_operand()
+
+        ctx = StructuredMaskContext(sparsifier, "linear", prune_grid_2, True)
+        ctx.dependent_structured_mask = mask_2
+        ctx.populate_dependent_structured_mask_to_operand()
+
+        assert torch.equal(sparsifier.weight_ctx.binary_mask, ref_weight_mask)
+        assert torch.equal(sparsifier.bias_ctx.binary_mask, ref_bias_mask)
 
     @pytest.mark.parametrize(
         "desc", desc_test_gather_statistics_from_operand.values(), ids=desc_test_gather_statistics_from_operand.keys()

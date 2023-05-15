@@ -22,6 +22,7 @@ from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization import FakeQuantize
 from nncf.tensorflow.quantization.init_range import TFRangeInitParams
+from nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 
 
@@ -149,3 +150,37 @@ class TestPerLayerRangeInitTest:
             input_type,
         ), ref_range_init_config in per_layer_range_init_test_struct.layer_vs_expected_init_config:
             assert params.get_init_config_for_quantization_point(layer, input_type) == ref_range_init_config
+
+
+@pytest.mark.parametrize(
+    ("min_values", "max_values", "input_low", "input_range"),
+    [
+        ([0], [1], [0], [1]),
+        ([1], [2], [0], [2]),
+        ([-1], [0], [-1], [1]),
+        ([-2], [-1], [-2], [2]),
+        ([0], [0.1], [0], [0.1]),
+        ([0], [0.05], [-0.025], [0.1]),
+        ([0], [0.04], [-0.03], [0.1]),
+        ([100], [101], [0], [101]),
+        ([100], [200], [0], [200]),
+        ([0, 1, -1, -2], [1, 2, 0, -1], [0, 0, -1, -2], [1, 2, 1, 2]),
+        ([100, 100], [101, 200], [0, 0], [101, 200]),
+        ([0, 0], [0.04, 100], [-0.48, 0], [1, 100]),
+    ],
+)
+def test_asymmetric_apply_range_initialization(min_values, max_values, input_low, input_range):
+    min_values_tf = tf.constant(min_values, dtype=tf.float32)
+    max_values_tf = tf.constant(max_values, dtype=tf.float32)
+    input_low_tf = tf.constant(input_low, dtype=tf.float32)
+    input_range_tf = tf.constant(input_range, dtype=tf.float32)
+    weights = dict(
+        input_low_var=tf.Variable(tf.zeros_like(min_values_tf)),
+        input_range_var=tf.Variable(tf.zeros_like(min_values_tf)),
+    )
+
+    asymmetric_quantizer = AsymmetricQuantizer("test_quantizer", TFQuantizerSpec(*((None,) * 6)))
+    asymmetric_quantizer.apply_range_initialization(weights, min_values_tf, max_values_tf)
+
+    assert tf.reduce_max(tf.abs(input_low_tf - weights["input_low_var"])).numpy() < 1e-5
+    assert tf.reduce_max(tf.abs(input_range_tf - weights["input_range_var"])).numpy() < 1e-5
