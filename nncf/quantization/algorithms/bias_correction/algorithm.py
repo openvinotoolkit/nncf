@@ -146,7 +146,7 @@ class BiasCorrection(Algorithm):
                 nodes_with_bias.append(node)
         subgraphs_data = [self._get_subgraph_data_for_node(node, nncf_graph) for node in nodes_with_bias]
 
-        for position, (node, subgraph_data) in tqdm(list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc='Biases correction : '):
+        for position, (node, subgraph_data) in tqdm(list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc='Biases correction'):
             node_name = node.node_name
 
             # We do not make an additional copy of the model because
