@@ -49,7 +49,7 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) ->
 
     # We check that add constant (aka bias) contains values only for channels.
     add_const_port = add_node.layer_attributes.get_const_port_ids()[0]
-    add_const_shape = list(add_node.layer_attributes.const_attrs[add_const_port]['shape'])
+    add_const_shape = list(add_node.layer_attributes.const_attrs[add_const_port]["shape"])
     add_const_shape.pop(node.metatype.output_channel_axis)
     # All others excluding channel_axis are 1.
     return all(v == 1 for v in add_const_shape)

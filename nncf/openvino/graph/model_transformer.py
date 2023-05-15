@@ -374,7 +374,9 @@ class OVModelTransformer(ModelTransformer):
                 input_node_output = input_port.get_source_output()
                 parameter_name = f"Parameter_{input_name}"
                 new_param = opset.parameter(
-                    shape=input_node_output.partial_shape, dtype=input_node_output.get_element_type(), name=parameter_name
+                    shape=input_node_output.partial_shape,
+                    dtype=input_node_output.get_element_type(),
+                    name=parameter_name,
                 )
                 input_port.replace_source_output(new_param.output(0))
                 new_param_tensors = [o.get_tensor() for o in new_param.outputs()]

@@ -91,7 +91,9 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
         constant_ports = node.layer_attributes.get_const_port_ids()
-        activation_ports = [e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports]
+        activation_ports = [
+            e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports
+        ]
         assert len(activation_ports) == 1
         return activation_ports[0]
 
