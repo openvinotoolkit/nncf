@@ -41,12 +41,11 @@ class PTOperatorMetatype(OperatorMetatype):
     Grouping also allows efficient application of HW specifics to compression of
     certain operation groups.
 
-    Attributes:
-        external_op_names (List[str]): Names of functions registered as operators via @register_operator
-            to be associated with this metatype.
-        module_to_function_names (Dict[NamespaceTarget, List[str]]): Names of functions from 'torch.nn.function',
-            'torch.tensor' and 'torch' modules respectively, which are associated with this metatype.
-        subtypes (List[Type[PTOperatorMetatype]]): List of subtypes of PyTorch operator.
+    :param external_op_names: Names of functions registered as operators via @register_operator to be associated
+    with this metatype.
+    :param module_to_function_names: Names of functions from 'torch.nn.function', 'torch.tensor' and 'torch' modules
+    respectively, which are associated with this metatype.
+    :param subtypes: List of subtypes of PyTorch operator.
     """
 
     external_op_names: List[str] = []

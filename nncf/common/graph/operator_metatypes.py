@@ -19,10 +19,9 @@ class OperatorMetatype:
     """
     Base class for grouping framework operators based on their semantic meaning.
 
-    Attributes:
-        name (str): The name of the operator.
-        hw_config_names (List[str]): The names of the hardware configurations.
-        output_channel_axis (Optional[int]): The axis along which the output channels of the operator are arranged.
+    :param name: The name of the operator.
+    :param hw_config_names: The names of the hardware configurations.
+    :param output_channel_axis: The axis along which the output channels of the operator are arranged.
     """
 
     name: str = ""
