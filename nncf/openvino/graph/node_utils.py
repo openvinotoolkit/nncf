@@ -43,9 +43,6 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return False
 
     bias_constant = get_node_with_bias_value(add_node, nncf_graph)
-    if bias_constant is None:
-        return False
-
     return bias_constant is not None
 
 
