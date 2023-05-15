@@ -134,8 +134,7 @@ class Evaluator:
             values_for_each_item is None or isinstance(values_for_each_item[0], float)
         ):
             self._metric_mode = True
-
-        if values_for_each_item is not None and not isinstance(values_for_each_item[0], Output):
+        elif values_for_each_item is not None and not isinstance(values_for_each_item[0], Output):
             raise RuntimeError("Unexpected return value from provided validation function.")
 
     def collect_values_for_each_item(
