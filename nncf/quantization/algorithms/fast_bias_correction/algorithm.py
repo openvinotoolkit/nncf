@@ -126,7 +126,7 @@ class FastBiasCorrection(Algorithm):
         node_and_bias_value = (
             (node, self._backend_entity.get_bias_value(node, nncf_graph, model))
             for node in nncf_graph.get_all_nodes()
-            if self._backend_entity.is_node_with_bias(node, nncf_graph, model)
+            if self._backend_entity.is_node_with_bias(node, nncf_graph)
         )
         model_transformer = ModelTransformerFactory.create(model)
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
@@ -317,7 +317,7 @@ class FastBiasCorrection(Algorithm):
         self._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         nodes_with_bias = [
-            node for node in nncf_graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node, nncf_graph, model)
+            node for node in nncf_graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node, nncf_graph)
         ]
 
         statistic_container = StatisticPointsContainer()

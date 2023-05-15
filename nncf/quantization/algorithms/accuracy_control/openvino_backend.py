@@ -60,8 +60,8 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     # Manipulations with bias value and weights
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> bool:
-        return is_node_with_bias(node, nncf_graph, model)
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        return is_node_with_bias(node, nncf_graph)
 
     @staticmethod
     def is_node_with_weight(node: NNCFNode) -> bool:
