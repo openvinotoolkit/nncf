@@ -65,7 +65,7 @@ def run(
     model = convert_opset_version(original_model) if convert_model_opset else original_model
     # Execute the pipeline.
     quantized_model = nncf.quantize(
-        model, dataset, subset_size=num_init_samples, ignored_scope=IgnoredScope(names=ignored_scopes)
+        model, dataset, subset_size=num_init_samples, ignored_scope=IgnoredScope(names=ignored_scopes), fast_bias_correction=False
     )
     # Save the quantized model.
     onnx.save(quantized_model, output_model_path)

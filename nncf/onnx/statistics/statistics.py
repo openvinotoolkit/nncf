@@ -11,9 +11,9 @@
 
 import numpy as np
 
-from nncf.common.tensor_statistics.statistics import BatchTensorStatistic
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 
 
 class ONNXMinMaxTensorStatistic(MinMaxTensorStatistic):
@@ -28,7 +28,7 @@ class ONNXMeanTensorStatistic(MeanTensorStatistic):
         return bool(np.all(tensor, rtol=rtol))
 
 
-class ONNXBatchTensorStatistic(BatchTensorStatistic):
+class ONNXRawTensorStatistic(RawTensorStatistic):
     @staticmethod
     def tensor_eq(tensor: np.ndarray, rtol=1e-6) -> bool:
         return bool(np.all(tensor, rtol=rtol))

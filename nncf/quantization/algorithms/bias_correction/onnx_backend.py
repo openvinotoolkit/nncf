@@ -31,9 +31,9 @@ from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.collectors import ONNXBatchStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
+from nncf.onnx.statistics.collectors import ONNXRawStatisticCollector
 from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
@@ -86,16 +86,16 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def batch_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
-        return ONNXBatchStatisticCollector(num_samples)
+    def raw_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
+        return ONNXRawStatisticCollector(num_samples)
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
-        return 0, 0
+    def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[int, int]:
+        return 0
 
     @staticmethod
     def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> np.ndarray:
@@ -121,5 +121,5 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return weight_node.metatype == ONNXDequantizeLinearMetatype
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> bool:
         return is_node_with_bias(node)

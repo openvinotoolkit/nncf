@@ -368,16 +368,18 @@ class OVModelTransformer(ModelTransformer):
             if input_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
                 params.append(input_node)
                 continue
-            input_port = input_node.input(0)
-            input_node_output = input_port.get_source_output()
-            parameter_name = f"Parameter_{input_name}"
-            new_param = opset.parameter(
-                shape=input_node_output.partial_shape, dtype=input_node_output.get_element_type(), name=parameter_name
-            )
-            input_port.replace_source_output(new_param.output(0))
-            new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
-            OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
-            params.append(new_param)
+            for input_port in input_node.inputs():
+                if input_port.get_source_output().get_node().get_type_name() in ["Constant", "FakeQuantize"]:
+                    continue
+                input_node_output = input_port.get_source_output()
+                parameter_name = f"Parameter_{input_name}"
+                new_param = opset.parameter(
+                    shape=input_node_output.partial_shape, dtype=input_node_output.get_element_type(), name=parameter_name
+                )
+                input_port.replace_source_output(new_param.output(0))
+                new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
+                OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
+                params.append(new_param)
 
         for output_name in transformation.outputs:
             output_node = name_to_node_mapping[output_name]

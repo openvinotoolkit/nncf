@@ -25,12 +25,13 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
 
-def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> bool:
     """
     Checks if the node has a bias or not.
 
     :param node: The node to check.
     :param nncf_graph: NNCFGraph instance.
+    :param model: The model that contains node.
     :return: Return `True` if `node` corresponds to the operation
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
@@ -43,7 +44,15 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return False
 
     bias_constant = get_node_with_bias_value(add_node, nncf_graph)
-    return bias_constant is not None
+    if bias_constant is None:
+        return False
+
+    # We check that add constant (aka bias) contains values only for channels.
+    add_const_port = add_node.layer_attributes.get_const_port_ids()[0]
+    add_const_shape = list(add_node.layer_attributes.const_attrs[add_const_port]['shape'])
+    add_const_shape.pop(node.metatype.output_channel_axis)
+    # All others excluding channel_axis are 1.
+    return all(v == 1 for v in add_const_shape)
 
 
 def get_const_value(const_node: ov.Node) -> np.ndarray:
