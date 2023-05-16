@@ -982,9 +982,11 @@ def test_works_when_wrapped_with_dataparallel(simple_net):
     dp_model(torch.zeros([10, *simple_net.INPUT_SIZE[1:]], device="cuda"))
 
 
-def test_works_with_old_wrapping_and_deprecation_warning(simple_net):
+def test_warns_on_old_style_calls(simple_net):
     with pytest.warns(NNCFDeprecationWarning):
         simple_net.get_graph()
+    with pytest.warns(NNCFDeprecationWarning):
+        simple_net.get_nncf_wrapped_model()
 
 
 def test_class_has_same_name_and_module_as_original(simple_net):
