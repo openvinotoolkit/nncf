@@ -13,91 +13,58 @@ from typing import Dict, Tuple
 import numpy as np
 
 
-def get_quant_len_by_range(input_range: np.array, bits: int) -> np.array:
+def get_quant_len_by_range(input_range: np.array, levels: int) -> np.array:
     """
     Returns quant length for N-bit quantization by input range.
 
     :param input_range: Input range of quantizer.
-    :param bits: Number of bits of quantization.
+    :param levels: Number of quantization levels.
 
     :return np.array: Length of quant.
     """
-    return input_range.astype(np.float64) / (2**bits - 1)
+    return input_range.astype(np.float64) / (levels - 1)
 
 
-def get_quant_len(value_low: np.array, value_high: np.array, bits: int) -> np.array:
+def get_quant_len(value_low: np.array, value_high: np.array, levels: int) -> np.array:
     """
     Returns quant length for N-bit quantization by min and max values.
 
     :param value_low: Low input value of quantizer.
     :param value_high: High input value of quantizer.
-    :param bits: Number of bits of quantization.
+    :param levels: Number of quantization levels.
 
     :return np.array: Length of quant.
     """
     input_range = value_high.astype(np.float64) - value_low
-    return get_quant_len_by_range(input_range, bits)
+    return get_quant_len_by_range(input_range, levels)
 
 
-def get_quant_points(value_low: np.array, quant_len: np.array, bits: int) -> np.array:
+def get_quant_points(value_low: np.array, quant_len: np.array, levels: int) -> np.array:
     """
     Returns array of quant points for quantization parameters. Quant points are floating-point levels to which
     the corresponding input floating point values will be brought to after application of fake quantization.
 
     :param value_low: Low input value of quantizer.
     :param quant_len: Length of quant.
-    :param bits: Number of bits of quantization.
+    :param levels: Number of quantization levels.
 
     :return np.array: Array of quant points.
     """
-    return np.array([value_low.astype(np.float64) + i * quant_len.astype(np.float64) for i in range(2**bits)])
+    return np.array([value_low.astype(np.float64) + i * quant_len.astype(np.float64) for i in range(levels)])
 
 
-def get_mid_quant_points(value_low: np.array, quant_len: np.array, bits: int) -> np.array:
+def get_mid_quant_points(value_low: np.array, quant_len: np.array, levels: int) -> np.array:
     """
     Returns an array of dots in the middle between quant points.
 
     :param value_low: Low input value of quantizer.
     :param quant_len: Length of quant.
-    :param bits: Number of bits of quantization.
+    :param levels: Number of quantization levels.
 
     :return np.array: Array of quant points.
     """
-    quant_points = get_quant_points(value_low, quant_len, bits)
+    quant_points = get_quant_points(value_low, quant_len, levels)
     return (quant_points - quant_len / 2)[1:]
-
-
-def get_symmetric_range_level(is_signed, bits) -> Tuple[int, int, int]:
-    """
-    Returns level_low, level_high and levels parameters for symmetric quantizer.
-
-    :param is_signed: True if used signed data type.
-    :param bits: Number of bits of quantization.
-
-    :return Tuple[int, int, int]: level_low, level_high, levels
-    """
-    levels = 2**bits
-    if is_signed:
-        level_high = (levels // 2) - 1
-        level_low = -(levels // 2)
-    else:
-        level_high = levels - 1
-        level_low = 0
-    return level_low, level_high, levels
-
-
-def get_asymmetric_range_level(bits) -> Tuple[int, int, int]:
-    """
-    Returns level_low, level_high and levels parameters for asymmetric quantizer.
-
-    :param bits: Number of bits of quantization.
-
-    :return Tuple[int, int, int]: level_low, level_high, levels
-    """
-    levels = 2**bits
-    level_low = 0
-    level_high = levels - 1
-    return level_low, level_high, levels
 
 
 def generate_random_scale(min_scale: float = 0.1, max_scale: float = 1.0) -> float:
@@ -235,7 +202,7 @@ def generate_lazy_sweep_data(shape: Tuple[int], min_val: float = -1.0, max_val: 
 
 
 def generate_sweep_for_one_channel(
-    input_low, input_range, input_size, bits, rtol_for_mid_point
+    input_low, input_range, input_size, levels, rtol_for_mid_point
 ) -> Tuple[np.array, np.array, np.array]:
     """
     Generate sorted array that include:
@@ -259,10 +226,10 @@ def generate_sweep_for_one_channel(
 
     min_val = input_low
     max_val = input_low + input_range
-    quant_len = get_quant_len_by_range(input_range, bits)
+    quant_len = get_quant_len_by_range(input_range, levels)
 
-    quant_points = get_quant_points(min_val, quant_len, bits)
-    quant_mid_points = get_mid_quant_points(min_val, quant_len, bits)
+    quant_points = get_quant_points(min_val, quant_len, levels)
+    quant_mid_points = get_mid_quant_points(min_val, quant_len, levels)
 
     out_of_range_points = [
         min_val - quant_len,
@@ -297,7 +264,7 @@ def generate_sweep_data(
     input_size: Tuple,
     input_low: np.array,
     input_range: np.array,
-    bits: int,
+    levels: int,
     is_per_channel: bool,
     is_weights: bool,
     rtol_for_mid_point: float = 0.00005,
@@ -308,7 +275,7 @@ def generate_sweep_data(
     :param input_size: Size of input tensor.
     :param input_low: Array with low values.
     :param input_range: Array with range values.
-    :param bits: Number of bits of quantization.
+    :param levels: Number of levels of quantization.
     :param is_per_channel: `True` for per-channel quantization, `False` for per-tensor.
     :param is_weights: Boolean that defines tensor type. True for Weights, False for Activations.
     :param rtol_for_mid_point: Relative tolerant value for points is in the middle between quant points,
@@ -317,7 +284,7 @@ def generate_sweep_data(
     :return np.array: inputs, is_near_mid_point, quant_lens
     """
     if not is_per_channel:
-        return generate_sweep_for_one_channel(input_low, input_range, input_size, bits, rtol_for_mid_point)
+        return generate_sweep_for_one_channel(input_low, input_range, input_size, levels, rtol_for_mid_point)
 
     inputs = None
     is_near_mid_point = None
@@ -330,7 +297,7 @@ def generate_sweep_data(
             quant_lens = np.empty(input_size)
             for idx in range(0, channel_count):
                 ch_input, ch_is_near_mid_point, ch_quant_lens = generate_sweep_for_one_channel(
-                    input_low[idx], input_range[idx], input_size[1:], bits, rtol_for_mid_point
+                    input_low[idx], input_range[idx], input_size[1:], levels, rtol_for_mid_point
                 )
                 inputs[idx] = ch_input
                 is_near_mid_point[idx] = ch_is_near_mid_point
@@ -342,7 +309,7 @@ def generate_sweep_data(
             quant_lens = np.empty(input_size)
             for idx in range(0, channel_count):
                 ch_input, ch_is_near_mid_point, ch_quant_lens = generate_sweep_for_one_channel(
-                    input_low[idx], input_range[idx], input_size[0:1] + input_size[2:], bits, rtol_for_mid_point
+                    input_low[idx], input_range[idx], input_size[0:1] + input_size[2:], levels, rtol_for_mid_point
                 )
                 inputs[:, idx] = ch_input
                 is_near_mid_point[:, idx] = ch_is_near_mid_point
@@ -404,6 +371,8 @@ def scatter_plot(
 
     Example of using:
     ```
+    from tests.common.quantization.data_generators import scatter_plot
+
     scatter_plot(
         data={
             "input": test_input.detach().numpy(),
@@ -434,7 +403,7 @@ def scatter_plot(
     fig = px.scatter(data_frame=df, x="X", y=column_names)
     fig.update_traces(marker={"size": 2})
 
-    if vertical_lines:
+    if vertical_lines is not None:
         for x_line in vertical_lines:
             fig.add_vline(x=x_line, line_width=1)
 
