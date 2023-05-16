@@ -37,6 +37,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
 from tests.common.quantization.metatypes import CatTestMetatype
+from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.mock_graphs import get_ip_graph_for_test
 from tests.common.quantization.mock_graphs import get_mock_nncf_node_attrs
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
@@ -68,6 +69,7 @@ class TestQuantizerPropagationStateGraph:
         qpsg = QPSG(ip_graph)
 
         qpsg.nodes["5 /F_0"][QPSG.OPERATOR_METATYPE_NODE_ATTR] = CatTestMetatype
+        qpsg.nodes["6 /G_0"][QPSG.OPERATOR_METATYPE_NODE_ATTR] = Conv2dTestMetatype
         qpsg.skip_check = False
         yield qpsg
         if not qpsg.skip_check:
