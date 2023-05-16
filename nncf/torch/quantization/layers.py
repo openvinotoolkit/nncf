@@ -743,9 +743,15 @@ class SymmetricQuantizer(BaseQuantizer):
 
             scale, zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
 
+            if self.narrow_range:
+                if level_low < 0:
+                    level_low -= 1
+                else:
+                    level_high += 1
+
             if self._half_range:
-                level_low = 2 * self.level_low
-                level_high = 2 * self.level_high + 1
+                level_low = 2 * level_low
+                level_high = 2 * level_high + 1
 
             scale = scale.view(-1)
             zero_point = zero_point.view(-1).to(dtype=torch.int32)

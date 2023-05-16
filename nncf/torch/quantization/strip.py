@@ -42,9 +42,9 @@ def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> NNCFNetwork:
             for key in list(nncf_module.pre_ops.keys()):
                 op = nncf_module.get_pre_op(key)
                 if isinstance(op.op, BaseQuantizer) and op.op.is_enabled_quantization():
-                    if op.op.is_half_range:
-                        # Half range require to clamp weights of module
-                        # Note: Half range used only for weight.
+                    if op.op.is_half_range or op.op.narrow_range:
+                        # Half range and narrow_range require to clamp weights of module
+                        # Note: Half range and narrow_range used only for weight.
                         input_low, input_high = op.op.get_input_low_input_high()
 
                         data = nncf_module.weight.data
