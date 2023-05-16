@@ -30,17 +30,15 @@ def insert_null_biases(model: ov.Model) -> ov.Model:
     :return: Updated ov.Model instance with zero biases
     """
     types_to_insert_bias = [
-            OVConvolutionMetatype,
-            OVGroupConvolutionMetatype,
-            OVDepthwiseConvolutionMetatype,
-            OVConvolutionBackpropDataMetatype,
-            OVGroupConvolutionBackpropDataMetatype,
-        ]
+        OVConvolutionMetatype,
+        OVGroupConvolutionMetatype,
+        OVDepthwiseConvolutionMetatype,
+        OVConvolutionBackpropDataMetatype,
+        OVGroupConvolutionBackpropDataMetatype,
+    ]
     nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
     nodes_without_biases = nncf_graph.get_nodes_by_metatypes(types_to_insert_bias)
-    nodes_without_biases = [
-        node for node in nodes_without_biases if not is_node_with_bias(node, nncf_graph)
-    ]
+    nodes_without_biases = [node for node in nodes_without_biases if not is_node_with_bias(node, nncf_graph)]
     transformation_layout = TransformationLayout()
     model_transformer = ModelTransformerFactory.create(model)
     for node_without_bias in nodes_without_biases:
