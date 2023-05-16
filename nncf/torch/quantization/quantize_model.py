@@ -201,7 +201,7 @@ def quantize_impl(
     """
     if fast_bias_correction is False:
         raise ValueError(f"fast_bias_correction={fast_bias_correction} is not " "supported")
-    if ignored_scope is not None and ignored_scope.types is not None:
+    if ignored_scope is not None and ignored_scope.types:
         raise RuntimeError(
             "Quantization algorithm from the PyTorch backend "
             "does not support operation types in the ignored "
