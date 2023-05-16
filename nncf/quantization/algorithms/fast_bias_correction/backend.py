@@ -40,13 +40,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def types_to_insert_bias(self):
-        """
-        Returns backend-specific list of the metatypes that should be with bias.
-        """
-
-    @property
-    @abstractmethod
     def tensor_processor(self):
         """
         Returns backend-specific instance of the NNCFCollectorTensorProcessor.
@@ -62,16 +55,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param target_node_name: Name of the located node.
         :param port_id: Port ID of the tensor for the statistics distribution.
         :return: Backend-specific TargetPoint.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def create_bias_insertion_command(node: NNCFNode) -> TransformationCommand:
-        """
-        Returns backend-specific command that inserts null bias.
-
-        :param node: The node for which bias should be inserted.
-        :return: Backend-specific command that inserts output.
         """
 
     @staticmethod
@@ -194,4 +177,14 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph that contains node.
         :return: Boolean indicating whether the node has a bias or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def insert_null_biases(model: TModel) -> TModel:
+        """
+        This method finds and inserts zero biases for the layers that should have it.
+
+        :param model: TModel instance.
+        :return: TModel instance with zero biases
         """

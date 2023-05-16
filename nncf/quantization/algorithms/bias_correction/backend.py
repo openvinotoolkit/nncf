@@ -46,13 +46,6 @@ class BiasCorrectionAlgoBackend(ABC):
         Returns backend-specific list of the quantizer metatypes.
         """
 
-    @property
-    @abstractmethod
-    def types_to_insert_bias(self):
-        """
-        Returns backend-specific list of the metatypes that should be with bias.
-        """
-
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
@@ -85,16 +78,6 @@ class BiasCorrectionAlgoBackend(ABC):
         :param inputs: List of the input names for sub-model beggining.
         :param outputs: List of the output names for sub-model end.
         :return: Backend-specific TransformationCommand for the model extraction.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def create_bias_insertion_command(node: NNCFNode) -> TransformationCommand:
-        """
-        Returns backend-specific command that inserts null bias.
-
-        :param node: The node for which bias should be inserted.
-        :return: Backend-specific command that inserts output.
         """
 
     @staticmethod
@@ -223,4 +206,14 @@ class BiasCorrectionAlgoBackend(ABC):
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph instance with the node.
         :return: Boolean indicating whether the node has a bias or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def insert_null_biases(model: TModel) -> TModel:
+        """
+        This method finds and inserts zero biases for the layers that should have it.
+
+        :param model: TModel instance.
+        :return: TModel instance with zero biases
         """
