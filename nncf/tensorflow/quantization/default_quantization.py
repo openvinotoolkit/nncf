@@ -13,9 +13,9 @@ from nncf.common.quantization.quantizer_propagation.structs import QuantizationT
 from nncf.tensorflow.graph.metatypes import common
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
-from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
 
 # If there are no some metatypes it means that they are considered as QuantizationTrait.QuantizationAgnostic
 
@@ -65,9 +65,9 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         op_metatypes.TFLogOpMetatype,
         op_metatypes.TFSqrtOpMetatype,
     ],
-    QuantizationTrait.QUANTIZATION_AGNOSTIC:  LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
-                                            + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
-                                            + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS,
+    QuantizationTrait.QUANTIZATION_AGNOSTIC: LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
+    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS,
     QuantizationTrait.CONCAT: [
         layer_metatypes.TFConcatenateLayerMetatype,
         op_metatypes.TFConcatOpMetatype,

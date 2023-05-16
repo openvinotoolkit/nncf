@@ -741,7 +741,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
 def test_synthetic_model_quantization(synthetic_model_desc: IModelDesc):
     model = synthetic_model_desc.get_model()
     if isinstance(model, MultiOutputSameTensorModel):
-        pytest.xfail("The MultiOutputSameTensorModel is skipped, ticket TODO.")
+        pytest.xfail("The MultiOutputSameTensorModel is skipped, ticket 110944.")
 
     config = get_basic_quantization_config(
         input_sample_sizes=synthetic_model_desc.get_input_sample_sizes(), input_info=synthetic_model_desc.input_info

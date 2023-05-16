@@ -815,9 +815,7 @@ class QuantizerPropagationSolver:
                 quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 if quant_det_id is None:
                     nncf_logger.debug(f"Unknown metatype for operator node: {node_key}")
-                trait = self._operator_quantization_trait_map.get(
-                    quant_det_id, QuantizationTrait.NON_QUANTIZABLE
-                )
+                trait = self._operator_quantization_trait_map.get(quant_det_id, QuantizationTrait.NON_QUANTIZABLE)
                 node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] = trait
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     node[
@@ -866,7 +864,7 @@ class QuantizerPropagationSolver:
                 nncf_logger.debug(
                     f"Operation metatype {op_meta} encountered, but it has no default "
                     f"quantization trait and the HW config entry is not given for it - "
-                    f"assuming non quantizable."
+                    f"assuming non-quantizable."
                 )
         else:
             # There IS a valid HW config name for the metatype, but it is deliberately not specified
