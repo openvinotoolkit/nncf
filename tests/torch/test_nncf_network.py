@@ -1045,3 +1045,46 @@ class ConcreteMetaModel(MetaModel):
 
 def test_can_wrap_models_with_metaclass():
     _ = NNCFNetwork(ConcreteMetaModel(), [ModelInputInfo([1, 1, 1, 1])])
+
+
+def test_reset_original_unbound_forward():
+    model = ModelWithAttr()
+    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
+    inp = torch.ones((1,))
+    assert nncf_network.forward(inp) == inp
+
+    nncf_network.set_original_unbound_forward(model.__class__.other_forward)
+    assert nncf_network.forward(inp) == inp * 2
+
+    nncf_network.reset_original_unbound_forward()
+    assert nncf_network.forward(inp) == inp
+
+
+def test_wrap_original_forward():
+    class Model(torch.nn.Module):
+        def forward(self, x):
+            return x
+
+    def get_wrapper(fun):
+        def wrapper(*args, **kwargs):
+            new_args = (args[0], args[1] + 1, *args[2:])
+            return fun(*new_args, **kwargs)
+
+        return wrapper
+
+    inp = torch.ones((1,))
+
+    original_model = Model()
+    assert str(inspect.signature(original_model.forward)) == "(x)"
+
+    nncf_model = NNCFNetwork(deepcopy(original_model), [ModelInputInfo([1])])
+    assert original_model.forward(inp) == nncf_model.forward(inp) == inp
+
+    Model.forward = get_wrapper(Model.forward)
+    assert str(inspect.signature(original_model.forward)) == "(*args, **kwargs)"
+
+    assert inspect.signature(original_model.forward) != inspect.signature(nncf_model.forward)
+    assert original_model.forward(inp) == nncf_model.forward(inp) == inp + 1
+
+    # Ideally, the condition below should fail but currently there is no means to implement it
+    assert inspect.signature(original_model.forward) != inspect.signature(nncf_model.forward)
