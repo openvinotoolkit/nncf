@@ -944,11 +944,13 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         super().__setattr__(key, value)
 
     def get_nncf_wrapped_model(self) -> "NNCFNetwork":
-        nncf_logger.warning("Calls to NNCFNetwork.get_nncf_wrapped_model() are deprecated and will be removed "
-                            "in NNCF v2.6.0.\n"
-                            "Starting from NNCF v2.5.0, the compressed model object already inherits the original "
-                            "class of the uncompressed model and the forward signature, so the call to "
-                            ".get_nncf_wrapped_model() may be simply omitted.")
+        warning_deprecated(
+            "Calls to NNCFNetwork.get_nncf_wrapped_model() are deprecated and will be removed "
+            "in NNCF v2.6.0.\n"
+            "Starting from NNCF v2.5.0, the compressed model object already inherits the original "
+            "class of the uncompressed model and the forward signature, so the call to "
+            ".get_nncf_wrapped_model() may be simply omitted."
+        )
         return self
 
 
