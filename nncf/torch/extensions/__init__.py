@@ -1,9 +1,10 @@
 import enum
 import os
-import signal
 import textwrap
 from abc import ABC
 from abc import abstractmethod
+from multiprocessing.context import TimeoutError
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from typing import Callable
 
@@ -16,6 +17,9 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
 
 EXTENSIONS = Registry("extensions")
+
+EXTENSION_LOAD_TIMEOUT_ENV_VAR = "NNCF_EXTENSION_LOAD_TIMEOUT"
+DEFAULT_EXTENSION_LOAD_TIMEOUT = 60
 
 
 class ExtensionsType(enum.Enum):
@@ -53,10 +57,7 @@ class ExtensionLoader(ABC):
 
 
 class ExtensionLoaderTimeoutException(Exception):
-    """Raises an exception if it takes too long time to load the extension"""
-
-
-NNCF_TIME_LIMIT_TO_LOAD_EXTENSION = "NNCF_TIME_LIMIT_TO_LOAD_EXTENSION"
+    """Raised when the extension takes too long to load"""
 
 
 class ExtensionNamespace:
@@ -80,29 +81,27 @@ class ExtensionNamespace:
         :return: A callable object corresponding to the requested function.
         """
         if self._loaded_namespace is None:
-            time_limit = int(os.environ.get(NNCF_TIME_LIMIT_TO_LOAD_EXTENSION, 60))
-
-            def extension_loader_timeout_handler(signum, frame):
-                # pylint: disable=line-too-long
-                msg = textwrap.dedent(
-                    f"""\
-                    The extension load function failed to execute within {time_limit} seconds.
-                    To resolve this issue, run the following command:
-                        rm -rf {self._loader.get_build_dir()}
-                    For a machine with poor performance, you may try increasing the time limit by setting the environment variable:
-                        {NNCF_TIME_LIMIT_TO_LOAD_EXTENSION}=180
-                    More information about reasons read on https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
-                    """
-                )
-                raise ExtensionLoaderTimeoutException(msg)
+            time_limit = int(os.environ.get(EXTENSION_LOAD_TIMEOUT_ENV_VAR, DEFAULT_EXTENSION_LOAD_TIMEOUT))
 
             with extension_is_loading_info_log(self._loader.name()):
-                signal.signal(signal.SIGALRM, extension_loader_timeout_handler)
-                signal.alarm(time_limit)
                 try:
-                    self._loaded_namespace = self._loader.load()
-                finally:
-                    signal.alarm(0)
+                    pool = ThreadPool(processes=1)
+                    async_result = pool.apply_async(self._loader.load)
+                    self._loaded_namespace = async_result.get(timeout=time_limit)
+                except TimeoutError as error:
+                    # pylint: disable=line-too-long
+                    msg = textwrap.dedent(
+                        f"""\
+                        The extension load function failed to execute within {time_limit} seconds.
+                        This may be due to leftover lock files from the PyTorch C++ extension build process.
+                        If this is the case, running the following command should help:
+                            rm -rf {self._loader.get_build_dir()}
+                        For a machine with poor performance, you may try increasing the time limit by setting the environment variable:
+                            {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=180
+                        More information about reasons read on https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
+                        """
+                    )
+                    raise ExtensionLoaderTimeoutException(msg)
 
         return getattr(self._loaded_namespace, fn_name)
 

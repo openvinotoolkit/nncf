@@ -6,7 +6,7 @@ import torch
 
 from nncf.torch.binarization.extensions import BinarizedFunctionsCPU
 from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
-from nncf.torch.extensions import NNCF_TIME_LIMIT_TO_LOAD_EXTENSION
+from nncf.torch.extensions import EXTENSION_LOAD_TIMEOUT_ENV_VAR
 from nncf.torch.extensions import ExtensionLoaderTimeoutException
 from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
 from tests.shared.isolation_runner import run_pytest_case_function_in_separate_process
@@ -19,7 +19,7 @@ def test_timeout_extension_loader_isolated(tmp_path, use_cuda):
 
     quant_func = BinarizedFunctionsCPU if use_cuda else BinarizedFunctionsCUDA
 
-    os.environ[NNCF_TIME_LIMIT_TO_LOAD_EXTENSION] = "1"
+    os.environ[EXTENSION_LOAD_TIMEOUT_ENV_VAR] = "1"
     os.environ["TORCH_EXTENSIONS_DIR"] = tmp_path.as_posix()
 
     # pylint: disable=protected-access
