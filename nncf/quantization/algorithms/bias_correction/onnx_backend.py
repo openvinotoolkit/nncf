@@ -135,4 +135,4 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def insert_null_biases(model: onnx.ModelProto) -> onnx.ModelProto:
-        pass
+        return model
