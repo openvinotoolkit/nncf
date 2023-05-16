@@ -3,7 +3,7 @@ import os
 import textwrap
 from abc import ABC
 from abc import abstractmethod
-from multiprocessing.context import TimeoutError
+from multiprocessing.context import TimeoutError as MPTimeoutError
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from typing import Callable
@@ -88,7 +88,7 @@ class ExtensionNamespace:
                     pool = ThreadPool(processes=1)
                     async_result = pool.apply_async(self._loader.load)
                     self._loaded_namespace = async_result.get(timeout=time_limit)
-                except TimeoutError as error:
+                except MPTimeoutError as error:
                     # pylint: disable=line-too-long
                     msg = textwrap.dedent(
                         f"""\
@@ -101,7 +101,7 @@ class ExtensionNamespace:
                         More information about reasons read on https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
                         """
                     )
-                    raise ExtensionLoaderTimeoutException(msg)
+                    raise ExtensionLoaderTimeoutException(msg) from error
 
         return getattr(self._loaded_namespace, fn_name)
 
