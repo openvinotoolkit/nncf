@@ -13,17 +13,17 @@ import os
 
 import openvino.runtime as ov
 import pytest
-
-import nncf
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.os import is_windows
-from nncf.parameters import TargetDevice
 from tests.openvino.conftest import AC_CONFIGS_DIR
 from tests.openvino.datasets_helpers import get_dataset_for_test
 from tests.openvino.datasets_helpers import get_nncf_dataset_from_ac_config
 from tests.openvino.omz_helpers import calculate_metrics
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
+
+import nncf
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.os import is_windows
+from nncf.parameters import TargetDevice
 
 OMZ_MODELS = [
     ("resnet-18-pytorch", "imagenette2-320", {"accuracy@top1": 0.777, "accuracy@top5": 0.948}),
