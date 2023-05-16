@@ -15,5 +15,7 @@ jobs:
     - uses: actions/setup-python@v3
       with:
         python-version: 3.8.10
+    - name: Install pre-commit package
+      run: make install-pre-commit
     - name: Pre commit check
       run: make pre-commit
