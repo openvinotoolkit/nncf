@@ -373,7 +373,7 @@ class QuantizerPropagationSolver:
         run_consistency_checks: bool = False,
         quantize_outputs: bool = False,
         post_processing_marker_metatypes: List[OperatorMetatype] = None,
-        unification_producing_metatypes: List[OperatorMetatype] = None,
+        scales_unification_map: Dict[OperatorMetatype, OperatorMetatype] = None,
     ):
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
@@ -422,8 +422,8 @@ class QuantizerPropagationSolver:
             If the path with the nodes has the post-processing marker node,
             all the nodes in this path will be added into ignored.
             If None automatic ignoring will be skipped.
-        :param unification_producing_metatypes: The framework-specific NNCF metatypes, which generating a quantizer
-            that can be unified if it so requires based on its location.
+        :param scales_unification_map: The framework-specific map with NNCF metatypes, which generating a quantizer
+            that can be unified if it so requires based on metatype.
         """
         if default_trait_to_metatype_map is None:
             self._default_trait_to_metatype_map = {}
@@ -478,9 +478,7 @@ class QuantizerPropagationSolver:
         self._num_potential_quantized_activations = 0
         self._quantizable_layer_nodes = quantizable_layer_nodes
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
-        self._unification_producing_metatypes = unification_producing_metatypes
-        if self._unification_producing_metatypes is None:
-            self._unification_producing_metatypes = []
+        self._scales_unification_map = scales_unification_map
 
     def _filter_by_weight_ignored_target_scopes(
         self,
@@ -757,7 +755,7 @@ class QuantizerPropagationSolver:
         # only concat unified scale groups appear here
         unified_scale_grouped_paths = (
             quant_prop_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-                curr_node_key, self._unified_scales_operation_set, self._unification_producing_metatypes
+                curr_node_key, self._unified_scales_operation_set, self._scales_unification_map
             )
         )
 

@@ -91,8 +91,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def unification_producing_metatypes(self) -> List[OperatorMetatype]:
-        return self.overflow_fix_metatypes
+    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
+        return {om.PTCatMetatype: self.overflow_fix_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:

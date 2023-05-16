@@ -754,7 +754,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self, insertion_point_node_key: str
     ) -> List[PropagationPath]:
         group_dict = self.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-            insertion_point_node_key, set(), []
+            insertion_point_node_key, set(), {}
         )
         return group_dict[None]
 
@@ -762,13 +762,13 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self,
         insertion_point_node_key: str,
         unified_scale_op_metatypes: Set[Type[OperatorMetatype]],
-        unification_producing_metatypes: List[OperatorMetatype],
+        scales_unification_map: Dict[OperatorMetatype, OperatorMetatype],
     ) -> Dict[Optional[int], List[PropagationPath]]:
         """Paths are lists of edges."""
         next_group_idx = 0
         paths = {}
 
-        def followed_by_weighted_types(curr_node_key) -> bool:
+        def followed_by_weighted_types(curr_node_key, curr_node_metatype) -> bool:
             nodes_queue = deque(self.successors(curr_node_key))
             while nodes_queue:
                 next_node_key = nodes_queue.popleft()
@@ -784,7 +784,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                         or next_node_metatype in unified_scale_op_metatypes
                     ):
                         nodes_queue.extend(self.successors(next_node_key))
-                    if next_node_metatype in unification_producing_metatypes:
+                    if next_node_metatype in scales_unification_map[curr_node_metatype]:
                         return True
             return False
 
@@ -803,12 +803,14 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
             if curr_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 metatype = curr_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
-                if (
-                    metatype in unified_scale_op_metatypes
-                    and curr_group is None
-                    and len(self.in_edges(curr_node_key)) > 1
-                    and followed_by_weighted_types(curr_node_key)
-                ):
+                unify_conditions = [
+                    metatype in unified_scale_op_metatypes,
+                    curr_group is None,
+                    len(self.in_edges(curr_node_key)) > 1,
+                ]
+                if metatype in scales_unification_map:
+                    unify_conditions.append(followed_by_weighted_types(curr_node_key, metatype))
+                if all(unify_conditions):
                     curr_group = next_group_idx
                     next_group_idx += 1
 

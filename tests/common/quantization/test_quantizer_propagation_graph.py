@@ -288,7 +288,7 @@ class TestQuantizerPropagationStateGraph:
         ref_groups_vs_paths = start_ip_node_and_dom_node_grouped_paths.ref_groups_vs_paths
         test_groups_vs_paths = (
             mock_qp_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-                start_node_key, {CatTestMetatype}, WEIGHT_LAYER_METATYPES
+                start_node_key, {CatTestMetatype}, {CatTestMetatype: WEIGHT_LAYER_METATYPES}
             )
         )
 

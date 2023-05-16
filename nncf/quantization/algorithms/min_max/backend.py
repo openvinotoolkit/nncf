@@ -78,7 +78,7 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @property
-    def unification_producing_metatypes(self) -> List[OperatorMetatype]:
+    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         """
         Property for the backend-specific metatypes that produces quantizers that might be unified.
         """
