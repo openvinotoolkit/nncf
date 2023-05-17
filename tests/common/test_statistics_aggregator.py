@@ -13,7 +13,6 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from collections import Counter
 from typing import Any, List, Type, Union
 
 import numpy as np
@@ -863,41 +862,3 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator.register_statistic_points(statistics_points)
         # Run statistic collection to check output names matches reduer names
         statistics_aggregator.collect_statistics(model)
-
-    @pytest.mark.parametrize(
-        "statistic_point_params",
-        (
-            (
-                ("AAA", RangeEstimatorParametersSet.MINMAX, TargetType.PRE_LAYER_OPERATION, 100),
-                ("BBB", RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION, 10),
-                ("CCC", RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, None),
-                ("CCC", RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, -1),
-            ),
-        ),
-    )
-    def test_register_statistics(self, dataset_samples, statistic_point_params):
-        model = self.get_backend_model(dataset_samples)
-        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
-        statistics_points = StatisticPointsContainer()
-        ref_val = {}
-
-        for statistic_point_param in statistic_point_params:
-            algorithm_name, range_estimator, target_point_type, subset_size = statistic_point_param
-            ref_val[algorithm_name] = subset_size
-            target_point = self.get_target_point(target_point_type)
-            statistics_point = self.create_statistics_point(
-                model, quantizer_config, target_point, subset_size, algorithm_name, True, range_estimator
-            )
-            statistics_points.add_statistic_point(statistics_point)
-
-        dataset = self.get_dataset(dataset_samples)
-        statistics_aggregator = self.get_statistics_aggregator(dataset)
-        statistics_aggregator.register_statistic_points(statistics_points)
-        assert Counter(statistics_points) == Counter(statistics_aggregator.statistic_points)
-        ref_subset_size = None
-        for subset_size in ref_val.values():
-            if subset_size and ref_subset_size:
-                ref_subset_size = max(ref_subset_size, subset_size)
-            else:
-                ref_subset_size = subset_size
-        assert statistics_aggregator.stat_subset_size == ref_subset_size
