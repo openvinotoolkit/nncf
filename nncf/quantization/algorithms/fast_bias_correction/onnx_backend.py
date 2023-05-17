@@ -20,15 +20,13 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import OperatorMetatype
+from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
-from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
@@ -39,10 +37,6 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCo
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-    @property
-    def quantizer_types(self) -> List[OperatorMetatype]:
-        return [ONNXQuantizeLinearMetatype, ONNXDequantizeLinearMetatype]
-
     @property
     def types_to_insert_bias(self):
         return []
@@ -68,10 +62,6 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:
         return ONNXModelExtractionCommand(inputs, outputs)
-
-    @staticmethod
-    def node_removing_command(target_point: ONNXTargetPoint) -> ONNXQDQNodeRemovingCommand:
-        return ONNXQDQNodeRemovingCommand(target_point)
 
     @staticmethod
     def mean_statistic_collector(
@@ -117,6 +107,10 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node)
+
+    @staticmethod
+    def remove_fq_from_inputs(model: onnx.ModelProto) -> onnx.ModelProto:
+        return remove_fq_from_inputs(model)
 
     @staticmethod
     def insert_null_biases(model: onnx.ModelProto) -> onnx.ModelProto:

@@ -21,13 +21,12 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.model_utils import insert_null_biases
+from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
@@ -39,10 +38,6 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCo
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-    @property
-    def quantizer_types(self) -> List[OVOpMetatype]:
-        return FAKE_QUANTIZE_OPERATIONS
-
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor
@@ -60,10 +55,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
         return OVModelExtractionCommand(inputs, outputs)
-
-    @staticmethod
-    def node_removing_command(target_point: OVTargetPoint) -> OVFQNodeRemovingCommand:
-        return OVFQNodeRemovingCommand(target_point)
 
     @staticmethod
     def mean_statistic_collector(
@@ -112,6 +103,10 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node, nncf_graph)
+
+    @staticmethod
+    def remove_fq_from_inputs(model: ov.Model) -> ov.Model:
+        return remove_fq_from_inputs(model)
 
     @staticmethod
     def insert_null_biases(model: ov.Model) -> ov.Model:

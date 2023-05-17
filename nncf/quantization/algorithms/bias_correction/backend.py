@@ -39,13 +39,6 @@ class BiasCorrectionAlgoBackend(ABC):
         Returns backend-specific instance of the NNCFCollectorTensorProcessor.
         """
 
-    @property
-    @abstractmethod
-    def quantizer_types(self):
-        """
-        Returns backend-specific list of the quantizer metatypes.
-        """
-
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
@@ -89,16 +82,6 @@ class BiasCorrectionAlgoBackend(ABC):
         :param nncf_graph: NNCFGraph instance.
         :param target_point: TargetPoint instance.
         :return: Backend-specific command that inserts output.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def node_removing_command(target_point: TargetPoint) -> TransformationCommand:
-        """
-        Returns backend-specific command that removes node.
-
-        :param target_point: TargetPoint instance.
-        :return: Backend-specific command that remove node.
         """
 
     @staticmethod
@@ -209,6 +192,17 @@ class BiasCorrectionAlgoBackend(ABC):
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph instance with the node.
         :return: Boolean indicating whether the node has a bias or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def remove_fq_from_inputs(model: TModel) -> TModel:
+        """
+        This method removes the activation Fake Quantize nodes (or Quantize-Dequantize pairs) from the model.
+        It's needed for the further bias shift calculation that relates on quantized weights.
+
+        :param model: TModel instance.
+        :return: TModel without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
         """
 
     @staticmethod

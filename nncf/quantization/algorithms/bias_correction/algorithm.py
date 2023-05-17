@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import deque
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
@@ -136,7 +135,7 @@ class BiasCorrection(Algorithm):
         main_model_transformer = ModelTransformerFactory.create(model)
 
         model_copy = copy_model(model)
-        model_copy = self._remove_fq_from_inputs(model_copy)
+        model_copy = self._backend_entity.remove_fq_from_inputs(model_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
 
         nodes_with_bias = []
@@ -200,37 +199,6 @@ class BiasCorrection(Algorithm):
             self._remove_unnecessary_stats(position, subgraphs_data)
 
         return main_model_transformer.transform(main_transformations_layout)
-
-    def _remove_fq_from_inputs(self, model: TModel) -> TModel:
-        """
-        This method removes the activation Fake Quantize nodes (or Quantize-Dequantize pairs) from the model.
-        It's needed for the further bias shift calculation that relates on quantized weights.
-
-        :param model: Backend-specific model.
-        :return: Backend-specific model without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
-        """
-        transformation_layout = TransformationLayout()
-        nncf_graph = NNCFGraphFactory.create(model)
-
-        model_transformer = ModelTransformerFactory.create(model)
-
-        seen_nodes = []
-        nodes_queue = deque(nncf_graph.get_input_nodes())
-        while nodes_queue:
-            current_node = nodes_queue.popleft()
-            current_node_name = current_node.node_name
-
-            if current_node_name in seen_nodes:
-                continue
-
-            seen_nodes.append(current_node_name)
-            if current_node.metatype in self._backend_entity.quantizer_types:
-                target_point = self._backend_entity.target_point(TargetType.LAYER, current_node_name, 0)
-                command = self._backend_entity.node_removing_command(target_point)
-                transformation_layout.register(command)
-            nodes_queue.extend(nncf_graph.get_next_nodes(current_node))
-
-        return model_transformer.transform(transformation_layout)
 
     def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> Dict[str, List[str]]:
         """
@@ -498,7 +466,7 @@ class BiasCorrection(Algorithm):
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        model_copy = self._remove_fq_from_inputs(copy_model(model))
+        model_copy = self._backend_entity.remove_fq_from_inputs(copy_model(model))
         model_copy = self._backend_entity.insert_null_biases(model_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
         statistic_container = StatisticPointsContainer()
