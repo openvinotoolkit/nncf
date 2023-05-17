@@ -140,7 +140,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
         validation_loader: torch.utils.data.DataLoader,
         validator: Validator,
         num_samples: int = None,
-    ) -> float:
+    ) -> Tuple[float, None]:
         validator.seen = 0
         validator.jdict = []
         validator.stats = []
@@ -170,7 +170,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
         else:
             stats_metrics = stats["metrics/mAP50-95(M)"]
         print(f"Validate: dataset lenght = {counter}, " f"metric value = {stats_metrics:.3f}")
-        return stats_metrics
+        return stats_metrics, None
 
     quantization_dataset = nncf.Dataset(data_loader, transform_fn)
 
