@@ -148,8 +148,6 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
 
 class OVNoopReducer(NoopReducer):
-    NAME = "noop"
-
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return [get_result_node_name(target_node_name, port_id)]
 

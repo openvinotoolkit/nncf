@@ -39,7 +39,6 @@ class TensorReducerBase(ABC):
 
         """
         self._reduction_shape = reduction_shape
-        self._init_reduction_shape = reduction_shape
         self._tensor_processor: NNCFCollectorTensorProcessor = self._get_processor()
         self._inplace = inplace
 
@@ -91,8 +90,6 @@ class TensorReducerBase(ABC):
         if self.inplace:
             return x
 
-        if self._reduction_shape is None:
-            self._reduction_shape = tuple(range(len(x[0].shape)))
         return self._reduce_out_of_place(x)
 
     def __eq__(self, __o: object) -> bool:
@@ -103,7 +100,12 @@ class TensorReducerBase(ABC):
         )
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._init_reduction_shape))
+        return hash((self.__class__.__name__, self.inplace, self._reduction_shape))
+
+    def _get_reduction_shape(self, tensor: NNCFTensor) -> Union[int, Tuple[int, ...]]:
+        if self._reduction_shape is not None:
+            return self._reduction_shape
+        return tuple(range(len(tensor.shape)))
 
 
 class TensorAggregatorBase:
@@ -410,23 +412,30 @@ class NoopReducer(TensorReducerBase):
 
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
-        return [self._tensor_processor.reduce_min(x[0], self._reduction_shape, keepdims=True)]
+        x = x[0]
+        reduction_shape = self._get_reduction_shape(x)
+        return [self._tensor_processor.reduce_min(x, reduction_shape, keepdims=True)]
 
 
 class MaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
-        return [self._tensor_processor.reduce_max(x[0], self._reduction_shape, keepdims=True)]
+        x = x[0]
+        reduction_shape = self._get_reduction_shape(x)
+        return [self._tensor_processor.reduce_max(x, reduction_shape, keepdims=True)]
 
 
 class AbsMaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = self._tensor_processor.abs(x[0])
-        return [self._tensor_processor.reduce_max(x, self._reduction_shape, keepdims=True)]
+        reduction_shape = self._get_reduction_shape(x)
+        return [self._tensor_processor.reduce_max(x, reduction_shape, keepdims=True)]
 
 
 class MeanReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
-        return [self._tensor_processor.mean(x[0], self._reduction_shape, keepdims=True)]
+        x = x[0]
+        reduction_shape = self._get_reduction_shape(x)
+        return [self._tensor_processor.mean(x, reduction_shape, keepdims=True)]
 
 
 class QuantileReducerBase(TensorReducerBase):
@@ -443,12 +452,14 @@ class QuantileReducerBase(TensorReducerBase):
         return super().__eq__(__o) and self._quantile == __o._quantile
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._init_reduction_shape, tuple(self._quantile)))
+        return hash((self.__class__.__name__, self.inplace, self._reduction_shape, tuple(self._quantile)))
 
 
 class QuantileReducer(QuantileReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
-        return self._tensor_processor.quantile(x[0], self._quantile, self._reduction_shape, keepdims=True)
+        x = x[0]
+        reduction_shape = self._get_reduction_shape(x)
+        return self._tensor_processor.quantile(x, self._quantile, reduction_shape, keepdims=True)
 
 
 class AbsQuantileReducer(QuantileReducerBase):
@@ -462,7 +473,8 @@ class AbsQuantileReducer(QuantileReducerBase):
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = self._tensor_processor.abs(x[0])
-        return self._tensor_processor.quantile(x, [self._quantile], self._reduction_shape, keepdims=True)
+        reduction_shape = self._get_reduction_shape(x)
+        return self._tensor_processor.quantile(x, [self._quantile], reduction_shape, keepdims=True)
 
 
 class BatchMeanReducer(TensorReducerBase):
