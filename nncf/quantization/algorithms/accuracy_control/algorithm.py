@@ -25,10 +25,10 @@ from nncf.data.dataset import Dataset
 from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
-from nncf.quantization.algorithms.accuracy_control.evaluator import Output
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 
 TModel = TypeVar("TModel")
+TTensor = TypeVar("TTensor")
 
 
 def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
@@ -159,7 +159,7 @@ class QuantizationAccuracyRestorer:
         initial_model: TModel,
         quantized_model: TModel,
         validation_dataset: Dataset,
-        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[List[float], List[Output], None]]],
+        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     ) -> TModel:
         """
         Restores the accuracy of the quantized model by removing the groups of quantizers
@@ -381,7 +381,7 @@ class QuantizationAccuracyRestorer:
     @staticmethod
     def _collect_metric_and_values(
         model: TModel, dataset: Dataset, evaluator: Evaluator, model_name: str
-    ) -> Tuple[float, Union[List[float], List[Output], None]]:
+    ) -> Tuple[float, Union[None, List[float], List[List[TTensor]]]]:
         nncf_logger.info(f"Validation of {model_name} model was started")
         with timer():
             metric, values_for_each_item = evaluator.validate(model, dataset)

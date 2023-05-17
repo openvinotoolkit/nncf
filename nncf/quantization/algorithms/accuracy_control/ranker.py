@@ -12,7 +12,7 @@
 import operator
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import List, TypeVar, Union
+from typing import Any, Callable, List, Optional, TypeVar, Union
 
 import numpy as np
 
@@ -25,11 +25,11 @@ from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
-from nncf.quantization.algorithms.accuracy_control.evaluator import Output
 from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
 from nncf.quantization.passes import remove_shapeof_subgraphs
 
 TModel = TypeVar("TModel")
+TTensor = TypeVar("TTensor")
 
 
 def get_ranking_subset_indices(errors: List[float], ranking_subset_size: int) -> List[int]:
@@ -76,7 +76,12 @@ class Ranker:
     """
 
     def __init__(
-        self, ranking_subset_size: int, dataset: Dataset, algo_backend: AccuracyControlAlgoBackend, evaluator: Evaluator
+        self,
+        ranking_subset_size: int,
+        dataset: Dataset,
+        algo_backend: AccuracyControlAlgoBackend,
+        evaluator: Evaluator,
+        ranking_fn: Optional[Callable[[Any, Any], float]] = None,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
@@ -86,6 +91,8 @@ class Ranker:
         :param dataset: Dataset for the ranking process.
         :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         :param evaluator: Evaluator to validate model.
+        :param  ranking_fn: a function that compares values returned by
+            `Evaluator.collect_values_for_each_item()` method for initial and quantized model.
         """
         self._ranking_subset_size = ranking_subset_size
         self._dataset = dataset
@@ -96,16 +103,15 @@ class Ranker:
         # them to improve execution time.
         self._reference_values_for_each_item = None
 
-        # A `ranking_fn()` is a function that compares values returned
-        # by `Evaluator.collect_values_for_each_item()` method for
-        # initial and quantized model.
-        if self._evaluator.is_metric_mode():
-            self._ranking_fn = operator.sub
-            self._metric_name = "ORIGINAL"
-        else:
-            self._ranking_fn = normalized_mse
-            self._metric_name = "NMSE"
-        nncf_logger.info(f"{self._metric_name} metric is used to rank quantizers")
+        if ranking_fn is None:
+            if self._evaluator.is_metric_mode():
+                ranking_fn = operator.sub
+                metric_name = "ORIGINAL"
+            else:
+                ranking_fn = normalized_mse
+                metric_name = "NMSE"
+            nncf_logger.info(f"{metric_name} metric is used to rank quantizers")
+        self._ranking_fn = ranking_fn
 
     def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
         """
@@ -150,8 +156,8 @@ class Ranker:
         initial_model: TModel,
         quantized_model: TModel,
         quantized_model_graph: NNCFGraph,
-        reference_values_for_each_item: Union[List[float], List[Output], None],
-        approximate_values_for_each_item: Union[List[float], List[Output], None],
+        reference_values_for_each_item: Union[List[float], List[List[TTensor]], None],
+        approximate_values_for_each_item: Union[List[float], List[List[TTensor]], None],
     ) -> List[GroupToRank]:
         """
         Ranks groups of quantizers by their contribution to accuracy drop. Returns a list of
@@ -220,10 +226,10 @@ class Ranker:
             ranking_score, _ = self._evaluator.validate(modified_model, self._dataset, ranking_subset_indices)
         else:
             # Calculate ranking score based on differences in logits
-            approximate_outputs: List[Output] = self._evaluator.collect_values_for_each_item(
+            approximate_outputs = self._evaluator.collect_values_for_each_item(
                 modified_model, self._dataset, ranking_subset_indices
             )
-            reference_outputs: List[Output] = [self._reference_values_for_each_item[i] for i in ranking_subset_indices]
+            reference_outputs = [self._reference_values_for_each_item[i] for i in ranking_subset_indices]
             errors = (self._ranking_fn(a, b) for a, b in zip(reference_outputs, approximate_outputs))
             ranking_score = sum(errors) / len(errors)
 

@@ -16,24 +16,7 @@ from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 
 TModel = TypeVar("TModel")
-
-
-class Output:
-    """
-    Contains ordered list of raw model outputs.
-    """
-
-    def __init__(self):
-        self._outputs = []
-
-    def __iter__(self):
-        return iter(self._outputs)
-
-    def register(self, value: Any) -> None:
-        """
-        Registers `value` as a raw model output.
-        """
-        self._outputs.append(value)
+TTensor = TypeVar("TTensor")
 
 
 class Evaluator:
@@ -45,7 +28,7 @@ class Evaluator:
 
     def __init__(
         self,
-        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[List[float], List[Output], None]]],
+        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
         algo_backend: AccuracyControlAlgoBackend,
     ):
         """
@@ -68,7 +51,7 @@ class Evaluator:
 
     def validate(
         self, model: TModel, dataset: Dataset, indices: Optional[List[int]] = None
-    ) -> Tuple[float, Union[List[float], List[Output], None]]:
+    ) -> Tuple[float, Union[None, List[float], List[List[TTensor]]]]:
         """
         Validates model.
 
@@ -120,13 +103,13 @@ class Evaluator:
         # +--------------+----------------------+-------------+
         # | float        | List[float]          | True        |
         # +--------------+----------------------+-------------+
-        # | float        | List[Output]         | False       |
+        # | float        | List[List[TTensor]]  | False       |
         # +--------------+----------------------+-------------+
         # | None         | None                 | False       |
         # +--------------+----------------------+-------------+
         # | None         | List[float]          | UNEXPECTED  |
         # +--------------+----------------------+-------------+
-        # | None         | List[Output]         | False       |
+        # | None         | List[List[TTensor]]  | False       |
         # +--------------+----------------------+-------------+
 
         self._metric_mode = False
@@ -134,12 +117,12 @@ class Evaluator:
             values_for_each_item is None or isinstance(values_for_each_item[0], float)
         ):
             self._metric_mode = True
-        elif values_for_each_item is not None and not isinstance(values_for_each_item[0], Output):
+        elif values_for_each_item is not None and not isinstance(values_for_each_item[0], list):
             raise RuntimeError("Unexpected return value from provided validation function.")
 
     def collect_values_for_each_item(
         self, model: Any, dataset: Dataset, indices: Optional[List[int]] = None
-    ) -> Union[List[float], List[Output]]:
+    ) -> Union[List[float], List[List[TTensor]]]:
         """
         Collects value for each item from the dataset. If `is_metric_mode()`
         returns `True` then i-th value is a metric for i-th data item. It
@@ -163,10 +146,7 @@ class Evaluator:
 
             values_for_each_item = []
             for data_item in dataset.get_inference_data(indices):
-                output = Output()
                 logits = engine.infer(data_item)
-                for x in logits.values():
-                    output.register(x)
-                values_for_each_item.append(output)
+                values_for_each_item.append(list(logits.values()))
 
         return values_for_each_item

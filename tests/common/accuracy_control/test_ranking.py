@@ -16,7 +16,6 @@ import pytest
 
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
-from nncf.quantization.algorithms.accuracy_control.evaluator import Output
 from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
 from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_subset_indices
 
@@ -42,12 +41,7 @@ def create_fp32_tensor_1d(items):
     ],
 )
 def test_normalized_mse(x_ref: np.ndarray, x_approx: np.ndarray, expected_nmse: float):
-    output_ref = Output()
-    output_ref.register(x_ref)
-    output_approx = Output()
-    output_approx.register(x_approx)
-
-    actual_nmse = normalized_mse(output_ref, output_approx)
+    actual_nmse = normalized_mse([x_ref], [x_approx])
     assert np.allclose(expected_nmse, actual_nmse)
 
 

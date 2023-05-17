@@ -9,12 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List, TypeVar
+
 import numpy as np
 
-from nncf.quantization.algorithms.accuracy_control.evaluator import Output
+TTensor = TypeVar("TTensor")
 
 
-def normalized_mse(ref_outputs: Output, approx_outputs: Output) -> float:
+def normalized_mse(ref_outputs: List[TTensor], approx_outputs: List[TTensor]) -> float:
     """
     Calculates normalized mean square error between `ref_outputs` and `approx_outputs`.
     The normalized mean square error is defined as

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -26,8 +26,9 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
-from nncf.quantization.algorithms.accuracy_control.evaluator import Output
 from nncf.scopes import IgnoredScope
+
+TTensor = TypeVar("TTensor")
 
 
 def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model) -> None:
@@ -68,7 +69,7 @@ def quantize_with_accuracy_control(
     model: ov.Model,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[List[float], List[Output], None]]],
+    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,

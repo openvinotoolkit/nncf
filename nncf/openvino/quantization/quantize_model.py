@@ -11,7 +11,7 @@
 
 import importlib
 from copy import deepcopy
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -28,7 +28,6 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
-from nncf.quantization.algorithms.accuracy_control.evaluator import Output
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
@@ -36,6 +35,8 @@ from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 USE_POT_AS_DEFAULT = False
+
+TTensor = TypeVar("TTensor")
 
 
 def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]) -> bool:
@@ -137,7 +138,7 @@ def native_quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[List[float], List[Output], None]]],
+    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
