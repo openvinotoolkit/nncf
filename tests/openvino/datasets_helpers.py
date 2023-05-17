@@ -18,9 +18,9 @@ from fastdownload import FastDownload
 from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
-from tests.openvino.omz_helpers import OPENVINO_DATASET_DEFINITIONS_PATH
 
 from nncf import Dataset
+from tests.openvino.omz_helpers import OPENVINO_DATASET_DEFINITIONS_PATH
 
 IMAGENETTE_URL = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz"
 IMAGENETTE_ANNOTATION_URL = (
@@ -36,7 +36,7 @@ def download(url: str, path: str) -> Path:
 
 
 def preprocess_imagenette_data(dataset_path: Path, destination_path: Path) -> None:
-    val_dataset_path = dataset_path / 'val'
+    val_dataset_path = dataset_path / "val"
     for filename in os.listdir(val_dataset_path):
         path = val_dataset_path / filename
         if path.is_dir():
@@ -78,7 +78,7 @@ def convert_dataset_to_ac_format(dataset_path: Path, destination_path: Path) -> 
 
 def prepare_imagenette_for_test(data_dir: Path) -> Path:
     dataset_path = download(IMAGENETTE_URL, data_dir)
-    destination_path = dataset_path.parent / 'ac_imagenette2-320/'
+    destination_path = dataset_path.parent / "ac_imagenette2-320/"
     if not destination_path.exists():
         destination_path.mkdir()
     convert_dataset_to_ac_format(dataset_path, destination_path)
