@@ -25,5 +25,5 @@ def create_bias_correction_command(node: NNCFNode, bias_value: Tensor) -> PTBias
     :param bias_value: The new bias value that will be set.
     :return: The `PTBiasCorrectionCommand` command to update bias.
     """
-    target_point = PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, node.node_name)
+    target_point = PTTargetPoint(TargetType.LAYER, node.node_name)
     return PTBiasCorrectionCommand(target_point, bias_value)

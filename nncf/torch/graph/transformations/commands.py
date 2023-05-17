@@ -37,13 +37,15 @@ class PTTargetPoint(TargetPoint):
     ]
     _HOOK_TYPES = [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATOR_POST_HOOK]
 
+    _LAYER_TYPE = [TargetType.LAYER]
+
     _state_names = PTTargetPointStateNames
 
     def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName, *, input_port_id: int = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.target_type = target_type
-        if self.target_type not in self._OPERATION_TYPES + self._HOOK_TYPES:
+        if self.target_type not in self._OPERATION_TYPES + self._HOOK_TYPES + self._LAYER_TYPE:
             raise NotImplementedError("Unsupported target type: {}".format(target_type))
 
         self.input_port_id = input_port_id
@@ -58,7 +60,7 @@ class PTTargetPoint(TargetPoint):
     def __str__(self):
         prefix = str(self.target_type)
         retval = prefix
-        if self.target_type in self._OPERATION_TYPES:
+        if self.target_type in self._OPERATION_TYPES + self._LAYER_TYPE:
             retval += " {}".format(self.target_node_name)
         elif self.target_type in self._HOOK_TYPES:
             if self.input_port_id is not None:
