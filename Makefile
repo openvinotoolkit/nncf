@@ -5,6 +5,9 @@ ifdef DATA
 	DATA_ARG := --data $(DATA)
 endif
 
+install-pre-commit:
+	pip install pre-commit==3.2.2
+
 ###############################################################################
 # ONNX backend
 install-onnx-test:
@@ -15,7 +18,7 @@ install-onnx-test:
 	pip install -r tests/onnx/benchmarking/requirements.txt
 	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
-install-onnx-dev: install-onnx-test
+install-onnx-dev: install-onnx-test install-pre-commit
 	pip install pylint==$(PYLINT_VERSION)
 
 test-onnx:
@@ -45,7 +48,7 @@ install-openvino-test:
 	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
 	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git#subdirectory=tools/model_tools
 
-install-openvino-dev: install-openvino-test
+install-openvino-dev: install-openvino-test install-pre-commit
 	pip install pylint==$(PYLINT_VERSION)
 
 test-openvino:
@@ -72,7 +75,7 @@ install-tensorflow-test:
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/tensorflow/requirements.txt
 
-install-tensorflow-dev: install-tensorflow-test
+install-tensorflow-dev: install-tensorflow-test install-pre-commit
 	pip install pylint==$(PYLINT_VERSION)
 
 test-tensorflow:
@@ -100,7 +103,7 @@ install-torch-test:
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/torch/requirements.txt
 
-install-torch-dev: install-torch-test
+install-torch-dev: install-torch-test install-pre-commit
 	pip install pylint==$(PYLINT_VERSION)
 
 test-torch:
@@ -132,5 +135,4 @@ test-install-torch-gpu:
 ###############################################################################
 # Pre commit check
 pre-commit:
-	pip install pre-commit==3.2.2
 	pre-commit run -a

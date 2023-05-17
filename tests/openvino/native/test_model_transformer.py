@@ -25,11 +25,12 @@ from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_min_op
-from nncf.openvino.graph.node_utils import get_reduce_node_name
+from nncf.openvino.graph.node_utils import get_ov_model_reduce_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -37,10 +38,12 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.models import ConvModel
+from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import QuantizedModel
 from tests.openvino.native.models import SimpleSplitModel
+from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import ZeroRankEltwiseModel
 
 REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graphs" / "original_nncf_graph"
@@ -206,7 +209,8 @@ def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, targe
     extra_outputs = get_extra_outputs(model, transformed_model)
     ref_output_names = [
         get_result_node_name(
-            get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id), default_output_fn_port
+            get_ov_model_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id),
+            default_output_fn_port,
         )
         for target_node, port_id in target_nodes
     ]
@@ -243,7 +247,8 @@ def test_split_inplace_fn_insertion(test_params: InplaceOpTestCase):
     default_output_fn_port = 0
     extra_outputs = get_extra_outputs(model, transformed_model)
     ref_output_name = get_result_node_name(
-        get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id), default_output_fn_port
+        get_ov_model_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id),
+        default_output_fn_port,
     )
     assert len(extra_outputs) == 1
     assert ref_output_name in extra_outputs
@@ -284,7 +289,7 @@ def test_inplace_reduce_fn_zero_rank_output(reduction_shape):
     target_node = get_prev_node(get_node_by_name(transformed_model, target_layer), 1)
     check_inplace_op(target_node, ["ReduceMin"], [[]], 1, 0)
     extra_outputs = get_extra_outputs(model, transformed_model)
-    ref_output_name = get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), name, 0), 0)
+    ref_output_name = get_result_node_name(get_ov_model_reduce_node_name(target_node.get_friendly_name(), name, 0), 0)
     assert len(extra_outputs) == 1
     assert extra_outputs.pop() == ref_output_name
 
@@ -518,3 +523,34 @@ def test_no_transformations():
     for output in ret_val_1.keys():
         assert np.allclose(ret_val_1[output], ret_val_2[output])
     assert id(transformed_model) != id(model)
+
+
+MODELS_WITH_PARAMETERS = [
+    {"model": ConvNotBiasModel().ov_model, "layers": ["Conv"]},
+    {"model": WeightsModel().ov_model, "layers": ["Conv", "Conv_backprop"]},
+]
+
+
+@pytest.mark.parametrize("model_with_parameters", MODELS_WITH_PARAMETERS)
+def test_null_biases_insertion(model_with_parameters):
+    model = model_with_parameters["model"]
+    layers = model_with_parameters["layers"]
+
+    transformed_model = create_transformed_model(model, layers, TargetType.LAYER, OVNullBiasInsertionCommand, port_id=0)
+    ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
+
+    for layer_name in layers:
+        node = ops_dict[layer_name]
+        layer_shape = ops_dict[layer_name].shape
+        bias_dtype = node.get_element_type().to_dtype()
+
+        # We assume that there is only ONE bias after convolution
+        output_port = node.output(0)
+        add_with_bias = list(output_port.get_target_inputs())[0].get_node()
+        assert add_with_bias.get_type_name() == "Add"
+
+        # We assume that the bias inserts only on 1st position for Add layer
+        bias_node = add_with_bias.input(1).get_source_output().get_node()
+        assert bias_node.get_type_name() == "Constant"
+
+        assert all(bias_node.get_vector() == np.zeros(layer_shape[1], dtype=bias_dtype))

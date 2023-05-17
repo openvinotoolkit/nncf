@@ -33,7 +33,7 @@ class StatisticsAggregator(ABC):
 
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
-        self.stat_subset_size = 0
+        self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
 
     def collect_statistics(self, model: TModel) -> None:
@@ -51,7 +51,9 @@ class StatisticsAggregator(ABC):
         engine = EngineFactory.create(model_with_outputs)
 
         for input_data in tqdm(
-            islice(self.dataset.get_inference_data(), self.stat_subset_size), total=self.stat_subset_size
+            islice(self.dataset.get_inference_data(), self.stat_subset_size),
+            total=self.stat_subset_size,
+            desc="Statistics collection",
         ):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
@@ -72,7 +74,10 @@ class StatisticsAggregator(ABC):
             for _statistic_point in _statistic_points:
                 for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
-                        self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
+                        if self.stat_subset_size is None:
+                            self.stat_subset_size = tensor_collector.num_samples
+                        elif tensor_collector.num_samples is not None:
+                            self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
 
     @abstractmethod
     def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:

@@ -94,7 +94,7 @@ def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict[
         return {}
 
     ignored = {}
-    if ignored_scope.names is not None:
+    if ignored_scope.names:
         ignored["scope"] = ignored_scope.names
     if ignored_scope.patterns:
         raise RuntimeError(
@@ -102,7 +102,7 @@ def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict[
             "does not support regular expressions in the ignored "
             "scopes yet"
         )
-    if ignored_scope.types is not None:
+    if ignored_scope.types:
         ignored["operations"] = [{"type": type} for type in ignored_scope.types]
     return ignored
 

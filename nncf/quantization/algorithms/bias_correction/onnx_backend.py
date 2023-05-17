@@ -28,6 +28,7 @@ from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -50,6 +51,10 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def quantizer_types(self) -> List[OperatorMetatype]:
         return [ONNXQuantizeLinearMetatype, ONNXDequantizeLinearMetatype]
 
+    @property
+    def types_to_insert_bias(self):
+        return []
+
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
@@ -63,6 +68,10 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:
         return ONNXModelExtractionCommand(inputs, outputs)
+
+    @staticmethod
+    def create_bias_insertion_command(node: NNCFNode) -> ONNXNullBiasInsertionCommand:
+        return ONNXNullBiasInsertionCommand(node)
 
     @staticmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> ONNXOutputInsertionCommand:
@@ -123,3 +132,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node)
+
+    @staticmethod
+    def insert_null_biases(model: onnx.ModelProto) -> onnx.ModelProto:
+        return model

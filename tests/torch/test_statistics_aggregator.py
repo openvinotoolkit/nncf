@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Type
+from typing import List, Type
 
 import numpy as np
 import pytest
@@ -18,6 +18,7 @@ from torch import nn
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
@@ -86,6 +87,9 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_target_point_cls(self):
         return PTTargetPoint
 
+    def reducers_map(self) -> List[TensorReducerBase]:
+        return None
+
     @pytest.fixture
     def dataset_samples(self, dataset_values):
         input_shape = INPUT_SHAPE
@@ -106,11 +110,15 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return request.param
 
     @pytest.mark.skip("Merging is not implemented yet")
-    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics):
+    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics, statistic_point_params):
         pass
 
     @pytest.mark.skip("Merging is not implemented yet")
     def test_statistic_merging(self, dataset_samples, inplace_statistics):
+        pass
+
+    @pytest.mark.skip("Merging is not implemented yet")
+    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
         pass
 
     @pytest.mark.skip("Bias correction and Fast bias correction is not implemented yet")

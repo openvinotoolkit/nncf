@@ -531,6 +531,11 @@ class TestSotaCheckpoints:
             onnx_cmd += " --resume {}".format(resume_file_path)
         else:
             onnx_cmd += " --pretrained"
+
+        if onnx_type == "fq":
+            # By default use torch.export and ctrl.strip(), that export to ONNX via torch native FQ.
+            onnx_cmd += " --no_strip_on_export"
+
         exit_code, err_str = self.run_cmd(onnx_cmd, cwd=PROJECT_ROOT)
         if exit_code != 0 and err_str is not None:
             pytest.fail(err_str)
@@ -552,8 +557,7 @@ class TestSotaCheckpoints:
         mean_val = eval_test_struct.mean_val_
         scale_val = eval_test_struct.scale_val_
         mo_cmd_tail_template = (
-            "--framework=onnx --data_type=FP16 --reverse_input_channels"
-            " --mean_values={} --scale_values={} --output_dir {}"
+            "--framework=onnx --reverse_input_channels  --mean_values={} --scale_values={} --output_dir {}"
         )
         if onnx_type == "q_dq":
             model_folder = q_dq_ir_model_folder

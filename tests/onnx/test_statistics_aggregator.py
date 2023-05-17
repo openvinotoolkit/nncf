@@ -9,13 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Type
+from typing import List, Type
 
 import numpy as np
 import pytest
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
@@ -75,6 +76,9 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_target_point_cls(self):
         return ONNXTargetPoint
 
+    def reducers_map(self) -> List[TensorReducerBase]:
+        return None
+
     @pytest.fixture
     def dataset_samples(self, dataset_values):
         input_shape = INPUT_SHAPE
@@ -95,7 +99,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return request.param
 
     @pytest.mark.skip("Merging is not implemented yet")
-    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics):
+    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics, statistic_point_params):
+        pass
+
+    @pytest.mark.skip("Merging is not implemented yet")
+    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
         pass
 
     @pytest.mark.skip("Merging is not implemented yet")

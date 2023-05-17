@@ -26,5 +26,6 @@
                                "{re}ResNet/Sequential\\[layer3\\]/BasicBlock\\[0\\]/Sequential\\[downsample\\]/.*",
                                "{re}ResNet/Sequential\\[layer4\\]/BasicBlock\\[0\\]/Sequential\\[downsample\\]/.*"]
         }
-    ]
+    ],
+    "no_strip_on_export": true
 }

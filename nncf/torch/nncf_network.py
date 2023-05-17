@@ -182,7 +182,14 @@ class NNCFNetworkInterface(torch.nn.Module):
         :param fwd_fn: The new original forward function. The signature w.r.t. activation tensors must be the same,
         and the function must leave its 0-th `self` argument unbound.
         """
-        self._original_unbound_forward = fwd_fn
+        self._custom_original_unbound_forward = fwd_fn
+
+    def reset_original_unbound_forward(self):
+        """
+        Reset the forward which was set with set_original_unbound_forward() method.
+        After this NNCF will fall back to the unbound forward of the original model.
+        """
+        self._custom_original_unbound_forward = None
 
     def __init__(
         self,
@@ -203,17 +210,13 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         if isinstance(model, NNCFNetwork):
             # Got an NNCFNetwork already, probably during shallow copying.
-            self._original_unbound_forward = model.nncf._original_unbound_forward
+            self._original_class = model.nncf._original_class
             self._bound_original_forward = model.nncf._bound_original_forward
+            self._custom_original_unbound_forward = model.nncf._custom_original_unbound_forward
         else:
-            # We need the version of the method that has the `self` parameter
-            # not set, otherwise we will be indirectly capturing a reference to the
-            # model object in NNCFInterface - this will lead to failures in DataParallel
-            # because the bound original forward call during NNCFNetwork.forward
-            # would then call forward on the original non-replica module even if NNCFNetwork itself was
-            # replicated.
-            self._original_unbound_forward = model.__class__.forward
+            self._original_class = model.__class__
             self._bound_original_forward = None
+            self._custom_original_unbound_forward = None
 
         self._forward_signature = inspect.signature(self.get_original_forward())
         self._input_infos = input_infos
@@ -290,6 +293,24 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._load_listener = None
 
         self.compression_controller = None  # type: PTCompressionAlgorithmController
+
+    @property
+    def _original_unbound_forward(self):
+        # Notes:
+        # (1) We rely on an "unbound" forward which is the version of the method that has the
+        #   `self` parameter not set, otherwise we will be indirectly capturing a reference to the
+        #   model object in NNCFInterface - this will lead to failures in DataParallel
+        #   because the bound original forward call during NNCFNetwork.forward
+        #   would then call forward on the original non-replica module even if NNCFNetwork itself was
+        #   replicated.
+        # (2) We access the unbound forward from a reference to the original model class instead
+        #   of storing the reference to the unbound forward itself because the original class forward
+        #   may be overridden by some 3rd party logic. For example, during export of mm-based models to ONNX
+        #   using mmdeploy library, the original forward method of the model is temporarily replaced
+        #   during export. Moreover, in such case the forward signature needs to be hidden by a user
+        #   beforehand by wrapping it with a function with (*args, **kwargs) as its arguments.
+        custom_unbound_forward = self._custom_original_unbound_forward
+        return self._original_class.forward if custom_unbound_forward is None else custom_unbound_forward
 
     @property
     def _model_ref(self) -> "NNCFNetwork":
@@ -942,6 +963,16 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
                 "if `fn` already had 0-th `self` argument bound or never had it in the first place."
             )
         super().__setattr__(key, value)
+
+    def get_nncf_wrapped_model(self) -> "NNCFNetwork":
+        warning_deprecated(
+            "Calls to NNCFNetwork.get_nncf_wrapped_model() are deprecated and will be removed "
+            "in NNCF v2.6.0.\n"
+            "Starting from NNCF v2.5.0, the compressed model object already inherits the original "
+            "class of the uncompressed model and the forward signature, so the call to "
+            ".get_nncf_wrapped_model() may be simply omitted."
+        )
+        return self
 
 
 class NNCFSkippingIter:

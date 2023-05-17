@@ -50,9 +50,9 @@ class TensorReducerBase(ABC):
     def output_port_id(self) -> int:
         return 0
 
-    @classmethod
-    def name(cls):
-        return cls.__name__
+    @property
+    def name(self):
+        return self.__class__.__name__ + str(self.__hash__())
 
     @staticmethod
     @abstractmethod
@@ -90,8 +90,6 @@ class TensorReducerBase(ABC):
         if self.inplace:
             return x
 
-        if self._reduction_shape is None:
-            self._reduction_shape = tuple(range(len(x[0].shape)))
         return self._reduce_out_of_place(x)
 
     def __eq__(self, __o: object) -> bool:
@@ -102,7 +100,12 @@ class TensorReducerBase(ABC):
         )
 
     def __hash__(self) -> int:
-        return hash((self.name(), self._inplace))
+        return hash((self.__class__.__name__, self.inplace, self._reduction_shape))
+
+    def _get_reduction_shape(self, tensor: NNCFTensor) -> Union[int, Tuple[int, ...]]:
+        if self._reduction_shape is not None:
+            return self._reduction_shape
+        return tuple(range(len(tensor.shape)))
 
 
 class TensorAggregatorBase:
@@ -127,10 +130,6 @@ class TensorAggregatorBase:
     @property
     def num_samples(self) -> int:
         return self._num_samples
-
-    @classmethod
-    def name(cls):
-        return cls.__name__
 
     def register_reduced_input(self, x: TensorType):
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
@@ -162,7 +161,7 @@ class TensorAggregatorBase:
         return isinstance(__o, self.__class__) and self._num_samples == __o.num_samples
 
     def __hash__(self) -> int:
-        return hash((self.name()))
+        return hash(self.__class__.__name__)
 
 
 class TensorCollector:
@@ -183,8 +182,14 @@ class TensorCollector:
         self._enabled = True
 
     @property
-    def num_samples(self) -> int:
-        return max(aggregator.num_samples for aggregator in self._aggregators.values())
+    def num_samples(self) -> Optional[int]:
+        output = None
+        for aggregator in self._aggregators.values():
+            if aggregator.num_samples and output:
+                output = max(output, aggregator.num_samples)
+            else:
+                output = aggregator.num_samples
+        return output
 
     @property
     def enabled(self) -> bool:
@@ -407,23 +412,30 @@ class NoopReducer(TensorReducerBase):
 
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
-        return [self._tensor_processor.reduce_min(x[0], self._reduction_shape, keepdims=True)]
+        x = x[0]
+        reduction_shape = self._get_reduction_shape(x)
+        return [self._tensor_processor.reduce_min(x, reduction_shape, keepdims=True)]
 
 
 class MaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
-        return [self._tensor_processor.reduce_max(x[0], self._reduction_shape, keepdims=True)]
+        x = x[0]
+        reduction_shape = self._get_reduction_shape(x)
+        return [self._tensor_processor.reduce_max(x, reduction_shape, keepdims=True)]
 
 
 class AbsMaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = self._tensor_processor.abs(x[0])
-        return [self._tensor_processor.reduce_max(x, self._reduction_shape, keepdims=True)]
+        reduction_shape = self._get_reduction_shape(x)
+        return [self._tensor_processor.reduce_max(x, reduction_shape, keepdims=True)]
 
 
 class MeanReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
-        return [self._tensor_processor.mean(x[0], self._reduction_shape, keepdims=True)]
+        x = x[0]
+        reduction_shape = self._get_reduction_shape(x)
+        return [self._tensor_processor.mean(x, reduction_shape, keepdims=True)]
 
 
 class QuantileReducerBase(TensorReducerBase):
@@ -433,19 +445,21 @@ class QuantileReducerBase(TensorReducerBase):
         quantile: Union[float, List[float]] = [0.01, 0.99],
         inplace: bool = False,
     ):
-        super().__init__(reduction_shape, inplace)
+        super().__init__(reduction_shape, False)
         self._quantile = quantile
 
     def __eq__(self, __o: object) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile
 
     def __hash__(self) -> int:
-        return hash((self.name(), self._inplace, tuple(self._quantile)))
+        return hash((self.__class__.__name__, self.inplace, self._reduction_shape, tuple(self._quantile)))
 
 
 class QuantileReducer(QuantileReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
-        return self._tensor_processor.quantile(x[0], self._quantile, self._reduction_shape, keepdims=True)
+        x = x[0]
+        reduction_shape = self._get_reduction_shape(x)
+        return self._tensor_processor.quantile(x, self._quantile, reduction_shape, keepdims=True)
 
 
 class AbsQuantileReducer(QuantileReducerBase):
@@ -455,11 +469,12 @@ class AbsQuantileReducer(QuantileReducerBase):
         quantile: Union[float, List[float]] = 0.99,
         inplace: bool = False,
     ):
-        super().__init__(reduction_shape, quantile, inplace)
+        super().__init__(reduction_shape, quantile, False)
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = self._tensor_processor.abs(x[0])
-        return self._tensor_processor.quantile(x, [self._quantile], self._reduction_shape, keepdims=True)
+        reduction_shape = self._get_reduction_shape(x)
+        return self._tensor_processor.quantile(x, [self._quantile], reduction_shape, keepdims=True)
 
 
 class BatchMeanReducer(TensorReducerBase):
@@ -576,7 +591,7 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase):
         return super().__eq__(__o) and self._quantile == __o._quantile
 
     def __hash__(self) -> int:
-        return hash((self.name(), self._quantile))
+        return hash((self.__class__.__name__, self._quantile))
 
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
@@ -595,5 +610,5 @@ AGGREGATORS_MAP = {
     AggregatorType.MEAN: MeanAggregator,
     AggregatorType.MEAN_NO_OUTLIERS: MeanNoOutliersAggregator,
     AggregatorType.MEDIAN: MedianAggregator,
-    AggregatorType.MEAN_NO_OUTLIERS: MedianNoOutliersAggregator,
+    AggregatorType.MEDIAN_NO_OUTLIERS: MedianNoOutliersAggregator,
 }
