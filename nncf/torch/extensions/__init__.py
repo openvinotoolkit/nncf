@@ -81,23 +81,26 @@ class ExtensionNamespace:
         :return: A callable object corresponding to the requested function.
         """
         if self._loaded_namespace is None:
-            time_limit = int(os.environ.get(EXTENSION_LOAD_TIMEOUT_ENV_VAR, DEFAULT_EXTENSION_LOAD_TIMEOUT))
+            timeout = int(os.environ.get(EXTENSION_LOAD_TIMEOUT_ENV_VAR, DEFAULT_EXTENSION_LOAD_TIMEOUT))
+            timeout = timeout if timeout > 0 else None
 
             with extension_is_loading_info_log(self._loader.name()):
                 try:
                     pool = ThreadPool(processes=1)
                     async_result = pool.apply_async(self._loader.load)
-                    self._loaded_namespace = async_result.get(timeout=time_limit)
+                    self._loaded_namespace = async_result.get(timeout=timeout)
                 except MPTimeoutError as error:
                     # pylint: disable=line-too-long
                     msg = textwrap.dedent(
                         f"""\
-                        The extension load function failed to execute within {time_limit} seconds.
+                        The extension load function failed to execute within {timeout} seconds.
                         This may be due to leftover lock files from the PyTorch C++ extension build process.
                         If this is the case, running the following command should help:
                             rm -rf {self._loader.get_build_dir()}
                         For a machine with poor performance, you may try increasing the time limit by setting the environment variable:
                             {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=180
+                        Or disable timeout by set:
+                            {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=0
                         More information about reasons read on https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
                         """
                     )
