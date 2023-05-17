@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.openvino.graph.model_utils`
+=========================================
+
+.. py:module:: nncf.openvino.graph.model_utils
+
+
