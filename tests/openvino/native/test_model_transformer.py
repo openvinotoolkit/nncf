@@ -25,7 +25,7 @@ from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_min_op
-from nncf.openvino.graph.node_utils import get_reduce_node_name
+from nncf.openvino.graph.node_utils import get_ov_model_reduce_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
@@ -206,7 +206,8 @@ def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, targe
     extra_outputs = get_extra_outputs(model, transformed_model)
     ref_output_names = [
         get_result_node_name(
-            get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id), default_output_fn_port
+            get_ov_model_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id),
+            default_output_fn_port,
         )
         for target_node, port_id in target_nodes
     ]
@@ -243,7 +244,8 @@ def test_split_inplace_fn_insertion(test_params: InplaceOpTestCase):
     default_output_fn_port = 0
     extra_outputs = get_extra_outputs(model, transformed_model)
     ref_output_name = get_result_node_name(
-        get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id), default_output_fn_port
+        get_ov_model_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id),
+        default_output_fn_port,
     )
     assert len(extra_outputs) == 1
     assert ref_output_name in extra_outputs
@@ -284,7 +286,7 @@ def test_inplace_reduce_fn_zero_rank_output(reduction_shape):
     target_node = get_prev_node(get_node_by_name(transformed_model, target_layer), 1)
     check_inplace_op(target_node, ["ReduceMin"], [[]], 1, 0)
     extra_outputs = get_extra_outputs(model, transformed_model)
-    ref_output_name = get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), name, 0), 0)
+    ref_output_name = get_result_node_name(get_ov_model_reduce_node_name(target_node.get_friendly_name(), name, 0), 0)
     assert len(extra_outputs) == 1
     assert extra_outputs.pop() == ref_output_name
 

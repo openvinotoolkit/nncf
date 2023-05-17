@@ -12,7 +12,9 @@
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Type, Union
+from itertools import product
+from collections import Counter
+from typing import Any, List, Type, Union
 
 import numpy as np
 import pytest
@@ -24,6 +26,9 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -34,6 +39,7 @@ from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 
+# pylint: disable=too-many-public-methods
 class TemplateTestStatisticsAggregator:
     @abstractmethod
     def get_min_max_algo_backend_cls(self) -> Type[MinMaxAlgoBackend]:
@@ -93,6 +99,10 @@ class TemplateTestStatisticsAggregator:
     @abstractmethod
     @pytest.fixture
     def is_backend_support_custom_estimators(self) -> bool:
+        pass
+
+    @abstractmethod
+    def reducers_map(self) -> List[TensorReducerBase]:
         pass
 
     @pytest.fixture
@@ -799,3 +809,95 @@ class TemplateTestStatisticsAggregator:
             if isinstance(ref[0], np.ndarray):
                 assert stat.min_values.shape == ref[0].shape
                 assert stat.max_values.shape == ref[1].shape
+
+    @pytest.mark.parametrize(
+        "statistics_type",
+        [
+            StatisticsType.MIN,
+            StatisticsType.MAX,
+            StatisticsType.ABS_MAX,
+            StatisticsType.MEAN,
+            StatisticsType.QUANTILE,
+            StatisticsType.ABS_QUANTILE,
+            "batch_mean",
+            "mean_per_ch",
+        ],
+    )
+    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
+        params = test_params["test_statistic_merging"]["split_concat"]
+        model = params["model"](dataset_samples)
+        params = {}
+        if statistics_type in [StatisticsType.MIN, StatisticsType.MAX, StatisticsType.ABS_MAX, StatisticsType.MEAN]:
+            params["reduction_shape"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["inplace"] = [False, True]
+        elif statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
+            params["reduction_shape"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
+        elif statistics_type == "batch_mean":
+            pytest.skip("Inplace statistic woun't work until openvino==2023.0.0 release")
+            params["inplace"] = [False, True]
+        elif statistics_type == "mean_per_ch":
+            # TODO(dlyakhov) uncoment when nncf will switch to openvino==2023.0.0
+            # params["inplace"] = [False, True]
+            params["channel_dim"] = [1, 2]
+
+        def product_dict(**kwargs):
+            keys = kwargs.keys()
+            for instance in product(*kwargs.values()):
+                yield dict(zip(keys, instance))
+
+        tensor_collector = TensorCollector()
+        statistics_points = StatisticPointsContainer()
+        target_point_cls = self.get_target_point_cls()
+        target_point_args = (TargetType.POST_LAYER_OPERATION, "split", 0)
+        for params_ in product_dict(**params):
+            reducer = self.reducers_map()[statistics_type](**params_)
+            aggregator = NoopAggregator(1)
+            tensor_collector.register_statistic_branch(str(params_), reducer, aggregator)
+            target_point = target_point_cls(*target_point_args)
+            stat_point = StatisticPoint(target_point, tensor_collector, "TEST")
+            statistics_points.add_statistic_point(stat_point)
+
+        dataset = self.get_dataset(dataset_samples)
+        statistics_aggregator = self.get_statistics_aggregator(dataset)
+        statistics_aggregator.register_statistic_points(statistics_points)
+        # Run statistic collection to check output names matches reduer names
+        statistics_aggregator.collect_statistics(model)
+
+    @pytest.mark.parametrize(
+        "statistic_point_params",
+        (
+            (
+                ("AAA", RangeEstimatorParametersSet.MINMAX, TargetType.PRE_LAYER_OPERATION, 100),
+                ("BBB", RangeEstimatorParametersSet.MINMAX, TargetType.POST_LAYER_OPERATION, 10),
+                ("CCC", RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, None),
+                ("CCC", RangeEstimatorParametersSet.MEAN_MINMAX, TargetType.PRE_LAYER_OPERATION, -1),
+            ),
+        ),
+    )
+    def test_register_statistics(self, dataset_samples, statistic_point_params):
+        model = self.get_backend_model(dataset_samples)
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
+        statistics_points = StatisticPointsContainer()
+        ref_val = {}
+
+        for statistic_point_param in statistic_point_params:
+            algorithm_name, range_estimator, target_point_type, subset_size = statistic_point_param
+            ref_val[algorithm_name] = subset_size
+            target_point = self.get_target_point(target_point_type)
+            statistics_point = self.create_statistics_point(
+                model, quantizer_config, target_point, subset_size, algorithm_name, True, range_estimator
+            )
+            statistics_points.add_statistic_point(statistics_point)
+
+        dataset = self.get_dataset(dataset_samples)
+        statistics_aggregator = self.get_statistics_aggregator(dataset)
+        statistics_aggregator.register_statistic_points(statistics_points)
+        assert Counter(statistics_points) == Counter(statistics_aggregator.statistic_points)
+        ref_subset_size = None
+        for subset_size in ref_val.values():
+            if subset_size and ref_subset_size:
+                ref_subset_size = max(ref_subset_size, subset_size)
+            else:
+                ref_subset_size = subset_size
+        assert statistics_aggregator.stat_subset_size == ref_subset_size

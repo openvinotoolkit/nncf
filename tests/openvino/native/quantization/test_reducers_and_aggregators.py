@@ -37,18 +37,15 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
     @pytest.fixture(scope="module")
     def reducers(self):
         return {
-            reducer.NAME: reducer
-            for reducer in [
-                OVNoopReducer,
-                OVMinReducer,
-                OVMaxReducer,
-                OVAbsMaxReducer,
-                OVMeanReducer,
-                OVQuantileReducer,
-                OVAbsQuantileReducer,
-                OVBatchMeanReducer,
-                OVMeanPerChanelReducer,
-            ]
+            "noop": OVNoopReducer,
+            "min": OVMinReducer,
+            "max": OVMaxReducer,
+            "abs_max": OVAbsMaxReducer,
+            "mean": OVMeanReducer,
+            "quantile": OVQuantileReducer,
+            "abs_quantile": OVAbsQuantileReducer,
+            "batch_mean": OVBatchMeanReducer,
+            "mean_per_ch": OVMeanPerChanelReducer,
         }
 
     def all_close(self, val, ref) -> bool:
