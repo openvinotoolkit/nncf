@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import copy
+from collections import defaultdict
 from typing import Callable, Dict, List, Tuple
 
 from torch import Tensor
@@ -36,40 +37,44 @@ class PTModelTransformer(ModelTransformer):
 
     def __init__(self, model: NNCFNetwork):
         super().__init__(model)
-        self._node_to_op_address_mapping = model.get_node_to_op_address_mapping()
+
+        self._command_transformation_ordered_pairs = [
+            (PTModelExtractionWithFusedBiasCommand, self._apply_extraction_with_fused_bias_transformations),
+            (PTInsertionCommand, self._apply_insertion_transformations),
+            (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
+        ]
 
     def transform(self, transformation_layout: PTTransformationLayout) -> NNCFNetwork:
         transformations = transformation_layout.transformations
-
-        bias_correction_transformations = []
-        extraction_transformations = None
-        insertion_transformations = []
-
+        aggregated_transformations = defaultdict(list)
         for transformation in transformations:
-            if isinstance(transformation, PTInsertionCommand):
-                insertion_transformations.append(transformation)
-            if isinstance(transformation, PTModelExtractionWithFusedBiasCommand):
-                extraction_transformations = transformation
-            if isinstance(transformation, PTBiasCorrectionCommand):
-                bias_correction_transformations.append(transformation)
+            aggregated_transformations[transformation.__class__].append(transformation)
 
-        if extraction_transformations:
-            return self._apply_extraction_transformations(extraction_transformations)
+        model = self._model
+        for transformation_cls, transformation_fn in self._command_transformation_ordered_pairs:
+            transformations = aggregated_transformations[transformation_cls]
+            if transformations:
+                model = transformation_fn(model, transformations)
 
-        if insertion_transformations:
-            self._apply_insertion_transformations(insertion_transformations)
-        if bias_correction_transformations:
-            self._apply_bias_correction_transformations(bias_correction_transformations)
-        return self._model
+        return model
 
-    def _apply_insertion_transformations(self, transformations: List[PTInsertionCommand]) -> None:
+    @staticmethod
+    def _apply_insertion_transformations(model: NNCFNetwork, transformations: List[PTInsertionCommand]) -> NNCFNetwork:
+        """
+        Applies insertion transformations to the model.
+
+        :param model: Model to apply transformations.
+        :param transformations: List of the bias correction transformations.
+        """
+        node_to_op_address_mapping = model.get_node_to_op_address_mapping()
         fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
+
         for transformation_command in transformations:  # type: PTInsertionCommand
             target_point = transformation_command.target_point  # type: PTTargetPoint
             target_node_name = target_point.target_node_name
             pt_ip = PTInsertionPoint(
                 target_type=target_point.target_type,
-                op_address=self._node_to_op_address_mapping[target_node_name],
+                op_address=node_to_op_address_mapping[target_node_name],
                 input_port_id=target_point.input_port_id,
             )
             fn = transformation_command.fn
@@ -83,18 +88,42 @@ class PTModelTransformer(ModelTransformer):
 
         for pt_ip, fn_list_with_priority in fns_grouped_by_points.items():
             fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
-            self._model.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
+            model.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
 
-    def _apply_extraction_transformations(self, transformation: PTModelExtractionWithFusedBiasCommand) -> nn.Module:
-        return extraction_potential_fused_modules(transformation.node_name, self._model)
+        return model
 
-    def _apply_bias_correction_transformations(self, transformations: List[PTBiasCorrectionCommand]) -> None:
+    @staticmethod
+    def _apply_extraction_with_fused_bias_transformations(
+        model: NNCFNetwork, transformations: List[PTModelExtractionWithFusedBiasCommand]
+    ) -> nn.Sequential:
+        """
+        Extracts copy of sub-modules from the original base on node name and potential fused nodes.
+
+        :param model: Model to apply transformations.
+        :param transformation: Model extraction transformation.
+        :return: Extracted sub-modules.
+        """
+        transformation = transformations[-1]
+        return extraction_potential_fused_modules(transformation.node_name, model)
+
+    @staticmethod
+    def _apply_bias_correction_transformations(
+        model: NNCFNetwork, transformations: List[PTBiasCorrectionCommand]
+    ) -> NNCFNetwork:
+        """
+        Applies bias correction transformations on the model.
+
+        :param model: Model to apply transformations.
+        :param transformations: List of the bias correction transformations.
+        :return: Model with corrected bias.
+        """
         for transformation in transformations:
             update_fused_bias(
                 target_node_name=transformation.target_point.target_node_name,
                 new_bias=transformation.bias_value,
-                model=self._model,
+                model=model,
             )
+        return model
 
 
 def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwork) -> None:
