@@ -172,7 +172,7 @@ class ACValidationFunction:
                 sign = 1.0
                 if metric_result.direction == "higher-worse":
                     sign = -1.0
-                metric_value = sign * float(metric_result.result)
+                metric_value = sign * float(np.nanmean(metric_result.result))
                 self._values_for_each_item.append({"sample_id": sample_id, "metric_value": metric_value})
 
     @staticmethod
