@@ -810,9 +810,18 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
 
 
 def test_range_initialization_in_train_mode():
-    # Check that if a model in train mode is being compressed, range initialization still runs in eval mode
+    """
+    Check that if a model in train mode is being compressed,
+    the range initialization statistic collection still runs in eval mode
+    """
+
     class Model(nn.Module):
         def forward(self, x):
+            # This forward produces different number of operations depending on
+            # the self.training state. If statistics collection was run in
+            # training mode it would fail with StatisticsNotCollectedError,
+            # because it wouldn't find some nodes discovered during model graph
+            # building, which runs in eval mode.
             if self.training:
                 return x
             return x * x * x

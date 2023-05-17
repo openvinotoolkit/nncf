@@ -23,7 +23,6 @@ from nncf.torch.utils import default_distributed_unwrapper
 from nncf.torch.utils import default_distributed_wrapper
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
-from nncf.torch.utils import training_mode_switcher
 
 
 class PTInitializingDataLoader(NNCFDataLoader):
@@ -147,9 +146,8 @@ class DataLoaderBaseRunner:
         data_loader = wrap_dataloader_for_init(data_loader)
 
         with torch.no_grad():
-            with training_mode_switcher(self.model, is_training=False):
-                self._run_model_inference(data_loader, num_init_steps, device)
-                self._apply_initializers()
+            self._run_model_inference(data_loader, num_init_steps, device)
+            self._apply_initializers()
 
         if self.init_device is not None:
             self.model.to(original_device)
