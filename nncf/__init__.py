@@ -46,7 +46,7 @@ try:
 except ImportError:
     _LOADED_FRAMEWORKS["openvino"] = False
 
-from nncf.common.logging import nncf_logger
+from nncf.common.logging import nncf_logger  # pylint: disable=wrong-import-position
 
 if not any(_LOADED_FRAMEWORKS.values()):
     nncf_logger.error(

@@ -55,14 +55,14 @@ class NodeDesc:
         self,
         node_id: str,
         name: str,
-        type: str,
+        type_: str,
         attrs: Optional[Dict[str, str]] = None,
         inputs: Optional[List[PortDesc]] = None,
         outputs: Optional[List[PortDesc]] = None,
     ):
         self.node_id = node_id
         self.name = name
-        self.type = type
+        self.type = type_
         if attrs is None:
             attrs = {}
         self.attrs = attrs
@@ -74,9 +74,9 @@ class NodeDesc:
         ET.SubElement(node, Tags.DATA, self.attrs)
 
         if self.inputs:
-            input = ET.SubElement(node, Tags.INPUT)
+            input_ = ET.SubElement(node, Tags.INPUT)
             for port in self.inputs:
-                input.append(port.as_xml_element())
+                input_.append(port.as_xml_element())
 
         if self.outputs:
             output = ET.SubElement(node, Tags.OUTPUT)
@@ -156,7 +156,7 @@ def get_graph_desc(
             NodeDesc(
                 node_id=str(node.node_id),
                 name=node.node_name,
-                type=node.node_type.title(),
+                type_=node.node_type.title(),
                 attrs=get_attributes_fn(node),
                 inputs=inputs,
                 outputs=outputs,

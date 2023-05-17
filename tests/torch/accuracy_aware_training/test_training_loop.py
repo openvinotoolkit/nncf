@@ -33,8 +33,8 @@ from tests.torch.quantization.quantization_helpers import get_quantization_confi
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
 
-@pytest.fixture(scope="module")
-def finetuned_master_lenet():
+@pytest.fixture(scope="module", name="finetuned_master_lenet")
+def fixture_finetuned_master_lenet():
     learning_rate = 1e-3
     finetuning_steps = 10
     with set_torch_seed():
@@ -56,8 +56,8 @@ def finetuned_master_lenet():
     return model, train_loader
 
 
-@pytest.fixture
-def finetuned_lenet(finetuned_master_lenet):
+@pytest.fixture(name="finetuned_lenet")
+def fixture_finetuned_lenet(finetuned_master_lenet):
     model, loader = finetuned_master_lenet
     return deepcopy(model), loader
 

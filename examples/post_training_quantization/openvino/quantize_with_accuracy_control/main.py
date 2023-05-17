@@ -39,7 +39,8 @@ MODEL_PATH = HOME_PATH / ".cache/nncf/models/stfpm_mvtec_capsule"
 
 DATASET_INFO = download.DownloadInfo(
     name="mvtec_capsule",
-    url="https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f282/download/420937454-1629951595/capsule.tar.xz",
+    url="https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f282/"
+    "download/420937454-1629951595/capsule.tar.xz",
     hash="380afc46701c99cb7b9a928edbe16eb5",
 )
 DATASET_PATH = HOME_PATH / ".cache/nncf/datasets/mvtec_capsule"
@@ -53,11 +54,11 @@ def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
 
 
 def get_anomaly_images(data_loader: Iterable[Any]) -> List[Dict[str, torch.Tensor]]:
-    anomaly_images = []
+    anomaly_images_ = []
     for data_item in data_loader:
         if data_item["label"].int() == 1:
-            anomaly_images.append({"image": data_item["image"]})
-    return anomaly_images
+            anomaly_images_.append({"image": data_item["image"]})
+    return anomaly_images_
 
 
 def validate(model: ov.CompiledModel, val_loader: Iterable[Any], val_params: Dict[str, float]) -> float:
@@ -118,9 +119,9 @@ datamodule.setup()
 test_loader = datamodule.test_dataloader()
 
 download_and_extract(MODEL_PATH, MODEL_INFO)
-model = ov.Core().read_model(MODEL_PATH / "stfpm_capsule.xml")
+ov_model = ov.Core().read_model(MODEL_PATH / "stfpm_capsule.xml")
 
-with open(MODEL_PATH / "meta_data_stfpm_capsule.json", "r") as f:
+with open(MODEL_PATH / "meta_data_stfpm_capsule.json", "r") as f:  # pylint: disable=unspecified-encoding
     validation_params = json.load(f)
 
 ###############################################################################
@@ -146,7 +147,7 @@ validation_fn = partial(validate, val_params=validation_params)
 validation_dataset = nncf.Dataset(test_loader, transform_fn)
 
 quantized_model = nncf.quantize_with_accuracy_control(
-    model=model,
+    model=ov_model,
     calibration_dataset=calibration_dataset,
     validation_dataset=validation_dataset,
     validation_fn=validation_fn,
@@ -157,7 +158,7 @@ quantized_model = nncf.quantize_with_accuracy_control(
 # Benchmark performance, calculate compression rate and validate accuracy
 
 fp32_ir_path = f"{ROOT}/stfpm_fp32.xml"
-ov.serialize(model, fp32_ir_path)
+ov.serialize(ov_model, fp32_ir_path)
 print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_size = get_model_size(fp32_ir_path, verbose=True)
 
@@ -172,7 +173,7 @@ print("[4/7] Benchmark INT8 model:")
 int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 256, 256], verbose=True)
 
 print("[5/7] Validate OpenVINO FP32 model:")
-compiled_model = ov.compile_model(model)
+compiled_model = ov.compile_model(ov_model)
 fp32_top1 = validate(compiled_model, test_loader, validation_params)
 print(f"Accuracy @ top1: {fp32_top1:.3f}")
 

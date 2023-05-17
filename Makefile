@@ -132,5 +132,4 @@ test-install-torch-gpu:
 ###############################################################################
 # Pre commit check
 pre-commit:
-	pip install pre-commit==3.2.2
 	pre-commit run -a
