@@ -23,14 +23,14 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 
 
-def get_potential_fused_node(node_name: NNCFNode, model: NNCFNetwork) -> Optional[NNCFNode]:
+def get_potential_fused_node(node_name: str, model: NNCFNetwork) -> Optional[NNCFNode]:
     """
     Get next node that can contain fused bias in runtime.
 
     :param node_name: The node name.
     :param model: The model that contains this operation.
 
-    :return NNCFNode: The node that can be fused or None.
+    :return: The node that can be fused or None.
     """
     graph = model.nncf.get_original_graph()
     target_node = graph.get_node_by_name(node_name)
@@ -59,7 +59,7 @@ def is_node_with_fused_bias(node: NNCFNode, model: NNCFNetwork) -> bool:
     return node.metatype in OPERATORS_WITH_BIAS_METATYPES and (node_module.bias is not None or fused_node is not None)
 
 
-def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
+def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Optional[torch.Tensor]:
     """
     Returns the bias tensor for the node or potential fused node.
 
