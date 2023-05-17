@@ -27,6 +27,7 @@ from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
@@ -48,6 +49,7 @@ class OVModelTransformer(ModelTransformer):
             (OVModelExtractionCommand, self._apply_model_extraction_transformation),
             (OVInplaceFnInsertionCommand, self._apply_insert_operation),
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
+            (OVNullBiasInsertionCommand, self._apply_bias_insertion_transformations),
         ]
 
     @staticmethod
@@ -431,3 +433,36 @@ class OVModelTransformer(ModelTransformer):
             new_node = transformation.inplace_op_fn(output.get_node(), output.get_index())
             return (new_node.output(fn_output_port_id), fn_output_port_id)
         raise RuntimeError(f"Transform type {transform_type} is not supported")
+
+    @staticmethod
+    def _apply_bias_insertion_transformations(
+        model: ov.Model, transformations: List[OVNullBiasInsertionCommand]
+    ) -> ov.Model:
+        """
+        Inserts null bias operation after corresponding layer.
+
+        :param transformations: List of the bias insertion transformations.
+        :returns: Transformed model with null biases.
+        """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        for transformation in transformations:
+            node_name = transformation.target_point.target_node_name
+            node = name_to_node_mapping[node_name]
+            # Since layers that may have biases mostly are Convolution or MatMul variations,
+            # we may use only 0 output port.
+            node_shape = node.output(0).partial_shape.get_max_shape()
+            node_output_port = node.output(transformation.target_point.port_id)
+            node_output_source_ports = node_output_port.get_target_inputs()
+
+            bias_shape = [1] * len(node_shape)
+            bias_shape[1] = node_shape[1]
+            const_value = np.zeros(bias_shape, dtype=node.get_element_type().to_dtype())
+            bias_const_node = opset.constant(const_value, dtype=node.get_element_type())
+            bias_const_output_port = bias_const_node.output(0)
+
+            add_node = opset.add(node_output_port, bias_const_output_port, name=f"{node_name}/nncf_null_bias_")
+
+            for node_output_source_port in node_output_source_ports:
+                node_output_source_port.replace_source_output(add_node.output(0))
+
+        return model

@@ -60,7 +60,9 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph):
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+    ) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 
@@ -227,4 +229,14 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :return:
             Name of node to collect input statistics
             Name of node to collect output statistics
+        """
+
+    @staticmethod
+    @abstractmethod
+    def insert_null_biases(model: TModel) -> TModel:
+        """
+        This method finds and inserts zero biases for the layers that should have it.
+
+        :param model: TModel instance.
+        :return: TModel instance with zero biases
         """
