@@ -27,6 +27,7 @@ from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
@@ -42,12 +43,20 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return ONNX_OPERATION_METATYPES
 
     @property
+    def types_to_insert_bias(self):
+        return []
+
+    @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
+
+    @staticmethod
+    def create_bias_insertion_command(node: NNCFNode) -> ONNXNullBiasInsertionCommand:
+        return ONNXNullBiasInsertionCommand(node)
 
     @staticmethod
     def create_bias_correction_command(
@@ -103,3 +112,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node)
+
+    @staticmethod
+    def insert_null_biases(model: onnx.ModelProto) -> onnx.ModelProto:
+        return model
