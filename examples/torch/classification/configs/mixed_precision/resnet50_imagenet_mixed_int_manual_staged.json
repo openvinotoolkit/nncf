@@ -172,5 +172,6 @@
             "lr_poly_drop_duration_epochs": 10,
             "disable_wd_start_epoch": 20
         }
-    }
+    },
+    "no_strip_on_export": true
 }
