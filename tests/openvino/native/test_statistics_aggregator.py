@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Type
+from typing import List, Type
 
 import numpy as np
 import openvino.runtime as ov
@@ -19,8 +19,12 @@ from openvino.runtime import opset9 as opset
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
+from nncf.openvino.statistics.collectors import OVBatchMeanReducer
+from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.openvino_backend import OVFastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
@@ -117,3 +121,8 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(sample)
         return SharedConvModel(input_name=INPUT_NAME, input_shape=INPUT_SHAPE, kernel=conv_w).ov_model
+
+    def reducers_map(self) -> List[TensorReducerBase]:
+        map_ = OV_REDUCERS_MAP.copy()
+        map_.update({"batch_mean": OVBatchMeanReducer, "mean_per_ch": OVMeanPerChanelReducer})
+        return map_
