@@ -13,11 +13,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+import onnx
 import pytest
 import torch
 from torch import nn
 
-import onnx
 from nncf import Dataset
 from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TargetType

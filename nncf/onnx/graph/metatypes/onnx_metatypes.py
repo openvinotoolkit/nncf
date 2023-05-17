@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Type
 
 import onnx
+
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
