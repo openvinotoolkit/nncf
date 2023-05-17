@@ -10,17 +10,21 @@
 # limitations under the License.
 import torch
 
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.torch.exporter import generate_input_names_list
-from nncf.torch.nncf_network import NNCFNetwork
 
 
-def export_model(model: NNCFNetwork, save_path: str) -> None:
+def export_model(ctrl: CompressionAlgorithmController, save_path: str, no_strip_on_export: bool) -> None:
     """
     Export compressed model. Supported only 'onnx' format.
 
-    :param model: The target model.
+    :param controller: The compression controller.
     :param save_path: Path to save onnx file.
+    :param no_strip_on_export: Set to skip strip model before export.
     """
+
+    model = ctrl.model if no_strip_on_export else ctrl.strip()
+
     model = model.eval().cpu()
     input_names = generate_input_names_list(len(model.input_infos))
     input_tensor_list = []
