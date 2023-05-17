@@ -1090,3 +1090,30 @@ def test_wrap_original_forward():
 
     # Ideally, the condition below should fail but currently there is no means to implement it
     assert inspect.signature(original_model.forward) != inspect.signature(nncf_model.forward)
+
+
+def test_forward_hooks_are_preserved():
+    original_obj = SimplestModel()
+
+    class CallCounter:
+        def __init__(self):
+            self.enabled = True
+            self.call_count = 0
+
+        def __call__(self, *args, **kwargs):
+            if self.enabled:
+                self.call_count += 1
+
+    hook = CallCounter()
+    original_obj.register_forward_hook(hook)
+    assert len(original_obj._forward_hooks) == 1
+    assert next(iter(original_obj._forward_hooks.values())) is hook
+
+    hook.enabled = False
+    nncf_net = NNCFNetwork(original_obj, [ModelInputInfo(SimplestModel.INPUT_SIZE)])
+    hook.enabled = True
+
+    assert len(nncf_net._forward_hooks) == 1
+    assert next(iter(nncf_net._forward_hooks.values())) is hook
+    nncf_net(torch.ones(SimplestModel.INPUT_SIZE))
+    assert hook.call_count == 1
