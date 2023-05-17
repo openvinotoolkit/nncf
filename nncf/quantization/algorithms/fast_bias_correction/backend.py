@@ -204,7 +204,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         Convert data to backend specific type.
 
         :param data: List of data.
-        :return TTensor: Converted data.
+        :return: Converted data.
         """
 
     @staticmethod

@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+from typing import Optional
 
 from timm.models.layers import Linear
 from timm.models.layers.norm_act import BatchNormAct2d
@@ -28,7 +29,7 @@ def copy_parameters(src_module: nn.Module, trg_module: nn.Module):
         setattr(trg_module, name, deepcopy(param))
 
 
-def convert_liner(module: Linear) -> nn.Linear:
+def convert_linear(module: Linear) -> nn.Linear:
     """
     Convert Linear module to torch.nn.Linear.
 
@@ -120,11 +121,11 @@ REPLACE_FN_MAP = {
     BatchNormAct2d: convert_batch_norm_act_2d,
     GroupNormAct: convert_group_norm_act,
     LayerNormAct: convert_layer_norm_act,
-    Linear: convert_liner,
+    Linear: convert_linear,
 }
 
 
-def replace_timm_modules(module: nn.Module):
+def replace_timm_modules(module: nn.Module) -> Optional[nn.Module]:
     """
     Replaces the given module with a PyTorch native module if possible.
 

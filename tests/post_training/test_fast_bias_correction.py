@@ -37,7 +37,7 @@ class TemplateTestFBCAlgorithm:
 
         :param data: List of data.
 
-        :return TTensor: Converted data.
+        :return: Converted data.
         """
 
     @staticmethod

@@ -75,7 +75,7 @@ def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
     return node_module.bias.data
 
 
-def find_fake_quantizer_for_wight(module: nn.Module) -> Optional[nn.Module]:
+def find_fake_quantizer_for_weight(module: nn.Module) -> Optional[nn.Module]:
     """
     Return quantizer operator for weight of module if exists, otherwise return None.
 
@@ -94,10 +94,10 @@ def is_quantized_weights(node: NNCFNode, model: NNCFNetwork) -> bool:
     Check that module have fake_quantizer for weight.
 
     :param node: The target node.
-    :param model: he model.
+    :param model: The model.
 
     :return bool: return `True` if module have FQ pre_ops for weight.
     """
     node_module = model.get_containing_module(node.node_name)
-    fq_module = find_fake_quantizer_for_wight(node_module)
+    fq_module = find_fake_quantizer_for_weight(node_module)
     return fq_module is not None

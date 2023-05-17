@@ -97,7 +97,7 @@ class PTModelTransformer(ModelTransformer):
             )
 
 
-def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwork):
+def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwork) -> None:
     """
     Update bias for target module or potential fused module.
 
