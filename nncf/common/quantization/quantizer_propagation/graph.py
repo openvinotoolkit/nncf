@@ -808,7 +808,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     curr_group is None,
                     len(self.in_edges(curr_node_key)) > 1,
                 ]
-                if metatype in scales_unification_map:
+                if scales_unification_map is not None and metatype in scales_unification_map:
                     unify_conditions.append(followed_by_weighted_types(curr_node_key, metatype))
                 if all(unify_conditions):
                     curr_group = next_group_idx
