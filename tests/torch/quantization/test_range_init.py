@@ -809,16 +809,21 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
             assert False  # options above should be exhaustive
 
 
-class AbsTwosDataset:
-    def __init__(self):
-        super().__init__()
-        self._length = 1
+def test_range_initialization_in_train_mode():
+    # Check that if a model in train mode is being compressed, range initialization still runs in eval mode
+    class Model(nn.Module):
+        def forward(self, x):
+            if self.training:
+                return x
+            else:
+                return x * x * x
 
-    def __getitem__(self, idx):
-        if idx >= self._length:
-            raise StopIteration
-        test_input_sample = torch.ones([3, 100, 100]) * 2
-        return test_input_sample, test_input_sample
+    config = get_empty_config()
+    config["compression"] = {"algorithm": "quantization", "initializer": {"range": {"num_init_samples": 1}}}
+    data_loader = wrap_dataloader_for_init(create_ones_mock_dataloader(config, 1))
 
-    def __len__(self):
-        return self._length
+    config.register_extra_structs([QuantizationRangeInitArgs(data_loader=data_loader)])
+
+    model = Model()
+    model.train()
+    _, _ = create_compressed_model_and_algo_for_test(model, config)
