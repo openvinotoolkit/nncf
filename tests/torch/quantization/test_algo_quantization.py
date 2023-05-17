@@ -30,12 +30,10 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.debug import nncf_debug
 from nncf.torch import create_compressed_model
-from nncf.torch import patch_torch_operators
 from nncf.torch import register_default_init_args
 from nncf.torch import register_module
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.compression_method_api import PTCompressionLoss
-from nncf.torch.dynamic_graph.patch_pytorch import unpatch_torch_operators
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.layers import NNCFConv2d
@@ -62,7 +60,6 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
-from tests.torch.test_onnx_export import LinearTestModel
 
 
 def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
@@ -915,6 +912,3 @@ def test_works_when_wrapped_with_dataparallel():
     model, _ = create_compressed_model_and_algo_for_test(model, config)
     model = torch.nn.DataParallel(model.cuda())
     model(torch.ones([10, 1, 1, 1], device="cuda"))
-
-
-

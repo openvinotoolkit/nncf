@@ -18,10 +18,8 @@ from torch import nn
 
 from nncf import NNCFConfig
 from nncf.torch import patch_torch_operators
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.patch_pytorch import unpatch_torch_operators
 from nncf.torch.exporter import PTExporter
-from nncf.torch.nncf_network import NNCFNetwork
 from tests.torch.helpers import MockModel
 from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -146,6 +144,7 @@ def test_can_export_with_model_args(tmp_path):
     compression_ctrl.export_model(str(test_path), model_args=({"param3": 42},))
     assert test_path.exists()
 
+
 class LinearTestModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -166,27 +165,29 @@ class LinearTestModel(nn.Module):
         return x
 
 
-@pytest.mark.parametrize('compression_section', [
-    {},
-    {"compression": {"algorithm": "quantization"}},
-    {"compression": {"algorithm": "filter_pruning"}}], ids=['none', 'quantization', 'filter_pruning'])
+@pytest.mark.parametrize(
+    "compression_section",
+    [{}, {"compression": {"algorithm": "quantization"}}, {"compression": {"algorithm": "filter_pruning"}}],
+    ids=["none", "quantization", "filter_pruning"],
+)
 def test_preserves_onnx_node_name_format(tmp_path, compression_section):
     model = LinearTestModel()
     model.eval().cpu()
     try:
         unpatch_torch_operators()
-        without_nncf_path = tmp_path / 'without_nncf.onnx'
-        torch.onnx.export(model,
-                          torch.ones([1, 3, 32, 32]),
-                          without_nncf_path,
-                          export_params=True,
-                          opset_version=13,
-                          do_constant_folding=False)
+        without_nncf_path = tmp_path / "without_nncf.onnx"
+        torch.onnx.export(
+            model,
+            torch.ones([1, 3, 32, 32]),
+            without_nncf_path,
+            export_params=True,
+            opset_version=13,
+            do_constant_folding=False,
+        )
         original_model_proto = onnx.load_model(str(without_nncf_path))
         patch_torch_operators()
 
-        config = NNCFConfig.from_dict({"input_info": {"sample_size": [1, 3, 32, 32]},
-                                       **compression_section})
+        config = NNCFConfig.from_dict({"input_info": {"sample_size": [1, 3, 32, 32]}, **compression_section})
         compressed_model_proto = load_exported_onnx_version(config, model, tmp_path)
 
         compressed_model_onnx_node_names = {node.name for node in compressed_model_proto.graph.node}
