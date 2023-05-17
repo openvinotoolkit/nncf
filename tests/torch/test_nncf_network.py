@@ -1093,6 +1093,7 @@ def test_wrap_original_forward():
 
 
 def test_forward_hooks_are_preserved():
+    # Testing only for the forward hook - other hooks use the same mechanism.
     original_obj = SimplestModel()
 
     class CallCounter:
@@ -1106,8 +1107,6 @@ def test_forward_hooks_are_preserved():
 
     hook = CallCounter()
     original_obj.register_forward_hook(hook)
-    assert len(original_obj._forward_hooks) == 1
-    assert next(iter(original_obj._forward_hooks.values())) is hook
 
     hook.enabled = False
     nncf_net = NNCFNetwork(original_obj, [ModelInputInfo(SimplestModel.INPUT_SIZE)])
