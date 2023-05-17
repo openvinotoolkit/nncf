@@ -23,7 +23,7 @@ from tests.post_training.test_fast_bias_correction import TemplateTestFBCAlgorit
 from tests.shared.command import Command
 
 
-class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
+class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def list_to_backend_type(data: List) -> np.ndarray:
         return np.array(data)
