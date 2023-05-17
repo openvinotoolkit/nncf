@@ -815,8 +815,7 @@ def test_range_initialization_in_train_mode():
         def forward(self, x):
             if self.training:
                 return x
-            else:
-                return x * x * x
+            return x * x * x
 
     config = get_empty_config()
     config["compression"] = {"algorithm": "quantization", "initializer": {"range": {"num_init_samples": 1}}}
