@@ -9,8 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 from tqdm import tqdm
 
@@ -283,28 +282,10 @@ class FastBiasCorrection(Algorithm):
             StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=FastBiasCorrection)
         )
 
-    def _create_input_data(
-        self, input_shape: Tuple[int], input_fp: List[TTensor], input_name: str, channel_axis: int
-    ) -> Dict[str, NNCFTensor]:
-        """
-        Creates input blob for the bias shift calculation.
-        :param input_shape: Input shape for the blob.
-        :param input_fp: Input data for the blob.
-        :param input_name: Name for the output dictionary.
-        :param channel_axis: Axis to fill the blob with provided data.
-        :return: The dictionary of the blob by input name.
-        """
-        input_blob = self._backend_entity.create_input_data(input_shape, input_fp, input_name, channel_axis)
-        if input_name is None:
-            # For unnamed inputs, as in pytorch
-            return input_blob
-        input_data = {input_name: input_blob}
-        return input_data
-
     def _get_bias_shift(
         self,
         model: TModel,
-        input_blob: Dict[str, NNCFTensor],
+        input_blob: Union[TTensor, Dict[str, TTensor]],
         channel_axis: Tuple[int],
         output_fp: List[TTensor],
         output_name: str,

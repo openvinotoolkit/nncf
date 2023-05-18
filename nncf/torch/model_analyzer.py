@@ -54,7 +54,7 @@ def is_node_with_fused_bias(node: NNCFNode, model: NNCFNetwork) -> bool:
         `False` otherwise.
     """
     fused_node = get_potential_fused_node(node.node_name, model)
-    node_module = model.get_containing_module(node.node_name)
+    node_module = model.nncf.get_containing_module(node.node_name)
 
     return node.metatype in OPERATORS_WITH_BIAS_METATYPES and (node_module.bias is not None or fused_node is not None)
 
@@ -98,6 +98,6 @@ def is_quantized_weights(node: NNCFNode, model: NNCFNetwork) -> bool:
 
     :return bool: return `True` if module have FQ pre_ops for weight.
     """
-    node_module = model.get_containing_module(node.node_name)
+    node_module = model.nncf.get_containing_module(node.node_name)
     fq_module = find_fake_quantizer_for_weight(node_module)
     return fq_module is not None
