@@ -9,30 +9,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import numpy as np
 import openvino.runtime as ov
+import pytest
 
 import nncf
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-
-from tests.openvino.native.models import LinearModel as ModelWithSingleInput
 from tests.openvino.native.models import ConvModel as ModelWithMultipleInputs
+from tests.openvino.native.models import LinearModel as ModelWithSingleInput
 
 dataset = [
     {
-        'input_0': np.zeros((1, 3, 4, 2), dtype=np.float32),
-        'input_1': np.zeros((1, 3, 2, 4), dtype=np.float32),
+        "input_0": np.zeros((1, 3, 4, 2), dtype=np.float32),
+        "input_1": np.zeros((1, 3, 2, 4), dtype=np.float32),
     }
 ]
 
+
 def single_input_transform_fn(data_item):
-    return data_item['input_0']
+    return data_item["input_0"]
 
 
 def multiple_inputs_transform_fn(data_item):
-    return data_item['input_0'], data_item['input_1']
+    return data_item["input_0"], data_item["input_1"]
 
 
 @pytest.mark.parametrize(
@@ -48,7 +48,7 @@ def multiple_inputs_transform_fn(data_item):
         "signle_input_pot",
         "multiple_inputs_native",
         "multiple_inputs_pot",
-    ]
+    ],
 )
 def test_transform_fn(model, transform_fn, use_pot: bool):
     # Check the transformation function
