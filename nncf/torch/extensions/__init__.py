@@ -101,7 +101,7 @@ class ExtensionNamespace:
                             {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=180
                         Or disable timeout by set:
                             {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=0
-                        More information about reasons read on https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
+                        For more information, see FAQ entry at: https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
                         """
                     )
                     raise ExtensionLoaderTimeoutException(msg) from error
