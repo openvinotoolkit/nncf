@@ -14,7 +14,6 @@ import openvino.runtime as ov
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
@@ -24,7 +23,6 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionB
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
-from nncf.openvino.graph.transformations.commands import OVTargetPoint
 
 
 def insert_null_biases(model: ov.Model) -> ov.Model:
@@ -76,8 +74,7 @@ def remove_fq_from_inputs(model: ov.Model) -> ov.Model:
 
         seen_nodes.append(current_node_name)
         if current_node.metatype in FAKE_QUANTIZE_OPERATIONS:
-            target_point = OVTargetPoint(TargetType.LAYER, current_node_name, 0)
-            command = OVCommandCreator.create_command_to_remove_quantizer(target_point)
+            command = OVCommandCreator.create_command_to_remove_quantizer(current_node)
             transformation_layout.register(command)
         nodes_queue.extend(nncf_graph.get_next_nodes(current_node))
 
