@@ -15,7 +15,6 @@ from collections import OrderedDict
 from collections import deque
 from copy import deepcopy
 from enum import Enum
-from functools import partial
 from typing import Deque, Dict, List, Optional, Set, Tuple
 
 import networkx as nx
@@ -226,6 +225,8 @@ class PostprocessingNodeLocator:
         self._post_processing_marker_encountered = False
 
     def _is_node_has_underlying_weights(self, node_key: str) -> bool:
+        if not self._is_node_operator(node_key):
+            return False
         underlying_nncf_nodes = self._quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[node_key]
         for node in underlying_nncf_nodes:
             if node.data[NNCFGraph.KEY_NODE_ATTR] in self._quantizable_layer_node_keys:
@@ -243,50 +244,60 @@ class PostprocessingNodeLocator:
     def get_post_processing_node_keys(self) -> Set[str]:
         """
         Finds out the nodes of the QuantizerPropagationStateGraph, which are in post-processing part of the model.
-        Traversing up from the post-processing nodes all the nodes are added into ignored,
-        until the quantizable nodes with weights are encountered.
-        Traversing down from the post-processing nodes all the nodes are added into ignored,
-        until output nodes are encountered.
-        Only QuantizerPropagationStateGraphNodeType.OPERATOR nodes are processed during the traversing.
+        Starting from the output nodes all the nodes are added to path, until the quantizable nodes with weights are faced.
+        If the path with the nodes has the post-processing marker node,
+        all the nodes in this path (except outputs and nodes with weights) will be added into ignored.
 
         :return: Set of the node keys to be ignored.
         """
-        post_processing_nodes = []
-        for metatype in self._post_processing_marker_metatypes:
-            post_processing_nodes.extend(self._quant_prop_graph.get_node_keys_by_metatype(metatype))
+        output_nodes = []
+        for output_metatype in OUTPUT_NOOP_METATYPES.values():
+            output_nodes.extend(self._quant_prop_graph.get_node_keys_by_metatype(output_metatype))
 
-        def traverse_function(post_processing_nodes, criteria_fn, traverse_forward=True):
-            ignored_node_keys = set()  # Set[str]
-            for start_node_key in post_processing_nodes:
-                forward_visited_node_keys = self._quant_prop_graph.traverse_graph(start_node_key,
-                                                                                  criteria_fn,
-                                                                                  output=set(),
-                                                                                  traverse_forward=traverse_forward)
-                ignored_node_keys.update(forward_visited_node_keys)
-            return ignored_node_keys
+        def get_ignored_operations(output_nodes: List[str]) -> Tuple[Set[str], Set[str]]:
+            stack = [([start_node_key], False) for start_node_key in output_nodes]
+            ignored_operations = set()
 
-        def criteria_function(node_key: str, output: Set[str], visited_nodes: Set[str], stop_fn) -> Tuple[bool, List[str]]:
-            # If the node is not operator
-            if not self._is_node_operator(node_key):
-                return False, output
-            if node_key in visited_nodes:
-                return True, output
-            if stop_fn(node_key):
-                return True, output
-            output.add(node_key)
-            visited_nodes.add(node_key)
-            return False, output
+            def _extend_ignored_operations(path: List[str]):
+                for node in path:
+                    if (
+                        self._is_node_operator(node)
+                        and not self._is_node_has_underlying_weights(node)
+                        and node not in output_nodes
+                    ):
+                        ignored_operations.add(node)
 
-        forward_fn = partial(criteria_function,
-                             visited_nodes=set(),
-                             stop_fn=lambda node_key: self._get_node_metatype(node_key) in OUTPUT_NOOP_METATYPES.values())
-        forward_ignored_node_keys = traverse_function(post_processing_nodes, forward_fn, traverse_forward=True)
+            visited = set()
+            while stack:
+                path, post_proc_encountered = stack.pop()
+                node_key = path[-1]
+                visited.add(node_key)
+                if (
+                    self._is_node_operator(node_key)
+                    and self._get_node_metatype(node_key) in self._post_processing_marker_metatypes
+                ):
+                    post_proc_encountered = True
 
-        backward_fn = partial(criteria_function,
-                              visited_nodes=set(),
-                              stop_fn=lambda node_key: self._is_node_has_underlying_weights(node_key))
-        backward_ignored_node_keys = traverse_function(post_processing_nodes, backward_fn, traverse_forward=False)
-        return forward_ignored_node_keys.union(backward_ignored_node_keys)
+                if self._is_node_has_underlying_weights(node_key):
+                    if post_proc_encountered:
+                        _extend_ignored_operations(path)
+                else:
+                    for input_key in self._quant_prop_graph.predecessors(node_key):
+                        if input_key in visited and post_proc_encountered and input_key in ignored_operations:
+                            # We have already visited input node, encountered post_processing node in current path,
+                            # and marked input node as ignored, then we can add entire path to ignored_operations
+                            _extend_ignored_operations(path)
+                        elif input_key in visited and not post_proc_encountered and input_key not in ignored_operations:
+                            # We have already visited input node but did not add it to ignored_operations (no post_proccessing node above)
+                            # and did not encounter post_processing node in current path,
+                            # then we can stop traversal
+                            pass
+                        else:
+                            stack.append((path + [input_key], post_proc_encountered))
+            return ignored_operations
+
+        ignored_ops = get_ignored_operations(output_nodes)
+        return ignored_ops
 
 
 class QuantizerPropagationSolver:
@@ -515,6 +526,11 @@ class QuantizerPropagationSolver:
     def _add_node_to_ignored(self, node_key: str, quant_prop_graph: QuantizerPropagationStateGraph) -> None:
         quant_prop_graph.ignored_node_keys[node_key] = IgnoreReason.AUTOGENERATED
         quant_prop_graph.nodes[node_key][quant_prop_graph.IS_IN_IGNORED_SCOPES] = True
+        # If node has weights, also remove the weight quantizers
+        underlying_nncf_nodes = quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[node_key]
+        for node in underlying_nncf_nodes:
+            if node.node_name in self._weight_quantizable_node_names_vs_qconfigs:
+                self._weight_quantizable_node_names_vs_qconfigs.pop(node.node_name)
 
     def _map_quantization_points_to_prop_quantizers(
         self,
