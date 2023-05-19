@@ -13,6 +13,7 @@
 
 - [What is Neural Network Compression Framework (NNCF)?](#what-is-Neural-Network-Compression-Framework)
 - [Key features of NNCF](#key-features)
+- [Documentation](#documentation)
 
 ## What is Neural Network Compression Framework?
 
@@ -48,10 +49,6 @@ learning frameworks.
 |[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
 |[Movement pruning](./nncf/experimental/torch/sparsity/movement/MovementSparsity.md) | Experimental | Not supported |
 
-
-
-
-
 - Automatic, configurable model graph transformation to obtain the compressed model.
   > **NOTE**: Limited support for TensorFlow models. The models created using Sequential or Keras Functional API are only supported.
 - Common interface for compression methods.
@@ -63,6 +60,10 @@ learning frameworks.
 joint (movement) pruning, quantization and distillation (JPQD), end-to-end from NNCF optimization to compressed OpenVINO IR.
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai/latest/home.html).
 - Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
+
+## Documentation
+The latest user documentation for NNCF is available [here](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html).
+This documentation covers detailed information about NNCF algorithms and functions needed for the contribution to NNCF.  
 
 ## Usage
 
