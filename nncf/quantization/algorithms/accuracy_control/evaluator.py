@@ -75,6 +75,16 @@ class Evaluator:
 
         metric, values_for_each_item = self._validation_fn(model_for_inference, dataset.get_data(indices))
 
+        if self.is_metric_mode():
+            # This casting is necessary to cover the following cases:
+            # - np.array(1.0, dtype=np.float32)
+            # - np.array([1.0], dtype=np.float32)
+            # - torch.tensor(1.0, dtype=torch.float32)
+            # - torch.tensor([1.0], dtype=torch.float32)
+            # - tf.constant(1.0, dtype=tf.float32
+            # - tf.constant([1.0], dtype=tf.float32)
+            values_for_each_item = [float(x) for x in values_for_each_item]
+
         return metric, values_for_each_item
 
     def _determine_mode(self, model_for_inference: TModel, dataset: Dataset) -> None:
@@ -95,6 +105,14 @@ class Evaluator:
         if self._metric_mode is not None:
             return
 
+        convert_to_float_possible = True
+        if values_for_each_item is not None:
+            # pylint: disable=W0703
+            try:
+                _ = float(values_for_each_item[0])
+            except Exception:
+                convert_to_float_possible = False
+
         # Analyze `metric_value` and `values_for_each_item` values:
         # +--------------+----------------------+-------------+
         # | metric_value | values_for_each_item | metric_mode |
@@ -113,9 +131,7 @@ class Evaluator:
         # +--------------+----------------------+-------------+
 
         self._metric_mode = False
-        if isinstance(metric_value, float) and (
-            values_for_each_item is None or isinstance(values_for_each_item[0], float)
-        ):
+        if isinstance(metric_value, float) and (values_for_each_item is None or convert_to_float_possible):
             self._metric_mode = True
         elif values_for_each_item is not None and not isinstance(values_for_each_item[0], list):
             raise RuntimeError("Unexpected return value from provided validation function.")
