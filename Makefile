@@ -4,9 +4,6 @@ ifdef DATA
 	DATA_ARG := --data $(DATA)
 endif
 
-
-###############################################################################
-# install requirements to CI
 install-pre-commit:
 	pip install pre-commit==3.2.2
 
