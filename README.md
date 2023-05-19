@@ -9,9 +9,15 @@
  
 </div>
 
+## Contents:
+
+- [What is Neural Network Compression Framework?](#what-is-Neural-Network-Compression-Framework)
+
+# What is Neural Network Compression Framework?
+
 _For the installation instructions, [click here](#installation)._
 
-NNCF provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html) with minimal accuracy drop.
+Neural Network Compression Framework (NNCF) provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html) with minimal accuracy drop.
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
