@@ -285,6 +285,8 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 Compact scripts demonstrating quantization and corresponding inference speed boost: 
 - [Post-Training Quantization of MobileNet v2 OpenVINO Model](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 - [Post-Training Quantization of YOLOv8 OpenVINO Model](examples/post_training_quantization/openvino/yolov8/README.md)
+- [Post-Training Quantization of Anomaly Classification OpenVINO model with control of accuracy metric](examples/post_training_quantization/openvino/quantize_with_accuracy_control/README.md)
+- [Post-Training Quantization of YOLOv8 OpenVINO Model with control of accuracy metric](examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)
 - [Post-Training Quantization of MobileNet v2 PyTorch Model](examples/post_training_quantization/torch/mobilenet_v2/README.md)
 - [Post-Training Quantization of SSD PyTorch Model](examples/post_training_quantization/torch/ssd300_vgg16/README.md)
 - [Post-Training Quantization of MobileNet v2 ONNX Model](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
