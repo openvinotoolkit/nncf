@@ -402,13 +402,14 @@ class BiasCorrection(Algorithm):
         # Collects list of the statistics that needed for the future layers.
         needed_stats_list = []
         for i in range(position + 1, len(subgraphs_data)):
-            needed_stats_list.extend(subgraphs_data[i]["subgraph_input_names"])
+            input_names = subgraphs_data[i]["subgraph_input_names"]
+            needed_stats_list.extend([self._collected_stat_inputs_map[name][0] for name in input_names])
 
         node_inputs_name = subgraphs_data[position]["subgraph_input_names"]
         for node_input_name in node_inputs_name:
             activation_name, _ = self._collected_stat_inputs_map[node_input_name]
-            if node_input_name not in needed_stats_list and activation_name in self._fp_inputs:
-                nncf_logger.debug(f"Dropped {node_input_name} input statistics.")
+            if activation_name not in needed_stats_list and activation_name in self._fp_inputs:
+                nncf_logger.debug(f"Dropped {activation_name} output statistics.")
                 self._fp_inputs[activation_name] = []
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
