@@ -71,6 +71,8 @@ joint (movement) pruning, quantization and distillation (JPQD), end-to-end from 
 ## Documentation
 The latest user documentation for NNCF is available [here](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html).
 
+NNCF API documentation can be found [here](https://openvinotoolkit.github.io/nncf/autoapi/nncf/).
+
 This documentation covers detailed information about NNCF algorithms and functions needed for the contribution to NNCF.  
 
 ## Usage
