@@ -244,7 +244,8 @@ class PostprocessingNodeLocator:
     def get_post_processing_node_keys(self) -> Set[str]:
         """
         Finds out the nodes of the QuantizerPropagationStateGraph, which are in post-processing part of the model.
-        Starting from the output nodes all the nodes are added to path, until the quantizable nodes with weights are faced.
+        Starting from the output nodes all the nodes are added to path,
+        until the quantizable nodes with weights are faced.
         If the path with the nodes has the post-processing marker node,
         all the nodes in this path (except outputs and nodes with weights) will be added into ignored.
 
@@ -288,7 +289,8 @@ class PostprocessingNodeLocator:
                             # and marked input node as ignored, then we can add entire path to ignored_operations
                             _extend_ignored_operations(path)
                         elif input_key in visited and not post_proc_encountered and input_key not in ignored_operations:
-                            # We have already visited input node but did not add it to ignored_operations (no post_proccessing node above)
+                            # We have already visited input node
+                            # but did not add it to ignored_operations (no post_proccessing node above)
                             # and did not encounter post_processing node in current path,
                             # then we can stop traversal
                             pass
