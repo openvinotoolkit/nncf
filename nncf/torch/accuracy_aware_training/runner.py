@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import os.path as osp
-from typing import Callable, Dict
+from typing import Dict
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
