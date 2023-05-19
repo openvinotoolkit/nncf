@@ -15,8 +15,7 @@ NNCF provides a suite of advanced algorithms for Neural Networks inference optim
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
-NNCF provides samples that demonstrate the usage of compression algorithms for three different use cases on public PyTorch and 
-TensorFlow models and datasets: Image Classification, Object Detection and Semantic Segmentation. 
+NNCF provides samples that demonstrate the usage of compression algorithms for different use cases and models. 
 [Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
 the end of this document.
 
@@ -27,11 +26,9 @@ learning frameworks.
 ## Key Features
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                       |PyTorch|TensorFlow|   ONNX   |       OpenVINO     |
+| Compression algorithm                                                       |OpenVINO|TensorFlow|   ONNX   |      PyTorch      |
 |:----------------------------------------------------------------------------| :---: | :---: |:--------:|:------------------:|
-| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Preview |
-
-_Preview means that this is a work in progress and NNCF does not guarantee the full functional support._
+| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| SUpported |
 
 ### Training-Time Compression Algorithms
 
