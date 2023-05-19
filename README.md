@@ -277,6 +277,7 @@ For a quicker start with NNCF-powered compression, try sample notebooks and scri
 ### Model Compression Notebooks 
 
 A collection of ready-to-run Jupyter* notebooks are available to demonstrate how to use NNCF compression algorithms to optimize models for inference with the OpenVINO Toolkit:
+- [Accelerate Inference of NLP models with Post-Training Qunatization API of NNCF](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/105-language-quantize-bert/README.md)
 - [Post-Training Quantization of Pytorch model with NNCF](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/112-pytorch-post-training-quantization-nncf)
 - [Optimizing PyTorch models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)
 - [Optimizing TensorFlow models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/305-tensorflow-quantization-aware-training)
