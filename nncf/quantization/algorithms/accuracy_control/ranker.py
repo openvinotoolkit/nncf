@@ -21,11 +21,13 @@ from nncf.common.graph import NNCFNode
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
-from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
+from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 from nncf.quantization.passes import remove_shapeof_subgraphs
 
 TModel = TypeVar("TModel")
@@ -98,20 +100,11 @@ class Ranker:
         self._dataset = dataset
         self._algo_backend = algo_backend
         self._evaluator = evaluator
+        self._ranking_fn = ranking_fn
         # We don't need to re-calculate values for the initial model
         # because they don't change. So use this attribute to store
         # them to improve execution time.
         self._reference_values_for_each_item = None
-
-        if ranking_fn is None:
-            if self._evaluator.is_metric_mode():
-                ranking_fn = operator.sub
-                metric_name = "ORIGINAL"
-            else:
-                ranking_fn = normalized_mse
-                metric_name = "NMSE"
-            nncf_logger.info(f"{metric_name} metric is used to rank quantizers")
-        self._ranking_fn = ranking_fn
 
     def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
         """
@@ -172,6 +165,9 @@ class Ranker:
         :param approximate_values_for_each_item: List of approximate values.
         :return: List of ranked groups of quantizers.
         """
+        if self._ranking_fn is None:
+            self._ranking_fn = self._create_ranking_fn(get_backend(initial_model))
+
         if reference_values_for_each_item is None:
             if self._reference_values_for_each_item is None:
                 nncf_logger.info("Collecting metrics for each data item using an initial model")
@@ -234,3 +230,19 @@ class Ranker:
             ranking_score = sum(errors) / len(errors)
 
         return ranking_score
+
+    def _create_ranking_fn(self, backend: BackendType) -> Callable[[List[TTensor], List[TTensor]], float]:
+        """
+        Creates ranking function.
+
+        :return: The ranking function.
+        """
+        if self._evaluator.is_metric_mode():
+            ranking_fn = operator.sub
+            metric_name = "ORIGINAL"
+        else:
+            ranking_fn = create_normalized_mse_func(backend)
+            metric_name = "NMSE"
+        nncf_logger.info(f"{metric_name} metric is used to rank quantizers")
+
+        return ranking_fn
