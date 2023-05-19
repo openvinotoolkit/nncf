@@ -15,7 +15,7 @@ NNCF provides a suite of advanced algorithms for Neural Networks inference optim
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
-NNCF provides [examples](#nncf_usage) and samples that demonstrate the usage of compression algorithms for different use cases and models. 
+NNCF provides [examples](#nncf_usage) and [samples](#nncf_samples) that demonstrate the usage of compression algorithms for different use cases and models. 
 [Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
 the end of this document.
 
@@ -255,6 +255,7 @@ compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md).
 
+<a name="nncf_samples"></a>
 ## Model Compression Samples
 
 For a quicker start with NNCF-powered compression, try sample notebooks and scripts presented below.
