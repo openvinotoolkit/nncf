@@ -14,6 +14,15 @@
 - [What is Neural Network Compression Framework (NNCF)?](#what-is-Neural-Network-Compression-Framework)
 - [Key features of NNCF](#key-features)
 - [Documentation](#documentation)
+- [Usage examples](#usage)
+- [Model compression samples](#Model-compression-samples)
+- [Third-party repository integration](#Third-party-repository-integration)
+- [System requirements](#System-requirements)
+- [Installation guide](#Installation-guide)
+- [Contributing guide](#Contributing-Guide)
+- [NNCF Compressed Model Zoo](#NNCF-Compressed-Model-Zoo)
+- [Citing](#Citing)
+- [Useful links](#Useful-links)
 
 ## What is Neural Network Compression Framework?
 
@@ -314,7 +323,7 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 
 This repository is tested on Python* 3.8.10, PyTorch* 1.12.1 (NVidia CUDA\* Toolkit 11.6) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
 
-## Installation
+## Installation Guide
 For detailed installation instructions please refer to the [Installation](./docs/Installation.md) page.
 
 NNCF can be installed as a regular PyPI package via pip:
@@ -334,7 +343,7 @@ conda install -c conda-forge nncf
 
 You may also use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
 
-## Contributing
+## Contributing Guide
 Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
 
 ## NNCF Compressed Model Zoo
@@ -500,14 +509,11 @@ to find instruction and links to exact configuration files and final checkpoints
 ```
 
 ## Useful links
-- [Documentation](./docs)
+- [NNCF Documentation](./docs)
 - Example scripts (model objects available through links in respective README.md files):
     - [PyTorch](./examples/torch)
     - [TensorFlow](./examples/tensorflow)
-- [FAQ](./docs/FAQ.md)
+- [NNCF FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov) utilizes NNCF as a compression backend within the renowned `transformers` repository.
 - [Model Optimization Guide](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
-
-## Legal Information
-[*] Other names and brands may be claimed as the property of others.
