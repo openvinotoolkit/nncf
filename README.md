@@ -69,11 +69,12 @@ joint (movement) pruning, quantization and distillation (JPQD), end-to-end from 
 - Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 ## Documentation
+
+This documentation covers detailed information about NNCF algorithms and functions needed for the contribution to NNCF.  
+
 The latest user documentation for NNCF is available [here](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html).
 
 NNCF API documentation can be found [here](https://openvinotoolkit.github.io/nncf/autoapi/nncf/).
-
-This documentation covers detailed information about NNCF algorithms and functions needed for the contribution to NNCF.  
 
 ## Usage
 
