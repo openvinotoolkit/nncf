@@ -50,7 +50,7 @@ def multiple_inputs_as_dict_transform_fn(data_item):
         [ModelWithMultipleInputs(), multiple_inputs_transform_fn, False],
         [ModelWithMultipleInputs(), multiple_inputs_transform_fn, True],
         [ModelWithMultipleInputs(), multiple_inputs_as_dict_transform_fn, False],
-        [ModelWithMultipleInputs(), multiple_inputs_as_dict_transform_fn, True]
+        [ModelWithMultipleInputs(), multiple_inputs_as_dict_transform_fn, True],
     ],
     ids=[
         "single_input_native",
