@@ -15,7 +15,7 @@ NNCF provides a suite of advanced algorithms for Neural Networks inference optim
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
-NNCF provides samples that demonstrate the usage of compression algorithms for different use cases and models. 
+NNCF provides [examples](#nncf_usage) and samples that demonstrate the usage of compression algorithms for different use cases and models. 
 [Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
 the end of this document.
 
@@ -57,6 +57,7 @@ joint (movement) pruning, quantization and distillation (JPQD), end-to-end from 
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai/latest/home.html).
 - Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
+<a name="nncf_usage"></a>
 ## Usage
 
 ### Post-Training Quantization
