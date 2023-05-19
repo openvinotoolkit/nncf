@@ -26,7 +26,7 @@ learning frameworks.
 ## Key Features
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                       |OpenVINO|TensorFlow|   ONNX   |      PyTorch      |
+| Compression algorithm                                                       |OpenVINO|PyTorch|   TensorFlow   |     ONNX       |
 |:----------------------------------------------------------------------------| :---: | :---: |:--------:|:------------------:|
 | [Post-Trainig Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Supported |
 
