@@ -26,8 +26,6 @@
 
 ## What is Neural Network Compression Framework?
 
-_For the installation instructions, [click here](#installation)._
-
 Neural Network Compression Framework (NNCF) provides a suite of advanced algorithms for neural networks inference optimization in [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html) with minimal accuracy drop.
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
@@ -310,6 +308,9 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
   
   NNCF is integrated into OpenVINO Training Extensions as model optimization backend. So you can train, optimize and export new models based on the available model templates as well as run exported models with OpenVINO.
 
+- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov) 
+  NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
+
 ### Git patches for third-party repository
 See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into the following repositories:
   - [huggingface-transformers](third_party_integration/huggingface_transformers/README.md)
@@ -516,4 +517,4 @@ to find instruction and links to exact configuration files and final checkpoints
 - [NNCF FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov) utilizes NNCF as a compression backend within the renowned `transformers` repository.
-- [Model Optimization Guide](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
+- [OpenVINO Model Optimization Guide](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
