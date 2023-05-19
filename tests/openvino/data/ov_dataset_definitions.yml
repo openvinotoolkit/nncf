@@ -19,9 +19,9 @@ datasets:
   - name: imagenette2-320
     annotation_conversion:
       converter: imagenet
-      annotation_file: imagenette2-320/imagenette2-320_val.txt
+      annotation_file: ac_imagenette2-320/imagenette2-320_val.txt
     annotation: imagenette2-320.pickle
-    data_source: imagenette2-320/val/
+    data_source: ac_imagenette2-320/
     metrics:
       - name: accuracy@top1
         type: accuracy

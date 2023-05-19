@@ -1,4 +1,3 @@
-PYLINT_VERSION := 2.13.9
 JUNITXML_PATH ?= nncf-tests.xml
 
 ifdef DATA
@@ -7,6 +6,10 @@ endif
 
 install-pre-commit:
 	pip install pre-commit==3.2.2
+
+install-pylint:
+	pip install pylint==2.13.9
+	pip install pylintfileheader==0.3.2
 
 ###############################################################################
 # ONNX backend
@@ -18,8 +21,7 @@ install-onnx-test:
 	pip install -r tests/onnx/benchmarking/requirements.txt
 	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
-install-onnx-dev: install-onnx-test install-pre-commit
-	pip install pylint==$(PYLINT_VERSION)
+install-onnx-dev: install-onnx-test install-pre-commit install-pylint
 
 test-onnx:
 	pytest tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
@@ -48,8 +50,7 @@ install-openvino-test:
 	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
 	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git#subdirectory=tools/model_tools
 
-install-openvino-dev: install-openvino-test install-pre-commit
-	pip install pylint==$(PYLINT_VERSION)
+install-openvino-dev: install-openvino-test install-pre-commit install-pylint
 
 test-openvino:
 	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
@@ -75,8 +76,7 @@ install-tensorflow-test:
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/tensorflow/requirements.txt
 
-install-tensorflow-dev: install-tensorflow-test install-pre-commit
-	pip install pylint==$(PYLINT_VERSION)
+install-tensorflow-dev: install-tensorflow-test install-pre-commit install-pylint
 
 test-tensorflow:
 	pytest tests/common tests/tensorflow    \
@@ -103,8 +103,7 @@ install-torch-test:
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/torch/requirements.txt
 
-install-torch-dev: install-torch-test install-pre-commit
-	pip install pylint==$(PYLINT_VERSION)
+install-torch-dev: install-torch-test install-pre-commit install-pylint
 
 test-torch:
 	pytest tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)

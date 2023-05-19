@@ -29,6 +29,9 @@ ignore-docstrings = yes
 ignored-modules = numpy,torch,cv2,openvino,tensorflow
 extension-pkg-whitelist = torch,cv2
 init-hook='import sys; sys.setrecursionlimit(8 * sys.getrecursionlimit())' # to avoid https://stackoverflow.com/questions/36496192/pylint-infinite-recursion-in-astriod-package
+load-plugins=pylintfileheader
+file-header-path=.file-header
+file-header-ignore-empty-files=yes
 
 [SIMILARITIES]
 ignore-imports = yes
