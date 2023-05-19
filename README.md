@@ -28,7 +28,7 @@ learning frameworks.
 
 | Compression algorithm                                                       |OpenVINO|TensorFlow|   ONNX   |      PyTorch      |
 |:----------------------------------------------------------------------------| :---: | :---: |:--------:|:------------------:|
-| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| SUpported |
+| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Supported |
 
 ### Training-Time Compression Algorithms
 
