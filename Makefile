@@ -45,13 +45,14 @@ install-openvino-test:
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/experimental/openvino/bert/requirements.txt
 	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
+	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git#subdirectory=tools/model_tools
+
+install-openvino-dev: install-openvino-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/quantize_with_accuracy_control/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
-	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git#subdirectory=tools/model_tools
 
-install-openvino-dev: install-openvino-test install-pre-commit install-pylint
 
 test-openvino:
 	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
@@ -98,9 +99,10 @@ install-torch-test:
 	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/torch/requirements.txt
-	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
 install-torch-dev: install-torch-test install-pre-commit install-pylint
+	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
+	pip install -r docs/api/requirements.txt
 
 test-torch:
 	pytest tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
