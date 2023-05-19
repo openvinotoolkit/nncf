@@ -35,6 +35,13 @@ def multiple_inputs_transform_fn(data_item):
     return data_item["input_0"], data_item["input_1"]
 
 
+def multiple_inputs_as_dict_transform_fn(data_item):
+    return {
+        "Input_1": data_item["input_0"],
+        "Input_2": data_item["input_1"],
+    }
+
+
 @pytest.mark.parametrize(
     "model,transform_fn,use_pot",
     [
@@ -42,12 +49,16 @@ def multiple_inputs_transform_fn(data_item):
         [ModelWithSingleInput(), single_input_transform_fn, True],
         [ModelWithMultipleInputs(), multiple_inputs_transform_fn, False],
         [ModelWithMultipleInputs(), multiple_inputs_transform_fn, True],
+        [ModelWithMultipleInputs(), multiple_inputs_as_dict_transform_fn, False],
+        [ModelWithMultipleInputs(), multiple_inputs_as_dict_transform_fn, True]
     ],
     ids=[
         "single_input_native",
         "signle_input_pot",
         "multiple_inputs_native",
         "multiple_inputs_pot",
+        "multiple_inputs_as_dict_native",
+        "multiple_inputs_as_dict_pot",
     ],
 )
 def test_transform_fn(model, transform_fn, use_pot: bool):
