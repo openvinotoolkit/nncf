@@ -283,10 +283,12 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 
 ### Post-Training Quantization Samples
 Compact scripts demonstrating quantization and corresponding inference speed boost: 
-- [PyTorch Post-Training Quantization sample](examples/post_training_quantization/torch/mobilenet_v2/README.md)
-- [TensorFlow Post-Training Quantization sample](examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)
-- [ONNX Post-Training Quantization sample](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
-- [OpenVINO Post-Training Quantization sample](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
+- [Post-Training Quantization of MobileNet v2 OpenVINO Model](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
+- [Post-Training Quantization of YOLOv8 OpenVINO Model](examples/post_training_quantization/openvino/yolov8/README.md)
+- [Post-Training Quantization of MobileNet v2 PyTorch Model](examples/post_training_quantization/torch/mobilenet_v2/README.md)
+- [Post-Training Quantization of SSD PyTorch Model](examples/post_training_quantization/torch/ssd300_vgg16/README.md)
+- [Post-Training Quantization of MobileNet v2 ONNX Model](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
+- [Post-Training Quantization of MobileNet v2 TensorFlow Model](examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)
 
 ### Training-Time Compression Samples
 These examples provide full pipelines including compression, training and inference for classification, object detection and segmentation tasks.
