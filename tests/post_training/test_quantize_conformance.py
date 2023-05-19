@@ -38,6 +38,7 @@ from torchvision.transforms import InterpolationMode
 import nncf
 from nncf.experimental.torch.quantization.quantize_model import quantize_impl as pt_impl_experimental
 from nncf.openvino.quantization.quantize_model import quantize_impl as ov_quantize_impl
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.post_training.conftest import PipelineType
 from tests.post_training.conftest import RunInfo
@@ -553,6 +554,7 @@ def ov_runner(
     ov_model_path = output_folder / (model_name + ".xml")
     core = ov.Core()
     ov_model = core.read_model(ov_model_path)
+    model_quantization_params["advanced_parameters"] = AdvancedQuantizationParameters(backend_params={"use_pot": True})
     ov_quantized_model = nncf.quantize(ov_model, ov_calibration_dataset, **model_quantization_params)
 
     ov_output_path = output_folder / "openvino"
