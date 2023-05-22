@@ -62,11 +62,6 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTDeformConv2dMetatype,
         operator_metatypes.PTModuleDeformConv2dMetatype,
         UnknownMetatype,
-        # Ticket: 108478
-        operator_metatypes.PTAbsMetatype,
-        operator_metatypes.PTExpMetatype,
-        operator_metatypes.PTLogMetatype,
-        operator_metatypes.PTSqrtMetatype,
     ],
     QuantizationTrait.QUANTIZATION_AGNOSTIC: [
         operator_metatypes.PTThresholdMetatype,

@@ -38,12 +38,6 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         onnx_metatypes.ONNXDequantizeLinearMetatype,
         onnx_metatypes.ONNXDeformableConvolutionMetatype,
         UnknownMetatype,
-        # Ticket: 108478
-        onnx_metatypes.ONNXReluMetatype,
-        onnx_metatypes.ONNXExpMetatype,
-        onnx_metatypes.ONNXLogMetatype,
-        onnx_metatypes.ONNXAbsMetatype,
-        onnx_metatypes.ONNXSqrtMetatype,
     ],
     QuantizationTrait.QUANTIZATION_AGNOSTIC: [
         onnx_metatypes.ONNXMaxPoolMetatype,

@@ -56,12 +56,6 @@ DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
         ov_metatypes.OVAssignMetatype,
         ov_metatypes.OVDeformableConvolutionMetatype,
         UnknownMetatype,
-        # Ticket: 108478
-        ov_metatypes.OVReluMetatype,
-        ov_metatypes.OVLogMetatype,
-        ov_metatypes.OVExpMetatype,
-        ov_metatypes.OVSqrtMetatype,
-        ov_metatypes.OVAbsMetatype,
     ],
     QuantizationTrait.QUANTIZATION_AGNOSTIC: QUANTIZE_AGNOSTIC_OPERATIONS,
     QuantizationTrait.CONCAT: [ov_metatypes.OVConcatMetatype],

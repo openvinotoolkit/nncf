@@ -58,12 +58,6 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         op_metatypes.TFSigmoidOpMetatype,
         op_metatypes.TFSoftmaxOpMetatype,
         UnknownMetatype,
-        # Ticket: 108478
-        op_metatypes.TFReluOpMetatype,
-        op_metatypes.TFAbsOpMetatype,
-        op_metatypes.TFExpOpMetatype,
-        op_metatypes.TFLogOpMetatype,
-        op_metatypes.TFSqrtOpMetatype,
     ],
     QuantizationTrait.QUANTIZATION_AGNOSTIC: LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
     + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
