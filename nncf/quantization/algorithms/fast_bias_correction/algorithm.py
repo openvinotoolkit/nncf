@@ -11,7 +11,6 @@
 
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
-
 import numpy as np
 from tqdm import tqdm
 
@@ -28,8 +27,8 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import get_backend
 from nncf.common.utils.backend import copy_model
+from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 
