@@ -266,8 +266,8 @@ class BiasCorrection(Algorithm):
         # we use the latter as the outputs of the subgraph.
         subgraph_output_nodes = subgraph_output_nodes if subgraph_output_nodes else statistic_nodes
         subgraph_data = {
-            "subgraph_input_names": [n.node_name for n in subgraph_input_nodes],
-            "subgraph_output_names": [n.node_name for n in subgraph_output_nodes],
+            "subgraph_input_names": set([n.node_name for n in subgraph_input_nodes]),
+            "subgraph_output_names": set([n.node_name for n in subgraph_output_nodes]),
         }
 
         return subgraph_data
@@ -597,7 +597,7 @@ class BiasCorrection(Algorithm):
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model)
         model_extraction_command = self._backend_entity.model_extraction_command(
-            set(input_node_names), set(output_node_names)
+            input_node_names, output_node_names
         )
         transformation_layout.register(model_extraction_command)
         return model_transformer.transform(transformation_layout)
