@@ -23,7 +23,7 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
 
-class HWFusedPatterns:
+class Patterns:
     """
     Stores all layer patterns to be fused determined by hardware specific.
     This essence is used in the quantization algorithm.
@@ -388,3 +388,7 @@ class PatternNames(Enum):
         "softmax_reshape_transpose_matmul", model_types=[ModelType.TRANSFORMER]
     )
     STABLE_DIFFUSION = PatternDesc("stable_diffusion", model_types=[ModelType.TRANSFORMER])
+
+
+class IgnoredPatternNames(Enum):
+    SOFTMAX_MATMUL_ANY = PatternDesc("softmax_matmul_any")
