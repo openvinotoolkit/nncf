@@ -111,7 +111,3 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def remove_fq_from_inputs(model: onnx.ModelProto) -> onnx.ModelProto:
         return remove_fq_from_inputs(model)
-
-    @staticmethod
-    def insert_null_biases(model: onnx.ModelProto) -> onnx.ModelProto:
-        return model

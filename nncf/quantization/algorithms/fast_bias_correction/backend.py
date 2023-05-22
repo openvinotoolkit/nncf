@@ -182,13 +182,3 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param model: TModel instance.
         :return: TModel without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
         """
-
-    @staticmethod
-    @abstractmethod
-    def insert_null_biases(model: TModel) -> TModel:
-        """
-        This method finds and inserts zero biases for the layers that should have it.
-
-        :param model: TModel instance.
-        :return: TModel instance with zero biases
-        """

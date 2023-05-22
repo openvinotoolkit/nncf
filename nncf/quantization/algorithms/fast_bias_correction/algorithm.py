@@ -11,6 +11,7 @@
 
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
+
 import numpy as np
 from tqdm import tqdm
 
@@ -27,8 +28,8 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
+from nncf.common.utils.backend import copy_model
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 
@@ -123,7 +124,6 @@ class FastBiasCorrection(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        model = self._backend_entity.insert_null_biases(model)
 
         model_copy = self._backend_entity.remove_fq_from_inputs(copy_model(model))
         nncf_graph = NNCFGraphFactory.create(model)
@@ -320,9 +320,7 @@ class FastBiasCorrection(Algorithm):
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        model_copy = copy_model(model)
-        model_copy = self._backend_entity.insert_null_biases(model_copy)
-        nncf_graph = NNCFGraphFactory.create(model_copy)
+        nncf_graph = NNCFGraphFactory.create(model)
         nodes_with_bias = [
             node for node in nncf_graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node, nncf_graph)
         ]

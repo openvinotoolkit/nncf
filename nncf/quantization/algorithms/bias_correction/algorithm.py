@@ -309,7 +309,16 @@ class BiasCorrection(Algorithm):
         :return: List of the dictionaries with the input data.
         """
         feed_dicts = []
-        for stat_id in range(self.subset_size):
+        statistics_size = self.subset_size
+        statistics_per_input = {}
+
+        for input_node_name in subgraph_data["input_node_names"]:
+            input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
+            input_fp = self._get_fp_inputs(statistic_points, input_node_name)
+            statistics_per_input[input_tensor_name] = input_fp
+            statistics_size = min(statistics_size, len(input_fp))
+
+        for stat_id in range(statistics_size):
             feed_dict = {}
             for input_node_name in subgraph_data["subgraph_input_names"]:
                 input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
@@ -317,7 +326,9 @@ class BiasCorrection(Algorithm):
                 # but those that follow them, we need to take this into account when creating feed dicts.
                 activation_name, port_id = self._collected_stat_inputs_map[input_node_name]
                 input_fp = self._get_fp_inputs(statistic_points, node_name=activation_name, port_id=port_id)
-                feed_dict[input_tensor_name] = input_fp[stat_id]
+                feed_dict[input_tensor_name] = np.mean(
+                    statistics_per_input[input_tensor_name][stat_id], axis=0, keepdims=True
+                )
             feed_dicts.append(feed_dict)
         return feed_dicts
 
