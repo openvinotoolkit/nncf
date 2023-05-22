@@ -154,7 +154,7 @@ class BiasCorrection(Algorithm):
         subgraphs_data = [self._get_subgraph_data_for_node(node, nncf_graph, model) for node in nodes_with_bias]
 
         for position, (node, subgraph_data) in tqdm(
-            list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="Biases correction"
+            list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="(BC) Bias correction"
         ):
             node_name = node.node_name
 
@@ -312,7 +312,7 @@ class BiasCorrection(Algorithm):
         statistics_size = self.subset_size
         statistics_per_input = {}
 
-        for input_node_name in subgraph_data["input_node_names"]:
+        for input_node_name in subgraph_data["subgraph_input_names"]:
             input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
             activation_name, port_id = self._collected_stat_inputs_map[input_node_name]
             input_fp = self._get_fp_inputs(statistic_points, node_name=activation_name, port_id=port_id)
