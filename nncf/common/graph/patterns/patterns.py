@@ -391,4 +391,5 @@ class PatternNames(Enum):
 
 
 class IgnoredPatternNames(Enum):
-    SOFTMAX_MATMUL_ANY = PatternDesc("softmax_matmul_any")
+    SOFTMAX_MATMUL = PatternDesc("softmax_matmul")
+    SOFTMAX_RESHAPE_MATMUL = PatternDesc("softmax_reshape_matmul")
