@@ -232,7 +232,8 @@ class TemplateTestPTQParams:
         ],
     )
     def test_quantization_points_overflow_fix(self, overflow_fix, affected_target_points, ignored_ops):
-        # Checks the return value of _get_quantization_points_overflow_fix based on the overflow_fix and weight target points.
+        # Checks the return value of _get_quantization_points_overflow_fix
+        # based on the overflow_fix and weight target points.
         model = ModelToTestOverflowFix(self.metatypes_mapping)
         nncf_graph = model.nncf_graph
 

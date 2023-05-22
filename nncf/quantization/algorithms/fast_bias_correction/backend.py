@@ -59,7 +59,9 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph):
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+    ) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 

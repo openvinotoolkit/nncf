@@ -149,16 +149,13 @@
                 "mobilenet_v3_small_imagenet_rb_sparsity_int8": {
                     "config": "examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json",
                     "reference": "mobilenet_v3_small_imagenet",
-                    "target": 67.44,
+                    "target": 67.69,
                     "target_init": 0.1,
                     "resume": "mobilenet_v3_small_imagenet_rb_sparsity_int8",
                     "metric_type": "Acc@1",
                     "model_description": "MobileNet V3 (Small)",
                     "compression_description": "INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)",
-                    "reverse_input_channels": true,
-                    "diff_target_min": -0.2,
-                    "diff_target_max": 0.15,
-                    "diff_fp32_min": -1.05
+                    "reverse_input_channels": true
                 },
                 "mobilenet_v3_large_imagenet": {
                     "config": "examples/tensorflow/classification/configs/mobilenet_v3_large_imagenet.json",

@@ -13,6 +13,7 @@ from collections import deque
 from typing import Any, Dict, List, Optional, TypeVar
 
 import numpy as np
+from tqdm import tqdm
 
 from nncf import Dataset
 from nncf import nncf_logger
@@ -130,6 +131,7 @@ class BiasCorrection(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
+        model = self._backend_entity.insert_null_biases(model)
         main_transformations_layout = TransformationLayout()
         main_model_transformer = ModelTransformerFactory.create(model)
 
@@ -145,7 +147,9 @@ class BiasCorrection(Algorithm):
                 nodes_with_bias.append(node)
         subgraphs_data = [self._get_subgraph_data_for_node(node, nncf_graph) for node in nodes_with_bias]
 
-        for position, (node, subgraph_data) in enumerate(zip(nodes_with_bias, subgraphs_data)):
+        for position, (node, subgraph_data) in tqdm(
+            list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="Biases correction"
+        ):
             node_name = node.node_name
 
             # We do not make an additional copy of the model because
@@ -156,7 +160,7 @@ class BiasCorrection(Algorithm):
 
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
 
-            current_bias = self._backend_entity.get_bias_value(node, model, nncf_graph)
+            current_bias = self._backend_entity.get_bias_value(node, model_copy, nncf_graph)
 
             channel_axis = node.metatype.output_channel_axis
             if current_bias.ndim > 1:
@@ -296,12 +300,22 @@ class BiasCorrection(Algorithm):
         :return: List of the dictionaries with the input data.
         """
         feed_dicts = []
-        for stat_id in range(self.subset_size):
+        statistics_size = self.subset_size
+        statistics_per_input = {}
+
+        for input_node_name in subgraph_data["input_node_names"]:
+            input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
+            input_fp = self._get_fp_inputs(statistic_points, input_node_name)
+            statistics_per_input[input_tensor_name] = input_fp
+            statistics_size = min(statistics_size, len(input_fp))
+
+        for stat_id in range(statistics_size):
             feed_dict = {}
             for input_node_name in subgraph_data["input_node_names"]:
                 input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
-                input_fp = self._get_fp_inputs(statistic_points, input_node_name)
-                feed_dict[input_tensor_name] = np.mean(input_fp[stat_id], axis=0, keepdims=True)
+                feed_dict[input_tensor_name] = np.mean(
+                    statistics_per_input[input_tensor_name][stat_id], axis=0, keepdims=True
+                )
             feed_dicts.append(feed_dict)
         return feed_dicts
 
@@ -446,7 +460,8 @@ class BiasCorrection(Algorithm):
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         model_copy = self._remove_fq_from_inputs(copy_model(model))
-        nncf_graph = NNCFGraphFactory.create(model_copy) if self.nncf_graph is None else self.nncf_graph
+        model_copy = self._backend_entity.insert_null_biases(model_copy)
+        nncf_graph = NNCFGraphFactory.create(model_copy)
         statistic_container = StatisticPointsContainer()
 
         nodes_with_bias = [

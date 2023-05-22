@@ -12,6 +12,7 @@
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
+from tqdm import tqdm
 
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
@@ -132,7 +133,7 @@ class FastBiasCorrection(Algorithm):
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []
-        for node, bias_value in node_and_bias_value:
+        for node, bias_value in tqdm(list(node_and_bias_value), desc="Biases correction"):
             node_name = node.node_name
 
             if not self._backend_entity.is_quantized_weights(node, nncf_graph):
@@ -315,7 +316,7 @@ class FastBiasCorrection(Algorithm):
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
+        nncf_graph = NNCFGraphFactory.create(model)
         nodes_with_bias = [
             node for node in nncf_graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node, nncf_graph)
         ]
