@@ -162,6 +162,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
         :return: boolean indicating whether the node has a quantized weights or not
         """
+        # TODO(AlexanderDokuchaev): use only nncf_graph instead of model, after fix 111576
 
     @staticmethod
     @abstractmethod
@@ -185,6 +186,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param model: Backend-specific model.
         :return: Boolean indicating whether the node has a bias or not.
         """
+        # TODO(AlexanderDokuchaev): use only nncf_graph instead of model, after fix 111576
 
     @staticmethod
     @abstractmethod
@@ -230,3 +232,4 @@ class FastBiasCorrectionAlgoBackend(ABC):
             Name of node to collect input statistics
             Name of node to collect output statistics
         """
+        # TODO(AlexanderDokuchaev): use nncf_graph instead of model, after fix 111576
