@@ -23,7 +23,6 @@ from nncf.common.utils.registry import Registry
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.openvino.graph.model_utils import insert_null_biases
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
@@ -130,7 +129,3 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, model: ov.Model) -> Tuple[str, str]:
         return node.node_name, node.node_name
-
-    @staticmethod
-    def insert_null_biases(model: ov.Model) -> ov.Model:
-        return insert_null_biases(model)

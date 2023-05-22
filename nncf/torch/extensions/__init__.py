@@ -10,8 +10,12 @@
 # limitations under the License.
 
 import enum
+import os
+import textwrap
 from abc import ABC
 from abc import abstractmethod
+from multiprocessing.context import TimeoutError as MPTimeoutError
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from typing import Callable
 
@@ -24,6 +28,9 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
 
 EXTENSIONS = Registry("extensions")
+
+EXTENSION_LOAD_TIMEOUT_ENV_VAR = "NNCF_EXTENSION_LOAD_TIMEOUT"
+DEFAULT_EXTENSION_LOAD_TIMEOUT = 60
 
 
 class ExtensionsType(enum.Enum):
@@ -60,6 +67,10 @@ class ExtensionLoader(ABC):
         return str(get_build_directory_for_extension(cls.name()))
 
 
+class ExtensionLoaderTimeoutException(Exception):
+    """Raised when the extension takes too long to load"""
+
+
 class ExtensionNamespace:
     """
     Provides lazy loading of the underlying extension, i.e. on the first request of a function from the extension.
@@ -81,8 +92,31 @@ class ExtensionNamespace:
         :return: A callable object corresponding to the requested function.
         """
         if self._loaded_namespace is None:
+            timeout = int(os.environ.get(EXTENSION_LOAD_TIMEOUT_ENV_VAR, DEFAULT_EXTENSION_LOAD_TIMEOUT))
+            timeout = timeout if timeout > 0 else None
+
             with extension_is_loading_info_log(self._loader.name()):
-                self._loaded_namespace = self._loader.load()
+                try:
+                    pool = ThreadPool(processes=1)
+                    async_result = pool.apply_async(self._loader.load)
+                    self._loaded_namespace = async_result.get(timeout=timeout)
+                except MPTimeoutError as error:
+                    # pylint: disable=line-too-long
+                    msg = textwrap.dedent(
+                        f"""\
+                        The extension load function failed to execute within {timeout} seconds.
+                        This may be due to leftover lock files from the PyTorch C++ extension build process.
+                        If this is the case, running the following command should help:
+                            rm -rf {self._loader.get_build_dir()}
+                        For a machine with poor performance, you may try increasing the time limit by setting the environment variable:
+                            {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=180
+                        Or disable timeout by set:
+                            {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=0
+                        For more information, see FAQ entry at: https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
+                        """
+                    )
+                    raise ExtensionLoaderTimeoutException(msg) from error
+
         return getattr(self._loaded_namespace, fn_name)
 
 
