@@ -158,17 +158,17 @@ def run_benchmark(model_path: str) -> Tuple[Optional[float], str]:
     return None, cmd_output
 
 
-def benchmark_performance(model_path: str, model_name: str, skip_bench: bool) -> Optional[float]:
+def benchmark_performance(model_path: str, model_name: str, do_bench: bool) -> Optional[float]:
     """
     Receives the OpenVINO IR model and runs benchmark tool for it
 
     :param model_path: Path to the OpenVINO IR model.
     :param model_name: Model name.
-    :param skip_bench: Boolean flag to skip or run benchmark.
+    :param do_bench: Boolean flag to run benchmark.
 
     :return: FPS for successful run of benchmark_app, otherwise None.
     """
-    if skip_bench:
+    if not do_bench:
         return None
 
     try:
@@ -232,7 +232,7 @@ def benchmark_torch_model(
     dataloader: DataLoader,
     model_name: str,
     output_path: str,
-    skip_bench: bool = False,
+    do_bench: bool,
     eval: bool = True,
 ) -> RunInfo:
     """
@@ -243,7 +243,7 @@ def benchmark_torch_model(
     :param model_name: Model name.
     :param output_path: Path to save ONNX and OpenVINO IR models.
     :param eval: Boolean flag to run validation, defaults to True.
-    :param skip_bench: Boolean flag to skip or run benchmark, defaults to False.
+    :param do_bench: Boolean flag to run benchmark.
 
     :return RunInfo: Accuracy and performance metrics.
     """
@@ -255,7 +255,7 @@ def benchmark_torch_model(
     export_to_ir(onnx_path, output_path, model_name)
 
     # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name, skip_bench)
+    performance = benchmark_performance(ov_path, model_name, do_bench)
 
     # Validate accuracy
     accuracy = None
@@ -270,7 +270,7 @@ def benchmark_onnx_model(
     dataloader: DataLoader,
     model_name: str,
     output_path: str,
-    skip_bench: bool,
+    do_bench: bool,
 ) -> RunInfo:
     """
     Benchmark the ONNX model.
@@ -279,7 +279,7 @@ def benchmark_onnx_model(
     :param dataloader: Validation dataloader.
     :param model_name: Model name.
     :param output_path: Path to save ONNX and OpenVINO IR models.
-    :param skip_bench: Boolean flag to skip or run benchmark.
+    :param do_bench: Boolean flag to run benchmark.
 
     :return RunInfo: Accuracy and performance metrics.
     """
@@ -290,7 +290,7 @@ def benchmark_onnx_model(
     export_to_ir(onnx_path, output_path, model_name)
 
     # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name, skip_bench)
+    performance = benchmark_performance(ov_path, model_name, do_bench)
     # Validate accuracy
     accuracy = validate_accuracy(ov_path, dataloader)
     return RunInfo(top_1=accuracy, fps=performance)
@@ -301,7 +301,7 @@ def benchmark_ov_model(
     dataloader: DataLoader,
     model_name: str,
     output_path: str,
-    skip_bench: bool,
+    do_bench: bool,
 ) -> RunInfo:
     """
     Benchmark the OpenVINO model.
@@ -310,7 +310,7 @@ def benchmark_ov_model(
     :param dataloader: Validation dataloader.
     :param model_name: Model name.
     :param output_path: Path to save ONNX and OpenVINO IR models.
-    :param skip_bench: Boolean flag to skip or run benchmark.
+    :param do_bench: Boolean flag to run benchmark.
 
     :return RunInfo: Accuracy and performance metrics.
     """
@@ -319,7 +319,7 @@ def benchmark_ov_model(
     ov.serialize(model, str(ov_path))
 
     # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name, skip_bench)
+    performance = benchmark_performance(ov_path, model_name, do_bench)
     # Validate accuracy
     accuracy = validate_accuracy(ov_path, dataloader)
     return RunInfo(top_1=accuracy, fps=performance)
@@ -399,7 +399,7 @@ def torch_runner(
     output_folder: str,
     model_name: str,
     batch_one_dataloader: DataLoader,
-    skip_bench: bool,
+    do_bench: bool,
 ) -> RunInfo:
     """
     Run quantization of the Torch model by TORCH backend.
@@ -414,7 +414,7 @@ def torch_runner(
         batch_one_dataloader,
         q_torch_model_name,
         torch_output_path,
-        skip_bench,
+        do_bench,
     )
     return run_info
 
@@ -426,7 +426,7 @@ def torch_ptq_runner(
     output_folder: str,
     model_name: str,
     batch_one_dataloader: DataLoader,
-    skip_bench: bool,
+    do_bench: bool,
 ) -> RunInfo:
     """
     Run quantization of the Torch model by TORCH_PTQ backend.
@@ -448,7 +448,7 @@ def torch_ptq_runner(
         batch_one_dataloader,
         q_torch_model_name,
         torch_output_path,
-        skip_bench,
+        do_bench,
     )
     return run_info
 
@@ -460,7 +460,7 @@ def onnx_runner(
     output_folder: str,
     model_name: str,
     batch_one_dataloader: DataLoader,
-    skip_bench: bool,
+    do_bench: bool,
 ):
     """
     Run quantization of the ONNX model by ONNX backend.
@@ -485,7 +485,7 @@ def onnx_runner(
         batch_one_dataloader,
         q_onnx_model_name,
         onnx_output_path,
-        skip_bench,
+        do_bench,
     )
     return run_info
 
@@ -497,7 +497,7 @@ def ov_native_runner(
     output_folder: str,
     model_name: str,
     batch_one_dataloader: DataLoader,
-    skip_bench: bool,
+    do_bench: bool,
 ):
     """
     Run quantization of the OpenVINO model by OV_NATIVE backend.
@@ -528,7 +528,7 @@ def ov_native_runner(
         batch_one_dataloader,
         q_ov_native_model_name,
         ov_native_output_path,
-        skip_bench,
+        do_bench,
     )
     return run_info
 
@@ -540,7 +540,7 @@ def ov_runner(
     output_folder: str,
     model_name: str,
     batch_one_dataloader: DataLoader,
-    skip_bench: bool,
+    do_bench: bool,
 ) -> RunInfo:
     """
     Run quantization of the OpenVINO model by OV backend.
@@ -565,7 +565,7 @@ def ov_runner(
         batch_one_dataloader,
         q_ov_model_name,
         ov_output_path,
-        skip_bench,
+        do_bench,
     )
     return run_info
 
@@ -588,7 +588,7 @@ def run_ptq_timm(
     process_connection: Connection,
     report_model_name: str,
     eval_fp32: bool,
-    skip_bench: bool,
+    do_bench: bool,
 ) -> None:  # pylint: disable=W0703
     """
     Run test for the target model on selected backends.
@@ -601,7 +601,7 @@ def run_ptq_timm(
     :param process_connection: Connection to send results to main process.
     :param report_model_name: Reported name of the model.
     :param eval_fp32: Boolean flag to validate fp32.
-    :param skip_bench: Boolean flag to skip or run benchmark.
+    :param do_bench: Boolean flag to run benchmark.
     """
     torch.multiprocessing.set_sharing_strategy("file_system")  # W/A to avoid RuntimeError
 
@@ -623,7 +623,7 @@ def run_ptq_timm(
             batch_one_dataloader,
             model_name,
             output_folder,
-            skip_bench,
+            do_bench,
             eval_fp32,
         )
         # Get cached accuracy
@@ -648,7 +648,7 @@ def run_ptq_timm(
                     output_folder,
                     model_name,
                     batch_one_dataloader,
-                    skip_bench,
+                    do_bench,
                 )
             except Exception as error:
                 backend_dir = backend.value.replace(" ", "_")
@@ -687,7 +687,7 @@ def get_error_msg(traceback_path: PosixPath, backend_name: str) -> str:
 
 
 @pytest.mark.parametrize("report_model_name,", VALIDATION_SCOPE.keys())
-def test_ptq_timm(data, output, result, report_model_name, backends_list, eval_fp32, skip_bench):
+def test_ptq_timm(data, output, result, report_model_name, backends_list, eval_fp32, do_bench):
     """
     Test quantization of classification models from timm module by different backends.
     """
@@ -707,7 +707,7 @@ def test_ptq_timm(data, output, result, report_model_name, backends_list, eval_f
             process_connection,
             report_model_name,
             eval_fp32,
-            skip_bench,
+            do_bench,
         ),
     )
     process.start()
