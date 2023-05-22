@@ -443,13 +443,6 @@ def map_tune_hyperparams(tune_hyperparams):
     return {"advanced_accuracy_restorer_parameters": advanced_parameters}
 
 
-def map_convert_to_mixed_preset(convert_to_mixed_preset):
-    ctx = get_algorithm_parameters_context()
-    advanced_parameters = ctx.params.get("advanced_accuracy_restorer_parameters", AdvancedAccuracyRestorerParameters())
-    advanced_parameters.convert_to_mixed_preset = convert_to_mixed_preset
-    return {"advanced_accuracy_restorer_parameters": advanced_parameters}
-
-
 def create_parameters_for_algorithm(
     pot_parameters, supported_parameters, default_parameters, ignored_parameters, param_name_map
 ):
@@ -529,7 +522,6 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
             "max_iter_num": map_max_iter_num,
             "ranking_subset_size": map_ranking_subset_size,
             "tune_hyperparams": map_tune_hyperparams,
-            "convert_to_mixed_preset": map_convert_to_mixed_preset,
             "drop_type": map_drop_type,
         }
     )
@@ -546,6 +538,7 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
         [
             "annotation_conf_threshold",
             "metric_subset_ratio",
+            "convert_to_mixed_preset",
         ]
     )
 
