@@ -20,16 +20,16 @@ from nncf.parameters import TargetDevice
 
 class PatternsManager:
     """
-    The main purpose of the class is to return the backend- & device-specific patterns.
+    Class provides interface to get hardware or ignored full patterns graph.
     """
 
     @staticmethod
-    def get_backend_hw_patterns_map(backend: BackendType) -> Dict[PatternNames, Callable]:
+    def _get_backend_hw_patterns_map(backend: BackendType) -> Dict[PatternNames, Callable]:
         """
-        Returns the backend-specific map from the Registry.
+        Returns the backend-specific hardware patterns map from the Registry.
 
         :param backend: BackendType instance.
-        :return: Dictionary with the PatternNames instance as keys and callable as value.
+        :return: Dictionary with the PatternNames instance as keys and creator function as a value.
         """
         if backend == BackendType.ONNX:
             from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
@@ -46,44 +46,92 @@ class PatternsManager:
         raise ValueError(f"Hardware-fused patterns not implemented for {backend} backend.")
 
     @staticmethod
-    def get_backend_ignored_patterns_map(backend: BackendType) -> Dict[PatternNames, Callable]:
+    def _get_backend_ignored_patterns_map(backend: BackendType) -> Dict[PatternNames, Callable]:
+        """
+        Returns the backend-specific ignored patterns map from the Registry.
+
+        :param backend: BackendType instance.
+        :return: Dictionary with the PatternNames instance as keys and creator function as a value.
+        """
+        if backend == BackendType.ONNX:
+            from nncf.onnx.quantization.ignored_patterns import ONNX_IGNORED_PATTERNS
+
+            return ONNX_IGNORED_PATTERNS.registry_dict
         if backend == BackendType.OPENVINO:
             from nncf.openvino.quantization.ignored_patterns import OPENVINO_IGNORED_PATTERNS
 
             return OPENVINO_IGNORED_PATTERNS.registry_dict
+        if backend == BackendType.TORCH:
+            from nncf.torch.quantization.ignored_patterns import PT_IGNORED_PATTERNS
+
+            return PT_IGNORED_PATTERNS.registry_dict
+        raise ValueError(f"Ignored patterns not implemented for {backend} backend.")
 
     @staticmethod
-    def _get_patterns(pattern_desc_to_graph, device, model_type):
+    def _create_patterns_graph(patterns_to_register: Dict[PatternNames, Callable]) -> Patterns:
+        """
+        Returns a Patterns instance with registered patterns from patterns_to_register.
+
+        :param patterns_to_register: Patterns that need to be registered in the returning Patterns instance.
+        :return Patterns: Patterns with registered patterns from patterns_to_register.
+        """
         patterns = Patterns()
-        for pattern_desc, pattern in pattern_desc_to_graph.items():
+        for pattern_desc, pattern_creator in patterns_to_register.items():
+            patterns.register(pattern_creator(), pattern_desc.value.name)
+        return patterns
+
+    @staticmethod
+    def _filter_patterns(
+        patterns_to_filter: Dict[PatternNames, Callable], device: TargetDevice, model_type: ModelType
+    ) -> Dict[PatternNames, Callable]:
+        """
+        Returns all patterns from patterns_to_filter that are satisfited device and model_type parameters.
+
+        :param patterns_to_filter: Dictionary with the PatternNames instance as keys and creator function as a value.
+        :param device: TargetDevice instance.
+        :param model_type: ModelType instance.
+        :return: Filtered patterns_to_filter.
+        """
+        filtered_patterns = {}
+        for pattern_desc, pattern_creator in patterns_to_filter.items():
             pattern_desc_devices = pattern_desc.value.devices
             pattern_desc_model_types = pattern_desc.value.model_types
             devices_condition = pattern_desc_devices is None or device in pattern_desc_devices
             model_types_condition = pattern_desc_model_types is None or model_type in pattern_desc_model_types
             if devices_condition and model_types_condition:
-                patterns.register(pattern(), pattern_desc.value.name)
-        return patterns
+                filtered_patterns[pattern_desc] = pattern_creator
+        return filtered_patterns
 
     @staticmethod
     def get_full_hw_pattern_graph(
         backend: BackendType, device: TargetDevice, model_type: Optional[ModelType] = None
     ) -> GraphPattern:
         """
-        Returns the backend-, device- & model_type-specific Pattern instance.
+        Returns a GraphPattern containing all registered hardware patterns specifically for backend, device, and model_type parameters.
 
         :param backend: BackendType instance.
         :param device: TargetDevice instance.
         :param model_type: ModelType instance.
-        :return: Completed GraphPattern value based on the backend, device & model_type.
+        :return: Completed GraphPattern based on the backend, device & model_type.
         """
-        backend_registry_map = PatternsManager.get_backend_hw_patterns_map(backend)
-        hw_fused_patterns = PatternsManager._get_patterns(backend_registry_map, device, model_type)
-        return hw_fused_patterns.get_full_pattern_graph()
+        backend_patterns_map = PatternsManager._get_backend_hw_patterns_map(backend)
+        filtered_patterns = PatternsManager._filter_patterns(backend_patterns_map, device, model_type)
+        patterns_graph = PatternsManager._create_patterns_graph(filtered_patterns)
+        return patterns_graph.get_full_pattern_graph()
 
     @staticmethod
     def get_full_ignored_pattern_graph(
         backend: BackendType, device: TargetDevice, model_type: Optional[ModelType] = None
     ) -> GraphPattern:
-        backend_registry_map = PatternsManager.get_backend_ignored_patterns_map(backend)
-        ignored_patterns = PatternsManager._get_patterns(backend_registry_map, device, model_type)
-        return ignored_patterns.get_full_pattern_graph()
+        """
+        Returns a GraphPattern containing all registered ignored patterns specifically for backend, device, and model_type parameters.
+
+        :param backend: BackendType instance.
+        :param device: TargetDevice instance.
+        :param model_type: ModelType instance.
+        :return: Completed GraphPattern with registered value based on the backend, device & model_type.
+        """
+        backend_patterns_map = PatternsManager._get_backend_ignored_patterns_map(backend)
+        filtered_patterns = PatternsManager._filter_patterns(backend_patterns_map, device, model_type)
+        patterns_graph = PatternsManager._create_patterns_graph(filtered_patterns)
+        return patterns_graph.get_full_pattern_graph()
