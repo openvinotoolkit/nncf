@@ -85,10 +85,17 @@ def _filter_target_points_by_metatypes(
 
 
 def _find_ignored_scope_ignored_patterns(nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> IgnoredScope:
+    """
+    Returns IgnoredScope with node names of matched subgrahps of ignored_patterns.
+
+    :param nncf_graph: Instance of NNCFgraph.
+    :param ignored_patterns: GraphPattern instance with all quantization ignored patterns.
+    :return: IgnoredScope with node names of matched subgrahps of ignored_patterns
+    """
     output = []
     for ignored_names in find_subgraphs_matching_pattern(nncf_graph._nx_graph, ignored_patterns):
         output.extend(map(lambda x: x.split()[-1], ignored_names))
-    return IgnoredScope(output)
+    return IgnoredScope(names=output)
 
 
 class MinMaxQuantization(Algorithm):
@@ -299,6 +306,13 @@ class MinMaxQuantization(Algorithm):
         return qconfig
 
     def _get_ignored_names(self, nncf_graph: NNCFGraph, backend: BackendType) -> Set[str]:
+        """
+        Returns all node names are ignored for quantization.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param backend: Original backend.
+        :return: Node names are ignored for quantization.
+        """
         model_type = self._model_type
         device = self._target_device
 
@@ -324,7 +338,7 @@ class MinMaxQuantization(Algorithm):
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
 
         :param nncf_graph: NNCFGraph instance.
-        :param pattern: GraphPattern instance.
+        :param backend: Original backend.
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
         hw_config_type = get_hw_config_type(self._target_device.value)
