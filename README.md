@@ -281,6 +281,7 @@ For a quicker start with NNCF-powered compression, try sample notebooks and scri
 A collection of ready-to-run Jupyter* notebooks are available to demonstrate how to use NNCF compression algorithms to optimize models for inference with the OpenVINO Toolkit:
 - [Accelerate Inference of NLP models with Post-Training Qunatization API of NNCF](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/105-language-quantize-bert)
 - [Convert and Optimize YOLOv8 with OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/230-yolov8-optimization)
+- [Convert and Optimize YOLOv7 with OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/226-yolov7-optimization)
 - [NNCF Post-Training Optimization of Segment Anything Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/237-segment-anything)
 - [Quantize a Segmentation Model and Show Live Inference](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/110-ct-segmentation-quantize)
 - [Training to Deployment with TensorFlow and OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/301-tensorflow-training-openvino)
