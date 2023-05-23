@@ -107,7 +107,8 @@ class PatternsManager:
         backend: BackendType, device: TargetDevice, model_type: Optional[ModelType] = None
     ) -> GraphPattern:
         """
-        Returns a GraphPattern containing all registered hardware patterns specifically for backend, device, and model_type parameters.
+        Returns a GraphPattern containing all registered hardware patterns specifically
+        for backend, device, and model_type parameters.
 
         :param backend: BackendType instance.
         :param device: TargetDevice instance.
@@ -124,7 +125,8 @@ class PatternsManager:
         backend: BackendType, device: TargetDevice, model_type: Optional[ModelType] = None
     ) -> GraphPattern:
         """
-        Returns a GraphPattern containing all registered ignored patterns specifically for backend, device, and model_type parameters.
+        Returns a GraphPattern containing all registered ignored patterns specifically
+        for backend, device, and model_type parameters.
 
         :param backend: BackendType instance.
         :param device: TargetDevice instance.
