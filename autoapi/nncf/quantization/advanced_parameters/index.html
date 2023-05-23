@@ -440,9 +440,6 @@ quantized layers.</p></li>
 preliminary step before reverting layers back to the floating-point precision.
 It can bring an additional boost in performance and accuracy, at the cost of
 increased overall quantization time. The default value is <cite>False</cite>.</p></li>
-<li><p><strong>convert_to_mixed_preset</strong> (<em>bool</em>) – Whether to convert the model to mixed mode if
-the accuracy criteria of the symmetrically quantized model are not satisfied.
-The default value is <cite>False</cite>.</p></li>
 <li><p><strong>ranking_subset_size</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Size of a subset that is used to rank layers by their
 contribution to the accuracy drop.</p></li>
 </ul>
