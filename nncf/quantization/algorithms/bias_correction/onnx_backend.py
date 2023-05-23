@@ -115,6 +115,8 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         input_nodes = [edge.from_node for edge in nncf_graph.get_input_edges(node)]
+        if not hasattr(node.metatype, "weight_definitions"):
+            return False
         weight_port_id = node.metatype.weight_definitions.weight_port_id
         weight_node = input_nodes[weight_port_id]
         return weight_node.metatype == ONNXDequantizeLinearMetatype
