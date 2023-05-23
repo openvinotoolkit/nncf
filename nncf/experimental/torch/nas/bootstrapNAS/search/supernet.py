@@ -14,15 +14,9 @@ from typing import Any, Callable, Dict, List, Tuple, TypeVar
 import torch
 
 from nncf import NNCFConfig
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import (
-    ElasticityController,
-)
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import (
-    SubnetConfig,
-)
-from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import (
-    resume_compression_from_state,
-)
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import SubnetConfig
+from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.nncf_network import NNCFNetwork
