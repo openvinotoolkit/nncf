@@ -327,9 +327,7 @@ class BiasCorrection(Algorithm):
                 # but those that follow them, we need to take this into account when creating feed dicts.
                 activation_name, port_id = self._collected_stat_inputs_map[input_node_name]
                 input_fp = self._get_fp_inputs(statistic_points, node_name=activation_name, port_id=port_id)
-                feed_dict[input_tensor_name] = np.mean(
-                    statistics_per_input[input_tensor_name][stat_id], axis=0, keepdims=True
-                )
+                feed_dict[input_tensor_name] = statistics_per_input[input_tensor_name][stat_id]
             feed_dicts.append(feed_dict)
         return feed_dicts
 
