@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import openvino.runtime as ov
 import pytest
 
@@ -16,6 +18,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.parameters import ModelType
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.native.common import dump_model
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv4DModel
@@ -26,6 +29,12 @@ from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 
 QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graphs" / "quantized"
+
+
+def dump_model_to_tmp_dir(model: ov.Model, tmp_dir: Path):
+    xml_path = tmp_dir / (model.ref_model_name + ".xml")
+    bin_path = tmp_dir / (model.ref_model_name + ".bin")
+    dump_model(model, str(xml_path), str(bin_path))
 
 
 @pytest.mark.parametrize("model_creator_func", SYNTHETIC_MODELS.values())
@@ -70,11 +79,12 @@ def test_omz_models_fq_placement(model_name_params, tmp_path):
     quantized_model = quantize_model(model, q_params)
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"{model_name}.dot"
+    dump_model_to_tmp_dir(model, tmp_path)
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
 @pytest.mark.parametrize("model_creator_func", [MatmulSoftmaxMatmulBlock])
-def test_transformer_models_fq_placement(model_creator_func):
+def test_transformer_models_fq_placement(model_creator_func, tmp_path):
     model = model_creator_func()
     quantized_model = quantize_model(
         model.ov_model,
@@ -82,4 +92,5 @@ def test_transformer_models_fq_placement(model_creator_func):
     )
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
+    dump_model_to_tmp_dir(model, tmp_path)
     compare_nncf_graphs(quantized_model, path_ref_graph)

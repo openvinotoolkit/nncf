@@ -24,7 +24,8 @@ SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
 class OVReferenceModel(ABC):
     def __init__(self, **kwargs):
         self._rng = np.random.default_rng(seed=0)
-        self.ref_graph_name = f"{self.__class__.__name__}.dot"
+        self.ref_model_name = f"{self.__class__.__name__}"
+        self.ref_graph_name = f"{self.ref_model_name}.dot"
         self.ov_model = self._create_ov_model(**kwargs)
 
     @abstractmethod
