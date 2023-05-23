@@ -6,5 +6,5 @@ onnx
 onnxruntime
 pytest
 openvino-dev>=2022.1
-timm
+timm==0.6.13
 scikit-learn

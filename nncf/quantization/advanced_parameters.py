@@ -179,10 +179,6 @@ class AdvancedAccuracyRestorerParameters:
         It can bring an additional boost in performance and accuracy, at the cost of
         increased overall quantization time. The default value is `False`.
     :type tune_hyperparams: int
-    :param convert_to_mixed_preset: Whether to convert the model to mixed mode if
-        the accuracy criteria of the symmetrically quantized model are not satisfied.
-        The default value is `False`.
-    :type convert_to_mixed_preset: bool
     :param ranking_subset_size: Size of a subset that is used to rank layers by their
         contribution to the accuracy drop.
     :type ranking_subset_size: Optional[int]
@@ -190,7 +186,6 @@ class AdvancedAccuracyRestorerParameters:
 
     max_num_iterations: int = sys.maxsize
     tune_hyperparams: bool = False
-    convert_to_mixed_preset: bool = False
     ranking_subset_size: Optional[int] = None
 
 

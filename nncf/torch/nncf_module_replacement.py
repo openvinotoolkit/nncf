@@ -44,10 +44,21 @@ def is_nncf_module(module: nn.Module) -> bool:
     return False
 
 
-def collect_all_scopes_for_extendable_and_extended_modules(module: nn.Module) -> Dict[nn.Module, Set[Scope]]:
+def collect_all_scopes_for_extendable_and_extended_modules(
+    model: nn.Module, predicate: Callable = None
+) -> Dict[nn.Module, Set[Scope]]:
+    """
+    Collects all ranges for all modules in the model that match the condition from predicate.
+
+    :param module: The model.
+    :param predicate: A predicate function that can be used to filter modules.
+    By default, the predicate function filters all NNCF modules and modules that can be replaced with NNCF modules.
+    :return: A dictionary mapping modules to sets of scopes.
+    """
     retval = {}
-    predicate = lambda x: _can_extend(x) or is_nncf_module(x)
-    return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
+    if predicate is None:
+        predicate = lambda x: _can_extend(x) or is_nncf_module(x)
+    return _collect_modules_and_scopes_recursive_helper(model, Scope(), predicate, retval)
 
 
 def collect_modules_and_scopes_by_predicate(
@@ -128,6 +139,7 @@ def replace_modules_by_nncf_modules(
     target_scopes: Optional[List[str]] = None,
     eval_op_scopes: Optional[List[Scope]] = None,
     custom_replacer: Callable[[nn.Module], None] = None,
+    predicate_fn: Optional[Callable] = None,
 ) -> Tuple[nn.Module, Dict[torch.nn.Module, List[Scope]]]:
     """
     Replaces certain modules in the model hierarchy with NNCF-wrapped versions of the same modules.
@@ -151,12 +163,13 @@ def replace_modules_by_nncf_modules(
     that end up having a scope not in this list will be considered train-only and will not be replaced).
     :param custom_replacer: The function to be used instead of the regular approach to replace a module with NNCF-
       extended counterpart.
+    :param predicate_fn: The function to find modules that can be replaced.
     :return: The model with the modules replaced and the dictionary of all extended modules vs list of scopes through
     which the module is accessible. The list of scope shall be sorted lexicographically w.r.t. the string representation
     of the Scope objects.
     The dictionary will also include the extended modules that have already been present in the model.
     """
-    modules_vs_scopes_dict = collect_all_scopes_for_extendable_and_extended_modules(model)
+    modules_vs_scopes_dict = collect_all_scopes_for_extendable_and_extended_modules(model, predicate=predicate_fn)
     inter_dict = {}  # type: Dict[nn.Module, Set[Scope]]
     ret_dict = {}  # type: Dict[nn.Module, List[Scope]]
     for module, scope_set in modules_vs_scopes_dict.items():

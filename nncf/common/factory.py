@@ -63,7 +63,7 @@ class ModelTransformerFactory:
 
             return OVModelTransformer(model)
         if model_backend == BackendType.TORCH:
-            from nncf.torch.nncf_network import PTModelTransformer
+            from nncf.torch.model_transformer import PTModelTransformer
 
             return PTModelTransformer(model)
         raise RuntimeError(

@@ -147,6 +147,7 @@ from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_model_dtype
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
+from nncf.torch.utils import training_mode_switcher
 
 QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME = "version"
 
@@ -678,7 +679,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             stat_ctrl = stat_builder.build_controller(intermediate_model)
             runner = SimpleDataLoaderRunner(intermediate_model, range_init_params.device)
             runner.progressbar_description = "Collecting tensor statistics"
-            runner.run(range_init_params.init_range_data_loader, range_init_params.get_max_num_init_steps())
+            with training_mode_switcher(intermediate_model, is_training=False):
+                # Run statistics collection in eval mode, otherwise it may fail because graph was built in eval mode
+                runner.run(range_init_params.init_range_data_loader, range_init_params.get_max_num_init_steps())
 
         retval = {}
         for ip, rs_vs_collector in stat_ctrl.ip_vs_collector_dict.items():
@@ -1428,7 +1431,9 @@ class QuantizationController(QuantizationControllerBase):
         quantizers_switcher = QuantizersSwitcher(quantizers)
         # bypass quantization to collect statistics from floating point model
         quantizers_switcher.disable_quantizers()
-        runner.run(range_init_params.init_range_data_loader, range_init_params.get_max_num_init_steps())
+        with training_mode_switcher(self._model, is_training=False):
+            # Statistics should be collected in eval mode because the model in train mode may behave differently
+            runner.run(range_init_params.init_range_data_loader, range_init_params.get_max_num_init_steps())
         quantizers_switcher.enable_quantizers()
 
         self._model.nncf.rebuild_graph()

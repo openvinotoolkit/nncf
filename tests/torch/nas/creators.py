@@ -29,8 +29,8 @@ from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_creation import create_nncf_network
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.nncf_network import PTModelTransformer
 from tests.torch import test_models
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import get_empty_config
