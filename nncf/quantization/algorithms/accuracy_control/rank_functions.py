@@ -25,7 +25,7 @@ def create_normalized_mse_func(backend: BackendType) -> Callable[[List[TTensor],
     :param backend: A backend type.
     :return: The backend-specific implementation of the normalized_nmse.
     """
-    if backend == BackendType.ONNX or backend == BackendType.OPENVINO:
+    if backend in (BackendType.ONNX, BackendType.OPENVINO):
         return normalized_mse
 
     raise RuntimeError(f"Could not create backend-specific implementation! {backend} backend is not supported!")
