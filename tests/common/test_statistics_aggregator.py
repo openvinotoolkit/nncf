@@ -379,11 +379,12 @@ class TemplateTestStatisticsAggregator:
         quantizer_config = QuantizerConfig(
             mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
         )
-        is_standart_estimator = test_parameters.range_estimator_params in [
+
+        is_standard_estimator = test_parameters.range_estimator_params in [
             RangeEstimatorParametersSet.MINMAX,
             RangeEstimatorParametersSet.MEAN_MINMAX,
         ]
-        if not is_standart_estimator and not is_backend_support_custom_estimators:
+        if not is_standard_estimator and not is_backend_support_custom_estimators:
             pytest.skip("Custom estimators are not supported for this backend yet")
 
         target_point = self.get_target_point(test_parameters.target_type)

@@ -135,7 +135,7 @@ class OVModelExtractionCommand(Command):
 
     def __init__(self, inputs: List[str], outputs: List[str]):
         """
-        :param inputs: List of the input names that denote the sub-graph beggining.
+        :param inputs: List of the input names that denote the sub-graph beginning.
         :param outputs: List of the output names that denote the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)

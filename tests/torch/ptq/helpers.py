@@ -47,7 +47,7 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
     return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype, conv_layer_attrs)
 
 
-def get_single_no_weigth_matmul_nncf_graph() -> NNCFGraphToTest:
+def get_single_no_weight_matmul_nncf_graph() -> NNCFGraphToTest:
     return NNCFGraphToTest(PTModuleLinearMetatype, None, PTNNCFGraph)
 
 

@@ -32,8 +32,8 @@ from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.nncf_network import PTModelTransformer
 
 TModel = TypeVar("TModel")
 

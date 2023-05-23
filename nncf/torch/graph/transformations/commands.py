@@ -11,7 +11,10 @@
 
 from typing import Any, Callable, Dict
 
+import torch
+
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
@@ -33,13 +36,15 @@ class PTTargetPoint(TargetPoint):
     ]
     _HOOK_TYPES = [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATOR_POST_HOOK]
 
+    _LAYER_TYPE = [TargetType.LAYER]
+
     _state_names = PTTargetPointStateNames
 
     def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName, *, input_port_id: int = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.target_type = target_type
-        if self.target_type not in self._OPERATION_TYPES + self._HOOK_TYPES:
+        if self.target_type not in self._OPERATION_TYPES + self._HOOK_TYPES + self._LAYER_TYPE:
             raise NotImplementedError("Unsupported target type: {}".format(target_type))
 
         self.input_port_id = input_port_id
@@ -54,7 +59,7 @@ class PTTargetPoint(TargetPoint):
     def __str__(self):
         prefix = str(self.target_type)
         retval = prefix
-        if self.target_type in self._OPERATION_TYPES:
+        if self.target_type in self._OPERATION_TYPES + self._LAYER_TYPE:
             retval += " {}".format(self.target_node_name)
         elif self.target_type in self._HOOK_TYPES:
             if self.input_port_id is not None:
@@ -106,4 +111,37 @@ class PTInsertionCommand(TransformationCommand):
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
+        raise NotImplementedError()
+
+
+class PTModelExtractionWithFusedBiasCommand(Command):
+    """
+    Extracts sequence by name with node that contain fused bias.
+    """
+
+    def __init__(self, node_name: str):
+        """
+        :param node_name: Node name that will be extracted.
+        """
+        super().__init__(TransformationType.EXTRACT)
+        self.node_name = node_name
+
+    def union(self, other: "Command") -> "Command":
+        raise NotImplementedError()
+
+
+class PTBiasCorrectionCommand(TransformationCommand):
+    """
+    Corrects bias value in the model based on the input value.
+    """
+
+    def __init__(self, target_point: PTTargetPoint, bias_value: torch.Tensor):
+        """
+        :param target_point: The TargetPoint instance for the correction that contains layer's information.
+        :param bias_value: The bias shift value that will be added to the original bias value.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.bias_value = bias_value
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
         raise NotImplementedError()

@@ -125,4 +125,5 @@ examples/**/results/**
 
 # Tests
 tests/**/runs/**
+tests/**/tmp*/**
 open_model_zoo/
