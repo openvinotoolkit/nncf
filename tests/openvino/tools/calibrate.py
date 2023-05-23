@@ -121,7 +121,7 @@ class ACValidationFunction:
         kwargs = {
             "subset": indices,
             "output_callback": self._output_callback,
-            "check_progress": False,
+            "check_progress": True,
             "dataset_tag": "",
             "calculate_metrics": True,
         }
