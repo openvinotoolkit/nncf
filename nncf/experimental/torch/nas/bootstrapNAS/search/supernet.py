@@ -10,16 +10,18 @@
 # limitations under the License.
 
 import torch
+
 from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
-from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.checkpoint_loading import load_state
+from nncf.torch.model_creation import create_nncf_network
 
 
 class SuperNetwork:
     """
-        An interface for handling pre-trained super-networks. This class can be used to quickly implement
-        third party solutions for subnetwork search on existing super-netwroks. 
+    An interface for handling pre-trained super-networks. This class can be used to quickly implement
+    third party solutions for subnetwork search on existing super-netwroks.
     """
+
     def __init__(self, elastic_ctrl, nncf_network):
         """
         Initializes the super-network interface.
@@ -83,7 +85,7 @@ class SuperNetwork:
     def get_macs_for_active_config(self):
         return self._m_handler.count_flops_and_weights_for_active_subnet()[0] / 2000000
 
-    def export_active_to_onnx(self, filename='subnet'):
+    def export_active_to_onnx(self, filename="subnet"):
         self._elasticity_ctrl.export_model(f"{filename}.onnx")
 
     def get_config_from_pymoo(self, pymoo_config):

@@ -205,9 +205,7 @@ class MultiElasticityHandler(ElasticityHandler):
 
         :return: search space
         """
-        active_handlers = {
-            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
-        }
+        active_handlers = {dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]}
         space = {}
         for handler_id, handler in active_handlers.items():
             space[handler_id.value] = handler.get_search_space()
