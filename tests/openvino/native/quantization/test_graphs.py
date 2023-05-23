@@ -31,12 +31,6 @@ from tests.openvino.omz_helpers import download_model
 QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graphs" / "quantized"
 
 
-def dump_model_to_tmp_dir(model: ov.Model, tmp_dir: Path):
-    xml_path = tmp_dir / (model.ref_model_name + ".xml")
-    bin_path = tmp_dir / (model.ref_model_name + ".bin")
-    dump_model(model, str(xml_path), str(bin_path))
-
-
 @pytest.mark.parametrize("model_creator_func", SYNTHETIC_MODELS.values())
 def test_synthetic_models_fq_placement(model_creator_func):
     model = model_creator_func()
@@ -79,7 +73,9 @@ def test_omz_models_fq_placement(model_name_params, tmp_path):
     quantized_model = quantize_model(model, q_params)
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"{model_name}.dot"
-    dump_model_to_tmp_dir(model, tmp_path)
+    xml_path = tmp_path / (model_name + ".xml")
+    bin_path = tmp_path / (model_name + ".bin")
+    dump_model(quantized_model, str(xml_path), str(bin_path))
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
@@ -92,5 +88,7 @@ def test_transformer_models_fq_placement(model_creator_func, tmp_path):
     )
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
-    dump_model_to_tmp_dir(model, tmp_path)
+    xml_path = tmp_path / (model.ref_model_name + ".xml")
+    bin_path = tmp_path / (model.ref_model_name + ".bin")
+    dump_model(quantized_model, str(xml_path), str(bin_path))
     compare_nncf_graphs(quantized_model, path_ref_graph)
