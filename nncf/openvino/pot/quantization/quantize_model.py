@@ -392,7 +392,6 @@ def _create_accuracy_restorer_config(
 
     config["max_num_iterations"] = advanced_parameters.max_num_iterations
     config["tune_hyperparams"] = advanced_parameters.tune_hyperparams
-    config["convert_to_mixed_preset"] = advanced_parameters.convert_to_mixed_preset
     if advanced_parameters.ranking_subset_size is not None:
         config["ranking_subset_size"] = advanced_parameters.ranking_subset_size
 

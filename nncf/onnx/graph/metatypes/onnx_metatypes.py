@@ -506,7 +506,6 @@ WEIGHT_LAYER_METATYPES = [
 OPERATIONS_WITH_BIAS_METATYPES = [
     ONNXConvolutionMetatype,
     ONNXDepthwiseConvolutionMetatype,
-    ONNXConvolutionTransposeMetatype,
 ]
 
 
