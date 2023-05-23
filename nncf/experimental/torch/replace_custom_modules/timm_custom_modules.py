@@ -12,10 +12,10 @@
 from copy import deepcopy
 from typing import Optional
 
-from timm.models.layers import Linear
-from timm.models.layers.norm_act import BatchNormAct2d
-from timm.models.layers.norm_act import GroupNormAct
-from timm.models.layers.norm_act import LayerNormAct
+from timm.layers import Linear
+from timm.layers.norm_act import BatchNormAct2d
+from timm.layers.norm_act import GroupNormAct
+from timm.layers.norm_act import LayerNormAct
 from torch import nn
 
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules

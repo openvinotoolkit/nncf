@@ -1,10 +1,10 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch
+torch==1.13.1
 --extra-index-url https://download.pytorch.org/whl/cpu
-torchvision
-onnx
-onnxruntime
+torchvision==0.14.1
+onnx==1.14.0
+onnxruntime==1.6.0
 pytest
 openvino-dev>=2022.1
-timm==0.6.13
-scikit-learn
+timm==0.9.2
+scikit-learn==1.2.2
