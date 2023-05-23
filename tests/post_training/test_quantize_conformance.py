@@ -641,6 +641,7 @@ def run_ptq_timm(
 
         calibration_dataset = nncf.Dataset(val_dataloader, transform_fn)
 
+        backend_errors = []
         for backend in backends:
             runner = RUNNERS[backend]
             try:
@@ -660,8 +661,14 @@ def run_ptq_timm(
                 status = get_error_msg(traceback_path, backend_dir)
                 runinfo = RunInfo(None, None, status)
             runinfos[backend] = runinfo
+            if runinfo.status:
+                backend_errors.append(runinfo.status)
+            elif runinfo.top_1 <= runinfos[PipelineType.FP32].top_1 - 0.01:
+                backend_errors.append(f"Archieved >1% drop for {timm_model_name} in {backend.name}")
 
         process_connection.send(runinfos)
+        if backend_errors != []:
+            raise Exception("\n\t" + "\n\t".join(backend_errors))
     except Exception as error:
         traceback_path = Path.joinpath(output_folder, model_name + "_error_log.txt")
         create_error_log(traceback_path)
