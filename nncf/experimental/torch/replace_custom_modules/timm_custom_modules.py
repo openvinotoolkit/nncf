@@ -134,7 +134,7 @@ def is_timm_custom_module(module: nn.Module):
     :param module: The module.
     :return: `True` if module is custom module, otherwise `False`
     """
-    return type(module) in list(CONVERT_FN_MAP.keys())
+    return type(module) in CONVERT_FN_MAP
 
 
 def convert_timm_custom_modules(module: nn.Module) -> Optional[nn.Module]:
