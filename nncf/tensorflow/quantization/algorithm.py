@@ -594,7 +594,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     ) -> SingleConfigQuantizerSetup:
         ip_graph = InsertionPointGraph(nncf_graph, [qn.node.node_name for qn in quantizable_weighted_layer_nodes])
 
-        pattern = TF_HW_FUSED_PATTERNS.get_full_hw_pattern_graph()
+        pattern = TF_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
         input_preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph, model)
