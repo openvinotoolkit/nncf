@@ -1,15 +1,14 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the 'License');
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an 'AS IS' BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import copy
 import logging
 import os
@@ -37,6 +36,9 @@ from torchvision.transforms import InterpolationMode
 
 import nncf
 from nncf.experimental.torch.quantization.quantize_model import quantize_impl as pt_impl_experimental
+from nncf.experimental.torch.replace_custom_modules.timm_custom_modules import (
+    replace_timm_custom_modules_with_torch_native,
+)
 from nncf.openvino.quantization.quantize_model import quantize_impl as ov_quantize_impl
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.torch.nncf_network import NNCFNetwork
@@ -58,6 +60,7 @@ def create_timm_model(name: str) -> nn.Module:
     :return: Instance of the timm model.
     """
     model = timm.create_model(name, num_classes=1000, in_chans=3, pretrained=True, checkpoint_path="")
+    model = replace_timm_custom_modules_with_torch_native(model)
     return model
 
 

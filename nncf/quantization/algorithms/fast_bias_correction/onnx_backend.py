@@ -82,13 +82,16 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return subgraph.graph.input[0].name, subgraph.graph.output[0].name
 
     @staticmethod
-    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
+    def create_input_data(
+        shape: Tuple[int], data: List[np.ndarray], input_name: str, channel_axis: int
+    ) -> Dict[str, np.array]:
         blob = np.zeros(shape)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
             blob[index] = data[j]
         blob = blob.astype(data[0].dtype)
-        return blob
+        input_data = {input_name: blob}
+        return input_data
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> np.ndarray:
@@ -103,12 +106,31 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return ONNXNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> bool:
         input_nodes = [edge.from_node for edge in nncf_graph.get_input_edges(node)]
         weight_port_id = node.metatype.weight_definitions.weight_port_id
         weight_node = input_nodes[weight_port_id]
         return weight_node.metatype == ONNXDequantizeLinearMetatype
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> bool:
         return is_node_with_bias(node)
+
+    @staticmethod
+    def get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
+        bias_shift_magnitude = np.inf
+        if np.count_nonzero(current_bias_value == 0) == 0:
+            bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
+        return bias_shift_magnitude
+
+    @staticmethod
+    def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
+        return np.array(data)
+
+    @staticmethod
+    def reshape_tensor(data: np.ndarray, new_shape: List[int]) -> np.ndarray:
+        return data.reshape(new_shape)
+
+    @staticmethod
+    def get_node_names_for_input_output_statistics(node: NNCFNode, model: onnx.ModelProto) -> Tuple[str, str]:
+        return node.node_name, node.node_name

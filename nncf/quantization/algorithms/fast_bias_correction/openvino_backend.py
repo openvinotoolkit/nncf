@@ -74,13 +74,16 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return subgraph.inputs[0].get_any_name(), subgraph.outputs[0].get_any_name()
 
     @staticmethod
-    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
+    def create_input_data(
+        shape: Tuple[int], data: List[np.ndarray], input_name: str, channel_axis: int
+    ) -> Dict[str, np.ndarray]:
         blob = np.zeros(shape)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
             blob[index] = data[j]
         blob = blob.astype(data[0].dtype)
-        return blob
+        input_data = {input_name: blob}
+        return input_data
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
@@ -91,7 +94,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> bool:
         # At first, checks whether the node has weight tensor
         if node.layer_attributes is None:
             return False
@@ -105,5 +108,24 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> bool:
         return is_node_with_bias(node, nncf_graph)
+
+    @staticmethod
+    def get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
+        bias_shift_magnitude = np.inf
+        if np.count_nonzero(current_bias_value == 0) == 0:
+            bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
+        return bias_shift_magnitude
+
+    @staticmethod
+    def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
+        return np.array(data)
+
+    @staticmethod
+    def reshape_tensor(data: np.ndarray, new_shape: List[int]) -> np.ndarray:
+        return data.reshape(new_shape)
+
+    @staticmethod
+    def get_node_names_for_input_output_statistics(node: NNCFNode, model: ov.Model) -> Tuple[str, str]:
+        return node.node_name, node.node_name

@@ -40,8 +40,8 @@ from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.nncf_network import PTModelTransformer
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
 from nncf.torch.quantization.init_range import StatCollectorGenerator
@@ -58,6 +58,11 @@ from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 # pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
+    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
+        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
+        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
+    }
+
     @property
     def mat_mul_metatype(self) -> OperatorMetatype:
         return om.PTModuleLinearMetatype
@@ -101,11 +106,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def model_transformer(model: NNCFNetwork) -> ModelTransformer:
         return PTModelTransformer(model)
-
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:

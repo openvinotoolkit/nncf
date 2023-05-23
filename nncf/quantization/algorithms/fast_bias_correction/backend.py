@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 
@@ -26,6 +26,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.registry import Registry
 
 TModel = TypeVar("TModel")
+TTensor = TypeVar("TTensor")
 OutputType = TypeVar("OutputType")
 ALGO_BACKENDS = Registry("algo_backends")
 
@@ -77,7 +78,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
         Returns backend-specific command to extract sub-model based on input & output names.
 
-        :param inputs: List of the input names for sub-model beggining.
+        :param inputs: List of the input names for sub-model beginning.
         :param outputs: List of the output names for sub-model end.
         :return: Backend-specific TransformationCommand for the model extraction.
         """
@@ -112,14 +113,17 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
+    def create_input_data(
+        shape: Tuple[int], data: List[TTensor], input_name: str, channel_axis: int
+    ) -> Union[Dict[str, TTensor], TTensor]:
         """
-        Creates the backend-specific (because of layout) blob.
+        Creates input data for the bias shift calculation.
 
         :param shape: Shape of the blob.
         :param data: Data to fill the blob.
+        :param input_name: Name for the output dictionary.
         :param channel_axis: Axis to fill the blob with provided data.
-        :return: np.ndarray blob.
+        :return: Created data.
         """
 
     @staticmethod
@@ -148,14 +152,17 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> bool:
         """
         Checks whether the node is quantized or not.
 
         :param node: NNCFNode to check.
         :param nncf_graph: NNCFGraph instance.
+        :param model: Backend-specific model.
+
         :return: boolean indicating whether the node has a quantized weights or not
         """
+        # TODO(AlexanderDokuchaev): use only nncf_graph instead of model, after fix 111576
 
     @staticmethod
     @abstractmethod
@@ -170,11 +177,59 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> bool:
         """
         Checks whether the node has a bias or not.
 
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph that contains node.
+        :param model: Backend-specific model.
         :return: Boolean indicating whether the node has a bias or not.
         """
+        # TODO(AlexanderDokuchaev): use only nncf_graph instead of model, after fix 111576
+
+    @staticmethod
+    @abstractmethod
+    def get_bias_shift_magnitude(current_bias_value: TTensor, updated_bias_value: TTensor) -> float:
+        """
+        Calculates bias shift magnitude based on the current and updated values.
+
+        :param current_bias_value: The original bias value.
+        :param updated_bias_value: The updated bias value.
+        :return: Magnitude between original and updated bias values.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def post_process_output_data(data: List[TTensor]) -> TTensor:
+        """
+        Convert data to backend specific type.
+
+        :param data: List of data.
+        :return: Converted data.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def reshape_tensor(data: TTensor, new_shape: List[int]) -> TTensor:
+        """
+        Reshape tensor.
+
+        :param data: Tensor.
+        :param new_shape: New shape.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_node_names_for_input_output_statistics(node: NNCFNode, model: TModel) -> Tuple[str, str]:
+        """
+        Return name of nodes to collect statistics.
+
+        :param node: NNCFNode to check.
+        :param model: Backend-specific model.
+
+        :return:
+            Name of node to collect input statistics
+            Name of node to collect output statistics
+        """
+        # TODO(AlexanderDokuchaev): use nncf_graph instead of model, after fix 111576
