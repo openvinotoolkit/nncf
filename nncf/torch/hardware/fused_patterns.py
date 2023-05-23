@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import PatternNames
+from nncf.common.graph.patterns import HWPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
@@ -24,7 +24,7 @@ PT_HW_FUSED_PATTERNS = Registry("torch")
 # ATOMIC OPERATIONS
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.L2_NORM)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.L2_NORM)
 def create_l2_norm_operations():
     pattern = GraphPattern()
 
@@ -46,7 +46,7 @@ def create_l2_norm_operations():
     return pattern
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.MATMUL_SOFTMAX_MATMUL)
 def create_matmul_softmax_matmul():
     matmul_aliases = ["linear", "addmm", "matmul", "bmm", "mm", "baddbmm"]
     pattern = GraphPattern()
@@ -78,7 +78,7 @@ def create_matmul_softmax_matmul():
 # COMBINATIONS
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ARITHMETIC)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ARITHMETIC)
 def create_linear_arithmetic_operations():
     linear = linear_operations()
     arithmetic = arithmetic_operations()
@@ -86,7 +86,7 @@ def create_linear_arithmetic_operations():
     return linear
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_ACTIVATIONS)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.BATCH_NORM_ACTIVATIONS)
 def create_batch_norm_activations_operations():
     batch_norm = batch_norm_operations()
     activations = activation_operations()
@@ -94,7 +94,7 @@ def create_batch_norm_activations_operations():
     return batch_norm
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ACTIVATIONS_BATCH_NORM)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.ACTIVATIONS_BATCH_NORM)
 def create_activations_batch_norm_operations():
     batch_norm = batch_norm_operations()
     activations = activation_operations()
@@ -102,7 +102,7 @@ def create_activations_batch_norm_operations():
     return activations
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_BATCH_NORM)
 def create_linear_batch_norm_operations():
     linear = linear_operations()
     batch_norm = batch_norm_operations()
@@ -110,7 +110,7 @@ def create_linear_batch_norm_operations():
     return linear
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ACTIVATIONS)
 def create_linear_activation_operations():
     linear = linear_operations()
     activation = activation_operations()
@@ -118,7 +118,7 @@ def create_linear_activation_operations():
     return linear
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
 def create_linear_batch_norm_activation_operations():
     linear_bn = create_linear_batch_norm_operations()
     activations = activation_operations()
@@ -126,7 +126,7 @@ def create_linear_batch_norm_activation_operations():
     return linear_bn
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
 def create_linear_activation_batch_norm_activations():
     linear_act = create_linear_activation_operations()
     batch_norm = batch_norm_operations()
@@ -134,7 +134,7 @@ def create_linear_activation_batch_norm_activations():
     return linear_act
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_BATCH_NORM)
 def create_arithmetic_batch_norm_operations():
     arithmetic = arithmetic_operations()
     batch_norm = batch_norm_operations()
@@ -142,7 +142,7 @@ def create_arithmetic_batch_norm_operations():
     return arithmetic
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_ACTIVATIONS)
 def create_arithmetic_activations_operations():
     arithmetic = arithmetic_operations()
     activation = activation_operations()
@@ -150,7 +150,7 @@ def create_arithmetic_activations_operations():
     return arithmetic
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
 def create_arithmetic_batch_norm_activations_operations():
     arithmetic_bn = create_arithmetic_batch_norm_operations()
     activation = activation_operations()
@@ -158,7 +158,7 @@ def create_arithmetic_batch_norm_activations_operations():
     return arithmetic_bn
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
 def create_arithmetic_activations_batch_norm_operations():
     arithmetic_act = create_arithmetic_activations_operations()
     batch_norm = batch_norm_operations()
@@ -166,7 +166,7 @@ def create_arithmetic_activations_batch_norm_operations():
     return arithmetic_act
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.GROUP_NORM_RELU)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.GROUP_NORM_RELU)
 def create_group_norm_relu_operations():
     group_norm = GraphPattern()
     group_norm.add_node(**GROUP_NORMALIZATION_OPERATIONS)
@@ -176,7 +176,7 @@ def create_group_norm_relu_operations():
     return group_norm
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_CONST_MULTIPLY)
+@PT_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_CONST_MULTIPLY)
 def create_linear_const_multiply():
     pattern = GraphPattern()
     linear_node = pattern.add_node(label="linear", type="linear")

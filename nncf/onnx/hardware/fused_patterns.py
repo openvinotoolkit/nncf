@@ -11,7 +11,7 @@
 
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import PatternNames
+from nncf.common.graph.patterns import HWPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.hardware.pattern_operations import ARITHMETIC_OPERATIONS
@@ -24,7 +24,7 @@ ONNX_HW_FUSED_PATTERNS = Registry("onnx")
 # BLOCK PATTERNS
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.SCALE_SHIFT)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.SCALE_SHIFT)
 def create_scale_shift():
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(
@@ -44,7 +44,7 @@ def create_scale_shift():
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.SWISH_WITH_SIGMOID)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.SWISH_WITH_SIGMOID)
 def create_swish_with_sigmoid():
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(
@@ -63,7 +63,7 @@ def create_swish_with_sigmoid():
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.SWISH_WITH_HARD_SIGMOID)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.SWISH_WITH_HARD_SIGMOID)
 def create_swish_with_hard_sigmoid():
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(
@@ -82,7 +82,7 @@ def create_swish_with_hard_sigmoid():
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.MATMUL_SOFTMAX_MATMUL)
 def create_matmul_softmax_matmul():
     pattern = GraphPattern()
     softmax_1 = pattern.add_node(
@@ -129,7 +129,7 @@ def create_matmul_softmax_matmul():
 # INPUT PROCESSING
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.INPUT_SHIFT_SCALE)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_SHIFT_SCALE)
 def create_input_shift_scale():
     pattern = GraphPattern()
     input_node = pattern.add_node(
@@ -150,7 +150,7 @@ def create_input_shift_scale():
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.INPUT_PROCESSING)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_PROCESSING)
 def create_input_add():
     pattern = GraphPattern()
     input_node = pattern.add_node(
@@ -167,7 +167,7 @@ def create_input_add():
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.INPUT_SCALE_SHIFT)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_SCALE_SHIFT)
 def create_input_scale_shift():
     pattern = GraphPattern()
     pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
@@ -180,7 +180,7 @@ def create_input_scale_shift():
 # COMBINATIONS
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ACTIVATIONS_BATCH_NORM)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.ACTIVATIONS_BATCH_NORM)
 def create_activations_batch_norm():
     activations = atomic_activations_operations()
     batch_norm = batch_normalization_operations()
@@ -188,7 +188,7 @@ def create_activations_batch_norm():
     return activations
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ACTIVATIONS_SCALE_SHIFT)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.ACTIVATIONS_SCALE_SHIFT)
 def create_activations_scale_shift():
     activations = atomic_activations_operations()
     scale_shift = create_scale_shift()
@@ -196,7 +196,7 @@ def create_activations_scale_shift():
     return activations
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_BATCH_NORM)
 def create_arithmetic_batch_norm():
     arithmetic = arithmetic_operations()
     batch_norm = batch_normalization_operations()
@@ -204,7 +204,7 @@ def create_arithmetic_batch_norm():
     return arithmetic
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_ACTIVATIONS)
 def create_arithmetic_activations():
     arithmetic = arithmetic_operations()
     activations = atomic_activations_operations()
@@ -212,7 +212,7 @@ def create_arithmetic_activations():
     return arithmetic
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_SCALE_SHIFT)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_SCALE_SHIFT)
 def create_arithmetic_scale_shift():
     arithmetic = arithmetic_operations()
     scale_shift = create_scale_shift()
@@ -220,7 +220,7 @@ def create_arithmetic_scale_shift():
     return arithmetic
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
 def create_arithmetic_batch_norm_activations():
     arithmetic_batch_norm = create_arithmetic_batch_norm()
     activations = atomic_activations_operations()
@@ -228,7 +228,7 @@ def create_arithmetic_batch_norm_activations():
     return arithmetic_batch_norm
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_SCALE_SHIFT_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_SCALE_SHIFT_ACTIVATIONS)
 def create_arithmetic_scale_shift_activations():
     arithmetic_scale_shift = create_arithmetic_scale_shift()
     activations = atomic_activations_operations()
@@ -236,7 +236,7 @@ def create_arithmetic_scale_shift_activations():
     return arithmetic_scale_shift
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
 def create_arithmetic_activations_batch_norm():
     arithmetic_activations = create_arithmetic_activations()
     batch_norm = batch_normalization_operations()
@@ -244,7 +244,7 @@ def create_arithmetic_activations_batch_norm():
     return arithmetic_activations
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS_SCALE_SHIFT)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_ACTIVATIONS_SCALE_SHIFT)
 def create_arithmetic_activations_scale_shift():
     arithmetic_activations = create_arithmetic_activations()
     scale_shift = create_scale_shift()
@@ -252,7 +252,7 @@ def create_arithmetic_activations_scale_shift():
     return arithmetic_activations
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.BATCH_NORM_ACTIVATIONS)
 def create_batch_norm_activations():
     batch_norm = batch_normalization_operations()
     activations = atomic_activations_operations()
@@ -260,7 +260,7 @@ def create_batch_norm_activations():
     return batch_norm
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.SCALE_SHIFT_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.SCALE_SHIFT_ACTIVATIONS)
 def create_scale_shift_activations():
     scale_shift = create_scale_shift()
     activations = atomic_activations_operations()
@@ -268,7 +268,7 @@ def create_scale_shift_activations():
     return scale_shift
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ARITHMETIC)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ARITHMETIC)
 def create_linear_arithmetic():
     linear = linear_operations()
     arithmetic = arithmetic_operations()
@@ -276,7 +276,7 @@ def create_linear_arithmetic():
     return linear
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_BATCH_NORM)
 def create_linear_batch_norm():
     linear = linear_operations()
     batch_norm = batch_normalization_operations()
@@ -284,7 +284,7 @@ def create_linear_batch_norm():
     return linear
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ACTIVATIONS)
 def create_linear_activations():
     linear = linear_operations()
     activations = atomic_activations_operations()
@@ -292,7 +292,7 @@ def create_linear_activations():
     return linear
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
 def create_linear_batch_norm_activations():
     linear_batch_norm = create_linear_batch_norm()
     activations = atomic_activations_operations()
@@ -300,7 +300,7 @@ def create_linear_batch_norm_activations():
     return linear_batch_norm
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SCALE_SHIFT_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_SCALE_SHIFT_ACTIVATIONS)
 def create_linear_scale_shift_activations():
     linear_scale_shift = create_linear_scale_shift()
     activations = atomic_activations_operations()
@@ -308,7 +308,7 @@ def create_linear_scale_shift_activations():
     return linear_scale_shift
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
 def create_linear_activations_batch_norm():
     linear_activations = create_linear_activations()
     batch_norm = batch_normalization_operations()
@@ -316,7 +316,7 @@ def create_linear_activations_batch_norm():
     return linear_activations
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_SCALE_SHIFT)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ACTIVATIONS_SCALE_SHIFT)
 def create_linear_activations_scale_shift():
     linear_activations = create_linear_activations()
     scale_shift = create_scale_shift()
@@ -324,7 +324,7 @@ def create_linear_activations_scale_shift():
     return linear_activations
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
 def create_linear_bn_scale_shift_activation() -> GraphPattern:
     linear_batch_norm = create_linear_batch_norm()
     scale_shift = create_scale_shift()
@@ -335,7 +335,7 @@ def create_linear_bn_scale_shift_activation() -> GraphPattern:
     return linear_batch_norm
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SQUEEZE_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_SQUEEZE_ACTIVATIONS)
 def create_linear_squeeze_activation():
     linear = linear_operations()
     squeeze = squeeze_operation()
@@ -346,7 +346,7 @@ def create_linear_squeeze_activation():
     return linear
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
 def create_bn_scale_shift_activation() -> GraphPattern:
     batch_norm = batch_normalization_operations()
     scale_shift = create_scale_shift()
@@ -360,7 +360,7 @@ def create_bn_scale_shift_activation() -> GraphPattern:
 # DEVICE PATTERNS
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SCALE_SHIFT)
+@ONNX_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_SCALE_SHIFT)
 def create_linear_scale_shift():
     linear = linear_operations()
     batch_norm = create_scale_shift()

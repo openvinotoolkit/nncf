@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import PatternNames
+from nncf.common.graph.patterns import HWPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.hardware.pattern_operations import ARITHMETIC_OPERATIONS
@@ -24,7 +24,7 @@ OPENVINO_HW_FUSED_PATTERNS = Registry("openvino")
 # BLOCK PATTERNS
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.ADD_SCALE_SHIFT_OUTPUT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.ADD_SCALE_SHIFT_OUTPUT)
 def create_add_scale_shift_output():
     pattern = GraphPattern()
     add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
@@ -42,7 +42,7 @@ def create_add_scale_shift_output():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.BATCH_INDEX)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.BATCH_INDEX)
 def create_batch_index():
     pattern = GraphPattern()
     subtract_node = pattern.add_node(
@@ -83,7 +83,7 @@ def create_batch_index():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.MVN_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.MVN_SCALE_SHIFT)
 def create_mvn():
     pattern = GraphPattern()
     pattern.add_node(**{GraphPattern.LABEL_ATTR: "MVN", GraphPattern.METATYPE_ATTR: om.OVMVNMetatype})
@@ -93,7 +93,7 @@ def create_mvn():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.NORMALIZE_L2_MULTIPLY)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.NORMALIZE_L2_MULTIPLY)
 def create_normalize():
     pattern = GraphPattern()
     normalize_l2_node = pattern.add_node(
@@ -107,7 +107,7 @@ def create_normalize():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_WITH_BIAS)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_WITH_BIAS)
 def create_biased_op():
     pattern = GraphPattern()
     linear_node = pattern.add_node(**LINEAR_OPERATIONS)
@@ -117,7 +117,7 @@ def create_biased_op():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.SCALE_SHIFT)
 def create_scale_shift():
     pattern = GraphPattern()
     mul_node = pattern.add_node(
@@ -128,7 +128,7 @@ def create_scale_shift():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SE_BLOCK)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.SE_BLOCK)
 def create_se_block():
     pattern = GraphPattern()
     any_node = pattern.add_node(
@@ -166,7 +166,7 @@ def create_se_block():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.STABLE_DIFFUSION)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.STABLE_DIFFUSION)
 def create_stable_diffusion():
     pattern = GraphPattern()
     softmax_node = pattern.add_node(
@@ -192,7 +192,7 @@ def create_stable_diffusion():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SOFTMAX_DIV)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.SOFTMAX_DIV)
 def create_softmax_div():
     pattern = GraphPattern()
     exp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EXP", GraphPattern.METATYPE_ATTR: om.OVExpMetatype})
@@ -207,7 +207,7 @@ def create_softmax_div():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SOFTMAX_RESHAPE_MATMUL)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.SOFTMAX_RESHAPE_MATMUL)
 def create_softmax_reshape_matmul():
     pattern = GraphPattern()
     softmax_node = pattern.add_node(
@@ -235,7 +235,7 @@ def create_softmax_reshape_matmul():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SOFTMAX_RESHAPE_TRANSPOSE_MATMUL)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.SOFTMAX_RESHAPE_TRANSPOSE_MATMUL)
 def create_softmax_reshape_transpose_matmul():
     pattern = GraphPattern()
     softmax_node = pattern.add_node(
@@ -259,7 +259,7 @@ def create_softmax_reshape_transpose_matmul():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL)
 def create_softmax_reshape_transpose_gather_matmul():
     pattern = GraphPattern()
     softmax_node = pattern.add_node(
@@ -287,7 +287,7 @@ def create_softmax_reshape_transpose_gather_matmul():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.EQUAL_LOGICALNOT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.EQUAL_LOGICALNOT)
 def create_equal_logicalnot():
     pattern = GraphPattern()
     equal_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EQUAL", GraphPattern.METATYPE_ATTR: om.OVEqualMetatype})
@@ -299,7 +299,7 @@ def create_equal_logicalnot():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.FC_BN_HSWISH_ACTIVATION)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.FC_BN_HSWISH_ACTIVATION)
 def create_fc_bn_hswish():
     pattern = GraphPattern()
     unsqueeze_node = pattern.add_node(
@@ -319,7 +319,7 @@ def create_fc_bn_hswish():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.MATMUL_SOFTMAX_MATMUL)
 def create_matmul_softmax_matmul():
     pattern = GraphPattern()
     softmax_1 = pattern.add_node(
@@ -366,7 +366,7 @@ def create_matmul_softmax_matmul():
 # ACTIVATIONS
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.HSWISH_ACTIVATION)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.HSWISH_ACTIVATION)
 def create_hswish():
     pattern = GraphPattern()
     linear_node = pattern.add_node(**LINEAR_OPERATIONS)
@@ -389,7 +389,7 @@ def create_hswish():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.HSWISH_ACTIVATION_V2)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.HSWISH_ACTIVATION_V2)
 def create_hswish_pattern_2():
     pattern = GraphPattern()
     input_node = pattern.add_node(
@@ -420,7 +420,7 @@ def create_hswish_pattern_2():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.HSWISH_ACTIVATION_WITHOUT_DENOMINATOR)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.HSWISH_ACTIVATION_WITHOUT_DENOMINATOR)
 def create_hswish_without_denominator():
     pattern = GraphPattern()
     linear_node = pattern.add_node(**LINEAR_OPERATIONS)
@@ -439,7 +439,7 @@ def create_hswish_without_denominator():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SWISH_WITH_HARD_SIGMOID)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.SWISH_WITH_HARD_SIGMOID)
 def create_swish_with_hardsigmoid():
     pattern = GraphPattern()
     linear_node = pattern.add_node(**LINEAR_OPERATIONS)
@@ -458,7 +458,7 @@ def create_swish_with_hardsigmoid():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SOFTMAX)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.SOFTMAX)
 def create_softmax():
     pattern = GraphPattern()
     exp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EXP", GraphPattern.METATYPE_ATTR: om.OVExpMetatype})
@@ -478,7 +478,7 @@ def create_softmax():
 # INPUT PROCESSING
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_SHIFT_SCALE)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_SHIFT_SCALE)
 def create_input_shift_scale():
     pattern = GraphPattern()
     model_input = pattern.add_node(
@@ -499,7 +499,7 @@ def create_input_shift_scale():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_CONVERT_TRANSPOSE_PROCESSING)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_CONVERT_TRANSPOSE_PROCESSING)
 def create_input_convert_transpose_processing():
     input_convert_transpose = create_input_convert_transpose()
     pattern = GraphPattern()
@@ -514,7 +514,7 @@ def create_input_convert_transpose_processing():
     return input_convert_transpose
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_CONVERT_TRANSPOSE_REVERSE_ADD)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_CONVERT_TRANSPOSE_REVERSE_ADD)
 def create_input_convert_transpose_reverse_add():
     input_convert_transpose = create_input_convert_transpose()
     pattern = GraphPattern()
@@ -531,7 +531,7 @@ def create_input_convert_transpose_reverse_add():
     return input_convert_transpose
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_CONVERT_TRANSPOSE_REVERSE_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_CONVERT_TRANSPOSE_REVERSE_SCALE_SHIFT)
 def create_input_convert_transpose_reverse_scale_shift():
     pattern = GraphPattern()
     model_input = pattern.add_node(
@@ -558,7 +558,7 @@ def create_input_convert_transpose_reverse_scale_shift():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_CONVERT_TRANSPOSE_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_CONVERT_TRANSPOSE_SCALE_SHIFT)
 def create_input_convert_transpose_scale_shift():
     input_convert_transpose = create_input_convert_transpose()
     scale_shift = create_scale_shift()
@@ -566,7 +566,7 @@ def create_input_convert_transpose_scale_shift():
     return input_convert_transpose
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_PROCESSING)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_PROCESSING)
 def create_input_processing():
     pattern = GraphPattern()
     model_input = pattern.add_node(
@@ -583,7 +583,7 @@ def create_input_processing():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_REVERSE_ADD)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_REVERSE_ADD)
 def create_input_reverse_add():
     pattern = GraphPattern()
     model_input = pattern.add_node(
@@ -602,7 +602,7 @@ def create_input_reverse_add():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_REVERSE_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_REVERSE_SCALE_SHIFT)
 def create_input_reverse_scale_shift():
     pattern = GraphPattern()
     model_input = pattern.add_node(
@@ -621,7 +621,7 @@ def create_input_reverse_scale_shift():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_SCALE_SHIFT)
 def create_input_scale_shift():
     pattern = GraphPattern()
     pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
@@ -631,7 +631,7 @@ def create_input_scale_shift():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_TRANSPOSE_PROCESSING)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_TRANSPOSE_PROCESSING)
 def create_input_transpose_processing():
     pattern = GraphPattern()
     model_input = pattern.add_node(
@@ -652,7 +652,7 @@ def create_input_transpose_processing():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_TRANSPOSE_REVERSE_ADD)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_TRANSPOSE_REVERSE_ADD)
 def create_input_transpose_reverse_add():
     pattern = GraphPattern()
     model_input = pattern.add_node(
@@ -675,7 +675,7 @@ def create_input_transpose_reverse_add():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.INPUT_TRANSPOSE_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.INPUT_TRANSPOSE_SCALE_SHIFT)
 def create_input_transpose_scale_shift():
     pattern = GraphPattern()
     model_input = pattern.add_node(
@@ -694,7 +694,7 @@ def create_input_transpose_scale_shift():
 # COMBINATIONS
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.ACTIVATIONS_BATCH_NORM)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.ACTIVATIONS_BATCH_NORM)
 def create_activations_batch_norm():
     activations = atomic_activations_operations()
     batch_norm = batch_normalization_operations()
@@ -702,7 +702,7 @@ def create_activations_batch_norm():
     return activations
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.ARITHMETIC_ACTIVATIONS)
 def create_arithmetic_activations():
     arithmetic = arithmetic_operations()
     activations = atomic_activations_operations()
@@ -710,7 +710,7 @@ def create_arithmetic_activations():
     return arithmetic
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_ACTIVATIONS)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.BATCH_NORM_ACTIVATIONS)
 def create_batch_norm_activations():
     batch_norm = batch_normalization_operations()
     activations = atomic_activations_operations()
@@ -718,7 +718,7 @@ def create_batch_norm_activations():
     return batch_norm
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ACTIVATIONS)
 def create_linear_activations():
     linear = linear_operations()
     activations = atomic_activations_operations()
@@ -726,7 +726,7 @@ def create_linear_activations():
     return linear
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ARITHMETIC)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ARITHMETIC)
 def create_linear_arithmetic():
     linear = linear_operations()
     arithmetic = arithmetic_operations()
@@ -734,7 +734,7 @@ def create_linear_arithmetic():
     return linear
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ARITHMETIC_ACTIVATIONS)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS)
 def create_linear_arithmetic_activations():
     linear = linear_operations()
     arithmetic = arithmetic_operations()
@@ -745,7 +745,7 @@ def create_linear_arithmetic_activations():
     return linear
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SQUEEZE_ACTIVATIONS)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_SQUEEZE_ACTIVATIONS)
 def create_linear_squeeze_activation():
     linear = linear_operations()
     squeeze = squeeze_operation()
@@ -756,7 +756,7 @@ def create_linear_squeeze_activation():
     return linear
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.MVN_SCALE_SHIFT_ACTIVATIONS)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.MVN_SCALE_SHIFT_ACTIVATIONS)
 def create_mvn_scale_shift_activations():
     pattern = GraphPattern()
     pattern.add_node(**{GraphPattern.LABEL_ATTR: "MVN", GraphPattern.METATYPE_ATTR: om.OVMVNMetatype})
@@ -771,7 +771,7 @@ def create_mvn_scale_shift_activations():
 # DEVICE PATTERNS
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.HSWISH_ACTIVATION_CLAMP_MULTIPLY)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.HSWISH_ACTIVATION_CLAMP_MULTIPLY)
 def create_clamp_mult_const():
     pattern = GraphPattern()
     clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.METATYPE_ATTR: om.OVClampMetatype})
@@ -783,7 +783,7 @@ def create_clamp_mult_const():
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SCALE_SHIFT_ACTIVATIONS)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.SCALE_SHIFT_ACTIVATIONS)
 def create_scale_shift_activations():
     scale_shift = create_scale_shift()
     activations = atomic_activations_operations()
@@ -791,7 +791,7 @@ def create_scale_shift_activations():
     return scale_shift
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_SCALE_SHIFT)
 def create_linear_scale_shift():
     linear = linear_operations()
     scale_shift = create_scale_shift()
@@ -799,7 +799,7 @@ def create_linear_scale_shift():
     return linear
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BIASED_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_BIASED_SCALE_SHIFT)
 def create_linear_biased_scale_shift():
     linear_biased = create_biased_op()
     scale_shift = create_scale_shift()
@@ -807,7 +807,7 @@ def create_linear_biased_scale_shift():
     return linear_biased
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATION_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ACTIVATION_SCALE_SHIFT)
 def create_linear_activation_scale_shift():
     linear_activations = create_linear_activations()
     scale_shift = create_scale_shift()
@@ -816,7 +816,7 @@ def create_linear_activation_scale_shift():
     return linear_activations
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BIASED_ACTIVATION_SCALE_SHIFT)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_BIASED_ACTIVATION_SCALE_SHIFT)
 def create_linear_biased_activation_scale_shift():
     linear_biased = create_biased_op()
     activations = atomic_activations_operations()
@@ -827,7 +827,7 @@ def create_linear_biased_activation_scale_shift():
     return linear_biased
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ELEMENTWISE)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ELEMENTWISE)
 def create_linear_elementwise():
     linear = linear_operations()
     elementwise = elementwise_operations()
@@ -835,7 +835,7 @@ def create_linear_elementwise():
     return linear
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BIASED_ELEMENTWISE)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_BIASED_ELEMENTWISE)
 def create_linear_biased_elementwise():
     linear_biased = create_biased_op()
     elementwise = elementwise_operations()
@@ -843,7 +843,7 @@ def create_linear_biased_elementwise():
     return linear_biased
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATION_ELEMENTWISE)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_ACTIVATION_ELEMENTWISE)
 def create_linear_activation_elementwise():
     linear_activations = create_linear_activations()
     elementwise = elementwise_operations()
@@ -852,7 +852,7 @@ def create_linear_activation_elementwise():
     return linear_activations
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BIASED_ACTIVATION_ELEMENTWISE)
+@OPENVINO_HW_FUSED_PATTERNS.register(HWPatternNames.LINEAR_BIASED_ACTIVATION_ELEMENTWISE)
 def create_linear_biased_activation_elementwise():
     linear_biased = create_biased_op()
     activations = atomic_activations_operations()

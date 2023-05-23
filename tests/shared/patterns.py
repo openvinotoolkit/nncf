@@ -10,15 +10,16 @@
 # limitations under the License.
 from typing import Dict
 
-from nncf.common.graph.patterns import PatternNames
+from nncf.common.graph.patterns import HWPatternNames
+from nncf.common.graph.patterns import IgnoredPatternNames
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.utils.backend import BackendType
 
 
-def check_hw_patterns(backend: BackendType, reasons: Dict[PatternNames, str]):
+def check_hw_patterns(backend: BackendType, reasons: Dict[HWPatternNames, str]):
     backend_patterns = PatternsManager._get_backend_hw_patterns_map(backend)
 
-    all_base_apatterns = PatternNames
+    all_base_apatterns = HWPatternNames
     for base_pattern in all_base_apatterns:
         pattern_name = base_pattern.name
         if base_pattern in reasons:
@@ -29,10 +30,10 @@ def check_hw_patterns(backend: BackendType, reasons: Dict[PatternNames, str]):
         assert base_pattern in backend_patterns, f"Pattern {pattern_name} not found in {backend.name}"
 
 
-def check_ignored_patterns(backend: BackendType, reasons: Dict[PatternNames, str]):
+def check_ignored_patterns(backend: BackendType, reasons: Dict[IgnoredPatternNames, str]):
     backend_patterns = PatternsManager._get_backend_ignored_patterns_map(backend)
 
-    all_base_apatterns = PatternNames
+    all_base_apatterns = IgnoredPatternNames
     for base_pattern in all_base_apatterns:
         pattern_name = base_pattern.name
         if base_pattern in reasons:

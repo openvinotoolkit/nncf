@@ -278,7 +278,7 @@ class PatternDesc:
     model_types: Optional[List[TargetDevice]] = None
 
 
-class PatternNames(Enum):
+class HWPatternNames(Enum):
     """
     Describes the patterns that will be fused during integer execution
     and would not be quantized in compression pipeline.
