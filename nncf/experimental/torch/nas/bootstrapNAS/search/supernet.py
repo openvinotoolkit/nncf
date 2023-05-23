@@ -60,15 +60,9 @@ class SuperNetwork:
         :return: SuperNetwork with wrapped functionality.
         """
         nncf_network = create_nncf_network(model, nncf_config)
-        compression_state = torch.load(
-            supernet_elasticity_path, map_location=torch.device(nncf_config.device)
-        )
-        model, elasticity_ctrl = resume_compression_from_state(
-            nncf_network, compression_state
-        )
-        model_weights = torch.load(
-            supernet_weights_path, map_location=torch.device(nncf_config.device)
-        )
+        compression_state = torch.load(supernet_elasticity_path, map_location=torch.device(nncf_config.device))
+        model, elasticity_ctrl = resume_compression_from_state(nncf_network, compression_state)
+        model_weights = torch.load(supernet_weights_path, map_location=torch.device(nncf_config.device))
         load_state(model, model_weights, is_resume=True)
         elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
         return SuperNetwork(elasticity_ctrl, model)
@@ -86,16 +80,12 @@ class SuperNetwork:
         """
         self._m_handler.get_design_vars_info()
 
-    def eval_subnet_with_design_vars(
-        self, design_config: List, eval_fn: ValFnType, **kwargs
-    ) -> Any:
+    def eval_subnet_with_design_vars(self, design_config: List, eval_fn: ValFnType, **kwargs) -> Any:
         """
 
         :returns the value produced by the user's function to evaluate the subnetwork.
         """
-        self._m_handler.activate_subnet_for_config(
-            self._m_handler.get_config_from_pymoo(design_config)
-        )
+        self._m_handler.activate_subnet_for_config(self._m_handler.get_config_from_pymoo(design_config))
         return eval_fn(self._model, **kwargs)
 
     def eval_active_subnet(self, eval_fn: ValFnType, **kwargs) -> Any:
