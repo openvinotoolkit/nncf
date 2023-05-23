@@ -54,14 +54,14 @@ class NodeDesc:
         self,
         node_id: str,
         name: str,
-        type_: str,
+        node_type: str,
         attrs: Optional[Dict[str, str]] = None,
         inputs: Optional[List[PortDesc]] = None,
         outputs: Optional[List[PortDesc]] = None,
     ):
         self.node_id = node_id
         self.name = name
-        self.type = type_
+        self.type = node_type
         if attrs is None:
             attrs = {}
         self.attrs = attrs
@@ -155,7 +155,7 @@ def get_graph_desc(
             NodeDesc(
                 node_id=str(node.node_id),
                 name=node.node_name,
-                type_=node.node_type.title(),
+                node_type=node.node_type.title(),
                 attrs=get_attributes_fn(node),
                 inputs=inputs,
                 outputs=outputs,

@@ -26,7 +26,7 @@ install-onnx-dev: install-onnx-test install-pre-commit install-pylint
 test-onnx:
 	pytest tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
-ONNX_PYFILES := $(shell find -path "*onnx*.py")
+ONNX_PYFILES := $(shell git ls-files | grep -P ".*onnx.*py$$" | grep -v -P ".*torch.*" | grep -v -P "^tools" )
 pylint-onnx:
 	pylint --rcfile .pylintrc               \
 		$(ONNX_PYFILES)
@@ -53,11 +53,10 @@ install-openvino-dev: install-openvino-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
-
 test-openvino:
 	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
-OV_PYFILES := $(shell find -path "*openvino*.py")
+OV_PYFILES := $(shell git ls-files | grep -P ".*openvino.*py$$" | grep -v -P "^tools")
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
 		$(OV_PYFILES)
@@ -83,7 +82,7 @@ test-tensorflow:
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
 
-TF_PYFILES := $(shell find -path "*tensorflow*.py")
+TF_PYFILES := $(shell git ls-files | grep -P ".*tensorflow.*py$$" | grep -v -P "^tools")
 pylint-tensorflow:
 	pylint --rcfile .pylintrc               \
 		$(TF_PYFILES)
@@ -107,13 +106,11 @@ install-torch-dev: install-torch-test install-pre-commit install-pylint
 test-torch:
 	pytest tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
-TORCH_PYFILES := $(shell find -type f -path "*torch*.py")
-COMMON_PYFILES := $(shell find  -type f -name "*.py"  ! \( \
-					-path "*torch*" -o                     \
-					-path "*tensorflow*" -o                \
-					-path "*onnx*" -o                      \
-					-path "*openvino*" -o                  \
-					-path "./tools/*" \))
+TORCH_PYFILES := $(shell git ls-files | grep -P ".*torch.*py$$" | grep -v -P "^tools")
+COMMON_PYFILES := $(shell git ls-files | grep -P ".*py$$" \
+					| grep -v -P ".*(torch|tensorflow|onnx|openvino).*" \
+					| grep -v -P "^tools")
+
 pylint-torch:
 	pylint --rcfile .pylintrc   \
 		$(TORCH_PYFILES)        \

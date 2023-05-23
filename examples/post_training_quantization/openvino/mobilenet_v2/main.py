@@ -131,7 +131,7 @@ def transform_fn(data_item):
 # (default: 300 samples) of the calibration dataset.
 
 calibration_dataset = nncf.Dataset(val_data_loader, transform_fn)
-quantized_model = nncf.quantize(ov_model, calibration_dataset)
+ov_quantized_model = nncf.quantize(ov_model, calibration_dataset)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
@@ -142,7 +142,7 @@ print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
 
 int8_ir_path = f"{ROOT}/mobilenet_v2_int8.xml"
-ov.serialize(quantized_model, int8_ir_path)
+ov.serialize(ov_quantized_model, int8_ir_path)
 print(f"[2/7] Save INT8 model: {int8_ir_path}")
 int8_model_size = get_model_size(int8_ir_path, verbose=True)
 
@@ -156,7 +156,7 @@ fp32_top1 = validate(ov_model, val_data_loader)
 print(f"Accuracy @ top1: {fp32_top1:.3f}")
 
 print("[6/7] Validate OpenVINO INT8 model:")
-int8_top1 = validate(quantized_model, val_data_loader)
+int8_top1 = validate(ov_quantized_model, val_data_loader)
 print(f"Accuracy @ top1: {int8_top1:.3f}")
 
 print("[7/7] Report:")

@@ -121,7 +121,7 @@ test_loader = datamodule.test_dataloader()
 download_and_extract(MODEL_PATH, MODEL_INFO)
 ov_model = ov.Core().read_model(MODEL_PATH / "stfpm_capsule.xml")
 
-with open(MODEL_PATH / "meta_data_stfpm_capsule.json", "r") as f:  # pylint: disable=unspecified-encoding
+with open(MODEL_PATH / "meta_data_stfpm_capsule.json", "r", encoding="utf-8") as f:
     validation_params = json.load(f)
 
 ###############################################################################
@@ -146,7 +146,7 @@ calibration_dataset = nncf.Dataset(anomaly_images, transform_fn)
 validation_fn = partial(validate, val_params=validation_params)
 validation_dataset = nncf.Dataset(test_loader, transform_fn)
 
-quantized_model = nncf.quantize_with_accuracy_control(
+ov_quantized_model = nncf.quantize_with_accuracy_control(
     model=ov_model,
     calibration_dataset=calibration_dataset,
     validation_dataset=validation_dataset,
@@ -163,7 +163,7 @@ print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_size = get_model_size(fp32_ir_path, verbose=True)
 
 int8_ir_path = f"{ROOT}/stfpm_int8.xml"
-ov.serialize(quantized_model, int8_ir_path)
+ov.serialize(ov_quantized_model, int8_ir_path)
 print(f"[2/7] Save INT8 model: {int8_ir_path}")
 int8_size = get_model_size(int8_ir_path, verbose=True)
 
@@ -178,7 +178,7 @@ fp32_top1 = validate(compiled_model, test_loader, validation_params)
 print(f"Accuracy @ top1: {fp32_top1:.3f}")
 
 print("[6/7] Validate OpenVINO INT8 model:")
-quantized_compiled_model = ov.compile_model(quantized_model)
+quantized_compiled_model = ov.compile_model(ov_quantized_model)
 int8_top1 = validate(quantized_compiled_model, test_loader, validation_params)
 print(f"Accuracy @ top1: {int8_top1:.3f}")
 

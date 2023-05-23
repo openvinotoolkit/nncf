@@ -142,13 +142,13 @@ def transform_fn(data_item):
 # (default: 300 samples) of the calibration dataset.
 
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
-quantized_model = nncf.quantize(tf_model, calibration_dataset)
+tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
 ov_model = mo.convert_model(tf_model)
-ov_quantized_model = mo.convert_model(quantized_model)
+ov_quantized_model = mo.convert_model(tf_quantized_model)
 
 fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
 ov.serialize(ov_model, fp32_ir_path)
