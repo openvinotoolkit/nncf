@@ -125,5 +125,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def get_node_names_for_input_output_statistics(node: NNCFNode, model: ov.Model) -> Tuple[str, str]:
         return node.node_name, node.node_name
 
+    @staticmethod
     def remove_fq_from_inputs(model: ov.Model) -> ov.Model:
         return remove_fq_from_inputs(model)

@@ -135,9 +135,13 @@ class FastBiasCorrection(Algorithm):
             (node, self._backend_entity.get_bias_value(node, nncf_graph, model))
             for node in nncf_graph.get_all_nodes()
             if self._backend_entity.is_node_with_bias(node, nncf_graph, model)
-        )
+        ]
         main_model_transformer = ModelTransformerFactory.create(model)
         model_transformer = ModelTransformerFactory.create(model_copy)
+
+        # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
+        # for which we should update bias and new bias values.
+        node_and_new_bias_value = []
 
         for node, bias_value in tqdm(node_and_bias_value, desc="(FBC) Bias correction"):
             node_name = node.node_name
