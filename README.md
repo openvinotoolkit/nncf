@@ -336,7 +336,8 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 - Supported frameworks:
   - PyTorch\* >=1.9.1, <1.14
   - TensorFlow\* >=2.4.0, <=2.11.1
-  - onnx~=1.13.1, onnxruntime~=1.14.1
+  - ONNX\* ~=1.13.1
+  - OpenVINO\* >=2022.3.0
 
 This repository is tested on Python* 3.8.10, PyTorch* 1.12.1 (NVidia CUDA\* Toolkit 11.6) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
 
