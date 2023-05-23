@@ -30,7 +30,7 @@ Neural Network Compression Framework (NNCF) provides a suite of post-training an
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
-NNCF provides [examples](#usage) and [samples](#Model-Compression-Samples) that demonstrate the usage of compression algorithms for different use cases and models. 
+NNCF provides [samples](#Model-Compression-Samples) that demonstrate the usage of compression algorithms for different use cases and models. 
 [Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
 the end of this document.
 
