@@ -19,6 +19,7 @@ from torch import nn
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
@@ -49,10 +50,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return PTMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> None:
-        return None
+        pytest.skip("PTBiasCorrectionAlgoBackend is not implemented")
 
-    def get_fast_bias_correction_algo_backend_cls(self) -> None:
-        return None
+    def get_fast_bias_correction_algo_backend_cls(self) -> Type[PTFastBiasCorrectionAlgoBackend]:
+        return PTFastBiasCorrectionAlgoBackend
 
     def get_backend_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
@@ -119,10 +120,4 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     @pytest.mark.skip("Merging is not implemented yet")
     def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
-        pass
-
-    @pytest.mark.skip("Bias correction and Fast bias correction is not implemented yet")
-    def test_statistics_aggregator_bias_correction(
-        self, dataset_samples, test_params, inplace_statistics, is_stat_in_shape_of_scale
-    ):
         pass

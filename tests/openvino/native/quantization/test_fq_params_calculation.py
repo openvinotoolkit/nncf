@@ -77,7 +77,7 @@ def fixture_inplace_statistics(request):
     ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
 )
 @pytest.mark.parametrize("model_creator_func", SYNTHETIC_MODELS.values())
-def test_syntetic_models_fq_scales(model_creator_func, preset, inplace_statistics):
+def test_synthetic_models_fq_scales(model_creator_func, preset, inplace_statistics):
     model = model_creator_func()
     quantized_model = quantize_model(model.ov_model, {"preset": preset, "inplace_statistics": inplace_statistics})
     nodes = get_fq_nodes_stats_algo(quantized_model)
@@ -85,7 +85,7 @@ def test_syntetic_models_fq_scales(model_creator_func, preset, inplace_statistic
     ref_stats_name = model.ref_graph_name.split(".")[0] + f"_{preset.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
@@ -107,7 +107,7 @@ def test_overflow_fix_scales(overflow_fix):
     ref_stats_name = model.ref_graph_name.split(".")[0] + f"_overflow_fix_{overflow_fix.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
@@ -140,7 +140,7 @@ def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
     ref_stats_name = str(Path(model_path).name).rsplit(".", maxsplit=1)[0] + f"_{preset.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
@@ -159,7 +159,7 @@ REF_NODES_SHAPES = {
 @pytest.mark.parametrize(
     "model_creator_func, ref_shapes", zip([LinearModel, ConvModel, MatMul2DModel], REF_NODES_SHAPES.values())
 )
-def test_syntetic_models_fq_shapes(model_creator_func, ref_shapes, inplace_statistics):
+def test_synthetic_models_fq_shapes(model_creator_func, ref_shapes, inplace_statistics):
     model = model_creator_func()
     quantized_model = quantize_model(
         model.ov_model, {"preset": QuantizationPreset.PERFORMANCE, "inplace_statistics": inplace_statistics}

@@ -146,11 +146,11 @@ class PostTrainingQuantization(Algorithm):
         """
         Creates backend-specific StatisticsAggregator.
 
-        :param engine: engine for the model execution
-        :param dataset: dataset for the statistics collection and validation
-        :param model_transformer: backend-specific ModelTransformerBase instance
-        :param backend: model backend type for the further differentiations
-        :return: backnd-specific StatisticsAggregator
+        :param engine: Engine for the model execution
+        :param dataset: Dataset for the statistics collection and validation
+        :param model_transformer: Backend-specific ModelTransformerBase instance
+        :param backend: Model backend type for the further differentiations
+        :return: Backend-specific StatisticsAggregator
         """
         if backend == BackendType.ONNX:
             from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator

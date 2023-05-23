@@ -29,7 +29,7 @@ QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graph
 
 
 @pytest.mark.parametrize("model_creator_func", SYNTHETIC_MODELS.values())
-def test_syntetic_models_fq_placement(model_creator_func):
+def test_synthetic_models_fq_placement(model_creator_func):
     model = model_creator_func()
     quantized_model = quantize_model(
         model.ov_model, {"preset": QuantizationPreset.PERFORMANCE, "inplace_statistics": True}

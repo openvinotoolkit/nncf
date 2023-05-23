@@ -52,7 +52,7 @@ class MeanTensorStatistic(TensorStatistic):
 
     def __init__(self, mean_values, shape):
         """
-        :param mean_values: Сollected mean per-axis values.
+        :param mean_values: Collected mean per-axis values.
         :param shape: The shape of the collected statistics.
         """
         self.mean_values = mean_values
@@ -95,7 +95,7 @@ class RawTensorStatistic(TensorStatistic):
 
     def __init__(self, values):
         """
-        :param values: Сollected raw values.
+        :param values: Collected raw values.
         """
         self.values = values
 
