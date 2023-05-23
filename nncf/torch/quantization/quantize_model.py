@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional, Tuple
 import torch
 
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.helpers import merge_dicts
 from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
@@ -32,6 +33,7 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_ob
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.quantization.strip import strip_quantized_model
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
 
@@ -39,7 +41,7 @@ DEFAULT_RANGE_TYPE = "mean_min_max"
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
-class CalibrarionDataLoader(PTInitializingDataLoader):
+class CalibrationDataLoader(PTInitializingDataLoader):
     """
     This class wraps the nncf.Dataset.
 
@@ -61,7 +63,7 @@ class CalibrarionDataLoader(PTInitializingDataLoader):
     def __len__(self):
         if self._length is None:
             data = self._data_loader.get_inference_data()
-            self._length = CalibrarionDataLoader._get_length(data)
+            self._length = CalibrationDataLoader._get_length(data)
         return self._length
 
     def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
@@ -180,7 +182,7 @@ def _create_nncf_config(
                 if "type" not in rconfig:
                     rconfig["type"] = DEFAULT_RANGE_TYPE
 
-        compression_config.update(advanced_config)
+        compression_config = merge_dicts(compression_config, advanced_config)
 
     return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 
@@ -210,11 +212,14 @@ def quantize_impl(
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported")
 
+    if advanced_parameters is None:
+        advanced_parameters = AdvancedQuantizationParameters()
+
     nncf_config = _create_nncf_config(
         preset, target_device, subset_size, model_type, ignored_scope, advanced_parameters
     )
 
-    calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
+    calibration_data_loader = CalibrationDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(
         [
             QuantizationRangeInitArgs(data_loader=calibration_data_loader),
@@ -259,5 +264,8 @@ def quantize_impl(
     )
     compression_ctrl.prepare_for_export()
     compressed_model.nncf.disable_dynamic_graph_building()
+
+    if advanced_parameters.strip_model:
+        compressed_model = strip_quantized_model(compressed_model)
 
     return compressed_model

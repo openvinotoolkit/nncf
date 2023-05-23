@@ -15,6 +15,7 @@ import tensorflow as tf
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.helpers import merge_dicts
 from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
@@ -32,7 +33,7 @@ DEFAULT_RANGE_TYPE = "mean_min_max"
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
-class CalibrarionDataLoader(NNCFDataLoader):
+class CalibrationDataLoader(NNCFDataLoader):
     """
     This class wraps the nncf.Dataset.
 
@@ -133,7 +134,7 @@ def _create_nncf_config(
                 if "type" not in rconfig:
                     rconfig["type"] = DEFAULT_RANGE_TYPE
 
-        compression_config.update(advanced_config)
+        compression_config = merge_dicts(compression_config, advanced_config)
 
     return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 
@@ -165,9 +166,12 @@ def quantize_impl(
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported.")
 
+    if advanced_parameters is None:
+        advanced_parameters = AdvancedQuantizationParameters()
+
     nncf_config = _create_nncf_config(preset, target_device, subset_size, ignored_scope, advanced_parameters)
 
-    calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
+    calibration_data_loader = CalibrationDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(
         [
             QuantizationRangeInitArgs(data_loader=calibration_data_loader),
@@ -176,6 +180,8 @@ def quantize_impl(
     )
 
     compression_ctrl, compressed_model = create_compressed_model(model=model, config=nncf_config)
-    stripped_model = compression_ctrl.strip_model(compressed_model)
 
-    return stripped_model
+    if advanced_parameters.strip_model:
+        compressed_model = compression_ctrl.strip_model(compressed_model)
+
+    return compressed_model

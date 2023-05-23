@@ -25,12 +25,14 @@ def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> NNCFNetwork:
     Replace NNCF quantizer modules to PyTorch FakeQuantizer module and remove unused quantizer operators.
 
     :param model: Target model.
-
     :return: The modified NNCF network.
     """
-    for key in model.nncf.external_quantizers.keys():
-        if model.nncf.external_quantizers[key].is_enabled_quantization():
-            model.nncf.external_quantizers[key] = convert_to_torch_fakequantizer(model.nncf.external_quantizers[key])
+    if hasattr(model.nncf, "external_quantizers"):
+        for key in model.nncf.external_quantizers.keys():
+            if model.nncf.external_quantizers[key].is_enabled_quantization():
+                model.nncf.external_quantizers[key] = convert_to_torch_fakequantizer(
+                    model.nncf.external_quantizers[key]
+                )
 
     for node in model.nncf.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
@@ -67,10 +69,8 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     Convert BaseQuantizer module to FakeQuantize.
 
     :param quantizer: NNCF Quantizer module.
-
     :return: Instance of FakeQuantize similar to the input quantizer.
     """
-
     # Call set_level_ranges to set actual values
     nncf_quantizer.set_level_ranges()
 
@@ -119,7 +119,6 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
     Remove all unused quantizer operators from the model.
 
     :param model: Compressed model.
-
     :return: The modified NNCF network.
     """
     if hasattr(model, "external_quantizers"):
@@ -146,4 +145,17 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
                 if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
                     nncf_module.remove_post_forward_operation(key)
 
+    return model
+
+
+def strip_quantized_model(model: NNCFNetwork):
+    """
+    Returns the model with as much custom NNCF additions as possible removed
+    while still preserving the functioning of the model object as a compressed model.
+
+    :param model: Compressed model.
+    :return: The modified NNCF network.
+    """
+    model = replace_quantizer_to_torch_native_module(model)
+    model = remove_disabled_quantizers(model)
     return model

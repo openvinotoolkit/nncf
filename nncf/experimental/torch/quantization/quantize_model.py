@@ -26,6 +26,7 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_obj
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.strip import strip_quantized_model
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
 from nncf.torch.utils import training_mode_switcher
@@ -117,7 +118,8 @@ def quantize_impl(
 
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=calibration_dataset)
 
-    # TODO (asuslov): quantized_model = quantized_model.strip()
+    if advanced_parameters.strip_model:
+        quantized_model = strip_quantized_model(quantized_model)
 
     quantized_model.nncf.disable_dynamic_graph_building()
 

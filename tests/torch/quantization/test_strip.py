@@ -16,11 +16,15 @@ import pytest
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
+import nncf
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.config import NNCFConfig
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
@@ -30,6 +34,7 @@ from tests.common.quantization.data_generators import generate_random_low_and_ra
 from tests.common.quantization.data_generators import generate_random_scale_by_input_size
 from tests.common.quantization.data_generators import generate_sweep_data
 from tests.common.quantization.data_generators import get_quant_len_by_range
+from tests.post_training.helpers import StaticDatasetMock
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -310,3 +315,29 @@ def test_do_copy(do_copy):
         assert id(inference_model) == id(compressed_model)
 
     assert id(compressed_model) == id(compression_ctrl.model)
+
+
+@pytest.mark.parametrize("strip_model", (True, False, None))
+def test_strip_quntized_model(strip_model):
+    model = BasicConvTestModel()
+
+    def transform_fn(data_item):
+        return data_item[0]
+
+    dataset = nncf.Dataset(StaticDatasetMock([1, 1, 4, 4], lambda x: torch.Tensor(x)), transform_fn)
+
+    if strip_model is not None:
+        advanced_parameters = AdvancedQuantizationParameters()
+        advanced_parameters.overflow_fix = OverflowFix.ENABLE
+        advanced_parameters.strip_model = strip_model
+        advanced_parameters.quantize_outputs = True
+    else:
+        advanced_parameters = None
+
+    quantized_model = nncf.quantize(model, dataset, subset_size=1, advanced_parameters=advanced_parameters)
+
+    fq = quantized_model.conv.pre_ops._modules["0"].op
+    if strip_model is None or strip_model is True:
+        assert isinstance(fq, FakeQuantize)
+    else:
+        assert isinstance(fq, BaseQuantizer)

@@ -115,7 +115,7 @@ class AdvancedBiasCorrectionParameters:
 @dataclass
 class AdvancedQuantizationParameters:
     """
-    Contains advanced parameters for fine-tuning qunatization algorithm.
+    Contains advanced parameters for fine-tuning quantization algorithm.
 
     :param overflow_fix: This option controls whether to apply the overflow issue fix
         for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
@@ -128,6 +128,9 @@ class AdvancedQuantizationParameters:
     :type inplace_statistics: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
+    :param strip_model: Strips auxiliary layers that were used for the model compression,
+    as it's only needed for training. Parameter used only for Pytorch and TensorFlow backends.
+    :type strip_model: bool
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -147,6 +150,7 @@ class AdvancedQuantizationParameters:
     quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_bias_correction: bool = False
+    strip_model: bool = True
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)
@@ -159,7 +163,7 @@ class AdvancedQuantizationParameters:
     # Advanced BiasCorrection algorithm parameters
     bias_correction_params: AdvancedBiasCorrectionParameters = field(default_factory=AdvancedBiasCorrectionParameters)
 
-    # backend specific parameters
+    # Backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -291,6 +295,13 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
             "min_percentile": 1 - params.min.quantile_outlier_prob,
             "max_percentile": 1 - params.max.quantile_outlier_prob,
         }
+    elif (
+        params.min.statistics_type is None
+        and params.min.aggregator_type is None
+        and params.max.statistics_type is None
+        and params.max.aggregator_type is None
+    ):
+        return {}
     else:
         raise RuntimeError("The following range estimator parameters are not supported: " f"{str(params)}")
 
@@ -307,10 +318,11 @@ def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) 
     result = {
         "overflow_fix": params.overflow_fix.value,
         "quantize_outputs": params.quantize_outputs,
+        "initializer": {},
     }
 
     if params.disable_bias_correction:
-        result["batchnorm_adaptation"] = {"num_bn_adaptation_samples": 0}
+        result["initializer"]["batchnorm_adaptation"] = {"num_bn_adaptation_samples": 0}
 
     activations_config = convert_quantization_parameters_to_dict(params.activations_quantization_params)
     if activations_config:
@@ -323,7 +335,7 @@ def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) 
     activations_init_range_config = convert_range_estimator_parameters_to_dict(
         params.activations_range_estimator_params
     )
-    weights_init_range_config = convert_range_estimator_parameters_to_dict(params.weigths_range_estimator_params)
+    weights_init_range_config = convert_range_estimator_parameters_to_dict(params.weights_range_estimator_params)
     if activations_init_range_config or weights_init_range_config:
         activations_init_range_config["target_quantizer_group"] = "activations"
         activations_init_range_config["target_scopes"] = "{re}.*"
