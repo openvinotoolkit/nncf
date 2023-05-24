@@ -124,6 +124,11 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
     op_metatypes.TFTileOpMetatype,
     op_metatypes.TFSplitOpMetatype,
     op_metatypes.TFTransposeOpMetatype,
+    # TFReluOpMetatype and TFReLULayerMetatype aren't considered to be QUANTIZATION_AGNOSTIC, because:
+    # 1. Runtime doesn't provide performance benefits by quantizing the stand-alone RELU's (ticket: 59548)
+    # 2. That it's frequently better for the end accuracy to have quantizers set up after the RELU
+    # so that the input distribution to the quantizer is non-negative
+    # and we can therefore have better quantization resolution while preserving the original dynamic range
 ]
 
 LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS = [
