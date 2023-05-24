@@ -28,7 +28,7 @@ test-onnx:
 
 pylint-onnx:
 	pylint --rcfile .pylintrc               \
-		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py onnx)
+		$(shell python3 tools/collect_pylint_input_files_for_backend.py onnx)
 
 test-install-onnx:
 	pytest tests/cross_fw/install/ -s       \
@@ -57,7 +57,7 @@ test-openvino:
 
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
-		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py openvino)
+		$(shell  python3 tools/collect_pylint_input_files_for_backend.py openvino)
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
@@ -82,7 +82,7 @@ test-tensorflow:
 
 pylint-tensorflow:
 	pylint --rcfile .pylintrc               \
-		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py tensorflow)
+		$(shell python3 tools/collect_pylint_input_files_for_backend.py tensorflow)
 
 test-install-tensorflow:
 	pytest tests/cross_fw/install/ -s --backend tf --junitxml ${JUNITXML_PATH}
@@ -100,11 +100,13 @@ install-torch-dev: install-torch-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
 test-torch:
-	pytest tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	pytest tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
+COMMON_PYFILES := $(shell python3 tools/collect_pylint_input_files_for_backend.py common)
 pylint-torch:
 	pylint --rcfile .pylintrc   \
-		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py torch)
+		$(COMMON_PYFILES)       \
+		$(shell python3 tools/collect_pylint_input_files_for_backend.py torch)
 
 test-install-torch-cpu:
 	pytest tests/cross_fw/install/ -s       \
@@ -121,7 +123,7 @@ test-install-torch-gpu:
 # Common part
 pylint-common:
 	pylint --rcfile .pylintrc   \
-		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py common)
+		$(COMMON_PYFILES)
 
 test-common:
 	pytest tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
