@@ -549,7 +549,7 @@ class AccuracyAwareTrainingMode:
 def create_accuracy_aware_training_loop(
     nncf_config: NNCFConfig,
     compression_ctrl: CompressionAlgorithmController,
-    uncompressed_model_accuracy: float = None,
+    uncompressed_model_accuracy: float,
     **additional_runner_args,
 ) -> BaseEarlyExitCompressionTrainingLoop:
     """
@@ -564,9 +564,6 @@ def create_accuracy_aware_training_loop(
     """
     accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
     accuracy_aware_training_mode = accuracy_aware_training_params.get("mode")
-    if uncompressed_model_accuracy is None:
-        eval_fn = nncf_config.get_extra_struct(ModelEvaluationArgs).eval_fn
-        uncompressed_model_accuracy = eval_fn(compression_ctrl.model)
     if accuracy_aware_training_mode == AccuracyAwareTrainingMode.EARLY_EXIT:
         return EarlyExitCompressionTrainingLoop(
             nncf_config, compression_ctrl, uncompressed_model_accuracy, **additional_runner_args
