@@ -74,6 +74,8 @@ class OVModelTransformer(ModelTransformer):
         nodes_queue = deque(model.get_parameters())
         while nodes_queue:
             node = nodes_queue.popleft()
+            if node.name in activation_nodes:
+                continue
             activation_nodes.add(node.name)
             for node_output in node.outputs():
                 nodes_queue.extend([i.get_node() for i in node_output.get_target_inputs()])
