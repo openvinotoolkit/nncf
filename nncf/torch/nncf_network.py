@@ -385,9 +385,10 @@ class NNCFNetworkInterface(torch.nn.Module):
         nncf_modules = self.get_nncf_modules()
         retval = {}
         for nncf_module, nncf_module_scope in nncf_modules.items():
-            nncf_module_scope.pop()
+            copy_nncf_module_scope = nncf_module_scope.copy()
+            copy_nncf_module_scope.pop()
             for relative_scope, target_module in get_all_modules_by_type(nncf_module, class_names).items():
-                retval[nncf_module_scope + relative_scope] = target_module
+                retval[copy_nncf_module_scope + relative_scope] = target_module
         return retval
 
     def insert_at_point(self, point: PTInsertionPoint, fn_list: List[Callable]):
