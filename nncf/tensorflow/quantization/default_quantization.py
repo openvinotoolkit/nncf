@@ -16,7 +16,7 @@ from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_D
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
 
-# If there are no some metatypes it means that they are considered as QuantizationTrait.NON_QUANTIZABLE
+# If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
 DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [

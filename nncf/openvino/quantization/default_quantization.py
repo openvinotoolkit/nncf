@@ -13,7 +13,7 @@ from nncf.common.quantization.quantizer_propagation.structs import QuantizationT
 from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 from nncf.openvino.graph.metatypes.common import QUANTIZE_AGNOSTIC_OPERATIONS
 
-# If there are no some metatypes it means that they are considered as QuantizationTrait.NON_QUANTIZABLE
+# If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
 DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [

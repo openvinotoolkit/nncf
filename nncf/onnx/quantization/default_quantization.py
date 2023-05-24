@@ -12,7 +12,7 @@
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.onnx.graph.metatypes import onnx_metatypes
 
-# If there are no some metatypes it means that they are considered as QuantizationTrait.NON_QUANTIZABLE
+# If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
 DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
@@ -57,7 +57,7 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         onnx_metatypes.ONNXFlattenMetatype,
         # ONNXReluMetatype is not considered to be QUANTIZATION_AGNOSTIC, because:
         # 1. Runtime doesn't provide performance benefits by quantizing the stand-alone RELU's (ticket: 59548)
-        # 2. That it's frequently better for the end accuracy to have quantizers set up after the RELU
+        # 2. It's frequently better for the end accuracy to have quantizers set up after the RELU
         # so that the input distribution to the quantizer is non-negative
         # and we can therefore have better quantization resolution while preserving the original dynamic range
     ],
