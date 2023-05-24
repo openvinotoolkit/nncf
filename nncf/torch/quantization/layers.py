@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
-from pkg_resources import parse_version
+from packaging import version
 from torch import distributed
 from torch import nn
 
@@ -618,7 +618,7 @@ class SymmetricQuantizer(BaseQuantizer):
             )
         )
 
-        if parse_version(torch.__version__) >= parse_version("1.12"):
+        if version.parse(torch.__version__) >= version.parse("1.12"):
             # Values of level_low, level_high must be recalculated for load new signed parameter.
             self.register_load_state_dict_post_hook(lambda module, _: module.set_level_ranges())
         else:
