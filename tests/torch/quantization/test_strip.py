@@ -324,7 +324,10 @@ def test_strip_quntized_model(strip_model):
     def transform_fn(data_item):
         return data_item[0]
 
-    dataset = nncf.Dataset(StaticDatasetMock([1, 1, 4, 4], lambda x: torch.Tensor(x)), transform_fn)
+    def to_tensor(x):
+        return torch.Tensor(x)
+
+    dataset = nncf.Dataset(StaticDatasetMock([1, 1, 4, 4], to_tensor), transform_fn)
 
     if strip_model is not None:
         advanced_parameters = AdvancedQuantizationParameters()
@@ -336,7 +339,7 @@ def test_strip_quntized_model(strip_model):
 
     quantized_model = nncf.quantize(model, dataset, subset_size=1, advanced_parameters=advanced_parameters)
 
-    fq = quantized_model.conv.pre_ops._modules["0"].op
+    fq = quantized_model.conv.get_pre_op("0").op
     if strip_model is None or strip_model is True:
         assert isinstance(fq, FakeQuantize)
     else:

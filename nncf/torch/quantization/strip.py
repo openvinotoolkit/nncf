@@ -121,7 +121,7 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
     :param model: Compressed model.
     :return: The modified NNCF network.
     """
-    if hasattr(model, "external_quantizers"):
+    if hasattr(model.nncf, "external_quantizers"):
         for key in list(model.nncf.external_quantizers.keys()):
             op = model.nncf.external_quantizers[key]
             if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
