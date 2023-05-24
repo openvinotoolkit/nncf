@@ -136,7 +136,3 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         next_norm_node = get_potential_fused_node(node.node_name, model)
         output_node_name = next_norm_node.node_name if next_norm_node else input_node_name
         return input_node_name, output_node_name
-
-    @staticmethod
-    def remove_fq_from_inputs(model: NNCFNetwork) -> NNCFNetwork:
-        return model

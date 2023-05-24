@@ -21,7 +21,6 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
-from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
@@ -124,7 +123,3 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, model: ov.Model) -> Tuple[str, str]:
         return node.node_name, node.node_name
-
-    @staticmethod
-    def remove_fq_from_inputs(model: ov.Model) -> ov.Model:
-        return remove_fq_from_inputs(model)

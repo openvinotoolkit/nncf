@@ -25,7 +25,6 @@ from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
@@ -127,7 +126,6 @@ class FastBiasCorrection(Algorithm):
     ) -> TModel:
         self._set_backend_entity(model)
 
-        model_copy = self._backend_entity.remove_fq_from_inputs(copy_model(model))
         nncf_graph = NNCFGraphFactory.create(model)
         model_transformer = ModelTransformerFactory.create(model)
 
@@ -136,8 +134,6 @@ class FastBiasCorrection(Algorithm):
             for node in nncf_graph.get_all_nodes()
             if self._backend_entity.is_node_with_bias(node, nncf_graph, model)
         ]
-        main_model_transformer = ModelTransformerFactory.create(model)
-        model_transformer = ModelTransformerFactory.create(model_copy)
 
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
         # for which we should update bias and new bias values.
@@ -187,7 +183,7 @@ class FastBiasCorrection(Algorithm):
             transformation_layout.register(
                 self._backend_entity.create_bias_correction_command(node, bias_value, nncf_graph)
             )
-        transformed_model = main_model_transformer.transform(transformation_layout)
+        transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
 

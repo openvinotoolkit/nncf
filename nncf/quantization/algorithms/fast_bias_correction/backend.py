@@ -226,14 +226,3 @@ class FastBiasCorrectionAlgoBackend(ABC):
             Name of node to collect output statistics
         """
         # TODO(AlexanderDokuchaev): use nncf_graph instead of model, after fix 111576
-
-    @staticmethod
-    @abstractmethod
-    def remove_fq_from_inputs(model: TModel) -> TModel:
-        """
-        This method removes the activation Fake Quantize nodes (or Quantize-Dequantize pairs) from the model.
-        It's needed for the further bias shift calculation that relates on quantized weights.
-
-        :param model: TModel instance.
-        :return: TModel without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
-        """

@@ -63,6 +63,23 @@ class OVModelTransformer(ModelTransformer):
         return {op.get_friendly_name(): op for op in model.get_ops()}
 
     @staticmethod
+    def _get_activation_node_names(model: ov.Model) -> List[str]:
+        """
+        Returns list of the activation node names.
+
+        :param model: Model to get list.
+        :return: List with the activation names.
+        """
+        activation_nodes = set()
+        nodes_queue = deque(model.get_parameters())
+        while nodes_queue:
+            node = nodes_queue.popleft()
+            activation_nodes.add(node.name)
+            for node_output in node.outputs():
+                nodes_queue.extend([i.get_node() for i in node_output.get_target_inputs()])
+        return list(activation_nodes)
+
+    @staticmethod
     def _update_tensor_name(tensors: List[DescriptorTensor], name: str) -> None:
         """
         Updates tensors names in-place.
@@ -364,6 +381,7 @@ class OVModelTransformer(ModelTransformer):
         """
         transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        activation_node_names = OVModelTransformer._get_activation_node_names(model)
         params, results = [], []
         for input_name in transformation.inputs:
             input_node = name_to_node_mapping[input_name]
@@ -371,7 +389,7 @@ class OVModelTransformer(ModelTransformer):
                 params.append(input_node)
                 continue
             for input_port in input_node.inputs():
-                if input_port.get_source_output().get_node().get_type_name() in ["Constant", "FakeQuantize"]:
+                if input_port.get_source_output().get_node().name not in activation_node_names:
                     continue
                 input_node_output = input_port.get_source_output()
                 parameter_name = f"Parameter_{input_name}"

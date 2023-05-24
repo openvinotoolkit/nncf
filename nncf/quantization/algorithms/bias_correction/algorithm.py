@@ -151,7 +151,7 @@ class BiasCorrection(Algorithm):
 
         # The collected information contains lists of input and output layers,
         # for which we will create a subgraph for inference and collection of statistics.
-        subgraphs_data = [self._get_subgraph_data_for_node(node, nncf_graph, model) for node in nodes_with_bias]
+        subgraphs_data = [self._get_subgraph_data_for_node(node, nncf_graph) for node in nodes_with_bias]
 
         for position, (node, subgraph_data) in tqdm(
             list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="(BC) Bias correction"
@@ -200,7 +200,7 @@ class BiasCorrection(Algorithm):
 
         return main_model_transformer.transform(main_transformations_layout)
 
-    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> Dict[str, List[str]]:
+    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, List[str]]:
         """
         This method collects necessary data for the specified node and its subgraph.
         This data contains the nodes (NNCFNode) for the subgraph building
@@ -208,7 +208,6 @@ class BiasCorrection(Algorithm):
 
         :param node: NNCFNode instance. This is the main node that with bias that would be corrected (or not).
         :param nncf_graph: NNCFGraph instance for graph analysis.
-        :param model: Backend-specific model.
         :return: A dict with the list of the nodes for the subgraph input and statistics collection.
         """
         statistic_nodes, subgraph_input_nodes, subgraph_output_nodes = [], [], []
