@@ -14,7 +14,6 @@ import tensorflow as tf
 
 import nncf
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.tensorflow.graph.utils import get_nncf_operations
 from tests.tensorflow.accuracy_aware_training.test_keras_api import get_const_target_mock_regression_dataset
 from tests.tensorflow.helpers import TFTensorListComparator
