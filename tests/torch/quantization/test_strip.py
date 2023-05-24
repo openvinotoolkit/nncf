@@ -34,7 +34,7 @@ from tests.common.quantization.data_generators import generate_random_low_and_ra
 from tests.common.quantization.data_generators import generate_random_scale_by_input_size
 from tests.common.quantization.data_generators import generate_sweep_data
 from tests.common.quantization.data_generators import get_quant_len_by_range
-from tests.post_training.helpers import StaticDatasetMock
+from tests.common.static_dataset import get_static_dataset
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -327,7 +327,7 @@ def test_strip_quntized_model(strip_model):
     def to_tensor(x):
         return torch.Tensor(x)
 
-    dataset = nncf.Dataset(StaticDatasetMock([1, 1, 4, 4], to_tensor), transform_fn)
+    dataset = get_static_dataset(input_size=[1, 1, 4, 4], transform_fn=transform_fn, fn_to_type=to_tensor)
 
     if strip_model is not None:
         advanced_parameters = AdvancedQuantizationParameters()
