@@ -26,10 +26,9 @@ install-onnx-dev: install-onnx-test install-pre-commit install-pylint
 test-onnx:
 	pytest tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
-ONNX_PYFILES := $(shell git ls-files | grep -P ".*onnx.*py$$" | grep -v -P ".*torch.*" | grep -v -P "^tools" )
 pylint-onnx:
 	pylint --rcfile .pylintrc               \
-		$(ONNX_PYFILES)
+		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py onnx)
 
 test-install-onnx:
 	pytest tests/cross_fw/install/ -s       \
@@ -56,10 +55,9 @@ install-openvino-dev: install-openvino-test install-pre-commit install-pylint
 test-openvino:
 	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
-OV_PYFILES := $(shell git ls-files | grep -P ".*openvino.*py$$" | grep -v -P "^tools")
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
-		$(OV_PYFILES)
+		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py openvino)
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
@@ -82,10 +80,9 @@ test-tensorflow:
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
 
-TF_PYFILES := $(shell git ls-files | grep -P ".*tensorflow.*py$$" | grep -v -P "^tools")
 pylint-tensorflow:
 	pylint --rcfile .pylintrc               \
-		$(TF_PYFILES)
+		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py tensorflow)
 
 test-install-tensorflow:
 	pytest tests/cross_fw/install/ -s --backend tf --junitxml ${JUNITXML_PATH}
@@ -101,21 +98,13 @@ install-torch-test:
 
 install-torch-dev: install-torch-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
-	pip install -r docs/api/requirements.txt
 
 test-torch:
-	pytest tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
-
-TORCH_PYFILES := $(shell git ls-files | grep -P ".*torch.*py$$" | grep -v -P "^tools")
-COMMON_PYFILES := $(shell git ls-files | grep -P ".*py$$" \
-					| grep -v -P ".*(torch|tensorflow|onnx|openvino).*" \
-					| grep -v -P "^tools")
+	pytest tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 pylint-torch:
 	pylint --rcfile .pylintrc   \
-		$(TORCH_PYFILES)        \
-		$(COMMON_PYFILES)
-
+		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py torch)
 
 test-install-torch-cpu:
 	pytest tests/cross_fw/install/ -s       \
@@ -127,6 +116,15 @@ test-install-torch-gpu:
 	pytest tests/cross_fw/install -s        \
 		--backend torch                     \
 		--junitxml ${JUNITXML_PATH}
+
+###############################################################################
+# Common part
+pylint-common:
+	pylint --rcfile .pylintrc   \
+		$(shell $(which python3) tools/collect_pylint_input_files_for_backend.py common)
+
+test-common:
+	pytest tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # Pre commit check
