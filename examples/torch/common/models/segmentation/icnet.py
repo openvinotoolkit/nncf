@@ -21,7 +21,7 @@ from collections import OrderedDict
 import torch
 import torch.nn.functional as F
 from numpy import lcm
-from pkg_resources import parse_version
+from packaging import version
 from torch import nn
 
 from examples.torch.common.example_logger import logger
@@ -393,7 +393,7 @@ class ICNet(nn.Module):
         fused_features_ds4 = F.interpolate(fused_features_sub421, self._input_size_hw_ds4, **self.sampling_params)
         label_scores_ds4 = self.conv6_cls(fused_features_ds4)
         label_scores = F.interpolate(label_scores_ds4, self._input_size_hw, **self.sampling_params)
-        if is_tracing_state() and parse_version(torch.__version__) >= parse_version("1.1.0"):
+        if is_tracing_state() and version.parse(torch.__version__) >= version.parse("1.1.0"):
             # While exporting, add extra post-processing layers into the graph
             # so that the model outputs class probabilities instead of class scores
             softmaxed = F.softmax(label_scores, dim=1)
