@@ -30,7 +30,6 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig
 from nncf.config.extractors import extract_accuracy_aware_training_params
-from nncf.config.structures import ModelEvaluationArgs
 
 TModel = TypeVar("TModel")
 TensorboardWriterType = TypeVar("TensorboardWriterType")
