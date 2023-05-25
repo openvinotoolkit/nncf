@@ -555,10 +555,8 @@ def create_accuracy_aware_training_loop(
     Creates an accuracy aware training loop corresponding to NNCFConfig and CompressionAlgorithmController.
     :param: nncf_config: An instance of the NNCFConfig.
     :param: compression_ctrl: An instance of CompressionAlgorithmController.
-    :param: uncompressed_model_accuracy: If provided, will take this as the value of the target accuracy metric for the
-    original (uncompressed) model for purposes of matching the compressed model metric to this baseline. If not
-    provided, the uncompressed model accuracy will be measured during this function using `ModelEvaluationArgs.eval_fn`
-    callable as provided by the nncf_config.
+    :param: uncompressed_model_accuracy: The value of the target accuracy metric for the original (uncompressed) model
+    for purposes of matching the compressed model metric to this baseline
     :return: Accuracy aware training loop.
     """
     accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
