@@ -55,6 +55,8 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         onnx_metatypes.ONNXCastLikeMetatype,
         onnx_metatypes.ONNXDropoutMetatype,
         onnx_metatypes.ONNXFlattenMetatype,
+        onnx_metatypes.ONNXExpandMetatype,
+        onnx_metatypes.ONNXIdentityMetatype,
         # ONNXReluMetatype is not considered to be QUANTIZATION_AGNOSTIC, because:
         # 1. Runtime doesn't provide performance benefits by quantizing the stand-alone RELU's (ticket: 59548)
         # 2. It's frequently better for the end accuracy to have quantizers set up after the RELU
