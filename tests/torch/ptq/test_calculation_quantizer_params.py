@@ -291,12 +291,12 @@ def calculate_fq_params(model, input_data):
     conv2_w = model.conv2.weight
     conv2_w_stats = calculate_statistics(conv2_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS)
     return {
-        "FakeQuantize_6": conv1_stats,
-        "relu/FakeQuantize": bn1_stats,
-        "avg_pool/FakeQuantize": avg_pool_stats,
-        "bn1/FakeQuantize": conv2_stats,
-        "conv1/pre_ops.0/op/FakeQuantize": conv1_w_stats,
-        "conv2/pre_ops.0/op/FakeQuantize": conv2_w_stats,
+        "/FakeQuantize": conv1_stats,
+        "/relu/FakeQuantize": bn1_stats,
+        "/avg_pool/FakeQuantize": avg_pool_stats,
+        "/bn1/FakeQuantize": conv2_stats,
+        "/conv1/pre_ops.0/op/FakeQuantize": conv1_w_stats,
+        "/conv2/pre_ops.0/op/FakeQuantize": conv2_w_stats,
     }
 
 
