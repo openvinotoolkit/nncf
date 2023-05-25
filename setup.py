@@ -111,6 +111,7 @@ INSTALL_REQUIRES = [
     # reference files no longer match against the graphs produced in tests.
     # Using 2.x versions of pyparsing seems to fix the issue.
     # Ticket: 69520
+    "packaging>=20.0",
     "pyparsing<3.0",
     "pymoo==0.5.0",
     "jsonschema>=3.2.0",
