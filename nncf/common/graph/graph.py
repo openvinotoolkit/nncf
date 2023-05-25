@@ -704,6 +704,12 @@ class NNCFGraph:
             self._node_id_to_key_dict[node["id"]] = node_key
 
     def find_patterns(self, patterns: GraphPattern) -> List[str]:
+        """
+        Returns node keys of matched pattern in patterns.
+
+        :param patterns: Instance of GraphPattern containing all patterns.
+        :return: Node keys that are matched patterns.
+        """
         output = []
         for ignored_names in find_subgraphs_matching_pattern(self._nx_graph, patterns):
             output.extend(map(lambda x: x.split()[-1], ignored_names))

@@ -19,7 +19,6 @@ from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
@@ -82,17 +81,6 @@ def _filter_target_points_by_metatypes(
         if node.metatype in metatypes:
             output.add(quantization_target_point)
     return output
-
-
-def _find_ignored_scope_ignored_patterns(nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> IgnoredScope:
-    """
-    Returns IgnoredScope with node names of matched subgrahps of ignored_patterns.
-
-    :param nncf_graph: Instance of NNCFgraph.
-    :param ignored_patterns: GraphPattern instance with all quantization ignored patterns.
-    :return: IgnoredScope with node names of matched subgrahps of ignored_patterns
-    """
-    return IgnoredScope(names=nncf_graph.find_patterns(ignored_patterns))
 
 
 class MinMaxQuantization(Algorithm):
@@ -320,7 +308,7 @@ class MinMaxQuantization(Algorithm):
             get_ignored_node_names_from_ignored_scope(model_type_ignore_scope, nncf_graph, strict=False)
         )
 
-        ignored_patterns_ignore_scope = _find_ignored_scope_ignored_patterns(nncf_graph, ignored_patterns)
+        ignored_patterns_ignore_scope = IgnoredScope(names=nncf_graph.find_patterns(ignored_patterns))
         ignored_names.update(
             get_ignored_node_names_from_ignored_scope(ignored_patterns_ignore_scope, nncf_graph, strict=False)
         )
