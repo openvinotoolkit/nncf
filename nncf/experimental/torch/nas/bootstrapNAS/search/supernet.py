@@ -25,7 +25,7 @@ TModel = TypeVar("TModel")
 ValFnType = Callable[[NNCFNetwork, Any], Any]
 
 
-class SuperNetwork:
+class TrainedSuperNet:
     """
     An interface for handling pre-trained super-networks. This class can be used to quickly implement
     third party solutions for subnetwork search on existing super-networks.
@@ -83,14 +83,13 @@ class SuperNetwork:
     def eval_subnet_with_design_vars(self, design_config: List, eval_fn: ValFnType, **kwargs) -> Any:
         """
 
-        :returns the value produced by the user's function to evaluate the subnetwork.
+        :return: the value produced by the user's function to evaluate the subnetwork.
         """
         self._m_handler.activate_subnet_for_config(self._m_handler.get_config_from_pymoo(design_config))
         return eval_fn(self._model, **kwargs)
 
     def eval_active_subnet(self, eval_fn: ValFnType, **kwargs) -> Any:
         """
-
         :param eval_fn: user's function to evaluate the active subnetwork.
         :return: value of the user's function used to evaluate the subnetwork.
         """
@@ -98,7 +97,6 @@ class SuperNetwork:
 
     def eval_subnet(self, config: SubnetConfig, eval_fn: ValFnType, **kwargs) -> Any:
         """
-
         :param config: subnetwork configuration.
         :param eval_fn: user's function to evaluate the active subnetwork.
         :return: value of the user's function used to evaluate the subnetwork.
@@ -108,7 +106,6 @@ class SuperNetwork:
 
     def activate_config(self, config: SubnetConfig) -> None:
         """
-
         :param config: subnetwork configuration to activate.
         """
         self._m_handler.activate_subnet_for_config(config)
@@ -116,27 +113,23 @@ class SuperNetwork:
     def activate_maximal_subnet(self) -> None:
         """
         Activates the maximal subnetwork in the super-network.
-
         """
         self._m_handler.activate_maximum_subnet()
 
     def activate_minimal_subnet(self) -> None:
         """
         Activates the minimal subnetwork in the super-network.
-
         """
         self._m_handler.activate_minimum_subnet()
 
     def get_active_config(self) -> SubnetConfig:
         """
-
         :return: the active configuration.
         """
         return self._m_handler.get_active_config()
 
     def get_macs_for_active_config(self) -> float:
         """
-
         :return: MACs of active subnet.
         """
         return self._m_handler.count_flops_and_weights_for_active_subnet()[0] / 2e6
@@ -160,7 +153,6 @@ class SuperNetwork:
 
     def get_active_subnet(self) -> NNCFNetwork:
         """
-
         :return: the nncf network with the current active configuration.
         """
         return self._model
