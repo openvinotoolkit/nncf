@@ -41,14 +41,14 @@ import sys
 import sysconfig
 
 import setuptools
-from packaging import version
+from pkg_resources import parse_version
 from setuptools import find_packages
 from setuptools import setup
 
 here = os.path.abspath(os.path.dirname(__file__))
 BKC_SETUPTOOLS_VERSION = "59.5.0"
 
-setuptools_version = version.parse(setuptools.__version__).base_version
+setuptools_version = parse_version(setuptools.__version__).base_version
 if setuptools_version < "43.0.0":
     raise RuntimeError(
         "To properly install NNCF, please install setuptools>=43.0.0, "
