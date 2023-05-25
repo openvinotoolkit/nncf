@@ -38,6 +38,7 @@ from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import set_seed
 from examples.tensorflow.common.utils import write_metrics
+from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
@@ -180,6 +181,9 @@ def run(config):
 
     with TFModelManager(model_fn, nncf_config, **model_params) as model:
         with strategy.scope():
+            if "train" in config.mode and is_accuracy_aware_training(config):
+                uncompressed_model_accuracy = config.nncf_config.get_extra_struct(ModelEvaluationArgs).eval_fn(model)
+
             compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
             compression_callbacks = create_compression_callbacks(compression_ctrl, log_dir=config.log_dir)
 
@@ -239,6 +243,7 @@ def run(config):
             statistics = compress_model.accuracy_aware_fit(
                 train_dataset,
                 compression_ctrl,
+                uncompressed_model_accuracy=uncompressed_model_accuracy,
                 nncf_config=config.nncf_config,
                 callbacks=callbacks,
                 initial_epoch=initial_epoch,
