@@ -49,7 +49,7 @@ class TrainedSuperNet:
         nncf_config: NNCFConfig,
         supernet_elasticity_path: str,
         supernet_weights_path: str,
-    ) -> "SuperNetwork":
+    ) -> "TrainedSuperNet":
         """
         Loads existing super-network weights and elasticity information, and creates the SuperNetwork interface.
 
@@ -65,7 +65,7 @@ class TrainedSuperNet:
         model_weights = torch.load(supernet_weights_path, map_location=torch.device(nncf_config.device))
         load_state(model, model_weights, is_resume=True)
         elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
-        return SuperNetwork(elasticity_ctrl, model)
+        return TrainedSuperNet(elasticity_ctrl, model)
 
     def get_search_space(self) -> Dict:
         """
