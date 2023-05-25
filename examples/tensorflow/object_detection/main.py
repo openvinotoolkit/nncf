@@ -412,8 +412,9 @@ def run(config):
                 metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
                 return metric_result["AP"]
 
-            acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl,
-                                                                          uncompressed_model_accuracy)
+            acc_aware_training_loop = create_accuracy_aware_training_loop(
+                nncf_config, compression_ctrl, uncompressed_model_accuracy
+            )
             compress_model = acc_aware_training_loop.run(
                 compress_model,
                 train_epoch_fn=train_epoch_fn,
