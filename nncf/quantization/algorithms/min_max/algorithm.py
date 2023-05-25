@@ -92,10 +92,7 @@ def _find_ignored_scope_ignored_patterns(nncf_graph: NNCFGraph, ignored_patterns
     :param ignored_patterns: GraphPattern instance with all quantization ignored patterns.
     :return: IgnoredScope with node names of matched subgrahps of ignored_patterns
     """
-    output = []
-    for ignored_names in find_subgraphs_matching_pattern(nncf_graph._nx_graph, ignored_patterns):
-        output.extend(map(lambda x: x.split()[-1], ignored_names))
-    return IgnoredScope(names=output)
+    return IgnoredScope(names=nncf_graph.find_patterns(ignored_patterns))
 
 
 class MinMaxQuantization(Algorithm):

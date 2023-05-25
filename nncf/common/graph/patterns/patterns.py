@@ -77,6 +77,7 @@ class GraphPattern:
 
     LABEL_ATTR = "label"
     METATYPE_ATTR = "type"
+    NODE_TYPE_ATTR = "metatype"
     ANY_PATTERN_NODE_TYPE = "ANY_PATTERN_NODE"
     NON_PATTERN_NODE_TYPE = "NON_PATTERN_NODE"
 

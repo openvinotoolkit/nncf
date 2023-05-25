@@ -15,11 +15,13 @@ from typing import Any, Callable, Dict, Generator, KeysView, List, Tuple, Type, 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 
+from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.utils.dot_file_rw import write_dot_graph
 
 NNCFNodeName = str
@@ -700,3 +702,9 @@ class NNCFGraph:
         self._node_id_to_key_dict = {}
         for node_key, node in self._nx_graph.nodes.items():
             self._node_id_to_key_dict[node["id"]] = node_key
+
+    def find_patterns(self, patterns: GraphPattern) -> List[str]:
+        output = []
+        for ignored_names in find_subgraphs_matching_pattern(self._nx_graph, patterns):
+            output.extend(map(lambda x: x.split()[-1], ignored_names))
+        return output
