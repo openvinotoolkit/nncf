@@ -91,6 +91,12 @@ class ACValidationFunction:
     Implementation of a validation function using the Accuracy Checker.
     """
 
+    METRIC_TO_PERSAMPLE_METRIC = {
+        "coco_orig_precision": "coco_precision",
+        "coco_orig_keypoints_precision": "coco_precision",
+        "coco_orig_segm_precision": "coco_segm_precision",
+    }
+
     def __init__(self, model_evaluator: ModelEvaluator, metric_name: str, requests_number: Optional[int] = None):
         """
         :param model_evaluator: Model Evaluator.
@@ -100,6 +106,10 @@ class ACValidationFunction:
         """
         self._model_evaluator = model_evaluator
         self._metric_name = metric_name
+        self._persample_metric_name = self.METRIC_TO_PERSAMPLE_METRIC.get(self._metric_name, self._metric_name)
+        registered_metrics = model_evaluator.get_metrics_attributes()
+        if self._persample_metric_name not in registered_metrics:
+            self._model_evaluator.register_metric(self._persample_metric_name)
         self._requests_number = requests_number
         self._values_for_each_item = []
 
@@ -166,7 +176,7 @@ class ACValidationFunction:
 
         for sample_id, results in metrics_result.items():
             for metric_result in results:
-                if metric_result.metric_name != self._metric_name:
+                if metric_result.metric_name != self._persample_metric_name:
                     continue
 
                 sign = 1.0
