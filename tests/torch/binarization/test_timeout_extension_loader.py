@@ -28,7 +28,7 @@ def test_timeout_extension_loader_isolated(tmp_path, use_cuda):
     if not torch.cuda.is_available() and use_cuda is True:
         pytest.skip("Skipping CUDA test cases for CPU only setups")
 
-    quant_func = BinarizedFunctionsCPU if use_cuda else BinarizedFunctionsCUDA
+    quant_func = BinarizedFunctionsCUDA if use_cuda else BinarizedFunctionsCPU
 
     os.environ[EXTENSION_LOAD_TIMEOUT_ENV_VAR] = "1"
     os.environ["TORCH_EXTENSIONS_DIR"] = tmp_path.as_posix()
