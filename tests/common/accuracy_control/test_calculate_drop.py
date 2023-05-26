@@ -87,7 +87,7 @@ class TestCase:
             drop_type=DropType.RELATIVE,
             expected_should_terminate=True,
             expected_accuracy_drop=None,
-        )
+        ),
     ],
 )
 def test_calculate_accuracy_drop(ts: TestCase):
