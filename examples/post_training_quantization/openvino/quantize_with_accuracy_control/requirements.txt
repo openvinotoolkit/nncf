@@ -1,2 +1,2 @@
-anomalib@ git+https://github.com/openvinotoolkit/anomalib@8a6c6ea115ad2c460a9beaee85736d1180eaa996#egg=anomalib
+anomalib@ git+https://github.com/openvinotoolkit/anomalib@d0b8ce8ea100bbdfb058f00a3b246f257a08da93#egg=anomalib
 openvino-dev
