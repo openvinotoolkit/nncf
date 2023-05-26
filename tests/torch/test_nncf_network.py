@@ -692,3 +692,13 @@ def test_forward_hooks_are_preserved():
     assert next(iter(nncf_net._forward_hooks.values())) is hook
     nncf_net(torch.ones(SimplestModel.INPUT_SIZE))
     assert hook.call_count == 1
+
+
+def test_safety_change_scope_in_get_nncf_modules():
+    model = SimplestModel()
+
+    nncf_net = NNCFNetwork(model, [ModelInputInfo(SimplestModel.INPUT_SIZE)])
+
+    orig_id = id(list(nncf_net.nncf._nncf_replaced_modules.values())[0][0])
+    return_id = id(list(nncf_net.nncf.get_nncf_modules().values())[0])
+    assert orig_id != return_id

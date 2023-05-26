@@ -476,7 +476,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         retval = {}
         for module, scope_set in self._nncf_replaced_modules.items():
             canonical_scope = next(iter(scope_set))
-            retval[module] = canonical_scope
+            retval[module] = canonical_scope.copy()
         return retval
 
     def get_weighted_original_graph_nodes(self, nncf_module_names: List[str] = None) -> List[NNCFNode]:
