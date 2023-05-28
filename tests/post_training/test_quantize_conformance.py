@@ -668,7 +668,7 @@ def run_ptq_timm(
                 runinfo = runner(
                     model,
                     calibration_dataset,
-                    model_quantization_params,
+                    model_quantization_params.copy(),
                     output_folder,
                     model_name,
                     batch_one_dataloader,
