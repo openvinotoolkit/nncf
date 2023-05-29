@@ -100,7 +100,7 @@ def calc_per_sample_metrics(
 ) -> List[Dict[str, Any]]:
     per_sample_metrics = []
     for inputs in dataset.get_data(subset_indices):
-        value = val_func(compiled_model, [inputs])
+        value, _ = val_func(compiled_model, [inputs])
         per_sample_metrics.append(
             {"sample_id": len(per_sample_metrics), "metric_name": "original_metric", "result": value}
         )
