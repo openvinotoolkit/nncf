@@ -85,7 +85,7 @@ class Evaluator:
             # - tf.constant([1.0], dtype=tf.float32)
             values_for_each_item = [float(x) for x in values_for_each_item]
 
-        return metric, values_for_each_item
+        return float(metric), values_for_each_item
 
     def _determine_mode(self, model_for_inference: TModel, dataset: Dataset) -> None:
         """
@@ -101,6 +101,14 @@ class Evaluator:
             metric_value, values_for_each_item = self._validation_fn(model_for_inference, data_item)
         except Exception:
             self._metric_mode = False
+
+        try:
+            metric_value = metric_value if metric_value is None else float(metric_value)
+        except Exception as ex:
+            raise RuntimeError(
+                f"Metric value of {type(metric_value)} type was returned from the `validation_fn` "
+                "but the float value is expected."
+            ) from ex
 
         if self._metric_mode is not None:
             return
