@@ -91,6 +91,7 @@ def test_determine_mode(ts: TestCase):
 
     evaluator = Evaluator(_validation_fn, DummyAccuracyControlAlgoBackend())
 
+    # pylint: disable=W0212
     if ts.raise_exception:
         with pytest.raises(RuntimeError):
             evaluator._determine_mode(None, Dataset([None]))
