@@ -330,10 +330,11 @@ def test_strip_quntized_model(strip_model):
     dataset = get_static_dataset(input_size=[1, 1, 4, 4], transform_fn=transform_fn, fn_to_type=to_tensor)
 
     if strip_model is not None:
-        advanced_parameters = AdvancedQuantizationParameters()
-        advanced_parameters.overflow_fix = OverflowFix.ENABLE
-        advanced_parameters.strip_model = strip_model
-        advanced_parameters.quantize_outputs = True
+        advanced_parameters = AdvancedQuantizationParameters(
+            overflow_fix=OverflowFix.ENABLE,
+            quantize_outputs=True,
+            strip_model=strip_model,
+        )
     else:
         advanced_parameters = None
 

@@ -68,8 +68,7 @@ def test_nncf_quantize_strip(strip_model):
     dataset = Dataset(RandomDatasetMock(input_size), transform_fn)
 
     if strip_model is not None:
-        advanced_parameters = AdvancedQuantizationParameters()
-        advanced_parameters.strip_model = strip_model
+        advanced_parameters = AdvancedQuantizationParameters(strip_model=strip_model)
     else:
         advanced_parameters = None
 
