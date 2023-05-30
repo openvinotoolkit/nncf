@@ -125,6 +125,9 @@ class PTTransformationCommand(TransformationCommand):
         """
         return False
 
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
+        raise NotImplementedError()
+
 
 class PTInsertionCommand(PTTransformationCommand):
     """
@@ -141,7 +144,7 @@ class PTInsertionCommand(PTTransformationCommand):
         self.fn = fn  # type: Callable
         self.priority = priority  # type: TransformationPriority
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
         # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
         raise NotImplementedError()
 
@@ -184,5 +187,5 @@ class PTBiasCorrectionCommand(PTTransformationCommand):
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_value = bias_value
 
-    def union(self, other: "Command") -> "Command":
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
         raise NotImplementedError()
