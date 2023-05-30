@@ -98,12 +98,12 @@ class PTTargetPoint(TargetPoint):
         return cls(**kwargs)
 
 
-class PTCommandExtension:
+class PTCommand(Command):
     """
-    TThe base class for all PT commands.
+    The base class for all Command for PyTorch.
     """
 
-    def need_rebuild_graph(self):
+    def requires_graph_rebuild(self):
         """
         Return boolean flag to rebuild graph of model.
 
@@ -112,7 +112,21 @@ class PTCommandExtension:
         return False
 
 
-class PTInsertionCommand(TransformationCommand, PTCommandExtension):
+class PTTransformationCommand(TransformationCommand):
+    """
+    The base class for all TransformationCommand for PyTorch.
+    """
+
+    def requires_graph_rebuild(self):
+        """
+        Return boolean flag to rebuild graph of model.
+
+        :return: Boolean flag.
+        """
+        return False
+
+
+class PTInsertionCommand(PTTransformationCommand):
     """
     Insertion operation to the models.
     """
@@ -131,7 +145,7 @@ class PTInsertionCommand(TransformationCommand, PTCommandExtension):
         # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
         raise NotImplementedError()
 
-    def need_rebuild_graph(self):
+    def requires_graph_rebuild(self):
         """
         Return boolean flag to rebuild graph of model.
 
@@ -141,7 +155,7 @@ class PTInsertionCommand(TransformationCommand, PTCommandExtension):
         return self.priority == TransformationPriority.QUANTIZATION_PRIORITY
 
 
-class PTModelExtractionWithFusedBiasCommand(Command, PTCommandExtension):
+class PTModelExtractionWithFusedBiasCommand(PTCommand):
     """
     Extracts sequence by name with node that contain fused bias.
     """
@@ -157,7 +171,7 @@ class PTModelExtractionWithFusedBiasCommand(Command, PTCommandExtension):
         raise NotImplementedError()
 
 
-class PTBiasCorrectionCommand(TransformationCommand, PTCommandExtension):
+class PTBiasCorrectionCommand(PTTransformationCommand):
     """
     Corrects bias value in the model based on the input value.
     """

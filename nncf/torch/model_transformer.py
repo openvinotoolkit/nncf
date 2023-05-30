@@ -47,10 +47,10 @@ class PTModelTransformer(ModelTransformer):
     def transform(self, transformation_layout: PTTransformationLayout) -> NNCFNetwork:
         transformations = transformation_layout.transformations
         aggregated_transformations = defaultdict(list)
-        need_rebuild_graph = False
+        requires_graph_rebuild = False
         for transformation in transformations:
             aggregated_transformations[transformation.__class__].append(transformation)
-            need_rebuild_graph = need_rebuild_graph or transformation.need_rebuild_graph()
+            requires_graph_rebuild = requires_graph_rebuild or transformation.requires_graph_rebuild()
 
         model = self._model
         for transformation_cls, transformation_fn in self._command_transformation_ordered_pairs:
@@ -58,7 +58,7 @@ class PTModelTransformer(ModelTransformer):
             if transformations:
                 model = transformation_fn(model, transformations)
 
-        if need_rebuild_graph:
+        if requires_graph_rebuild:
             model.nncf.rebuild_graph()
 
         return model
