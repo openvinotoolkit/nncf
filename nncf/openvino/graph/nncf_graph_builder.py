@@ -26,6 +26,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpr
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 
 
 class GraphConverter:
@@ -177,9 +178,16 @@ class GraphConverter:
                     if GraphConverter.convert_to_nncf_dtype(ov_dtype) == Dtype.INTEGER:
                         continue
 
+                    transpose = False
+                    if metatype == OVMatMulMetatype:
+                        attribute_names = ["transpose_a", "transpose_b"]
+                        node_attributes = node.get_attributes()
+                        transpose = node_attributes[attribute_names[const_port_id]]
+
                     const_attrs[const_port_id] = {
                         "name": const_node.get_friendly_name(),
                         "shape": tuple(const_node.get_output_shape(0)),
+                        "transpose": transpose,
                     }
 
                 if const_attrs:
