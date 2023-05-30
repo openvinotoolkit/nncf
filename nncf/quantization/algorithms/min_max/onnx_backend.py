@@ -24,6 +24,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
@@ -224,6 +225,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ONNXSqueezeMetatype,
                 ONNXSubMetatype,
                 ONNXReduceMeanMetatype,
+                ONNXDivLayerMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(ONNXMulLayerMetatype)
