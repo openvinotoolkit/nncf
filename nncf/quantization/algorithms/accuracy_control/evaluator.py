@@ -102,6 +102,9 @@ class Evaluator:
         except Exception:
             self._metric_mode = False
 
+        if self._metric_mode is not None:
+            return
+
         try:
             metric_value = metric_value if metric_value is None else float(metric_value)
         except Exception as ex:
@@ -109,9 +112,6 @@ class Evaluator:
                 f"Metric value of {type(metric_value)} type was returned from the `validation_fn` "
                 "but the float value is expected."
             ) from ex
-
-        if self._metric_mode is not None:
-            return
 
         convert_to_float_possible = True
         if values_for_each_item is not None:
