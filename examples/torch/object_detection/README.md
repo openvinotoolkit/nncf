@@ -47,6 +47,7 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
 - Use `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training from scratch. This flag is optional, but highly recommended to use.
 - Use `--multiprocessing-distributed` flag to run in the distributed mode.
 - Use `--resume` flag with the path to a previously saved model to resume training.
+- Use the `--no_strip_on_export` to export not stripped model.
 
 #### Validate your model checkpoint
 

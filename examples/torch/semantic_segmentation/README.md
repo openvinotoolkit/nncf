@@ -54,6 +54,7 @@ It may take a few epochs to get the baseline accuracy results.
 - Use the `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful
   if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training fr
   om scratch.
+- Use the `--no_strip_on_export` to export not stripped model.
 
 #### Validate your model checkpoint
 
