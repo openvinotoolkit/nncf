@@ -1,5 +1,60 @@
 # Release Notes
 
+## New in Release 2.5.0
+Post-training Quantization:
+
+- Features:
+  - Official release of OpenVINO framework support.
+    - Ported NNCF OpenVINO backend to use the [nGraph](https://docs.openvino.ai/2021.3/openvino_docs_nGraph_DG_Introduction.html) representation of OpenVINO models.
+    - Changed dependecies of NNCF OpenVINO backend. It now depends on `openvino` package and not on the `openvino-dev` package.
+    - Added GRU/LSTM quantization support.
+    - Added quantizer scales unification.
+    - Added support for models with 3D and 5D Depthwise convolution.
+    - Added FP16 OpenVINO models support.
+  - Added `"overflow_fix"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support & functionality. It improves accuracy for optimized model for affected devices. More details in [Quantization section](docs/compression_algorithms/Quantization.md).
+  - (OpenVINO) Added support for in-place statistics collection (reduce memory footprint during optimization).
+  - (OpenVINO) Added Quantization with accuracy control algorithm.
+  - (OpenVINO) Added YOLOv8 examples for [`quantize(...)`](examples/post_training_quantization/openvino/yolov8) & [`quantize_with_accuracy_control(...)`](examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control) methods.
+  - (PyTorch) Added min-max quantization algorithm as experimental.
+
+- Fixes:
+  - Fixed `ignored_scope` attribute behaviour for weights. Now, the weighted layers excludes from optimization scope correctly.
+  - (ONNX) Checking correct ONNX opset version via the `nncf.quantize(...)`. Now, models with opset < 13 are optimized correctly in per-tensor quantization.
+
+- Improvements:
+  - Added improvements for statistic collection process (collect weights statistics only once).
+  - (PyTorch, OpenVINO, ONNX) Introduced unified quantizer parameters calculation.
+
+Compression-aware training:
+
+- New Features:
+  - Introduced automated structured pruning algorithm for JPQD with support for BERT, Wave2VecV2, Swin, ViT, DistilBERT, CLIP, and MobileBERT models.
+  - Added `nncf.common.utils.patcher.Patcher` - this class can be used to patch methods on live PyTorch model objects with wrappers such as `nncf.torch.dynamic_graph.context.no_nncf_trace` when doing so in the model code is not possible (e.g. if the model comes from an external library package).
+  - Compression controllers of the `nncf.api.compression.CompressionAlgorithmController` class now have a `.strip()` method that will return the compressed model object with as many custom NNCF additions removed as possible while preserving the functioning of the model object as a compressed model.
+
+- Fixes:
+  - Fixed statistics computation for pruned layers.
+  - (PyTorch) Fixed traced tensors to implement the YOLOv8 from Ultralytics.
+
+- Improvements:
+  - Extension of attributes (`transpose/permute/getitem`) for pruning node selector.
+  - NNCFNetwork was refactored from a wrapper-approach to a mixin-like approach.
+  - Added average pool 3d-like ops to pruning mask.
+  - Added Conv3d for overflow fix.
+  - `nncf.set_log_file(...)` can now be used to set location of the NNCF log file.
+  - (PyTorch) Added support for pruning of `torch.nn.functional.pad` operation.
+  - (PyTorch) Added `torch.baddbmm` as an alias for the matmul metatype for quantization purposes.
+  - (PyTorch) Added config file for ResNet18 accuracy-aware pruning + quantization on CIFAR10.
+  - (PyTorch) Fixed JIT-traceable PyTorch models with internal patching.
+  - (PyTorch) Added `__matmul__` magic functions to the list of patched ops (for SwinTransformer by Microsoft).
+
+- Requirements:
+  - Updated ONNX version (1.13)
+  - Updated Tensorflow version (2.11)
+
+- General changes:
+  - Added Windows support for NNCF.
+
 ## New in Release 2.4.0
 Target version updates:
 - Bump target framework versions to PyTorch 1.13.1, TensorFlow 2.8.x, ONNX 1.12, ONNXRuntime 1.13.1
