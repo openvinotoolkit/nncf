@@ -1155,6 +1155,11 @@ class QuantizerPropagationSolver:
                 pred_node_type
             ), "Invalid insertion point graph supplied for quantizer propagation!"
 
+            ip = pred_node[QuantizerPropagationStateGraph.QUANT_INSERTION_POINT_DATA_NODE_ATTR]
+            input_port_id = ip.input_port_id
+            if input_port_id in metatype.ignored_input_ports:
+                continue
+
             edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]
             if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
                 pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list

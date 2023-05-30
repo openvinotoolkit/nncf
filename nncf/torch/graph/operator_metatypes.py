@@ -498,9 +498,20 @@ class PTMatMulMetatype(PTOperatorMetatype):
     name = "MatMulOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__"],
-        NamespaceTarget.TORCH: ["matmul", "bmm", "mm", "baddbmm"],
+        NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTBaddBmmMetatype(PTOperatorMetatype):
+    name = "MatMulOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["baddbmm"]}
+    hw_config_names = [HWConfigOpName.MATMUL]
+    # 0-th arg to the baddbmm is basically a (b)ias to be (add)ed to the (bmm) operation,
+    # presuming that most runtime implementations will fuse the bias addition into the matrix multiplication
+    # and therefore won't quantize the bias input, as this would break the hardware-fused pattern.
+    ignored_input_ports: List[int] = [0]
 
 
 @PT_OPERATOR_METATYPES.register()

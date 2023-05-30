@@ -12,7 +12,7 @@
 Base subpackage for NNCF TensorFlow functionality.
 """
 import tensorflow
-from pkg_resources import parse_version
+from packaging import version
 
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
@@ -22,11 +22,11 @@ from nncf.version import BKC_TF_VERSION
 
 try:
     _tf_version = tensorflow.__version__
-    tensorflow_version = parse_version(_tf_version).base_version
+    tensorflow_version = version.parse(_tf_version).base_version
 except:
     nncf_logger.debug("Could not parse tensorflow version")
     _tf_version = "0.0.0"
-    tensorflow_version = parse_version(_tf_version).base_version
+    tensorflow_version = version.parse(_tf_version).base_version
 tensorflow_version_major, tensorflow_version_minor = tuple(map(int, tensorflow_version.split(".")))[:2]
 if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
     warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, _tf_version)
