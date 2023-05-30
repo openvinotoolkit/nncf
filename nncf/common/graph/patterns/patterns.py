@@ -392,5 +392,9 @@ class HWPatternNames(Enum):
 
 
 class IgnoredPatternNames(Enum):
+    """
+    Describes the patterns, which nodes should be ignored during FakeQuantize placement.
+    """
+
     SOFTMAX_MATMUL = PatternDesc("softmax_matmul", model_types=[ModelType.TRANSFORMER])
     SOFTMAX_RESHAPE_MATMUL = PatternDesc("softmax_reshape_matmul", model_types=[ModelType.TRANSFORMER])

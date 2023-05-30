@@ -19,8 +19,8 @@ from nncf.common.utils.backend import BackendType
 def check_hw_patterns(backend: BackendType, reasons: Dict[HWPatternNames, str]):
     backend_patterns = PatternsManager._get_backend_hw_patterns_map(backend)
 
-    all_base_apatterns = HWPatternNames
-    for base_pattern in all_base_apatterns:
+    all_base_patterns = HWPatternNames
+    for base_pattern in all_base_patterns:
         pattern_name = base_pattern.name
         if base_pattern in reasons:
             assert base_pattern not in backend_patterns, f"Pattern {pattern_name} found in {backend.name}"
@@ -33,8 +33,8 @@ def check_hw_patterns(backend: BackendType, reasons: Dict[HWPatternNames, str]):
 def check_ignored_patterns(backend: BackendType, reasons: Dict[IgnoredPatternNames, str]):
     backend_patterns = PatternsManager._get_backend_ignored_patterns_map(backend)
 
-    all_base_apatterns = IgnoredPatternNames
-    for base_pattern in all_base_apatterns:
+    all_base_patterns = IgnoredPatternNames
+    for base_pattern in all_base_patterns:
         pattern_name = base_pattern.name
         if base_pattern in reasons:
             assert base_pattern not in backend_patterns, f"Pattern {pattern_name} found in {backend.name}"

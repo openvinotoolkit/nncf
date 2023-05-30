@@ -307,8 +307,8 @@ class MinMaxQuantization(Algorithm):
         ignored_names.update(
             get_ignored_node_names_from_ignored_scope(model_type_ignore_scope, nncf_graph, strict=False)
         )
-
-        ignored_patterns_ignore_scope = IgnoredScope(names=nncf_graph.find_patterns(ignored_patterns))
+        nncf_node_names = [nncf_node.node_name for nncf_node in nncf_graph.find_patterns_nodes(ignored_patterns)]
+        ignored_patterns_ignore_scope = IgnoredScope(names=nncf_node_names)
         ignored_names.update(
             get_ignored_node_names_from_ignored_scope(ignored_patterns_ignore_scope, nncf_graph, strict=False)
         )
