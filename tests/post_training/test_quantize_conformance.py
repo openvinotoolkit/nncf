@@ -212,7 +212,7 @@ def validate_accuracy(model_path: str, val_loader: DataLoader) -> float:
     jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
     infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
 
-    # Disable tqdm fot Jenkins
+    # Disable tqdm for Jenkins
     disable_tqdm = os.environ.get("JENKINS_HOME") is not None
     if disable_tqdm:
         print("Validation...")
@@ -668,7 +668,7 @@ def run_ptq_timm(
                 runinfo = runner(
                     model,
                     calibration_dataset,
-                    model_quantization_params.copy(),
+                    copy.deepcopy(model_quantization_params),
                     output_folder,
                     model_name,
                     batch_one_dataloader,
