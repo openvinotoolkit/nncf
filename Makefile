@@ -57,7 +57,13 @@ test-openvino:
 
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
+<<<<<<< HEAD
 		$(shell  python3 tools/collect_pylint_input_files_for_backend.py openvino)
+=======
+		nncf/openvino/                      \
+		tests/openvino/                     \
+		examples/experimental/openvino/
+>>>>>>> Update Makefile
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
