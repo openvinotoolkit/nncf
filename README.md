@@ -354,9 +354,6 @@ You may also use one of the Dockerfiles in the [docker](./docker) directory to b
 
 This repository is tested on Python* 3.8.10, PyTorch* 1.13.1 (NVidia CUDA\* Toolkit 11.6) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
 
-## Contributing Guide
-Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
-
 ## NNCF Compressed Model Zoo
 
 Results achieved using sample scripts, example patches to third-party repositories and NNCF configuration files provided 
@@ -518,6 +515,9 @@ to find instruction and links to exact configuration files and final checkpoints
     year =    {2020}
 }
 ```
+
+## Contributing Guide
+Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
 
 ## Useful links
 - [Documentation](./docs)
