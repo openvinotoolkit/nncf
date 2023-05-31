@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from typing import Tuple
 
 import numpy as np
@@ -23,6 +24,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.config import NNCFConfig
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
@@ -114,16 +116,15 @@ def range_mode_to_args(range_mode: str) -> Tuple[bool, bool]:
 
 
 @pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)
-@pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
 @pytest.mark.parametrize("range_mode", ["full_range", "half_range", "narrow_range"])
-def test_converting_symmetric_quantizer(
-    input_size, num_bits, is_per_channel, is_weights, range_mode, is_signed, use_cuda
-):
+def test_converting_symmetric_quantizer(input_size, is_per_channel, is_weights, range_mode, is_signed, use_cuda):
     if not torch.cuda.is_available() and use_cuda is True:
         pytest.skip("Skipping CUDA test cases for CPU only setups")
 
     if is_per_channel and input_size[0 if is_weights else 1] == 1:
         pytest.skip("Same case as for per_tensor case")
+
+    num_bits = 8
 
     is_half_range, narrow_range = range_mode_to_args(range_mode)
 
@@ -196,8 +197,7 @@ def test_converting_symmetric_quantizer(
 
 
 @pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)
-@pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
-def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, is_weights, is_half_range, use_cuda):
+def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights, is_half_range, use_cuda):
     if not torch.cuda.is_available() and use_cuda is True:
         pytest.skip("Skipping CUDA test cases for CPU only setups")
 
@@ -205,6 +205,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
         pytest.skip("Same case as for per_tensor case")
 
     np.random.seed(42)
+    num_bits = 8
     real_num_bits = num_bits - 1 if is_half_range else num_bits
 
     input_low, input_range = generate_random_low_and_range_by_input_size(input_size, is_per_channel, is_weights)
@@ -278,8 +279,8 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
 
 @pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
 @pytest.mark.parametrize("overflow_fix", ("disable", "enable"), ids=("overflow_fix_disable", "overflow_fix_enable"))
-@pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
-def test_strip_quantization(mode, overflow_fix, num_bits, tmp_path):
+def test_strip_quantization(mode, overflow_fix, tmp_path):
+    num_bits = 8
     model = BasicConvTestModel()
 
     config = _get_config_for_algo(model.INPUT_SIZE, mode, overflow_fix, bits=num_bits)
@@ -295,9 +296,7 @@ def test_strip_quantization(mode, overflow_fix, num_bits, tmp_path):
 
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
-    if num_bits == 8:
-        # ONNX export only supports 8 bits
-        torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx")
+    torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx")
 
 
 @pytest.mark.parametrize("do_copy", (True, False))
@@ -345,3 +344,21 @@ def test_strip_quntized_model(strip_model):
         assert isinstance(fq, FakeQuantize)
     else:
         assert isinstance(fq, BaseQuantizer)
+
+
+def test_strip_quntized_model_error_on_unsupported_num_bits():
+    model = BasicConvTestModel()
+
+    def transform_fn(data_item):
+        return data_item[0]
+
+    def to_tensor(x):
+        return torch.Tensor(x)
+
+    dataset = get_static_dataset(input_size=[1, 1, 4, 4], transform_fn=transform_fn, fn_to_type=to_tensor)
+    advanced_parameters = AdvancedQuantizationParameters(
+        strip_model=True,
+        activations_quantization_params=QuantizationParameters(num_bits=1),
+    )
+    with pytest.raises(RuntimeError, match=re.escape(r"strip_model")):
+        nncf.quantize(model, dataset, subset_size=1, advanced_parameters=advanced_parameters)

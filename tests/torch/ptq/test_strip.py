@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 
 import pytest
 from torch.quantization import FakeQuantize
@@ -18,6 +19,7 @@ from nncf.experimental.torch.quantization.quantize_model import quantize_impl
 from nncf.parameters import TargetDevice
 from nncf.quantization import QuantizationPreset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 from tests.torch.helpers import LeNet
@@ -83,3 +85,29 @@ def test_nncf_quantize_strip(strip_model):
     )
 
     check_fq(quantized_model, True if strip_model is None else strip_model)
+
+
+def test_strip_quntized_model_error_on_unsupported_num_bits():
+    model = LeNet()
+    input_size = [1, 1, 32, 32]
+
+    def transform_fn(data_item):
+        images, _ = data_item
+        return images
+
+    dataset = Dataset(RandomDatasetMock(input_size), transform_fn)
+    advanced_parameters = AdvancedQuantizationParameters(
+        strip_model=True,
+        activations_quantization_params=QuantizationParameters(num_bits=1),
+    )
+
+    with pytest.raises(RuntimeError, match=re.escape(r"strip_model")):
+        quantize_impl(
+            model=model,
+            calibration_dataset=dataset,
+            preset=QuantizationPreset.MIXED,
+            target_device=TargetDevice.CPU,
+            subset_size=1,
+            fast_bias_correction=True,
+            advanced_parameters=advanced_parameters,
+        )

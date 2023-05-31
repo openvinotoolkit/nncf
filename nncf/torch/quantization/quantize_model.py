@@ -17,6 +17,7 @@ import torch
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.helpers import merge_dicts
 from nncf.config import NNCFConfig
+from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
@@ -33,6 +34,7 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_ob
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.quantization.strip import SUPPORTED_NUM_BITS_FOR_STRIP_MODEL
 from nncf.torch.quantization.strip import strip_quantized_model
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
@@ -214,6 +216,20 @@ def quantize_impl(
 
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
+
+    if advanced_parameters.strip_model is True:
+        activations_num_bits = advanced_parameters.activations_quantization_params.num_bits or QUANTIZATION_BITS
+        weights_num_bits = advanced_parameters.weights_quantization_params.num_bits or QUANTIZATION_BITS
+
+        if (
+            activations_num_bits not in SUPPORTED_NUM_BITS_FOR_STRIP_MODEL
+            or weights_num_bits not in SUPPORTED_NUM_BITS_FOR_STRIP_MODEL
+        ):
+            raise RuntimeError(
+                "Parameter strip_model=True is only supported for num_bits={SUPPORTED_NUM_BITS_FOR_STRIP_MODEL}. "
+                "To disable strip model, pass advanced_parameters=AdvancedQuantizationParameters(strip_model=False) "
+                "to nncf.quantize() function."
+            )
 
     nncf_config = _create_nncf_config(
         preset, target_device, subset_size, model_type, ignored_scope, advanced_parameters

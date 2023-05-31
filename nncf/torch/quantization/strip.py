@@ -19,6 +19,8 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 
+SUPPORTED_NUM_BITS_FOR_STRIP_MODEL = [8]
+
 
 def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> NNCFNetwork:
     """
@@ -74,6 +76,11 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     # Call set_level_ranges to set actual values
     nncf_quantizer.set_level_ranges()
 
+    if nncf_quantizer.num_bits not in SUPPORTED_NUM_BITS_FOR_STRIP_MODEL:
+        raise RuntimeError(
+            "Converting nncf quantizer module to torch native only supports "
+            "for num_bits in {SUPPORTED_NUM_BITS_FOR_STRIP_MODEL}."
+        )
     per_channel = nncf_quantizer.per_channel
     scale_shape = nncf_quantizer.scale_shape
     ch_axis = int(np.argmax(scale_shape))
