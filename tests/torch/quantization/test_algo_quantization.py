@@ -16,7 +16,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 import torch.utils.data
-from pkg_resources import parse_version
+from packaging import version
 from torch import nn
 from torchvision.models import resnet50
 from torchvision.models import squeezenet1_1
@@ -694,7 +694,7 @@ def test_quantization_can_be_run_with_no_data_loaders_if_zero_init_samples():
     )
 
 
-if parse_version(torch.__version__).base_version <= parse_version("1.9.1").base_version:
+if version.parse(torch.__version__).base_version <= version.parse("1.9.1").base_version:
     from torch.cuda.amp import autocast
 else:
     from torch import autocast

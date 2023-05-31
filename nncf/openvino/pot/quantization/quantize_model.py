@@ -465,8 +465,8 @@ def quantize_with_accuracy_control_impl(
 
     algotrithm_parameters.update(
         _create_quantization_config(
-            target_device,
             preset,
+            target_device,
             subset_size,
             fast_bias_correction,
             model_type,
