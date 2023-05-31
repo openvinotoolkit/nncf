@@ -345,6 +345,7 @@ def train(
     best_acc1=0,
 ):
     best_compression_stage = CompressionStage.UNCOMPRESSED
+
     for epoch in range(config.start_epoch, config.epochs):
         # update compression scheduler state at the begin of the epoch
         compression_ctrl.scheduler.epoch_step()
