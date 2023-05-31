@@ -25,6 +25,11 @@ Post-training Quantization:
   - Added improvements for statistic collection process (collect weights statistics only once).
   - (PyTorch, OpenVINO, ONNX) Introduced unified quantizer parameters calculation.
 
+- Known issues:
+  - The accuracy of the optimized model on architectures such as DenseNets may a slight drops due to a malfunctioning scales unification functionality.
+  - On transformer architectures, the BiasCorrection algorithm (option `fast_bias_correction`: false) can cause unexpected hangs in the pipeline.
+  - On architectures such as MobileNets, there may be a slight drops in accuracy due to the absence of Channel Alignment algorithm.
+
 Compression-aware training:
 
 - New Features:
