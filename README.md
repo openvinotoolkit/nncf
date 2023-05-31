@@ -8,8 +8,7 @@
 [Usage](#usage) •
 [Tutorials and Samples](#Model-compression-tutorials-and-samples) •
 [Third-party integration](#Third-party-repository-integration) •
-[Compressed Model Zoo](#NNCF-Compressed-Model-Zoo) •
-[System Requirements](#System-requirements)
+[NNCF Model Zoo](#NNCF-Compressed-Model-Zoo)
  
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
 [![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Flatest%2Fopenvino_docs_model_optimization_guide.html)](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
@@ -324,17 +323,6 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
 See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into the following repositories:
   - [huggingface-transformers](third_party_integration/huggingface_transformers/README.md)
 
-## System requirements
-- Ubuntu\* 18.04 or later (64-bit)
-- Python\* 3.7 or later
-- Supported frameworks:
-  - PyTorch\* >=1.9.1, <1.14
-  - TensorFlow\* >=2.4.0, <=2.11.1
-  - ONNX\* ~=1.13.1
-  - OpenVINO\* >=2022.3.0
-
-This repository is tested on Python* 3.8.10, PyTorch* 1.13.1 (NVidia CUDA\* Toolkit 11.6) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
-
 ## Installation Guide
 For detailed installation instructions please refer to the [Installation](./docs/Installation.md) page.
 
@@ -354,6 +342,17 @@ conda install -c conda-forge nncf
 ```
 
 You may also use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
+
+### System requirements
+- Ubuntu\* 18.04 or later (64-bit)
+- Python\* 3.7 or later
+- Supported frameworks:
+  - PyTorch\* >=1.9.1, <1.14
+  - TensorFlow\* >=2.4.0, <=2.11.1
+  - ONNX\* ~=1.13.1
+  - OpenVINO\* >=2022.3.0
+
+This repository is tested on Python* 3.8.10, PyTorch* 1.13.1 (NVidia CUDA\* Toolkit 11.6) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
 
 ## Contributing Guide
 Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
