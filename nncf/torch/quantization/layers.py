@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
+from pkg_resources import parse_version
 from torch import distributed
 from torch import nn
 
@@ -322,6 +323,7 @@ class BaseQuantizer(nn.Module):
                 self.hook.remove()
 
         self.load_listener = LoadStateListener(self)
+        self._old_level_range_setting = False
 
     def enable_gradients(self):
         raise NotImplementedError
@@ -347,6 +349,8 @@ class BaseQuantizer(nn.Module):
         # TODO: refactor to get rid of extra if's and calls on each forward
         if not self.is_enabled_quantization():
             return x
+        if self._old_level_range_setting:
+            self.set_level_ranges()
         is_exporting = is_tracing_state()
         if is_exporting:
             with no_nncf_trace():
@@ -614,8 +618,11 @@ class SymmetricQuantizer(BaseQuantizer):
             )
         )
 
-        # Values of level_low, level_high must be recalculated for load new signed parameter.
-        self.register_load_state_dict_post_hook(lambda module, _: module.set_level_ranges())
+        if parse_version(torch.__version__) >= parse_version("1.12"):
+            # Values of level_low, level_high must be recalculated for load new signed parameter.
+            self.register_load_state_dict_post_hook(lambda module, _: module.set_level_ranges())
+        else:
+            self._old_level_range_setting = True
 
     @property
     def scale(self):
