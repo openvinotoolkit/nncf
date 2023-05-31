@@ -339,7 +339,7 @@ See [third_party_integration](./third_party_integration) for examples of code mo
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 1.12.1 (NVidia CUDA\* Toolkit 11.6) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
+This repository is tested on Python* 3.8.10, PyTorch* 1.13.1 (NVidia CUDA\* Toolkit 11.6) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
 
 ## Installation Guide
 For detailed installation instructions please refer to the [Installation](./docs/Installation.md) page.
