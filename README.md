@@ -527,11 +527,11 @@ to find instruction and links to exact configuration files and final checkpoints
 ```
 
 ## Useful links
-- [NNCF Documentation](./docs)
+- [Documentation](./docs)
 - Example scripts (model objects available through links in respective README.md files):
     - [PyTorch](./examples/torch)
     - [TensorFlow](./examples/tensorflow)
-- [NNCF FAQ](./docs/FAQ.md)
+- [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
