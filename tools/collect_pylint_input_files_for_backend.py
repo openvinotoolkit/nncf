@@ -35,7 +35,7 @@ def main(target_backend: str):
     python_file_pathes = [
         file_path
         for file_path in python_file_pathes
-        if not any(file_path.parts[0] == dir_name for dir_name in IGNORED_DIRS)
+        if not any(os.path.commonpath([file_path, dir_name]) for dir_name in IGNORED_DIRS)
     ]
 
     # 2) Ignore some files
