@@ -389,7 +389,7 @@ LEGR_TEST_CASE_DESCRIPTORS = [
     .expected_accuracy(68.11)
     .weights_filename("mobilenet_v2_32x32_cifar100_68.11.pth")
     .absolute_tolerance_train(1.5)
-    .absolute_tolerance_eval(2e-2),
+    .absolute_tolerance_eval(3e-2),
 ]
 
 

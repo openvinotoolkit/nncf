@@ -8,6 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# pylint:disable=too-many-lines
+
+from abc import ABC
+from abc import abstractmethod
 from enum import Enum
 from functools import partial
 from typing import Any, Dict, List, Optional, Tuple
@@ -24,6 +29,7 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
+from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
@@ -275,7 +281,7 @@ class PTQuantizerSetup(QuantizerSetupBase):
         self.quantization_points[qp_id] = qp
 
 
-class BaseQuantizer(nn.Module):
+class BaseQuantizer(nn.Module, ABC):
     # pylint:disable=too-many-public-methods
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
@@ -290,10 +296,12 @@ class BaseQuantizer(nn.Module):
             compression_lr_multiplier=qspec.compression_lr_multiplier,
         )
         OPTIONAL_PARAMETERS_REGISTRY.register("_num_bits")
-        self.level_high = None
-        self.level_low = None
 
-        self.levels = 0
+        # These must be made buffers, since they impact the "forward" behaviour and the model can be used
+        # in DDP scenarios, so these must be properly synchronized across processes.
+        self.register_buffer("_level_low", torch.IntTensor([0]), persistent=False)
+        self.register_buffer("_level_high", torch.IntTensor([0]), persistent=False)
+
         ENABLED_VAR_NAME = "enabled"
         self.register_buffer(ENABLED_VAR_NAME, torch.IntTensor([1]))
         OPTIONAL_PARAMETERS_REGISTRY.register(ENABLED_VAR_NAME)
@@ -325,11 +333,33 @@ class BaseQuantizer(nn.Module):
         self.load_listener = LoadStateListener(self)
         self._old_level_range_setting = False
 
-    def enable_gradients(self):
-        raise NotImplementedError
+    @property
+    def level_low(self) -> int:
+        return self._level_low.item()
 
+    @level_low.setter
+    def level_low(self, val: int):
+        self._level_low.fill_(val)
+
+    @property
+    def level_high(self) -> int:
+        return self._level_high.item()
+
+    @level_high.setter
+    def level_high(self, val: int):
+        self._level_high.fill_(val)
+
+    @property
+    def levels(self):
+        return get_num_levels(self.level_low, self.level_high)
+
+    @abstractmethod
+    def enable_gradients(self):
+        pass
+
+    @abstractmethod
     def disable_gradients(self):
-        raise NotImplementedError
+        pass
 
     def is_enabled_quantization(self):
         with no_jit_trace():
@@ -367,14 +397,16 @@ class BaseQuantizer(nn.Module):
 
         return self.quantize(x, execute_traced_op_as_identity=False)
 
+    @abstractmethod
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        raise NotImplementedError
+        pass
 
     def reset_call_counter(self):
         self.call_count = 0
 
+    @abstractmethod
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
-        raise NotImplementedError
+        pass
 
     def apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
         """min_values and max_values must have the same shape as specified in self.scale_shape"""
@@ -393,11 +425,15 @@ class BaseQuantizer(nn.Module):
         max_values = max_values.to(own_device)
         self._apply_minmax_init(min_values, max_values, log_module_name)
 
+    @abstractmethod
     def _apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
-        raise NotImplementedError
+        pass
 
-    def set_level_ranges(self):
-        raise NotImplementedError
+    @abstractmethod
+    def set_levels(self):
+        """Must set the self._level_low and self._level_high buffers according to the current quantizer state
+        and type, and called whenever the state of the quantizer is updated in a way that affects the effective level
+        ranges."""
 
     @property
     def is_half_range(self):
@@ -408,8 +444,9 @@ class BaseQuantizer(nn.Module):
         return self._is_using_log_scale_storage
 
     @property
+    @abstractmethod
     def signed(self):
-        raise NotImplementedError
+        pass
 
     @property
     def num_bits(self):
@@ -419,7 +456,7 @@ class BaseQuantizer(nn.Module):
     @num_bits.setter
     def num_bits(self, num_bits: int):
         self._num_bits.fill_(num_bits)
-        self.set_level_ranges()
+        self.set_levels()
 
     @property
     def narrow_range(self) -> bool:
@@ -436,11 +473,13 @@ class BaseQuantizer(nn.Module):
     def set_export_mode(self, mode: QuantizerExportMode):
         self._export_mode = mode
 
+    @abstractmethod
     def _get_input_low_input_high(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _prepare_export_quantization(self, x: torch.Tensor):
-        raise NotImplementedError
+        pass
 
     def _prepare_fq_export_quantization(self, x: torch.Tensor):
         x, level_high, level_low, input_low, input_high = self._prepare_export_quantization(x)
@@ -488,8 +527,9 @@ class BaseQuantizer(nn.Module):
     def extra_repr(self):
         return "bit={}, ch={}".format(self.num_bits, self.per_channel)
 
+    @abstractmethod
     def get_quantizer_config(self) -> QuantizerConfig:
-        raise NotImplementedError
+        pass
 
     @property
     def per_channel(self) -> bool:
@@ -499,6 +539,7 @@ class BaseQuantizer(nn.Module):
         is_per_tensor = (numel == 1) and (len(self.scale_shape) == 1)
         return not is_per_tensor
 
+    @abstractmethod
     def get_parameters_for_torch_fq(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
         """
         Get parameters for conversion to native FakeQuantize.
@@ -509,7 +550,6 @@ class BaseQuantizer(nn.Module):
             scale - Quantizer scale.
             zero_point - Quantizer zero point.
         """
-        raise NotImplementedError
 
 
 class QuantizersSwitcher:
@@ -600,7 +640,7 @@ class SymmetricQuantizer(BaseQuantizer):
             self.eps = 1e-16
         if qspec.signedness_to_force is not None:
             self.signed = bool(qspec.signedness_to_force)
-        self.set_level_ranges()
+        self.set_levels()
 
         self._register_load_state_dict_pre_hook(
             StorageRedirectingLoadStateDictHook(
@@ -620,7 +660,7 @@ class SymmetricQuantizer(BaseQuantizer):
 
         if version.parse(torch.__version__) >= version.parse("1.12"):
             # Values of level_low, level_high must be recalculated for load new signed parameter.
-            self.register_load_state_dict_post_hook(lambda module, _: module.set_level_ranges())
+            self.register_load_state_dict_post_hook(lambda module, _: module.set_levels())
         else:
             self._old_level_range_setting = True
 
@@ -651,15 +691,11 @@ class SymmetricQuantizer(BaseQuantizer):
     def disable_gradients(self):
         self._scale_param_storage.requires_grad = False
 
-    def set_level_ranges(self):
+    def set_levels(self):
         scaled_num_bits = 1 if self._half_range else 0
-        self.level_low, self.level_high, self.levels = self.calculate_level_ranges(
+        self.level_low, self.level_high = calculate_symmetric_level_ranges(
             self.num_bits - scaled_num_bits, self.signed, self._narrow_range
         )
-
-    @staticmethod
-    def calculate_level_ranges(num_bits, signed, narrow_range):
-        return calculate_symmetric_level_ranges(num_bits, signed, narrow_range)
 
     @property
     def signed(self):
@@ -669,7 +705,7 @@ class SymmetricQuantizer(BaseQuantizer):
     @signed.setter
     def signed(self, signed: bool):
         self.signed_tensor.fill_(int(signed))
-        self.set_level_ranges()
+        self.set_levels()
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
         return symmetric_quantize(
@@ -801,7 +837,7 @@ class AsymmetricQuantizer(BaseQuantizer):
             self.eps = 0
         else:
             self.eps = 1e-16
-        self.set_level_ranges()
+        self.set_levels()
 
         self._register_load_state_dict_pre_hook(
             StorageRedirectingLoadStateDictHook(
@@ -854,13 +890,9 @@ class AsymmetricQuantizer(BaseQuantizer):
     def signed(self):
         return True
 
-    def set_level_ranges(self):
+    def set_levels(self):
         scaled_num_bits = 1 if self._half_range else 0
-        self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits - scaled_num_bits)
-
-    @staticmethod
-    def calculate_level_ranges(num_bits):
-        return calculate_asymmetric_level_ranges(num_bits)
+        self.level_low, self.level_high = calculate_asymmetric_level_ranges(self.num_bits - scaled_num_bits)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
         return asymmetric_quantize(
