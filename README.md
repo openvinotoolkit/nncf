@@ -9,7 +9,7 @@
 [Tutorials and Samples](#Model-compression-tutorials-and-samples) •
 [Third-party integration](#Third-party-repository-integration) •
 [Compressed Model Zoo](#NNCF-Compressed-Model-Zoo) •
-[System Requirements](#System-requirements) •
+[System Requirements](#System-requirements)
  
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
 [![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Flatest%2Fopenvino_docs_model_optimization_guide.html)](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
