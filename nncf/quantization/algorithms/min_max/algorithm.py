@@ -292,7 +292,10 @@ class MinMaxQuantization(Algorithm):
 
     def _get_ignored_names(self, nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> Set[str]:
         """
-        Returns all node names are ignored for quantization.
+        Returns all node names which are ignored for quantization:
+        Firstly, the ignored names are obtained from user-defined ignored the scope
+        Secondly, the ignored names are updated from model_type parameter.
+        Lastly, the ignored names are updated from ignored_patterns.
 
         :param nncf_graph: NNCFGraph instance.
         :param ignored_patterns: Ignored patterns.
@@ -300,20 +303,32 @@ class MinMaxQuantization(Algorithm):
         """
         model_type = self._model_type
         device = self._target_device
+        ignored_names = set()
 
-        ignored_names = get_ignored_node_names_from_ignored_scope(self._ignored_scope, nncf_graph)
+        ignored_names.update(get_ignored_node_names_from_ignored_scope(self._ignored_scope, nncf_graph))
 
-        model_type_ignore_scope = self._backend_entity.get_model_type_ignore_scope(model_type, device)
+        model_type_ignore_scope = self._backend_entity.get_model_type_ignored_scope(model_type, device)
+
         ignored_names.update(
             get_ignored_node_names_from_ignored_scope(model_type_ignore_scope, nncf_graph, strict=False)
         )
-        nncf_node_names = [nncf_node.node_name for nncf_node in nncf_graph.find_patterns_nodes(ignored_patterns)]
-        ignored_patterns_ignore_scope = IgnoredScope(names=nncf_node_names)
-        ignored_names.update(
-            get_ignored_node_names_from_ignored_scope(ignored_patterns_ignore_scope, nncf_graph, strict=False)
-        )
+
+        ignored_scope = self._get_ignored_scope_ignored_patterns(nncf_graph, ignored_patterns)
+
+        ignored_names.update(get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph))
 
         return ignored_names
+
+    def _get_ignored_scope_ignored_patterns(nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> IgnoredScope:
+        """
+        Returns IgnoredScope with node names matched ignored_patterns.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param ignored_patterns: Ignored patterns.
+        :return: IgnoredScope with all node names mathced ignored_patterns.
+        """
+        nncf_node_names = [nncf_node.node_name for nncf_node in nncf_graph.find_patterns_nodes(ignored_patterns)]
+        return IgnoredScope(names=nncf_node_names)
 
     def _get_quantizer_setup(
         self, nncf_graph: NNCFGraph, hw_patterns: GraphPattern, ignored_patterns: GraphPattern

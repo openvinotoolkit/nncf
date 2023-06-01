@@ -16,7 +16,7 @@ PT_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
 
 @PT_IGNORED_PATTERNS.register(IgnoredPatternNames.SOFTMAX_MATMUL)
-def softmax_matmul():
+def create_softmax_matmul() -> GraphPattern:
     matmul_aliases = ["linear", "addmm", "matmul", "bmm", "mm", "baddbmm"]
     pattern = GraphPattern()
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: "softmax"})
@@ -30,7 +30,7 @@ def softmax_matmul():
 
 
 @PT_IGNORED_PATTERNS.register(IgnoredPatternNames.SOFTMAX_RESHAPE_MATMUL)
-def softmax_reshape_matmul():
+def create_softmax_reshape_matmul() -> GraphPattern:
     matmul_aliases = ["linear", "addmm", "matmul", "bmm", "mm", "baddbmm"]
     pattern = GraphPattern()
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: "softmax"})

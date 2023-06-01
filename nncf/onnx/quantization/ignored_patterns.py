@@ -17,7 +17,7 @@ ONNX_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
 
 @ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.SOFTMAX_MATMUL)
-def softmax_matmul():
+def create_softmax_matmul() -> GraphPattern:
     pattern = GraphPattern()
     softmax = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXSoftmaxMetatype}
@@ -34,7 +34,7 @@ def softmax_matmul():
 
 
 @ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.SOFTMAX_RESHAPE_MATMUL)
-def softmax_reshape_matmul():
+def create_softmax_reshape_matmul() -> GraphPattern:
     pattern = GraphPattern()
     softmax = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXSoftmaxMetatype}

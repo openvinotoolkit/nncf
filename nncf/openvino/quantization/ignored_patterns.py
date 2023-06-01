@@ -17,7 +17,7 @@ OPENVINO_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
 
 @OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.SOFTMAX_MATMUL)
-def softmax_matmul():
+def softmax_matmul() -> GraphPattern:
     pattern = GraphPattern()
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
     matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
@@ -30,7 +30,7 @@ def softmax_matmul():
 
 
 @OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.SOFTMAX_RESHAPE_MATMUL)
-def softmax_reshape_matmul():
+def softmax_reshape_matmul() -> GraphPattern:
     pattern = GraphPattern()
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
     reshape = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: om.OVReshapeMetatype})

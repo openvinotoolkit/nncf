@@ -11,14 +11,14 @@
 from typing import Callable, Dict, Optional, Union
 
 from nncf.common.graph.patterns.patterns import GraphPattern
-from nncf.common.graph.patterns.patterns import HWPatternNames
+from nncf.common.graph.patterns.patterns import HWFusedPatternNames
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.graph.patterns.patterns import Patterns
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
-PatternNames = Union[IgnoredPatternNames, HWPatternNames]
+PatternNames = Union[IgnoredPatternNames, HWFusedPatternNames]
 
 
 class PatternsManager:
@@ -27,12 +27,12 @@ class PatternsManager:
     """
 
     @staticmethod
-    def _get_backend_hw_patterns_map(backend: BackendType) -> Dict[HWPatternNames, Callable]:
+    def _get_backend_hw_patterns_map(backend: BackendType) -> Dict[HWFusedPatternNames, Callable[[], GraphPattern]]:
         """
-        Returns the backend-specific hardware patterns map from the Registry.
+        Returns the backend-specific hardware-fused patterns map from the Registry.
 
         :param backend: BackendType instance.
-        :return: Dictionary with the HWPatternNames instance as keys and creator function as a value.
+        :return: Dictionary with the HWFusedPatternNames instance as keys and creator function as a value.
         """
         if backend == BackendType.ONNX:
             from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
@@ -49,12 +49,14 @@ class PatternsManager:
         raise ValueError(f"Hardware-fused patterns not implemented for {backend} backend.")
 
     @staticmethod
-    def _get_backend_ignored_patterns_map(backend: BackendType) -> Dict[IgnoredPatternNames, Callable]:
+    def _get_backend_ignored_patterns_map(
+        backend: BackendType,
+    ) -> Dict[IgnoredPatternNames, Callable[[], GraphPattern]]:
         """
         Returns the backend-specific ignored patterns map from the Registry.
 
         :param backend: BackendType instance.
-        :return: Dictionary with the HWPatternNames instance as keys and creator function as a value.
+        :return: Dictionary with the HWFusedPatternNames instance as keys and creator function as a value.
         """
         if backend == BackendType.ONNX:
             from nncf.onnx.quantization.ignored_patterns import ONNX_IGNORED_PATTERNS
@@ -71,22 +73,9 @@ class PatternsManager:
         raise ValueError(f"Ignored patterns not implemented for {backend} backend.")
 
     @staticmethod
-    def _create_patterns_graph(patterns_to_register: Dict[PatternNames, Callable]) -> Patterns:
-        """
-        Returns a Patterns instance with registered patterns from patterns_to_register.
-
-        :param patterns_to_register: Patterns that need to be registered in the returning Patterns instance.
-        :return Patterns: Patterns with registered patterns from patterns_to_register.
-        """
-        patterns = Patterns()
-        for pattern_desc, pattern_creator in patterns_to_register.items():
-            patterns.register(pattern_creator(), pattern_desc.value.name)
-        return patterns
-
-    @staticmethod
     def _filter_patterns(
-        patterns_to_filter: Dict[PatternNames, Callable], device: TargetDevice, model_type: ModelType
-    ) -> Dict[PatternNames, Callable]:
+        patterns_to_filter: Dict[PatternNames, Callable[[], GraphPattern]], device: TargetDevice, model_type: ModelType
+    ) -> Dict[PatternNames, Callable[[], GraphPattern]]:
         """
         Returns all patterns from patterns_to_filter that are satisfited device and model_type parameters.
 
@@ -106,7 +95,7 @@ class PatternsManager:
         return filtered_patterns
 
     def _get_full_pattern_graph(
-        backend_patterns_map: Dict[PatternNames, Callable],
+        backend_patterns_map: Dict[PatternNames, Callable[[], GraphPattern]],
         device: TargetDevice,
         model_type: ModelType,
     ) -> GraphPattern:
@@ -119,8 +108,10 @@ class PatternsManager:
         :return: Completed GraphPattern based on the backend, device & model_type.
         """
         filtered_patterns = PatternsManager._filter_patterns(backend_patterns_map, device, model_type)
-        patterns_graph = PatternsManager._create_patterns_graph(filtered_patterns)
-        return patterns_graph.get_full_pattern_graph()
+        patterns = Patterns()
+        for pattern_desc, pattern_creator in filtered_patterns.items():
+            patterns.register(pattern_creator(), pattern_desc.value.name)
+        return patterns.get_full_pattern_graph()
 
     @staticmethod
     def get_full_hw_pattern_graph(
