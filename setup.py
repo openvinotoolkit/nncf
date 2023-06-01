@@ -137,7 +137,7 @@ TORCH_EXTRAS = [
 
 ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]
 
-OPENVINO_EXTRAS = ["openvino"]
+OPENVINO_EXTRAS = ["openvino==2022.3.0"]
 
 
 EXTRAS_REQUIRE = {
