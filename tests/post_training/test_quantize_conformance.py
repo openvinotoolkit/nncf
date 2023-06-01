@@ -27,6 +27,7 @@ import openvino.runtime as ov
 import pytest
 import timm
 import torch
+import tqdm
 from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
@@ -211,20 +212,29 @@ def validate_accuracy(model_path: str, val_loader: DataLoader) -> float:
     jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
     infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
 
-    def process_result(request, userdata):
-        output_data = request.get_output_tensor().data
-        predicted_label = np.argmax(output_data, axis=1)
-        predictions[userdata] = [predicted_label]
+    # Disable tqdm for Jenkins
+    disable_tqdm = os.environ.get("JENKINS_HOME") is not None
+    if disable_tqdm:
+        print("Validation...")
 
-    infer_queue.set_callback(process_result)
+    with tqdm.tqdm(total=dataset_size, desc=f"Validation", disable=disable_tqdm) as pbar:
 
-    for i, (images, target) in enumerate(val_loader):
-        # W/A for memory leaks when using torch DataLoader and OpenVINO
-        image_copies = copy.deepcopy(images.numpy())
-        infer_queue.start_async(image_copies, userdata=i)
-        references[i] = target
+        def process_result(request, userdata):
+            output_data = request.get_output_tensor().data
+            predicted_label = np.argmax(output_data, axis=1)
+            predictions[userdata] = [predicted_label]
+            pbar.update()
 
-    infer_queue.wait_all()
+        infer_queue.set_callback(process_result)
+
+        for i, (images, target) in enumerate(val_loader):
+            # W/A for memory leaks when using torch DataLoader and OpenVINO
+            image_copies = copy.deepcopy(images.numpy())
+            infer_queue.start_async(image_copies, userdata=i)
+            references[i] = target
+
+        infer_queue.wait_all()
+
     predictions = np.concatenate(predictions, axis=0)
     references = np.concatenate(references, axis=0)
     return accuracy_score(predictions, references)
@@ -582,6 +592,14 @@ RUNNERS = {
 }
 
 
+def log_separator_strings(model_name, backend):
+    print("\n")
+    print("-" * 60)
+    print(f"Model: {model_name} Backend: {backend}")
+    print("-" * 60)
+    print("\n")
+
+
 def run_ptq_timm(
     data: str,
     output: str,
@@ -610,6 +628,8 @@ def run_ptq_timm(
 
     runinfos = {}
     try:
+        log_separator_strings(report_model_name, "TORCH_FP32")
+
         output_folder = Path(output)
         output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -642,12 +662,13 @@ def run_ptq_timm(
         calibration_dataset = nncf.Dataset(val_dataloader, transform_fn)
 
         for backend in backends:
+            log_separator_strings(report_model_name, backend.value)
             runner = RUNNERS[backend]
             try:
                 runinfo = runner(
                     model,
                     calibration_dataset,
-                    model_quantization_params,
+                    copy.deepcopy(model_quantization_params),
                     output_folder,
                     model_name,
                     batch_one_dataloader,
