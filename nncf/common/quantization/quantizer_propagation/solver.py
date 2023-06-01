@@ -24,7 +24,6 @@ from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -424,7 +423,7 @@ class QuantizerPropagationSolver:
         # Will handle the "wildcard" quantization situation for the time being
         if default_qconfig_list is not None:
             for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
-                trait = self._operator_quantization_trait_map.get(op_meta, QuantizationTrait.QUANTIZATION_AGNOSTIC)
+                trait = self._operator_quantization_trait_map.get(op_meta, QuantizationTrait.NON_QUANTIZABLE)
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     if HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list):
                         self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
@@ -816,13 +815,7 @@ class QuantizerPropagationSolver:
                 quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 if quant_det_id is None:
                     nncf_logger.debug(f"Unknown metatype for operator node: {node_key}")
-                    trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
-                elif quant_det_id is UnknownMetatype:
-                    trait = QuantizationTrait.NON_QUANTIZABLE
-                else:
-                    trait = self._operator_quantization_trait_map.get(
-                        quant_det_id, QuantizationTrait.QUANTIZATION_AGNOSTIC
-                    )
+                trait = self._operator_quantization_trait_map.get(quant_det_id, QuantizationTrait.NON_QUANTIZABLE)
                 node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] = trait
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     node[
@@ -852,7 +845,7 @@ class QuantizerPropagationSolver:
                             trait = default_trait
                             break
                     else:
-                        trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
+                        trait = QuantizationTrait.NON_QUANTIZABLE
                 else:
                     trait = QuantizationTrait.INPUTS_QUANTIZABLE
                 retval[op_meta] = trait
@@ -867,11 +860,11 @@ class QuantizerPropagationSolver:
                     trait = default_trait
                     break
             else:
-                trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
+                trait = QuantizationTrait.NON_QUANTIZABLE
                 nncf_logger.debug(
                     f"Operation metatype {op_meta} encountered, but it has no default "
                     f"quantization trait and the HW config entry is not given for it - "
-                    f"assuming quantization-agnostic."
+                    f"assuming non-quantizable."
                 )
         else:
             # There IS a valid HW config name for the metatype, but it is deliberately not specified
@@ -1107,9 +1100,8 @@ class QuantizerPropagationSolver:
             and metatype not in OUTPUT_NOOP_METATYPES
         ):
             return
-        quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
-        qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
-        if quant_det_id in OUTPUT_NOOP_METATYPES:
+        qconf_list = self.get_allowed_quantizer_configs_for_operator(metatype)
+        if metatype in OUTPUT_NOOP_METATYPES:
             qconf_list = deepcopy(self.default_global_qconfig_list)
         assert qconf_list is not None
 
@@ -1119,7 +1111,7 @@ class QuantizerPropagationSolver:
         else:
             qconf_list = [deepcopy(DEFAULT_QUANTIZER_CONFIG)]
 
-        is_unified_scale = quant_det_id in self._unified_scales_operation_set
+        is_unified_scale = metatype in self._unified_scales_operation_set
         if is_unified_scale:
             # Filtering out the per-channel cases in the unified scale scenario.
             # In order to support unified per-channel scales, we will need to handle a situation
@@ -1132,7 +1124,7 @@ class QuantizerPropagationSolver:
             # 2. transpose input tensors to the quantization modules on the fly to accommodate scale,
             #    or vice versa, transpose scale to accommodate shape; need to handle exporting as well
             per_tensor_qconf_list = list(filter(lambda x: x.per_channel is False, qconf_list))
-            op_meta_name = quant_det_id.__class__.__name__
+            op_meta_name = metatype.__class__.__name__
             if len(per_tensor_qconf_list) != len(qconf_list):
                 if not per_tensor_qconf_list:
                     raise RuntimeError(

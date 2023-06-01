@@ -59,7 +59,7 @@ OMZ_MODELS_QUANTIZE_PARAMS = {
 }
 
 
-@pytest.mark.parametrize("model_name_params", OMZ_MODELS_QUANTIZE_PARAMS.items())
+@pytest.mark.parametrize("model_name_params", OMZ_MODELS_QUANTIZE_PARAMS.items(), ids=list(OMZ_MODELS_QUANTIZE_PARAMS))
 def test_omz_models_fq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
     q_params.update({"inplace_statistics": True})

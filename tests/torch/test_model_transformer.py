@@ -30,6 +30,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
@@ -53,6 +54,8 @@ from nncf.torch.module_operations import BaseOp
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
+from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.layers import PTQuantizerSpec
 from tests.common.quantization.mock_graphs import get_ip_graph_for_test
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_broken_output_edge_pattern
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_mergeable_pattern
@@ -179,10 +182,15 @@ class TestInsertionCommands:
         # pylint:disable=too-many-branches
         priority_type = case[0]
         insertion_type = case[1]
-        if insertion_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.POST_LAYER_OPERATION]:
+
+        if insertion_type == TargetType.OPERATION_WITH_WEIGHTS:
             hook1 = BaseOp(lambda x: x)
             hook2 = BaseOp(lambda x: 2 * x)
             hook3 = BaseOp(lambda x: 3 * x)
+        elif insertion_type == TargetType.POST_LAYER_OPERATION:
+            hook1 = BaseOp(lambda m, x: x)
+            hook2 = BaseOp(lambda m, x: 2 * x)
+            hook3 = BaseOp(lambda m, x: 3 * x)
         else:
             hook1 = lambda x: x
             hook2 = lambda x: 2 * x
@@ -476,3 +484,24 @@ def test_bias_correction_transformations():
     transformation_layout.register(command)
     updated_model = model_transformer.transform(transformation_layout)
     assert updated_model.conv1.bias.data == new_bias
+
+
+def test_rebuild_graph_after_insert_transformation():
+    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+
+    graph = model.get_graph()
+
+    command = PTInsertionCommand(
+        PTTargetPoint(
+            TargetType.OPERATION_WITH_WEIGHTS, target_node_name="InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0"
+        ),
+        AsymmetricQuantizer(PTQuantizerSpec(8, QuantizationMode.ASYMMETRIC, None, False, False, (1, 1, 1, 1), False)),
+        TransformationPriority.QUANTIZATION_PRIORITY,
+    )
+    transformation_layout = PTTransformationLayout()
+    transformation_layout.register(command)
+
+    model_transformer = PTModelTransformer(model)
+    transformed_model = model_transformer.transform(transformation_layout=transformation_layout)
+    new_graph = transformed_model.get_graph()
+    assert len(new_graph.get_all_nodes()) == len(graph.get_all_nodes()) + 1
