@@ -18,7 +18,7 @@ from collections import defaultdict
 from dataclasses import asdict
 from enum import Enum
 from itertools import islice
-from typing import Iterable, Optional, TypeVar
+from typing import Iterable, List, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
@@ -32,6 +32,7 @@ import nncf
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.data.dataset import DataProvider
 from nncf.openvino.pot.quantization.quantize_model import (
     quantize_with_accuracy_control_impl as pot_quantize_with_native_accuracy_control,
 )
@@ -701,6 +702,22 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_imp
     return quantized_model
 
 
+# TODO(andrey-churkin): This class is a workaround for the proper integration
+# with the POT AA implementation. It will be removed when an extended validation
+# function will be implemented.
+class ACDataset:
+    def __init__(self, data_source, transform_func):
+        self._data_source = data_source
+        self._indices = list(range(data_source.full_size))
+        self._transform_func = transform_func
+
+    def get_data(self, indices: Optional[List[int]] = None):
+        return DataProvider(self._indices, None, indices)
+
+    def get_inference_data(self, indices: Optional[List[int]] = None):
+        return DataProvider(self._data_source, self._transform_func, indices)
+
+
 def quantize_model_with_accuracy_control(
     xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str, quantization_parameters
 ):
@@ -711,7 +728,7 @@ def quantize_model_with_accuracy_control(
 
     transform_fn = get_transform_fn(model_evaluator)
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
-    validation_dataset = nncf.Dataset(list(range(model_evaluator.dataset.full_size)))
+    validation_dataset = ACDataset(model_evaluator.dataset, transform_fn)
 
     if get_allow_reshape_input(accuracy_checker_config):
         ov_model = maybe_reshape_model(
