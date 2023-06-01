@@ -42,7 +42,7 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.OPENVINO, device=device)
 
 
-def get_ignored_pattens(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
+def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.OPENVINO, device=device)
 
 
@@ -97,17 +97,17 @@ class TestPTQParams(TemplateTestPTQParams):
             "test_quantize_outputs": {
                 "nncf_graph": GraphConverter.create_nncf_graph(LinearModel().ov_model),
                 "hw_patterns": get_hw_patterns(),
-                "ignored_patterns": get_ignored_pattens(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_ignored_scopes": {
                 "nncf_graph": GraphConverter.create_nncf_graph(LinearModel().ov_model),
                 "hw_patterns": get_hw_patterns(),
-                "ignored_patterns": get_ignored_pattens(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_model_type_pass": {
                 "nncf_graph": NNCFGraphToTestMatMul(OVMatMulMetatype).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
-                "ignored_patterns": get_ignored_pattens(),
+                "ignored_patterns": get_ignored_patterns(),
             },
         }
 

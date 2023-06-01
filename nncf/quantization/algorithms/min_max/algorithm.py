@@ -292,7 +292,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_ignored_names(self, nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> Set[str]:
         """
-        Returns all node names which are ignored for quantization:
+        Returns all node names that are ignored for quantization:
         Firstly, the ignored names are obtained from user-defined ignored the scope
         Secondly, the ignored names are updated from model_type parameter.
         Lastly, the ignored names are updated from ignored_patterns.

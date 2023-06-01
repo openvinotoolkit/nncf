@@ -713,7 +713,7 @@ class NNCFGraph:
         DiGraphMatcher does not guarantee a specific order for returning isomorphic subgraphs.
         """
         output = []
-        for ignored_subgraph in find_subgraphs_matching_pattern(self._nx_graph, patterns):
-            for node_key in ignored_subgraph:
+        for matched_subgraph in find_subgraphs_matching_pattern(self._nx_graph, patterns):
+            for node_key in matched_subgraph:
                 output.append(self.get_node_by_key(node_key))
         return output

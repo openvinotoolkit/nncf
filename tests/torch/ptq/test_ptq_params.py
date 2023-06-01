@@ -44,7 +44,7 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH, device=device)
 
 
-def get_ignored_pattens(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
+def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.TORCH, device=device)
 
 
@@ -130,17 +130,17 @@ class TestPTQParams(TemplateTestPTQParams):
             "test_quantize_outputs": {
                 "nncf_graph": get_single_conv_nncf_graph().nncf_graph,
                 "hw_patterns": get_hw_patterns(),
-                "ignored_patterns": get_ignored_pattens(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_ignored_scopes": {
                 "nncf_graph": get_single_conv_nncf_graph().nncf_graph,
                 "hw_patterns": get_hw_patterns(),
-                "ignored_patterns": get_ignored_pattens(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_model_type_pass": {
                 "nncf_graph": get_single_no_weight_matmul_nncf_graph().nncf_graph,
                 "hw_patterns": get_hw_patterns(),
-                "ignored_patterns": get_ignored_pattens(),
+                "ignored_patterns": get_ignored_patterns(),
             },
         }
 

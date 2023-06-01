@@ -10,16 +10,16 @@
 # limitations under the License.
 from typing import Dict
 
-from nncf.common.graph.patterns import HWPatternNames
+from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.graph.patterns import IgnoredPatternNames
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.utils.backend import BackendType
 
 
-def check_hw_patterns(backend: BackendType, reasons: Dict[HWPatternNames, str]):
+def check_hw_patterns(backend: BackendType, reasons: Dict[HWFusedPatternNames, str]):
     backend_patterns = PatternsManager._get_backend_hw_patterns_map(backend)
 
-    all_base_patterns = HWPatternNames
+    all_base_patterns = HWFusedPatternNames
     for base_pattern in all_base_patterns:
         pattern_name = base_pattern.name
         if base_pattern in reasons:

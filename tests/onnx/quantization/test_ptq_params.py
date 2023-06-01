@@ -42,7 +42,7 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.ONNX, device=device)
 
 
-def get_ignored_pattens(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
+def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.ONNX, device=device)
 
 
@@ -95,19 +95,19 @@ class TestPTQParams(TemplateTestPTQParams):
                     ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
                 ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
-                "ignored_patterns": get_ignored_pattens(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_ignored_scopes": {
                 "nncf_graph": NNCFGraphToTest(
                     ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
                 ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
-                "ignored_patterns": get_ignored_pattens(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_model_type_pass": {
                 "nncf_graph": NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
-                "ignored_patterns": get_ignored_pattens(),
+                "ignored_patterns": get_ignored_patterns(),
             },
         }
 
