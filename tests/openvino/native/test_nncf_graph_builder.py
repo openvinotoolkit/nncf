@@ -40,6 +40,8 @@ OMZ_MODELS = [
 
 @pytest.mark.parametrize("model_name", OMZ_MODELS)
 def test_compare_nncf_graph_omz_models(tmp_path, model_name):
+    if model_name == "mobilenet-v3-small-1.0-224-tf":
+        pytest.xfail("Disables until OMZ fix model conversion pipeline.")
     download_model(model_name, tmp_path)
     convert_model(model_name, tmp_path)
     model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"

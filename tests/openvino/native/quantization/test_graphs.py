@@ -62,6 +62,8 @@ OMZ_MODELS_QUANTIZE_PARAMS = {
 @pytest.mark.parametrize("model_name_params", OMZ_MODELS_QUANTIZE_PARAMS.items(), ids=list(OMZ_MODELS_QUANTIZE_PARAMS))
 def test_omz_models_fq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
+    if model_name == "mobilenet-v3-small-1.0-224-tf":
+        pytest.xfail("Disables until OMZ fix model conversion pipeline.")
     q_params.update({"inplace_statistics": True})
     download_model(model_name, tmp_path)
     convert_model(model_name, tmp_path)
