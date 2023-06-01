@@ -319,7 +319,9 @@ class MinMaxQuantization(Algorithm):
 
         return ignored_names
 
-    def _get_ignored_scope_ignored_patterns(nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> IgnoredScope:
+    def _get_ignored_scope_ignored_patterns(
+        self, nncf_graph: NNCFGraph, ignored_patterns: GraphPattern
+    ) -> IgnoredScope:
         """
         Returns IgnoredScope with node names matched ignored_patterns.
 
@@ -327,7 +329,7 @@ class MinMaxQuantization(Algorithm):
         :param ignored_patterns: Ignored patterns.
         :return: IgnoredScope with all node names mathced ignored_patterns.
         """
-        nncf_node_names = [nncf_node.node_name for nncf_node in nncf_graph.find_patterns_nodes(ignored_patterns)]
+        nncf_node_names = [nncf_node.node_name for nncf_node in nncf_graph.find_matching_nodes(ignored_patterns)]
         return IgnoredScope(names=nncf_node_names)
 
     def _get_quantizer_setup(
