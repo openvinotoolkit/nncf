@@ -13,6 +13,7 @@ import logging
 import sys
 
 logger = logging.getLogger("example")
+logger.propagate = False
 
 if not logger.hasHandlers():
     logger.setLevel(logging.INFO)

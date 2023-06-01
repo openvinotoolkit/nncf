@@ -73,8 +73,9 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     :param quantizer: NNCF Quantizer module.
     :return: Instance of FakeQuantize similar to the input quantizer.
     """
-    # Call set_level_ranges to set actual values
-    nncf_quantizer.set_level_ranges()
+
+    # Call set_ranges in case the basic parameters impacting levels had changed
+    nncf_quantizer.set_levels()
 
     if nncf_quantizer.num_bits not in SUPPORTED_NUM_BITS_FOR_STRIP_MODEL:
         raise RuntimeError(

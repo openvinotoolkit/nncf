@@ -28,6 +28,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYE
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVDivideMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -38,6 +39,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVPowerMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVReadValueMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSqrtMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSquaredDifferenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSqueezeMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
@@ -236,6 +238,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 OVReduceMeanMetatype,
                 OVSquaredDifferenceMetatype,
                 OVMVNMetatype,
+                OVDivideMetatype,
+                OVSqrtMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(OVMultiplyMetatype)

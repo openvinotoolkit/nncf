@@ -257,6 +257,7 @@ class OriginalOpInfo:
 
 
 ORIGINAL_OPERATORS = []  # type: List[OriginalOpInfo]
+ORIGINAL_CALL = torch.nn.Module.__call__
 _JIT_ALREADY_WRAPPED = False
 _OPERATORS_ALREADY_WRAPPED = False
 _ORIG_JIT_SCRIPT = None

@@ -13,7 +13,7 @@ import os
 
 import pytest
 import tensorflow as tf
-from pkg_resources import parse_version
+from packaging import version
 from tensorflow.keras import layers
 from tensorflow.keras import models
 
@@ -523,7 +523,7 @@ def apply_insert_before(model):
 
 
 def check_graphs(model, ref_graph_filename):
-    tf_version = parse_version(tf.__version__).base_version
+    tf_version = version.parse(tf.__version__).base_version
     tf_version_major, tf_version_minor = tuple(map(int, tf_version.split(".")))[:2]
     data_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "data", "model_transormer", f"{tf_version_major}.{tf_version_minor}"

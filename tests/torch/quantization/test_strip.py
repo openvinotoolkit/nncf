@@ -20,6 +20,7 @@ from torch.quantization.fake_quantize import FakeQuantize
 import nncf
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
+from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.config import NNCFConfig
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -133,9 +134,11 @@ def test_converting_symmetric_quantizer(input_size, is_per_channel, is_weights, 
     np_scale = generate_random_scale_by_input_size(input_size, is_per_channel, is_weights)
     tensor_scale = get_test_data([np_scale], use_cuda)
 
-    level_low, level_high, levels = calculate_symmetric_level_ranges(
+    level_low, level_high = calculate_symmetric_level_ranges(
         num_bits=real_num_bits, signed=is_signed, narrow_range=narrow_range
     )
+
+    levels = get_num_levels(level_low, level_high)
 
     input_low = np_scale * (level_low / level_high)
     input_range = np_scale - input_low
@@ -209,7 +212,8 @@ def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights,
     real_num_bits = num_bits - 1 if is_half_range else num_bits
 
     input_low, input_range = generate_random_low_and_range_by_input_size(input_size, is_per_channel, is_weights)
-    _, _, levels = calculate_asymmetric_level_ranges(real_num_bits)
+    level_low, level_high = calculate_asymmetric_level_ranges(real_num_bits)
+    levels = get_num_levels(level_low, level_high)
 
     ######################################################################
     # TODO: Workaround for issue 105241 (remove after fix)
