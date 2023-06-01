@@ -10,13 +10,12 @@
 # limitations under the License.
 from typing import Dict, List
 
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.torch.graph import operator_metatypes
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 
-# If there are no some metatypes it means that they are considered as QuantizationTrait.QuantizationAgnostic
+# If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
 DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
@@ -55,18 +54,31 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTAvgPool2dMetatype,
         operator_metatypes.PTAvgPool3dMetatype,
     ],
-    QuantizationTrait.NON_QUANTIZABLE: [
-        operator_metatypes.PTSigmoidMetatype,
-        operator_metatypes.PTSoftmaxMetatype,
-        operator_metatypes.PTRELUMetatype,
-        operator_metatypes.PTDeformConv2dMetatype,
-        operator_metatypes.PTModuleDeformConv2dMetatype,
-        UnknownMetatype,
-        # Ticket: 108478
-        operator_metatypes.PTAbsMetatype,
-        operator_metatypes.PTExpMetatype,
-        operator_metatypes.PTLogMetatype,
-        operator_metatypes.PTSqrtMetatype,
+    QuantizationTrait.QUANTIZATION_AGNOSTIC: [
+        operator_metatypes.PTThresholdMetatype,
+        operator_metatypes.PTDropoutMetatype,
+        operator_metatypes.PTPadMetatype,
+        operator_metatypes.PTMaxMetatype,
+        operator_metatypes.PTMinMetatype,
+        operator_metatypes.PTTransposeMetatype,
+        operator_metatypes.PTGatherMetatype,
+        operator_metatypes.PTScatterMetatype,
+        operator_metatypes.PTReshapeMetatype,
+        operator_metatypes.PTSplitMetatype,
+        operator_metatypes.PTExpandMetatype,
+        operator_metatypes.PTMaxPool1dMetatype,
+        operator_metatypes.PTMaxPool2dMetatype,
+        operator_metatypes.PTMaxPool3dMetatype,
+        operator_metatypes.PTMaxUnpool1dMetatype,
+        operator_metatypes.PTMaxUnpool2dMetatype,
+        operator_metatypes.PTMaxUnpool3dMetatype,
+        operator_metatypes.PTRepeatMetatype,
+        operator_metatypes.PTNoopMetatype,
+        # PTRELUMetatype is not considered to be QUANTIZATION_AGNOSTIC, because:
+        # 1. Runtime doesn't provide performance benefits by quantizing the stand-alone RELU's (ticket: 59548)
+        # 2. It's frequently better for the end accuracy to have quantizers set up after the RELU
+        # so that the input distribution to the quantizer is non-negative
+        # and we can therefore have better quantization resolution while preserving the original dynamic range
     ],
     QuantizationTrait.CONCAT: [operator_metatypes.PTCatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [

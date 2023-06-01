@@ -346,6 +346,8 @@ class TFModelTransformer(ModelTransformer):
                 # Downstream layer config update
                 if downstream_layer_cfg["class_name"] in ["TFOpLambda", "SlicingOpLambda"]:
                     downstream_layer_inbound_nodes[instance_idx][input_port_id][0] = config["name"]
+                    downstream_layer_inbound_nodes[instance_idx][input_port_id][1] = 0
+                    downstream_layer_inbound_nodes[instance_idx][input_port_id][2] = 0
                 else:
                     self._model_config["layers"][idx]["inbound_nodes"][instance_idx][input_port_id] = [
                         config["name"],
