@@ -217,7 +217,7 @@ def validate_accuracy(model_path: str, val_loader: DataLoader) -> float:
     if disable_tqdm:
         print("Validation...")
 
-    with tqdm.tqdm(total=dataset_size, desc=f"Validation", disable=disable_tqdm) as pbar:
+    with tqdm.tqdm(total=dataset_size, desc="Validation", disable=disable_tqdm) as pbar:
 
         def process_result(request, userdata):
             output_data = request.get_output_tensor().data
