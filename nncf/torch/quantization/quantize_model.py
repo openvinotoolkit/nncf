@@ -226,7 +226,7 @@ def quantize_impl(
             or weights_num_bits not in SUPPORTED_NUM_BITS_FOR_STRIP_MODEL
         ):
             raise RuntimeError(
-                "Parameter strip_model=True is only supported for num_bits={SUPPORTED_NUM_BITS_FOR_STRIP_MODEL}. "
+                f"Parameter strip_model=True is only supported for num_bits={SUPPORTED_NUM_BITS_FOR_STRIP_MODEL}. "
                 "To disable strip model, pass advanced_parameters=AdvancedQuantizationParameters(strip_model=False) "
                 "to nncf.quantize() function."
             )
