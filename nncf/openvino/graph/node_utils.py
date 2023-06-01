@@ -17,10 +17,13 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
@@ -305,3 +308,26 @@ def get_reducer_output_node_names(
         target_node_name = get_ov_model_reduce_node_name(target_node_name, node_type, port_id)
         return [get_result_node_name(target_node_name, fn_output_port_id)]
     return [get_result_node_name(target_node_name, port_id)]
+
+
+def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
+    """
+    Returns axes numbers of the weight tensor which correspond to its channels.
+
+    :param node: NNCCFNode with weights.
+    :param weights_port_id: Weight port id of the target node.
+    :return: Axes numbers of the weight tensor which correspond to its channels.
+    """
+    if node.metatype not in GENERAL_WEIGHT_LAYER_METATYPES:
+        raise ValueError("Channel axis cannot be defined for operation without weights.")
+
+    channel_axis = node.metatype.const_channel_axis
+    if node.metatype == OVMatMulMetatype:
+        assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
+        const_attrs = node.layer_attributes.const_attrs[weights_port_id]
+        if const_attrs["transpose"]:
+            assert len(channel_axis) == 1
+            assert channel_axis[0] in [0, 1]
+            channel_axis = [1 - channel_axis[0]]
+
+    return channel_axis

@@ -178,17 +178,16 @@ class GraphConverter:
                     if GraphConverter.convert_to_nncf_dtype(ov_dtype) == Dtype.INTEGER:
                         continue
 
-                    transpose = False
+                    const_attrs[const_port_id] = {
+                        "name": const_node.get_friendly_name(),
+                        "shape": tuple(const_node.get_output_shape(0)),
+                    }
+
                     if metatype == OVMatMulMetatype:
                         attribute_names = ["transpose_a", "transpose_b"]
                         node_attributes = node.get_attributes()
                         transpose = node_attributes[attribute_names[const_port_id]]
-
-                    const_attrs[const_port_id] = {
-                        "name": const_node.get_friendly_name(),
-                        "shape": tuple(const_node.get_output_shape(0)),
-                        "transpose": transpose,
-                    }
+                        const_attrs[const_port_id]["transpose"] = transpose
 
                 if const_attrs:
                     nncf_node = nncf_graph.get_node_by_name(node_name)
