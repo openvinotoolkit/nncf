@@ -23,9 +23,9 @@ from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
-from tests.post_training.models import NNCFGraphToTest
-from tests.post_training.models import NNCFGraphToTestDepthwiseConv
-from tests.post_training.models import NNCFGraphToTestSumAggregation
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
 
 
 def get_single_conv_nncf_graph() -> NNCFGraphToTest:

@@ -18,7 +18,7 @@ from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFa
 from nncf.torch.model_analyzer import get_fused_bias_value
 from nncf.torch.model_analyzer import is_node_with_fused_bias
 from nncf.torch.nncf_network import NNCFNetwork
-from tests.post_training.test_fast_bias_correction import TemplateTestFBCAlgorithm
+from tests.post_training.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
 from tests.torch.ptq.helpers import get_nncf_network
 
 
