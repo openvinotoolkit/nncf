@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import PatternNames
+from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
@@ -24,8 +24,8 @@ PT_HW_FUSED_PATTERNS = Registry("torch")
 # ATOMIC OPERATIONS
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.L2_NORM)
-def create_l2_norm_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.L2_NORM)
+def create_l2_norm_operations() -> GraphPattern:
     pattern = GraphPattern()
 
     outside_pattern_node = pattern.add_node(label="*OUTSIDE_PATTERN_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
@@ -46,8 +46,8 @@ def create_l2_norm_operations():
     return pattern
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
-def create_matmul_softmax_matmul():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.MATMUL_SOFTMAX_MATMUL)
+def create_matmul_softmax_matmul() -> GraphPattern:
     matmul_aliases = ["linear", "addmm", "matmul", "bmm", "mm", "baddbmm"]
     pattern = GraphPattern()
     softmax_1 = pattern.add_node(label="SOFTMAX", type="softmax")
@@ -78,96 +78,96 @@ def create_matmul_softmax_matmul():
 # COMBINATIONS
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ARITHMETIC)
-def create_linear_arithmetic_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC)
+def create_linear_arithmetic_operations() -> GraphPattern:
     linear = linear_operations()
     arithmetic = arithmetic_operations()
     linear.join_patterns(arithmetic)
     return linear
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_ACTIVATIONS)
-def create_batch_norm_activations_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.BATCH_NORM_ACTIVATIONS)
+def create_batch_norm_activations_operations() -> GraphPattern:
     batch_norm = batch_norm_operations()
     activations = activation_operations()
     batch_norm.join_patterns(activations)
     return batch_norm
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ACTIVATIONS_BATCH_NORM)
-def create_activations_batch_norm_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ACTIVATIONS_BATCH_NORM)
+def create_activations_batch_norm_operations() -> GraphPattern:
     batch_norm = batch_norm_operations()
     activations = activation_operations()
     activations.join_patterns(batch_norm)
     return activations
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM)
-def create_linear_batch_norm_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_NORM)
+def create_linear_batch_norm_operations() -> GraphPattern:
     linear = linear_operations()
     batch_norm = batch_norm_operations()
     linear.join_patterns(batch_norm)
     return linear
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS)
-def create_linear_activation_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ACTIVATIONS)
+def create_linear_activation_operations() -> GraphPattern:
     linear = linear_operations()
     activation = activation_operations()
     linear.join_patterns(activation)
     return linear
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
-def create_linear_batch_norm_activation_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
+def create_linear_batch_norm_activation_operations() -> GraphPattern:
     linear_bn = create_linear_batch_norm_operations()
     activations = activation_operations()
     linear_bn.join_patterns(activations)
     return linear_bn
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
-def create_linear_activation_batch_norm_activations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
+def create_linear_activation_batch_norm_activations() -> GraphPattern:
     linear_act = create_linear_activation_operations()
     batch_norm = batch_norm_operations()
     linear_act.join_patterns(batch_norm)
     return linear_act
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM)
-def create_arithmetic_batch_norm_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_BATCH_NORM)
+def create_arithmetic_batch_norm_operations() -> GraphPattern:
     arithmetic = arithmetic_operations()
     batch_norm = batch_norm_operations()
     arithmetic.join_patterns(batch_norm)
     return arithmetic
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS)
-def create_arithmetic_activations_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_ACTIVATIONS)
+def create_arithmetic_activations_operations() -> GraphPattern:
     arithmetic = arithmetic_operations()
     activation = activation_operations()
     arithmetic.join_patterns(activation)
     return arithmetic
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
-def create_arithmetic_batch_norm_activations_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
+def create_arithmetic_batch_norm_activations_operations() -> GraphPattern:
     arithmetic_bn = create_arithmetic_batch_norm_operations()
     activation = activation_operations()
     arithmetic_bn.join_patterns(activation)
     return arithmetic_bn
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
-def create_arithmetic_activations_batch_norm_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
+def create_arithmetic_activations_batch_norm_operations() -> GraphPattern:
     arithmetic_act = create_arithmetic_activations_operations()
     batch_norm = batch_norm_operations()
     arithmetic_act.join_patterns(batch_norm)
     return arithmetic_act
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.GROUP_NORM_RELU)
-def create_group_norm_relu_operations():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.GROUP_NORM_RELU)
+def create_group_norm_relu_operations() -> GraphPattern:
     group_norm = GraphPattern()
     group_norm.add_node(**GROUP_NORMALIZATION_OPERATIONS)
     relu = GraphPattern()
@@ -176,8 +176,8 @@ def create_group_norm_relu_operations():
     return group_norm
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_CONST_MULTIPLY)
-def create_linear_const_multiply():
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_CONST_MULTIPLY)
+def create_linear_const_multiply() -> GraphPattern:
     pattern = GraphPattern()
     linear_node = pattern.add_node(label="linear", type="linear")
     mul_node = pattern.add_node(label="MUL", type="__mul__")
@@ -186,25 +186,25 @@ def create_linear_const_multiply():
     return pattern
 
 
-def linear_operations():
+def linear_operations() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(**LINEAR_OPERATIONS)
     return pattern
 
 
-def arithmetic_operations():
+def arithmetic_operations() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(**ARITHMETIC_OPERATIONS)
     return pattern
 
 
-def batch_norm_operations():
+def batch_norm_operations() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(**BATCH_NORMALIZATION_OPERATIONS)
     return pattern
 
 
-def activation_operations():
+def activation_operations() -> GraphPattern:
     atomic_activations = GraphPattern()
     atomic_activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
     swish = create_swish_act()
