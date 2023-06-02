@@ -225,7 +225,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod
-    def get_model_type_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [

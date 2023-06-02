@@ -215,7 +215,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [node.metatype.weight_definitions.weight_port_id]
 
     @staticmethod
-    def get_model_type_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [

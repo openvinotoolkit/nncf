@@ -94,13 +94,14 @@ class PatternsManager:
                 filtered_patterns[pattern_desc] = pattern_creator
         return filtered_patterns
 
+    @staticmethod
     def _get_full_pattern_graph(
         backend_patterns_map: Dict[PatternNames, Callable[[], GraphPattern]],
         device: TargetDevice,
         model_type: ModelType,
     ) -> GraphPattern:
         """
-        Filter patterns and returns GraphPattern with registered filtered patterns.
+        Filters patterns and returns GraphPattern with registered filtered patterns.
 
         :param backend_patterns_map: Dictionary with the PatternNames instance as keys and creator function as a value.
         :param device: TargetDevice instance.
