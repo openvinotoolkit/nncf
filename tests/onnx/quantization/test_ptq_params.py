@@ -12,7 +12,9 @@
 import pytest
 
 from nncf.common.graph.patterns import GraphPattern
+from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
@@ -34,6 +36,14 @@ from tests.post_training.models import NNCFGraphToTestMatMul
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 
 # pylint: disable=protected-access
+
+
+def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
+    return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.ONNX, device=device)
+
+
+def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
+    return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.ONNX, device=device)
 
 
 @pytest.mark.parametrize("target_device", TargetDevice)
@@ -84,17 +94,20 @@ class TestPTQParams(TemplateTestPTQParams):
                 "nncf_graph": NNCFGraphToTest(
                     ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
                 ).nncf_graph,
-                "pattern": GraphPattern(),
+                "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_ignored_scopes": {
                 "nncf_graph": NNCFGraphToTest(
                     ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
                 ).nncf_graph,
-                "pattern": GraphPattern(),
+                "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_model_type_pass": {
                 "nncf_graph": NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
-                "pattern": GraphPattern(),
+                "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
             },
         }
 

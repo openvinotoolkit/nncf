@@ -38,10 +38,12 @@ from tests.post_training.models import NNCFGraphToTestMatMul
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 
 
-def get_patterns_setup() -> GraphPattern:
-    backend = BackendType.OPENVINO
-    device = TargetDevice.ANY
-    return PatternsManager.get_full_pattern_graph(backend=backend, device=device)
+def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
+    return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.OPENVINO, device=device)
+
+
+def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
+    return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.OPENVINO, device=device)
 
 
 # pylint: disable=protected-access
@@ -94,15 +96,18 @@ class TestPTQParams(TemplateTestPTQParams):
             "test_range_estimator_per_channel": {"model": DepthwiseConv4DModel().ov_model, "stat_points_num": 2},
             "test_quantize_outputs": {
                 "nncf_graph": GraphConverter.create_nncf_graph(LinearModel().ov_model),
-                "pattern": get_patterns_setup(),
+                "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_ignored_scopes": {
                 "nncf_graph": GraphConverter.create_nncf_graph(LinearModel().ov_model),
-                "pattern": get_patterns_setup(),
+                "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
             },
             "test_model_type_pass": {
                 "nncf_graph": NNCFGraphToTestMatMul(OVMatMulMetatype).nncf_graph,
-                "pattern": GraphPattern(),
+                "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
             },
         }
 
