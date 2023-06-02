@@ -141,8 +141,9 @@ def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
     # Uncomment lines below to generate reference for new models.
-    # from tests.shared.helpers import dump_to_json
-    # dump_to_json(ref_stats_path, nodes)
+    from tests.shared.helpers import dump_to_json
+
+    dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
     params = ["input_low", "input_high", "output_low", "output_high"]
@@ -150,9 +151,9 @@ def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
 
 
 REF_NODES_SHAPES = {
-    "LinearModel": {"Input/fq_output_0": (), "MatMul/fq_weights_1": (1, 1, 1, 1)},
+    "LinearModel": {"Input/fq_output_0": (), "MatMul/fq_weights_1": (1, 5)},
     "ConvModel": {"Conv/fq_weights_1": (3, 1, 1, 1), "Sub/fq_output_0": ()},
-    "MatMul2DModel": {"Input/fq_output_0": (), "MatMul/fq_weights_1": (5, 1)},
+    "MatMul2DModel": {"Input/fq_output_0": (), "MatMul/fq_weights_1": (1, 2)},
 }
 
 
