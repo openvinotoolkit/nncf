@@ -1,7 +1,7 @@
 yattag>=1.14.0
 prettytable>=2.0.0
-onnx>=1.8.0
-onnxruntime==1.6.0
+onnx==1.13.1
+onnxruntime==1.14.1
 pytest-mock>=3.3.1
 pytest-dependency>=0.5.1
 virtualenv
