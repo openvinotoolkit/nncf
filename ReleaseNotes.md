@@ -25,6 +25,11 @@ Post-training Quantization:
   - Added improvements for statistic collection process (collect weights statistics only once).
   - (PyTorch, OpenVINO, ONNX) Introduced unified quantizer parameters calculation.
 
+- Known issues:
+  - `quantize(...)` method can generate inaccurate int8 results for models with the *DenseNet-like* architecture. Use `quantize_with_accuracy_control(...)` in such case.
+  - `quantize(...)` method can hang on models with *transformer* architecture when `fast_bias_correction` optional parameter is set to *False*. Don't set it to *False* or use `quantize_with_accuracy_control(...)` in such case.
+  - `quantize(...)` method can generate inaccurate int8 results for models with the *MobileNet-like* architecture on non-VNNI machines.
+
 Compression-aware training:
 
 - New Features:
