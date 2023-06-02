@@ -248,6 +248,7 @@ def quantize_impl(
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
+    # subset_size = 1
     if should_use_pot(advanced_parameters):
         from nncf.openvino.pot.quantization.quantize_model import quantize_impl as pot_quantize_impl
 

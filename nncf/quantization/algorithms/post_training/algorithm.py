@@ -26,6 +26,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.bias_correction.algorithm import BIAS_CORRECTION_THRESHOLD
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
+from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FAST_BIAS_CORRECTION_THRESHOLD
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -78,6 +79,7 @@ class PostTrainingQuantization(Algorithm):
         """
         super().__init__()
         self.algorithms = []
+        self.first_stage_algorithms = []
 
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
@@ -100,6 +102,14 @@ class PostTrainingQuantization(Algorithm):
 
         self.algorithms.append(min_max_quantization)
 
+        if not advanced_parameters.disable_channel_alignment:
+            channel_alignment = ChannelAlignment(
+                subset_size=subset_size,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                backend_params=advanced_parameters.backend_params,
+            )
+            self.first_stage_algorithms.append(channel_alignment)
+
         if advanced_parameters.disable_bias_correction:
             return
 
@@ -119,7 +129,7 @@ class PostTrainingQuantization(Algorithm):
             threshold = BIAS_CORRECTION_THRESHOLD
             if bias_correction_params.threshold is not None:
                 threshold = bias_correction_params.threshold
-            bias_correction_subset_size = max(np.int(subset_size * 0.2), 1)
+            bias_correction_subset_size = max(int(subset_size * 0.2), 1)
             bias_correction = BiasCorrection(
                 subset_size=bias_correction_subset_size,
                 threshold=threshold,
@@ -173,9 +183,17 @@ class PostTrainingQuantization(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         modified_model = copy_model(model)
-        if statistic_points is None:
-            backend = get_backend(modified_model)
+        backend = get_backend(modified_model)
 
+        if statistic_points is None:
+            for algorithm in self.first_stage_algorithms:
+                statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
+                algo_statistic_points = algorithm.get_statistic_points(modified_model)
+                statistics_aggregator.register_statistic_points(algo_statistic_points)
+                statistics_aggregator.collect_statistics(modified_model)
+                modified_model = algorithm.apply(modified_model, statistics_aggregator.statistic_points)
+
+        if statistic_points is None:
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)

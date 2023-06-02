@@ -146,6 +146,7 @@ class AdvancedQuantizationParameters:
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
     quantize_outputs: bool = False
     inplace_statistics: bool = True
+    disable_channel_alignment: bool = False
     disable_bias_correction: bool = False
 
     # Advanced Quantization parameters

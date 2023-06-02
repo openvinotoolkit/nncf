@@ -17,13 +17,13 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
@@ -323,7 +323,7 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
 
     channel_axes = node.metatype.const_channel_axis
     if node.metatype == OVMatMulMetatype:
-        assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
+        assert isinstance(node.layer_attributes, OVConstantLayerAttributesContainer)
         assert len(channel_axes) == 1
         assert channel_axes[0] in [-1, -2]
         const_attrs = node.layer_attributes.const_attrs[weights_port_id]

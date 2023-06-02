@@ -9,21 +9,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import UserDict
 from collections import deque
-from typing import Dict, List, Type
+from dataclasses import dataclass
+from typing import Any, Dict, List, Tuple, Type
 
 import openvino.runtime as ov
 
-from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.layer_attributes import MultipleWeightsLayerAttributes
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
+from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
 from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -191,30 +201,10 @@ class GraphConverter:
 
                 if const_attrs:
                     nncf_node = nncf_graph.get_node_by_name(node_name)
-                    nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs)
-
+                    common_layer_attrs = get_weighted_layer_attributes(node, metatype, const_attrs)
+                    nncf_node.layer_attributes = OVConstantLayerAttributesContainer(const_attrs, common_layer_attrs)
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
-
-
-class OVConstantLayerAttributes(BaseLayerAttributes):
-    """
-    This class stores mapping weights port indices to constant name and shape.
-    """
-
-    def __init__(self, const_attrs: Dict[int, Dict]):
-        """
-        :param const_attrs: Map of weights port ID to corresponding const attributes.
-        """
-        self.const_attrs = const_attrs
-
-    def get_const_port_ids(self) -> List[int]:
-        """
-        Returns indices of input ports corresponding to the constant nodes.
-
-        :returns: List of input port indices with constants.
-        """
-        return list(self.const_attrs.keys())
 
 
 def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
@@ -247,6 +237,6 @@ def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
         queue.append(curr_node.input_value(0).get_node())
 
     if constant_node is None:
-        raise RuntimeError("Constant node was expected but could not find it.")
+        raise RuntimeError("Constant node was expected but could not be found.")
 
     return constant_node

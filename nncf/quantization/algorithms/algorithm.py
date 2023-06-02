@@ -11,6 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
+from abc import abstractproperty
 from typing import Dict, Optional, TypeVar
 
 from nncf import Dataset
