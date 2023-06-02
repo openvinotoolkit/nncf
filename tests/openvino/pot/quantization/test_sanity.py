@@ -37,8 +37,6 @@ OMZ_MODELS = [
 def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
     if is_windows() and model == "mobilefacedet-v1-mxnet":
         pytest.xfail("OMZ for Windows has version 1.2.0 pinned that is incompatible with Python 3.8+")
-    if model == "mobilenet-v3-small-1.0-224-tf":
-        pytest.xfail("Disables until OMZ fix model conversion pipeline.")
     extracted_data_dir = os.path.dirname(get_dataset_for_test(dataset, data_dir))
     config_path = AC_CONFIGS_DIR / f"{model}.yml"
 
