@@ -82,7 +82,9 @@ class TemplateTestQuantizerConfig:
         algo = PostTrainingQuantization()
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
-        q_setup = min_max_algo._get_quantizer_setup(single_conv_nncf_graph.nncf_graph, GraphPattern())
+        q_setup = min_max_algo._get_quantizer_setup(
+            single_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+        )
 
         weight_default_config = QuantizerConfig(
             mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
@@ -131,7 +133,9 @@ class TemplateTestQuantizerConfig:
         )
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
-        q_setup = min_max_algo._get_quantizer_setup(single_conv_nncf_graph.nncf_graph, GraphPattern())
+        q_setup = min_max_algo._get_quantizer_setup(
+            single_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+        )
         q_g_to_quantization_mode = {}
         for q_g in QuantizerGroup:
             q_g_to_quantization_mode[q_g] = preset.get_params_configured_by_preset(q_g)["mode"]
@@ -156,7 +160,9 @@ class TemplateTestQuantizerConfig:
         algo = PostTrainingQuantization()
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
-        q_setup = min_max_algo._get_quantizer_setup(depthwise_conv_nncf_graph.nncf_graph, GraphPattern())
+        q_setup = min_max_algo._get_quantizer_setup(
+            depthwise_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+        )
 
         weight_default_config = QuantizerConfig(
             mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True

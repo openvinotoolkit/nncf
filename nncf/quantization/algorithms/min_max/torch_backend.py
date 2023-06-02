@@ -309,7 +309,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
     @staticmethod
-    def get_model_type_ignore_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [
