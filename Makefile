@@ -43,7 +43,7 @@ install-openvino-test:
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/experimental/openvino/bert/requirements.txt
 	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
-	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git@670aa190d73c8d04d0e48b2a2e24737ce7b4fdb6#subdirectory=tools/model_tools
+	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git@dcbf53280a95dae3c6538689bafe760470f08ec2#subdirectory=tools/model_tools
 
 install-openvino-dev: install-openvino-test
 	pip install pylint==$(PYLINT_VERSION)
