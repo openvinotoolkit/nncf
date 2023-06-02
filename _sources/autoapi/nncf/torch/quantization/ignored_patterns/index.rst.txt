@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.torch.quantization.ignored_patterns`
+==================================================
+
+.. py:module:: nncf.torch.quantization.ignored_patterns
+
+

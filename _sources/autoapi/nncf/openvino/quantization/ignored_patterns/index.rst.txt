@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.openvino.quantization.ignored_patterns`
+=====================================================
+
+.. py:module:: nncf.openvino.quantization.ignored_patterns
+
+
