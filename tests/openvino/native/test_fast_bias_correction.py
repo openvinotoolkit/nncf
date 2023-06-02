@@ -13,7 +13,6 @@ from typing import List
 
 import numpy as np
 import openvino.runtime as ov
-import pytest
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
