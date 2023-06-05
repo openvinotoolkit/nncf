@@ -380,7 +380,7 @@ class BaseQuantizer(nn.Module, ABC):
         if not self.is_enabled_quantization():
             return x
         if self._old_level_range_setting:
-            self.set_level_ranges()
+            self.set_levels()
         is_exporting = is_tracing_state()
         if is_exporting:
             with no_nncf_trace():
