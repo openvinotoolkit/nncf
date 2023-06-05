@@ -25,7 +25,7 @@ def export_model(ctrl: CompressionAlgorithmController, save_path: str, no_strip_
     """
 
     if parse_version(torch.__version__) < parse_version("1.10"):
-        no_strip_on_export = False
+        no_strip_on_export = True
 
     model = ctrl.model if no_strip_on_export else ctrl.strip()
 
