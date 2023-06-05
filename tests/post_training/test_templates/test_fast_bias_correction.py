@@ -114,7 +114,7 @@ class TemplateTestFBCAlgorithm:
     @pytest.mark.parametrize(
         "model_cls, ref_bias",
         (
-            (ConvTestModel, [0.01984841, 1.0838453]),
+            (ConvTestModel, [0.0288348, 1.0838453]),
             (ConvBNTestModel, [0.08396978, 1.1676897]),
         ),
     )

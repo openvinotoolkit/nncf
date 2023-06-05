@@ -217,7 +217,7 @@ class ONNXDivLayerMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXConcatLayerMetatype(ONNXOpMetatype):
+class ONNXConcatMetatype(ONNXOpMetatype):
     name = "ConcatOp"
     op_names = ["Concat"]
     hw_config_names = [HWConfigOpName.CONCAT]
@@ -237,10 +237,23 @@ class ONNXResizeMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXCenterCropPadMetatype(ONNXOpMetatype):
+    name = "CenterCropPadOp"
+    op_names = ["CenterCropPad"]
+    hw_config_names = [HWConfigOpName.CROP]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXReshapeMetatype(ONNXOpMetatype):
     name = "ReshapeOp"
     op_names = ["Reshape"]
     hw_config_names = [HWConfigOpName.RESHAPE]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXTileMetatype(ONNXOpMetatype):
+    name = "TileOp"
+    op_names = ["Tile"]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -363,9 +376,21 @@ class ONNXAbsMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXScatterElementslMetatype(ONNXOpMetatype):
+class ONNXScatterElementsMetatype(ONNXOpMetatype):
     name = "ScatterElementsOp"
     op_names = ["ScatterElements"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXScatterMetatype(ONNXOpMetatype):
+    name = "ScatterOp"
+    op_names = ["Scatter"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXScatterNDMetatype(ONNXOpMetatype):
+    name = "ScatterNDOp"
+    op_names = ["ScatterND"]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -385,6 +410,18 @@ class ONNXMatMulMetatype(ONNXOpMetatype):
 class ONNXGatherMetatype(ONNXOpMetatype):
     name = "GatherOp"
     op_names = ["Gather"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXGatherNDMetatype(ONNXOpMetatype):
+    name = "GatherNDOp"
+    op_names = ["GatherND"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXGatherElementsMetatype(ONNXOpMetatype):
+    name = "GatherElementsOp"
+    op_names = ["GatherElements"]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -411,13 +448,37 @@ class ONNXNonMaxSuppressionMetatype(ONNXOpMetatype):
 class ONNXCastMetatype(ONNXOpMetatype):
     name = "CastOp"
     op_names = ["Cast"]
-    hw_config_names = [HWConfigOpName.SQUEEZE]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXCastLikeMetatype(ONNXOpMetatype):
+    name = "CastLikeOp"
+    op_names = ["CastLike"]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXReduceMinMetatype(ONNXOpMetatype):
     name = "ReduceMinOp"
     op_names = ["ReduceMin"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXReduceMaxMetatype(ONNXOpMetatype):
+    name = "ReduceMaxOp"
+    op_names = ["ReduceMax"]
+    hw_config_names = [HWConfigOpName.REDUCEMAX]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXDepthToSpaceMetatype(ONNXOpMetatype):
+    name = "DepthToSpaceOp"
+    op_names = ["DepthToSpace"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSpaceToDepthMetatype(ONNXOpMetatype):
+    name = "SpaceToDepthOp"
+    op_names = ["SpaceToDepth"]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -450,6 +511,12 @@ class ONNXTransposeMetatype(ONNXOpMetatype):
     name = "TransposeOp"
     op_names = ["Transpose"]
     hw_config_names = [HWConfigOpName.TRANSPOSE]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXDropoutMetatype(ONNXOpMetatype):
+    name = "DropoutOp"
+    op_names = ["Dropout"]
 
 
 @ONNX_OPERATION_METATYPES.register()

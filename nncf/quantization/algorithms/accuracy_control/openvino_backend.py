@@ -22,6 +22,7 @@ from nncf.openvino.graph.metatypes.common import QUANTIZABLE_OPERATIONS
 from nncf.openvino.graph.metatypes.common import QUANTIZE_AGNOSTIC_OPERATIONS
 from nncf.openvino.graph.metatypes.common import SHAPEOF_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.openvino.graph.node_utils import get_bias_value
@@ -51,7 +52,7 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
 
     @staticmethod
     def get_quantize_agnostic_metatypes() -> List[OVOpMetatype]:
-        return QUANTIZE_AGNOSTIC_OPERATIONS
+        return QUANTIZE_AGNOSTIC_OPERATIONS + [OVConcatMetatype]
 
     @staticmethod
     def get_shapeof_metatypes() -> List[OVOpMetatype]:

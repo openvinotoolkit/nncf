@@ -283,8 +283,8 @@ def calculate_fq_params(model, input_data):
     _, relu, bn1, avg_pool = model(input_data)
     conv1_stats = calculate_statistics(input_data, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
     bn1_stats = calculate_statistics(bn1, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
-    avg_pool_stats = calculate_statistics(avg_pool, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
-    conv2_stats = calculate_statistics(relu, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
+    conv2_stats = calculate_statistics(avg_pool, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
+    avg_pool_stats = calculate_statistics(relu, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
 
     conv1_w = model.conv1.weight
     conv1_w_stats = calculate_statistics(conv1_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS, True)
@@ -292,9 +292,9 @@ def calculate_fq_params(model, input_data):
     conv2_w_stats = calculate_statistics(conv2_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS)
     return {
         "/FakeQuantize": conv1_stats,
-        "/relu/FakeQuantize": bn1_stats,
+        "/bn1/FakeQuantize": bn1_stats,
         "/avg_pool/FakeQuantize": avg_pool_stats,
-        "/bn1/FakeQuantize": conv2_stats,
+        "/conv2/FakeQuantize": conv2_stats,
         "/conv1/pre_ops.0/op/FakeQuantize": conv1_w_stats,
         "/conv2/pre_ops.0/op/FakeQuantize": conv2_w_stats,
     }

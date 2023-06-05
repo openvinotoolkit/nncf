@@ -15,7 +15,6 @@ QUANTIZE_AGNOSTIC_OPERATIONS = [
     ov_metatypes.OVMaxPoolMetatype,
     ov_metatypes.OVReduceMaxMetatype,
     ov_metatypes.OVReshapeMetatype,
-    ov_metatypes.OVConcatMetatype,
     ov_metatypes.OVSqueezeMetatype,
     ov_metatypes.OVUnsqueezeMetatype,
     ov_metatypes.OVSplitMetatype,
@@ -30,7 +29,20 @@ QUANTIZE_AGNOSTIC_OPERATIONS = [
     ov_metatypes.OVMaximumMetatype,
     ov_metatypes.OVConvertLikeMetatype,
     ov_metatypes.OVGatherMetatype,
+    ov_metatypes.OVGatherNDMetatype,
+    ov_metatypes.OVGatherElementsMetatype,
+    ov_metatypes.OVScatterUpdateMetatype,
+    ov_metatypes.OVScatterNDUpdateMetatype,
+    ov_metatypes.OVScatterElementsUpdateMetatype,
     ov_metatypes.OVDepthToSpaceMetatype,
+    ov_metatypes.OVSpaceToDepthMetatype,
+    ov_metatypes.OVBatchToSpaceMetatype,
+    ov_metatypes.OVSpaceToBatchMetatype,
+    # OVReluMetatype is not considered to be QUANTIZATION_AGNOSTIC, because:
+    # 1. Runtime doesn't provide performance benefits by quantizing the stand-alone RELU's (ticket: 59548)
+    # 2. It's frequently better for the end accuracy to have quantizers set up after the RELU
+    # so that the input distribution to the quantizer is non-negative
+    # and we can therefore have better quantization resolution while preserving the original dynamic range
 ]
 
 

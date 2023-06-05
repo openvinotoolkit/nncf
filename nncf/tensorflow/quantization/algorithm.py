@@ -23,6 +23,8 @@ from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.layer_attributes import ConvertDtypeLayerAttributes
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.utils import get_first_nodes_of_type
@@ -56,11 +58,13 @@ from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
+from nncf.tensorflow.graph.metatypes.common import CAST_METATYPES
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLambdaLayerMetatype
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLayerWithWeightsMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFIdentityOpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
@@ -435,6 +439,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _get_quantizer_setup(self, model: tf.keras.Model) -> TFQuantizationSetup:
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
+        nncf_graph = QuantizationBuilder._preprocess_cast_nodes(nncf_graph, CAST_METATYPES)
 
         check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
 
@@ -677,6 +682,16 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             retval += preprocessing_nodes_for_this_input
 
         return retval
+
+    @staticmethod
+    def _preprocess_cast_nodes(nncf_graph: NNCFGraph, cast_metatypes: List[OperatorMetatype]) -> NNCFGraph:
+        cast_nodes = nncf_graph.get_nodes_by_metatypes(cast_metatypes)
+        for node in cast_nodes:
+            if not isinstance(node.layer_attributes, ConvertDtypeLayerAttributes):
+                continue
+            if node.layer_attributes.src_dtype == node.layer_attributes.dst_dtype:
+                node.data[NNCFGraph.METATYPE_ATTR] = TFIdentityOpMetatype
+        return nncf_graph
 
     def _get_fake_quantize_name(self, node_name: NNCFNodeName, input_port_id: int = None) -> str:
         original_node_name, instance_idx = get_original_name_and_instance_idx(node_name)
