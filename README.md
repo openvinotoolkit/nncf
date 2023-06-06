@@ -374,35 +374,35 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |Model|Compression algorithm|Dataset|Accuracy (_drop_) %|
 | :---: | :---: | :---: | :---: |
-|ResNet-50|INT8|ImageNet|76.46 (-0.31)|
-|ResNet-50|INT8 (per-tensor only)|ImageNet|76.39 (-0.24)|
-|ResNet-50|Mixed, 43.12% INT8 / 56.88% INT4|ImageNet|76.05 (0.10)|
-|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|75.42 (0.73)|
+|ResNet-50|INT8|ImageNet|76.36 (-0.21)|
+|ResNet-50|INT8 (per-tensor only)|ImageNet|76.40 (-0.25)|
+|ResNet-50|Mixed, 43.12% INT8 / 56.88% INT4|ImageNet|75.96 (0.19)|
+|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|75.40 (0.75)|
 |ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|75.50 (0.65)|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|75.57 (0.58)|
-|Inception V3|INT8|ImageNet|77.45 (-0.12)|
-|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|76.36 (0.97)|
-|MobileNet V2|INT8|ImageNet|71.07 (0.80)|
-|MobileNet V2|INT8 (per-tensor only)|ImageNet|71.24 (0.63)|
-|MobileNet V2|Mixed, 58.88% INT8 / 41.12% INT4|ImageNet|70.95 (0.92)|
-|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.09 (0.78)|
-|MobileNet V3 small|INT8|ImageNet|66.98 (0.68)|
-|SqueezeNet V1.1|INT8|ImageNet|58.22 (-0.03)|
-|SqueezeNet V1.1|INT8 (per-tensor only)|ImageNet|58.11 (0.08)|
-|SqueezeNet V1.1|Mixed, 52.83% INT8 / 47.17% INT4|ImageNet|57.57 (0.62)|
-|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|61.67 (8.09)|
-|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|61.63 (8.13)|
+|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|75.58 (0.57)|
+|Inception V3|INT8|ImageNet|77.46 (-0.13)|
+|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|76.34 (0.99)|
+|MobileNet V2|INT8|ImageNet|71.41 (0.46)|
+|MobileNet V2|INT8 (per-tensor only)|ImageNet|71.12 (0.75)|
+|MobileNet V2|Mixed, 58.88% INT8 / 41.12% INT4|ImageNet|70.63 (1.24)|
+|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.08 (0.79)|
+|MobileNet V3 small|INT8|ImageNet|67.02 (0.65)|
+|SqueezeNet V1.1|INT8|ImageNet|58.21 (-0.03)|
+|SqueezeNet V1.1|INT8 (per-tensor only)|ImageNet|58.10 (0.08)|
+|SqueezeNet V1.1|Mixed, 52.83% INT8 / 47.17% INT4|ImageNet|57.51 (0.67)|
+|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|61.68 (8.08)|
+|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|61.62 (8.14)|
 |ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.27 (0.49)|
 |ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.31 (0.45)|
 |ResNet-34|Filter pruning, 50%, geometric median criterion + KD|ImageNet|73.11 (0.19)|
-|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.47 (0.30)|
+|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.47 (0.31)|
 
 <a name="pytorch_object_detection"></a>
 #### Object detection
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|
 | :---: | :---: | :---: | :---: |
-|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|62.95 (-0.72)|
+|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|62.93 (-0.70)|
 |SSD300-VGG-BN|INT8|VOC12+07 train, VOC07 eval|77.81 (0.47)|
 |SSD300-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|77.66 (0.62)|
 |SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC07 eval|78.35 (-0.07)|
@@ -443,21 +443,21 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |Model|Compression algorithm|Dataset|Accuracy (_drop_) %|
 | :---: | :---: | :---: | :---: |
-|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|78.39 (-0.48)|
-|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)|ImageNet|77.52 (0.39)|
+|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|78.37 (-0.46)|
+|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)|ImageNet|77.53 (0.38)|
 |Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.86 (0.05)|
 |MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|71.63 (0.22)|
 |MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 52% (RB)|ImageNet|70.94 (0.91)|
-|MobileNet V2| Sparsity 50% (RB)|ImageNet|71.34 (0.51)|
+|MobileNet V2| Sparsity 50% (RB)|ImageNet|71.33 (0.52)|
 |MobileNet V2 (TensorFlow Hub MobileNet V2)|Sparsity 35% (Magnitude)|ImageNet|71.87 (-0.02)|
-|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|67.79 (0.59)|
-|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)|ImageNet|67.44 (0.94)|
-|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|75.04 (0.76)|
-|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (RB)|ImageNet|75.24 (0.56)|
+|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|67.66 (0.72)|
+|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)|ImageNet|67.69 (0.69)|
+|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|74.91 (0.89)|
+|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (RB)|ImageNet|75.23 (0.57)|
 |ResNet-50|INT8|ImageNet|74.99 (0.06)|
-|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 65% (RB)|ImageNet|74.36 (0.69)|
+|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 65% (RB)|ImageNet|74.35 (0.70)|
 |ResNet-50|Sparsity 80% (RB)|ImageNet|74.38 (0.67)|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|74.96 (0.09)|
+|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|74.97 (0.08)|
 |ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion|ImageNet|75.09 (-0.04)|
 
 <a name="tensorflow_object_detection"></a>
@@ -465,11 +465,11 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|
 | :---: | :---: | :---: | :---: |
-|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|33.12 (0.31)|
+|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|33.21 (0.22)|
 |RetinaNet|Magnitude sparsity (50%)|COCO 2017|33.10 (0.33)|
 |RetinaNet|Filter pruning, 40%|COCO 2017|32.72 (0.71)|
-|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%|COCO 2017|32.67 (0.76)|
-|YOLO v4|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|46.20 (0.87)|
+|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%|COCO 2017|32.63 (0.80)|
+|YOLO v4|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|46.11 (0.96)|
 |YOLO v4|Magnitude sparsity, 50%|COCO 2017|46.49 (0.58)|
 
 <a name="tensorflow_instance_segmentation"></a>
@@ -477,7 +477,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|
 | :---: | :---: | :---: | :---: |
-|Mask-R-CNN|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|37.19 (0.14)|
+|Mask-R-CNN|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|37.18 (0.15)|
 |Mask-R-CNN|Magnitude sparsity, 50%|COCO 2017|36.94 (0.39)|
 
 ### ONNX models

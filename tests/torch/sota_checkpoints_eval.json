@@ -10,7 +10,7 @@
             "resnet50_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/resnet50_imagenet_int8.json",
                 "reference": "resnet50_imagenet",
-                "target": 76.46,
+                "target": 76.36,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int8.pth",
                 "model_description": "ResNet-50",
@@ -21,7 +21,7 @@
             "resnet50_imagenet_int8_per_tensor": {
                 "config": "examples/torch/classification/configs/quantization/resnet50_imagenet_int8_per_tensor.json",
                 "reference": "resnet50_imagenet",
-                "target": 76.39,
+                "target": 76.4,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int8_per_tensor.pth",
                 "model_description": "ResNet-50",
@@ -32,7 +32,7 @@
             "resnet50_imagenet_int4_int8": {
                 "config": "examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json",
                 "reference": "resnet50_imagenet",
-                "target": 76.05,
+                "target": 75.96,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int4_int8.pth",
                 "model_description": "ResNet-50",
@@ -45,7 +45,7 @@
             "resnet50_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json",
                 "reference": "resnet50_imagenet",
-                "target": 75.42,
+                "target": 75.4,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_rb_sparsity_int8.pth",
                 "model_description": "ResNet-50",
@@ -67,7 +67,7 @@
             "resnet50_imagenet_pruning_geometric_median": {
                 "config": "examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_geometric_median.json",
                 "reference": "resnet50_imagenet",
-                "target": 75.57,
+                "target": 75.58,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_pruning_geometric_median.pth",
                 "model_description": "ResNet-50",
@@ -83,7 +83,7 @@
             "inception_v3_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json",
                 "reference": "inception_v3_imagenet",
-                "target": 77.45,
+                "target": 77.46,
                 "metric_type": "Acc@1",
                 "resume": "inception_v3_imagenet_int8.pth",
                 "model_description": "Inception V3",
@@ -95,7 +95,7 @@
             "inception_v3_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json",
                 "reference": "inception_v3_imagenet",
-                "target": 76.36,
+                "target": 76.34,
                 "metric_type": "Acc@1",
                 "resume": "inception_v3_imagenet_rb_sparsity_int8.pth",
                 "model_description": "Inception V3",
@@ -113,7 +113,7 @@
             "mobilenet_v2_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 71.07,
+                "target": 71.41,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int8.pth",
                 "model_description": "MobileNet V2",
@@ -124,7 +124,7 @@
             "mobilenet_v2_imagenet_int8_per_tensor": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 71.24,
+                "target": 71.12,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int8_per_tensor.pth",
                 "model_description": "MobileNet V2",
@@ -135,7 +135,7 @@
             "mobilenet_v2_imagenet_int4_int8": {
                 "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 70.95,
+                "target": 70.63,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int4_int8.pth",
                 "model_description": "MobileNet V2",
@@ -145,7 +145,7 @@
             "mobilenet_v2_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 71.09,
+                "target": 71.08,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_rb_sparsity_int8.pth",
                 "model_description": "MobileNet V2",
@@ -155,14 +155,14 @@
             },
             "mobilenet_v3_small_imagenet": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet.json",
-                "target": 67.66,
+                "target": 67.67,
                 "metric_type": "Acc@1",
                 "model_description": "MobileNet V3 small"
             },
             "mobilenet_v3_small_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json",
                 "reference": "mobilenet_v3_small_imagenet",
-                "target": 66.98,
+                "target": 67.02,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v3_small_imagenet_int8.pth",
                 "model_description": "MobileNet V3 small",
@@ -172,14 +172,14 @@
             },
             "squeezenet1_1_imagenet": {
                 "config": "examples/torch/classification/configs/quantization/squeezenet1_1_imagenet.json",
-                "target": 58.19,
+                "target": 58.18,
                 "metric_type": "Acc@1",
                 "model_description": "SqueezeNet V1.1"
             },
             "squeezenet1_1_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 58.22,
+                "target": 58.21,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8.pth",
                 "model_description": "SqueezeNet V1.1",
@@ -190,7 +190,7 @@
             "squeezenet1_1_imagenet_int8_per_tensor": {
                 "config": "examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 58.11,
+                "target": 58.1,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8_per_tensor.pth",
                 "model_description": "SqueezeNet V1.1",
@@ -201,7 +201,7 @@
             "squeezenet1_1_imagenet_int4_int8": {
                 "config": "examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 57.57,
+                "target": 57.51,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int4_int8.pth",
                 "model_description": "SqueezeNet V1.1",
@@ -218,7 +218,7 @@
             "resnet18_imagenet_binarization_xnor": {
                 "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json",
                 "reference": "resnet18_imagenet",
-                "target": 61.67,
+                "target": 61.68,
                 "metric_type": "Acc@1",
                 "resume": "resnet18_imagenet_binarization_xnor.pth",
                 "model_description": "ResNet-18",
@@ -229,7 +229,7 @@
             "resnet18_imagenet_binarization_dorefa": {
                 "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json",
                 "reference": "resnet18_imagenet",
-                "target": 61.63,
+                "target": 61.62,
                 "metric_type": "Acc@1",
                 "resume": "resnet18_imagenet_binarization_dorefa.pth",
                 "model_description": "ResNet-18",
@@ -272,7 +272,7 @@
             },
             "googlenet_imagenet": {
                 "config": "examples/torch/classification/configs/pruning/googlenet_imagenet.json",
-                "target": 69.77,
+                "target": 69.78,
                 "metric_type": "Acc@1",
                 "model_description": "GoogLeNet"
             },
@@ -300,7 +300,7 @@
             "ssd300_mobilenet_voc_magnitude_sparsity_int8": {
                 "config": "examples/torch/object_detection/configs/ssd300_mobilenet_voc_magnitude_int8.json",
                 "reference": "ssd300_mobilenet_voc",
-                "target": 62.95,
+                "target": 62.93,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_mobilenet_voc_magnitude_sparsity_int8.pth",
                 "model_description": "SSD300-MobileNet",
