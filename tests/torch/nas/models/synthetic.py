@@ -393,3 +393,18 @@ class TwoSequentialFcLNTestModel(nn.Module):
         x = self.fc2(x)
         x = self.ln2(x)
         return x
+
+
+class TwoConvMeanModel(nn.Module):
+    INPUT_SIZE = [1, 1, 10, 10]
+
+    def __init__(self, in_channels=1, out_channels=3, kernel_size=5, weight_init=1, bias_init=0):
+        super().__init__()
+        self.conv1 = create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init)
+        self.last_conv = create_conv(out_channels, 3, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = x.mean(2, keepdim=True).mean(3, keepdim=True)
+        x = self.last_conv(x)
+        return x
