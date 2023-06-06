@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import pytest
 
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
@@ -35,10 +33,7 @@ def clear_session():
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--data", type=str, default=None,
-        help="Path to test datasets"
-    )
+    parser.addoption("--data", type=str, default=None, help="Path to test datasets")
     parser.addoption(
         "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
     )
@@ -46,24 +41,21 @@ def pytest_addoption(parser):
         "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
     )
     parser.addoption(
-        "--metrics-dump-path", type=str, default=None, help="Path to directory to store metrics. "
-                                                            "Directory must be empty or should not exist."
-                                                            "Metric keeps in "
-                                                            "PROJECT_ROOT/test_results/metrics_dump_timestamp "
-                                                            "if param not specified"
+        "--metrics-dump-path",
+        type=str,
+        default=None,
+        help="Path to directory to store metrics. "
+        "Directory must be empty or should not exist."
+        "Metric keeps in "
+        "PROJECT_ROOT/test_results/metrics_dump_timestamp "
+        "if param not specified",
     )
     parser.addoption(
         "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVINO accuracy test"
     )
-    parser.addoption(
-        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO"
-    )
-    parser.addoption(
-        "--run-weekly-tests", action="store_true", default=False, help="To run weekly tests"
-    )
-    parser.addoption(
-        "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
-    )
+    parser.addoption("--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO")
+    parser.addoption("--run-weekly-tests", action="store_true", default=False, help="To run weekly tests")
+    parser.addoption("--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests")
 
 
 @pytest.fixture(scope="module")
@@ -113,9 +105,8 @@ def install_tests(request):
 
 # Custom markers specifying tests to be run only if a specific option
 # is present on the pytest command line must be registered here.
-MARKS_VS_OPTIONS = {
-    **COMMON_SCOPE_MARKS_VS_OPTIONS
-}
+MARKS_VS_OPTIONS = {**COMMON_SCOPE_MARKS_VS_OPTIONS}
+
 
 def pytest_collection_modifyitems(config, items):
     skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)

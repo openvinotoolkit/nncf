@@ -1,46 +1,45 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, Tuple, List
+from typing import Dict, List, Optional, Set, TypeVar
 
-import numpy as np
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.patterns import HWFusedPatterns
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.scopes import IgnoredScope
 
-TModel = TypeVar('TModel')
-ALGO_BACKENDS = Registry('algo_backends')
+TModel = TypeVar("TModel")
+ALGO_BACKENDS = Registry("algo_backends")
 
 
 class MinMaxAlgoBackend(ABC):
-
     @property
     @abstractmethod
-    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
+    def mat_mul_metatype(self) -> OperatorMetatype:
         """
-        Property for the backend-specific metatypes with weights.
+        Property for the backend-specific MatMul metatype.
         """
 
     @property
@@ -52,9 +51,30 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def hw_fused_patterns(self) -> HWFusedPatterns:
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
         """
-        Property for the hardware & backend-specific layers patterns.
+        Property for the backend-specific ShapeOf metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def conv_metatype(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Convolution metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes for which overflow_fix is applicable.
+        """
+
+    @property
+    @abstractmethod
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
         """
 
     @property
@@ -73,16 +93,6 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_transformer(model: TModel) -> ModelTransformer:
-        """
-        Returns backend-specific ModelTransformer instance.
-
-        :param model: Backend-specific model to create ModelTransformer.
-        :return: ModelTransformer instance.
-        """
-
-    @staticmethod
-    @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
@@ -95,92 +105,119 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_activation_quantizer_insertion_command(target_point: TargetPoint,
-                                                      quantizer_config: QuantizerConfig,
-                                                      statistics: MinMaxTensorStatistic) -> TransformationCommand:
+    def create_activation_quantizer_insertion_command(
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
+        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 
     @staticmethod
     @abstractmethod
-    def create_weight_quantizer_insertion_command(target_point: TargetPoint,
-                                                  quantizer_config: QuantizerConfig,
-                                                  weight_tensor: np.ndarray,
-                                                  node: NNCFNode) -> TransformationCommand:
+    def create_weight_quantizer_insertion_command(
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param weight_tensor: weight tensor to calculate weight quantization parameters.
-        :param node: NNCFNode with the attributes.
+        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 
     @staticmethod
     @abstractmethod
-    def minmax_statistic_collector(use_abs_max: bool,
-                                   reduction_shape: ReductionShape,
-                                   num_samples: int = None) -> TensorStatisticCollectorBase:
+    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
         """
-        Returns backend-specific min max statistic collector.
+        Returns backend-specific unified statistics.
 
-        :param use_abs_max: Whether to use absolute maximum value or not.
-        :param reduction_shape: Channel axes for the statistics aggregation.
+        :param statistics: List of MinMaxTensorStatistic instances.
+        :return: Unified MinMaxTensorStatistic value.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_statistic_collector(
+        range_estimator_params: RangeEstimatorParameters,
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        inplace: bool,
+        num_samples: int = None,
+    ) -> TensorStatisticCollectorBase:
+        """
+        Returns backend-specific statistic collector.
+
+        :param range_estimator_params: Parameters that specify estimators types.
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
+        :param target_point: Target location for the correction.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
 
     @staticmethod
     @abstractmethod
-    def mean_minmax_statistic_collector(use_per_sample_stats: bool,
-                                        use_abs_max: bool,
-                                        reduction_shape: ReductionShape,
-                                        num_samples: int = None,
-                                        window_size: int = None) -> TensorStatisticCollectorBase:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
         """
-        Returns backend-specific min max statistic collector.
+        Returns node's input port indices with weight tensors.
 
-        :param use_abs_max: Whether to use absolute maximum value or not.
-        :param reduction_shape: Channel axes for the statistics aggregation.
-        :param num_samples: Maximum number of samples to collect.
-        :param window_size: The maximum size of the samples queue.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
+        :param node: NNCFNode to find its weight input port indices.
+        :return: Weights input port indices.
+        """
+
+    @staticmethod
+    def get_weight_name(nncf_graph: NNCFGraph, target_point: TargetPoint) -> str:
+        """
+        Returns node's weight name corresponding to port ID.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param target_point: The TargetPoint instance that contains layer's information.
+        :return: Weight name.
+        """
+
+    @staticmethod
+    def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
+        """
+        Return True if weight should be quantized.
+
+        :param weight_name: Weight name.
+        :param quantized_weight_names: Set containing already quantized weight names.
+        :return: A boolean value specifying whether a weight should be quantized.
         """
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor(model: TModel, target_point: TargetPoint) -> Tuple[str, np.ndarray]:
+    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         """
-        Returns node's weight tensor name and its value.
+        Returns ignores scope based on a model type and device parameters.
 
-        :param model: Backend-specific model for the initializer finding.
-        :param target_point: Backend-specific TargetPoint to find its weight.
-        :return: Weight tensor name and its value.
-        """
-
-    @staticmethod
-    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> int:
-        """
-        Returns node's weight tensor input port ID.
-
-        :param node: NNCFNode to find its weight input port ID.
-        :return: The input port ID of the weight.
+        :param model_type: Model type parameter.
+        :param device: Target device.
+        :return: Instance of ignored scope.
         """
 
     @staticmethod
     @abstractmethod
-    def get_weight_config(config: QuantizerConfig, model: TModel) -> QuantizerConfig:
+    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
-        Returns backend-specific configuration based on the input model attributes.
+        Returns nodes that have weights.
 
-        :param config: Base QuantizerConfig from the algo.
-        :param model: Backend-specific model instance.
-        :return: The updated QuantizerConfig.
+        :param nncf_graph: Instance of NNCFGraph.
+        :return: All nodes with weights.
         """

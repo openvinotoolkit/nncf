@@ -1,24 +1,17 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Callable
-from typing import Dict
-from typing import Generic
-from typing import Hashable
-from typing import List
-from typing import TypeVar
+from typing import Callable, Dict, Generic, Hashable, List, TypeVar
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Cluster(Generic[T]):
@@ -62,7 +55,7 @@ class Clusterization(Generic[T]):
         :return: Cluster according to provided `cluster_id`.
         """
         if cluster_id not in self.clusters:
-            raise IndexError('No cluster with id = {}'.format(cluster_id))
+            raise IndexError("No cluster with id = {}".format(cluster_id))
         return self.clusters[cluster_id]
 
     def get_cluster_containing_element(self, element_id: Hashable) -> Cluster[T]:
@@ -73,7 +66,7 @@ class Clusterization(Generic[T]):
         :return: Cluster containing element with provided `element_id`.
         """
         if element_id not in self._element_to_cluster:
-            raise IndexError('No cluster for node with id = {}'.format(element_id))
+            raise IndexError("No cluster for node with id = {}".format(element_id))
         return self.get_cluster_by_id(self._element_to_cluster[element_id])
 
     def is_node_in_clusterization(self, node_id: int) -> bool:
@@ -93,7 +86,7 @@ class Clusterization(Generic[T]):
         """
         cluster_id = cluster.id
         if cluster_id in self.clusters:
-            raise IndexError('Cluster with index = {} already exist'.format(cluster_id))
+            raise IndexError("Cluster with index = {} already exist".format(cluster_id))
         self.clusters[cluster_id] = cluster
         for elt in cluster.elements:
             self._element_to_cluster[self._id_fn(elt)] = cluster_id
@@ -105,7 +98,7 @@ class Clusterization(Generic[T]):
         :param cluster_id: Id of a cluster to delete.
         """
         if cluster_id not in self.clusters:
-            raise IndexError('No cluster with index = {} to delete'.format(cluster_id))
+            raise IndexError("No cluster with index = {} to delete".format(cluster_id))
         for elt in self.clusters[cluster_id].elements:
             node_id = self._id_fn(elt)
             self._element_to_cluster.pop(node_id)

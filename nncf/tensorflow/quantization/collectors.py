@@ -1,25 +1,23 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import List, Tuple
 
 import tensorflow as tf
 
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.collectors import QuantizerDescription
 from nncf.common.quantization.collectors import QuantizationStatisticsCollector
-from nncf.tensorflow.quantization.utils import collect_fake_quantize_layers
+from nncf.common.quantization.collectors import QuantizerDescription
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow.graph.utils import get_nncf_operations
+from nncf.tensorflow.quantization.utils import collect_fake_quantize_layers
 
 
 class TFQuantizationStatisticsCollector(QuantizationStatisticsCollector):
@@ -47,7 +45,7 @@ class TFQuantizationStatisticsCollector(QuantizationStatisticsCollector):
         quantizers_descriptions = []
 
         for wrapped_layer, _, op in get_nncf_operations(self._model, self._operation_names):
-            is_symmetric = (op.mode == QuantizationMode.SYMMETRIC)
+            is_symmetric = op.mode == QuantizationMode.SYMMETRIC
 
             is_signed = True
             if is_symmetric:
@@ -55,27 +53,15 @@ class TFQuantizationStatisticsCollector(QuantizationStatisticsCollector):
                 is_signed = op.signed(operation_weights)
 
             quantizers_descriptions.append(
-                QuantizerDescription(
-                    op.num_bits,
-                    op.per_channel,
-                    is_signed,
-                    is_symmetric,
-                    True,
-                    op.enabled
-                )
+                QuantizerDescription(op.num_bits, op.per_channel, is_signed, is_symmetric, True, op.enabled)
             )
 
         for fq_layer in collect_fake_quantize_layers(self._model):
-            is_symmetric = (fq_layer.mode == QuantizationMode.SYMMETRIC)
+            is_symmetric = fq_layer.mode == QuantizationMode.SYMMETRIC
 
             quantizers_descriptions.append(
                 QuantizerDescription(
-                    fq_layer.num_bits,
-                    fq_layer.per_channel,
-                    fq_layer.signed,
-                    is_symmetric,
-                    False,
-                    fq_layer.enabled
+                    fq_layer.num_bits, fq_layer.per_channel, fq_layer.signed, is_symmetric, False, fq_layer.enabled
                 )
             )
 

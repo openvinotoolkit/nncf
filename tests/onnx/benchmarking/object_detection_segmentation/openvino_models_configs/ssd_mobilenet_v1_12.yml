@@ -1,0 +1,28 @@
+models:
+  - name: ssd_mobilenet_v1_12
+    launchers:
+      - framework: openvino
+        device: CPU
+        tags: ['OpenVINO']
+        adapter:
+          type: tf_object_detection
+          scores_out: detection_scores
+          classes_out: detection_classes
+          boxes_out: detection_boxes
+          num_detections_out: num_detections
+        inputs:
+          - name: inputs
+            type: INPUT
+            layout: "NHWC"
+    datasets:
+      - name: ms_coco_detection_80_class_with_background
+
+        postprocessing:
+          - type: resize_prediction_boxes
+
+        metrics:
+          - type: coco_precision
+            threshold: .5:.05:.95
+
+    ignored_scopes: [ 'copy__21/Preprocessor/map/while/Less', 'Preprocessor/mul',
+                      'copy__43/Postprocessor/BatchMultiClassNonMaxSuppression/map/while/Less', 'add']

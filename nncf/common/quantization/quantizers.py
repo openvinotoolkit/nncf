@@ -1,22 +1,17 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from typing import Tuple
 
 
-def calculate_symmetric_level_ranges(
-        num_bits: int,
-        signed: bool,
-        narrow_range: bool = False) -> Tuple[int, int, int]:
+def calculate_symmetric_level_ranges(num_bits: int, signed: bool, narrow_range: bool = False) -> Tuple[int, int]:
     """
     Calculates the numbers of the low and high quant and the number of
     quantization levels for the symmetric quantization scheme.
@@ -30,9 +25,8 @@ def calculate_symmetric_level_ranges(
     :return: A Tuple
         level_low - the low quant number
         level_high - the high quant number
-        levels - the number of quantization levels
     """
-    levels = 2 ** num_bits
+    levels = 2**num_bits
 
     if signed:
         level_high = (levels // 2) - 1
@@ -42,15 +36,15 @@ def calculate_symmetric_level_ranges(
         level_low = 0
 
     if narrow_range:
-        level_low = level_low + 1
-        levels = levels - 1
+        if level_low < 0:
+            level_low += 1
+        else:
+            level_high -= 1
 
-    return level_low, level_high, levels
+    return level_low, level_high
 
 
-def calculate_asymmetric_level_ranges(
-        num_bits: int,
-        narrow_range: bool = False) -> Tuple[int, int, int]:
+def calculate_asymmetric_level_ranges(num_bits: int, narrow_range: bool = False) -> Tuple[int, int]:
     """
     Calculates the numbers of the low and high quant and the number of
     quantization levels for the asymmetric quantization scheme.
@@ -61,14 +55,16 @@ def calculate_asymmetric_level_ranges(
     :return: A Tuple
         level_low - the low quant number
         level_high - the high quant number
-        levels - the number of quantization levels
     """
-    levels = 2 ** num_bits
+    levels = 2**num_bits
     level_high = levels - 1
     level_low = 0
 
     if narrow_range:
         level_low = level_low + 1
-        levels = levels - 1
 
-    return level_low, level_high, levels
+    return level_low, level_high
+
+
+def get_num_levels(level_low: int, level_high: int):
+    return level_high - level_low + 1

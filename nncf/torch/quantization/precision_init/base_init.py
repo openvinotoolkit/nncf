@@ -12,54 +12,57 @@
 """
 
 from collections import OrderedDict
-from typing import Dict
-from typing import List
-from typing import Union
-
 from copy import deepcopy
+from typing import Dict, List, Union
 
 from nncf.common.graph import NNCFNodeName
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
+from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
-from nncf.common.quantization.structs import QuantizerId
-from nncf.common.quantization.structs import WeightQuantizerId
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.structures import NNCFExtraConfigStruct
 from nncf.torch.utils import get_all_modules_by_type
 
 
 class BasePrecisionInitParams:
-    def __init__(self,
-                 user_init_args: NNCFExtraConfigStruct = None):
+    def __init__(self, user_init_args: NNCFExtraConfigStruct = None):
         self.user_init_args = user_init_args
 
 
 class BasePrecisionInitializer:
-    def __init__(self, algo: 'ExperimentalQuantizationController',
-                 params: BasePrecisionInitParams,
-                 hw_precision_constraints: HardwareQuantizationConstraints = None):
+    def __init__(
+        self,
+        algo: "ExperimentalQuantizationController",
+        params: BasePrecisionInitParams,
+        hw_precision_constraints: HardwareQuantizationConstraints = None,
+    ):
         self._algo = algo
         self._model = self._algo._model  # type: NNCFNetwork
         all_quantizers = algo.all_quantizations
         self._hw_precision_constraints = hw_precision_constraints
         self.original_precisions = {q_id: quantizer.num_bits for q_id, quantizer in all_quantizers.items()}
-        self._quantizers_handler = WeightQuantizersHandler(self._model, self._algo.weight_quantizers,
-                                                           self._hw_precision_constraints)
+        self._quantizers_handler = WeightQuantizersHandler(
+            self._model, self._algo.weight_quantizers, self._hw_precision_constraints
+        )
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
-        self._weight_quantizations_by_execution_order = self._quantizers_handler. \
-            get_weight_quantizers_in_execution_order_per_id()
+        self._weight_quantizations_by_execution_order = (
+            self._quantizers_handler.get_weight_quantizers_in_execution_order_per_id()
+        )
 
         self._all_quantizers_per_scope = get_all_modules_by_type(
-            self._model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
-            quantization_types)
+            self._model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
+            quantization_types,
+        )
         self._all_quantizers_per_scope.update(
-            self._quantizers_handler.get_all_weight_quantizers_in_execution_order_per_scope())
+            self._quantizers_handler.get_all_weight_quantizers_in_execution_order_per_scope()
+        )
 
     def apply_init(self) -> SingleConfigQuantizerSetup:
         raise NotImplementedError
@@ -92,9 +95,12 @@ class WeightQuantizersHandler:
         retval.pop()
         return retval
 
-    def __init__(self, model: NNCFNetwork,
-                 weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
-                 constraints: HardwareQuantizationConstraints):
+    def __init__(
+        self,
+        model: NNCFNetwork,
+        weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
+        constraints: HardwareQuantizationConstraints,
+    ):
         self._wq_affected_module_node_name_vs_qid_dict = {k.target_node_name: k for k in weight_quantizers.keys()}
         self._quantizer_module_scope_vs_qid_dict = {}  # type: Dict[Scope, WeightQuantizerId]
         self._skipped_quantized_weight_node_names = []
@@ -103,14 +109,13 @@ class WeightQuantizersHandler:
         self._weight_quantizers_in_execution_order = OrderedDict()  # type: Dict[WeightQuantizerId, BaseQuantizer]
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
-        weight_module_dict = model.get_nncf_wrapped_model()
-        quantizers_in_execution_order_per_scope = get_all_modules_by_type(weight_module_dict,
-                                                                          quantization_types)
+        weight_module_dict = model
+        quantizers_in_execution_order_per_scope = get_all_modules_by_type(weight_module_dict, quantization_types)
 
         for scope, quantizer in quantizers_in_execution_order_per_scope.items():
             if self.is_wq_scope(scope):
                 affected_module_scope = self.get_owning_module_scope_from_wq_scope(scope)
-                affected_module_node = model.get_original_graph().get_op_nodes_in_scope(affected_module_scope)[0]
+                affected_module_node = model.nncf.get_original_graph().get_op_nodes_in_scope(affected_module_scope)[0]
                 if affected_module_node.node_name in self._wq_affected_module_node_name_vs_qid_dict:
                     qid = self._wq_affected_module_node_name_vs_qid_dict[affected_module_node.node_name]
                     if len(constraints.get_all_unique_bitwidths(qid)) != 1:

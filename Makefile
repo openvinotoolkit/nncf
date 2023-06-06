@@ -19,7 +19,7 @@ install-onnx-dev: install-onnx-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-onnx:
-	pytest tests/onnx --junitxml ${JUNITXML_PATH}
+	pytest tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 ONNX_PYFILES := $(shell find examples/post_training_quantization/onnx -type f -name "*.py")
 pylint-onnx:
@@ -43,16 +43,18 @@ install-openvino-test:
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/experimental/openvino/bert/requirements.txt
 	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
+	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git@dcbf53280a95dae3c6538689bafe760470f08ec2#subdirectory=tools/model_tools
 
 install-openvino-dev: install-openvino-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-openvino:
-	pytest tests/openvino --junitxml ${JUNITXML_PATH}
+	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
 		nncf/openvino/                      \
+		nncf/experimental/openvino/  \
 		tests/openvino/                     \
 		examples/experimental/openvino/
 

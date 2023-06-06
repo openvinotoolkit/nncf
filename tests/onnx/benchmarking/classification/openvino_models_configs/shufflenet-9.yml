@@ -1,0 +1,34 @@
+models:
+- name: shufflenet-9
+  launchers:
+  - framework: openvino
+    device: CPU
+    adapter: classification
+    tags: ['OpenVINO']
+  datasets:
+  - name: imagenet_1000_classes
+    # read in RGB format
+    reader: pillow_imread
+    preprocessing:
+      - type: resize
+        size: 256
+        aspect_ratio_scale: greater
+        use_pillow: true
+        interpolation: BILINEAR
+
+      - type: crop
+        size: 224
+        use_pillow: true
+
+      # Scale to [0, 1]
+      - type: normalization
+        std: 255
+
+      - type: normalization
+        mean: (0.485, 0.456, 0.406)
+        std: (0.229, 0.224, 0.225)
+
+    metrics:
+    - name: accuracy@top1
+      type: accuracy
+      top_k: 1

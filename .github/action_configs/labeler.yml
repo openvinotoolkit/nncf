@@ -1,0 +1,41 @@
+# See help here: https://github.com/marketplace/actions/labeler
+
+dependencies:
+  - 'requirements.txt'
+  - '**/setup.py'
+
+NNCF PT:
+  - 'examples/torch/**/*'
+  - 'examples/post_training_quantization/torch/**/*'
+  - 'nncf/torch/**/*'
+  - 'tests/torch/**/*'
+
+NNCF TF:
+  - 'examples/tensorflow/**/*'
+  - 'examples/post_training_quantization/tensorflow/**/*'
+  - 'nncf/tensorflow/**/*'
+  - 'tests/tensorflow/**/*'
+
+NNCF ONNX:
+  - 'examples/onnx/**/*'
+  - 'examples/post_training_quantization/onnx/**/*'
+  - 'nncf/onnx/**/*'
+  - 'tests/onnx/**/*'
+
+NNCF OpenVINO:
+  - 'examples/openvino/**/*'
+  - 'examples/post_training_quantization/openvino/**/*'
+  - 'nncf/openvino/**/*'
+  - 'tests/openvino/**/*'
+
+documentation:
+  - '**/README.md'
+  - 'docs/**/*'
+
+experimental:
+  - 'nncf/experimental/**/*'
+
+NNCF Common:
+  - 'examples/common/**/*'
+  - 'nncf/common/**/*'
+  - 'tests/common/**/*'

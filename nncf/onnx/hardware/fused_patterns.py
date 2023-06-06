@@ -1,73 +1,404 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import HWFusedPatterns
-
-from nncf.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
-from nncf.onnx.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
-from nncf.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
+from nncf.common.graph.patterns import HWFusedPatternNames
+from nncf.common.utils.registry import Registry
+from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.hardware.pattern_operations import ARITHMETIC_OPERATIONS
+from nncf.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
+from nncf.onnx.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
+from nncf.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
 
-from nncf.onnx.hardware.patterns import create_swish_activation
-from nncf.onnx.hardware.patterns import create_input_preprocessing_pattern
-from nncf.onnx.hardware.patterns import create_decomposed_batch_norm
-from nncf.onnx.hardware.patterns import create_scale_shift
+ONNX_HW_FUSED_PATTERNS = Registry("onnx")
+
+# BLOCK PATTERNS
 
 
-def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
-    hw_fused_patterns = HWFusedPatterns()
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SCALE_SHIFT)
+def create_scale_shift() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern_input_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    )
+    mul_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+    )
+    add_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
+            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
+        }
+    )
+    pattern.add_edge(pattern_input_node, mul_node)
+    pattern.add_edge(mul_node, add_node)
+    return pattern
 
-    linear_ops = GraphPattern()
-    linear_ops.add_node(**LINEAR_OPERATIONS)
-    hw_fused_patterns.register(linear_ops, LINEAR_OPERATIONS['label'], match=False)
 
-    batch_norm = GraphPattern()
-    batch_norm.add_node(**BATCH_NORMALIZATION_OPERATIONS)
-    decomposed_batch_norm = create_decomposed_batch_norm()
-    batch_norms = batch_norm | decomposed_batch_norm
-    hw_fused_patterns.register(batch_norms, BATCH_NORMALIZATION_OPERATIONS['label'], match=False)
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SWISH_WITH_SIGMOID)
+def create_swish_with_sigmoid() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern_input_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    )
+    sigmoid_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "SIGMOID", GraphPattern.METATYPE_ATTR: om.ONNXSigmoidMetatype}
+    )
+    mul_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+    )
 
-    atomic_activations = GraphPattern()
-    atomic_activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
-    swish = create_swish_activation()
-    activations = atomic_activations | swish
-    hw_fused_patterns.register(activations, 'ACTIVATIONS', match=False)
+    pattern.add_edge(pattern_input_node, sigmoid_node)
+    pattern.add_edge(sigmoid_node, mul_node)
+    pattern.add_edge(pattern_input_node, mul_node)
+    return pattern
 
-    arithmetic_ops = GraphPattern()
-    arithmetic_ops.add_node(**ARITHMETIC_OPERATIONS)
-    hw_fused_patterns.register(arithmetic_ops, ARITHMETIC_OPERATIONS['label'], match=False)
 
-    batch_norm_activations_permutation = batch_norms + activations | \
-                                         activations + batch_norms | \
-                                         batch_norms | activations
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SWISH_WITH_HARD_SIGMOID)
+def create_swish_with_hard_sigmoid() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern_input_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    )
+    hard_sigmoid_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "HARD_SIGMOID", GraphPattern.METATYPE_ATTR: om.ONNXHardSigmoidMetatype}
+    )
+    mul_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+    )
 
-    hw_fused_patterns.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
-                               match=True)
-    hw_fused_patterns.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC', match=True)
-    hw_fused_patterns.register(batch_norms + activations, 'BN + ACTIVATIONS', match=True)
-    hw_fused_patterns.register(activations + batch_norms, 'ACTIVATIONS + BN', match=True)
-    hw_fused_patterns.register(arithmetic_ops + batch_norm_activations_permutation,
-                               'ARITHMETIC + BN_ACT_PERM', match=True)
+    pattern.add_edge(pattern_input_node, hard_sigmoid_node)
+    pattern.add_edge(hard_sigmoid_node, mul_node)
+    pattern.add_edge(pattern_input_node, mul_node)
+    return pattern
 
-    input_preprocessing_pattern = create_input_preprocessing_pattern()
-    hw_fused_patterns.register(input_preprocessing_pattern,
-                               'INPUT_PREPROCESSING', match=True)
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.MATMUL_SOFTMAX_MATMUL)
+def create_matmul_softmax_matmul() -> GraphPattern:
+    pattern = GraphPattern()
+    softmax_1 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.ONNXSoftmaxMetatype}
+    )
+    mat_mul_1_1 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MATMUL_1", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
+    )
+    mat_mul_2_1 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MATMUL_2", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
+    )
+
+    any_1 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    )
+
+    pattern.add_edge(mat_mul_1_1, softmax_1)
+    pattern.add_edge(softmax_1, mat_mul_2_1)
+    pattern.add_edge(any_1, mat_mul_2_1)
+
+    softmax_2 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.ONNXSoftmaxMetatype}
+    )
+    add_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    mat_mul_1_2 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MATMUL_1", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
+    )
+    mat_mul_2_2 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MATMUL_2", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
+    )
+
+    any_2 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    )
+
+    pattern.add_edge(mat_mul_1_2, add_2)
+    pattern.add_edge(add_2, softmax_2)
+    pattern.add_edge(softmax_2, mat_mul_2_2)
+    pattern.add_edge(any_2, mat_mul_2_2)
+
+    return pattern
+
+
+# INPUT PROCESSING
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
+def create_input_shift_scale() -> GraphPattern:
+    pattern = GraphPattern()
+    input_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype}
+    )
+    add_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
+            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
+        }
+    )
+    multiply_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+    )
+
+    pattern.add_edge(input_node, add_node)
+    pattern.add_edge(add_node, multiply_node)
+    return pattern
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_PROCESSING)
+def create_input_add() -> GraphPattern:
+    pattern = GraphPattern()
+    input_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype}
+    )
+    add_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "ADD, MULTIPLY",
+            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXMulLayerMetatype],
+        }
+    )
+
+    pattern.add_edge(input_node, add_node)
+    return pattern
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SCALE_SHIFT)
+def create_input_scale_shift() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
     scale_shift = create_scale_shift()
-    hw_fused_patterns.register(scale_shift, 'SCALE_SHIFT', match=True)
 
-    return hw_fused_patterns
+    pattern.join_patterns(scale_shift)
+    return pattern
 
 
-ONNX_HW_FUSED_PATTERNS = _get_onnx_hw_fused_patterns()
+# COMBINATIONS
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ACTIVATIONS_BATCH_NORM)
+def create_activations_batch_norm() -> GraphPattern:
+    activations = atomic_activations_operations()
+    batch_norm = batch_normalization_operations()
+    activations.join_patterns(batch_norm)
+    return activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ACTIVATIONS_SCALE_SHIFT)
+def create_activations_scale_shift() -> GraphPattern:
+    activations = atomic_activations_operations()
+    scale_shift = create_scale_shift()
+    activations.join_patterns(scale_shift)
+    return activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_BATCH_NORM)
+def create_arithmetic_batch_norm() -> GraphPattern:
+    arithmetic = arithmetic_operations()
+    batch_norm = batch_normalization_operations()
+    arithmetic.join_patterns(batch_norm)
+    return arithmetic
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_ACTIVATIONS)
+def create_arithmetic_activations() -> GraphPattern:
+    arithmetic = arithmetic_operations()
+    activations = atomic_activations_operations()
+    arithmetic.join_patterns(activations)
+    return arithmetic
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_SCALE_SHIFT)
+def create_arithmetic_scale_shift() -> GraphPattern:
+    arithmetic = arithmetic_operations()
+    scale_shift = create_scale_shift()
+    arithmetic.join_patterns(scale_shift)
+    return arithmetic
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
+def create_arithmetic_batch_norm_activations() -> GraphPattern:
+    arithmetic_batch_norm = create_arithmetic_batch_norm()
+    activations = atomic_activations_operations()
+    arithmetic_batch_norm.join_patterns(activations)
+    return arithmetic_batch_norm
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_SCALE_SHIFT_ACTIVATIONS)
+def create_arithmetic_scale_shift_activations() -> GraphPattern:
+    arithmetic_scale_shift = create_arithmetic_scale_shift()
+    activations = atomic_activations_operations()
+    arithmetic_scale_shift.join_patterns(activations)
+    return arithmetic_scale_shift
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
+def create_arithmetic_activations_batch_norm() -> GraphPattern:
+    arithmetic_activations = create_arithmetic_activations()
+    batch_norm = batch_normalization_operations()
+    arithmetic_activations.join_patterns(batch_norm)
+    return arithmetic_activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_ACTIVATIONS_SCALE_SHIFT)
+def create_arithmetic_activations_scale_shift() -> GraphPattern:
+    arithmetic_activations = create_arithmetic_activations()
+    scale_shift = create_scale_shift()
+    arithmetic_activations.join_patterns(scale_shift)
+    return arithmetic_activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.BATCH_NORM_ACTIVATIONS)
+def create_batch_norm_activations() -> GraphPattern:
+    batch_norm = batch_normalization_operations()
+    activations = atomic_activations_operations()
+    batch_norm.join_patterns(activations)
+    return batch_norm
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SCALE_SHIFT_ACTIVATIONS)
+def create_scale_shift_activations() -> GraphPattern:
+    scale_shift = create_scale_shift()
+    activations = atomic_activations_operations()
+    scale_shift.join_patterns(activations)
+    return scale_shift
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC)
+def create_linear_arithmetic() -> GraphPattern:
+    linear = linear_operations()
+    arithmetic = arithmetic_operations()
+    linear.join_patterns(arithmetic)
+    return linear
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_NORM)
+def create_linear_batch_norm() -> GraphPattern:
+    linear = linear_operations()
+    batch_norm = batch_normalization_operations()
+    linear.join_patterns(batch_norm)
+    return linear
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ACTIVATIONS)
+def create_linear_activations() -> GraphPattern:
+    linear = linear_operations()
+    activations = atomic_activations_operations()
+    linear.join_patterns(activations)
+    return linear
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
+def create_linear_batch_norm_activations() -> GraphPattern:
+    linear_batch_norm = create_linear_batch_norm()
+    activations = atomic_activations_operations()
+    linear_batch_norm.join_patterns(activations)
+    return linear_batch_norm
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SCALE_SHIFT_ACTIVATIONS)
+def create_linear_scale_shift_activations() -> GraphPattern:
+    linear_scale_shift = create_linear_scale_shift()
+    activations = atomic_activations_operations()
+    linear_scale_shift.join_patterns(activations)
+    return linear_scale_shift
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
+def create_linear_activations_batch_norm() -> GraphPattern:
+    linear_activations = create_linear_activations()
+    batch_norm = batch_normalization_operations()
+    linear_activations.join_patterns(batch_norm)
+    return linear_activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ACTIVATIONS_SCALE_SHIFT)
+def create_linear_activations_scale_shift() -> GraphPattern:
+    linear_activations = create_linear_activations()
+    scale_shift = create_scale_shift()
+    linear_activations.join_patterns(scale_shift)
+    return linear_activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
+def create_linear_bn_scale_shift_activation() -> GraphPattern:
+    linear_batch_norm = create_linear_batch_norm()
+    scale_shift = create_scale_shift()
+    activations = atomic_activations_operations()
+
+    linear_batch_norm.join_patterns(scale_shift)
+    linear_batch_norm.join_patterns(activations)
+    return linear_batch_norm
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SQUEEZE_ACTIVATIONS)
+def create_linear_squeeze_activation() -> GraphPattern:
+    linear = linear_operations()
+    squeeze = squeeze_operation()
+    activations = atomic_activations_operations()
+
+    linear.join_patterns(squeeze)
+    linear.join_patterns(activations)
+    return linear
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
+def create_bn_scale_shift_activation() -> GraphPattern:
+    batch_norm = batch_normalization_operations()
+    scale_shift = create_scale_shift()
+    activations = atomic_activations_operations()
+
+    batch_norm.join_patterns(scale_shift)
+    batch_norm.join_patterns(activations)
+    return batch_norm
+
+
+# DEVICE PATTERNS
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SCALE_SHIFT)
+def create_linear_scale_shift() -> GraphPattern:
+    linear = linear_operations()
+    batch_norm = create_scale_shift()
+    linear.join_patterns(batch_norm)
+    return linear
+
+
+def linear_operations() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**LINEAR_OPERATIONS)
+    return pattern
+
+
+def batch_normalization_operations() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**BATCH_NORMALIZATION_OPERATIONS)
+    return pattern
+
+
+def atomic_activations_operations() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
+
+    swish_sigmoid = create_swish_with_sigmoid()
+    pattern.add_pattern_alternative(swish_sigmoid)
+
+    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
+    pattern.add_pattern_alternative(swish_hard_sigmoid)
+    return pattern
+
+
+def arithmetic_operations() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**ARITHMETIC_OPERATIONS)
+    return pattern
+
+
+def squeeze_operation() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "SQUEEZE", GraphPattern.METATYPE_ATTR: om.ONNXSqueezeMetatype})
+    return pattern

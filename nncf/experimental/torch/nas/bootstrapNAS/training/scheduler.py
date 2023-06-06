@@ -1,23 +1,17 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from typing import Any, Dict, List, Optional, Tuple
 
-from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.logging import nncf_logger
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import BaseLRScheduler
@@ -26,7 +20,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import S
 
 
 class NSParamsStateNames:
-    LIST_STAGE_DESCRIPTIONS = 'list_stage_descriptions'
+    LIST_STAGE_DESCRIPTIONS = "list_stage_descriptions"
 
 
 class NASSchedulerParams:
@@ -40,25 +34,22 @@ class NASSchedulerParams:
         """
         if list_stage_descriptions is None:
             list_stage_descriptions = [
-                StageDescriptor(train_dims=[ElasticityDim.KERNEL],
-                                epochs=1),
-                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH],
-                                epochs=1),
-                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH],
-                                epochs=1,
-                                depth_indicator=2),
-                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH, ElasticityDim.WIDTH],
-                                epochs=1),
-                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH, ElasticityDim.WIDTH],
-                                epochs=1,
-                                width_indicator=2,
-                                reorg_weights=True,
-                                bn_adapt=True)
+                StageDescriptor(train_dims=[ElasticityDim.KERNEL], epochs=1),
+                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH], epochs=1),
+                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH], epochs=1, depth_indicator=2),
+                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH, ElasticityDim.WIDTH], epochs=1),
+                StageDescriptor(
+                    train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH, ElasticityDim.WIDTH],
+                    epochs=1,
+                    width_indicator=2,
+                    reorg_weights=True,
+                    bn_adapt=True,
+                ),
             ]
         self.list_stage_descriptions = list_stage_descriptions
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> 'NASSchedulerParams':
+    def from_config(cls, config: Dict[str, Any]) -> "NASSchedulerParams":
         """
         Creates the object from its config.
         """
@@ -69,7 +60,7 @@ class NASSchedulerParams:
         return cls(descs)
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'NASSchedulerParams':
+    def from_state(cls, state: Dict[str, Any]) -> "NASSchedulerParams":
         """
         Creates the object from its state.
 
@@ -89,12 +80,12 @@ class NASSchedulerParams:
             self._state_names.LIST_STAGE_DESCRIPTIONS: [desc.get_state() for desc in self.list_stage_descriptions],
         }
 
-    def __eq__(self, other: 'NASSchedulerParams') -> bool:
+    def __eq__(self, other: "NASSchedulerParams") -> bool:
         return self.__dict__ == other.__dict__
 
 
 class BNASSchedulerStateNames:
-    LIST_STAGE_DESCRIPTIONS = 'list_stage_descriptions'
+    LIST_STAGE_DESCRIPTIONS = "list_stage_descriptions"
 
 
 class BootstrapNASScheduler(BaseCompressionScheduler):
@@ -103,12 +94,16 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
     compression scheduler must be called in the beginning of each training step and epoch, respectively.
     These methods trigger a subnet activations, elasticity configuration during the training.
     """
+
     _state_names = BNASSchedulerStateNames
 
-    def __init__(self, training_ctrl: BNASTrainingAlgorithm,
-                 params: NASSchedulerParams,
-                 available_elasticity_dims: List[ElasticityDim],
-                 progressivity_of_elasticity: List[ElasticityDim]):
+    def __init__(
+        self,
+        training_ctrl: BNASTrainingAlgorithm,
+        params: NASSchedulerParams,
+        available_elasticity_dims: List[ElasticityDim],
+        progressivity_of_elasticity: List[ElasticityDim],
+    ):
         super().__init__()
         self._training_ctrl = training_ctrl
         self._params = params
@@ -238,9 +233,9 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         state[self._state_names.LIST_STAGE_DESCRIPTIONS] = [desc.get_state() for desc in self.list_stage_descriptors]
         return state
 
-    def _validate_elasticity_dims(self,
-                                  available_elasticity_dims: List[ElasticityDim],
-                                  progressivity_of_elasticity: List[ElasticityDim]) -> None:
+    def _validate_elasticity_dims(
+        self, available_elasticity_dims: List[ElasticityDim], progressivity_of_elasticity: List[ElasticityDim]
+    ) -> None:
         last_stage = -1
         first_stage = len(progressivity_of_elasticity)
         for desc in self._list_stage_descriptors:
@@ -254,7 +249,8 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
                         f"The elasticity for this dimension is not enabled.\n"
                         f"It can be enabled by specifying `available_elasticity_dims` param in the `elasticity` "
                         f"section of config.\n"
-                        f"List of currently available dimensions: {[dim.value for dim in available_elasticity_dims]}")
+                        f"List of currently available dimensions: {[dim.value for dim in available_elasticity_dims]}"
+                    )
                 dim_idx = progressivity_of_elasticity.index(train_dim)
                 if dim_idx not in stages_covered:
                     stages_covered.append(dim_idx)
@@ -264,12 +260,14 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
                     low_priority_dim_idx = dim_idx
             if high_priority_dim_idx < last_stage or low_priority_dim_idx > first_stage:
                 raise ValueError(
-                    f"stage {progressivity_of_elasticity[high_priority_dim_idx]} violates progressivity of elasticity")
+                    f"stage {progressivity_of_elasticity[high_priority_dim_idx]} violates progressivity of elasticity"
+                )
             for i in range(low_priority_dim_idx, high_priority_dim_idx):
                 if i not in stages_covered and progressivity_of_elasticity[i] in available_elasticity_dims:
                     raise ValueError(
                         f"Missed to call {progressivity_of_elasticity[i]} in {desc.train_dims} which violates "
-                        f"progressivity of elasticity {progressivity_of_elasticity}")
+                        f"progressivity of elasticity {progressivity_of_elasticity}"
+                    )
             last_stage = high_priority_dim_idx
             first_stage = low_priority_dim_idx
 
@@ -283,11 +281,13 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
             # Check if stage learning rate has been set
             if desc.init_lr is None and not bool(self._training_ctrl.lr_schedule_config):
                 nncf_logger.warning(
-                    "Stage learning rate in use but init_lr value for stage wasn't set. Using default value of 3.5e-6")
+                    "Stage learning rate in use but init_lr value for stage wasn't set. Using default value of 3.5e-6"
+                )
                 desc.init_lr = DEFAULT_STAGE_LR_RATE
 
             if desc.init_lr is not None and desc.epochs_lr is None:
                 nncf_logger.warning(
                     f"Stage learning rate in use but epochs_lr value for stage wasn't set. "
-                    f"Using number of epochs for stage {desc.epochs}")
+                    f"Using number of epochs for stage {desc.epochs}"
+                )
                 desc.epochs_lr = desc.epochs

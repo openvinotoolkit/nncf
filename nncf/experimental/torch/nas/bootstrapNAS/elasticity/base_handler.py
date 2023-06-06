@@ -1,33 +1,27 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from abc import ABC
 from abc import abstractmethod
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import TypeVar
+from typing import Any, Dict, List, Optional, TypeVar
 
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.utils.registry import Registry
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nncf_network import NNCFNetwork
 
-ELASTICITY_HANDLERS_MAP = Dict[ElasticityDim, 'ElasticityHandler']
-ElasticSearchSpace = TypeVar('ElasticSearchSpace')
-ElasticityConfig = TypeVar('ElasticityConfig')
-ELASTICITY_BUILDERS = Registry('Elasticity builder', add_name_as_attr=True)
-ELASTICITY_PARAMS = Registry('Elasticity builder', add_name_as_attr=True)
+ELASTICITY_HANDLERS_MAP = Dict[ElasticityDim, "ElasticityHandler"]
+ElasticSearchSpace = TypeVar("ElasticSearchSpace")
+ElasticityConfig = TypeVar("ElasticityConfig")
+ELASTICITY_BUILDERS = Registry("Elasticity builder", add_name_as_attr=True)
+ELASTICITY_PARAMS = Registry("Elasticity builder", add_name_as_attr=True)
 
 
 class ElasticityHandler(ABC):
@@ -128,13 +122,14 @@ class ElasticityHandler(ABC):
 
 
 class SEHandlerStateNames:
-    ACTIVE_CONFIG = 'active_config'
+    ACTIVE_CONFIG = "active_config"
 
 
 class SingleElasticityHandler(ElasticityHandler, ABC):
     """
     An interface for handling a single elasticity dimension in the network, e.g. elastic width or depth.
     """
+
     _state_names = SEHandlerStateNames
 
     @abstractmethod
@@ -150,9 +145,9 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
         """
 
     @abstractmethod
-    def resolve_conflicts_with_other_elasticities(self,
-                                                  config: ElasticityConfig,
-                                                  elasticity_handlers: ELASTICITY_HANDLERS_MAP) -> ElasticityConfig:
+    def resolve_conflicts_with_other_elasticities(
+        self, config: ElasticityConfig, elasticity_handlers: ELASTICITY_HANDLERS_MAP
+    ) -> ElasticityConfig:
         """
         Resolves a conflict between the given elasticity config and active elasticity configs of the given handlers.
         For example, elastic width configuration may contradict to elastic depth one. When we activate some
@@ -189,14 +184,14 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
 
 class BaseElasticityParams:
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> 'BaseElasticityParams':
+    def from_config(cls, config: Dict[str, Any]) -> "BaseElasticityParams":
         """
         Creates the object from its config.
         """
 
     @classmethod
     @abstractmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'BaseElasticityParams':
+    def from_state(cls, state: Dict[str, Any]) -> "BaseElasticityParams":
         """
         Creates the object from its state.
 
@@ -213,7 +208,7 @@ class BaseElasticityParams:
 
 
 class SEHBuilderStateNames:
-    ELASTICITY_PARAMS = 'elasticity_params'
+    ELASTICITY_PARAMS = "elasticity_params"
 
 
 class SingleElasticityBuilder:
@@ -221,12 +216,15 @@ class SingleElasticityBuilder:
     Determines which modifications should be made to the original FP32 model in order to introduce elasticity
     to the model.
     """
+
     _state_names = SEHBuilderStateNames
 
-    def __init__(self,
-                 params: BaseElasticityParams,
-                 ignored_scopes: Optional[List[str]] = None,
-                 target_scopes: Optional[List[str]] = None):
+    def __init__(
+        self,
+        params: BaseElasticityParams,
+        ignored_scopes: Optional[List[str]] = None,
+        target_scopes: Optional[List[str]] = None,
+    ):
         self._target_scopes = target_scopes
         self._ignored_scopes = ignored_scopes
         self._params = params
@@ -259,10 +257,12 @@ class SingleElasticityBuilder:
         """
 
 
-def create_elasticity_builder_from_config(config: Dict[str, Any],
-                                          elasticity_dim: ElasticityDim,
-                                          ignored_scopes: Optional[List[str]] = None,
-                                          target_scopes: Optional[List[str]] = None) -> SingleElasticityBuilder:
+def create_elasticity_builder_from_config(
+    config: Dict[str, Any],
+    elasticity_dim: ElasticityDim,
+    ignored_scopes: Optional[List[str]] = None,
+    target_scopes: Optional[List[str]] = None,
+) -> SingleElasticityBuilder:
     params_cls = ELASTICITY_PARAMS.get(elasticity_dim)
     params = params_cls.from_config(config)
     elasticity_builder_cls = ELASTICITY_BUILDERS.get(elasticity_dim)

@@ -16,8 +16,9 @@ class ResidualRecurrentEncoder(nn.Module):
     inputs to LSTM layers.
     """
 
-    def __init__(self, vocab_size, hidden_size=1024, num_layers=4, dropout=0.2,
-                 batch_first=False, embedder=None, init_weight=0.1):
+    def __init__(
+        self, vocab_size, hidden_size=1024, num_layers=4, dropout=0.2, batch_first=False, embedder=None, init_weight=0.1
+    ):
         """
         Constructor for the ResidualRecurrentEncoder.
 
@@ -36,29 +37,25 @@ class ResidualRecurrentEncoder(nn.Module):
         self.rnn_layers = nn.ModuleList()
         # 1st LSTM layer, bidirectional
         self.rnn_layers.append(
-            nn.LSTM(hidden_size, hidden_size, num_layers=1, bias=True,
-                    batch_first=batch_first, bidirectional=True))
+            nn.LSTM(hidden_size, hidden_size, num_layers=1, bias=True, batch_first=batch_first, bidirectional=True)
+        )
 
         # 2nd LSTM layer, with 2x larger input_size
         self.rnn_layers.append(
-            nn.LSTM((2 * hidden_size), hidden_size, num_layers=1, bias=True,
-                    batch_first=batch_first))
+            nn.LSTM((2 * hidden_size), hidden_size, num_layers=1, bias=True, batch_first=batch_first)
+        )
 
         # Remaining LSTM layers
         for _ in range(num_layers - 2):
-            self.rnn_layers.append(
-                nn.LSTM(hidden_size, hidden_size, num_layers=1, bias=True,
-                        batch_first=batch_first))
+            self.rnn_layers.append(nn.LSTM(hidden_size, hidden_size, num_layers=1, bias=True, batch_first=batch_first))
 
         self.dropout = nn.Dropout(p=dropout)
 
         if embedder is not None:
             self.embedder = embedder
         else:
-            self.embedder = nn.Embedding(vocab_size, hidden_size,
-                                         padding_idx=PAD)
-            nn.init.uniform_(self.embedder.weight.data, -init_weight,
-                             init_weight)
+            self.embedder = nn.Embedding(vocab_size, hidden_size, padding_idx=PAD)
+            nn.init.uniform_(self.embedder.weight.data, -init_weight, init_weight)
 
     def forward(self, inputs, lengths):
         """
@@ -73,8 +70,7 @@ class ResidualRecurrentEncoder(nn.Module):
 
         # bidirectional layer
         x = self.dropout(x)
-        x = pack_padded_sequence(x, lengths.cpu().numpy(),
-                                 batch_first=self.batch_first)
+        x = pack_padded_sequence(x, lengths.cpu().numpy(), batch_first=self.batch_first)
         x, _ = self.rnn_layers[0](x)
         x, _ = pad_packed_sequence(x, batch_first=self.batch_first)
 

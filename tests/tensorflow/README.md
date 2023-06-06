@@ -3,18 +3,25 @@
 ## Introduction
 In this folder, there are test files available to test if the nncf module is installed and works properly in your local or server environment. It will test NNCF module with mock datasets(`cifar10` for classification, or `coco2017` for detection & segmentation) and mock models.
 
+Before testing make sure that symlinks from `tests/tensorflow/data` are correct. They may be corrupted if the repo was downloaded to Windows machine via git without `core.symlinks` parameter enabled.
+
 **NOTICE** : Test checkpoint for `mobilenet_v3_small_imagenet_rb_sparsity_int8` is updated for TF2.8 version, expected accuracy also updated to `67.55%` to `67.59%`.
 
 ---
 
 ## pre-commit test
-If you want to do pre-commit test, you can enter the command as below.
+A generic way to run TF pre-commit tests is via `make`:
+```
+make install-tensorflow-test
+make test-tensorflow
+```
+
+Another way is to run `pytest` explicitly:
 ```
 pytest tests/common tests/tensorflow \
-       --junitxml nncf-tests.xml \
-       --data-dir tests/tensorflow/data
+       --junitxml nncf-tests.xml
 ```
-The test result will be saved in `nncf-test.xml`, and it will returns pass, skip, warnings or error during the test.
+The tests results will be saved in `nncf-tests.xml`.
 
 ## nightly-test
 

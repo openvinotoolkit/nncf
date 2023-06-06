@@ -28,8 +28,9 @@ def test_set_quantization_traits_for_quant_prop_graph_nodes():
     ip_graph = get_ip_graph_for_test(nncf_graph)
 
     quant_prop_graph = QPSG(ip_graph)
-    quant_prop_solver = QuantizerPropagationSolver(default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
-                                                   run_consistency_checks=True)
+    quant_prop_solver = QuantizerPropagationSolver(
+        default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT, run_consistency_checks=True
+    )
     quant_prop_graph = quant_prop_solver.set_allowed_quantization_types_for_operator_nodes(quant_prop_graph)
     op_quant_traits_map = quant_prop_solver.get_operator_quantization_traits_map()
 
@@ -37,8 +38,10 @@ def test_set_quantization_traits_for_quant_prop_graph_nodes():
         if qpg_node[QPSG.NODE_TYPE_NODE_ATTR] == QuantizerPropagationStateGraphNodeType.OPERATOR:
             quant_det_id = qpg_node[QPSG.OPERATOR_METATYPE_NODE_ATTR]
             quant_types = qpg_node[QPSG.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR]
-            if op_quant_traits_map.get(quant_det_id, QuantizationTrait.QUANTIZATION_AGNOSTIC) == \
-                    QuantizationTrait.INPUTS_QUANTIZABLE:
+            if (
+                op_quant_traits_map.get(quant_det_id, QuantizationTrait.QUANTIZATION_AGNOSTIC)
+                == QuantizationTrait.INPUTS_QUANTIZABLE
+            ):
                 # TODO: check for correspondence of operator type and HW config to initial
                 # quantization types
                 assert quant_types == QuantizerPropagationSolver.DEFAULT_QUANTIZATION_TYPES

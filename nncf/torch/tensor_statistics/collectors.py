@@ -1,37 +1,35 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Union, List, Deque
+from typing import Any, Callable, Deque, List, Optional, Union
 
 import torch
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
-from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
-from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
+from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
-from nncf.torch.tensor_statistics.reduction import  expand_like
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
-from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
-from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.tensor import PTNNCFTensor
+from nncf.torch.tensor_statistics.reduction import expand_like
+from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 
 
 class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -40,12 +38,12 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return PTNNCFTensor(torch.amin(x.tensor, dim=axis))
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+        return PTNNCFTensor(torch.amin(x.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return PTNNCFTensor(torch.amax(x.tensor, dim=axis))
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+        return PTNNCFTensor(torch.amax(x.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
     def abs(x: NNCFTensor) -> NNCFTensor:
@@ -60,8 +58,20 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return PTNNCFTensor(torch.max(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return PTNNCFTensor(x.tensor.mean(dim=axis))
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        return PTNNCFTensor(x.tensor.mean(dim=axis, keepdim=keepdims))
+
+    @staticmethod
+    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+        return PTNNCFTensor(x.tensor.median(dim=axis, keepdim=keepdims))
+
+    @staticmethod
+    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
 
     @staticmethod
     def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
@@ -71,7 +81,7 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         tensor = x.tensor
-        if list(tensor.shape) == []: #pylint: disable=C1803
+        if list(tensor.shape) == []:  # pylint: disable=C1803
             tensor = tensor.unsqueeze(0)
         tensor_list = torch.unbind(tensor, dim=axis)
         return [PTNNCFTensor(t) for t in tensor_list]
@@ -80,10 +90,27 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return torch.sum(tensor.tensor).item()
 
+    @staticmethod
+    def quantile(
+        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list], keepdims: bool = False
+    ) -> List[NNCFTensor]:
+        raise NotImplementedError()
+
+    @staticmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @classmethod
+    def no_outliers_map(
+        cls, x: NNCFTensor, fn: Callable[[NNCFTensor, Optional[int]], Any], axis: int = 0, alpha: float = 0.01
+    ):
+        raise NotImplementedError()
+
 
 class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
-    def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, output_shape: ReductionShape,
-                 num_samples: int = None):
+    def __init__(
+        self, use_abs_max: bool, reduction_shape: ReductionShape, output_shape: ReductionShape, num_samples: int = None
+    ):
         super().__init__(use_abs_max, reduction_shape, num_samples)
         self._output_shape = output_shape
 
@@ -102,17 +129,26 @@ class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
 
 
 class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
-    def __init__(self,
-                 use_per_sample_stats: bool,
-                 use_abs_max: bool,
-                 use_means_of_mins: bool,
-                 use_means_of_maxs: bool,
-                 reduction_shape: ReductionShape,
-                 output_shape: ReductionShape,
-                 num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(use_per_sample_stats, use_abs_max, use_means_of_mins,
-                         use_means_of_maxs, reduction_shape, num_samples, window_size)
+    def __init__(
+        self,
+        use_per_sample_stats: bool,
+        use_abs_max: bool,
+        use_means_of_mins: bool,
+        use_means_of_maxs: bool,
+        reduction_shape: ReductionShape,
+        output_shape: ReductionShape,
+        num_samples: int = None,
+        window_size: int = None,
+    ):
+        super().__init__(
+            use_per_sample_stats,
+            use_abs_max,
+            use_means_of_mins,
+            use_means_of_maxs,
+            reduction_shape,
+            num_samples,
+            window_size,
+        )
         self._output_shape = output_shape
 
     @staticmethod
@@ -130,15 +166,16 @@ class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
 
 
 class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
-    def __init__(self,
-                 use_per_sample_stats: bool,
-                 use_abs_max: bool,
-                 reduction_shape: ReductionShape,
-                 output_shape: ReductionShape,
-                 num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape,
-                                                             num_samples, window_size)
+    def __init__(
+        self,
+        use_per_sample_stats: bool,
+        use_abs_max: bool,
+        reduction_shape: ReductionShape,
+        output_shape: ReductionShape,
+        num_samples: int = None,
+        window_size: int = None,
+    ):
+        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape, num_samples, window_size)
         self._output_shape = output_shape
 
     @staticmethod

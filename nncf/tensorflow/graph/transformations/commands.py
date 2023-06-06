@@ -1,22 +1,15 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -27,8 +20,8 @@ from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 
 
 class TFLayerPointStateNames:
-    LAYER_NAME = 'layer_name'
-    TARGET_TYPE = 'target_type'
+    LAYER_NAME = "layer_name"
+    TARGET_TYPE = "target_type"
 
 
 @TF_STATEFUL_CLASSES.register()
@@ -50,13 +43,13 @@ class TFLayerPoint(TargetPoint):
     def layer_name(self) -> str:
         return self._layer_name
 
-    def __eq__(self, other: 'TFLayerPoint') -> bool:
+    def __eq__(self, other: "TFLayerPoint") -> bool:
         if isinstance(other, TFLayerPoint):
             return self.type == other.type and self.layer_name == other.layer_name
         return False
 
     def __str__(self) -> str:
-        return super().__str__() + ' ' + self.layer_name
+        return super().__str__() + " " + self.layer_name
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -71,7 +64,7 @@ class TFLayerPoint(TargetPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'TFLayerPoint':
+    def from_state(cls, state: Dict[str, Any]) -> "TFLayerPoint":
         """
         Creates the object from its state.
 
@@ -98,8 +91,9 @@ class TFMultiLayerPoint:
     def target_points(self) -> List[TargetPoint]:
         return self._target_points
 
+
 class TFLayerStateNames:
-    LAYER_NAME = 'layer_name'
+    LAYER_NAME = "layer_name"
 
 
 @TF_STATEFUL_CLASSES.register()
@@ -128,7 +122,7 @@ class TFLayer(TFLayerPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'TFLayer':
+    def from_state(cls, state: Dict[str, Any]) -> "TFLayer":
         """
         Creates the object from its state.
 
@@ -138,9 +132,9 @@ class TFLayer(TFLayerPoint):
 
 
 class TFBeforeLayerStateNames:
-    LAYER_NAME = 'layer_name'
-    INSTANCE_IDX = 'instance_idx'
-    INPUT_PORT_ID = 'input_port_id'
+    LAYER_NAME = "layer_name"
+    INSTANCE_IDX = "instance_idx"
+    INPUT_PORT_ID = "input_port_id"
 
 
 @TF_STATEFUL_CLASSES.register()
@@ -168,15 +162,15 @@ class TFBeforeLayer(TFLayerPoint):
         return self._input_port_id
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, TFBeforeLayer) \
-               and self.layer_name == other.layer_name \
-               and self.instance_idx == other.instance_idx \
-               and self.input_port_id == other.input_port_id
+        return (
+            isinstance(other, TFBeforeLayer)
+            and self.layer_name == other.layer_name
+            and self.instance_idx == other.instance_idx
+            and self.input_port_id == other.input_port_id
+        )
 
     def __str__(self) -> str:
-        return ' '.join([super().__str__(),
-                         self.instance_idx,
-                         str(self.input_port_id)])
+        return " ".join([super().__str__(), self.instance_idx, str(self.input_port_id)])
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -191,11 +185,11 @@ class TFBeforeLayer(TFLayerPoint):
         return {
             self._state_names.LAYER_NAME: self.layer_name,
             self._state_names.INSTANCE_IDX: self.instance_idx,
-            self._state_names.INPUT_PORT_ID: self.input_port_id
+            self._state_names.INPUT_PORT_ID: self.input_port_id,
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'TFBeforeLayer':
+    def from_state(cls, state: Dict[str, Any]) -> "TFBeforeLayer":
         """
         Creates the object from its state.
 
@@ -205,9 +199,9 @@ class TFBeforeLayer(TFLayerPoint):
 
 
 class TFAfterLayerStateNames:
-    LAYER_NAME = 'layer_name'
-    INSTANCE_IDX = 'instance_idx'
-    OUTPUT_PORT_ID = 'output_port_id'
+    LAYER_NAME = "layer_name"
+    INSTANCE_IDX = "instance_idx"
+    OUTPUT_PORT_ID = "output_port_id"
 
 
 @TF_STATEFUL_CLASSES.register()
@@ -218,6 +212,7 @@ class TFAfterLayer(TFLayerPoint):
     For example, `TFAfterLayer` is used in the insertion commands to specify
     where the new object should be inserted.
     """
+
     _state_names = TFAfterLayerStateNames
 
     def __init__(self, layer_name: str, instance_idx: int = 0, output_port_id: int = 0):
@@ -234,16 +229,16 @@ class TFAfterLayer(TFLayerPoint):
         return self._output_port_id
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, TFAfterLayer) \
-               and self.type == other.type \
-               and self.layer_name == other.layer_name \
-               and self.instance_idx == other.instance_idx \
-               and self._output_port_id == other.output_port_id
+        return (
+            isinstance(other, TFAfterLayer)
+            and self.type == other.type
+            and self.layer_name == other.layer_name
+            and self.instance_idx == other.instance_idx
+            and self._output_port_id == other.output_port_id
+        )
 
     def __str__(self) -> str:
-        return ' '.join([super().__str__(),
-                         self.instance_idx,
-                         str(self.output_port_id)])
+        return " ".join([super().__str__(), self.instance_idx, str(self.output_port_id)])
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -262,7 +257,7 @@ class TFAfterLayer(TFLayerPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'TFAfterLayer':
+    def from_state(cls, state: Dict[str, Any]) -> "TFAfterLayer":
         """
         Creates the object from its state.
 
@@ -272,8 +267,8 @@ class TFAfterLayer(TFLayerPoint):
 
 
 class TFLayerWeightsStateNames:
-    LAYER_NAME = 'layer_name'
-    WEIGHTS_ATTR_NAME = 'weights_attr_name'
+    LAYER_NAME = "layer_name"
+    WEIGHTS_ATTR_NAME = "weights_attr_name"
 
 
 @TF_STATEFUL_CLASSES.register()
@@ -296,13 +291,15 @@ class TFLayerWeight(TFLayerPoint):
         return self._weights_attr_name
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, TFLayerWeight) and \
-               self.type == other.type and \
-               self.layer_name == other.layer_name and \
-               self.weights_attr_name == other.weights_attr_name
+        return (
+            isinstance(other, TFLayerWeight)
+            and self.type == other.type
+            and self.layer_name == other.layer_name
+            and self.weights_attr_name == other.weights_attr_name
+        )
 
     def __str__(self) -> str:
-        return super().__str__() + ' ' + self.weights_attr_name
+        return super().__str__() + " " + self.weights_attr_name
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -320,7 +317,7 @@ class TFLayerWeight(TFLayerPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'TFLayerWeight':
+    def from_state(cls, state: Dict[str, Any]) -> "TFLayerWeight":
         """
         Creates the object from its state.
 
@@ -330,9 +327,9 @@ class TFLayerWeight(TFLayerPoint):
 
 
 class TFOperationWithWeightsStateNames:
-    LAYER_NAME = 'layer_name'
-    WEIGHTS_ATTR_NAME = 'weights_attr_name'
-    OPERATION_NAME = 'operation_name'
+    LAYER_NAME = "layer_name"
+    WEIGHTS_ATTR_NAME = "weights_attr_name"
+    OPERATION_NAME = "operation_name"
 
 
 @TF_STATEFUL_CLASSES.register()
@@ -355,14 +352,16 @@ class TFOperationWithWeights(TFLayerWeight):
         return self._operation_name
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, TFOperationWithWeights) and \
-               self.type == other.type and \
-               self.layer_name == other.layer_name and \
-               self.weights_attr_name == other.weights_attr_name and \
-               self.operation_name == other.operation_name
+        return (
+            isinstance(other, TFOperationWithWeights)
+            and self.type == other.type
+            and self.layer_name == other.layer_name
+            and self.weights_attr_name == other.weights_attr_name
+            and self.operation_name == other.operation_name
+        )
 
     def __str__(self) -> str:
-        return super().__str__() + ' ' + self.operation_name
+        return super().__str__() + " " + self.operation_name
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -377,11 +376,11 @@ class TFOperationWithWeights(TFLayerWeight):
         return {
             self._state_names.LAYER_NAME: self._layer_name,
             self._state_names.WEIGHTS_ATTR_NAME: self._weights_attr_name,
-            self._state_names.OPERATION_NAME: self._operation_name
+            self._state_names.OPERATION_NAME: self._operation_name,
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'TFOperationWithWeights':
+    def from_state(cls, state: Dict[str, Any]) -> "TFOperationWithWeights":
         """
         Creates the object from its state.
 
@@ -395,29 +394,31 @@ class TFInsertionCommand(TransformationCommand):
     Inserts objects at the target point in the TensorFlow model graph.
     """
 
-    def __init__(self,
-                 target_point: Union[TargetPoint, TFMultiLayerPoint],
-                 callable_object: Optional[Callable] = None,
-                 priority: Optional[TransformationPriority] = None):
+    def __init__(
+        self,
+        target_point: Union[TargetPoint, TFMultiLayerPoint],
+        callable_object: Optional[Callable] = None,
+        priority: Optional[TransformationPriority] = None,
+    ):
         super().__init__(TransformationType.INSERT, target_point)
         self.callable_objects = []
         if callable_object is not None:
-            _priority = TransformationPriority.DEFAULT_PRIORITY \
-                if priority is None else priority
+            _priority = TransformationPriority.DEFAULT_PRIORITY if priority is None else priority
             self.callable_objects.append((callable_object, _priority))
 
     @property
     def insertion_objects(self) -> List[Callable]:
         return [x for x, _ in self.callable_objects]
 
-    def union(self, other: TransformationCommand) -> 'TFInsertionCommand':
+    def union(self, other: TransformationCommand) -> "TFInsertionCommand":
         if isinstance(self.target_point, TFMultiLayerPoint):
-            raise NotImplementedError('A command of TFInsertionCommand type with TFMultiLayerPoint '
-                                      'could not be united with another command')
+            raise NotImplementedError(
+                "A command of TFInsertionCommand type with TFMultiLayerPoint "
+                "could not be united with another command"
+            )
 
         if not self.check_command_compatibility(other):
-            raise ValueError('{} and {} commands could not be united'.format(
-                type(self).__name__, type(other).__name__))
+            raise ValueError("{} and {} commands could not be united".format(type(self).__name__, type(other).__name__))
 
         com = TFInsertionCommand(self.target_point)
         com.callable_objects = self.callable_objects + other.callable_objects
@@ -433,9 +434,8 @@ class TFRemovalCommand(TransformationCommand):
     def __init__(self, target_point: TargetPoint):
         super().__init__(TransformationType.REMOVE, target_point)
 
-    def union(self, other: TransformationCommand) -> 'TFRemovalCommand':
-        raise NotImplementedError('A command of TFRemovalCommand type '
-                                  'could not be united with another command')
+    def union(self, other: TransformationCommand) -> "TFRemovalCommand":
+        raise NotImplementedError("A command of TFRemovalCommand type could not be united with another command")
 
 
 class TFMultipleInsertionCommands(TransformationCommand):
@@ -448,10 +448,12 @@ class TFMultipleInsertionCommands(TransformationCommand):
     weights variable at one multiple insertion command.
     """
 
-    def __init__(self,
-                 target_point: TargetPoint,
-                 check_target_points_fn: Optional[Callable] = None,
-                 commands: Optional[List[TransformationCommand]] = None):
+    def __init__(
+        self,
+        target_point: TargetPoint,
+        check_target_points_fn: Optional[Callable] = None,
+        commands: Optional[List[TransformationCommand]] = None,
+    ):
         super().__init__(TransformationType.MULTI_INSERT, target_point)
         self.check_target_points_fn = check_target_points_fn
         if check_target_points_fn is None:
@@ -466,16 +468,17 @@ class TFMultipleInsertionCommands(TransformationCommand):
         return self._commands
 
     def check_insertion_command(self, command: TransformationCommand) -> bool:
-        if isinstance(command, TransformationCommand) and \
-            command.type == TransformationType.INSERT and \
-            self.check_target_points_fn(self.target_point, command.target_point):
+        if (
+            isinstance(command, TransformationCommand)
+            and command.type == TransformationType.INSERT
+            and self.check_target_points_fn(self.target_point, command.target_point)
+        ):
             return True
         return False
 
     def add_insertion_command(self, command: TransformationCommand) -> None:
         if not self.check_insertion_command(command):
-            raise ValueError('{} command could not be added'.format(
-                type(command).__name__))
+            raise ValueError("{} command could not be added".format(type(command).__name__))
 
         for idx, cmd in enumerate(self.commands):
             if cmd.target_point == command.target_point:
@@ -484,10 +487,9 @@ class TFMultipleInsertionCommands(TransformationCommand):
         else:
             self.commands.append(command)
 
-    def union(self, other: TransformationCommand) -> 'TFMultipleInsertionCommands':
+    def union(self, other: TransformationCommand) -> "TFMultipleInsertionCommands":
         if not self.check_command_compatibility(other):
-            raise ValueError('{} and {} commands could not be united'.format(
-                type(self).__name__, type(other).__name__))
+            raise ValueError("{} and {} commands could not be united".format(type(self).__name__, type(other).__name__))
 
         def make_check_target_points_fn(fn1, fn2):
             def check_target_points(tp0, tp1):
@@ -495,15 +497,13 @@ class TFMultipleInsertionCommands(TransformationCommand):
 
             return check_target_points
 
-        check_target_points_fn = self.check_target_points_fn \
-            if self.check_target_points_fn == other.check_target_points_fn else \
-            make_check_target_points_fn(self.check_target_points_fn, other.check_target_points_fn)
-
-        multi_cmd = TFMultipleInsertionCommands(
-            self.target_point,
-            check_target_points_fn,
-            self.commands
+        check_target_points_fn = (
+            self.check_target_points_fn
+            if self.check_target_points_fn == other.check_target_points_fn
+            else make_check_target_points_fn(self.check_target_points_fn, other.check_target_points_fn)
         )
+
+        multi_cmd = TFMultipleInsertionCommands(self.target_point, check_target_points_fn, self.commands)
         for cmd in other.commands:
             multi_cmd.add_insertion_command(cmd)
         return multi_cmd

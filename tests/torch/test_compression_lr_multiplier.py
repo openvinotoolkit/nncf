@@ -1,21 +1,16 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import copy
-from typing import Callable
-from typing import Tuple
-from typing import List
-from typing import Dict
+from typing import Callable, Dict, List, Tuple
 
 import pytest
 import torch
@@ -26,34 +21,26 @@ from torch.utils.data import DataLoader
 
 from nncf import NNCFConfig
 from nncf.torch.layer_utils import CompressionParameter
-from tests.torch.helpers import create_initialized_compressed_model
-from tests.torch.helpers import create_random_mock_dataloader
-from tests.torch.helpers import get_grads
 from tests.torch.helpers import LeNet
 from tests.torch.helpers import PTTensorListComparator
 from tests.torch.helpers import RandomDatasetMock
+from tests.torch.helpers import create_initialized_compressed_model
+from tests.torch.helpers import create_random_mock_dataloader
+from tests.torch.helpers import get_grads
 from tests.torch.helpers import set_torch_seed
 from tests.torch.quantization.test_algo_quantization import get_quantization_config_without_range_init
 from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 
-
 ALGO_NAME_TO_PATH_MAP = {
-    'quantization': 'nncf.torch.quantization',
-    'rb_sparsity': 'nncf.torch.sparsity.rb',
-    'binarization': 'nncf.torch.binarization'
+    "quantization": "nncf.torch.quantization",
+    "rb_sparsity": "nncf.torch.sparsity.rb",
+    "binarization": "nncf.torch.binarization",
 }
 
 
 def get_quantization_config() -> NNCFConfig:
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
-    config['compression']['initializer'] = {
-        'range': {
-            'num_init_samples': 10
-        },
-        'batchnorm_adaptation': {
-            'num_bn_adaptation_samples': 0,
-        }
-    }
+    config["compression"]["initializer"] = {"range": {"num_init_samples": 10}}
     return config
 
 
@@ -64,49 +51,43 @@ def get_sparsity_config() -> NNCFConfig:
 
 def get_binarization_config() -> NNCFConfig:
     config = NNCFConfig()
-    config.update({
-        "model": "resnet18",
-
-        "input_info": {
-            "sample_size": [1, *LeNet.INPUT_SIZE]
-        },
-
-        "compression": [
-            {
-                "algorithm": "binarization",
-                "mode": "xnor",
-                "params": {
-                    "activations_quant_start_epoch": 0,
-                    "weights_quant_start_epoch": 0
+    config.update(
+        {
+            "model": "resnet18",
+            "input_info": {"sample_size": [1, *LeNet.INPUT_SIZE]},
+            "compression": [
+                {
+                    "algorithm": "binarization",
+                    "mode": "xnor",
+                    "params": {"activations_quant_start_epoch": 0, "weights_quant_start_epoch": 0},
                 }
-            }
-        ]
-    })
+            ],
+        }
+    )
     return config
 
 
 def get_config_algorithms(config: NNCFConfig) -> List[Dict]:
-    if isinstance(config['compression'], list):
-        algorithms = config['compression']
+    if isinstance(config["compression"], list):
+        algorithms = config["compression"]
     else:
-        algorithms = [config['compression']]
+        algorithms = [config["compression"]]
     return algorithms
 
 
-def add_multiplier_to_config(config: NNCFConfig,
-                             local_multiplier: float = None, global_multiplier: float = None) -> NNCFConfig:
+def add_multiplier_to_config(
+    config: NNCFConfig, local_multiplier: float = None, global_multiplier: float = None
+) -> NNCFConfig:
     config = copy.deepcopy(config)
 
     if local_multiplier is not None:
         algorithms = get_config_algorithms(config)
 
         for algo in algorithms:
-            algo.update({
-                'compression_lr_multiplier': local_multiplier
-            })
+            algo.update({"compression_lr_multiplier": local_multiplier})
 
     if global_multiplier is not None:
-        config['compression_lr_multiplier'] = global_multiplier
+        config["compression_lr_multiplier"] = global_multiplier
 
     return config
 
@@ -115,10 +96,10 @@ def get_multipliers_from_config(config: NNCFConfig) -> Dict[str, float]:
     algo_to_multipliers = {}
 
     algorithms = get_config_algorithms(config)
-    global_multiplier = config.get('compression_lr_multiplier', 1)
+    global_multiplier = config.get("compression_lr_multiplier", 1)
     for algo in algorithms:
-        algo_name = algo['algorithm']
-        algo_to_multipliers[algo_name] = algo.get('compression_lr_multiplier', global_multiplier)
+        algo_name = algo["algorithm"]
+        algo_to_multipliers[algo_name] = algo.get("compression_lr_multiplier", global_multiplier)
 
     return algo_to_multipliers
 
@@ -131,7 +112,7 @@ def merge_configs(configs: List[NNCFConfig], use_algo_list: bool = True) -> NNCF
         source_config = copy.deepcopy(source_config)
 
         algorithms.extend(get_config_algorithms(source_config))
-        del source_config['compression']
+        del source_config["compression"]
 
         if res_config is None:
             res_config = source_config
@@ -139,13 +120,12 @@ def merge_configs(configs: List[NNCFConfig], use_algo_list: bool = True) -> NNCF
 
     if not use_algo_list:
         if len(algorithms) > 1:
-            raise Exception('If there is more than one algorithm '
-                            'you could use only use_algo_list=True')
-        res_config['compression'] = algorithms[0]
+            raise Exception("If there is more than one algorithm you could use only use_algo_list=True")
+        res_config["compression"] = algorithms[0]
     else:
-        res_config['compression'] = algorithms
+        res_config["compression"] = algorithms
 
-    res_config['model'] = 'merged_model'
+    res_config["model"] = "merged_model"
     return res_config
 
 
@@ -155,42 +135,50 @@ def get_configs_building_params() -> List[Dict]:
     num_orig_configs = len(get_orig_config_fns)
 
     for global_multiplier in [0, 1, 10]:
-        res.append({
-                'get_orig_config_fns': get_orig_config_fns,
-                'multipliers': [None] * num_orig_configs,
-                'global_multiplier': global_multiplier,
-                'use_algo_list': True
-        })
+        res.append(
+            {
+                "get_orig_config_fns": get_orig_config_fns,
+                "multipliers": [None] * num_orig_configs,
+                "global_multiplier": global_multiplier,
+                "use_algo_list": True,
+            }
+        )
 
     global_multiplier = 10
-    multipliers = [global_multiplier * (1.1 ** i) for i in range(num_orig_configs)]
+    multipliers = [global_multiplier * (1.1**i) for i in range(num_orig_configs)]
 
-    res.append({
-        'get_orig_config_fns': get_orig_config_fns,
-        'multipliers': multipliers,
-        'global_multiplier': global_multiplier,
-        'use_algo_list': True
-    })
+    res.append(
+        {
+            "get_orig_config_fns": get_orig_config_fns,
+            "multipliers": multipliers,
+            "global_multiplier": global_multiplier,
+            "use_algo_list": True,
+        }
+    )
 
     for i in range(num_orig_configs):
         cur_multipliers = copy.deepcopy(multipliers)
         cur_multipliers[i] = None
-        res.append({
-            'get_orig_config_fns': get_orig_config_fns,
-            'multipliers': cur_multipliers,
-            'global_multiplier': None,
-            'use_algo_list': True
-        })
+        res.append(
+            {
+                "get_orig_config_fns": get_orig_config_fns,
+                "multipliers": cur_multipliers,
+                "global_multiplier": None,
+                "use_algo_list": True,
+            }
+        )
 
     for get_orig_config_fn in get_orig_config_fns:
         for use_algo_list in [False, True]:
             for global_multiplier, multiplier in [(11, 10), (11, None), (None, 10)]:
-                res.append({
-                    'get_orig_config_fns': [get_orig_config_fn],
-                    'multipliers': [multiplier],
-                    'global_multiplier': global_multiplier,
-                    'use_algo_list': use_algo_list
-                })
+                res.append(
+                    {
+                        "get_orig_config_fns": [get_orig_config_fn],
+                        "multipliers": [multiplier],
+                        "global_multiplier": global_multiplier,
+                        "use_algo_list": use_algo_list,
+                    }
+                )
 
     return res
 
@@ -205,45 +193,48 @@ def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[n
     return model, train_loader
 
 
-@pytest.fixture(name='configs_building_params',
-                params=get_configs_building_params())
+@pytest.fixture(name="configs_building_params", params=get_configs_building_params())
 def configs_building_params_(request) -> Dict:
     return request.param
 
 
-@pytest.fixture(name='ref_configs')
+@pytest.fixture(name="ref_configs")
 def ref_configs_(configs_building_params: Dict) -> List[NNCFConfig]:
-    return [get_ref_config_fn() for get_ref_config_fn in configs_building_params['get_orig_config_fns']]
+    return [get_ref_config_fn() for get_ref_config_fn in configs_building_params["get_orig_config_fns"]]
 
 
-@pytest.fixture(name='ref_config')
+@pytest.fixture(name="ref_config")
 def ref_config_(ref_configs, configs_building_params) -> NNCFConfig:
-    return merge_configs(ref_configs, configs_building_params['use_algo_list'])
+    return merge_configs(ref_configs, configs_building_params["use_algo_list"])
 
 
-@pytest.fixture(name='target_configs')
+@pytest.fixture(name="target_configs")
 def target_configs_(ref_configs: List[NNCFConfig], configs_building_params: Dict) -> List[NNCFConfig]:
-    return [add_multiplier_to_config(config, local_multiplier=multiplier)
-            for config, multiplier in zip(ref_configs, configs_building_params['multipliers'])]
+    return [
+        add_multiplier_to_config(config, local_multiplier=multiplier)
+        for config, multiplier in zip(ref_configs, configs_building_params["multipliers"])
+    ]
 
 
-@pytest.fixture(name='target_config')
+@pytest.fixture(name="target_config")
 def target_config_(target_configs: List[NNCFConfig], configs_building_params: Dict) -> NNCFConfig:
-    target_config = merge_configs(target_configs, configs_building_params['use_algo_list'])
-    return add_multiplier_to_config(target_config, global_multiplier=configs_building_params['global_multiplier'])
+    target_config = merge_configs(target_configs, configs_building_params["use_algo_list"])
+    return add_multiplier_to_config(target_config, global_multiplier=configs_building_params["global_multiplier"])
 
 
-@pytest.fixture(name='get_ref_lenet_model_and_dataloader')
+@pytest.fixture(name="get_ref_lenet_model_and_dataloader")
 def get_ref_lenet_model_and_dataloader_(ref_config: NNCFConfig) -> Callable[[], Tuple[nn.Module, DataLoader]]:
     def f():
         return create_initialized_lenet_model_and_dataloader(ref_config)
+
     return f
 
 
-@pytest.fixture(name='get_target_lenet_model_and_dataloader')
+@pytest.fixture(name="get_target_lenet_model_and_dataloader")
 def get_target_lenet_model_and_dataloader_(target_config: NNCFConfig) -> Callable[[], Tuple[nn.Module, DataLoader]]:
     def f():
         return create_initialized_lenet_model_and_dataloader(target_config)
+
     return f
 
 
@@ -262,9 +253,15 @@ def get_one_parameter_model_creation_params(for_training: bool = False) -> List[
     params = []
     for init_requires_grad in [False, True]:
         requires_grad_settings_list = [
-            [], [('attr', False)], [('attr', True)], [('fn', False)], [('fn', True)],
-            [('attr', not init_requires_grad), ('attr', True)], [('fn', not init_requires_grad), ('fn', True)],
-            [('attr', not init_requires_grad), ('fn', True)], [('fn', not init_requires_grad), ('attr', True)]
+            [],
+            [("attr", False)],
+            [("attr", True)],
+            [("fn", False)],
+            [("fn", True)],
+            [("attr", not init_requires_grad), ("attr", True)],
+            [("fn", not init_requires_grad), ("fn", True)],
+            [("attr", not init_requires_grad), ("fn", True)],
+            [("fn", not init_requires_grad), ("attr", True)],
         ]
 
         for requires_grad_settings in requires_grad_settings_list:
@@ -274,56 +271,67 @@ def get_one_parameter_model_creation_params(for_training: bool = False) -> List[
             multipliers = [0.1, 1, 10] if trainable else [0.1]
 
             for multiplier in multipliers:
-                params.append({
-                    'init_requires_grad': init_requires_grad,
-                    'requires_grad_settings': requires_grad_settings,
-                    'multiplier': multiplier
-                })
+                params.append(
+                    {
+                        "init_requires_grad": init_requires_grad,
+                        "requires_grad_settings": requires_grad_settings,
+                        "multiplier": multiplier,
+                    }
+                )
     return params
 
 
-def create_initialized_one_parameter_model_and_dataloader(parameter_cls: type, init_requires_grad: bool,
-                                                          requires_grad_settings: List[Tuple[str, bool]],
-                                                          multiplier: float = None) -> [nn.Module, DataLoader]:
+def create_initialized_one_parameter_model_and_dataloader(
+    parameter_cls: type,
+    init_requires_grad: bool,
+    requires_grad_settings: List[Tuple[str, bool]],
+    multiplier: float = None,
+) -> [nn.Module, DataLoader]:
     with set_torch_seed():
         data = torch.randn(size=(1, 1, 5, 5))
         if parameter_cls is nn.Parameter:
             param = parameter_cls(data, requires_grad=init_requires_grad)
         elif parameter_cls is CompressionParameter:
-            param = parameter_cls(data, requires_grad=init_requires_grad,
-                                  compression_lr_multiplier=multiplier)
+            param = parameter_cls(data, requires_grad=init_requires_grad, compression_lr_multiplier=multiplier)
         else:
-            raise Exception(f'Unsupported parameter type: {parameter_cls}')
+            raise Exception(f"Unsupported parameter type: {parameter_cls}")
 
     for setting_type, requires_grad in requires_grad_settings:
-        if setting_type == 'attr':
+        if setting_type == "attr":
             param.requires_grad = requires_grad
-        elif setting_type == 'fn':
+        elif setting_type == "fn":
             param.requires_grad_(requires_grad)
         else:
-            raise Exception(f'Unsupported setting type: {setting_type}')
+            raise Exception(f"Unsupported setting type: {setting_type}")
 
     model = OneParameterModel(param)
-    train_loader = DataLoader(RandomDatasetMock(model.INPUT_SIZE),
-                              batch_size=1, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(
+        RandomDatasetMock(model.INPUT_SIZE), batch_size=1, shuffle=False, num_workers=0, drop_last=True
+    )
     return model, train_loader
 
 
-@pytest.fixture(name='get_ref_one_parameter_model_and_dataloader')
-def get_ref_one_parameter_model_and_dataloader_(one_parameter_model_creation_params: Dict) -> \
-        Callable[[], Tuple[nn.Module, DataLoader]]:
+@pytest.fixture(name="get_ref_one_parameter_model_and_dataloader")
+def get_ref_one_parameter_model_and_dataloader_(
+    one_parameter_model_creation_params: Dict,
+) -> Callable[[], Tuple[nn.Module, DataLoader]]:
     def f():
-        return create_initialized_one_parameter_model_and_dataloader(nn.Parameter,
-                                                                     **one_parameter_model_creation_params)
+        return create_initialized_one_parameter_model_and_dataloader(
+            nn.Parameter, **one_parameter_model_creation_params
+        )
+
     return f
 
 
-@pytest.fixture(name='get_target_one_parameter_model_and_dataloader')
-def get_target_one_parameter_model_and_dataloader_(one_parameter_model_creation_params: Dict) -> \
-        Callable[[], Tuple[nn.Module, DataLoader]]:
+@pytest.fixture(name="get_target_one_parameter_model_and_dataloader")
+def get_target_one_parameter_model_and_dataloader_(
+    one_parameter_model_creation_params: Dict,
+) -> Callable[[], Tuple[nn.Module, DataLoader]]:
     def f():
-        return create_initialized_one_parameter_model_and_dataloader(CompressionParameter,
-                                                                     **one_parameter_model_creation_params)
+        return create_initialized_one_parameter_model_and_dataloader(
+            CompressionParameter, **one_parameter_model_creation_params
+        )
+
     return f
 
 
@@ -354,7 +362,7 @@ def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, List[nn.Para
     cls_name_to_params = {}
     for module in model.modules():
         params = list(module.parameters(recurse=False))
-        full_cls_name = '.'.join([module.__class__.__module__, module.__class__.__name__])
+        full_cls_name = ".".join([module.__class__.__module__, module.__class__.__name__])
         if full_cls_name not in cls_name_to_params:
             cls_name_to_params[full_cls_name] = []
         cls_name_to_params[full_cls_name].extend(params)
@@ -365,7 +373,7 @@ def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, List[nn.Para
         if len(params) == 0:
             continue
 
-        algo_name = 'regular'
+        algo_name = "regular"
         for cur_algo_name, cur_algo_path in ALGO_NAME_TO_PATH_MAP.items():
             if cur_algo_path in cls_name:
                 algo_name = cur_algo_name
@@ -377,35 +385,35 @@ def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, List[nn.Para
     return algo_name_to_params
 
 
-def get_lenet_params_after_training_steps(model: nn.Module, train_loader: DataLoader,
-                                          num_steps: int = 1) -> Dict[str, List[nn.Parameter]]:
+def get_lenet_params_after_training_steps(
+    model: nn.Module, train_loader: DataLoader, num_steps: int = 1
+) -> Dict[str, List[nn.Parameter]]:
     with set_torch_seed():
         model = perform_model_training_steps(model, train_loader, num_steps)
     return get_params_grouped_by_algorithms(model)
 
 
-def get_one_parameter_model_params_after_training_steps(model: nn.Module, train_loader: DataLoader,
-                                                        num_steps: int = 1) -> List[nn.Parameter]:
+def get_one_parameter_model_params_after_training_steps(
+    model: nn.Module, train_loader: DataLoader, num_steps: int = 1
+) -> List[nn.Parameter]:
     with set_torch_seed():
         model = perform_model_training_steps(model, train_loader, num_steps)
     return list(model.parameters())
 
 
 def test_if_algorithms_add_params(
-        get_target_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        ref_config: NNCFConfig
+    get_target_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]], ref_config: NNCFConfig
 ):
     algo_to_params = get_lenet_params_after_training_steps(*get_target_lenet_model_and_dataloader(), num_steps=0)
     algo_names = get_multipliers_from_config(ref_config).keys()
 
-    assert sorted(algo_to_params.keys()) == sorted(list(algo_names) + ['regular'])
+    assert sorted(algo_to_params.keys()) == sorted(list(algo_names) + ["regular"])
 
 
-@pytest.mark.parametrize('one_parameter_model_creation_params',
-                         get_one_parameter_model_creation_params())
+@pytest.mark.parametrize("one_parameter_model_creation_params", get_one_parameter_model_creation_params())
 def test_if_parameter_is_initialized_correctly(
-        get_ref_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        get_target_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]]
+    get_ref_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+    get_target_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
 ):
     ref_model, _ref_loader = get_ref_one_parameter_model_and_dataloader()
     target_model, target_loader = get_target_one_parameter_model_and_dataloader()
@@ -420,8 +428,7 @@ def test_if_parameter_is_initialized_correctly(
             get_one_parameter_model_params_after_training_steps(target_model, target_loader)
 
 
-def check_if_grads_are_multiplied(ref_params: List[nn.Parameter], target_params: List[nn.Parameter],
-                                  multiplier: float):
+def check_if_grads_are_multiplied(ref_params: List[nn.Parameter], target_params: List[nn.Parameter], multiplier: float):
     ref_grads = get_grads(ref_params)
     ref_grads = [multiplier * grad for grad in ref_grads]
     target_grads = get_grads(target_params)
@@ -430,36 +437,39 @@ def check_if_grads_are_multiplied(ref_params: List[nn.Parameter], target_params:
 
 
 def test_if_setting_multipliers_in_config_multiplies_grads_values(
-        get_ref_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        get_target_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        target_config: NNCFConfig
+    get_ref_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+    get_target_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+    target_config: NNCFConfig,
 ):
     ref_params = get_lenet_params_after_training_steps(*get_ref_lenet_model_and_dataloader())
     target_params = get_lenet_params_after_training_steps(*get_target_lenet_model_and_dataloader())
     multipliers = get_multipliers_from_config(target_config)
-    multipliers['regular'] = 1
+    multipliers["regular"] = 1
 
     for algo, val in ref_params.items():
         check_if_grads_are_multiplied(val, target_params[algo], multipliers[algo])
 
 
-@pytest.mark.parametrize('one_parameter_model_creation_params',
-                         get_one_parameter_model_creation_params(for_training=True))
+@pytest.mark.parametrize(
+    "one_parameter_model_creation_params", get_one_parameter_model_creation_params(for_training=True)
+)
 def test_if_setting_multiplier_in_parameter_multiplies_grads_values(
-        get_ref_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        get_target_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        one_parameter_model_creation_params: Dict
+    get_ref_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+    get_target_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+    one_parameter_model_creation_params: Dict,
 ):
     ref_params = get_one_parameter_model_params_after_training_steps(*get_ref_one_parameter_model_and_dataloader())
-    target_params = \
-        get_one_parameter_model_params_after_training_steps(*get_target_one_parameter_model_and_dataloader())
+    target_params = get_one_parameter_model_params_after_training_steps(
+        *get_target_one_parameter_model_and_dataloader()
+    )
 
     assert target_params[0].requires_grad
-    check_if_grads_are_multiplied(ref_params, target_params, one_parameter_model_creation_params['multiplier'])
+    check_if_grads_are_multiplied(ref_params, target_params, one_parameter_model_creation_params["multiplier"])
 
 
-def check_if_zero_multiplier_freezes_training(orig_params: List[nn.Parameter], params: List[nn.Parameter],
-                                              multiplier: float):
+def check_if_zero_multiplier_freezes_training(
+    orig_params: List[nn.Parameter], params: List[nn.Parameter], multiplier: float
+):
     if multiplier == 0:
         PTTensorListComparator.check_equal(orig_params, params)
     else:
@@ -473,9 +483,12 @@ def get_params_diff(orig_params: List[nn.Parameter], params: List[nn.Parameter])
     return param_diffs
 
 
-def check_params_affect_training_speed(orig_params: List[nn.Parameter],
-                                       ref_params: List[nn.Parameter], target_params: List[nn.Parameter],
-                                       compression_lr_multiplier: float):
+def check_params_affect_training_speed(
+    orig_params: List[nn.Parameter],
+    ref_params: List[nn.Parameter],
+    target_params: List[nn.Parameter],
+    compression_lr_multiplier: float,
+):
     assert len(ref_params) == len(orig_params)
     assert len(target_params) == len(orig_params)
 
@@ -491,36 +504,41 @@ def check_params_affect_training_speed(orig_params: List[nn.Parameter],
 
 
 def test_if_setting_multipliers_in_config_affect_training_speed(
-        get_ref_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        get_target_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        target_config: NNCFConfig
+    get_ref_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+    get_target_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+    target_config: NNCFConfig,
 ):
     orig_params = get_lenet_params_after_training_steps(*get_ref_lenet_model_and_dataloader(), num_steps=0)
     target_params = get_lenet_params_after_training_steps(*get_target_lenet_model_and_dataloader(), num_steps=1)
     multipliers = get_multipliers_from_config(target_config)
-    multipliers['regular'] = 1
+    multipliers["regular"] = 1
 
     for algo, val in orig_params.items():
         check_if_zero_multiplier_freezes_training(val, target_params[algo], multipliers[algo])
 
 
-@pytest.mark.parametrize('one_parameter_model_creation_params',
-                         get_one_parameter_model_creation_params(for_training=True))
+@pytest.mark.parametrize(
+    "one_parameter_model_creation_params", get_one_parameter_model_creation_params(for_training=True)
+)
 def test_if_setting_multiplier_in_parameter_affect_training_speed(
-        get_ref_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        get_target_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
-        one_parameter_model_creation_params: Dict
+    get_ref_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+    get_target_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+    one_parameter_model_creation_params: Dict,
 ):
-    orig_params = \
-        get_one_parameter_model_params_after_training_steps(*get_ref_one_parameter_model_and_dataloader(), num_steps=0)
-    ref_params = \
-        get_one_parameter_model_params_after_training_steps(*get_ref_one_parameter_model_and_dataloader(), num_steps=1)
-    target_params = \
-        get_one_parameter_model_params_after_training_steps(*get_target_one_parameter_model_and_dataloader(),
-                                                            num_steps=1)
+    orig_params = get_one_parameter_model_params_after_training_steps(
+        *get_ref_one_parameter_model_and_dataloader(), num_steps=0
+    )
+    ref_params = get_one_parameter_model_params_after_training_steps(
+        *get_ref_one_parameter_model_and_dataloader(), num_steps=1
+    )
+    target_params = get_one_parameter_model_params_after_training_steps(
+        *get_target_one_parameter_model_and_dataloader(), num_steps=1
+    )
 
     assert target_params[0].requires_grad
-    check_if_zero_multiplier_freezes_training(orig_params, target_params,
-                                              one_parameter_model_creation_params['multiplier'])
-    check_params_affect_training_speed(orig_params, ref_params, target_params,
-                                       one_parameter_model_creation_params['multiplier'])
+    check_if_zero_multiplier_freezes_training(
+        orig_params, target_params, one_parameter_model_creation_params["multiplier"]
+    )
+    check_params_affect_training_speed(
+        orig_params, ref_params, target_params, one_parameter_model_creation_params["multiplier"]
+    )

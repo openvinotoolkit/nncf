@@ -1,21 +1,18 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Optional
 import threading
+from typing import Optional
 
 import tensorflow as tf
-
 
 _CURRENT_CONTEXT = threading.local()
 
@@ -26,10 +23,10 @@ def get_current_context():
 
     :return: Tracing context.
     """
-    tracing_context = getattr(_CURRENT_CONTEXT, 'tracing_context', None)
+    tracing_context = getattr(_CURRENT_CONTEXT, "tracing_context", None)
     if tracing_context is None:
         tracing_context = TFTracingContext()
-        setattr(_CURRENT_CONTEXT, 'tracing_context', tracing_context)
+        setattr(_CURRENT_CONTEXT, "tracing_context", tracing_context)
     return tracing_context
 
 
@@ -38,10 +35,7 @@ class TFTracingContextState:
     Contains values that describe a state of the `TFTracingContext`.
     """
 
-    def __init__(self,
-                 in_call: bool = False,
-                 wrap_ops: bool = False,
-                 model: Optional[tf.keras.Model] = None):
+    def __init__(self, in_call: bool = False, wrap_ops: bool = False, model: Optional[tf.keras.Model] = None):
         """
         Initializes the `TFTracingContextState` instance.
 
@@ -57,9 +51,9 @@ class TFTracingContextState:
 
         if model is None and in_call:
             raise ValueError(
-                f'Inconsisten values `{in_call}` and `{model}` for `in_call` and `model` parameters. '
-                'The `None` value is specified that model is undefined at this moment. This is only '
-                'possible when `in_call` is equal to `False`.'
+                f"Inconsisten values `{in_call}` and `{model}` for `in_call` and `model` parameters. "
+                "The `None` value is specified that model is undefined at this moment. This is only "
+                "possible when `in_call` is equal to `False`."
             )
 
         self._model = model
@@ -103,10 +97,7 @@ class TFTracingContext:
     def wrap_ops(self) -> bool:
         return self.state.wrap_ops
 
-    def enter(self,
-              in_call: bool,
-              wrap_ops: bool,
-              model: Optional[tf.keras.Model] = None):
+    def enter(self, in_call: bool, wrap_ops: bool, model: Optional[tf.keras.Model] = None):
         """
         Pushes parameters onto the tracing context.
 
@@ -138,7 +129,7 @@ class TFTracingContext:
             base_name_key = name_key
             # Make sure the composed name key is not already used.
             while name_key in self.names_in_use:
-                name_key = f'{base_name_key}_{i}'
+                name_key = f"{base_name_key}_{i}"
                 i += 1
 
             # Mark the composed name_key as used in case someone wants
@@ -146,7 +137,7 @@ class TFTracingContext:
             self.names_in_use[name_key] = 1
 
             # Return the new name with the original capitalization of the given name.
-            name = f'{name}_{i - 1}'
+            name = f"{name}_{i - 1}"
         return name
 
     @property
@@ -162,9 +153,7 @@ class TFTracingContextManager:
     Context manager for the tracing context.
     """
 
-    def __init__(self,
-                 tracing_context: TFTracingContext,
-                 next_state: TFTracingContextState):
+    def __init__(self, tracing_context: TFTracingContext, next_state: TFTracingContextState):
         """
         Initializes the tracing context manager.
 

@@ -1,16 +1,13 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from typing import TypeVar
 
 import torch.nn
@@ -28,7 +25,7 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
 
-TModel = TypeVar('TModel')
+TModel = TypeVar("TModel")
 
 
 class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
@@ -41,16 +38,16 @@ class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
         return self._child_losses
 
 
-class PTCompositeCompressionAlgorithmBuilder(
-        CompositeCompressionAlgorithmBuilder, PTCompressionAlgorithmBuilder):
+class PTCompositeCompressionAlgorithmBuilder(CompositeCompressionAlgorithmBuilder, PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
-
         super().__init__(config, should_init)
 
         algo_names = extract_algorithm_names(config)
         if len(algo_names) < 2:
-            raise RuntimeError('Composite algorithm builder must be supplied with a config with more than one '
-                               'compression algo specified!')
+            raise RuntimeError(
+                "Composite algorithm builder must be supplied with a config with more than one "
+                "compression algo specified!"
+            )
         for algo_name in algo_names:
             algo_builder = PT_COMPRESSION_ALGORITHMS.get(algo_name)
             self._child_builders.append(algo_builder(config, should_init=should_init))
@@ -109,7 +106,8 @@ class PTCompositeCompressionAlgorithmBuilder(
 
 
 class PTCompositeCompressionAlgorithmController(
-    CompositeCompressionAlgorithmController, PTCompressionAlgorithmController):
+    CompositeCompressionAlgorithmController, PTCompressionAlgorithmController
+):
     def __init__(self, target_model: TModel):
         super().__init__(target_model)
         self._loss = PTCompositeCompressionLoss()

@@ -1,27 +1,24 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+
+from types import SimpleNamespace
 
 import numpy as np
-
 import torch
 from torch import nn
 from torch.autograd import Variable
 from torch.optim import Adam
-from types import SimpleNamespace
 
 from nncf.torch.automl.agent.ddpg.memory import SequentialMemory
-
 
 criterion = nn.MSELoss()
 USE_CUDA = torch.cuda.is_available()
@@ -33,14 +30,13 @@ def to_numpy(var):
 
 
 def to_tensor(ndarray, volatile=False, requires_grad=False, dtype=FLOAT):
-    return Variable(
-        torch.from_numpy(ndarray), volatile=volatile, requires_grad=requires_grad
-    ).type(dtype)
+    return Variable(torch.from_numpy(ndarray), volatile=volatile, requires_grad=requires_grad).type(dtype)
 
 
 def sample_from_truncated_normal_distribution(lower, upper, mu, sigma, size=1):
     from scipy import stats
-    return stats.truncnorm.rvs((lower-mu)/sigma, (upper-mu)/sigma, loc=mu, scale=sigma, size=size)
+
+    return stats.truncnorm.rvs((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma, size=size)
 
 
 class Actor(nn.Module):
@@ -84,6 +80,7 @@ class Critic(nn.Module):
 class DDPG:
     LBOUND = 0.0
     RBOUND = 1.0
+
     def __init__(self, nb_states, nb_actions, iter_number: int = None, hparam_override: dict = None):
         self.nb_states = nb_states
         self.nb_actions = nb_actions
@@ -105,7 +102,7 @@ class DDPG:
             "epsilon": 50000,
             "init_delta": 0.5,
             "warmup_iter_number": 20,
-            "n_update": 1
+            "n_update": 1,
         }
 
         if hparam_override is not None:
@@ -113,7 +110,7 @@ class DDPG:
                 if hparam in hyperparameters:
                     hyperparameters[hparam] = hparam_val
         if iter_number is not None:
-            hyperparameters['train_episode'] = iter_number
+            hyperparameters["train_episode"] = iter_number
 
         args = SimpleNamespace(**hyperparameters)
 
@@ -123,11 +120,7 @@ class DDPG:
             self.seed(args.seed)
 
         # Create Actor and Critic Network
-        net_cfg = {
-            'hidden1': args.hidden1,
-            'hidden2': args.hidden2,
-            'init_w': args.init_w
-        }
+        net_cfg = {"hidden1": args.hidden1, "hidden2": args.hidden2, "init_w": args.init_w}
 
         self.actor = Actor(self.nb_states, self.nb_actions, **net_cfg)
         self.actor_target = Actor(self.nb_states, self.nb_actions, **net_cfg)
@@ -171,27 +164,25 @@ class DDPG:
         self.moving_average = None
         self.moving_alpha = 0.5  # based on batch, so small
 
-
     def update_delta_decay_factor(self, num_train_episode):
         assert num_train_episode > 0, "Number of train episode must be larger than 0"
 
         if num_train_episode < 1000:
             # every hundred of episode below 1000 (100, 200 ... 1000)
-            calibrated_factor = [0.960, 0.960, 0.980, 0.987, 0.992,
-                                 0.993, 0.995, 0.995, 0.996, 0.996]
-            self.delta_decay = calibrated_factor[num_train_episode//100]
+            calibrated_factor = [0.960, 0.960, 0.980, 0.987, 0.992, 0.993, 0.995, 0.995, 0.996, 0.996]
+            self.delta_decay = calibrated_factor[num_train_episode // 100]
 
         elif num_train_episode <= 3000:
-            self.delta_decay = (num_train_episode-999)*(0.999-0.997)/(3000-999) + 0.997
+            self.delta_decay = (num_train_episode - 999) * (0.999 - 0.997) / (3000 - 999) + 0.997
 
         else:
             self.delta_decay = 0.999
 
-
     def update_policy(self):
         # Sample batch
-        state_batch, action_batch, reward_batch, \
-        next_state_batch, terminal_batch = self.memory.sample_and_split(self.batch_size)
+        state_batch, action_batch, reward_batch, next_state_batch, terminal_batch = self.memory.sample_and_split(
+            self.batch_size
+        )
 
         # normalize the reward
         batch_mean_reward = np.mean(reward_batch)
@@ -203,13 +194,16 @@ class DDPG:
 
         # Prepare for the target q batch
         with torch.no_grad():
-            next_q_values = self.critic_target([
-                to_tensor(next_state_batch),
-                self.actor_target(to_tensor(next_state_batch)),
-            ])
+            next_q_values = self.critic_target(
+                [
+                    to_tensor(next_state_batch),
+                    self.actor_target(to_tensor(next_state_batch)),
+                ]
+            )
 
-        target_q_batch = to_tensor(reward_batch) + \
-                         self.discount * to_tensor(terminal_batch.astype(np.float)) * next_q_values
+        target_q_batch = (
+            to_tensor(reward_batch) + self.discount * to_tensor(terminal_batch.astype(np.float)) * next_q_values
+        )
 
         # Critic update
         self.critic.zero_grad()
@@ -223,10 +217,7 @@ class DDPG:
         # Actor update
         self.actor.zero_grad()
 
-        policy_loss = (-1) * self.critic([
-            to_tensor(state_batch),
-            self.actor(to_tensor(state_batch))
-        ])
+        policy_loss = (-1) * self.critic([to_tensor(state_batch), self.actor(to_tensor(state_batch))])
 
         policy_loss = policy_loss.mean()
         policy_loss.backward()
@@ -240,13 +231,11 @@ class DDPG:
         self.value_loss = value_loss
         self.policy_loss = policy_loss
 
-
     def eval(self):
         self.actor.eval()
         self.actor_target.eval()
         self.critic.eval()
         self.critic_target.eval()
-
 
     def cuda(self):
         self.actor.cuda()
@@ -254,16 +243,13 @@ class DDPG:
         self.critic.cuda()
         self.critic_target.cuda()
 
-
     def observe(self, r_t, s_t, a_t, done):
         if self.is_training:
             self.memory.append(s_t, a_t, r_t, done)  # save to memory
 
-
     def random_action(self):
         action = np.random.uniform(self.LBOUND, self.RBOUND, self.nb_actions)
         return action
-
 
     def select_action(self, s_t, episode, decay_epsilon=True):
         action = to_numpy(self.actor(to_tensor(np.array(s_t).reshape(1, -1)))).squeeze(0)
@@ -271,64 +257,44 @@ class DDPG:
         if decay_epsilon is True:
             self.delta = self.init_delta * (self.delta_decay ** (episode - self.warmup_iter_number))
             action = sample_from_truncated_normal_distribution(
-                lower=self.LBOUND, upper=self.RBOUND, mu=action, sigma=self.delta, size=self.nb_actions)
+                lower=self.LBOUND, upper=self.RBOUND, mu=action, sigma=self.delta, size=self.nb_actions
+            )
 
         return np.clip(action, self.LBOUND, self.RBOUND)
 
-
     def reset(self, obs):
         pass
-
 
     def load_weights(self, output):
         if output is None:
             return
 
-        self.actor.load_state_dict(
-            torch.load('{}/actor.pkl'.format(output))
-        )
+        self.actor.load_state_dict(torch.load("{}/actor.pkl".format(output)))
 
-        self.critic.load_state_dict(
-            torch.load('{}/critic.pkl'.format(output))
-        )
-
+        self.critic.load_state_dict(torch.load("{}/critic.pkl".format(output)))
 
     def save_model(self, output):
-        torch.save(
-            self.actor.state_dict(),
-            '{}/actor.pkl'.format(output)
-        )
-        torch.save(
-            self.critic.state_dict(),
-            '{}/critic.pkl'.format(output)
-        )
-
+        torch.save(self.actor.state_dict(), "{}/actor.pkl".format(output))
+        torch.save(self.critic.state_dict(), "{}/critic.pkl".format(output))
 
     def seed(self, s):
         torch.manual_seed(s)
         if USE_CUDA:
             torch.cuda.manual_seed(s)
 
-
     def soft_update(self, target, source):
         for target_param, param in zip(target.parameters(), source.parameters()):
-            target_param.data.copy_(
-                target_param.data * (1.0 - self.tau) + param.data * self.tau
-            )
-
+            target_param.data.copy_(target_param.data * (1.0 - self.tau) + param.data * self.tau)
 
     def hard_update(self, target, source):
         for target_param, param in zip(target.parameters(), source.parameters()):
             target_param.data.copy_(param.data)
 
-
     def get_delta(self):
         return self.delta
 
-
     def get_value_loss(self):
         return self.value_loss
-
 
     def get_policy_loss(self):
         return self.policy_loss

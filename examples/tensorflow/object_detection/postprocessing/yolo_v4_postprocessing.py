@@ -1,19 +1,19 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import copy
 
 import numpy as np
-import copy
-from scipy.special import expit, softmax # pylint: disable=E0611
+from scipy.special import expit  # pylint: disable=E0611
+from scipy.special import softmax
 
 
 def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, use_softmax=False):
@@ -23,8 +23,7 @@ def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, us
 
     grid_size = np.shape(prediction)[1:3]
 
-    prediction = np.reshape(prediction,
-                            (batch_size, grid_size[0] * grid_size[1] * num_anchors, num_classes + 5))
+    prediction = np.reshape(prediction, (batch_size, grid_size[0] * grid_size[1] * num_anchors, num_classes + 5))
 
     # generate x_y_offset grid map
     grid_y = np.arange(grid_size[0])
@@ -88,8 +87,10 @@ def yolo3_decode(predictions, anchors, num_classes, input_dims, elim_grid_sense=
     results = []
     for i, prediction in enumerate(predictions):
         results.append(
-            yolo_decode(prediction, anchors[anchor_mask[i]], num_classes, input_dims, scale_x_y=scale_x_y[i],
-                        use_softmax=False))
+            yolo_decode(
+                prediction, anchors[anchor_mask[i]], num_classes, input_dims, scale_x_y=scale_x_y[i], use_softmax=False
+            )
+        )
 
     return np.concatenate(results, axis=1)
 
@@ -102,11 +103,11 @@ def yolo_correct_boxes(predictions, img_shape, model_image_size):
     class_scores = predictions[..., 5:]
 
     # model_image_size & image_shape should be (height, width) format
-    model_image_size = np.array(model_image_size, dtype='float32')
-    image_shape = np.array(img_shape, dtype='float32')
+    model_image_size = np.array(model_image_size, dtype="float32")
+    image_shape = np.array(img_shape, dtype="float32")
 
     new_shape = np.round(image_shape * np.min(model_image_size / image_shape))
-    offset = (model_image_size - new_shape) / 2. / model_image_size
+    offset = (model_image_size - new_shape) / 2.0 / model_image_size
     scale = model_image_size / new_shape
     # reverse offset/scale to match (w,h) order
     offset = offset[..., ::-1]
@@ -219,6 +220,7 @@ def box_iou_matrix(boxes1, boxes2):
     :return iou: (np.array[N, M]): the NxM matrix containing the pairwise
             IoU values for every element in boxes1 and boxes2
     """
+
     def box_area(box):
         # box = 4xN
         return box[2] * box[3]
@@ -247,14 +249,12 @@ def box_diou_matrix(boxes1, boxes2):
     iou = box_iou_matrix(boxes1, boxes2)
 
     # box center distance
-    center_distance = (boxes1[:, None, :2] + boxes1[:, None, 2:] / 2) - (
-            boxes2[:, :2] + boxes2[:, 2:] / 2)  # [N,M,2]
+    center_distance = (boxes1[:, None, :2] + boxes1[:, None, 2:] / 2) - (boxes2[:, :2] + boxes2[:, 2:] / 2)  # [N,M,2]
     center_distance = np.power(center_distance[..., 0], 2) + np.power(center_distance[..., 1], 2)  # [N,M]
 
     # get enclosed area
     enclose_min = np.minimum(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
-    enclose_max = np.maximum(boxes1[:, None, :2] + boxes1[:, None, 2:],
-                             boxes2[:, :2] + boxes2[:, 2:])  # [N,M,2]
+    enclose_max = np.maximum(boxes1[:, None, :2] + boxes1[:, None, 2:], boxes2[:, :2] + boxes2[:, 2:])  # [N,M,2]
 
     enclose_wh = np.maximum(enclose_max - enclose_min, 0)  # [N,M,2]
     enclose_wh = np.maximum(enclose_max - enclose_min, 0)  # [N,M,2]
@@ -338,8 +338,9 @@ def fast_cluster_nms_boxes(boxes, classes, scores, iou_threshold):
         keep_mask = max_iou < iou_threshold
 
         # generate weights matrix with box score and final IoU matrix
-        weights = (updated_iou_matrix * (updated_iou_matrix > iou_threshold).astype(np.float32) + np.eye(
-            num_boxes)) * (s_nms.reshape((1, num_boxes)))
+        weights = (updated_iou_matrix * (updated_iou_matrix > iou_threshold).astype(np.float32) + np.eye(num_boxes)) * (
+            s_nms.reshape((1, num_boxes))
+        )
 
         # convert box format to (xmin,ymin,xmax,ymax) for weighted average,
         # and expand to NxN array
@@ -356,8 +357,7 @@ def fast_cluster_nms_boxes(boxes, classes, scores, iou_threshold):
         ymax_expand = np.true_divide((ymax_expand * weights).sum(axis=1), weightsum)
 
         # stack the weighted average boxes and convert back to (x,y,w,h)
-        b_nms = np.stack([xmin_expand, ymin_expand, xmax_expand - xmin_expand, ymax_expand - ymin_expand],
-                         axis=1)
+        b_nms = np.stack([xmin_expand, ymin_expand, xmax_expand - xmin_expand, ymax_expand - ymin_expand], axis=1)
 
         # keep NMSed boxes
         b_nms = b_nms[keep_mask]
@@ -472,7 +472,7 @@ def yolo_handle_predictions(predictions, max_boxes=100, confidence=0.1, iou_thre
     boxes, classes, scores = [], [], []
     if n_boxes:
         boxes = np.concatenate(n_boxes)
-        classes = np.concatenate(n_classes).astype('int32')
+        classes = np.concatenate(n_classes).astype("int32")
         scores = np.concatenate(n_scores)
         boxes, classes, scores = filter_boxes(boxes, classes, scores, max_boxes)
 
@@ -487,7 +487,7 @@ def yolo_adjust_boxes(boxes, img_shape):
     if boxes is None or len(boxes) == 0:
         return np.array([])
 
-    image_shape = np.array(img_shape, dtype='float32')
+    image_shape = np.array(img_shape, dtype="float32")
     height, width = image_shape
 
     adjusted_boxes = []
@@ -499,10 +499,10 @@ def yolo_adjust_boxes(boxes, img_shape):
         xmax = x + w
         ymax = y + h
 
-        ymin = max(0, np.floor(ymin + 0.5).astype('int32'))
-        xmin = max(0, np.floor(xmin + 0.5).astype('int32'))
-        ymax = min(height, np.floor(ymax + 0.5).astype('int32'))
-        xmax = min(width, np.floor(xmax + 0.5).astype('int32'))
+        ymin = max(0, np.floor(ymin + 0.5).astype("int32"))
+        xmin = max(0, np.floor(xmin + 0.5).astype("int32"))
+        ymax = min(height, np.floor(ymax + 0.5).astype("int32"))
+        xmax = min(width, np.floor(xmax + 0.5).astype("int32"))
         adjusted_boxes.append([xmin, ymin, xmax, ymax])
 
     return np.array(adjusted_boxes, dtype=np.int32)
@@ -510,22 +510,31 @@ def yolo_adjust_boxes(boxes, img_shape):
 
 def get_anchors(anchors_path):
     """loads the anchors from a file"""
-    with open(anchors_path, encoding='utf8') as f:
+    with open(anchors_path, encoding="utf8") as f:
         anchors = f.readline()
-    anchors = [float(x) for x in anchors.split(',')]
+    anchors = [float(x) for x in anchors.split(",")]
     return np.array(anchors).reshape(-1, 2)
 
 
-def yolo3_postprocess_np(yolo_outputs, image_shape, anchors, num_classes, model_image_size, max_boxes=100,
-                         confidence=0.1, iou_threshold=0.4, elim_grid_sense=False):
-    predictions = yolo3_decode(yolo_outputs, anchors, num_classes, input_dims=model_image_size,
-                               elim_grid_sense=elim_grid_sense)
+def yolo3_postprocess_np(
+    yolo_outputs,
+    image_shape,
+    anchors,
+    num_classes,
+    model_image_size,
+    max_boxes=100,
+    confidence=0.1,
+    iou_threshold=0.4,
+    elim_grid_sense=False,
+):
+    predictions = yolo3_decode(
+        yolo_outputs, anchors, num_classes, input_dims=model_image_size, elim_grid_sense=elim_grid_sense
+    )
     predictions = yolo_correct_boxes(predictions, image_shape, model_image_size)
 
-    boxes, classes, scores = yolo_handle_predictions(predictions,
-                                                     max_boxes=max_boxes,
-                                                     confidence=confidence,
-                                                     iou_threshold=iou_threshold)
+    boxes, classes, scores = yolo_handle_predictions(
+        predictions, max_boxes=max_boxes, confidence=confidence, iou_threshold=iou_threshold
+    )
     boxes = yolo_adjust_boxes(boxes, image_shape)
 
     return boxes, classes, scores
@@ -535,14 +544,88 @@ def convert_coco_category(category_id):
     """
     Convert continuous coco class id to discontinuous coco category id (0..79 --> 0..90)
     """
-    match = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-             11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-             22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
-             35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
-             46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
-             56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
-             67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
-             80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
+    match = [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        27,
+        28,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        67,
+        70,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+    ]
     category_id = match[category_id]
     return category_id
 
@@ -552,8 +635,9 @@ def convert_coordinate(box):
     return [ymin, xmin, ymax, xmax]
 
 
-def postprocess_yolo_v4_np(image_info, out1, out2, out3, anchors, num_classes,
-                           input_shape, conf_threshold, elim_grid_sense):
+def postprocess_yolo_v4_np(
+    image_info, out1, out2, out3, anchors, num_classes, input_shape, conf_threshold, elim_grid_sense
+):
     image_info = image_info.numpy()
     out1 = out1.numpy()
     out2 = out2.numpy()
@@ -574,17 +658,23 @@ def postprocess_yolo_v4_np(image_info, out1, out2, out3, anchors, num_classes,
     for i in range(batch_size):
         prediction = [out1[i][None, ...], out2[i][None, ...], out3[i][None, ...]]
         image_shape = image_info[i][0]
-        pred_boxes, pred_classes, pred_scores = yolo3_postprocess_np(prediction, image_shape, anchors, num_classes,
-                                                                     input_shape, max_boxes=100,
-                                                                     confidence=conf_threshold,
-                                                                     elim_grid_sense=elim_grid_sense)
+        pred_boxes, pred_classes, pred_scores = yolo3_postprocess_np(
+            prediction,
+            image_shape,
+            anchors,
+            num_classes,
+            input_shape,
+            max_boxes=100,
+            confidence=conf_threshold,
+            elim_grid_sense=elim_grid_sense,
+        )
 
         num_detections = pred_boxes.shape[0]
         pred_boxes = np.array(list(map(convert_coordinate, pred_boxes)))
         pred_classes = np.array(list(map(convert_coco_category, pred_classes)))
 
         if 0 < num_detections < 100:
-            pred_boxes = np.vstack((pred_boxes, np.zeros((100 -num_detections, 4))))
+            pred_boxes = np.vstack((pred_boxes, np.zeros((100 - num_detections, 4))))
             pred_classes = np.hstack((pred_classes, np.ones(100 - num_detections)))
             pred_scores = np.hstack((pred_scores, np.zeros(100 - num_detections)))
         elif num_detections == 0:

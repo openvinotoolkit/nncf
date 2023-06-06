@@ -1,21 +1,22 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import numpy as np
 import pytest
 
-from nncf.common.pruning.schedulers import BaselinePruningScheduler, ExponentialWithBiasPruningScheduler
-from tests.torch.pruning.helpers import get_pruning_baseline_config, PruningTestModel, get_pruning_exponential_config
+from nncf.common.pruning.schedulers import BaselinePruningScheduler
+from nncf.common.pruning.schedulers import ExponentialWithBiasPruningScheduler
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.pruning.helpers import PruningTestModel
+from tests.torch.pruning.helpers import get_pruning_baseline_config
+from tests.torch.pruning.helpers import get_pruning_exponential_config
 
 
 def test_baseline_scheduler():
@@ -23,7 +24,7 @@ def test_baseline_scheduler():
     Test baseline scheduler parameters and changes of params during epochs.
     """
     config = get_pruning_baseline_config()
-    config['compression']['algorithm'] = 'filter_pruning'
+    config["compression"]["algorithm"] = "filter_pruning"
     model = PruningTestModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     scheduler = compression_ctrl.scheduler
@@ -54,7 +55,7 @@ def test_exponential_scheduler():
     Test exponential with bias scheduler parameters and changes of params during epochs.
     """
     config = get_pruning_exponential_config()
-    config['compression']['algorithm'] = 'filter_pruning'
+    config["compression"]["algorithm"] = "filter_pruning"
     model = PruningTestModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     scheduler = compression_ctrl.scheduler
@@ -80,8 +81,9 @@ def test_exponential_scheduler():
     for i in range(20):
         # Check pruning params on epoch 1
         scheduler.epoch_step()
-        pruning_level = scheduler.a * np.exp(
-            -scheduler.k * (scheduler.current_epoch - scheduler.num_warmup_epochs)) + scheduler.b
+        pruning_level = (
+            scheduler.a * np.exp(-scheduler.k * (scheduler.current_epoch - scheduler.num_warmup_epochs)) + scheduler.b
+        )
         assert pytest.approx(scheduler.current_pruning_level) == pruning_level
         assert pytest.approx(compression_ctrl.pruning_level) == pruning_level
         assert compression_ctrl.frozen is False
@@ -95,7 +97,7 @@ def test_exponential_scheduler():
     assert scheduler.current_epoch == 21
 
 
-@pytest.fixture(name='pruning_controller_mock')
+@pytest.fixture(name="pruning_controller_mock")
 def pruning_controller_mock_(mocker):
     class MockPruningController:
         def __init__(self):
@@ -113,13 +115,9 @@ def pruning_controller_mock_(mocker):
 
 def test_exponential_with_bias(pruning_controller_mock):
     pruning_init = 0.1
-    scheduler_params = {
-        'pruning_target': 0.7,
-        'num_init_steps': 3,
-        'pruning_steps': 5
-    }
+    scheduler_params = {"pruning_target": 0.7, "num_init_steps": 3, "pruning_steps": 5}
     expected_levels = [0, 0, 0, 0.1, 0.6489741, 0.6956869, 0.6996617, 0.7, 0.7, 0.7]
-    freeze_epoch = scheduler_params['num_init_steps'] + scheduler_params['pruning_steps']
+    freeze_epoch = scheduler_params["num_init_steps"] + scheduler_params["pruning_steps"]
 
     pruning_controller_mock.set_pruning_init(pruning_init)
     scheduler = ExponentialWithBiasPruningScheduler(pruning_controller_mock, scheduler_params)

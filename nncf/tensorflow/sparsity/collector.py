@@ -1,25 +1,23 @@
-"""
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import List
 
 import tensorflow as tf
 
-from nncf.common.sparsity.collector import WeightDescription
 from nncf.common.sparsity.collector import BaseSparseModelStatisticsCollector
+from nncf.common.sparsity.collector import WeightDescription
+from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
-from nncf.tensorflow.graph.utils import get_nncf_operations
 
 
 def _get_standardized_weight_shape(shape):
@@ -60,7 +58,7 @@ class TFSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
                     weight.name,
                     _get_standardized_weight_shape(weight.shape.as_list()),
                     tf.math.count_nonzero(sparse_weight).numpy().item(),
-                    is_sparse=True
+                    is_sparse=True,
                 )
             )
 
@@ -81,7 +79,7 @@ class TFSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
                     weight.name,
                     _get_standardized_weight_shape(weight.shape.as_list()),
                     tf.math.count_nonzero(weight).numpy().item(),
-                    is_sparse=False
+                    is_sparse=False,
                 )
             )
 

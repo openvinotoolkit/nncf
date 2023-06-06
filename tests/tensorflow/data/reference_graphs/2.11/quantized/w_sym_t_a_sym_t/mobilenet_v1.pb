@@ -1,0 +1,1 @@
+../../../2.8/quantized/w_sym_t_a_sym_t/mobilenet_v1.pb

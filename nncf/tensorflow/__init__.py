@@ -1,42 +1,49 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
- Copyright (c) 2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+Base subpackage for NNCF TensorFlow functionality.
 """
-from nncf import nncf_logger
-from nncf.common.logging.logger import warn_bkc_version_mismatch
-# pylint: skip-file
-from nncf.version import BKC_TF_VERSION
-
 import tensorflow
 from pkg_resources import parse_version
 
-tensorflow_version = parse_version(tensorflow.__version__).base_version
+from nncf import nncf_logger
+from nncf.common.logging.logger import warn_bkc_version_mismatch
+
+# pylint: skip-file
+from nncf.version import BKC_TF_VERSION
+
+try:
+    _tf_version = tensorflow.__version__
+    tensorflow_version = parse_version(_tf_version).base_version
+except:
+    nncf_logger.debug("Could not parse tensorflow version")
+    _tf_version = "0.0.0"
+    tensorflow_version = parse_version(_tf_version).base_version
+tensorflow_version_major, tensorflow_version_minor = tuple(map(int, tensorflow_version.split(".")))[:2]
 if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
-    warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, tensorflow.__version__)
-elif not ('2.4' <= tensorflow_version[:3] <= '2.8'):
+    warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, _tf_version)
+elif not (tensorflow_version_major == 2 and 4 <= tensorflow_version_minor <= 11):
     raise RuntimeError(
-       f'NNCF only supports 2.4.0 <= tensorflow <= 2.8.*, while current tensorflow version is {tensorflow.__version__}')
-
-
-from nncf.tensorflow.helpers import create_compressed_model
-from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
-from nncf.tensorflow.initialization import register_default_init_args
-
-
-# Required for correct COMPRESSION_ALGORITHMS registry functioning
-from nncf.tensorflow.quantization import algorithm as quantization_algorithm
-from nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_algorithm
-from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_algorithm
-from nncf.tensorflow.sparsity.rb import algorithm as rb_sparsity_algorithm
+        f"NNCF only supports 2.4.0 <= tensorflow <= 2.11.*, " f"while current tensorflow version is {_tf_version}"
+    )
 
 
 from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
 from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop
+from nncf.tensorflow.helpers import create_compressed_model
+from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
+from nncf.tensorflow.initialization import register_default_init_args
+from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_algorithm
+
+# Required for correct COMPRESSION_ALGORITHMS registry functioning
+from nncf.tensorflow.quantization import algorithm as quantization_algorithm
+from nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_algorithm
+from nncf.tensorflow.sparsity.rb import algorithm as rb_sparsity_algorithm

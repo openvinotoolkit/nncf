@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 Intel Corporation
+# Copyright (c) 2023 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +13,7 @@
 # This workflow will upload a Python Package using Twine when a release is created
 # For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
 
-name: Upload Python Package
+name: Publish release Python package to PyPI
 
 on:
   release:

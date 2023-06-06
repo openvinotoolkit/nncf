@@ -1,0 +1,14 @@
+strict digraph  {
+"0 Add2" [id=0, type=Add];
+"1 Add1" [id=1, type=Add];
+"2 nncf_model_input_0" [id=2, type=nncf_model_input];
+"3 nncf_model_input_1" [id=3, type=nncf_model_input];
+"4 nncf_model_output_0" [id=4, type=nncf_model_output];
+"5 nncf_model_output_1" [id=5, type=nncf_model_output];
+"0 Add2" -> "4 nncf_model_output_0"  [label="[2, 6, 3, 3", style=solid];
+"1 Add1" -> "5 nncf_model_output_1"  [label="[2, 6, 3, 3]", style=solid];
+"2 nncf_model_input_0" -> "0 Add2"  [label="[1, 6, 3, 3]", style=solid];
+"2 nncf_model_input_0" -> "1 Add1"  [label="[1, 6, 3, 3]", style=solid];
+"3 nncf_model_input_1" -> "0 Add2"  [label="[2, 6, 3, 3]", style=solid];
+"3 nncf_model_input_1" -> "1 Add1"  [label="[2, 6, 3, 3]", style=solid];
+}
