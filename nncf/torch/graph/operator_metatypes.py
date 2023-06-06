@@ -566,6 +566,12 @@ class PTAvgPool3dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.AVGPOOL]
 
 
+class PTMaxPool1dMetatype(PTOperatorMetatype):
+    name = "MaxPool1DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool1d", "adaptive_max_pool1d"]}
+    hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
 @PT_OPERATOR_METATYPES.register()
 class PTMaxPool2dMetatype(PTOperatorMetatype):
     name = "MaxPool2DOp"
@@ -578,6 +584,18 @@ class PTMaxPool3dMetatype(PTOperatorMetatype):
     name = "MaxPool3DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool3d", "adaptive_max_pool3d"]}
     hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTMaxUnpool1dMetatype(PTOperatorMetatype):
+    name = "MaxUnPool1DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_unpool1d"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTMaxUnpool2dMetatype(PTOperatorMetatype):
+    name = "MaxUnPool2DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_unpool2d"]}
 
 
 @PT_OPERATOR_METATYPES.register()

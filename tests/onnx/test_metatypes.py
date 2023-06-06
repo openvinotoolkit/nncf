@@ -16,7 +16,7 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantOfShapeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
@@ -44,7 +44,7 @@ REF_METATYPES_COUNTERS = [
         InputNoopMetatype,
         InputNoopMetatype,
         InputNoopMetatype,
-        ONNXConcatLayerMetatype,
+        ONNXConcatMetatype,
         ONNXAddLayerMetatype,
         OutputNoopMetatype,
         OutputNoopMetatype,

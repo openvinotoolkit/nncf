@@ -17,7 +17,7 @@ from dataclasses import field
 from dataclasses import fields
 from dataclasses import is_dataclass
 from enum import Enum
-from typing import Any, ClassVar, Dict, Optional, Protocol
+from typing import Any, Dict, Optional
 
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.utils.api_marker import api
@@ -189,15 +189,7 @@ class AdvancedAccuracyRestorerParameters:
     ranking_subset_size: Optional[int] = None
 
 
-class IsDataclass(Protocol):
-    """
-    Type hint class for the dataclass
-    """
-
-    __dataclass_fields__: ClassVar[Dict]
-
-
-def changes_asdict(params: IsDataclass) -> Dict[str, Any]:
+def changes_asdict(params: Any) -> Dict[str, Any]:
     """
     Returns non None fields as dict
 
@@ -212,7 +204,7 @@ def changes_asdict(params: IsDataclass) -> Dict[str, Any]:
     return changes
 
 
-def convert_to_dict_recursively(params: IsDataclass) -> Dict[str, Any]:
+def convert_to_dict_recursively(params: Any) -> Dict[str, Any]:
     """
     Converts dataclass to dict recursively
 

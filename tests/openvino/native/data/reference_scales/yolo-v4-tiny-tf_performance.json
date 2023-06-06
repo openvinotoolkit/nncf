@@ -1,5 +1,5 @@
 {
-    "conv2d_20/Conv2D/fq_weights_1": {
+    "Convolution_711/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -7149,13 +7149,13 @@
             ]
         ]
     },
-    "leaky_re_lu_18/LeakyRelu/fq_output_0": {
+    "Transpose_1774/fq_output_0": {
         "input_low": -4.470880508422852,
         "input_high": 4.4359517097473145,
         "output_low": -4.470880508422852,
         "output_high": 4.4359517097473145
     },
-    "conv2d_19/Conv2D/fq_weights_1": {
+    "Multiply_3818/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -14333,13 +14333,13 @@
             ]
         ]
     },
-    "leaky_re_lu_13/LeakyRelu/fq_output_0": {
+    "Transpose_1638/fq_output_0": {
         "input_low": -3.59743070602417,
         "input_high": 3.5693256855010986,
         "output_low": -3.59743070602417,
         "output_high": 3.5693256855010986
     },
-    "conv2d_13/Conv2D/fq_weights_1": {
+    "Multiply_3762/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -21517,13 +21517,13 @@
             ]
         ]
     },
-    "leaky_re_lu_11/LeakyRelu/fq_output_0": {
+    "Transpose_1574/fq_output_0": {
         "input_low": -4.5784101486206055,
         "input_high": 4.5426411628723145,
         "output_low": -4.5784101486206055,
         "output_high": 4.5426411628723145
     },
-    "conv2d_11/Conv2D/fq_weights_1": {
+    "Multiply_3734/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -25117,13 +25117,13 @@
             ]
         ]
     },
-    "leaky_re_lu_10/LeakyRelu/fq_output_0": {
+    "Transpose_1539/fq_output_0": {
         "input_low": -3.59743070602417,
         "input_high": 3.5693256855010986,
         "output_low": -3.59743070602417,
         "output_high": 3.5693256855010986
     },
-    "conv2d_10/Conv2D/fq_weights_1": {
+    "Multiply_3720/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -32301,13 +32301,13 @@
             ]
         ]
     },
-    "leaky_re_lu_9/LeakyRelu/fq_output_0": {
+    "Transpose_1505/fq_output_0": {
         "input_low": -5.901343822479248,
         "input_high": 5.855239391326904,
         "output_low": -5.901343822479248,
         "output_high": 5.855239391326904
     },
-    "conv2d_9/Conv2D/fq_weights_1": {
+    "Multiply_3706/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -35901,13 +35901,13 @@
             ]
         ]
     },
-    "leaky_re_lu_7/LeakyRelu/fq_output_0": {
+    "Transpose_1441/fq_output_0": {
         "input_low": -9.338680267333984,
         "input_high": 9.265722274780273,
         "output_low": -9.338680267333984,
         "output_high": 9.265722274780273
     },
-    "conv2d_7/Conv2D/fq_weights_1": {
+    "Multiply_3678/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -37709,13 +37709,13 @@
             ]
         ]
     },
-    "leaky_re_lu_6/LeakyRelu/fq_output_0": {
+    "Transpose_1406/fq_output_0": {
         "input_low": -5.901343822479248,
         "input_high": 5.855239391326904,
         "output_low": -5.901343822479248,
         "output_high": 5.855239391326904
     },
-    "conv2d_6/Conv2D/fq_weights_1": {
+    "Multiply_3664/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -41309,13 +41309,13 @@
             ]
         ]
     },
-    "leaky_re_lu_5/LeakyRelu/fq_output_0": {
+    "Transpose_1372/fq_output_0": {
         "input_low": -10.120508193969727,
         "input_high": 10.041441917419434,
         "output_low": -10.120508193969727,
         "output_high": 10.041441917419434
     },
-    "conv2d_5/Conv2D/fq_weights_1": {
+    "Multiply_3650/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -43117,13 +43117,13 @@
             ]
         ]
     },
-    "leaky_re_lu_3/LeakyRelu/fq_output_0": {
+    "Transpose_1308/fq_output_0": {
         "input_low": -6.130911350250244,
         "input_high": 6.083013534545898,
         "output_low": -6.130911350250244,
         "output_high": 6.083013534545898
     },
-    "conv2d_3/Conv2D/fq_weights_1": {
+    "Multiply_3622/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -44029,13 +44029,13 @@
             ]
         ]
     },
-    "leaky_re_lu_2/LeakyRelu/fq_output_0": {
+    "Transpose_1273/fq_output_0": {
         "input_low": -10.120508193969727,
         "input_high": 10.041441917419434,
         "output_low": -10.120508193969727,
         "output_high": 10.041441917419434
     },
-    "conv2d_2/Conv2D/fq_weights_1": {
+    "Multiply_3608/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -45837,13 +45837,13 @@
             ]
         ]
     },
-    "leaky_re_lu_1/LeakyRelu/fq_output_0": {
+    "Transpose_1243/fq_output_0": {
         "input_low": -12.622331619262695,
         "input_high": 12.523719787597656,
         "output_low": -12.622331619262695,
         "output_high": 12.523719787597656
     },
-    "conv2d_1/Conv2D/fq_weights_1": {
+    "Multiply_3594/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -47645,13 +47645,13 @@
             ]
         ]
     },
-    "leaky_re_lu/LeakyRelu/fq_output_0": {
+    "Transpose_1188/fq_output_0": {
         "input_low": -2.385321617126465,
         "input_high": 2.3666863441467285,
         "output_low": -2.385321617126465,
         "output_high": 2.3666863441467285
     },
-    "conv2d/Conv2D/fq_weights_1": {
+    "Multiply_3580/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -47768,7 +47768,7 @@
             [
                 [
                     [
-                        -0.0461965873837471
+                        -0.0461965911090374
                     ]
                 ]
             ],
@@ -47931,7 +47931,7 @@
             [
                 [
                     [
-                        0.06539495289325714
+                        0.06539496034383774
                     ]
                 ]
             ],
@@ -48115,7 +48115,7 @@
             [
                 [
                     [
-                        -0.06439225375652313
+                        -0.06439224630594254
                     ]
                 ]
             ],
@@ -48220,7 +48220,7 @@
             [
                 [
                     [
-                        -0.0461965873837471
+                        -0.0461965911090374
                     ]
                 ]
             ],
@@ -48383,7 +48383,7 @@
             [
                 [
                     [
-                        0.06539495289325714
+                        0.06539496034383774
                     ]
                 ]
             ],
@@ -48563,13 +48563,13 @@
         "output_low": 0.0,
         "output_high": 0.9999967813491821
     },
-    "leaky_re_lu_4/LeakyRelu/fq_output_0": {
+    "Transpose_1338/fq_output_0": {
         "input_low": -6.130911350250244,
         "input_high": 6.083013534545898,
         "output_low": -6.130911350250244,
         "output_high": 6.083013534545898
     },
-    "conv2d_4/Conv2D/fq_weights_1": {
+    "Multiply_3636/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -49475,13 +49475,13 @@
             ]
         ]
     },
-    "leaky_re_lu_8/LeakyRelu/fq_output_0": {
+    "Transpose_1471/fq_output_0": {
         "input_low": -9.338680267333984,
         "input_high": 9.265722274780273,
         "output_low": -9.338680267333984,
         "output_high": 9.265722274780273
     },
-    "conv2d_8/Conv2D/fq_weights_1": {
+    "Multiply_3692/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -51283,13 +51283,13 @@
             ]
         ]
     },
-    "leaky_re_lu_12/LeakyRelu/fq_output_0": {
+    "Transpose_1604/fq_output_0": {
         "input_low": -4.5784101486206055,
         "input_high": 4.5426411628723145,
         "output_low": -4.5784101486206055,
         "output_high": 4.5426411628723145
     },
-    "conv2d_12/Conv2D/fq_weights_1": {
+    "Multiply_3748/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -54883,19 +54883,19 @@
             ]
         ]
     },
-    "up_sampling2d/resize/ResizeNearestNeighbor/fq_output_0": {
+    "Transpose_1740/fq_output_0": {
         "input_low": -3.59743070602417,
         "input_high": 3.5693256855010986,
         "output_low": -3.59743070602417,
         "output_high": 3.5693256855010986
     },
-    "leaky_re_lu_17/LeakyRelu/fq_output_0": {
+    "Transpose_1732/fq_output_0": {
         "input_low": -3.59743070602417,
         "input_high": 3.5693256855010986,
         "output_low": -3.59743070602417,
         "output_high": 3.5693256855010986
     },
-    "conv2d_18/Conv2D/fq_weights_1": {
+    "Multiply_3804/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -58489,13 +58489,13 @@
             ]
         ]
     },
-    "leaky_re_lu_15/LeakyRelu/fq_output_0": {
+    "Transpose_1702/fq_output_0": {
         "input_low": -2.133545160293579,
         "input_high": 2.1168768405914307,
         "output_low": -2.133545160293579,
         "output_high": 2.1168768405914307
     },
-    "conv2d_15/Conv2D/fq_weights_1": {
+    "Multiply_3790/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -60770,7 +60770,7 @@
             [
                 [
                     [
-                        0.5015769600868225
+                        0.5015769004821777
                     ]
                 ]
             ],
@@ -64358,7 +64358,7 @@
             [
                 [
                     [
-                        0.5015769600868225
+                        0.5015769004821777
                     ]
                 ]
             ],
@@ -65673,13 +65673,13 @@
             ]
         ]
     },
-    "leaky_re_lu_14/LeakyRelu/fq_output_0": {
+    "Transpose_1672/fq_output_0": {
         "input_low": -1.492520809173584,
         "input_high": 1.4808604717254639,
         "output_low": -1.492520809173584,
         "output_high": 1.4808604717254639
     },
-    "conv2d_14/Conv2D/fq_weights_1": {
+    "Multiply_3776/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -66153,7 +66153,7 @@
             [
                 [
                     [
-                        -0.05792614072561264
+                        -0.05792613327503204
                     ]
                 ]
             ],
@@ -69739,7 +69739,7 @@
             [
                 [
                     [
-                        0.05792614072561264
+                        0.05792613327503204
                     ]
                 ]
             ],
@@ -73325,7 +73325,7 @@
             [
                 [
                     [
-                        -0.05792614072561264
+                        -0.05792613327503204
                     ]
                 ]
             ],
@@ -76911,7 +76911,7 @@
             [
                 [
                     [
-                        0.05792614072561264
+                        0.05792613327503204
                     ]
                 ]
             ],
@@ -80025,7 +80025,7 @@
             ]
         ]
     },
-    "conv2d_17/Conv2D/fq_weights_1": {
+    "Convolution_754/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -87175,13 +87175,13 @@
             ]
         ]
     },
-    "leaky_re_lu_16/LeakyRelu/fq_output_0": {
+    "Transpose_1810/fq_output_0": {
         "input_low": -4.909113883972168,
         "input_high": 4.870761394500732,
         "output_low": -4.909113883972168,
         "output_high": 4.870761394500732
     },
-    "conv2d_16/Conv2D/fq_weights_1": {
+    "Multiply_3832/fq_weights_1": {
         "input_low": [
             [
                 [

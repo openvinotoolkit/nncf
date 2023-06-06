@@ -14,7 +14,6 @@ from typing import List
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 
 METATYPES_FOR_TEST = OperatorMetatypeRegistry("TEST_METATYPES")
@@ -166,13 +165,6 @@ DEFAULT_TEST_QUANT_TRAIT_MAP = {
         GeluTestMetatype,
         LinearTestMetatype,
         AddTestMetatype,
-    ],
-    QuantizationTrait.NON_QUANTIZABLE: [
-        MaxPool2dTestMetatype,
-        DropoutTestMetatype,
-        MinTestMetatype,
-        SoftmaxTestMetatype,
-        UnknownMetatype,
     ],
     QuantizationTrait.CONCAT: [CatTestMetatype],
 }

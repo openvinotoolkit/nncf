@@ -3,14 +3,14 @@
         "model_name": "vgg11",
         "quantization_params": {},
         "metrics": {
-            "FP32 top 1": 0.61246
+            "FP32 top 1": 0.68344
         }
     },
     "resnet18": {
         "model_name": "resnet18",
         "quantization_params": {},
         "metrics": {
-            "FP32 top 1": 0.62734
+            "FP32 top 1": 0.70104
         }
     },
     "mobilenetv2_050": {
@@ -19,7 +19,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.59498
+            "FP32 top 1": 0.64568
         }
     },
     "mobilenetv2_050_BC": {
@@ -29,7 +29,7 @@
             "fast_bias_correction": false
         },
         "metrics": {
-            "FP32 top 1": 0.59498
+            "FP32 top 1": 0.64568
         }
     },
     "densenet121": {
@@ -52,7 +52,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.75948
+            "FP32 top 1": 0.77728
         }
     },
     "xception": {
@@ -61,7 +61,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.77522
+            "FP32 top 1": 0.78506
         }
     },
     "efficientnet_b0": {
@@ -70,7 +70,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.72912
+            "FP32 top 1": 0.77292
         }
     },
     "efficientnet_b0_BC": {
@@ -80,7 +80,7 @@
             "fast_bias_correction": false
         },
         "metrics": {
-            "FP32 top 1": 0.72912
+            "FP32 top 1": 0.77292
         }
     },
     "darknet53": {
@@ -89,7 +89,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.7645
+            "FP32 top 1": 0.79858
         }
     },
     "resnest14d": {
@@ -98,14 +98,14 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.70102
+            "FP32 top 1": 0.74862
         }
     },
     "inception_resnet_v2": {
         "model_name": "inception_resnet_v2",
         "quantization_params": {},
         "metrics": {
-            "FP32 top 1": 0.78894
+            "FP32 top 1": 0.80102
         }
     },
     "wide_resnet50_2": {
@@ -114,7 +114,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.7664
+            "FP32 top 1": 0.81414
         }
     },
     "regnetx_002": {
@@ -123,7 +123,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.63078
+            "FP32 top 1": 0.67826
         }
     },
     "mobilenetv3_small_050": {
@@ -132,7 +132,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.51764
+            "FP32 top 1": 0.56338
         }
     },
     "levit_128": {
@@ -166,7 +166,7 @@
         }
     },
     "convit_tiny": {
-        "skipped" : "Suppressed due to bug - 104173",
+        "skipped": "Suppressed due to bug - 104173",
         "model_name": "convit_tiny",
         "quantization_params": {
             "preset": "MIXED",
@@ -199,7 +199,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.70656
+            "FP32 top 1": 0.77504
         }
     },
     "efficientnet_lite0": {
@@ -208,7 +208,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.69878
+            "FP32 top 1": 0.7496
         }
     },
     "dpn68": {
@@ -217,7 +217,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.71478
+            "FP32 top 1": 0.75964
         }
     },
     "dla34": {
@@ -226,7 +226,7 @@
             "preset": "MIXED"
         },
         "metrics": {
-            "FP32 top 1": 0.68424
+            "FP32 top 1": 0.74416
         }
     }
 }
