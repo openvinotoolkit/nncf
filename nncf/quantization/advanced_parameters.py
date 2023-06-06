@@ -128,9 +128,6 @@ class AdvancedQuantizationParameters:
     :type inplace_statistics: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
-    :param strip_model: Strips auxiliary layers that were used for the model compression,
-    as it's only needed for training. Parameter used only for Pytorch and TensorFlow backends.
-    :type strip_model: bool
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -150,7 +147,6 @@ class AdvancedQuantizationParameters:
     quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_bias_correction: bool = False
-    strip_model: bool = True
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)

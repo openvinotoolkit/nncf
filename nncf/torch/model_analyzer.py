@@ -69,7 +69,7 @@ def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Optional[torch.T
     """
     fused_node = get_potential_fused_node(node.node_name, model)
     target_node_name = fused_node.node_name if fused_node else node.node_name
-    node_module = model.get_containing_module(target_node_name)
+    node_module = model.nncf.get_containing_module(target_node_name)
     if node_module.bias is None:
         return None
     return node_module.bias.data

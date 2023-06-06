@@ -320,49 +320,19 @@ def test_do_copy(do_copy):
     assert id(compressed_model) == id(compression_ctrl.model)
 
 
-@pytest.mark.parametrize("strip_model", (True, False, None))
-def test_strip_quntized_model(strip_model):
+@pytest.mark.parametrize("strip_type", ("nncf", "torch", "nncf_interfere"))
+def test_nncf_strip_api(strip_type):
     model = BasicConvTestModel()
+    config = _get_config_for_algo(model.INPUT_SIZE)
 
-    def transform_fn(data_item):
-        return data_item[0]
+    quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
-    def to_tensor(x):
-        return torch.Tensor(x)
+    if strip_type == "nncf":
+        strip_model = nncf.strip(quantized_model)
+    elif strip_type == "torch":
+        strip_model = nncf.torch.strip(quantized_model)
+    elif strip_type == "nncf_interfere":
+        strip_model = quantized_model.nncf.strip()
 
-    dataset = get_static_dataset(input_size=[1, 1, 4, 4], transform_fn=transform_fn, fn_to_type=to_tensor)
-
-    if strip_model is not None:
-        advanced_parameters = AdvancedQuantizationParameters(
-            overflow_fix=OverflowFix.ENABLE,
-            quantize_outputs=True,
-            strip_model=strip_model,
-        )
-    else:
-        advanced_parameters = None
-
-    quantized_model = nncf.quantize(model, dataset, subset_size=1, advanced_parameters=advanced_parameters)
-
-    fq = quantized_model.conv.get_pre_op("0").op
-    if strip_model is None or strip_model is True:
-        assert isinstance(fq, FakeQuantize)
-    else:
-        assert isinstance(fq, BaseQuantizer)
-
-
-def test_strip_quntized_model_error_on_unsupported_num_bits():
-    model = BasicConvTestModel()
-
-    def transform_fn(data_item):
-        return data_item[0]
-
-    def to_tensor(x):
-        return torch.Tensor(x)
-
-    dataset = get_static_dataset(input_size=[1, 1, 4, 4], transform_fn=transform_fn, fn_to_type=to_tensor)
-    advanced_parameters = AdvancedQuantizationParameters(
-        strip_model=True,
-        activations_quantization_params=QuantizationParameters(num_bits=1),
-    )
-    with pytest.raises(RuntimeError, match=re.escape(r"strip_model")):
-        nncf.quantize(model, dataset, subset_size=1, advanced_parameters=advanced_parameters)
+    fq = strip_model.conv.get_pre_op("0").op
+    assert isinstance(fq, FakeQuantize)

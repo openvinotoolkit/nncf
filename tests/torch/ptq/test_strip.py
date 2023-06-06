@@ -9,17 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
-
 import pytest
 from torch.quantization import FakeQuantize
 
+import nncf
 from nncf.data import Dataset
 from nncf.experimental.torch.quantization.quantize_model import quantize_impl
 from nncf.parameters import TargetDevice
 from nncf.quantization import QuantizationPreset
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 from tests.torch.helpers import LeNet
@@ -58,8 +55,8 @@ def check_fq(model: NNCFNetwork, striped: bool):
                     assert isinstance(op.op, BaseQuantizer)
 
 
-@pytest.mark.parametrize("strip_model", (True, False, None))
-def test_nncf_quantize_strip(strip_model):
+@pytest.mark.parametrize("strip_type", ("nncf", "torch", "nncf_interfere"))
+def test_nncf_quantize_strip(strip_type):
     model = LeNet()
     input_size = [1, 1, 32, 32]
 
@@ -68,11 +65,6 @@ def test_nncf_quantize_strip(strip_model):
         return images
 
     dataset = Dataset(RandomDatasetMock(input_size), transform_fn)
-
-    if strip_model is not None:
-        advanced_parameters = AdvancedQuantizationParameters(strip_model=strip_model)
-    else:
-        advanced_parameters = None
 
     quantized_model = quantize_impl(
         model=model,
@@ -81,33 +73,13 @@ def test_nncf_quantize_strip(strip_model):
         target_device=TargetDevice.CPU,
         subset_size=1,
         fast_bias_correction=True,
-        advanced_parameters=advanced_parameters,
     )
+
+    if strip_type == "nncf":
+        strip_model = nncf.strip(quantized_model)
+    elif strip_type == "torch":
+        strip_model = nncf.torch.strip(quantized_model)
+    elif strip_type == "nncf_interfere":
+        strip_model = quantized_model.nncf.strip()
 
     check_fq(quantized_model, True if strip_model is None else strip_model)
-
-
-def test_strip_quntized_model_error_on_unsupported_num_bits():
-    model = LeNet()
-    input_size = [1, 1, 32, 32]
-
-    def transform_fn(data_item):
-        images, _ = data_item
-        return images
-
-    dataset = Dataset(RandomDatasetMock(input_size), transform_fn)
-    advanced_parameters = AdvancedQuantizationParameters(
-        strip_model=True,
-        activations_quantization_params=QuantizationParameters(num_bits=1),
-    )
-
-    with pytest.raises(RuntimeError, match=re.escape(r"strip_model")):
-        quantize_impl(
-            model=model,
-            calibration_dataset=dataset,
-            preset=QuantizationPreset.MIXED,
-            target_device=TargetDevice.CPU,
-            subset_size=1,
-            fast_bias_correction=True,
-            advanced_parameters=advanced_parameters,
-        )

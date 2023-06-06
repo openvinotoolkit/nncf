@@ -181,7 +181,6 @@ def quantize_impl(
 
     compression_ctrl, compressed_model = create_compressed_model(model=model, config=nncf_config)
 
-    if advanced_parameters.strip_model:
-        compressed_model = compression_ctrl.strip_model(compressed_model)
+    stripped_model = compression_ctrl.strip_model(compressed_model)
 
-    return compressed_model
+    return stripped_model

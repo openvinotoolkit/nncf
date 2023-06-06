@@ -12,10 +12,6 @@
 import pytest
 import tensorflow as tf
 
-import nncf
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.tensorflow.graph.utils import get_nncf_operations
-from tests.tensorflow.accuracy_aware_training.test_keras_api import get_const_target_mock_regression_dataset
 from tests.tensorflow.helpers import TFTensorListComparator
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_two_conv_test_model
@@ -56,29 +52,3 @@ def test_do_copy(do_copy):
         assert id(inference_model) != id(compression_model)
     else:
         assert id(inference_model) == id(compression_model)
-
-
-@pytest.mark.parametrize("strip_model", (True, False, None))
-def test_nncf_quantize_strip(strip_model):
-    model = get_basic_two_conv_test_model()
-
-    def transform_fn(data_item):
-        return data_item[0]
-
-    dataset = nncf.Dataset(get_const_target_mock_regression_dataset(img_size=4), transform_fn)
-
-    if strip_model is not None:
-        advanced_parameters = AdvancedQuantizationParameters(strip_model=strip_model)
-    else:
-        advanced_parameters = None
-
-    quantized_model = nncf.quantize(model, dataset, advanced_parameters=advanced_parameters)
-
-    has_half_range = False
-    for _, _, op in get_nncf_operations(quantized_model, ["conv2d_kernel_quantizer", "conv2d_1_kernel_quantizer"]):
-        has_half_range = has_half_range or op.half_range
-
-    if strip_model is None or strip_model is True:
-        assert not has_half_range
-    else:
-        assert has_half_range
