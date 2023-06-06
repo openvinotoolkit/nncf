@@ -3,7 +3,7 @@ pillow>=8.0.1
 tensorboard>=2.1
 matplotlib>=3.3.3
 defusedxml>=0.7.0rc1
-mlflow>=1.12.1
+mlflow>=1.12.1,<2.4.0
 returns>0.14
 opencv-python>=4.4.0.46
 torchvision>=0.10.0,<0.15  # the minor version should always match the torch minor version that is installed via NNCF's `pip install nncf[torch]`; TV minor version is torch minor version +1
