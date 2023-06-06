@@ -304,7 +304,6 @@ def model_eval_fn(model, strategy, model_builder, test_dist_dataset, num_test_ba
     return metric_result["AP"]
 
 
-# pylint: disable=too-many-statements
 def run(config):
     if config.disable_tensor_float_32_execution:
         tf.config.experimental.enable_tensor_float_32_execution(False)
@@ -332,9 +331,8 @@ def run(config):
 
     # Register additional parameters in the NNCFConfig for initialization
     # the compressed model during building
-    nncf_config = config.nncf_config
-    nncf_config = register_default_init_args(
-        nncf_config=nncf_config, data_loader=train_dataset, batch_size=train_builder.global_batch_size
+    config.nncf_config = register_default_init_args(
+        nncf_config=config.nncf_config, data_loader=train_dataset, batch_size=train_builder.global_batch_size
     )
 
     resume_training = config.ckpt_path is not None
@@ -363,7 +361,7 @@ def run(config):
             if "train" in config.mode and is_accuracy_aware_training(config):
                 uncompressed_model_accuracy = config.nncf_config.get_extra_struct(ModelEvaluationArgs).eval_fn(model)
 
-            compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
+            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
             scheduler = build_scheduler(config=config, steps_per_epoch=steps_per_epoch)
 
             optimizer = build_optimizer(config=config, scheduler=scheduler)
@@ -414,7 +412,7 @@ def run(config):
                 return metric_result["AP"]
 
             acc_aware_training_loop = create_accuracy_aware_training_loop(
-                nncf_config, compression_ctrl, uncompressed_model_accuracy
+                config.nncf_config, compression_ctrl, uncompressed_model_accuracy
             )
             compress_model = acc_aware_training_loop.run(
                 compress_model,
