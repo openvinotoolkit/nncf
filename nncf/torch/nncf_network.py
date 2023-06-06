@@ -745,13 +745,12 @@ class NNCFNetworkInterface(torch.nn.Module):
         :param do_copy: _description_, defaults to True.
         :return: _description_
         """
-        if self.compression_controller is not None:
-            return self.compression_controller.strip(do_copy)
-        else:
+        if self.compression_controller is None:
             # PTQ algorithm does not set compressed controller .
             from nncf.torch.quantization.strip import strip_quantized_model  # pylint: disable=cyclic-import
 
             return strip_quantized_model(self._model_ref)
+        return self.compression_controller.strip(do_copy)
 
 
 class NNCFNetworkMeta(type):
