@@ -106,7 +106,7 @@ class OVMatMulMetatype(OVOpMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    const_channel_axis = [1]  # const layout: [Y, X]
+    const_channel_axis = [-1]  # const layout: [B, ..., Y, X]
     output_channel_axis = -1
 
 
