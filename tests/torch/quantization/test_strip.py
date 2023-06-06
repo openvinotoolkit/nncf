@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 from typing import Tuple
 
 import numpy as np
@@ -23,11 +22,7 @@ from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.config import NNCFConfig
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import OverflowFix
-from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
@@ -37,7 +32,6 @@ from tests.common.quantization.data_generators import generate_random_low_and_ra
 from tests.common.quantization.data_generators import generate_random_scale_by_input_size
 from tests.common.quantization.data_generators import generate_sweep_data
 from tests.common.quantization.data_generators import get_quant_len_by_range
-from tests.common.static_dataset import get_static_dataset
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
