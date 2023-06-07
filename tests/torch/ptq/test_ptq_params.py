@@ -204,7 +204,7 @@ def test_create_nncf_config(params):
     else:
         assert num_bn_samples == params["subset_size"]
 
-    ref_scope = [x for x in params["ignored_scope"].names] if params["ignored_scope"] is not None else []
+    ref_scope = params["ignored_scope"].names if params["ignored_scope"] is not None else []
     if params["model_type"] == ModelType.TRANSFORMER:
         ref_scope = [
             "{re}.*Embeddings.*",

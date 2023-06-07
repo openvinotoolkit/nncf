@@ -23,6 +23,7 @@ from tests.torch.helpers import LeNet
 from tests.torch.helpers import RandomDatasetMock
 
 
+# pylint: disable=too-many-branches
 def check_fq(model: NNCFNetwork, striped: bool):
     if hasattr(model.nncf, "external_quantizers"):
         for key in list(model.nncf.external_quantizers.keys()):

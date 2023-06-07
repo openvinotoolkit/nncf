@@ -10,11 +10,10 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar
+from typing import List, TypeVar
 
 import pytest
 
-from nncf.data import Dataset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
