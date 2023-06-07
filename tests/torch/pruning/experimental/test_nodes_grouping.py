@@ -35,8 +35,8 @@ from nncf.experimental.common.pruning.propagation_data import ConsumerInfo
 from nncf.experimental.common.pruning.propagation_data import ProducerInfo
 from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
 
-# NNCF Torch should be imported before transformers in order to patch all operations before they added to some global vars,
-# otherwise test may fail with some error (e.g. IndexError: list index out of range).
+# NNCF Torch should be imported before transformers in order to patch all operations before they
+# added to some global vars,  otherwise test may fail with some error (e.g. IndexError: list index out of range).
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
 from transformers import AutoModelForQuestionAnswering
@@ -140,7 +140,7 @@ class GroupTestDesc:
     ref_groups: Optional[List[PruningGroup]] = None
 
     def __str__(self) -> str:
-        return self.model_desc.model_name
+        return self.model_desc.model_name  # pylint: disable=no-member
 
 
 SYNTHETIC_DESCS = [

@@ -11,7 +11,7 @@
 
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import HWFusedPatterns
+from nncf.common.graph.patterns import Patterns
 from nncf.tensorflow.graph.metatypes.tf_ops import TFIdentityOpMetatype
 from nncf.tensorflow.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
@@ -24,8 +24,8 @@ from nncf.tensorflow.graph.patterns import create_h_swish_act
 from nncf.tensorflow.graph.patterns import create_matmul_biasadd_pattern
 
 
-def _get_tf_hw_fused_patterns() -> HWFusedPatterns:
-    retval = HWFusedPatterns()
+def _get_tf_hw_fused_patterns() -> Patterns:
+    retval = Patterns()
     linear_ops = GraphPattern()
     linear_ops.add_node(**LINEAR_OPERATIONS)
 

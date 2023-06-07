@@ -111,6 +111,7 @@ INSTALL_REQUIRES = [
     # reference files no longer match against the graphs produced in tests.
     # Using 2.x versions of pyparsing seems to fix the issue.
     # Ticket: 69520
+    "packaging>=20.0",
     "pyparsing<3.0",
     "pymoo==0.5.0",
     "jsonschema>=3.2.0",
@@ -131,12 +132,12 @@ TF_EXTRAS = [
 ]
 
 TORCH_EXTRAS = [
-    "torch>=1.9.1,<1.14;python_version < '3.11'",
+    "torch>=1.13.0,<2.1;python_version < '3.11'",
 ]
 
 ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]
 
-OPENVINO_EXTRAS = ["openvino"]
+OPENVINO_EXTRAS = ["openvino==2023.0.0"]
 
 
 EXTRAS_REQUIRE = {

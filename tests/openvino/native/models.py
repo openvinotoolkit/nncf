@@ -24,7 +24,8 @@ SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
 class OVReferenceModel(ABC):
     def __init__(self, **kwargs):
         self._rng = np.random.default_rng(seed=0)
-        self.ref_graph_name = f"{self.__class__.__name__}.dot"
+        self.ref_model_name = f"{self.__class__.__name__}"
+        self.ref_graph_name = f"{self.ref_model_name}.dot"
         self.ov_model = self._create_ov_model(**kwargs)
 
     @abstractmethod
@@ -40,7 +41,7 @@ class LinearModel(OVReferenceModel):
         if reshape_shape is None:
             reshape_shape = (1, 3, 2, 4)
         if matmul_w_shape is None:
-            matmul_w_shape = (1, 3, 4, 5)
+            matmul_w_shape = (4, 5)
         if add_shape is None:
             add_shape = (1, 3, 2, 4)
 
@@ -210,9 +211,9 @@ class WeightsModel(OVReferenceModel):
             conv, kernel_2, output_shape, strides, pads, pads, dilations, name="Conv_backprop"
         )
 
-        weights_1 = self._rng.random((1, 3, 1, 4)).astype(np.float32)
+        weights_1 = self._rng.random((1, 4)).astype(np.float32)
         matmul_1 = opset.matmul(conv_tr, weights_1, transpose_a=False, transpose_b=False, name="MatMul_1")
-        weights_0 = self._rng.random((1, 3, 1, 1)).astype(np.float32)
+        weights_0 = self._rng.random((1, 1)).astype(np.float32)
         matmul_0 = opset.matmul(weights_0, matmul_1, transpose_a=False, transpose_b=False, name="MatMul_0")
         matmul = opset.matmul(matmul_0, matmul_1, transpose_a=False, transpose_b=True, name="MatMul")
         matmul_const = opset.matmul(weights_1, weights_0, transpose_a=True, transpose_b=False, name="MatMul_const")
@@ -596,7 +597,7 @@ class SeBlockModel(OVReferenceModel):
         sigmoid = opset.sigmoid(add2, name="Sigmoid")
         multiply = opset.multiply(add0, sigmoid, name="Mul")
 
-        data = self._rng.random((1, 3, 6, 5)).astype(np.float32)
+        data = self._rng.random((6, 5)).astype(np.float32)
         matmul = opset.matmul(multiply, data, transpose_a=False, transpose_b=False, name="MatMul")
         result_1 = opset.result(matmul, name="Result")
         model = ov.Model([result_1], [input_1])

@@ -104,20 +104,31 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
     layer_metatypes.TFZeroPadding1DLayerMetatype,
     layer_metatypes.TFZeroPadding2DLayerMetatype,
     layer_metatypes.TFZeroPadding3DLayerMetatype,
+    layer_metatypes.TFDropoutLayerMetatype,
+    layer_metatypes.TFSlicingOpLambdaMetatype,
+    layer_metatypes.TFPermuteLayerMetatype,
     # TF_OP_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
     op_metatypes.TFIdentityOpMetatype,
     op_metatypes.TFPackOpMetatype,
     op_metatypes.TFPadOpMetatype,
     op_metatypes.TFStridedSliceOpMetatype,
+    op_metatypes.TFSliceOpMetatype,
     op_metatypes.TFReshapeOpMetatype,
     op_metatypes.TFShapeOpMetatype,
     op_metatypes.TFMaxOpMetatype,
     op_metatypes.TFMaxPoolOpMetatype,
     op_metatypes.TFExpandDimsOpMetatype,
     op_metatypes.TFSqueezeOpMetatype,
+    op_metatypes.TFGatherOpMetatype,
     op_metatypes.TFMaxPool3DOpMetatype,
     op_metatypes.TFTileOpMetatype,
     op_metatypes.TFSplitOpMetatype,
+    op_metatypes.TFTransposeOpMetatype,
+    # TFReluOpMetatype and TFReLULayerMetatype aren't considered to be QUANTIZATION_AGNOSTIC, because:
+    # 1. Runtime doesn't provide performance benefits by quantizing the stand-alone RELU's (ticket: 59548)
+    # 2. It's frequently better for the end accuracy to have quantizers set up after the RELU
+    # so that the input distribution to the quantizer is non-negative
+    # and we can therefore have better quantization resolution while preserving the original dynamic range
 ]
 
 LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS = [
@@ -130,13 +141,10 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS = [
     op_metatypes.TFMinimumOpMetatype,
 ]
 
-LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS = [op_metatypes.TFSplitOpMetatype]
-
-LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION = (
-    LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
-    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS
-    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
-)
+LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS = [
+    op_metatypes.TFSplitOpMetatype,
+    op_metatypes.TFUnPackOpMetatype,
+]
 
 ELEMENTWISE_LAYER_METATYPES = [
     layer_metatypes.TFAddLayerMetatype,
@@ -163,6 +171,10 @@ RESHAPE_METATYPES = [
 DIMENSION_PERMUTATION_METATYPES = [
     op_metatypes.TFTransposeOpMetatype,
     layer_metatypes.TFPermuteLayerMetatype,
+]
+
+CAST_METATYPES = [
+    op_metatypes.TFCastOpMetatype,
 ]
 
 

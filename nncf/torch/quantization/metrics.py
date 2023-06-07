@@ -329,7 +329,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                 self.stats.quantized_edges_in_cfg += 1
 
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
-        pattern = PatternsManager.get_full_pattern_graph(backend=BackendType.TORCH, device=self._target_device)
+        pattern = PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH, device=self._target_device)
         # pylint: disable=protected-access
         matches = find_subgraphs_matching_pattern(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)

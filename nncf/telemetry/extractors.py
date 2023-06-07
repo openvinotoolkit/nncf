@@ -48,7 +48,6 @@ class TelemetryExtractor(ABC):
         Implement this method to prepare the telemetry event data from the tracked function's argument value
         passed via `argvalue`.
         """
-        pass
 
 
 class VerbatimTelemetryExtractor(TelemetryExtractor):

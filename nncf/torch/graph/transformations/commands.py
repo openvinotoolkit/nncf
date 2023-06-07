@@ -98,7 +98,42 @@ class PTTargetPoint(TargetPoint):
         return cls(**kwargs)
 
 
-class PTInsertionCommand(TransformationCommand):
+class PTCommand(Command):
+    """
+    The base class for all Command for PyTorch.
+    """
+
+    def requires_graph_rebuild(self):
+        """
+        Return boolean flag to rebuild graph of model.
+
+        :return: Boolean flag.
+        """
+        return False
+
+
+class PTTransformationCommand(TransformationCommand):
+    """
+    The base class for all TransformationCommand for PyTorch.
+    """
+
+    def requires_graph_rebuild(self):
+        """
+        Return boolean flag to rebuild graph of model.
+
+        :return: Boolean flag.
+        """
+        return False
+
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
+        raise NotImplementedError()
+
+
+class PTInsertionCommand(PTTransformationCommand):
+    """
+    Insertion operation to the models.
+    """
+
     def __init__(
         self,
         point: PTTargetPoint,
@@ -109,12 +144,21 @@ class PTInsertionCommand(TransformationCommand):
         self.fn = fn  # type: Callable
         self.priority = priority  # type: TransformationPriority
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
         # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
         raise NotImplementedError()
 
+    def requires_graph_rebuild(self):
+        """
+        Return boolean flag to rebuild graph of model.
 
-class PTModelExtractionWithFusedBiasCommand(Command):
+        :return: Boolean flag.
+        """
+        # Rebuild graph when adding quantization nodes.
+        return self.priority == TransformationPriority.QUANTIZATION_PRIORITY
+
+
+class PTModelExtractionWithFusedBiasCommand(PTCommand):
     """
     Extracts sequence by name with node that contain fused bias.
     """
@@ -130,7 +174,7 @@ class PTModelExtractionWithFusedBiasCommand(Command):
         raise NotImplementedError()
 
 
-class PTBiasCorrectionCommand(TransformationCommand):
+class PTBiasCorrectionCommand(PTTransformationCommand):
     """
     Corrects bias value in the model based on the input value.
     """
@@ -143,5 +187,5 @@ class PTBiasCorrectionCommand(TransformationCommand):
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_value = bias_value
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
         raise NotImplementedError()

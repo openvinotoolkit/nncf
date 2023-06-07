@@ -95,4 +95,3 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |UNet|None|Mapillary|56.24|[unet_mapillary.json](configs/unet_mapillary.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth)|
 |UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.64 (0.60)|[unet_mapillary_pruning_geometric_median.json](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_pruning_geometric_median.pth)|
-|UNet|Filter pruning 25%,<br/>geometric median criterion|Mapillary|55.62 (0.61)|589.4 (67.36%)|18.6 (60.00%)|[Link](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_pruning_geometric_median.pth)|

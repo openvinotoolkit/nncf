@@ -203,7 +203,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_model_type_ignore_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         """
         Returns ignores scope based on a model type and device parameters.
 

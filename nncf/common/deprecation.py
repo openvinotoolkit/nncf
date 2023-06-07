@@ -14,7 +14,7 @@ import inspect
 import warnings
 from typing import Callable, Type, TypeVar
 
-from pkg_resources import parse_version
+from packaging import version
 
 
 def warning_deprecated(msg):
@@ -37,8 +37,8 @@ class deprecated:
         :param msg: Custom message to be added after the boilerplate deprecation text.
         """
         self.msg = msg
-        self.start_version = parse_version(start_version) if start_version is not None else None
-        self.end_version = parse_version(end_version) if end_version is not None else None
+        self.start_version = version.parse(start_version) if start_version is not None else None
+        self.end_version = version.parse(end_version) if end_version is not None else None
 
     def __call__(self, fn_or_class: ClassOrFn) -> ClassOrFn:
         name = fn_or_class.__module__ + "." + fn_or_class.__name__

@@ -17,7 +17,7 @@ from typing import Dict, Union
 import jstyleson as json
 import pytest
 import torch.cuda
-from pkg_resources import parse_version
+from packaging import version
 from pytest import approx
 
 from tests.shared.paths import PROJECT_ROOT
@@ -317,7 +317,7 @@ class TestMovementTraining:
         self._validate_train_metric(movement_desc_long)
 
     @pytest.mark.skipif(
-        parse_version(torch.__version__) < parse_version("1.12"),
+        version.parse(torch.__version__) < version.parse("1.12"),
         reason=f"torch {torch.__version__} may not compatible with installed transformers package. "
         f"Some tests may fail with error",
     )

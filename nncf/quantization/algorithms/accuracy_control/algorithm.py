@@ -11,7 +11,7 @@
 
 import operator
 import sys
-from typing import Any, Callable, Iterable, List, TypeVar
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
@@ -52,6 +52,41 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
 def _create_message(nodes: Iterable[NNCFNode]) -> str:
     names = [f"\t{x.node_name}" for x in nodes]
     return "\n".join(names)
+
+
+def calculate_accuracy_drop(
+    initial_metric: float, quantized_metric: float, max_drop: float, drop_type: DropType
+) -> Tuple[bool, Optional[float]]:
+    """
+    Calculates accuracy drop and termination boolean flag.
+
+    :param initial_metric: Metric value for initial model.
+    :param quantized_metric: Metric value for quantized model.
+    :param max_drop: Maximum accuracy drop that should be achieved.
+    :param drop_type: Accuracy drop type.
+    :return: A tuple (should_terminate, accuracy_drop) where:
+        - should_terminate: Whether the algorithm should terminate or not.
+        - accuracy_drop: Accuracy drop value.
+    """
+    should_terminate = None
+    accuracy_drop = None
+
+    if quantized_metric >= initial_metric:
+        drop_values_by_drop_type = {
+            DropType.RELATIVE: None,
+            DropType.ABSOLUTE: initial_metric - quantized_metric,
+        }
+        accuracy_drop = drop_values_by_drop_type[drop_type]
+        should_terminate = True
+    else:
+        drop_values_by_drop_type = {
+            DropType.RELATIVE: abs(1 - quantized_metric / initial_metric),
+            DropType.ABSOLUTE: initial_metric - quantized_metric,
+        }
+        accuracy_drop = drop_values_by_drop_type[drop_type]
+        should_terminate = accuracy_drop <= max_drop
+
+    return should_terminate, accuracy_drop
 
 
 class QuantizationAccuracyRestorerReport:
@@ -151,7 +186,14 @@ class QuantizationAccuracyRestorer:
         backend = get_backend(initial_model)
         algo_backend = get_algo_backend(backend)
 
-        accuracy_drop = self.calculate_accuracy_drop(initial_metric, quantized_metric)
+        should_terminate, accuracy_drop = calculate_accuracy_drop(
+            initial_metric, quantized_metric, self.max_drop, self.drop_type
+        )
+
+        if should_terminate:
+            QuantizationAccuracyRestorer._print_completion_message(accuracy_drop, self.drop_type)
+            return quantized_model
+
         nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({self.drop_type})")
 
         if accuracy_drop <= self.max_drop:
@@ -215,9 +257,9 @@ class QuantizationAccuracyRestorer:
             current_metric = validation_fn(
                 algo_backend.prepare_for_inference(current_model), validation_dataset.get_data()
             )
-            current_accuracy_drop = self.calculate_accuracy_drop(initial_metric, current_metric)
-            nncf_logger.info(
-                f"Accuracy drop with the new quantization scope is {float(current_accuracy_drop)} ({self.drop_type})"
+
+            should_terminate, current_accuracy_drop = calculate_accuracy_drop(
+                initial_metric, current_metric, self.max_drop, self.drop_type
             )
 
             if not ranked_groups:
@@ -229,12 +271,17 @@ class QuantizationAccuracyRestorer:
                 break
 
             # Accuracy was restored to the acceptable drop.
-            if current_accuracy_drop <= self.max_drop:
+            if should_terminate:
                 report.reached_required_drop = True
+                QuantizationAccuracyRestorer._print_completion_message(current_accuracy_drop, self.drop_type)
                 break
 
+            nncf_logger.info(
+                f"Accuracy drop with the new quantization scope is {float(current_accuracy_drop)} ({self.drop_type})"
+            )
+
             # Continue greedy quantizer remove
-            if self.max_drop < current_accuracy_drop <= previous_accuracy_drop or (
+            if current_accuracy_drop <= previous_accuracy_drop or (
                 current_accuracy_drop > previous_accuracy_drop and is_step_back
             ):
                 is_step_back = False
@@ -258,23 +305,6 @@ class QuantizationAccuracyRestorer:
         QuantizationAccuracyRestorer._print_report(report, self.max_num_iterations)
 
         return current_model
-
-    def calculate_accuracy_drop(self, initial_metric, quantized_metric):
-        """
-        Calculates accuracy drop.
-
-        :param initial_metric: Metric value for initial model.
-        :param quantized_metric: Metric value for quantized model.
-        :return: Accuracy drop value.
-        """
-        if self.drop_type == DropType.ABSOLUTE:
-            accuracy_drop = initial_metric - quantized_metric
-        elif self.drop_type == DropType.RELATIVE:
-            accuracy_drop = 1 - quantized_metric / initial_metric
-        else:
-            raise ValueError(f"{self.drop_type} drop type is not supported.")
-
-        return accuracy_drop
 
     @staticmethod
     def _collect_original_biases_and_weights(
@@ -359,3 +389,11 @@ class QuantizationAccuracyRestorer:
                 "were reverted back to the floating-point precision:"
                 f"\n{_create_message(report.reverted_operations)}"
             )
+
+    @staticmethod
+    def _print_completion_message(accuracy_drop: float, drop_type: DropType) -> None:
+        if accuracy_drop is None or accuracy_drop < 0:
+            reason = "metric of the quantized model is greater than the metric of the initial model"
+        else:
+            reason = f"achieved required accuracy drop {float(accuracy_drop)} ({drop_type})"
+        nncf_logger.info(f"Algorithm completed: {reason}")

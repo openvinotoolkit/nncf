@@ -26,6 +26,10 @@ def compare_nncf_graphs(model: ov.Model, path_ref_graph: str) -> None:
     compare_nx_graph_with_reference(nx_graph, path_ref_graph, check_edge_attrs=True, unstable_node_names=True)
 
 
+def dump_model(model: ov.Model, xml_path: str, bin_path: str):
+    ov.serialize(model, xml_path, bin_path)
+
+
 def get_dataset_for_test(model):
     rng = np.random.default_rng(seed=0)
     input_data = {}

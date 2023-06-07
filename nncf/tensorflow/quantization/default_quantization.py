@@ -8,13 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.tensorflow.graph.metatypes import common
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
 
-# If there are no some metatypes it means that they are considered as QuantizationTrait.QuantizationAgnostic
+# If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
 DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
@@ -50,18 +52,9 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         op_metatypes.TFRelu6OpMetatype,
         op_metatypes.TFBatchMatMulV2OpMetatype,
     ],
-    QuantizationTrait.NON_QUANTIZABLE: [
-        layer_metatypes.TFSoftmaxLayerMetatype,
-        op_metatypes.TFSigmoidOpMetatype,
-        op_metatypes.TFSoftmaxOpMetatype,
-        UnknownMetatype,
-        # Ticket: 108478
-        op_metatypes.TFReluOpMetatype,
-        op_metatypes.TFAbsOpMetatype,
-        op_metatypes.TFExpOpMetatype,
-        op_metatypes.TFLogOpMetatype,
-        op_metatypes.TFSqrtOpMetatype,
-    ],
+    QuantizationTrait.QUANTIZATION_AGNOSTIC: LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
+    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS,
     QuantizationTrait.CONCAT: [
         layer_metatypes.TFConcatenateLayerMetatype,
         op_metatypes.TFConcatOpMetatype,
