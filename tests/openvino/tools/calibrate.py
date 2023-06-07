@@ -443,13 +443,6 @@ def map_tune_hyperparams(tune_hyperparams):
     return {"advanced_accuracy_restorer_parameters": advanced_parameters}
 
 
-def map_convert_to_mixed_preset(convert_to_mixed_preset):
-    ctx = get_algorithm_parameters_context()
-    advanced_parameters = ctx.params.get("advanced_accuracy_restorer_parameters", AdvancedAccuracyRestorerParameters())
-    advanced_parameters.convert_to_mixed_preset = convert_to_mixed_preset
-    return {"advanced_accuracy_restorer_parameters": advanced_parameters}
-
-
 def create_parameters_for_algorithm(
     pot_parameters, supported_parameters, default_parameters, ignored_parameters, param_name_map
 ):
@@ -529,7 +522,6 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
             "max_iter_num": map_max_iter_num,
             "ranking_subset_size": map_ranking_subset_size,
             "tune_hyperparams": map_tune_hyperparams,
-            "convert_to_mixed_preset": map_convert_to_mixed_preset,
             "drop_type": map_drop_type,
         }
     )
@@ -546,6 +538,7 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
         [
             "annotation_conf_threshold",
             "metric_subset_ratio",
+            "convert_to_mixed_preset",
         ]
     )
 
@@ -742,8 +735,12 @@ def quantize_model_with_accuracy_control(
     advanced_parameters = quantization_parameters.get(
         "advanced_quantization_parameters", AdvancedQuantizationParameters()
     )
-    if quantization_impl == "native":
+    if quantization_impl == "pot":
+        advanced_parameters.backend_params["use_pot"] = True
+    elif quantization_impl == "native":
         advanced_parameters.backend_params["use_pot"] = False
+    else:
+        raise NotImplementedError()
     quantization_parameters["advanced_quantization_parameters"] = advanced_parameters
 
     quantization_impl_fn = name_to_quantization_impl_map.get(quantization_impl)

@@ -392,7 +392,6 @@ def _create_accuracy_restorer_config(
 
     config["max_num_iterations"] = advanced_parameters.max_num_iterations
     config["tune_hyperparams"] = advanced_parameters.tune_hyperparams
-    config["convert_to_mixed_preset"] = advanced_parameters.convert_to_mixed_preset
     if advanced_parameters.ranking_subset_size is not None:
         config["ranking_subset_size"] = advanced_parameters.ranking_subset_size
 
@@ -466,8 +465,8 @@ def quantize_with_accuracy_control_impl(
 
     algotrithm_parameters.update(
         _create_quantization_config(
-            target_device,
             preset,
+            target_device,
             subset_size,
             fast_bias_correction,
             model_type,

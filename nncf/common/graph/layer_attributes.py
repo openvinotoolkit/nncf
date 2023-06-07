@@ -282,3 +282,14 @@ class PadLayerAttributes(BaseLayerAttributes):
 
     mode: str = "constant"
     value: float = 0
+
+
+@dataclass
+class ConvertDtypeLayerAttributes(BaseLayerAttributes):
+    """
+    :param src_dtype: node input data type.
+    :param dst_dtype: node output data type.
+    """
+
+    src_dtype: Any
+    dst_dtype: Any

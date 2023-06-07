@@ -106,7 +106,7 @@ class OVMatMulMetatype(OVOpMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    const_channel_axis = [0]  # const layout: [BATCH, Z, Y, X]
+    const_channel_axis = [1]  # const layout: [Y, X]
     output_channel_axis = -1
 
 
@@ -286,9 +286,27 @@ class OVConvertLikeMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVSpaceToBatchMetatype(OVOpMetatype):
+    name = "SpaceToBatchOp"
+    op_names = ["SpaceToBatch"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVBatchToSpaceMetatype(OVOpMetatype):
+    name = "BatchToSpaceOp"
+    op_names = ["BatchToSpace"]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVDepthToSpaceMetatype(OVOpMetatype):
     name = "DepthToSpaceOp"
     op_names = ["DepthToSpace"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVSpaceToDepthMetatype(OVOpMetatype):
+    name = "SpaceToDepthOp"
+    op_names = ["SpaceToDepth"]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -443,6 +461,18 @@ class OVGatherMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVGatherNDMetatype(OVOpMetatype):
+    name = "GatherNDOp"
+    op_names = ["GatherND"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVGatherElementsMetatype(OVOpMetatype):
+    name = "GatherElementsOp"
+    op_names = ["GatherElements"]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVUnsqueezeMetatype(OVOpMetatype):
     name = "UnsqueezeOp"
     op_names = ["Unsqueeze"]
@@ -526,6 +556,24 @@ class OVTileMetatype(OVOpMetatype):
     name = "TileOp"
     op_names = ["Tile"]
     hw_config_names = [HWConfigOpName.TILE]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVScatterElementsUpdateMetatype(OVOpMetatype):
+    name = "ScatterElementsUpdateOp"
+    op_names = ["ScatterElementsUpdate"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVScatterNDUpdateMetatype(OVOpMetatype):
+    name = "ScatterNDUpdateOp"
+    op_names = ["ScatterNDUpdate"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVScatterUpdateMetatype(OVOpMetatype):
+    name = "ScatterUpdateOp"
+    op_names = ["ScatterUpdate"]
 
 
 @OV_OPERATOR_METATYPES.register()

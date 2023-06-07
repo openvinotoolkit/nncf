@@ -1,11 +1,20 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import importlib
 import inspect
 import os
 import pkgutil
 import sys
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from sphinx.ext.autodoc import mock
 
@@ -13,7 +22,7 @@ sys.path.insert(0, os.path.abspath("../../.."))
 
 project = "NNCF"
 html_title = "NNCF"
-copyright = "2023, Intel Corporation"
+copyright_ = "2023, Intel Corporation"
 author = "Intel Corporation"
 
 extensions = ["autoapi.extension", "sphinx.ext.autodoc", "sphinx.ext.linkcode"]
@@ -47,6 +56,7 @@ class APIInfo:
         self.canonical_name_vs_fqn: Dict[str, str] = {}
 
 
+# pylint: disable=too-many-branches
 def collect_api_entities() -> APIInfo:
     """
     Collects the fully qualified names of symbols in NNCF package that contain a special attribute (set via
@@ -60,17 +70,16 @@ def collect_api_entities() -> APIInfo:
     skipped_modules = {}  # type: Dict[str, str]
     import nncf
 
-    for importer, modname, ispkg in pkgutil.walk_packages(
-        path=nncf.__path__, prefix=nncf.__name__ + ".", onerror=lambda x: None
-    ):
+    for _, modname, _ in pkgutil.walk_packages(path=nncf.__path__, prefix=nncf.__name__ + ".", onerror=lambda x: None):
         try:
             modules[modname] = importlib.import_module(modname)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             skipped_modules[modname] = str(e)
 
     from nncf.common.utils.api_marker import api
 
     canonical_imports_seen = set()
+    # pylint: disable=too-many-nested-blocks
     for modname, module in modules.items():
         print(f"{modname}")
         for obj_name, obj in inspect.getmembers(module):
@@ -78,7 +87,7 @@ def collect_api_entities() -> APIInfo:
             if objects_module == modname:
                 if inspect.isclass(obj) or inspect.isfunction(obj):
                     if hasattr(obj, api.API_MARKER_ATTR):
-                        marked_object_name = obj._nncf_api_marker
+                        marked_object_name = obj._nncf_api_marker  # pylint: disable=protected-access
                         # Check the actual name of the originally marked object
                         # so that the classes derived from base API classes don't
                         # all automatically end up in API
@@ -124,8 +133,8 @@ with mock(["torch", "torchvision", "onnx", "onnxruntime", "openvino", "tensorflo
 
 module_fqns = set()
 
-for fqn in api_info.api_names_vs_obj_dict:
-    path_elements = fqn.split(".")
+for fqn_ in api_info.api_names_vs_obj_dict:
+    path_elements = fqn_.split(".")
     for i in range(1, len(path_elements)):
         intermediate_module_path = ".".join(path_elements[:i])
         module_fqns.add(intermediate_module_path)

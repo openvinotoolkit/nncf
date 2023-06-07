@@ -71,8 +71,8 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     :return: Instance of FakeQuantize similar to the input quantizer.
     """
 
-    # Call set_level_ranges to set actual values
-    nncf_quantizer.set_level_ranges()
+    # Call set_ranges in case the basic parameters impacting levels had changed
+    nncf_quantizer.set_levels()
 
     per_channel = nncf_quantizer.per_channel
     scale_shape = nncf_quantizer.scale_shape

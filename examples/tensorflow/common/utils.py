@@ -9,8 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import atexit
-import datetime
 import json
 import os
 import random
@@ -21,7 +19,6 @@ from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
 
 from examples.common.sample_config import CustomArgumentParser
 from examples.common.sample_config import SampleConfig

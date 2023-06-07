@@ -11,6 +11,7 @@
 """
 Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.
 """
+from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import disable_logging
 from nncf.common.logging.logger import set_log_level
 from nncf.config import NNCFConfig
@@ -46,7 +47,6 @@ try:
 except ImportError:
     _LOADED_FRAMEWORKS["openvino"] = False
 
-from nncf.common.logging import nncf_logger
 
 if not any(_LOADED_FRAMEWORKS.values()):
     nncf_logger.error(

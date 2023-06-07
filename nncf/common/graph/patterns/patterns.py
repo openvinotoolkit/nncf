@@ -23,7 +23,7 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
 
-class HWFusedPatterns:
+class Patterns:
     """
     Stores all layer patterns to be fused determined by hardware specific.
     This essence is used in the quantization algorithm.
@@ -77,6 +77,7 @@ class GraphPattern:
 
     LABEL_ATTR = "label"
     METATYPE_ATTR = "type"
+    NODE_TYPE_ATTR = "metatype"
     ANY_PATTERN_NODE_TYPE = "ANY_PATTERN_NODE"
     NON_PATTERN_NODE_TYPE = "NON_PATTERN_NODE"
 
@@ -278,7 +279,7 @@ class PatternDesc:
     model_types: Optional[List[TargetDevice]] = None
 
 
-class PatternNames(Enum):
+class HWFusedPatternNames(Enum):
     """
     Describes the patterns that will be fused during integer execution
     and would not be quantized in compression pipeline.
@@ -388,3 +389,12 @@ class PatternNames(Enum):
         "softmax_reshape_transpose_matmul", model_types=[ModelType.TRANSFORMER]
     )
     STABLE_DIFFUSION = PatternDesc("stable_diffusion", model_types=[ModelType.TRANSFORMER])
+
+
+class IgnoredPatternNames(Enum):
+    """
+    Describes the patterns, which nodes should be ignored during FakeQuantize placement.
+    """
+
+    SOFTMAX_MATMUL = PatternDesc("softmax_matmul", model_types=[ModelType.TRANSFORMER])
+    SOFTMAX_RESHAPE_MATMUL = PatternDesc("softmax_reshape_matmul", model_types=[ModelType.TRANSFORMER])

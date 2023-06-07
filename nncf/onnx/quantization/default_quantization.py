@@ -9,9 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.onnx.graph.metatypes import onnx_metatypes
+
+# If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
 DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
@@ -31,20 +32,37 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         onnx_metatypes.ONNXPowMetatype,
         onnx_metatypes.ONNXReciprocalMetatype,
     ],
-    QuantizationTrait.NON_QUANTIZABLE: [
-        onnx_metatypes.ONNXSigmoidMetatype,
-        onnx_metatypes.ONNXSoftmaxMetatype,
-        onnx_metatypes.ONNXQuantizeLinearMetatype,
-        onnx_metatypes.ONNXDequantizeLinearMetatype,
-        onnx_metatypes.ONNXDeformableConvolutionMetatype,
-        UnknownMetatype,
-        # Ticket: 108478
-        onnx_metatypes.ONNXReluMetatype,
-        onnx_metatypes.ONNXExpMetatype,
-        onnx_metatypes.ONNXLogMetatype,
-        onnx_metatypes.ONNXAbsMetatype,
-        onnx_metatypes.ONNXSqrtMetatype,
+    QuantizationTrait.QUANTIZATION_AGNOSTIC: [
+        onnx_metatypes.ONNXMaxPoolMetatype,
+        onnx_metatypes.ONNXReduceMaxMetatype,
+        onnx_metatypes.ONNXReshapeMetatype,
+        onnx_metatypes.ONNXTransposeMetatype,
+        onnx_metatypes.ONNXSqueezeMetatype,
+        onnx_metatypes.ONNXUnsqueezeMetatype,
+        onnx_metatypes.ONNXSplitMetatype,
+        onnx_metatypes.ONNXTileMetatype,
+        onnx_metatypes.ONNXCenterCropPadMetatype,
+        onnx_metatypes.ONNXSliceMetatype,
+        onnx_metatypes.ONNXPadMetatype,
+        onnx_metatypes.ONNXGatherMetatype,
+        onnx_metatypes.ONNXGatherNDMetatype,
+        onnx_metatypes.ONNXGatherElementsMetatype,
+        onnx_metatypes.ONNXDepthToSpaceMetatype,
+        onnx_metatypes.ONNXSpaceToDepthMetatype,
+        onnx_metatypes.ONNXScatterElementsMetatype,
+        onnx_metatypes.ONNXScatterNDMetatype,
+        onnx_metatypes.ONNXScatterMetatype,
+        onnx_metatypes.ONNXCastLikeMetatype,
+        onnx_metatypes.ONNXDropoutMetatype,
+        onnx_metatypes.ONNXFlattenMetatype,
+        onnx_metatypes.ONNXExpandMetatype,
+        onnx_metatypes.ONNXIdentityMetatype,
+        # ONNXReluMetatype is not considered to be QUANTIZATION_AGNOSTIC, because:
+        # 1. Runtime doesn't provide performance benefits by quantizing the stand-alone RELU's (ticket: 59548)
+        # 2. It's frequently better for the end accuracy to have quantizers set up after the RELU
+        # so that the input distribution to the quantizer is non-negative
+        # and we can therefore have better quantization resolution while preserving the original dynamic range
     ],
-    QuantizationTrait.CONCAT: [onnx_metatypes.ONNXConcatLayerMetatype],
+    QuantizationTrait.CONCAT: [onnx_metatypes.ONNXConcatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [],
 }

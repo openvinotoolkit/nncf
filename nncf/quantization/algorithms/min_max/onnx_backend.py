@@ -25,6 +25,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
@@ -220,7 +221,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [node.metatype.weight_definitions.weight_port_id]
 
     @staticmethod
-    def get_model_type_ignore_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [
@@ -229,6 +230,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ONNXSqueezeMetatype,
                 ONNXSubMetatype,
                 ONNXReduceMeanMetatype,
+                ONNXDivLayerMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(ONNXMulLayerMetatype)

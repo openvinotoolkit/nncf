@@ -162,10 +162,11 @@ class TemplateTestPTQParams:
         min_max_algo._backend_entity = self.get_algo_backend()
 
         nncf_graph = test_params["test_quantize_outputs"]["nncf_graph"]
-        pattern = test_params["test_quantize_outputs"]["pattern"]
 
         assert min_max_algo._quantize_outputs == quantize_outputs
-        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
+        hw_patterns = test_params["test_model_type_pass"]["hw_patterns"]
+        ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
+        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, hw_patterns, ignored_patterns)
         act_num_q, weight_num_q = 0, 0
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
@@ -183,9 +184,9 @@ class TemplateTestPTQParams:
         assert min_max_algo._ignored_scope == ignored_scope
 
         nncf_graph = test_params["test_ignored_scopes"]["nncf_graph"]
-        pattern = test_params["test_ignored_scopes"]["pattern"]
-
-        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
+        hw_patterns = test_params["test_model_type_pass"]["hw_patterns"]
+        ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
+        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, hw_patterns, ignored_patterns)
         act_num_q, weight_num_q = 0, 0
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
@@ -203,8 +204,9 @@ class TemplateTestPTQParams:
         min_max_algo._backend_entity = self.get_algo_backend()
 
         nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
-        pattern = test_params["test_model_type_pass"]["pattern"]
-        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
+        hw_patterns = test_params["test_model_type_pass"]["hw_patterns"]
+        ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
+        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, hw_patterns, ignored_patterns)
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
                 node_names = quantization_point.directly_quantized_operator_node_names
@@ -232,8 +234,8 @@ class TemplateTestPTQParams:
         ],
     )
     def test_quantization_points_overflow_fix(self, overflow_fix, affected_target_points, ignored_ops):
-        # Checks the return value of _get_quantization_points_overflow_fix
-        # based on the overflow_fix and weight target points.
+        # Checks the return value of _get_quantization_points_overflow_fix based on
+        # the overflow_fix and weight target points.
         model = ModelToTestOverflowFix(self.metatypes_mapping)
         nncf_graph = model.nncf_graph
 
@@ -245,9 +247,9 @@ class TemplateTestPTQParams:
 
         # Remove ignored nodes from weight_target_points
         filtered_weight_target_points = {}
-        for t_p in weight_target_points.keys():
+        for t_p, config in weight_target_points.items():
             if t_p.target_node_name not in ignored_ops:
-                filtered_weight_target_points[t_p] = weight_target_points[t_p]
+                filtered_weight_target_points[t_p] = config
 
         algo = MinMaxQuantization()
         algo._backend_entity = self.get_algo_backend()

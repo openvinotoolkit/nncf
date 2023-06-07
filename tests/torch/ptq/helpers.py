@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import List, Optional
 
 import torch
 
@@ -47,7 +47,7 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
     return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype, conv_layer_attrs)
 
 
-def get_single_no_weigth_matmul_nncf_graph() -> NNCFGraphToTest:
+def get_single_no_weight_matmul_nncf_graph() -> NNCFGraphToTest:
     return NNCFGraphToTest(PTModuleLinearMetatype, None, PTNNCFGraph)
 
 
@@ -65,7 +65,8 @@ def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
     return NNCFGraphToTestSumAggregation(PTModuleConv2dMetatype, PTSumMetatype, conv_layer_attrs, PTNNCFGraph)
 
 
-def get_nncf_network(model: torch.nn.Module, input_shape: List[int] = [1, 3, 32, 32]):
+def get_nncf_network(model: torch.nn.Module, input_shape: Optional[List[int]] = None):
+    input_shape = [1, 3, 32, 32] if input_shape is None else input_shape
     model.eval()
     nncf_config = NNCFConfig({"input_info": {"sample_size": input_shape.copy()}})
     nncf_network = create_nncf_network(
@@ -80,7 +81,7 @@ def mock_collect_statistics(mocker):
         "nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics", return_value=None
     )
     min_, max_ = 0.0, 1.0
-    min_, max_ = map(lambda x: torch.tensor(x), [min_, max_])
+    min_, max_ = torch.tensor(min_), torch.tensor(max_)
     _ = mocker.patch(
         "nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics",
         return_value=PTMinMaxTensorStatistic(min_, max_),

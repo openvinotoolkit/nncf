@@ -16,6 +16,7 @@ import numpy as np
 
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
+from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
@@ -230,10 +231,12 @@ def calculate_quantizer_parameters(
     else:
         num_bits = quantizer_config.num_bits
         if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-            _, _, levels = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=narrow_range)
+            level_low, level_high = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=narrow_range)
+            levels = get_num_levels(level_low, level_high)
             input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
         else:
-            _, _, levels = calculate_asymmetric_level_ranges(num_bits, narrow_range=narrow_range)
+            level_low, level_high = calculate_asymmetric_level_ranges(num_bits, narrow_range=narrow_range)
+            levels = get_num_levels(level_low, level_high)
             input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     if not quantizer_config.per_channel:
@@ -272,10 +275,14 @@ def _calculate_scaled_parameters(
         raise RuntimeError("half_range is only applied to weight quantizers.")
 
     num_bits = quantizer_config.num_bits
-    _, _, levels = calculate_symmetric_level_ranges(num_bits - 1, signed=True, narrow_range=False)
+    level_low, level_high = calculate_symmetric_level_ranges(num_bits - 1, signed=True, narrow_range=False)
+    levels = get_num_levels(level_low, level_high)
     input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
 
-    _, _, export_levels = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=narrow_range)
+    export_level_low, export_level_high = calculate_symmetric_level_ranges(
+        num_bits, signed=True, narrow_range=narrow_range
+    )
+    export_levels = get_num_levels(export_level_low, export_level_high)
     input_high *= (export_levels - 1) / (levels - 1)
     input_low *= (export_levels - 1) / (levels - 1)
 

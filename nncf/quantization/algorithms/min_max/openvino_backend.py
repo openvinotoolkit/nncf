@@ -29,6 +29,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVDivideMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -39,11 +40,13 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVPowerMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVReadValueMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSqrtMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSquaredDifferenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSqueezeMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVTopKMetatype
 from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
+from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.hardware.config import OVHWConfig
@@ -163,9 +166,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         const_shape = node.layer_attributes.const_attrs[target_point.port_id]["shape"]
 
         if quantizer_config.per_channel:
-            assert node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
-            channel_axis = node.metatype.const_channel_axis
-            axes = tuple(i for i in range(len(const_shape)) if i not in channel_axis)
+            channel_axes = get_weight_channel_axes(node, target_point.port_id)
+            axes = tuple(i for i in range(len(const_shape)) if i not in channel_axes)
         else:
             axes = tuple(range(len(const_shape)))
 
@@ -230,7 +232,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod
-    def get_model_type_ignore_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [
@@ -241,6 +243,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 OVReduceMeanMetatype,
                 OVSquaredDifferenceMetatype,
                 OVMVNMetatype,
+                OVDivideMetatype,
+                OVSqrtMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(OVMultiplyMetatype)

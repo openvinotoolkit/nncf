@@ -1,5 +1,5 @@
 pytest
 virtualenv
 pytest-mock>=3.3.1
-openvino-dev[mxnet,onnx,pytorch,tensorflow2]
+openvino-dev[mxnet,onnx,pytorch,tensorflow2]==2023.0.0
 fastdownload

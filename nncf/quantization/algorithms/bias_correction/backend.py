@@ -75,7 +75,7 @@ class BiasCorrectionAlgoBackend(ABC):
         """
         Returns backend-specific command to extract sub-model based on input & output names.
 
-        :param inputs: List of the input names for sub-model beggining.
+        :param inputs: List of the input names for sub-model beginning.
         :param outputs: List of the output names for sub-model end.
         :return: Backend-specific TransformationCommand for the model extraction.
         """

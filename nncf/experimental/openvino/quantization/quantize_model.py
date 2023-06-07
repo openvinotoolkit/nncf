@@ -94,12 +94,6 @@ def quantize_with_accuracy_control(
             "Quantization algorithm with accuracy control from the "
             "OpenVINO backend does not support tuning hyperparams yet"
         )
-    if advanced_accuracy_restorer_parameters.convert_to_mixed_preset:
-        raise RuntimeError(
-            "Quantization algorithm with accuracy control from the "
-            "OpenVINO backend does not support the option to convert "
-            "to the mixed preset yet"
-        )
 
     compress_weights = is_weight_compression_needed(advanced_quantization_parameters)
 

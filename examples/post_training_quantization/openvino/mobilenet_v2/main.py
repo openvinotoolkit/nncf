@@ -100,20 +100,19 @@ val_dataset = datasets.ImageFolder(
         ]
     ),
 )
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False)
+val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False)
 
-model_path = download(MODEL_URL, MODEL_PATH)
-model = ov.Core().read_model(model_path / "mobilenet_v2_fp32.xml")
+path_to_model = download(MODEL_URL, MODEL_PATH)
+ov_model = ov.Core().read_model(path_to_model / "mobilenet_v2_fp32.xml")
 
 ###############################################################################
 # Quantize an OpenVINO model
-"""
-The transformation function transforms a data item into model input data.
-
-To validate the transform function use the following code:
->> for data_item in val_loader:
->>    model(transform_fn(data_item))
-"""
+#
+# The transformation function transforms a data item into model input data.
+#
+# To validate the transform function use the following code:
+# >> for data_item in val_loader:
+# >>    model(transform_fn(data_item))
 
 
 def transform_fn(data_item):
@@ -121,30 +120,29 @@ def transform_fn(data_item):
     return images
 
 
-"""
-The calibration dataset is a small, no label, representative dataset
-(~100-500 samples) that is used to estimate the range, i.e. (min, max) of all
-floating point activation tensors in the model, to initialize the quantization
-parameters.
+# The calibration dataset is a small, no label, representative dataset
+# (~100-500 samples) that is used to estimate the range, i.e. (min, max) of all
+# floating point activation tensors in the model, to initialize the quantization
+# parameters.
+#
+# The easiest way to define a calibration dataset is to use a training or
+# validation dataset and a transformation function to remove labels from the data
+# item and prepare model input data. The quantize method uses a small subset
+# (default: 300 samples) of the calibration dataset.
 
-The easiest way to define a calibration dataset is to use a training or
-validation dataset and a transformation function to remove labels from the data
-item and prepare model input data. The quantize method uses a small subset
-(default: 300 samples) of the calibration dataset.
-"""
-calibration_dataset = nncf.Dataset(val_loader, transform_fn)
-quantized_model = nncf.quantize(model, calibration_dataset)
+calibration_dataset = nncf.Dataset(val_data_loader, transform_fn)
+ov_quantized_model = nncf.quantize(ov_model, calibration_dataset)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
 fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
-ov.serialize(model, fp32_ir_path)
+ov.serialize(ov_model, fp32_ir_path)
 print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
 
 int8_ir_path = f"{ROOT}/mobilenet_v2_int8.xml"
-ov.serialize(quantized_model, int8_ir_path)
+ov.serialize(ov_quantized_model, int8_ir_path)
 print(f"[2/7] Save INT8 model: {int8_ir_path}")
 int8_model_size = get_model_size(int8_ir_path, verbose=True)
 
@@ -154,11 +152,11 @@ print("[4/7] Benchmark INT8 model:")
 int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 224, 224], verbose=True)
 
 print("[5/7] Validate OpenVINO FP32 model:")
-fp32_top1 = validate(model, val_loader)
+fp32_top1 = validate(ov_model, val_data_loader)
 print(f"Accuracy @ top1: {fp32_top1:.3f}")
 
 print("[6/7] Validate OpenVINO INT8 model:")
-int8_top1 = validate(quantized_model, val_loader)
+int8_top1 = validate(ov_quantized_model, val_data_loader)
 print(f"Accuracy @ top1: {int8_top1:.3f}")
 
 print("[7/7] Report:")

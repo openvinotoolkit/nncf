@@ -114,18 +114,16 @@ val_dataset = tfds.load("imagenette/320px-v2", split="validation", shuffle_files
 val_dataset = val_dataset.map(preprocess_for_eval).batch(128)
 
 weights_path = data_utils.get_file("mobilenet_v2_imagenette_weights.h5", WEIGHTS_URL, cache_subdir="models")
-model = tf.keras.applications.MobileNetV2(weights=weights_path, classes=DATASET_CLASSES)
+tf_model = tf.keras.applications.MobileNetV2(weights=weights_path, classes=DATASET_CLASSES)
 
 ###############################################################################
 # Quantize a Tensorflow model
-
-"""
-The transformation function transforms a data item into model input data.
-
-To validate the transform function use the following code:
->> for data_item in val_loader:
->>    model(transform_fn(data_item))
-"""
+#
+# The transformation function transforms a data item into model input data.
+#
+# To validate the transform function use the following code:
+# >> for data_item in val_loader:
+# >>    model(transform_fn(data_item))
 
 
 def transform_fn(data_item):
@@ -133,25 +131,24 @@ def transform_fn(data_item):
     return images
 
 
-"""
-The calibration dataset is a small, no label, representative dataset
-(~100-500 samples) that is used to estimate the range, i.e. (min, max) of all
-floating point activation tensors in the model, to initialize the quantization
-parameters.
+# The calibration dataset is a small, no label, representative dataset
+# (~100-500 samples) that is used to estimate the range, i.e. (min, max) of all
+# floating point activation tensors in the model, to initialize the quantization
+# parameters.
+#
+# The easiest way to define a calibration dataset is to use a training or
+# validation dataset and a transformation function to remove labels from the data
+# item and prepare model input data. The quantize method uses a small subset
+# (default: 300 samples) of the calibration dataset.
 
-The easiest way to define a calibration dataset is to use a training or
-validation dataset and a transformation function to remove labels from the data
-item and prepare model input data. The quantize method uses a small subset
-(default: 300 samples) of the calibration dataset.
-"""
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
-quantized_model = nncf.quantize(model, calibration_dataset)
+tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
-ov_model = mo.convert_model(model)
-ov_quantized_model = mo.convert_model(quantized_model)
+ov_model = mo.convert_model(tf_model)
+ov_quantized_model = mo.convert_model(tf_quantized_model)
 
 fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
 ov.serialize(ov_model, fp32_ir_path)

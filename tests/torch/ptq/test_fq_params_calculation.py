@@ -33,6 +33,9 @@ from tests.torch.helpers import create_random_mock_dataloader
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "reference_scales"
 
 
+# pylint: disable=protected-access
+
+
 def min_max_quantize_model(
     original_model: torch.nn.Module, quantization_params: Dict[str, Any] = None
 ) -> torch.nn.Module:

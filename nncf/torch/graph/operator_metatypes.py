@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from typing import Dict, List, Optional, Type, TypeVar
 
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -39,21 +40,23 @@ class PTOperatorMetatype(OperatorMetatype):
     so that the entire group of operations is visible in the internal graph.
     Grouping also allows efficient application of HW specifics to compression of
     certain operation groups.
+
+    :param external_op_names: Names of functions registered as operators via @register_operator to be associated
+    with this metatype.
+    :param module_to_function_names: Names of functions from 'torch.nn.function', 'torch.tensor' and 'torch' modules
+    respectively, which are associated with this metatype.
+    :param subtypes: List of subtypes of PyTorch operator.
     """
 
-    # Names of functions registered as operators via @register_operator to be associated
-    # with this metatype
-    external_op_names = []  # type: List[str]
+    external_op_names: List[str] = []
 
-    # Names of functions from 'torch.nn.function', 'torch.tensor' and 'torch' modules respectively,
-    # which are associated with this metatype.
-    module_to_function_names = {
+    module_to_function_names: Dict[NamespaceTarget, List[str]] = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
         NamespaceTarget.TORCH_TENSOR: [],
         NamespaceTarget.TORCH: [],
-    }  # type: Dict[NamespaceTarget, List[str]]
+    }
 
-    subtypes = []  # type: List[Type[PTOperatorMetatype]]
+    subtypes: List[Type["PTOperatorMetatype"]] = []
 
     @classmethod
     def get_subtypes(cls) -> List[Type["PTOperatorMetatype"]]:
@@ -161,6 +164,7 @@ class PTDepthwiseConv1dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv1DOp"
     hw_config_name = [HWConfigOpName.DEPTHWISECONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -169,6 +173,7 @@ class PTModuleConv1dMetatype(PTModuleOperatorSubtype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
     subtypes = [PTDepthwiseConv1dSubtype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -177,6 +182,7 @@ class PTConv1dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
     subtypes = [PTModuleConv1dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -184,6 +190,7 @@ class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv2DOp"
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -192,6 +199,7 @@ class PTModuleConv2dMetatype(PTModuleOperatorSubtype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
     subtypes = [PTDepthwiseConv2dSubtype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -200,6 +208,7 @@ class PTConv2dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
     subtypes = [PTModuleConv2dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -207,6 +216,7 @@ class PTDepthwiseConv3dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv3DOp"
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -215,6 +225,7 @@ class PTModuleConv3dMetatype(PTModuleOperatorSubtype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
     subtypes = [PTDepthwiseConv3dSubtype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -223,6 +234,7 @@ class PTConv3dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
     subtypes = [PTModuleConv3dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -230,6 +242,7 @@ class PTModuleConvTranspose1dMetatype(PTModuleOperatorSubtype):
     name = "ConvTranspose1DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]}
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -238,6 +251,7 @@ class PTConvTranspose1dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]}
     subtypes = [PTModuleConvTranspose1dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -245,6 +259,7 @@ class PTModuleConvTranspose2dMetatype(PTModuleOperatorSubtype):
     name = "ConvTranspose2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]}
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -253,6 +268,7 @@ class PTConvTranspose2dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]}
     subtypes = [PTModuleConvTranspose2dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -260,6 +276,7 @@ class PTModuleConvTranspose3dMetatype(PTModuleOperatorSubtype):
     name = "ConvTranspose3DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]}
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -268,6 +285,7 @@ class PTConvTranspose3dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]}
     subtypes = [PTModuleConvTranspose3dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -288,6 +306,7 @@ class PTModuleLinearMetatype(PTModuleOperatorSubtype):
     name = "LinearOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["linear"], NamespaceTarget.TORCH: ["addmm"]}
     hw_config_names = [HWConfigOpName.MATMUL]
+    output_channel_axis = -1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -296,6 +315,7 @@ class PTLinearMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["linear"], NamespaceTarget.TORCH: ["addmm"]}
     hw_config_names = [HWConfigOpName.MATMUL]
     subtypes = [PTModuleLinearMetatype]
+    output_channel_axis = -1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -478,9 +498,20 @@ class PTMatMulMetatype(PTOperatorMetatype):
     name = "MatMulOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__"],
-        NamespaceTarget.TORCH: ["matmul", "bmm", "mm", "baddbmm"],
+        NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTBaddBmmMetatype(PTOperatorMetatype):
+    name = "MatMulOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["baddbmm"]}
+    hw_config_names = [HWConfigOpName.MATMUL]
+    # 0-th arg to the baddbmm is basically a (b)ias to be (add)ed to the (bmm) operation,
+    # presuming that most runtime implementations will fuse the bias addition into the matrix multiplication
+    # and therefore won't quantize the bias input, as this would break the hardware-fused pattern.
+    ignored_input_ports: List[int] = [0]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -535,6 +566,12 @@ class PTAvgPool3dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.AVGPOOL]
 
 
+class PTMaxPool1dMetatype(PTOperatorMetatype):
+    name = "MaxPool1DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool1d", "adaptive_max_pool1d"]}
+    hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
 @PT_OPERATOR_METATYPES.register()
 class PTMaxPool2dMetatype(PTOperatorMetatype):
     name = "MaxPool2DOp"
@@ -547,6 +584,18 @@ class PTMaxPool3dMetatype(PTOperatorMetatype):
     name = "MaxPool3DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool3d", "adaptive_max_pool3d"]}
     hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTMaxUnpool1dMetatype(PTOperatorMetatype):
+    name = "MaxUnPool1DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_unpool1d"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTMaxUnpool2dMetatype(PTOperatorMetatype):
+    name = "MaxUnPool2DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_unpool2d"]}
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -856,3 +905,20 @@ UNIFICATION_PRODUCING_METATYPES = [
 ]
 
 OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in meta.get_all_aliases()]
+
+# Contains the operation metatypes for which bias can be applied.
+OPERATORS_WITH_BIAS_METATYPES = [
+    PTModuleConv1dMetatype,
+    PTModuleConv2dMetatype,
+    PTModuleConv3dMetatype,
+    PTDepthwiseConv1dSubtype,
+    PTDepthwiseConv2dSubtype,
+    PTDepthwiseConv3dSubtype,
+    PTModuleConvTranspose1dMetatype,
+    PTModuleConvTranspose2dMetatype,
+    PTModuleConvTranspose3dMetatype,
+]
+
+OPERATORS_FUSED_METATYPES = [
+    PTModuleBatchNormMetatype,
+]

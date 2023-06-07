@@ -4,7 +4,7 @@ pytest-ordering>=0.6
 torch~=1.13.0
 torchvision~=0.14.0
 yattag>=1.14.0
-openvino-dev
+openvino-dev==2023.0.0
 fastdownload
 scikit-learn
 # Pandas requires it for styling in e2e report generation
