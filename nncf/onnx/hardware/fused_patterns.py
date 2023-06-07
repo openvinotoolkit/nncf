@@ -89,10 +89,10 @@ def create_matmul_softmax_matmul():
         **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.ONNXSoftmaxMetatype}
     )
     mat_mul_1_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL_1", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
+        **{GraphPattern.LABEL_ATTR: "MATMUL_1", GraphPattern.METATYPE_ATTR: om.MATMUL_METATYPES}
     )
     mat_mul_2_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL_2", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
+        **{GraphPattern.LABEL_ATTR: "MATMUL_2", GraphPattern.METATYPE_ATTR: om.MATMUL_METATYPES}
     )
 
     any_1 = pattern.add_node(
@@ -108,10 +108,10 @@ def create_matmul_softmax_matmul():
     )
     add_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
     mat_mul_1_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL_1", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
+        **{GraphPattern.LABEL_ATTR: "MATMUL_1", GraphPattern.METATYPE_ATTR: om.MATMUL_METATYPES}
     )
     mat_mul_2_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL_2", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
+        **{GraphPattern.LABEL_ATTR: "MATMUL_2", GraphPattern.METATYPE_ATTR: om.MATMUL_METATYPES}
     )
 
     any_2 = pattern.add_node(

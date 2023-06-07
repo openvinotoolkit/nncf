@@ -104,12 +104,22 @@ class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXLinearMetatype(ONNXOpWithWeightsMetatype):
-    name = "LinearOp"
+class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
+    name = "GemmOp"
     op_names = ["Gemm"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    # TODO(kshpv): ticket:95156
-    weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+    weight_definitions = OpWeightDef(weight_channel_axis=-1, weight_port_id=None, bias_port_id=2)
+    possible_weight_ports = [0, 1]
+    output_channel_axis = -1
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXMatMulMetatype(ONNXOpMetatype):
+    name = "MatMulOp"
+    op_names = ["MatMul"]
+    hw_config_names = [HWConfigOpName.MATMUL]
+    weight_definitions = OpWeightDef(weight_channel_axis=-1, weight_port_id=None, bias_port_id=None)
+    possible_weight_ports = [0, 1]
     output_channel_axis = -1
 
 
@@ -375,13 +385,6 @@ class ONNXRoiAlignMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXMatMulMetatype(ONNXOpMetatype):
-    name = "MatMulOp"
-    op_names = ["MatMul"]
-    hw_config_names = [HWConfigOpName.MATMUL]
-
-
-@ONNX_OPERATION_METATYPES.register()
 class ONNXGatherMetatype(ONNXOpMetatype):
     name = "GatherOp"
     op_names = ["Gather"]
@@ -495,11 +498,15 @@ class ONNXDeformableConvolutionMetatype(ONNXOpMetatype):
     op_names = ["DeformConv"]
 
 
-WEIGHT_LAYER_METATYPES = [
+CONSTANT_WEIGHT_LAYER_METATYPES = [
     ONNXConvolutionMetatype,
     ONNXDepthwiseConvolutionMetatype,
     ONNXConvolutionTransposeMetatype,
-    ONNXLinearMetatype,
+]
+
+POSSIBLE_WEIGHT_LAYER_METATYPES = [
+    ONNXGemmMetatype,
+    ONNXMatMulMetatype,
 ]
 
 # Contains the operation metatypes for which bias can be applied.
@@ -507,6 +514,8 @@ OPERATIONS_WITH_BIAS_METATYPES = [
     ONNXConvolutionMetatype,
     ONNXDepthwiseConvolutionMetatype,
 ]
+
+MATMUL_METATYPES = [ONNXGemmMetatype, ONNXMatMulMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
@@ -516,6 +525,14 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     :return: List of operator metatypes .
     """
     return list(ONNX_OPERATION_METATYPES.registry_dict.values())
+
+
+def get_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
+    if metatype in POSSIBLE_WEIGHT_LAYER_METATYPES:
+        return [0, 1]
+    if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
+        return [metatype.weight_definitions.weight_port_id]
+    return []
 
 
 def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:

@@ -22,14 +22,14 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXEluMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXHardSwishMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLeakyReluMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
+
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPReluMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXThresholdedReluMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
 
 LINEAR_OPERATIONS = {
     GraphPattern.METATYPE_ATTR: [
@@ -37,8 +37,7 @@ LINEAR_OPERATIONS = {
         ONNXDepthwiseConvolutionMetatype,
         ONNXConvolutionTransposeMetatype,
         ONNXDeformableConvolutionMetatype,
-        ONNXLinearMetatype,
-        ONNXMatMulMetatype,
+        *MATMUL_METATYPES,
     ],
     GraphPattern.LABEL_ATTR: "LINEAR",
 }

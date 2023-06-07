@@ -22,7 +22,9 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import POSSIBLE_WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_weight_port_ids
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 
@@ -158,15 +160,22 @@ class GraphConverter:
                 subtype = metatype.determine_subtype(onnx_model, node)
                 if subtype is not None:
                     metatype = subtype
-
-            if metatype in WEIGHT_LAYER_METATYPES:
+            is_shared, weight_edge_name, layer_attributes = None, None, None
+            if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
                 is_shared = onnx_graph.is_node_shared(node)
                 weight_edge_name = onnx_graph.get_weight_tensor_edge(node)
                 edge = onnx_graph.get_edge(weight_edge_name)
                 weight_shape = ONNXGraph.get_edge_shape(edge)
                 layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
-            else:
-                is_shared, weight_edge_name, layer_attributes = None, None, None
+            elif metatype in POSSIBLE_WEIGHT_LAYER_METATYPES:
+                for port_id in get_weight_port_ids(metatype):
+                    if onnx_graph.is_node_with_weight(node, port_id):
+                        is_shared = onnx_graph.is_node_shared(node)
+                        weight_edge_name = onnx_graph.get_weight_tensor_edge(node)
+                        edge = onnx_graph.get_edge(weight_edge_name)
+                        weight_shape = ONNXGraph.get_edge_shape(edge)
+                        layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
+
             nncf_graph.add_nncf_node(
                 node_name=node.name,
                 node_type=node.op_type,

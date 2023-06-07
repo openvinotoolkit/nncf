@@ -14,7 +14,7 @@ import pytest
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -68,7 +68,7 @@ class TestPTQParams(TemplateTestPTQParams):
     def metatypes_mapping(self):
         return {
             Conv2dTestMetatype: ONNXConvolutionMetatype,
-            LinearTestMetatype: ONNXLinearMetatype,
+            LinearTestMetatype: MATMUL_METATYPES[0],
             SoftmaxTestMetatype: ONNXSoftmaxMetatype,
         }
 
@@ -93,7 +93,7 @@ class TestPTQParams(TemplateTestPTQParams):
                 "pattern": GraphPattern(),
             },
             "test_model_type_pass": {
-                "nncf_graph": NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
+                "nncf_graph": NNCFGraphToTestMatMul(MATMUL_METATYPES[0]).nncf_graph,
                 "pattern": GraphPattern(),
             },
         }

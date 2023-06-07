@@ -16,8 +16,13 @@ import onnx
 from onnx import numpy_helper
 
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 
 
 # pylint: disable=too-many-public-methods
@@ -214,7 +219,7 @@ class ONNXGraph:
         :return: weight definition of the node.
         """
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-        if metatype in WEIGHT_LAYER_METATYPES:
+        if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
             return metatype.weight_definitions
         raise RuntimeError(f"The metatype {metatype} does not belong to a list of metatypes with a weight tensor.")
 
@@ -253,30 +258,6 @@ class ONNXGraph:
         if weight_definitions.bias_port_id is not None:
             return weight_definitions.bias_port_id
         raise RuntimeError(f"The node {node} does not have bias_port_id attribute")
-
-    def _get_weight_tensor_with_reshape(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
-        """
-        Returns node's weight tensor name and its value in the case when reshape node is placed after the weight.
-        The returned weight tensor will be reshaped according to a shape attribute of the reshape node.
-
-        :param node: Reshape node, whose input is weight tensor.
-        :return: The weight tensor name and its value with applied the reshape operation.
-        """
-        tensor_name = node.output[0]
-        shape = self.get_initializers_value(node.input[1])
-        tensor_value = self.get_initializers_value(node.input[0])
-        reshaped_tensor_value = tensor_value.reshape(shape)
-        return tensor_name, reshaped_tensor_value
-
-    def _get_tensor_from_zero_input(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
-        """
-        Returns the weight tensor name and its value, which is located on the 0-index input port of the node.
-
-        :param node: Node, which takes on the 0-index input port id the weight tensor.
-        :return: The weight tensor name and its value.
-        """
-        tensor_name = self.get_initializer(node.input[0]).name
-        return tensor_name, self.get_initializers_value(tensor_name)
 
     def get_node_index(self, node_name: str) -> int:
         """
@@ -366,17 +347,14 @@ class ONNXGraph:
             return edge.type.tensor_type.elem_type
         return edge.data_type
 
-    def get_parents(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
+    def get_parent(self, node: onnx.NodeProto, port_id: int) -> List[onnx.NodeProto]:
         """
         Returns parents of the node.
 
         :param node: The child node.
         :return: All children nodes.
         """
-        output = []
-        for inp in node.input:
-            output.extend(self.get_nodes_by_output(inp))
-        return output
+        return self.get_nodes_by_output(node.input[port_id])
 
     def get_children(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
         """
@@ -412,3 +390,33 @@ class ONNXGraph:
         weight_tensor_edge = self.get_weight_tensor_edge(node)
         nodes = self.get_nodes_by_input(weight_tensor_edge)
         return len(nodes) > 1
+
+    def is_node_with_weight(self, node: onnx.NodeProto, port_id: int) -> bool:
+        ALLOWED_OP_TYPES = (
+            ONNXConstantMetatype.get_all_aliases()
+            + ONNXIdentityMetatype.get_all_aliases()
+            + ONNXReshapeMetatype.get_all_aliases()
+            + ONNXQuantizeLinearMetatype.get_all_aliases()
+            + ONNXDequantizeLinearMetatype.get_all_aliases()
+        )
+        # There are several cases here
+        # (Constant) -> (Operation)
+        # (Identity) -> (Operation)
+        # (Constant) -> (QuantizeLinear) -> (DequantizeLinear) -> (Operation)
+        # (Constant) -> (QuantizeLinear) -> (DequantizeLinear) -> (Operation)
+        # (Reshape) -> (Operation)
+        #  and etc. We need properly find the constant node. So we start with
+        # `node` and traverse up until the constant node is not found.
+
+        # If Constant on the port
+        if self.has_initializer(node.input[port_id]):
+            return True
+        queue = self.get_parent(node, port_id)
+        while queue:
+            node = queue.pop()
+            if node.op_type not in ALLOWED_OP_TYPES:
+                return False
+            if self.has_initializer(node.input[0]):
+                return True
+            queue.extend(self.get_parent(node, 0))
+        return False

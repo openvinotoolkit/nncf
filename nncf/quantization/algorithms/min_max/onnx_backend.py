@@ -24,7 +24,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
@@ -58,7 +58,7 @@ from nncf.scopes import IgnoredScope
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatype(self) -> OperatorMetatype:
-        return ONNXLinearMetatype
+        return MATMUL_METATYPES
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -74,7 +74,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
-        return [ONNXConvolutionMetatype, ONNXConvolutionTransposeMetatype, ONNXLinearMetatype]
+        return [ONNXConvolutionMetatype, ONNXConvolutionTransposeMetatype, *MATMUL_METATYPES]
 
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
