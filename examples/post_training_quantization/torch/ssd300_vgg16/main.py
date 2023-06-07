@@ -165,7 +165,7 @@ class COCO128Dataset(torch.utils.data.Dataset):
         target = dict(image_id=[image_id], boxes=[], labels=[])
         label_filepath = self.labels_path / f"{image_id:012d}.txt"
         if label_filepath.exists():
-            with open(label_filepath, "r") as f:
+            with open(label_filepath, "r", encoding="utf-8") as f:
                 for box_descr in f.readlines():
                     category_id, rel_x, rel_y, rel_w, rel_h = tuple(map(float, box_descr.split(" ")))
                     box_x1, box_y1 = img_w * (rel_x - rel_w / 2), img_h * (rel_y - rel_h / 2)
@@ -173,8 +173,12 @@ class COCO128Dataset(torch.utils.data.Dataset):
                     target["boxes"].append((box_x1, box_y1, box_x2, box_y2))
                     target["labels"].append(self.category_mapping[int(category_id)])
 
-        for k in target.keys():
-            target[k] = torch.as_tensor(target[k], dtype=torch.float32 if k == "boxes" else torch.int64)
+        target_copy = {}
+        target_keys = target.keys()
+        for k in target_keys:
+            target_copy[k] = torch.as_tensor(target[k], dtype=torch.float32 if k == "boxes" else torch.int64)
+        target = target_copy
+
         img, target = self.transform(img, target)
         return img, target
 
@@ -211,7 +215,7 @@ def main():
 
     # Get the pretrained ssd300_vgg16 model from torchvision.models
     model = torchvision.models.get_model("ssd300_vgg16", weights=weights_name)
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.cpu
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model.to(device)
     model.eval()
 

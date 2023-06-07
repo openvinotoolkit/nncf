@@ -26,13 +26,9 @@ install-onnx-dev: install-onnx-test install-pre-commit install-pylint
 test-onnx:
 	pytest tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
-ONNX_PYFILES := $(shell find examples/post_training_quantization/onnx -type f -name "*.py")
 pylint-onnx:
 	pylint --rcfile .pylintrc               \
-		nncf/onnx              	            \
-		nncf/quantization                   \
-		tests/onnx                          \
-		$(ONNX_PYFILES)
+		$(shell python3 tools/collect_pylint_input_files_for_backend.py onnx)
 
 test-install-onnx:
 	pytest tests/cross_fw/install/ -s       \
@@ -51,16 +47,17 @@ install-openvino-test:
 	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git@dcbf53280a95dae3c6538689bafe760470f08ec2#subdirectory=tools/model_tools
 
 install-openvino-dev: install-openvino-test install-pre-commit install-pylint
+	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/quantize_with_accuracy_control/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
 	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
-		nncf/openvino/                      \
-		nncf/experimental/openvino/  \
-		tests/openvino/                     \
-		examples/experimental/openvino/
+		$(shell  python3 tools/collect_pylint_input_files_for_backend.py openvino)
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
@@ -85,11 +82,7 @@ test-tensorflow:
 
 pylint-tensorflow:
 	pylint --rcfile .pylintrc               \
-		nncf/tensorflow                     \
-		nncf/experimental/tensorflow        \
-		tests/tensorflow                    \
-		tests/experimental/tensorflow       \
-		examples/tensorflow
+		$(shell python3 tools/collect_pylint_input_files_for_backend.py tensorflow)
 
 test-install-tensorflow:
 	pytest tests/cross_fw/install/ -s --backend tf --junitxml ${JUNITXML_PATH}
@@ -104,21 +97,16 @@ install-torch-test:
 	pip install -r examples/torch/requirements.txt
 
 install-torch-dev: install-torch-test install-pre-commit install-pylint
+	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
 test-torch:
 	pytest tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
+COMMON_PYFILES := $(shell python3 tools/collect_pylint_input_files_for_backend.py common)
 pylint-torch:
-	pylint --rcfile .pylintrc               \
-		nncf/common                         \
-		nncf/config                         \
-		nncf/api                            \
-		nncf/torch                          \
-		nncf/experimental/torch             \
-		tests/common                        \
-		tests/torch                         \
-		examples/torch                      \
-		examples/experimental/torch
+	pylint --rcfile .pylintrc   \
+		$(COMMON_PYFILES)       \
+		$(shell python3 tools/collect_pylint_input_files_for_backend.py torch)
 
 test-install-torch-cpu:
 	pytest tests/cross_fw/install/ -s       \
@@ -130,6 +118,15 @@ test-install-torch-gpu:
 	pytest tests/cross_fw/install -s        \
 		--backend torch                     \
 		--junitxml ${JUNITXML_PATH}
+
+###############################################################################
+# Common part
+pylint-common:
+	pylint --rcfile .pylintrc   \
+		$(COMMON_PYFILES)
+
+test-common:
+	pytest tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # Pre commit check
