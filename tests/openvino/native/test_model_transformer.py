@@ -30,7 +30,6 @@ from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
-from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
