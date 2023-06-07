@@ -55,6 +55,7 @@ def test_set_log_file(messages, expected):
             assert actual_line.rstrip("\n") == expected_line
 
         handlers_to_remove = []
+        # pylint: disable=no-member
         for handler in nncf_logger.handlers:
             if isinstance(handler, logging.FileHandler) and str(tmp_dir) in handler.baseFilename:
                 handler.close()  # so that the log file is released and temp dir can be deleted

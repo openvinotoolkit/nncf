@@ -304,6 +304,7 @@ def model_eval_fn(model, strategy, model_builder, test_dist_dataset, num_test_ba
     return metric_result["AP"]
 
 
+# pylint: disable=too-many-statements
 def run(config):
     if config.disable_tensor_float_32_execution:
         tf.config.experimental.enable_tensor_float_32_execution(False)

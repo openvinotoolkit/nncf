@@ -239,7 +239,7 @@ class ElementwisePruningOp(BasePruningOp):
         output_mask = None
         if len(input_masks) == 1:
             nncf_logger.warning(
-                f"ElementWise with a single input is not properly supported. "
+                "ElementWise with a single input is not properly supported. "
                 "The second input might be a constant without node in the graph. "
                 "The constant should be in the graph or in the node attributes. "
                 "It's also should be pruned in accordance with an input mask. "
@@ -371,7 +371,8 @@ class SplitPruningOp(BasePruningOp):
                         # not affected by split groups are propagated further
                         output_mask.dim_groups_map[dim] = groups
                     else:
-                        # invalidate groups, that assigned to the removed dimension or to the dimension that have 1 channel
+                        # invalidate groups, that assigned to the removed dimension or
+                        # to the dimension that have 1 channel
                         for group in groups:
                             group.invalidate()
             else:
@@ -722,8 +723,8 @@ class ExpandAsPruningOp(BasePruningOp):
         propagated_mask = None
         if mask:
             nncf_logger.warning(
-                f"expand_as is applied to the node with propagation mask. Currently, it's not supported "
-                "and mask is invalidated. node_name={node.node_name}"
+                "expand_as is applied to the node with propagation mask. Currently, it's not supported "
+                f"and mask is invalidated. node_name={node.node_name}"
             )
             mask.invalidate_groups()
         input_to_get_shape = input_edges[1].from_node
@@ -734,9 +735,9 @@ class ExpandAsPruningOp(BasePruningOp):
             for dim, groups in mask.dim_groups_map.items():
                 if target_shape[dim] == source_shape[dim]:
                     nncf_logger.warning(
-                        f"expand_as takes the shape from the node with propagation mask and pruning "
+                        "expand_as takes the shape from the node with propagation mask and pruning "
                         "dimension in the mask matches the dimension in the expanded input. Currently, "
-                        "it's not supported and mask is invalidated. node_name={node.node_name}"
+                        f"it's not supported and mask is invalidated. node_name={node.node_name}"
                     )
                     for group in groups:
                         group.invalidate()
@@ -757,9 +758,9 @@ class ScatterPruningOp(BasePruningOp):
         propagated_mask = None
         if i1 != i2:
             nncf_logger.warning(
-                f"expand_as takes the shape from the node with propagation mask and pruning "
+                "expand_as takes the shape from the node with propagation mask and pruning "
                 "dimension in the mask matches the dimension in the expanded input. Currently, "
-                "it's not supported and mask is invalidated. node_name={node.node_name}"
+                f"it's not supported and mask is invalidated. node_name={node.node_name}"
             )
             if i1:
                 i1.invalidate_groups()
