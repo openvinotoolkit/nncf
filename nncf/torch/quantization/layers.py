@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
-from packaging import version
 from torch import distributed
 from torch import nn
 
@@ -331,7 +330,6 @@ class BaseQuantizer(nn.Module, ABC):
                 self.hook.remove()
 
         self.load_listener = LoadStateListener(self)
-        self._old_level_range_setting = False
 
     @property
     def level_low(self) -> int:
@@ -379,8 +377,6 @@ class BaseQuantizer(nn.Module, ABC):
         # TODO: refactor to get rid of extra if's and calls on each forward
         if not self.is_enabled_quantization():
             return x
-        if self._old_level_range_setting:
-            self.set_level_ranges()
         is_exporting = is_tracing_state()
         if is_exporting:
             with no_nncf_trace():
@@ -658,11 +654,8 @@ class SymmetricQuantizer(BaseQuantizer):
             )
         )
 
-        if version.parse(torch.__version__) >= version.parse("1.12"):
-            # Values of level_low, level_high must be recalculated for load new signed parameter.
-            self.register_load_state_dict_post_hook(lambda module, _: module.set_levels())
-        else:
-            self._old_level_range_setting = True
+        # Values of level_low, level_high must be recalculated for load new signed parameter.
+        self.register_load_state_dict_post_hook(lambda module, _: module.set_levels())
 
     @property
     def scale(self):
