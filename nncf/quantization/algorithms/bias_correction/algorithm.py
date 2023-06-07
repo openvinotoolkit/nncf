@@ -35,6 +35,7 @@ from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 TModel = TypeVar("TModel")
 
 BIAS_CORRECTION_THRESHOLD = 1000
+OUTPUT_PORT_OF_NODE = 0
 
 
 class BiasCorrection(Algorithm):
@@ -145,7 +146,7 @@ class BiasCorrection(Algorithm):
             ):
                 nodes_with_bias.append(node)
 
-        # We pre-collect information about the subgraph we need to create in order
+        # We pre-collect information about the subgraph we need in order
         # to collect statistics for the change in the bias of each layer.
         # Also here we collect a list of layers that depend on the current one.
 
@@ -154,7 +155,7 @@ class BiasCorrection(Algorithm):
         subgraphs_data = [self._get_subgraph_data_for_node(node, nncf_graph) for node in nodes_with_bias]
 
         for position, (node, subgraph_data) in tqdm(
-            list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="(BC) Bias correction"
+            list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="Applying Bias correction"
         ):
             node_name = node.node_name
 
@@ -206,7 +207,7 @@ class BiasCorrection(Algorithm):
         This data contains the nodes (NNCFNode) for the subgraph building
         and statistics collection (for the next step).
 
-        :param node: NNCFNode instance. This is the main node that with bias that would be corrected (or not).
+        :param node: NNCFNode instance. This is the main node with bias that would be corrected (or not).
         :param nncf_graph: NNCFGraph instance for graph analysis.
         :return: A dict with the list of the nodes for the subgraph input and statistics collection.
         """
@@ -281,17 +282,17 @@ class BiasCorrection(Algorithm):
         :param subgraph_data: A dictionary with the layers for the graph building.
         :return: Backend-specific subgraph extracted from the model.
         """
-        input_node_names, output_node_names = (
-            subgraph_data["subgraph_input_names"],
-            subgraph_data["subgraph_output_names"],
+        extracted_model = self.extract_model(
+            model, subgraph_data["subgraph_input_names"], subgraph_data["subgraph_output_names"]
         )
-        extracted_model = self.extract_model(model, input_node_names, output_node_names)
 
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(extracted_model)
 
         # For layes with weights, there is only one output port - 0.
-        statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION, node.node_name, port_id=0)
+        statistic_point = self._backend_entity.target_point(
+            TargetType.POST_LAYER_OPERATION, node.node_name, port_id=OUTPUT_PORT_OF_NODE
+        )
         output_insertion_command = self._backend_entity.output_insertion_command(nncf_graph, statistic_point)
         transformation_layout.register(output_insertion_command)
         return model_transformer.transform(transformation_layout)
@@ -492,7 +493,9 @@ class BiasCorrection(Algorithm):
             channel_axis = node.metatype.output_channel_axis
 
             # For layes with weights, there is only one output port - 0.
-            statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION, node_name, port_id=0)
+            statistic_point = self._backend_entity.target_point(
+                TargetType.POST_LAYER_OPERATION, node_name, port_id=OUTPUT_PORT_OF_NODE
+            )
             stat_collector = self._backend_entity.mean_statistic_collector(
                 reduction_shape=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
             )
