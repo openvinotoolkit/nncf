@@ -12,6 +12,7 @@
 import json
 import multiprocessing
 import os
+import tempfile
 from argparse import ArgumentParser
 from collections import OrderedDict
 from collections import defaultdict
@@ -24,6 +25,7 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import Dimension
 from openvino.runtime import PartialShape
+from openvino.tools import pot
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
 from openvino.tools.pot.configs.config import Config
@@ -718,13 +720,27 @@ class ACDataset:
         return DataProvider(self._data_source, self._transform_func, indices)
 
 
+def initialize_model_and_evaluator(xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str):
+    model_evaluator = create_model_evaluator(accuracy_checker_config)
+
+    with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
+        if quantization_impl == "pot":
+            pot_model = pot.load_model({"model_name": "model", "model": xml_path, "weights": bin_path}, "CPU")
+            paths = pot.save_model(pot_model, save_path=tmp_dir, model_name="model")
+            xml_path, bin_path = paths[0]["model"], paths[0]["weights"]
+
+        model = ov.Core().read_model(xml_path, bin_path)
+        model_evaluator.load_network_from_ir([{"model": xml_path, "weights": bin_path}])
+        model_evaluator.select_dataset("")
+    return model, model_evaluator
+
+
 def quantize_model_with_accuracy_control(
     xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str, quantization_parameters
 ):
-    ov_model = ov.Core().read_model(xml_path, bin_path)
-    model_evaluator = create_model_evaluator(accuracy_checker_config)
-    model_evaluator.load_network_from_ir([{"model": xml_path, "weights": bin_path}])
-    model_evaluator.select_dataset("")
+    ov_model, model_evaluator = initialize_model_and_evaluator(
+        xml_path, bin_path, accuracy_checker_config, quantization_impl
+    )
 
     transform_fn = get_transform_fn(model_evaluator)
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
