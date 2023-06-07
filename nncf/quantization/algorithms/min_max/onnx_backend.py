@@ -22,7 +22,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
@@ -84,7 +84,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {ONNXConcatLayerMetatype: self.overflow_fix_metatypes}
+        return {ONNXConcatMetatype: self.overflow_fix_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:
