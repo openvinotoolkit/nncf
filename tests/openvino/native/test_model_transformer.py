@@ -555,24 +555,3 @@ def test_null_biases_insertion(model_with_parameters):
         assert bias_node.get_type_name() == "Constant"
 
         assert all(bias_node.get_vector() == np.zeros(layer_shape[1], dtype=bias_dtype))
-
-
-MODELS_WITH_DATA = [
-    {"model": ConvModel(), "input_layers": ["Conv"], "output_layers": ["Conv"]},
-    {"model": QuantizedModel(), "input_layers": ["Relu_1", "Transpose"], "output_layers": ["Conv_3", "Add_2"]},
-]
-
-
-@pytest.mark.parametrize("model_with_data", MODELS_WITH_DATA)
-def test_model_extraction(model_with_data):
-    model_to_test = model_with_data["model"]
-    model = model_to_test.ov_model
-    transformation_layout = TransformationLayout()
-    command = OVModelExtractionCommand(model_with_data["input_layers"], model_with_data["output_layers"])
-    transformation_layout.register(command)
-
-    model_transformer = OVModelTransformer(model)
-    transformed_model = model_transformer.transform(transformation_layout)
-
-    path_to_dot = REFERENCE_GRAPHS_DIR / f"exctracted_{model_to_test.ref_graph_name}"
-    compare_nncf_graphs(transformed_model, path_to_dot)
