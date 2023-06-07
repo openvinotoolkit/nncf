@@ -24,11 +24,11 @@ def _add_softmax_matmul(pattern: GraphPattern) -> None:
     #              \        /
     #               \      /
     #                MATMUL
-    branch_matmul_nodes = [om.OVReshapeMetatype, om.OVTransposeMetatype, om.OVGatherMetatype]
+    reshape_transpose_gather = [om.OVReshapeMetatype, om.OVTransposeMetatype, om.OVGatherMetatype]
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
     matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
     matmul_branch_nodes = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE || TRANSPOSE || GATHER", GraphPattern.METATYPE_ATTR: branch_matmul_nodes}
+        **{GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER", GraphPattern.METATYPE_ATTR: reshape_transpose_gather}
     )
     pattern.add_edge(softmax, matmul)
     pattern.add_edge(matmul_branch_nodes, matmul)
@@ -48,7 +48,7 @@ def _add_softmax_reshape_matmul(pattern: GraphPattern) -> None:
     #                     \         /
     #                      \       /
     #                        MATMUL
-    branch_matmul_nodes = [om.OVReshapeMetatype, om.OVTransposeMetatype, om.OVGatherMetatype]
+    reshape_transpose_gather = [om.OVReshapeMetatype, om.OVTransposeMetatype, om.OVGatherMetatype]
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
     reshape = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: om.OVReshapeMetatype})
     matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
@@ -56,7 +56,7 @@ def _add_softmax_reshape_matmul(pattern: GraphPattern) -> None:
         **{GraphPattern.LABEL_ATTR: "NON_PATTERN", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
     matmul_branch_nodes = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE || TRANSPOSE || GATHER", GraphPattern.METATYPE_ATTR: branch_matmul_nodes}
+        **{GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER", GraphPattern.METATYPE_ATTR: reshape_transpose_gather}
     )
     pattern.add_edge(softmax, reshape)
     pattern.add_edge(non_pattern_node, reshape)

@@ -11,151 +11,78 @@
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
-from nncf.onnx.graph.metatypes import onnx_metatypes
+from nncf.onnx.graph.metatypes import onnx_metatypes as om
 
 ONNX_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
 
-@ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.SOFTMAX_MATMUL)
-def create_softmax_matmul() -> GraphPattern:
-    pattern = GraphPattern()
+def _add_softmax_matmul(pattern: GraphPattern) -> None:
+    #       SOFTMAX  RESHAPE||TRANSPOSE||GATHER
+    #           \              /
+    #            \            /
+    #             \          /
+    #              \        /
+    #               \      /
+    #                MATMUL
+    reshape_transpose_gather = [
+        om.ONNXReshapeMetatype,
+        om.ONNXTransposeMetatype,
+        om.ONNXGatherMetatype,
+    ]
     softmax = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXSoftmaxMetatype}
+        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.ONNXSoftmaxMetatype}
     )
-    matmul = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXLinearMetatype}
-    )
-    non_pattern_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype})
+    matmul_branch_nodes = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER",
+            GraphPattern.METATYPE_ATTR: reshape_transpose_gather,
+        }
     )
     pattern.add_edge(softmax, matmul)
-    pattern.add_edge(non_pattern_node, matmul)
-    return pattern
+    pattern.add_edge(matmul_branch_nodes, matmul)
 
 
-@ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.SOFTMAX_RESHAPE_MATMUL)
-def create_softmax_reshape_matmul() -> GraphPattern:
-    pattern = GraphPattern()
+def _add_softmax_reshape_matmul(pattern: GraphPattern) -> None:
+    #       SOFTMAX  NON_PATTERN_NODE
+    #           \       /
+    #            \     /
+    #             \   /
+    #             RESHAPE   RESHAPE||TRANSPOSE||GATHER
+    #                 \                 /
+    #                  \               /
+    #                   \             /
+    #                    \           /
+    #                     \         /
+    #                      \       /
+    #                        MATMUL
+    reshape_transpose_gather = [
+        om.ONNXReshapeMetatype,
+        om.ONNXTransposeMetatype,
+        om.ONNXGatherMetatype,
+    ]
     softmax = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXSoftmaxMetatype}
+        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.ONNXSoftmaxMetatype}
     )
     reshape = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXReshapeMetatype}
+        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: om.ONNXReshapeMetatype}
     )
-    matmul = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXLinearMetatype}
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype})
+    non_pattern_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "NON_PATTERN", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
-    non_pattern_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "NON_PATTERN_1", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
-    )
-    non_pattern_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "NON_PATTERN_2", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    matmul_branch_nodes = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER", GraphPattern.METATYPE_ATTR: reshape_transpose_gather}
     )
     pattern.add_edge(softmax, reshape)
-    pattern.add_edge(non_pattern_node_1, reshape)
+    pattern.add_edge(non_pattern_node, reshape)
     pattern.add_edge(reshape, matmul)
-    pattern.add_edge(non_pattern_node_2, matmul)
-    return pattern
+    pattern.add_edge(matmul_branch_nodes, matmul)
 
 
 @ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.MULTIHEAD_ATTENTION_OUTPUT)
 def create_multihead_attention_output() -> GraphPattern:
     pattern = GraphPattern()
-    softmax_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXSoftmaxMetatype}
-    )
-    reshape_node_1_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXReshapeMetatype}
-    )
-    add_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXAddLayerMetatype}
-    )
-    reshape_node_1_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXReshapeMetatype}
-    )
-    transpose_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXTransposeMetatype}
-    )
-    matmul_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXLinearMetatype}
-    )
-
-    pattern.add_edge(softmax_node_1, reshape_node_1_1)
-    pattern.add_edge(add_node_1, reshape_node_1_2)
-    pattern.add_edge(reshape_node_1_2, transpose_node_1)
-    pattern.add_edge(transpose_node_1, matmul_node_1)
-    pattern.add_edge(reshape_node_1_1, matmul_node_1)
-
-    softmax_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXSoftmaxMetatype}
-    )
-    add_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXAddLayerMetatype}
-    )
-    reshape_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXReshapeMetatype}
-    )
-    transpose_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXTransposeMetatype}
-    )
-    gather_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "GATHER", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXGatherMetatype}
-    )
-    matmul_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXLinearMetatype}
-    )
-
-    pattern.add_edge(add_node_2, reshape_node_2)
-    pattern.add_edge(reshape_node_2, transpose_node_2)
-    pattern.add_edge(transpose_node_2, gather_node_2)
-    pattern.add_edge(softmax_node_2, matmul_node_2)
-    pattern.add_edge(gather_node_2, matmul_node_2)
-
-    softmax_node_3 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXSoftmaxMetatype}
-    )
-    add_node_3 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXAddLayerMetatype}
-    )
-    reshape_node_3 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXReshapeMetatype}
-    )
-    transpose_node_3 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXTransposeMetatype}
-    )
-    matmul_node_3 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXLinearMetatype}
-    )
-
-    pattern.add_edge(add_node_3, reshape_node_3)
-    pattern.add_edge(reshape_node_3, transpose_node_3)
-    pattern.add_edge(transpose_node_3, matmul_node_3)
-    pattern.add_edge(softmax_node_3, matmul_node_3)
-
-    return pattern
-
-
-@ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.STABLE_DIFFUSION)
-def create_stable_diffusion() -> GraphPattern:
-    pattern = GraphPattern()
-    softmax_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXSoftmaxMetatype}
-    )
-    reshape_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXReshapeMetatype}
-    )
-    transpose_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXTransposeMetatype}
-    )
-    reshape_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXReshapeMetatype}
-    )
-    matmul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXLinearMetatype}
-    )
-
-    pattern.add_edge(reshape_node_1, transpose_node)
-    pattern.add_edge(transpose_node, reshape_node_2)
-    pattern.add_edge(reshape_node_2, matmul_node)
-    pattern.add_edge(softmax_node, matmul_node)
+    _add_softmax_matmul(pattern)
+    _add_softmax_reshape_matmul(pattern)
     return pattern
