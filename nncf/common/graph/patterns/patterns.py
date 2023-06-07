@@ -385,7 +385,4 @@ class IgnoredPatternNames(Enum):
     Describes the patterns, which nodes should be ignored during FakeQuantize placement.
     """
 
-    SOFTMAX_MATMUL = PatternDesc("softmax_matmul", model_types=[ModelType.TRANSFORMER])
-    SOFTMAX_RESHAPE_MATMUL = PatternDesc("softmax_reshape_matmul", model_types=[ModelType.TRANSFORMER])
     MULTIHEAD_ATTENTION_OUTPUT = PatternDesc("multihead_attention_output", model_types=[ModelType.TRANSFORMER])
-    STABLE_DIFFUSION = PatternDesc("stable_diffusion", model_types=[ModelType.TRANSFORMER])
