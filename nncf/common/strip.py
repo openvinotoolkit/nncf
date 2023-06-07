@@ -32,4 +32,4 @@ def strip(model: TModel, do_copy: bool = True) -> TModel:
 
         return strip_pt(model, do_copy)
 
-    raise RuntimeError(f"Method `strip` does not supported for {model_backend.value} backend.")
+    raise RuntimeError(f"Method `strip` does not support for {model_backend.value} backend.")

@@ -57,20 +57,3 @@ def product_dict(d: Dict[Hashable, List]) -> Dict:
     vals = d.values()
     for instance in itertools.product(*vals):
         yield dict(zip(keys, instance))
-
-
-def merge_dicts(target: dict, update: dict):
-    """
-    Merge two dictionaries with update dict recursively key by key.
-
-
-    :param target: Target dictionary.
-    :param update: Dictionary that update value to merge to target.
-    :return: Merged dict.
-    """
-    for k, v in update.items():
-        if isinstance(v, dict):
-            update[k] = merge_dicts(target[k], v)
-        else:
-            target[k] = v
-    return target

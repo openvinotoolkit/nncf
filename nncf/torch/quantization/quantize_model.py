@@ -15,7 +15,6 @@ from typing import Any, Dict, Optional, Tuple
 import torch
 
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.helpers import merge_dicts
 from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
@@ -23,7 +22,7 @@ from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import convert_advanced_parameters_to_dict
+from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 from nncf.torch.dynamic_graph.context import no_nncf_trace
@@ -172,16 +171,7 @@ def _create_nncf_config(
             compression_config["ignored_scopes"] = _ignored_scope
 
     if advanced_parameters is not None:
-        advanced_config = convert_advanced_parameters_to_dict(advanced_parameters)
-
-        ranges = advanced_config.get("initializer", {}).get("range")
-        if ranges is not None:
-            for rconfig in ranges:
-                rconfig["num_init_samples"] = subset_size
-                if "type" not in rconfig:
-                    rconfig["type"] = DEFAULT_RANGE_TYPE
-
-        compression_config = merge_dicts(compression_config, advanced_config)
+        compression_config = apply_advanced_parameters_to_config(compression_config, advanced_parameters)
 
     return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 

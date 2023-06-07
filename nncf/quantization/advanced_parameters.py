@@ -21,6 +21,7 @@ from typing import Any, Dict, Optional
 
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.utils.api_marker import api
+from nncf.config.config import NNCFConfig
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
@@ -296,29 +297,27 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     return result
 
 
-def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) -> Dict[str, Any]:
+def apply_advanced_parameters_to_config(config: NNCFConfig, params: AdvancedQuantizationParameters) -> NNCFConfig:
     """
-    Converts advanced parameters to the dict in the legacy format
+    Apply advanced parameters to the config in the legacy format
 
+    :param config: NNCF config in legacy format
     :param params: Advanced quantization parameters
     :return: advanced quantization parameters as dict in the legacy format
     """
-    result = {
-        "overflow_fix": params.overflow_fix.value,
-        "quantize_outputs": params.quantize_outputs,
-        "initializer": {},
-    }
+    config["overflow_fix"] = params.overflow_fix.value
+    config["quantize_outputs"] = params.quantize_outputs
 
     if params.disable_bias_correction:
-        result["initializer"]["batchnorm_adaptation"] = {"num_bn_adaptation_samples": 0}
+        config["initializer"]["batchnorm_adaptation"] = {"num_bn_adaptation_samples": 0}
 
     activations_config = convert_quantization_parameters_to_dict(params.activations_quantization_params)
     if activations_config:
-        result["activations"] = activations_config
+        config["activations"] = activations_config
 
     weights_config = convert_quantization_parameters_to_dict(params.weights_quantization_params)
     if weights_config:
-        result["weights"] = weights_config
+        config["weights"] = weights_config
 
     activations_init_range_config = convert_range_estimator_parameters_to_dict(
         params.activations_range_estimator_params
@@ -330,7 +329,7 @@ def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) 
         weights_init_range_config["target_quantizer_group"] = "weights"
         weights_init_range_config["target_scopes"] = "{re}.*"
 
-        result["initializer"]["range"] = [activations_init_range_config, weights_init_range_config]
+        config["initializer"]["range"] = [activations_init_range_config, weights_init_range_config]
 
     if params.bias_correction_params.apply_for_all_nodes:
         raise RuntimeError(
@@ -340,4 +339,4 @@ def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) 
     if params.bias_correction_params.threshold is not None:
         raise RuntimeError("threshold parameter of the BiasCorrection algorithm is not supported in the legacy format")
 
-    return result
+    return config
