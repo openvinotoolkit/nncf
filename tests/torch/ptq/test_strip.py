@@ -56,7 +56,7 @@ def check_fq(model: NNCFNetwork, striped: bool):
 
 
 @pytest.mark.parametrize("strip_type", ("nncf", "torch", "nncf_interfere"))
-def test_nncf_quantize_strip(strip_type):
+def test_nncf_strip_api(strip_type):
     model = LeNet()
     input_size = [1, 1, 32, 32]
 
