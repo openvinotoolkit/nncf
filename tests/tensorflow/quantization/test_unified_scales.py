@@ -145,7 +145,7 @@ def test_shared_op_unified_scales(target_device):
     nncf_config["target_device"] = target_device
 
     non_weight_quantizers_ref = 8
-    if target_device == 'VPU':
+    if target_device == "VPU":
         non_weight_quantizers_ref = 5
 
     model = get_shared_conv_test_model()
