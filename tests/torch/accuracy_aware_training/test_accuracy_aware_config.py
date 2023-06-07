@@ -104,6 +104,6 @@ def test_accuracy_aware_config(aa_config, must_raise):
 
     if must_raise:
         with pytest.raises(RuntimeError):
-            _ = create_accuracy_aware_training_loop(config, compression_ctrl, dump_checkpoints=False)
+            _ = create_accuracy_aware_training_loop(config, compression_ctrl, 0, dump_checkpoints=False)
     else:
-        _ = create_accuracy_aware_training_loop(config, compression_ctrl, dump_checkpoints=False)
+        _ = create_accuracy_aware_training_loop(config, compression_ctrl, 0, dump_checkpoints=False)

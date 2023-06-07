@@ -234,6 +234,12 @@
                 "scales": "unified"
             }
         },
+        {
+            "type": "ReduceSum",
+            "quantization": {
+                "activations": "q8_a"
+            }
+        },
         {"type": "Flatten"},
         {"type": "Squeeze"},
         {"type": "Unsqueeze"},

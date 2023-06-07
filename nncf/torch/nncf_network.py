@@ -46,6 +46,7 @@ from nncf.torch.dynamic_graph.io_handling import InputInfoWrapManager
 from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_CALL
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope_access import get_module_by_scope
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
@@ -475,7 +476,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         retval = {}
         for module, scope_set in self._nncf_replaced_modules.items():
             canonical_scope = next(iter(scope_set))
-            retval[module] = canonical_scope
+            retval[module] = canonical_scope.copy()
         return retval
 
     def get_weighted_original_graph_nodes(self, nncf_module_names: List[str] = None) -> List[NNCFNode]:
@@ -879,7 +880,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         Ensures that functor-like calls of the processed model object will directly trigger the NNCF-specific
         forward call.
         """
-        return self.forward(*args, **kwargs)
+        return ORIGINAL_CALL(self, *args, **kwargs)
 
     def forward(self, *args, **kwargs):
         """

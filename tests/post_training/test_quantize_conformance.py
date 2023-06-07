@@ -27,6 +27,7 @@ import openvino.runtime as ov
 import pytest
 import timm
 import torch
+import tqdm
 from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
@@ -179,7 +180,7 @@ def benchmark_performance(model_path: str, model_name: str, do_bench: bool) -> O
 
         if model_perf is None:
             logging.info(f"Cannot measure performance for the model: {model_name}\nDetails: {bench_output}\n")
-    except BaseException as error:
+    except BaseException as error:  # pylint: disable=broad-except
         logging.error(f"Error when benchmarking the model: {model_name}. Details: {error}")
 
     return model_perf
@@ -211,20 +212,29 @@ def validate_accuracy(model_path: str, val_loader: DataLoader) -> float:
     jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
     infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
 
-    def process_result(request, userdata):
-        output_data = request.get_output_tensor().data
-        predicted_label = np.argmax(output_data, axis=1)
-        predictions[userdata] = [predicted_label]
+    # Disable tqdm for Jenkins
+    disable_tqdm = os.environ.get("JENKINS_HOME") is not None
+    if disable_tqdm:
+        print("Validation...")
 
-    infer_queue.set_callback(process_result)
+    with tqdm.tqdm(total=dataset_size, desc="Validation", disable=disable_tqdm) as pbar:
 
-    for i, (images, target) in enumerate(val_loader):
-        # W/A for memory leaks when using torch DataLoader and OpenVINO
-        image_copies = copy.deepcopy(images.numpy())
-        infer_queue.start_async(image_copies, userdata=i)
-        references[i] = target
+        def process_result(request, userdata):
+            output_data = request.get_output_tensor().data
+            predicted_label = np.argmax(output_data, axis=1)
+            predictions[userdata] = [predicted_label]
+            pbar.update()
 
-    infer_queue.wait_all()
+        infer_queue.set_callback(process_result)
+
+        for i, (images, target) in enumerate(val_loader):
+            # W/A for memory leaks when using torch DataLoader and OpenVINO
+            image_copies = copy.deepcopy(images.numpy())
+            infer_queue.start_async(image_copies, userdata=i)
+            references[i] = target
+
+        infer_queue.wait_all()
+
     predictions = np.concatenate(predictions, axis=0)
     references = np.concatenate(references, axis=0)
     return accuracy_score(predictions, references)
@@ -236,7 +246,7 @@ def benchmark_torch_model(
     model_name: str,
     output_path: str,
     do_bench: bool,
-    eval: bool = True,
+    eval_mode: bool = True,
 ) -> RunInfo:
     """
     Benchmark the torch model.
@@ -245,7 +255,7 @@ def benchmark_torch_model(
     :param dataloader: Validation dataloader.
     :param model_name: Model name.
     :param output_path: Path to save ONNX and OpenVINO IR models.
-    :param eval: Boolean flag to run validation, defaults to True.
+    :param eval_mode: Boolean flag to run validation, defaults to True.
     :param do_bench: Boolean flag to run benchmark.
 
     :return RunInfo: Accuracy and performance metrics.
@@ -262,7 +272,7 @@ def benchmark_torch_model(
 
     # Validate accuracy
     accuracy = None
-    if eval:
+    if eval_mode:
         accuracy = validate_accuracy(ov_path, dataloader)
 
     return RunInfo(top_1=accuracy, fps=performance)
@@ -328,18 +338,18 @@ def benchmark_ov_model(
     return RunInfo(top_1=accuracy, fps=performance)
 
 
-@pytest.fixture(scope="session")
-def data(pytestconfig):
+@pytest.fixture(scope="session", name="data")
+def fixture_data(pytestconfig):
     return pytestconfig.getoption("data")
 
 
-@pytest.fixture(scope="session")
-def output(pytestconfig):
+@pytest.fixture(scope="session", name="output")
+def fixture_output(pytestconfig):
     return pytestconfig.getoption("output")
 
 
-@pytest.fixture(scope="session")
-def result(pytestconfig):
+@pytest.fixture(scope="session", name="result")
+def fixture_result(pytestconfig):
     return pytestconfig.test_results
 
 
@@ -582,6 +592,14 @@ RUNNERS = {
 }
 
 
+def log_separator_strings(model_name, backend):
+    print("\n")
+    print("-" * 60)
+    print(f"Model: {model_name} Backend: {backend}")
+    print("-" * 60)
+    print("\n")
+
+
 def run_ptq_timm(
     data: str,
     output: str,
@@ -610,6 +628,8 @@ def run_ptq_timm(
 
     runinfos = {}
     try:
+        log_separator_strings(report_model_name, "TORCH_FP32")
+
         output_folder = Path(output)
         output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -642,18 +662,19 @@ def run_ptq_timm(
         calibration_dataset = nncf.Dataset(val_dataloader, transform_fn)
 
         for backend in backends:
+            log_separator_strings(report_model_name, backend.value)
             runner = RUNNERS[backend]
             try:
                 runinfo = runner(
                     model,
                     calibration_dataset,
-                    model_quantization_params,
+                    copy.deepcopy(model_quantization_params),
                     output_folder,
                     model_name,
                     batch_one_dataloader,
                     do_bench,
                 )
-            except Exception as error:
+            except Exception:  # pylint: disable=broad-except
                 backend_dir = backend.value.replace(" ", "_")
                 traceback_path = Path.joinpath(output_folder, backend_dir, model_name + "_error_log.txt")
                 create_error_log(traceback_path)
@@ -676,7 +697,7 @@ def create_error_log(traceback_path: PosixPath) -> None:
     Create file with error log.
     """
     traceback_path.parents[0].mkdir(parents=True, exist_ok=True)
-    with open(traceback_path, "w") as file:
+    with open(traceback_path, "w") as file:  # pylint: disable=unspecified-encoding
         traceback.print_exc(file=file)
     file.close()
     logging.error(traceback.format_exc())

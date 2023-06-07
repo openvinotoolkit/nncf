@@ -30,7 +30,6 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig
 from nncf.config.extractors import extract_accuracy_aware_training_params
-from nncf.config.structures import ModelEvaluationArgs
 
 TModel = TypeVar("TModel")
 TensorboardWriterType = TypeVar("TensorboardWriterType")
@@ -549,24 +548,19 @@ class AccuracyAwareTrainingMode:
 def create_accuracy_aware_training_loop(
     nncf_config: NNCFConfig,
     compression_ctrl: CompressionAlgorithmController,
-    uncompressed_model_accuracy: float = None,
+    uncompressed_model_accuracy: float,
     **additional_runner_args,
 ) -> BaseEarlyExitCompressionTrainingLoop:
     """
     Creates an accuracy aware training loop corresponding to NNCFConfig and CompressionAlgorithmController.
     :param: nncf_config: An instance of the NNCFConfig.
     :param: compression_ctrl: An instance of CompressionAlgorithmController.
-    :param: uncompressed_model_accuracy: If provided, will take this as the value of the target accuracy metric for the
-    original (uncompressed) model for purposes of matching the compressed model metric to this baseline. If not
-    provided, the uncompressed model accuracy will be measured during this function using `ModelEvaluationArgs.eval_fn`
-    callable as provided by the nncf_config.
+    :param: uncompressed_model_accuracy: The value of the target accuracy metric for the original (uncompressed) model
+    for purposes of matching the compressed model metric to this baseline
     :return: Accuracy aware training loop.
     """
     accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
     accuracy_aware_training_mode = accuracy_aware_training_params.get("mode")
-    if uncompressed_model_accuracy is None:
-        eval_fn = nncf_config.get_extra_struct(ModelEvaluationArgs).eval_fn
-        uncompressed_model_accuracy = eval_fn(compression_ctrl.model)
     if accuracy_aware_training_mode == AccuracyAwareTrainingMode.EARLY_EXIT:
         return EarlyExitCompressionTrainingLoop(
             nncf_config, compression_ctrl, uncompressed_model_accuracy, **additional_runner_args

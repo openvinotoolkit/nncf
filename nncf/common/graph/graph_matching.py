@@ -14,7 +14,6 @@ from typing import List, Set
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.patterns import GraphPattern
 
 
@@ -89,8 +88,8 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                 # Torch and TF pattern mapping based on 'type' section,
                 # While ONNX mapping based on metatypes -
                 # to support all of them, we need to check the existane of the attributes
-                if NNCFGraph.METATYPE_ATTR in node_1:
-                    if node_1[NNCFGraph.METATYPE_ATTR] in node_2[attr]:
+                if GraphPattern.NODE_TYPE_ATTR in node_1:
+                    if node_1[GraphPattern.NODE_TYPE_ATTR] in node_2[attr]:
                         continue
             if node_1[attr] not in node_2[attr]:
                 return False

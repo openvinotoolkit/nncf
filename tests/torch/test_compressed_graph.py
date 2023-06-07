@@ -739,12 +739,15 @@ SYNTHETIC_MODEL_DESC_LIST = [
     "synthetic_model_desc", SYNTHETIC_MODEL_DESC_LIST, ids=[m.model_name for m in SYNTHETIC_MODEL_DESC_LIST]
 )
 def test_synthetic_model_quantization(synthetic_model_desc: IModelDesc):
+    model = synthetic_model_desc.get_model()
+    if isinstance(model, MultiOutputSameTensorModel):
+        pytest.xfail("The MultiOutputSameTensorModel is skipped, ticket 110944.")
+
     config = get_basic_quantization_config(
         input_sample_sizes=synthetic_model_desc.get_input_sample_sizes(), input_info=synthetic_model_desc.input_info
     )
     register_bn_adaptation_init_args(config)
 
-    model = synthetic_model_desc.get_model()
     compressed_model, _ = create_compressed_model_and_algo_for_test(
         model, config, wrap_inputs_fn=synthetic_model_desc.get_wrap_inputs_fn()
     )

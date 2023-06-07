@@ -15,11 +15,13 @@ from typing import Any, Callable, Dict, Generator, KeysView, List, Tuple, Type, 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 
+from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.utils.dot_file_rw import write_dot_graph
 
 NNCFNodeName = str
@@ -700,3 +702,18 @@ class NNCFGraph:
         self._node_id_to_key_dict = {}
         for node_key, node in self._nx_graph.nodes.items():
             self._node_id_to_key_dict[node["id"]] = node_key
+
+    def find_matching_nodes(self, patterns: GraphPattern) -> List[NNCFNode]:
+        """
+        Returns nodes of matched pattern in patterns.
+
+        :param patterns: Instance of GraphPattern containing all patterns.
+        :return: Nodes that are matched patterns.
+        The returned nodes order relies on DiGraphMatcher isomorphic subgraphs matching logic from networkX package.
+        DiGraphMatcher does not guarantee a specific order for returning isomorphic subgraphs.
+        """
+        output = []
+        for matched_subgraph in find_subgraphs_matching_pattern(self._nx_graph, patterns):
+            for node_key in matched_subgraph:
+                output.append(self.get_node_by_key(node_key))
+        return output

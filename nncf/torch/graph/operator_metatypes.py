@@ -498,9 +498,20 @@ class PTMatMulMetatype(PTOperatorMetatype):
     name = "MatMulOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__"],
-        NamespaceTarget.TORCH: ["matmul", "bmm", "mm", "baddbmm"],
+        NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTBaddBmmMetatype(PTOperatorMetatype):
+    name = "MatMulOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["baddbmm"]}
+    hw_config_names = [HWConfigOpName.MATMUL]
+    # 0-th arg to the baddbmm is basically a (b)ias to be (add)ed to the (bmm) operation,
+    # presuming that most runtime implementations will fuse the bias addition into the matrix multiplication
+    # and therefore won't quantize the bias input, as this would break the hardware-fused pattern.
+    ignored_input_ports: List[int] = [0]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -555,6 +566,12 @@ class PTAvgPool3dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.AVGPOOL]
 
 
+class PTMaxPool1dMetatype(PTOperatorMetatype):
+    name = "MaxPool1DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool1d", "adaptive_max_pool1d"]}
+    hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
 @PT_OPERATOR_METATYPES.register()
 class PTMaxPool2dMetatype(PTOperatorMetatype):
     name = "MaxPool2DOp"
@@ -567,6 +584,18 @@ class PTMaxPool3dMetatype(PTOperatorMetatype):
     name = "MaxPool3DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool3d", "adaptive_max_pool3d"]}
     hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTMaxUnpool1dMetatype(PTOperatorMetatype):
+    name = "MaxUnPool1DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_unpool1d"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTMaxUnpool2dMetatype(PTOperatorMetatype):
+    name = "MaxUnPool2DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_unpool2d"]}
 
 
 @PT_OPERATOR_METATYPES.register()

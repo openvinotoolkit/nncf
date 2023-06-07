@@ -735,8 +735,12 @@ def quantize_model_with_accuracy_control(
     advanced_parameters = quantization_parameters.get(
         "advanced_quantization_parameters", AdvancedQuantizationParameters()
     )
-    if quantization_impl == "native":
+    if quantization_impl == "pot":
+        advanced_parameters.backend_params["use_pot"] = True
+    elif quantization_impl == "native":
         advanced_parameters.backend_params["use_pot"] = False
+    else:
+        raise NotImplementedError()
     quantization_parameters["advanced_quantization_parameters"] = advanced_parameters
 
     quantization_impl_fn = name_to_quantization_impl_map.get(quantization_impl)

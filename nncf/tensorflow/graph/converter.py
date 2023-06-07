@@ -23,6 +23,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConvertDtypeLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
@@ -35,6 +36,7 @@ from nncf.common.graph.utils import get_concat_axis
 from nncf.common.graph.utils import get_split_axis
 from nncf.common.logging import nncf_logger
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
+from nncf.tensorflow.graph.metatypes.common import CAST_METATYPES
 from nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import DIMENSION_PERMUTATION_METATYPES
@@ -754,6 +756,8 @@ def _get_layer_attributes(
         layer_attributes = _get_permutation_layer_attributes(model_layer, layer_metatype)
     elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS:
         layer_attributes = _get_multiple_output_layer_attributes(model_layer)
+    elif layer_metatype in CAST_METATYPES:
+        layer_attributes = _get_cast_layer_attributes(model_layer)
 
     return layer_attributes
 
@@ -842,3 +846,9 @@ def _get_multiple_output_layer_attributes(layer: tf.keras.layers.Layer) -> Multi
         input_shape = [input_shape]
     axis = get_split_axis(input_shape, output_shape)
     return MultipleOutputLayerAttributes(chunks, axis)
+
+
+def _get_cast_layer_attributes(layer: tf.keras.layers.Layer) -> ConvertDtypeLayerAttributes:
+    src_dtype = layer.input.dtype
+    dst_dtype = layer.output.dtype
+    return ConvertDtypeLayerAttributes(src_dtype, dst_dtype)

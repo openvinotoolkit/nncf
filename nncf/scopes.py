@@ -12,7 +12,7 @@
 import re
 from dataclasses import dataclass
 from dataclasses import field
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
@@ -88,9 +88,9 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
 
 def get_ignored_node_names_from_ignored_scope(
     ignored_scope: IgnoredScope, nncf_graph: NNCFGraph, strict: bool = True
-) -> List[str]:
+) -> Set[str]:
     """
-    Returns list of ignored names according to ignored scope and NNCFGraph.
+    Returns ignored names according to ignored scope and NNCFGraph.
     If strict is True, raises RuntimeError if any ignored name is not found in the NNCFGraph or
     any ignored pattern or any ignored type match 0 nodes in the NNCFGraph.
     If strict is False, returns all possible matches.
@@ -98,7 +98,7 @@ def get_ignored_node_names_from_ignored_scope(
     :param ignored_scope: Given ignored scope instance.
     :param nncf_grpah: Given NNCFGrpah.
     :param strict: Whether all ignored_scopes must match at least one node or not.
-    :returns: List of NNCF node names from given NNCFGraph specified in given ignored scope.
+    :returns: NNCF node names from given NNCFGraph specified in given ignored scope.
     """
     error_msg = (
         "Refer to the original_graph.dot to discover the operations"
@@ -146,4 +146,4 @@ def get_ignored_node_names_from_ignored_scope(
             )
         nncf_logger.info(f"{len(matched_by_types)} ignored nodes was found by types in the NNCFGraph")
 
-    return list(set(matched_by_names + matched_by_types + matched_by_patterns))
+    return set(matched_by_names + matched_by_types + matched_by_patterns)
