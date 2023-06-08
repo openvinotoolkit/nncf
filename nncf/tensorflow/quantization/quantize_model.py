@@ -156,9 +156,6 @@ def quantize_impl(
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported.")
 
-    if advanced_parameters is None:
-        advanced_parameters = AdvancedQuantizationParameters()
-
     nncf_config = _create_nncf_config(preset, target_device, subset_size, ignored_scope, advanced_parameters)
 
     calibration_data_loader = CalibrationDataLoader(calibration_dataset)
