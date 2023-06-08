@@ -268,7 +268,7 @@ class TensorCollector:
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
-            if any([tensor.is_empty() for tensor in input_]):
+            if any(tensor.is_empty() for tensor in input_):
                 continue
             reduced_inputs[reducer_hash] = reducer(input_)
 
@@ -442,11 +442,11 @@ class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
         reduction_shape: Optional[ReductionShape] = None,
-        quantile: Union[float, List[float]] = [0.01, 0.99],
+        quantile: Optional[Union[float, List[float]]] = None,
         inplace: bool = False,
     ):
         super().__init__(reduction_shape, False)
-        self._quantile = quantile
+        self._quantile = [0.01, 0.99] if quantile is None else quantile
 
     def __eq__(self, __o: object) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile
@@ -540,7 +540,7 @@ class MaxAggregator(TensorAggregatorBase):
         return self._container.tensor
 
 
-class OfflineAggregatorBase(TensorAggregatorBase):
+class OfflineAggregatorBase(TensorAggregatorBase, ABC):
     def __init__(
         self, tensor_processor, use_per_sample_stats: bool = False, num_samples: Optional[int] = None, window_size=None
     ):
@@ -570,7 +570,7 @@ class MedianAggregator(OfflineAggregatorBase):
         return self._aggregate(self._tensor_processor.median)
 
 
-class NoOutliersAggregatorBase(OfflineAggregatorBase):
+class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
     def __init__(
         self,
         tensor_processor,

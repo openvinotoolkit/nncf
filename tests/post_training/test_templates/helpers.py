@@ -35,9 +35,6 @@ class StaticDatasetMock(Dataset):
             data = self._fn_to_type(data)
         return data, 0
 
-    def to_datatype(tensor):
-        return tensor
-
     def __len__(self) -> int:
         return self._len
 

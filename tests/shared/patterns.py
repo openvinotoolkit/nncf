@@ -15,6 +15,8 @@ from nncf.common.graph.patterns import IgnoredPatternNames
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.utils.backend import BackendType
 
+# pylint: disable=protected-access
+
 
 def check_hw_patterns(backend: BackendType, reasons: Dict[HWFusedPatternNames, str]):
     backend_patterns = PatternsManager._get_backend_hw_patterns_map(backend)

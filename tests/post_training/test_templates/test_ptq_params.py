@@ -234,8 +234,8 @@ class TemplateTestPTQParams:
         ],
     )
     def test_quantization_points_overflow_fix(self, overflow_fix, affected_target_points, ignored_ops):
-        # Checks the return value of _get_quantization_points_overflow_fix
-        # based on the overflow_fix and weight target points.
+        # Checks the return value of _get_quantization_points_overflow_fix based on
+        # the overflow_fix and weight target points.
         model = ModelToTestOverflowFix(self.metatypes_mapping)
         nncf_graph = model.nncf_graph
 
@@ -247,9 +247,9 @@ class TemplateTestPTQParams:
 
         # Remove ignored nodes from weight_target_points
         filtered_weight_target_points = {}
-        for t_p in weight_target_points.keys():
+        for t_p, config in weight_target_points.items():
             if t_p.target_node_name not in ignored_ops:
-                filtered_weight_target_points[t_p] = weight_target_points[t_p]
+                filtered_weight_target_points[t_p] = config
 
         algo = MinMaxQuantization()
         algo._backend_entity = self.get_algo_backend()

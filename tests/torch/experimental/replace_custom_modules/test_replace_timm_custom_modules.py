@@ -71,7 +71,7 @@ def test_replace_custom_timm_module(custom_module):
     out_custom = custom_module(input_data)
     out_native = native_module(input_data)
 
-    assert type(custom_module) != type(native_module)
+    assert custom_module.__class__ is not native_module.__class__
     assert torch.equal(out_custom, out_native)
 
 

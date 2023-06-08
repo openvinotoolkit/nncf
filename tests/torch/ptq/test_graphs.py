@@ -30,11 +30,11 @@ ALGOS = ["symmetric"]
 SKIP_MARK = pytest.mark.skip("Model is not supported yet")
 
 
-@pytest.fixture(scope="function", params=ALGOS)
-def graph_dir(request):
+@pytest.fixture(scope="function", params=ALGOS, name="graph_dir")
+def fixture_graph_dir(request):
     quantization_type = request.param
-    graph_dir = Path("quantized") / "ptq" / quantization_type
-    return graph_dir
+    graph_dir_ = Path("quantized") / "ptq" / quantization_type
+    return graph_dir_
 
 
 def get_model_name(desc):

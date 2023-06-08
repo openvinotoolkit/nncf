@@ -38,6 +38,7 @@ from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
 
 # pylint: disable=protected-access
+# pylint: disable=too-many-function-args
 
 INPUT_SHAPE = (2, 3, 4, 5)
 
@@ -225,8 +226,8 @@ class LinearTestModel(nn.Module):
         self.conv2 = nn.Conv2d(3, 1, 1)
         self.bn2 = nn.BatchNorm2d(1)
         with torch.no_grad():
-            self.conv1.weight.copy_(torch.rand_like(self.conv1.weight)) - 0.5
-            self.conv2.weight.copy_(torch.rand_like(self.conv2.weight)) - 0.5
+            self.conv1.weight.copy_(torch.rand_like(self.conv1.weight) - 0.5)
+            self.conv2.weight.copy_(torch.rand_like(self.conv2.weight) - 0.5)
 
     def forward(self, x):
         # input_shape = [1, 3, 32, 32]
@@ -338,10 +339,10 @@ def test_quantizer_parameters_export(tmp_path: Path):
         input_low, input_high = fq_input[-2].flatten(), fq_input[-1].flatten()
         torch_ptq_params[fq_node.name] = {"input_low": input_low, "input_high": input_high}
 
-    for name in fq_params:
+    for name, param in fq_params.items():
         assert name in torch_ptq_params
-        assert np.allclose(fq_params[name]["input_low"], torch_ptq_params[name]["input_low"])
-        assert np.allclose(fq_params[name]["input_high"], torch_ptq_params[name]["input_high"])
+        assert np.allclose(param["input_low"], torch_ptq_params[name]["input_low"])
+        assert np.allclose(param["input_high"], torch_ptq_params[name]["input_high"])
 
 
 class TestFQParams(TemplateTestFQParams):
