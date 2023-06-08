@@ -22,6 +22,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorReducerB
 from nncf.experimental.common.tensor_statistics.collectors import TensorType
 
 
+# pylint: disable=(protected-access)
 class DummyTensorReducer(TensorReducerBase):
     def __init__(self, output_name: str, inplace: bool = False, inplace_mock=None):
         super().__init__(inplace=inplace)
@@ -266,5 +267,5 @@ def test_multiple_branch_reducer():
     ref_stats = {"0": NNCFTensor(np.array(0)), "1": NNCFTensor(np.array(1))}
     stats = collector.get_statistics()
     assert len(ref_stats) == len(stats)
-    for key in ref_stats:
-        assert ref_stats[key] == stats[key]
+    for key, value in ref_stats.items():
+        assert value == stats[key]

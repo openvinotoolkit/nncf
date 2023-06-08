@@ -16,7 +16,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 import torch.utils.data
-from packaging import version
+from torch import autocast
 from torch import nn
 from torchvision.models import resnet50
 from torchvision.models import squeezenet1_1
@@ -694,12 +694,6 @@ def test_quantization_can_be_run_with_no_data_loaders_if_zero_init_samples():
     )
 
 
-if version.parse(torch.__version__).base_version <= version.parse("1.9.1").base_version:
-    from torch.cuda.amp import autocast
-else:
-    from torch import autocast
-
-
 class TestHalfPrecisionModels:
     class RegularModel(torch.nn.Module):
         def __init__(self):
@@ -718,7 +712,7 @@ class TestHalfPrecisionModels:
             self.model = TestHalfPrecisionModels.RegularModel()
 
         def forward(self, x):
-            with autocast():
+            with autocast(device_type="cuda" if x.is_cuda else "cpu"):
                 y = self.model(x)
             return y
 
@@ -794,7 +788,7 @@ class TestHalfPrecisionModels:
 
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, initializing_config)
 
-        with autocast():
+        with autocast(device_type="cuda" if inputs.is_cuda else "cpu"):
             # Should complete successfully.
             result = compressed_model(inputs)
             if torch.is_autocast_enabled():  # For torch <= 1.9.1 and CPU the autocast context won't have effect

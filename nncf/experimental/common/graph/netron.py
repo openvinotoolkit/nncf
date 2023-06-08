@@ -1,15 +1,14 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Since we are not reading XML, but creating it, the package security message is irrelevant
 import xml.etree.ElementTree as ET  # nosec
 from typing import Callable, Dict, List, Optional, Tuple
@@ -55,14 +54,14 @@ class NodeDesc:
         self,
         node_id: str,
         name: str,
-        type: str,
+        node_type: str,
         attrs: Optional[Dict[str, str]] = None,
         inputs: Optional[List[PortDesc]] = None,
         outputs: Optional[List[PortDesc]] = None,
     ):
         self.node_id = node_id
         self.name = name
-        self.type = type
+        self.type = node_type
         if attrs is None:
             attrs = {}
         self.attrs = attrs
@@ -74,9 +73,9 @@ class NodeDesc:
         ET.SubElement(node, Tags.DATA, self.attrs)
 
         if self.inputs:
-            input = ET.SubElement(node, Tags.INPUT)
+            input_ = ET.SubElement(node, Tags.INPUT)
             for port in self.inputs:
-                input.append(port.as_xml_element())
+                input_.append(port.as_xml_element())
 
         if self.outputs:
             output = ET.SubElement(node, Tags.OUTPUT)
@@ -156,7 +155,7 @@ def get_graph_desc(
             NodeDesc(
                 node_id=str(node.node_id),
                 name=node.node_name,
-                type=node.node_type.title(),
+                node_type=node.node_type.title(),
                 attrs=get_attributes_fn(node),
                 inputs=inputs,
                 outputs=outputs,
