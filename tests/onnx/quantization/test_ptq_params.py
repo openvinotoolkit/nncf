@@ -31,9 +31,9 @@ from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.onnx.models import LinearModel
 from tests.onnx.models import OneDepthwiseConvolutionalModel
-from tests.post_training.models import NNCFGraphToTest
-from tests.post_training.models import NNCFGraphToTestMatMul
-from tests.post_training.test_ptq_params import TemplateTestPTQParams
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestMatMul
+from tests.post_training.test_templates.test_ptq_params import TemplateTestPTQParams
 
 # pylint: disable=protected-access
 

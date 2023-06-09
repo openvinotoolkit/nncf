@@ -20,8 +20,8 @@ from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBias
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from tests.common.static_dataset import get_static_dataset
-from tests.post_training.helpers import ConvBNTestModel
-from tests.post_training.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import ConvBNTestModel
+from tests.post_training.test_templates.helpers import ConvTestModel
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
