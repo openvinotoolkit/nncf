@@ -677,7 +677,10 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
     def get_input_masks_with_add_dynamic_inputs(self, node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTensor]]:
         """
-        Returns input masks for all inputs of given NNCFNode.
+        Returns input masks for all inputs of given NNCFNode. Compared to get_input_masks in the common folder,
+        this function also computes input masks for nodes in self._add_dynamic_inputs, which are nodes used in
+        special elastic configurations in NAS.
+
         :param node: Given NNCFNode.
         :param graph: Graph to work with.
         :return: Input masks.
