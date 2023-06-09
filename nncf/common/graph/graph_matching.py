@@ -8,8 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from typing import List, Set
+from typing import Any, Dict, List
 
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
@@ -17,13 +16,47 @@ import networkx.algorithms.isomorphism as ism
 from nncf.common.graph.patterns import GraphPattern
 
 
-def is_subgraph_has_inner_outgoing_edges(
-    graph: nx.DiGraph, full_subgraph_with_non_pattern_nodes: List[str], pattern_subgraph: List[str]
-) -> bool:
+def _are_nodes_matched(node_1, node_2):
+    for attr in node_2:
+        if attr == GraphPattern.LABEL_ATTR:
+            continue
+        if attr == GraphPattern.METATYPE_ATTR:
+            # GraphPattern.ANY_PATTERN_NODE_TYPE and GraphPattern.NON_PATTERN_NODE_TYPE
+            # are matched to any node type.
+            if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2[attr] or GraphPattern.NON_PATTERN_NODE_TYPE in node_2[attr]:
+                continue
+            # Torch and TF pattern mapping based on 'type' section,
+            # While ONNX mapping based on metatypes -
+            # to support all of them, we need to check the existane of the attributes
+            if GraphPattern.NODE_TYPE_ATTR in node_1:
+                if node_1[GraphPattern.NODE_TYPE_ATTR] in node_2[attr]:
+                    continue
+        if node_1[attr] not in node_2[attr]:
+            return False
+    return True
+
+
+def _sort_patterns_by_len(pattern: nx.DiGraph):
     """
-    Checks out whether the 'pattern_subgraph' has outgoing edges,
-    that aren't connected with nodes from full_subgraph_with_non_pattern_nodes.
+    Sort patterns by their length. GraphPattern.NON_PATTERN_NODE_TYPE is not counted as a pattern node.
+    """
+    non_pattern_nodes = [
+        node_id
+        for node_id, node_data in pattern.nodes(data=True)
+        if GraphPattern.NON_PATTERN_NODE_TYPE in node_data[GraphPattern.METATYPE_ATTR]
+    ]
+    return len(pattern) - len(non_pattern_nodes)
+
+
+def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgraph: Dict[str, str]) -> bool:
+    """
+    Checks out whether the matched subgraph has:
+    1) External predecessors of starting nodes.
+    2) External successors of the last nodes.
+    3) External successors or predecessors of the nodes which are not starting and last.
+    If any of these conditions is True then returns False, otherwise - True.
     Example:
+    This subgraph matching is not strict.
     (conv2d + BN + ReLU pattern):
             ...
              |
@@ -37,119 +70,76 @@ def is_subgraph_has_inner_outgoing_edges(
              |
             ...
     :param graph: The model graph.
-    :param full_subgraph_with_non_pattern_nodes: A subgraph of the model graph including the nodes outside the pattern.
-    :param pattern_subgraph: A subgraph of the model.
-    :return: True if the subgraph contains outgoing edges starting not from the last node,
-        False - otherwise.
+    :param pattern: The matched pattern.
+    :param subgraph: A subgraph of the model graph including the nodes outside the pattern.
+    :return: If any of three conditions is True than returns False, otherwise - True.
     """
-    first_node = pattern_subgraph[0]
-    last_node = pattern_subgraph[-1]
-    for node_key in pattern_subgraph:
-        if node_key == last_node:
-            predecessors = list(graph.pred[node_key].keys())
-            if any(predecessor not in full_subgraph_with_non_pattern_nodes for predecessor in predecessors):
-                return True
-        elif node_key == first_node:
-            successors = list(graph.succ[node_key].keys())
-            if any(successor not in full_subgraph_with_non_pattern_nodes for successor in successors):
-                return True
-        else:
-            successors = list(graph.succ[node_key].keys())
-            predecessors = list(graph.pred[node_key].keys())
-            if any(successors_key not in full_subgraph_with_non_pattern_nodes for successors_key in successors):
-                return True
-            if any(predecessor not in full_subgraph_with_non_pattern_nodes for predecessor in predecessors):
-                return True
-    return False
+    starting_nodes = []
+    last_nodes = []
+    for node in pattern.nodes:
+        if not pattern.pred[node] and pattern.succ[node]:
+            starting_nodes.append(node)
+        if pattern.pred[node] and not pattern.succ[node]:
+            last_nodes.append(node)
+
+    for node_from_graph, node_from_pattern in subgraph.items():
+        predecessors_keys = graph.pred[node_from_graph].keys()
+        successor_keys = graph.succ[node_from_graph].keys()
+        has_external_successors = any(successor_key not in subgraph for successor_key in successor_keys)
+        has_external_predcessors = any(predecessor_key not in subgraph for predecessor_key in predecessors_keys)
+        if node_from_pattern in starting_nodes and has_external_successors:
+            return False
+        if node_from_pattern in last_nodes and has_external_predcessors:
+            return False
+        if (node_from_pattern not in last_nodes and node_from_pattern not in starting_nodes) and (
+            has_external_successors or has_external_predcessors
+        ):
+            return False
+    return True
+
+
+def _copy_subgraph_excluding_nodes(
+    subgraph: Dict[str, str], pattern_graph: GraphPattern, node_attribute: Any
+) -> Dict[str, str]:
+    """
+    Copies a matching subgraph excluding the mapping where the pattern node has an attribute equal to the node_attribute.
+
+    :param subgraph: Subgraph
+    :param pattern_graph: A graph consists of patterns to match.
+    :param  node_attribute: Node attribute used to filter subgraph mapping.
+    :return: New subgraph without excluded nodes.
+    """
+    output = {}
+    for node_from_graph, node_from_pattern in subgraph.items():
+        pattern_node = pattern_graph.graph.nodes[node_from_pattern]
+        pattern_node_types = pattern_node.get(node_attribute)
+        if node_attribute not in pattern_node_types:
+            output[node_from_graph] = node_from_pattern
+    return output
 
 
 def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPattern) -> List[List[str]]:
     """
-    Find a list of subgraphs for the particular graph that match the pattern expression.
+    Finds a list of nodes which define a subgraph matched a pattern in pattern_graph.
+
     :param graph: The model graph.
-    :param pattern_graph: A graph consists of patterns for layer fusing logic.
-    :return: A list of subgraphs, matching the pattern expression.
-        Each subgraph is defined as a list of node keys.
+    :param pattern_graph: A graph consists of patterns to match.
+    :return: A list of subgraphs are mathced to the patterns. Each subgraph is defined as a list of node keys.
     """
-
-    def are_nodes_matching(node_1, node_2):
-        for attr in node_2:
-            if attr == GraphPattern.LABEL_ATTR:
-                continue
-            if attr == GraphPattern.METATYPE_ATTR:
-                # GraphPattern.ANY_PATTERN_NODE_TYPE and GraphPattern.NON_PATTERN_NODE_TYPE
-                # are matched to any node type.
-
-                if (
-                    GraphPattern.ANY_PATTERN_NODE_TYPE in node_2[attr]
-                    or GraphPattern.NON_PATTERN_NODE_TYPE in node_2[attr]
-                ):
-                    continue
-                # Torch and TF pattern mapping based on 'type' section,
-                # While ONNX mapping based on metatypes -
-                # to support all of them, we need to check the existane of the attributes
-                if GraphPattern.NODE_TYPE_ATTR in node_1:
-                    if node_1[GraphPattern.NODE_TYPE_ATTR] in node_2[attr]:
-                        continue
-            if node_1[attr] not in node_2[attr]:
-                return False
-        return True
-
-    def are_edges_matching(edge_1, edge_2):
-        for attr in edge_2:
-            if edge_1[attr] not in edge_2[attr]:
-                return False
-        return True
-
-    subgraphs = []  # type: List[List[str]]
-    visited_nodes = set()  # type: Set[str]
-    patterns = []  # type: List[nx.DiGraph]
-    for c in nx.weakly_connected_components(pattern_graph.graph):
-        patterns.append(pattern_graph.graph.subgraph(c))
-
-    def sort_patterns(pattern: nx.DiGraph):
-        """
-        Sort patterns by their length,
-        keeping in mind that if node type is GraphPattern.NON_PATTERN_NODE_TYPE it shouldn't count.
-        """
-        pattern_len = len(pattern)
-        for node in pattern.nodes:
-            if GraphPattern.NON_PATTERN_NODE_TYPE in pattern_graph.graph.nodes.get(node)[GraphPattern.METATYPE_ATTR]:
-                pattern_len -= 1
-        return pattern_len
-
-    # Get all patterns sorted by their lengths
-    # as we want match the longest patterns first
-
-    patterns = sorted(patterns, key=sort_patterns, reverse=True)
-
+    subgraphs = []
+    matched_nodes = set()
+    patterns = pattern_graph.get_weakly_connected_subgraphs()
+    patterns = sorted(patterns, key=_sort_patterns_by_len, reverse=True)
     for pattern in patterns:
-        matcher = ism.DiGraphMatcher(graph, pattern, node_match=are_nodes_matching, edge_match=are_edges_matching)
+        matcher = ism.DiGraphMatcher(graph, pattern, node_match=_are_nodes_matched)
         for subgraph in matcher.subgraph_isomorphisms_iter():
-            # Bottleneck that need to sort by id for result consistency
-            pattern_subgraph = list(
-                nx.lexicographical_topological_sort(graph.subgraph(subgraph), key=lambda x: int(x.split()[0]))
-            )
+            subgraph = _copy_subgraph_excluding_nodes(subgraph, pattern_graph, GraphPattern.NON_PATTERN_NODE_TYPE)
+            is_any_node_matched = any(node in matched_nodes for node in subgraph)
 
-            full_subgraph_with_non_pattern_nodes = pattern_subgraph[:]
-            outside_pattern_nodes = []
-
-            # If some nodes are outside the pattern - remove them from pattern_subgraph
-
-            for node, pattern_node_id in matcher.mapping.items():
-                pattern_node = pattern_graph.graph.nodes[pattern_node_id]
-                pattern_node_types = pattern_node.get(GraphPattern.METATYPE_ATTR)
-                if GraphPattern.NON_PATTERN_NODE_TYPE in pattern_node_types:
-                    outside_pattern_nodes.append(node)
-            for node in outside_pattern_nodes:
-                pattern_subgraph.remove(node)
-
-            is_visited_node = any(node in visited_nodes for node in pattern_subgraph)
-            if is_visited_node:
+            if is_any_node_matched or not _is_subgraph_matching_strict(graph, pattern, subgraph):
                 continue
-            if is_subgraph_has_inner_outgoing_edges(graph, full_subgraph_with_non_pattern_nodes, pattern_subgraph):
-                continue
-            visited_nodes.update(pattern_subgraph)
-            subgraphs.append(pattern_subgraph)
 
-    return subgraphs if subgraphs else []
+            matched_nodes.update(subgraph)
+            subgraphs.append(list(subgraph.keys()))
+
+    return subgraphs
