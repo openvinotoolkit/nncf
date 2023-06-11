@@ -15,12 +15,8 @@ from torch import nn
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
-from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
@@ -28,7 +24,6 @@ from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
-from nncf.torch.quantization.quantize_model import _create_nncf_config
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from tests.common.quantization.metatypes import Conv2dTestMetatype
@@ -152,65 +147,3 @@ class TestPTQParams(TemplateTestPTQParams):
     @pytest.fixture(params=[(IgnoredScope([]), 1, 1), (IgnoredScope(["/Conv_1_0"]), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param
-
-
-@pytest.mark.parametrize(
-    "params",
-    (
-        {
-            "preset": QuantizationPreset.MIXED,
-            "target_device": TargetDevice.ANY,
-            "subset_size": 1,
-            "model_type": ModelType.TRANSFORMER,
-            "ignored_scope": IgnoredScope(names=["node_1"]),
-            "advanced_parameters": AdvancedQuantizationParameters(
-                overflow_fix=OverflowFix.DISABLE, quantize_outputs=True, disable_bias_correction=True
-            ),
-        },
-        {
-            "preset": QuantizationPreset.MIXED,
-            "target_device": TargetDevice.ANY,
-            "subset_size": 2,
-            "model_type": None,
-            "ignored_scope": None,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                overflow_fix=OverflowFix.ENABLE, quantize_outputs=False, disable_bias_correction=False
-            ),
-        },
-        {
-            "preset": QuantizationPreset.MIXED,
-            "target_device": TargetDevice.ANY,
-            "subset_size": 3,
-            "model_type": None,
-            "ignored_scope": IgnoredScope(names=["node_1"]),
-            "advanced_parameters": AdvancedQuantizationParameters(
-                overflow_fix=OverflowFix.FIRST_LAYER, quantize_outputs=True, disable_bias_correction=False
-            ),
-        },
-    ),
-)
-def test_create_nncf_config(params):
-    config = _create_nncf_config(**params)
-
-    assert config["compression"]["overflow_fix"] == params["advanced_parameters"].overflow_fix.value
-    assert config["compression"]["quantize_outputs"] == params["advanced_parameters"].quantize_outputs
-
-    assert config["compression"]["preset"] == params["preset"].value
-    assert config["compression"]["initializer"]["range"]["num_init_samples"] == params["subset_size"]
-
-    num_bn_samples = config["compression"]["initializer"]["batchnorm_adaptation"]["num_bn_adaptation_samples"]
-    if params["advanced_parameters"].disable_bias_correction is True or params["model_type"] == ModelType.TRANSFORMER:
-        assert num_bn_samples == 0
-    else:
-        assert num_bn_samples == params["subset_size"]
-
-    ref_scope = params["ignored_scope"].names if params["ignored_scope"] is not None else []
-    if params["model_type"] == ModelType.TRANSFORMER:
-        ref_scope = [
-            "{re}.*Embeddings.*",
-            "{re}.*__add___[0-1]",
-            "{re}.*layer_norm_0",
-            "{re}.*matmul_1",
-            "{re}.*__truediv__*",
-        ] + ref_scope
-    assert config["compression"].get("ignored_scopes", []) == ref_scope

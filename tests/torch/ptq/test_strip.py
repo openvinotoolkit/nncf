@@ -73,7 +73,7 @@ def test_nncf_strip_api(strip_type):
         preset=QuantizationPreset.MIXED,
         target_device=TargetDevice.CPU,
         subset_size=1,
-        fast_bias_correction=True,
+        fast_bias_correction=False,
     )
 
     if strip_type == "nncf":

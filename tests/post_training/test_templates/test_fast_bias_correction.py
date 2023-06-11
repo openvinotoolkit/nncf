@@ -10,18 +10,19 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import List, TypeVar
+from typing import List, Tuple, TypeVar
 
 import pytest
 
+from nncf.data import Dataset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from tests.common.static_dataset import get_static_dataset
 from tests.post_training.test_templates.helpers import ConvBNTestModel
 from tests.post_training.test_templates.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import StaticDatasetMock
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -80,6 +81,14 @@ class TemplateTestFBCAlgorithm:
         Get transformation function for dataset.
         """
 
+    def get_dataset(self, input_size: Tuple):
+        """
+        Return backend specific random dataset.
+
+        :param model: The model for which the dataset is being created.
+        """
+        return StaticDatasetMock(input_size, self.fn_to_type)
+
     @staticmethod
     @abstractmethod
     def backend_specific_model(model: TModel, tmp_dir: str):
@@ -111,8 +120,7 @@ class TemplateTestFBCAlgorithm:
     )
     def test_update_bias(self, model_cls, ref_bias, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
-
-        dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
+        dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
         quantized_model = quantization_algorithm.apply(model, dataset=dataset)

@@ -103,9 +103,6 @@ def quantize_impl(
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported")
 
-    if advanced_parameters is None:
-        advanced_parameters = AdvancedQuantizationParameters()
-
     nncf_network = create_nncf_network(model.eval(), calibration_dataset)
 
     quantization_algorithm = PostTrainingQuantization(
@@ -119,6 +116,8 @@ def quantize_impl(
     )
 
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=calibration_dataset)
+
+    # TODO (asuslov): quantized_model = quantized_model.strip()
 
     quantized_model.nncf.disable_dynamic_graph_building()
 
