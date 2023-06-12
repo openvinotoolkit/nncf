@@ -112,7 +112,7 @@ def _copy_subgraph_excluding_nodes(
     output = {}
     for node_from_graph, node_from_pattern in subgraph.items():
         pattern_node = pattern_graph.graph.nodes[node_from_pattern]
-        pattern_node_types = pattern_node.get(node_attribute)
+        pattern_node_types = pattern_node.get(node_attribute, [])
         if node_attribute not in pattern_node_types:
             output[node_from_graph] = node_from_pattern
     return output
@@ -121,6 +121,7 @@ def _copy_subgraph_excluding_nodes(
 def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPattern) -> List[List[str]]:
     """
     Finds a list of nodes which define a subgraph matched a pattern in pattern_graph.
+    Nodes in each subgraph is stored in lexicographical_topological_sort.
 
     :param graph: The model graph.
     :param pattern_graph: A graph consists of patterns to match.
@@ -140,6 +141,7 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                 continue
 
             matched_nodes.update(subgraph)
-            subgraphs.append(list(subgraph.keys()))
+            sorted_nodes_subgraph = list(nx.lexicographical_topological_sort(graph.subgraph(subgraph)))
+            subgraphs.append(sorted_nodes_subgraph)
 
     return subgraphs
