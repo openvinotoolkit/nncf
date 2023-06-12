@@ -19,6 +19,7 @@ def strip(model: NNCFNetwork, do_copy: bool = True) -> NNCFNetwork:
     while still preserving the functioning of the model object as a compressed model.
 
     :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
-    will return the currently associated model object "stripped" in-place.
+      will return the currently associated model object "stripped" in-place.
+    :return: The stripped model.
     """
     return model.nncf.strip(do_copy)

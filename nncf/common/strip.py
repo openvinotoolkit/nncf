@@ -12,19 +12,23 @@
 
 from typing import TypeVar
 
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 
 TModel = TypeVar("TModel")
 
 
+@api(canonical_alias="nncf.strip")
 def strip(model: TModel, do_copy: bool = True) -> TModel:
     """
     Returns the model object with as much custom NNCF additions as possible removed
     while still preserving the functioning of the model object as a compressed model.
 
+    :param model: The compressed model.
     :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
-    will return the currently associated model object "stripped" in-place.
+      will return the currently associated model object "stripped" in-place.
+    :return: The stripped model.
     """
     model_backend = get_backend(model)
     if model_backend == BackendType.TORCH:
