@@ -12,10 +12,14 @@
 
 import pytest
 
+from nncf import NNCFConfig
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import QuantizationMode
+from nncf.quantization.advanced_parameters import QuantizationParameters
+from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.tensorflow.quantization.quantize_model import _create_nncf_config
 
@@ -50,6 +54,21 @@ from nncf.tensorflow.quantization.quantize_model import _create_nncf_config
                 overflow_fix=OverflowFix.FIRST_LAYER, quantize_outputs=True, disable_bias_correction=False
             ),
         },
+        {
+            "preset": QuantizationPreset.MIXED,
+            "target_device": TargetDevice.ANY,
+            "subset_size": 4,
+            "ignored_scope": IgnoredScope(names=["node_1"]),
+            "advanced_parameters": AdvancedQuantizationParameters(
+                overflow_fix=OverflowFix.FIRST_LAYER,
+                quantize_outputs=True,
+                disable_bias_correction=False,
+                activations_quantization_params=QuantizationParameters(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+                activations_range_estimator_params=RangeEstimatorParametersSet.MINMAX,
+                weights_quantization_params=QuantizationParameters(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+                weights_range_estimator_params=RangeEstimatorParametersSet.MINMAX,
+            ),
+        },
     ),
 )
 def test_create_nncf_config(params):
@@ -59,7 +78,15 @@ def test_create_nncf_config(params):
     assert config["compression"]["quantize_outputs"] == params["advanced_parameters"].quantize_outputs
 
     assert config["compression"]["preset"] == params["preset"].value
-    assert config["compression"]["initializer"]["range"]["num_init_samples"] == params["subset_size"]
+
+    range_config = config["compression"]["initializer"]["range"]
+    if isinstance(range_config, dict):
+        assert range_config["num_init_samples"] == params["subset_size"]
+        assert range_config["type"] == "mean_min_max"
+    else:
+        for rc in range_config:
+            assert rc["num_init_samples"] == params["subset_size"]
+            assert rc["type"] == "mean_min_max"
 
     num_bn_samples = config["compression"]["initializer"]["batchnorm_adaptation"]["num_bn_adaptation_samples"]
     if params["advanced_parameters"].disable_bias_correction is True:
@@ -69,3 +96,7 @@ def test_create_nncf_config(params):
 
     ref_scope = params["ignored_scope"].names if params["ignored_scope"] is not None else []
     assert config["compression"].get("ignored_scopes", []) == ref_scope
+
+    # To validate NNCFConfig requared input_info
+    config["input_info"] = {"sample_size": [1, 2, 224, 224]}
+    NNCFConfig.validate(config)

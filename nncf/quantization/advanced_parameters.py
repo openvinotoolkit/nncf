@@ -324,11 +324,21 @@ def apply_advanced_parameters_to_config(
         params.activations_range_estimator_params
     )
     weights_init_range_config = convert_range_estimator_parameters_to_dict(params.weights_range_estimator_params)
+
     if activations_init_range_config or weights_init_range_config:
+        init_range = config["initializer"]["range"]
+
         activations_init_range_config["target_quantizer_group"] = "activations"
         activations_init_range_config["target_scopes"] = "{re}.*"
+        activations_init_range_config["num_init_samples"] = init_range["num_init_samples"]
+        if type not in activations_init_range_config:
+            activations_init_range_config["type"] = init_range["type"]
+
         weights_init_range_config["target_quantizer_group"] = "weights"
         weights_init_range_config["target_scopes"] = "{re}.*"
+        weights_init_range_config["num_init_samples"] = init_range["num_init_samples"]
+        if type not in weights_init_range_config:
+            weights_init_range_config["type"] = init_range["type"]
 
         config["initializer"]["range"] = [activations_init_range_config, weights_init_range_config]
 
