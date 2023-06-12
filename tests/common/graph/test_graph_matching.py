@@ -175,7 +175,7 @@ def test_matches_with_non_pattern_node_type():
 
     ref_graph = create_graph_with_many_nodes()
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
-    assert matches == [["1", "2", "4", "3", "5", "6"]]
+    assert matches == [["1", "2", "3", "4", "5", "6"]]
 
 
 def test_matches_with_any_pattern_node_type():

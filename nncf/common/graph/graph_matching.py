@@ -98,22 +98,19 @@ def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgrap
     return True
 
 
-def _copy_subgraph_excluding_nodes(
-    subgraph: Dict[str, str], pattern_graph: GraphPattern, node_attribute: Any
-) -> Dict[str, str]:
+def _copy_subgraph_excluding_non_pattern_node(subgraph: Dict[str, str], pattern_graph: GraphPattern) -> Dict[str, str]:
     """
-    Copies a matching subgraph excluding the mapping where the pattern node has an attribute equal to the node_attribute.
+    Copies a matching subgraph excluding the nodes having GraphPattern.NON_PATTERN_NODE_TYPE.
 
     :param subgraph: Subgraph
     :param pattern_graph: A graph consists of patterns to match.
-    :param  node_attribute: Node attribute used to filter subgraph mapping.
     :return: New subgraph without excluded nodes.
     """
     output = {}
     for node_from_graph, node_from_pattern in subgraph.items():
         pattern_node = pattern_graph.graph.nodes[node_from_pattern]
-        pattern_node_types = pattern_node.get(node_attribute, [])
-        if node_attribute not in pattern_node_types:
+        pattern_node_types = pattern_node.get(GraphPattern.METATYPE_ATTR)
+        if GraphPattern.NON_PATTERN_NODE_TYPE not in pattern_node_types:
             output[node_from_graph] = node_from_pattern
     return output
 
@@ -134,10 +131,14 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
     for pattern in patterns:
         matcher = ism.DiGraphMatcher(graph, pattern, node_match=_are_nodes_matched)
         for subgraph in matcher.subgraph_isomorphisms_iter():
-            subgraph = _copy_subgraph_excluding_nodes(subgraph, pattern_graph, GraphPattern.NON_PATTERN_NODE_TYPE)
+            is_matching_strict = _is_subgraph_matching_strict(graph, pattern, subgraph)
+            if not is_matching_strict:
+                continue
+
+            subgraph = _copy_subgraph_excluding_non_pattern_node(subgraph, pattern_graph)
             is_any_node_matched = any(node in matched_nodes for node in subgraph)
 
-            if is_any_node_matched or not _is_subgraph_matching_strict(graph, pattern, subgraph):
+            if is_any_node_matched:
                 continue
 
             matched_nodes.update(subgraph)
