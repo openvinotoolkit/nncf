@@ -19,11 +19,11 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
-from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
+from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 
-def is_node_with_bias(node: NNCFNode) -> bool:
+def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """
     Checks if the node has a bias or not.
 
@@ -33,9 +33,9 @@ def is_node_with_bias(node: NNCFNode) -> bool:
         `False` otherwise.
     """
     if node.metatype in OPERATIONS_WITH_BIAS_METATYPES and isinstance(
-        node.layer_attributes, ONNXExtendedLayerAttributes
+        node.layer_attributes, ONNXConstantLayerAttributes
     ):
-        return len(node.layer_attributes.input_tensor_names) > 2
+        return node.layer_attributes.bias_attrs
     return False
 
 

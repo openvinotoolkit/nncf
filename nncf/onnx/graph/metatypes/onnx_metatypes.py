@@ -576,6 +576,8 @@ POSSIBLE_WEIGHT_LAYER_METATYPES = [
     ONNXMatMulMetatype,
 ]
 
+GENERAL_WEIGHT_LAYER_METATYPES = CONSTANT_WEIGHT_LAYER_METATYPES + POSSIBLE_WEIGHT_LAYER_METATYPES
+
 # Contains the operation metatypes for which bias can be applied.
 OPERATIONS_WITH_BIAS_METATYPES = [
     ONNXConvolutionMetatype,

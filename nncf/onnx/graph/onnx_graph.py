@@ -23,6 +23,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTransposeMetatype
 
 
 # pylint: disable=too-many-public-methods
@@ -380,14 +381,14 @@ class ONNXGraph:
         weight_tensor_edge = self.get_node_edge_names(node.name)["input"][weight_port_id]
         return weight_tensor_edge
 
-    def is_node_shared(self, node: onnx.NodeProto) -> bool:
+    def is_node_shared(self, node: onnx.NodeProto, weight_port_id) -> bool:
         """
         Returns whether the node share a weight.
 
         :param node: Node.
         :return: True whether node shares a weight - otherwise False.
         """
-        weight_tensor_edge = self.get_weight_tensor_edge(node)
+        weight_tensor_edge = self.get_node_edge_names(node.name)["input"][weight_port_id]
         nodes = self.get_nodes_by_input(weight_tensor_edge)
         return len(nodes) > 1
 
@@ -398,6 +399,7 @@ class ONNXGraph:
             + ONNXReshapeMetatype.get_all_aliases()
             + ONNXQuantizeLinearMetatype.get_all_aliases()
             + ONNXDequantizeLinearMetatype.get_all_aliases()
+            + ONNXTransposeMetatype.get_all_aliases()
         )
         # There are several cases here
         # (Constant) -> (Operation)

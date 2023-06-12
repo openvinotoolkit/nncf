@@ -12,6 +12,7 @@ from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.onnx.graph.metatypes import onnx_metatypes
+from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
 
 ONNX_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
@@ -22,9 +23,7 @@ def create_softmax_matmul() -> GraphPattern:
     softmax = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXSoftmaxMetatype}
     )
-    matmul = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXLinearMetatype}
-    )
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: MATMUL_METATYPES})
     non_pattern_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
@@ -42,9 +41,7 @@ def create_softmax_reshape_matmul() -> GraphPattern:
     reshape = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXReshapeMetatype}
     )
-    matmul = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: onnx_metatypes.ONNXLinearMetatype}
-    )
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: MATMUL_METATYPES})
     non_pattern_node_1 = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "NON_PATTERN_1", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )

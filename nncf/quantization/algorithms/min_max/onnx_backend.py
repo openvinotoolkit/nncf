@@ -34,7 +34,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
-from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
+from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -53,6 +53,7 @@ from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.scopes import IgnoredScope
+from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
@@ -164,8 +165,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         # Calculate reduction shape for weight statistic collector
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        assert isinstance(node.layer_attributes, ONNXExtendedLayerAttributes)
-        weight_shape = node.layer_attributes.weight_shape
+        assert isinstance(node.layer_attributes, ONNXConstantLayerAttributes)
+        weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]['weight_shape']
         reduction_shape = list(range(len(weight_shape)))
 
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
@@ -213,7 +214,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
-        return [node.metatype.weight_definitions.weight_port_id]
+        if node in CONSTANT_WEIGHT_LAYER_METATYPES:
+            return [node.metatype.weight_definitions.weight_port_id]
+        return node.layer_attributes.get_weight_port_ids()
 
     @staticmethod
     def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
@@ -239,7 +242,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [
             node
             for node in nncf_graph.get_all_nodes()
-            if isinstance(node.layer_attributes, ONNXExtendedLayerAttributes)
+            if isinstance(node.layer_attributes, ONNXConstantLayerAttributes)
         ]
 
     @staticmethod

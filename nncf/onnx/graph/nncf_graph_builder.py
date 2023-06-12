@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 import onnx
 
@@ -24,6 +24,7 @@ from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import POSSIBLE_WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_weight_port_ids
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
@@ -161,21 +162,32 @@ class GraphConverter:
                 if subtype is not None:
                     metatype = subtype
             is_shared, weight_edge_name, layer_attributes = None, None, None
+            const_attrs = {}
+            bias_attrs = {}
             if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
-                is_shared = onnx_graph.is_node_shared(node)
-                weight_edge_name = onnx_graph.get_weight_tensor_edge(node)
+                port_id = metatype.weight_definitions.weight_port_id
+                is_shared = onnx_graph.is_node_shared(node, port_id)
+                weight_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][port_id]
                 edge = onnx_graph.get_edge(weight_edge_name)
                 weight_shape = ONNXGraph.get_edge_shape(edge)
-                layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
+                const_attrs[port_id] = {"weight_shape": weight_shape}
             elif metatype in POSSIBLE_WEIGHT_LAYER_METATYPES:
                 for port_id in get_weight_port_ids(metatype):
                     if onnx_graph.is_node_with_weight(node, port_id):
-                        is_shared = onnx_graph.is_node_shared(node)
-                        weight_edge_name = onnx_graph.get_weight_tensor_edge(node)
+                        is_shared = onnx_graph.is_node_shared(node, port_id)
+                        weight_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][port_id]
                         edge = onnx_graph.get_edge(weight_edge_name)
                         weight_shape = ONNXGraph.get_edge_shape(edge)
-                        layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
-
+                        const_attrs[port_id] = {"weight_shape": weight_shape}
+            if metatype in OPERATIONS_WITH_BIAS_METATYPES:
+                bias_tensor_port_id = onnx_graph.get_bias_tensor_port_id(node)
+                if len(node.input) > bias_tensor_port_id:
+                    bias_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][bias_tensor_port_id]
+                    edge = onnx_graph.get_edge(bias_edge_name)
+                    bias_shape = ONNXGraph.get_edge_shape(edge)
+                    bias_attrs[bias_tensor_port_id] = {'bias_shape': bias_shape}
+            if len(const_attrs) or len(bias_attrs):
+                layer_attributes = ONNXConstantLayerAttributes(weight_attrs=const_attrs, bias_attrs=bias_attrs)
             nncf_graph.add_nncf_node(
                 node_name=node.name,
                 node_type=node.op_type,
@@ -216,19 +228,30 @@ class GraphConverter:
         return nncf_graph
 
 
-class ONNXExtendedLayerAttributes(BaseLayerAttributes):
+class ONNXConstantLayerAttributes(BaseLayerAttributes):
     """
     This class stores extended attributes of modules/layers for the algorithms.
     """
 
-    def __init__(
-        self, input_tensor_names: List[str], output_tensor_names: List[str], weight_shape: Optional[Tuple[int]] = None
-    ):
+    def __init__(self, weight_attrs: Dict[int, Dict], bias_attrs: Dict[int, Dict]):
         """
-        :param input_tensor_names: List of the input tensor/edge names of the module/layer.
-        :param output_tensor_names: List of the output tensor/edge names of the module/layer.
-        :param weight_shape: Shape of a weight shape of the module/layer.
+        :param const_attrs: Map of weights port ID to corresponding const attributes.
         """
-        self.input_tensor_names = input_tensor_names
-        self.output_tensor_names = output_tensor_names
-        self.weight_shape = weight_shape
+        self.weight_attrs = weight_attrs
+        self.bias_attrs = bias_attrs
+
+    def get_weight_port_ids(self) -> List[int]:
+        """
+        Returns indices of input ports corresponding to the constant nodes.
+
+        :returns: List of input port indices with constants.
+        """
+        return list(self.weight_attrs.keys())
+
+    def get_bias_port_ids(self) -> List[int]:
+        """
+        Returns indices of input ports corresponding to the constant nodes.
+
+        :returns: List of input port indices with constants.
+        """
+        return list(self.bias_attrs.keys())
