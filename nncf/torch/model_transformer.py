@@ -93,7 +93,7 @@ class PTModelTransformer(ModelTransformer):
 
         for pt_ip, fn_list_with_priority in fns_grouped_by_points.items():
             fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
-            model.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
+            model.nncf.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
 
         return model
 

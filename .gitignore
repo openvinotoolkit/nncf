@@ -117,11 +117,18 @@ nncf_debug/
 # NNCF examples
 examples/torch/object_detection/eval/
 examples/post_training_quantization/onnx/mobilenet_v2/mobilenet_v2_*
-examples/post_training_quantization/openvino/mobilenet_v2/mobilenet_v2_*
+examples/post_training_quantization/openvino/quantize/mobilenet_v2/mobilenet_v2_*
 examples/post_training_quantization/tensorflow/mobilenet_v2/mobilenet_v2_*
 examples/post_training_quantization/torch/mobilenet_v2/mobilenet_v2_*
+examples/post_training_quantization/torch/ssd300_vgg16/ssd300_vgg16_*
+examples/post_training_quantization/openvino/quantize_with_accuracy_control/anomaly_stfpm/stfpm_*
+examples/post_training_quantization/openvino/quantize/yolov8/yolov8n*
+examples/post_training_quantization/openvino/quantize_with_accuracy_control/yolov8/yolov8n*
 examples/**/runs/**
 examples/**/results/**
+compressed_graph.dot
+original_graph.dot
+datasets/**
 
 # Tests
 tests/**/runs/**

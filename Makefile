@@ -19,9 +19,9 @@ install-onnx-test:
 	pip install -r tests/onnx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/onnx/benchmarking/requirements.txt
-	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
 install-onnx-dev: install-onnx-test install-pre-commit install-pylint
+	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
 test-onnx:
 	pytest tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
@@ -42,15 +42,15 @@ install-openvino-test:
 	pip install -e .[openvino]
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
-	pip install -r examples/experimental/openvino/bert/requirements.txt
-	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
 	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git@dcbf53280a95dae3c6538689bafe760470f08ec2#subdirectory=tools/model_tools
 
 install-openvino-dev: install-openvino-test install-pre-commit install-pylint
-	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/quantize_with_accuracy_control/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
+	pip install -r examples/experimental/openvino/bert/requirements.txt
+	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/quantize/mobilenet_v2/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/quantize_with_accuracy_control/anomaly_stfpm/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/quantize/yolov8/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/quantize_with_accuracy_control/yolov8/requirements.txt
 
 test-openvino:
 	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
@@ -74,6 +74,7 @@ install-tensorflow-test:
 	pip install -r examples/tensorflow/requirements.txt
 
 install-tensorflow-dev: install-tensorflow-test install-pre-commit install-pylint
+	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
 
 test-tensorflow:
 	pytest tests/common tests/tensorflow    \
@@ -97,6 +98,7 @@ install-torch-test:
 	pip install -r examples/torch/requirements.txt
 
 install-torch-dev: install-torch-test install-pre-commit install-pylint
+	pip install -r examples/post_training_quantization/torch/mobilenet_v2/requirements.txt
 	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
 test-torch:
