@@ -10,25 +10,33 @@
 # limitations under the License.
 
 from ast import Tuple
-from typing import Callable
+from typing import Callable, Tuple, TypeVar
 
 import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import Dataset
 
+from nncf import Dataset
 from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_conv
 
+TTensor = TypeVar("TTensor")
 
-class StaticDatasetMock(Dataset):
+
+class StaticDatasetMock:
+    """
+    Common dataset that generate same data and can used for any backend by set fn_to_type function
+    to convert data to backend specific type.
+    """
+
     def __init__(self, input_size: Tuple, fn_to_type: Callable = None):
         super().__init__()
         self._len = 1
         self._input_size = input_size
         self._fn_to_type = fn_to_type
 
-    def __getitem__(self, index):
+    def __getitem__(self, _) -> Tuple[TTensor, int]:
         np.random.seed(0)
         data = np.random.rand(*tuple(self._input_size)).astype(np.float32)
         if self._fn_to_type:
@@ -37,6 +45,21 @@ class StaticDatasetMock(Dataset):
 
     def __len__(self) -> int:
         return self._len
+
+
+def get_static_dataset(
+    input_size: Tuple,
+    transform_fn: Callable,
+    fn_to_type: Callable,
+) -> Dataset:
+    """
+    Create nncf.Dataset for StaticDatasetMock.
+    :param input_size: Size of generated tensors,
+    :param transform_fn: Function to transformation dataset.
+    :param fn_to_type: Function, defaults to None.
+    :return: Instance of nncf.Dataset for StaticDatasetMock.
+    """
+    return Dataset(StaticDatasetMock(input_size, fn_to_type), transform_fn)
 
 
 class ConvTestModel(nn.Module):
