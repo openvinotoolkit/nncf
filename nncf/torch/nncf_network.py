@@ -740,10 +740,10 @@ class NNCFNetworkInterface(torch.nn.Module):
 
     def strip(self, do_copy: bool = True) -> "NNCFNetwork":
         """
-        _summary_
-
-        :param do_copy: _description_, defaults to True.
-        :return: _description_
+        Returns the model object with as much custom NNCF additions as possible removed
+        while still preserving the functioning of the model object as a compressed model.
+        :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
+        will return the currently associated model object "stripped" in-place.
         """
         if self.compression_controller is None:
             # PTQ algorithm does not set compressed controller
