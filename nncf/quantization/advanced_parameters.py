@@ -19,7 +19,6 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from nncf import NNCFConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.utils.api_marker import api
 from nncf.quantization.range_estimator import AggregatorType
@@ -297,7 +296,9 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     return result
 
 
-def apply_advanced_parameters_to_config(config: NNCFConfig, params: AdvancedQuantizationParameters) -> NNCFConfig:
+def apply_advanced_parameters_to_config(
+    config: Dict[str, Any], params: AdvancedQuantizationParameters
+) -> Dict[str, Any]:
     """
     Apply advanced parameters to the config in the legacy format
 
