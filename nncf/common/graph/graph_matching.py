@@ -16,7 +16,7 @@ import networkx.algorithms.isomorphism as ism
 from nncf.common.graph.patterns import GraphPattern
 
 
-def _are_nodes_matched(node_1, node_2):
+def _are_nodes_matched(node_1, node_2) -> bool:
     for attr in node_2:
         if attr == GraphPattern.LABEL_ATTR:
             continue
@@ -36,7 +36,7 @@ def _are_nodes_matched(node_1, node_2):
     return True
 
 
-def _sort_patterns_by_len(pattern: nx.DiGraph):
+def _sort_patterns_by_len(pattern: nx.DiGraph) -> int:
     """
     Sort patterns by their length. GraphPattern.NON_PATTERN_NODE_TYPE is not counted as a pattern node.
     """
