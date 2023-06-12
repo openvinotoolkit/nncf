@@ -241,9 +241,6 @@ class OVAbsQuantileReducer(AbsQuantileReducer):
 
 
 def get_mean_stat_collector(num_samples, channel_axis, window_size=None, inplace=True):
-    # TODO(dlyakhov): use inplace OVBatchMeanReducer and OVMeanPerChanelReducer
-    # after migration on openvino-dev=2023.0
-    inplace = False
     if channel_axis == 0:
         reducer = OVBatchMeanReducer(inplace)
     else:
@@ -266,9 +263,6 @@ def get_mean_stat_collector(num_samples, channel_axis, window_size=None, inplace
 
 
 def get_mean_batch_stat_collector(num_samples, inplace=True):
-    # TODO(dlyakhov): use inplace OVBatchMeanReducer
-    # after migration on openvino-dev=2023.0
-    inplace = False
     reducer = OVBatchMeanReducer(inplace=inplace)
     aggregator = NoopAggregator(num_samples)
 
