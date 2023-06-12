@@ -688,7 +688,7 @@ def get_dataset(model_evaluator, quantization_parameters):
     sequence_subset_size = quantization_parameters.get("subset_size", 300)
     subset_size = dataset.calculate_per_sample_subset_size(sequence_subset_size)
     if subset_size != sequence_subset_size:
-        print(f"Increase subset size from {sequence_subset_size} to {subset_size} as sequence dataset is presented")
+        print(f"Subset size is increased from {sequence_subset_size} to {subset_size} as sequence dataset is presented")
         quantization_parameters["subset_size"] = subset_size
     return dataset
 
