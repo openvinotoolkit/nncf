@@ -12,6 +12,7 @@
 import json
 import multiprocessing
 import os
+import tempfile
 from argparse import ArgumentParser
 from collections import OrderedDict
 from collections import defaultdict
@@ -19,12 +20,13 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from enum import Enum
 from itertools import islice
-from typing import Any, Iterable, Optional, TypeVar
+from typing import Any, Iterable, List, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import Dimension
 from openvino.runtime import PartialShape
+from openvino.tools import pot
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
 from openvino.tools.pot.configs.config import Config
@@ -33,8 +35,9 @@ import nncf
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.experimental.openvino.quantization.quantize_model import (
-    quantize_with_accuracy_control as pot_quantize_with_native_accuracy_control,
+from nncf.data.dataset import DataProvider
+from nncf.openvino.pot.quantization.quantize_model import (
+    quantize_with_accuracy_control_impl as pot_quantize_with_native_accuracy_control,
 )
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -806,18 +809,47 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_imp
     return quantized_model
 
 
+# TODO(andrey-churkin): This class is a workaround for the proper integration
+# with the POT AA implementation.
+class ACDataset:
+    def __init__(self, data_source, transform_func):
+        self._data_source = data_source
+        self._indices = list(range(data_source.full_size))
+        self._transform_func = transform_func
+
+    def get_data(self, indices: Optional[List[int]] = None):
+        return DataProvider(self._indices, None, indices)
+
+    def get_inference_data(self, indices: Optional[List[int]] = None):
+        return DataProvider(self._data_source, self._transform_func, indices)
+
+
+def initialize_model_and_evaluator(xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str):
+    model_evaluator = create_model_evaluator(accuracy_checker_config)
+
+    with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
+        if quantization_impl == "pot":
+            pot_model = pot.load_model({"model_name": "model", "model": xml_path, "weights": bin_path}, "CPU")
+            paths = pot.save_model(pot_model, save_path=tmp_dir, model_name="model")
+            xml_path, bin_path = paths[0]["model"], paths[0]["weights"]
+
+        model = ov.Core().read_model(xml_path, bin_path)
+        model_evaluator.load_network_from_ir([{"model": xml_path, "weights": bin_path}])
+        model_evaluator.select_dataset("")
+    return model, model_evaluator
+
+
 def quantize_model_with_accuracy_control(
     xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str, quantization_parameters
 ):
-    ov_model = ov.Core().read_model(xml_path, bin_path)
-    model_evaluator = create_model_evaluator(accuracy_checker_config)
-    model_evaluator.load_network_from_ir([{"model": xml_path, "weights": bin_path}])
-    model_evaluator.select_dataset("")
+    ov_model, model_evaluator = initialize_model_and_evaluator(
+        xml_path, bin_path, accuracy_checker_config, quantization_impl
+    )
 
     transform_fn = get_transform_fn(model_evaluator, ov_model)
     dataset = get_dataset(model_evaluator, quantization_parameters)
     calibration_dataset = nncf.Dataset(dataset, transform_fn)
-    validation_dataset = nncf.Dataset(list(range(model_evaluator.dataset.full_size)))
+    validation_dataset = ACDataset(model_evaluator.dataset, transform_fn)
 
     if get_allow_reshape_input(accuracy_checker_config):
         ov_model = maybe_reshape_model(
