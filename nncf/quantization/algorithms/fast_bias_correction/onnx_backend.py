@@ -114,7 +114,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> bool:
-        return is_node_with_bias(node, nncf_graph)
+        return is_node_with_bias(node)
 
     @staticmethod
     def get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:

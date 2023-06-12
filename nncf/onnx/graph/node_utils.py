@@ -23,7 +23,7 @@ from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 
-def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+def is_node_with_bias(node: NNCFNode) -> bool:
     """
     Checks if the node has a bias or not.
 

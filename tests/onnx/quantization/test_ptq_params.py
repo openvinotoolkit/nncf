@@ -18,7 +18,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
-from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
+from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
@@ -92,14 +92,14 @@ class TestPTQParams(TemplateTestPTQParams):
             },
             "test_quantize_outputs": {
                 "nncf_graph": NNCFGraphToTest(
-                    ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
+                    ONNXConvolutionMetatype, ONNXConstantLayerAttributes(None, None)
                 ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_ignored_scopes": {
                 "nncf_graph": NNCFGraphToTest(
-                    ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
+                    ONNXConvolutionMetatype, ONNXConstantLayerAttributes(None, None)
                 ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),

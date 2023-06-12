@@ -15,7 +15,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
+from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
@@ -52,16 +52,16 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
-        conv_layer_attrs = ONNXExtendedLayerAttributes("dummy", "dummy", (4, 4, 4, 4))
+        conv_layer_attrs = ONNXConstantLayerAttributes(weight_attrs={1: {'weight_shape': [4, 4, 4, 4]}}, bias_attrs={})
         return NNCFGraphToTest(ONNXConvolutionMetatype, conv_layer_attrs)
 
     @pytest.fixture
     def depthwise_conv_nncf_graph(self) -> NNCFGraphToTestDepthwiseConv:
         return NNCFGraphToTestDepthwiseConv(
-            ONNXDepthwiseConvolutionMetatype, ONNXExtendedLayerAttributes("dummy", "dummy")
+            ONNXDepthwiseConvolutionMetatype, ONNXConstantLayerAttributes(weight_attrs={}, bias_attrs={})
         )
 
     @pytest.fixture
     def conv_sum_aggregation_nncf_graph(self) -> NNCFGraphToTestSumAggregation:
-        conv_layer_attrs = ONNXExtendedLayerAttributes("dummy", "dummy", (4, 4, 4, 4))
+        conv_layer_attrs = ONNXConstantLayerAttributes(weight_attrs={1: {'weight_shape': [4, 4, 4, 4]}}, bias_attrs={})
         return NNCFGraphToTestSumAggregation(ONNXConvolutionMetatype, ONNXAddLayerMetatype, conv_layer_attrs)
