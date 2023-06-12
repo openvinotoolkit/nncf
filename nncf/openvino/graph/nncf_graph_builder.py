@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Dict, List, Type
+from typing import Any, Dict, List, Optional, Type
 
 import openvino.runtime as ov
 
@@ -166,7 +166,7 @@ class GraphConverter:
                 GraphConverter._add_nncf_node(node, nncf_graph)
             # Set const port id
             elif metatype in METATYPES_WITH_CONST_PORT_ID:
-                const_attrs = {}
+                const_attrs, act_attrs = {}, {}
                 for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
                     inp_name = inp.get_source_output().get_node().get_friendly_name()
                     if inp_name in visited:
@@ -184,14 +184,20 @@ class GraphConverter:
                     }
 
                     if metatype == OVMatMulMetatype:
+                        node_inputs = node.inputs()
                         attribute_names = ["transpose_a", "transpose_b"]
                         node_attributes = node.get_attributes()
-                        transpose = node_attributes[attribute_names[const_port_id]]
-                        const_attrs[const_port_id]["transpose"] = transpose
+                        const_transpose_name = attribute_names.pop(const_port_id)
+                        node_inputs.pop(const_port_id)
+                        const_attrs[const_port_id]["transpose"] = node_attributes[const_transpose_name]
 
-                if const_attrs:
-                    nncf_node = nncf_graph.get_node_by_name(node_name)
-                    nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs)
+                        assert len(attribute_names) == 1
+                        act_attrs["transpose"] = node_attributes[attribute_names[0]]
+                        assert len(node_inputs) == 1
+                        act_attrs["shape"] = tuple(node_inputs[0].get_shape())
+
+                nncf_node = nncf_graph.get_node_by_name(node_name)
+                nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs, act_attrs)
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
@@ -202,11 +208,21 @@ class OVConstantLayerAttributes(BaseLayerAttributes):
     This class stores mapping weights port indices to constant name and shape.
     """
 
-    def __init__(self, const_attrs: Dict[int, Dict]):
+    def __init__(self, const_attrs: Dict[int, Dict], act_attrs: Optional[Dict[Any, Any]] = None):
         """
         :param const_attrs: Map of weights port ID to corresponding const attributes.
+        :param act_attrs: Activation attributes.
         """
-        self.const_attrs = const_attrs
+        self._const_attrs = const_attrs
+        self._act_attrs = act_attrs
+
+    @property
+    def const_attrs(self):
+        return self._const_attrs if self._const_attrs != {} else None
+
+    @property
+    def act_attrs(self):
+        return self._act_attrs if self._act_attrs != {} else None
 
     def get_const_port_ids(self) -> List[int]:
         """

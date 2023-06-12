@@ -259,6 +259,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             node
             for node in nncf_graph.get_all_nodes()
             if isinstance(node.layer_attributes, OVConstantLayerAttributes)
+            and node.layer_attributes.const_attrs is not None
             and node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
         ]
 

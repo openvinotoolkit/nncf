@@ -29,6 +29,7 @@ from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrectio
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FAST_BIAS_CORRECTION_THRESHOLD
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms.smooth_quantize.algorithm import SmoothQuantize
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
@@ -78,9 +79,13 @@ class PostTrainingQuantization(Algorithm):
         """
         super().__init__()
         self.algorithms = []
+        self.pre_algorithms = []
 
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
+
+        smooth_quantize_algorithm = SmoothQuantize()
+        self.pre_algorithms.append(smooth_quantize_algorithm)
 
         min_max_quantization = MinMaxQuantization(
             preset=preset,
@@ -173,9 +178,17 @@ class PostTrainingQuantization(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         modified_model = copy_model(model)
-        if statistic_points is None:
-            backend = get_backend(modified_model)
+        backend = get_backend(modified_model)
 
+        if statistic_points is None:
+            for algorithm in self.pre_algorithms:
+                statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
+                algo_statistic_points = algorithm.get_statistic_points(modified_model)
+                statistics_aggregator.register_statistic_points(algo_statistic_points)
+                statistics_aggregator.collect_statistics(modified_model)
+                modified_model = algorithm.apply(modified_model, statistics_aggregator.statistic_points)
+
+        if statistic_points is None:
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
