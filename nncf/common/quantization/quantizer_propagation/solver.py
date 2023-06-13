@@ -333,6 +333,7 @@ class QuantizerPropagationSolver:
         run_consistency_checks: bool = False,
         quantize_outputs: bool = False,
         post_processing_marker_metatypes: List[OperatorMetatype] = None,
+        scales_unification_map: Dict[OperatorMetatype, OperatorMetatype] = None,
     ):
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
@@ -374,13 +375,15 @@ class QuantizerPropagationSolver:
           trainable quantizer parameters.
         :param run_consistency_checks: Whether to run internal consistency checks at each propagataion step.
         :param quantize_outputs: Whether to insert additional quantizers right before each of the model outputs.
-        :param post_processing_marker_metatypes: The framework specific NNCF Metatypes, which are markers for
-        the model post-processing part. They are used for automatic ignoring post-processing nodes.
-        The seeking post-processing nodes algorithm uses traversing through the model graph from the output nodes.
-        During traversing all the visited nodes are added, until the quantizable nodes with weights are faced.
-        If the path with the nodes has the post-processing marker node,
-        all the nodes in this path will be added into ignored.
-         If None automatic ignoring will be skipped.
+        :param post_processing_marker_metatypes: The framework specific NNCF metatypes, which are markers for
+            the model post-processing part. They are used for automatic ignoring post-processing nodes.
+            The seeking post-processing nodes algorithm uses traversing through the model graph from the output nodes.
+            During traversing all the visited nodes are added, until the quantizable nodes with weights are faced.
+            If the path with the nodes has the post-processing marker node,
+            all the nodes in this path will be added into ignored.
+            If None automatic ignoring will be skipped.
+        :param scales_unification_map: The framework-specific map with NNCF metatypes, which generating a quantizer
+            that can be unified if it so requires based on metatype.
         """
         if default_trait_to_metatype_map is None:
             self._default_trait_to_metatype_map = {}
@@ -435,6 +438,7 @@ class QuantizerPropagationSolver:
         self._num_potential_quantized_activations = 0
         self._quantizable_layer_nodes = quantizable_layer_nodes
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
+        self._scales_unification_map = scales_unification_map
 
     def _filter_by_weight_ignored_target_scopes(
         self,
@@ -716,7 +720,7 @@ class QuantizerPropagationSolver:
         # only concat unified scale groups appear here
         unified_scale_grouped_paths = (
             quant_prop_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-                curr_node_key, self._unified_scales_operation_set
+                curr_node_key, self._unified_scales_operation_set, self._scales_unification_map
             )
         )
 

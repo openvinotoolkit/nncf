@@ -754,16 +754,39 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self, insertion_point_node_key: str
     ) -> List[PropagationPath]:
         group_dict = self.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-            insertion_point_node_key, set()
+            insertion_point_node_key, set(), {}
         )
         return group_dict[None]
 
     def get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-        self, insertion_point_node_key: str, unified_scale_op_metatypes: Set[Type[OperatorMetatype]]
+        self,
+        insertion_point_node_key: str,
+        unified_scale_op_metatypes: Set[Type[OperatorMetatype]],
+        scales_unification_map: Dict[OperatorMetatype, OperatorMetatype],
     ) -> Dict[Optional[int], List[PropagationPath]]:
         """Paths are lists of edges."""
         next_group_idx = 0
         paths = {}
+
+        def followed_by_weighted_types(curr_node_key, curr_node_metatype) -> bool:
+            nodes_queue = deque(self.successors(curr_node_key))
+            while nodes_queue:
+                next_node_key = nodes_queue.popleft()
+                next_node = self.nodes[next_node_key]
+                next_node_type = next_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+                if next_node_type != QuantizerPropagationStateGraphNodeType.OPERATOR:
+                    nodes_queue.extend(self.successors(next_node_key))
+                else:
+                    next_node_metatype = next_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
+                    next_node_trait = next_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
+                    if (
+                        next_node_trait == QuantizationTrait.QUANTIZATION_AGNOSTIC
+                        or next_node_metatype in unified_scale_op_metatypes
+                    ):
+                        nodes_queue.extend(self.successors(next_node_key))
+                    if next_node_metatype in scales_unification_map[curr_node_metatype]:
+                        return True
+            return False
 
         def recursive_helper(curr_edge, curr_path, all_paths, curr_group):
             nonlocal next_group_idx
@@ -780,11 +803,14 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
             if curr_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 metatype = curr_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
-                if (
-                    metatype in unified_scale_op_metatypes
-                    and curr_group is None
-                    and len(self.in_edges(curr_node_key)) > 1
-                ):
+                unify_conditions = [
+                    metatype in unified_scale_op_metatypes,
+                    curr_group is None,
+                    len(self.in_edges(curr_node_key)) > 1,
+                ]
+                if scales_unification_map is not None and metatype in scales_unification_map:
+                    unify_conditions.append(followed_by_weighted_types(curr_node_key, metatype))
+                if all(unify_conditions):
                     curr_group = next_group_idx
                     next_group_idx += 1
 

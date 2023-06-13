@@ -62,8 +62,10 @@ from nncf.tensorflow.graph.metatypes.common import CAST_METATYPES
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
+from nncf.tensorflow.graph.metatypes.keras_layers import TFConcatenateLayerMetatype
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLambdaLayerMetatype
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLayerWithWeightsMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFConcatOpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFIdentityOpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
@@ -615,6 +617,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             + input_preprocessing_node_names
             + custom_layer_node_names
         )
+        scales_unification_map = {
+            TFConcatenateLayerMetatype: GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES,
+            TFConcatOpMetatype: GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES,
+        }
         solver = QuantizerPropagationSolver(
             activation_ignored_scopes=ignored_scopes_for_solver,
             weight_ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
@@ -628,6 +634,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             quantizable_layer_nodes=quantizable_weighted_layer_nodes,
             global_constraints=self.global_quantizer_constraints,
             quantize_outputs=self.quantize_outputs,
+            scales_unification_map=scales_unification_map,
         )
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)

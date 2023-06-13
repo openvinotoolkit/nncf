@@ -378,6 +378,7 @@ class MinMaxQuantization(Algorithm):
             quantize_outputs=self._quantize_outputs,
             global_constraints=self._global_quantizer_constraints,
             post_processing_marker_metatypes=post_processing_types,
+            scales_unification_map=self._backend_entity.scales_unification_map,
         )
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)

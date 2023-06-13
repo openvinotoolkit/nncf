@@ -891,6 +891,19 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
     PTModuleEmbeddingBagMetatype,
 ]
 
+UNIFICATION_PRODUCING_METATYPES = [
+    PTModuleConv1dMetatype,
+    PTModuleConv2dMetatype,
+    PTModuleConv3dMetatype,
+    PTDepthwiseConv1dSubtype,
+    PTDepthwiseConv2dSubtype,
+    PTDepthwiseConv3dSubtype,
+    PTModuleConvTranspose1dMetatype,
+    PTModuleConvTranspose2dMetatype,
+    PTModuleConvTranspose3dMetatype,
+    PTModuleLinearMetatype,
+]
+
 OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in meta.get_all_aliases()]
 
 # Contains the operation metatypes for which bias can be applied.
