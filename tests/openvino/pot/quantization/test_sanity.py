@@ -49,7 +49,9 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
 
     calibration_dataset = get_nncf_dataset_from_ac_config(model_path, config_path, extracted_data_dir)
 
-    ov_model = ov.Core().read_model(str(model_path))
+    core = ov.Core()
+    core.set_property({"ENABLE_MMAP": "NO"})
+    ov_model = core.read_model(str(model_path))
     quantized_model = nncf.quantize(
         ov_model,
         calibration_dataset,
