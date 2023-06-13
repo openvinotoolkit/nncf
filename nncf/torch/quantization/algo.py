@@ -131,8 +131,7 @@ from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitPa
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
-from nncf.torch.quantization.strip import remove_disabled_quantizers
-from nncf.torch.quantization.strip import replace_quantizer_to_torch_native_module
+from nncf.torch.quantization.strip import strip_quantized_model
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.translator import PTTargetPointTranslator
@@ -1519,8 +1518,7 @@ class QuantizationController(QuantizationControllerBase):
     def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
         if do_copy:
             model = copy_model(model)
-        model = replace_quantizer_to_torch_native_module(model)
-        model = remove_disabled_quantizers(model)
+        model = strip_quantized_model(model)
         return model
 
 

@@ -738,6 +738,21 @@ class NNCFNetworkInterface(torch.nn.Module):
     def set_compression_controller(self, ctrl: "PTCompressionAlgorithmController"):
         self.compression_controller = ctrl
 
+    def strip(self, do_copy: bool = True) -> "NNCFNetwork":
+        """
+        Returns the model object with as much custom NNCF additions as possible removed
+        while still preserving the functioning of the model object as a compressed model.
+        :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
+          will return the currently associated model object "stripped" in-place.
+        :return: The stripped model.
+        """
+        if self.compression_controller is None:
+            # PTQ algorithm does not set compressed controller
+            from nncf.torch.quantization.strip import strip_quantized_model
+
+            return strip_quantized_model(self._model_ref)
+        return self.compression_controller.strip(do_copy)
+
 
 class NNCFNetworkMeta(type):
     """
