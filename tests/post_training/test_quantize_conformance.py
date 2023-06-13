@@ -29,6 +29,7 @@ import timm
 import torch
 import tqdm
 from sklearn.metrics import accuracy_score
+from timm.layers.config import set_fused_attn
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets
@@ -50,6 +51,9 @@ from tests.post_training.model_scope import get_cached_metric
 from tests.shared.command import Command
 
 DEFAULT_VAL_THREADS = 4
+
+# Disable using aten::scaled_dot_product_attention
+set_fused_attn(False, False)
 
 
 def create_timm_model(name: str) -> nn.Module:
