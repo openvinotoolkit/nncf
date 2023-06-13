@@ -92,7 +92,7 @@ Classes
 
 .. py:class:: AdvancedQuantizationParameters
 
-   Contains advanced parameters for fine-tuning qunatization algorithm.
+   Contains advanced parameters for fine-tuning quantization algorithm.
 
    :param overflow_fix: This option controls whether to apply the overflow issue fix
        for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
