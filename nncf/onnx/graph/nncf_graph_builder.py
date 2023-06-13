@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
-from typing import List, Optional, Tuple, Dict
+from typing import Dict, List, Optional, Tuple
 
 import onnx
 
@@ -21,10 +21,10 @@ from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import POSSIBLE_WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import POSSIBLE_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_weight_port_ids
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
@@ -167,7 +167,7 @@ class GraphConverter:
             if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
                 port_id = metatype.weight_definitions.weight_port_id
                 is_shared = onnx_graph.is_node_shared(node, port_id)
-                weight_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][port_id]
+                weight_edge_name = onnx_graph.get_weight_edge_name(node, port_id)
                 edge = onnx_graph.get_edge(weight_edge_name)
                 weight_shape = ONNXGraph.get_edge_shape(edge)
                 const_attrs[port_id] = {"weight_shape": weight_shape}
@@ -175,7 +175,7 @@ class GraphConverter:
                 for port_id in get_weight_port_ids(metatype):
                     if onnx_graph.is_node_with_weight(node, port_id):
                         is_shared = onnx_graph.is_node_shared(node, port_id)
-                        weight_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][port_id]
+                        weight_edge_name = onnx_graph.get_weight_edge_name(node, port_id)
                         edge = onnx_graph.get_edge(weight_edge_name)
                         weight_shape = ONNXGraph.get_edge_shape(edge)
                         const_attrs[port_id] = {"weight_shape": weight_shape}

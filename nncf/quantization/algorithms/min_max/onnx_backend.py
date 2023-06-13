@@ -21,16 +21,18 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.backend import BackendType
+from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqrtMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
@@ -53,7 +55,6 @@ from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.scopes import IgnoredScope
-from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
@@ -229,6 +230,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ONNXSubMetatype,
                 ONNXReduceMeanMetatype,
                 ONNXDivLayerMetatype,
+                ONNXSqrtMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(ONNXMulLayerMetatype)
