@@ -52,6 +52,7 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
     core = ov.Core()
     core.set_property({"ENABLE_MMAP": "NO"})
     ov_model = core.read_model(str(model_path))
+    print('OV VERSION', ov.get_version())
     quantized_model = nncf.quantize(
         ov_model,
         calibration_dataset,

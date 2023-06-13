@@ -72,5 +72,6 @@ def test_transform_fn(model, transform_fn, use_pot: bool):
             BackendParameters.USE_POT: use_pot,
         }
     )
+    print('OV VERSION', ov.get_version())
     calibration_dataset = nncf.Dataset(dataset, transform_fn)
     _ = nncf.quantize(model.ov_model, calibration_dataset, advanced_parameters=params)
