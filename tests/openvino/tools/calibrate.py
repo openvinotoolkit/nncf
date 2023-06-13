@@ -16,9 +16,10 @@ from argparse import ArgumentParser
 from collections import OrderedDict
 from collections import defaultdict
 from dataclasses import asdict
+from dataclasses import dataclass
 from enum import Enum
 from itertools import islice
-from typing import Iterable, Optional, TypeVar
+from typing import Any, Iterable, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
@@ -658,16 +659,82 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
 
 
 # pylint: disable=protected-access
-def get_transform_fn(model_evaluator: ModelEvaluator):
-    def transform_fn(data_item):
-        _, batch_annotation, batch_input, _ = data_item
-        filled_inputs, _, _ = model_evaluator._get_batch_input(batch_input, batch_annotation)
-        input_data = {}
-        for name, value in filled_inputs[0].items():
-            input_data[model_evaluator.launcher.input_to_tensor_name[name]] = value
-        return input_data
+def get_transform_fn(model_evaluator: ModelEvaluator, ov_model):
+    if model_evaluator.launcher._lstm_inputs:
+        compiled_original_model = ov.Core().compile_model(ov_model)
+        model_outputs = None
+
+        def transform_fn(data_item: ACDattasetWrapper.DataItem):
+            model_inputs = data_item.data
+            nonlocal model_outputs
+            state_inputs = model_evaluator.launcher._fill_lstm_inputs(model_outputs)
+            model_inputs.update(state_inputs)
+            if data_item.status == ACDattasetWrapper.Status.SEQUENCE_IS_GOING:
+                model_outputs = compiled_original_model(model_inputs)
+            else:
+                model_outputs = None
+            return model_inputs
+
+    else:
+
+        def transform_fn(data_item: ACDattasetWrapper.DataItem):
+            return data_item.data
 
     return transform_fn
+
+
+def get_dataset(model_evaluator, quantization_parameters):
+    dataset = ACDattasetWrapper(model_evaluator)
+    sequence_subset_size = quantization_parameters.get("subset_size", 300)
+    subset_size = dataset.calculate_per_sample_subset_size(sequence_subset_size)
+    if subset_size != sequence_subset_size:
+        print(f"Subset size is changed from {sequence_subset_size} to {subset_size}")
+        print(f"Total dataset size: {len(dataset)}")
+        quantization_parameters["subset_size"] = subset_size
+    return dataset
+
+
+class ACDattasetWrapper:
+    """
+    Iters through all items in sequences of model_evaluator dataset and
+    returns DataItem with one of the status: sequence is going or end of sequence.
+    """
+
+    class Status(Enum):
+        END_OF_SEQUENCE = "END_OF_SEQUENCE"
+        SEQUENCE_IS_GOING = "SEQUENCE_IS_GOING"
+
+    @dataclass
+    class DataItem:
+        data: Any
+        status: "ACDattasetWrapper.Status"
+
+    def __init__(self, model_evaluator):
+        self.model_evaluator = model_evaluator
+
+    def __iter__(self):
+        for sequence in self.model_evaluator.dataset:
+            _, batch_annotation, batch_input, _ = sequence
+            filled_inputs, _, _ = self.model_evaluator._get_batch_input(batch_input, batch_annotation)
+            for idx, filled_input in enumerate(filled_inputs):
+                input_data = {}
+                for name, value in filled_input.items():
+                    input_data[self.model_evaluator.launcher.input_to_tensor_name[name]] = value
+                status = self.Status.SEQUENCE_IS_GOING
+                if idx == len(filled_inputs) - 1:
+                    status = self.Status.END_OF_SEQUENCE
+                yield self.DataItem(input_data, status)
+
+    def __len__(self):
+        return len(self.model_evaluator.dataset)
+
+    def calculate_per_sample_subset_size(self, sequence_subset_size):
+        subset_size = 0
+        for data_item in islice(self.model_evaluator.dataset, sequence_subset_size):
+            _, batch_annotation, batch_input, _ = data_item
+            filled_inputs, _, _ = self.model_evaluator._get_batch_input(batch_input, batch_annotation)
+            subset_size += len(filled_inputs)
+        return subset_size
 
 
 def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_impl, quantization_parameters):
@@ -685,8 +752,9 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_imp
         raise NotImplementedError()
     quantization_parameters["advanced_parameters"] = advanced_parameters
 
-    transform_fn = get_transform_fn(model_evaluator)
-    calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
+    transform_fn = get_transform_fn(model_evaluator, ov_model)
+    dataset = get_dataset(model_evaluator, quantization_parameters)
+    calibration_dataset = nncf.Dataset(dataset, transform_fn)
 
     if get_allow_reshape_input(accuracy_checker_config):
         ov_model = maybe_reshape_model(
@@ -709,8 +777,9 @@ def quantize_model_with_accuracy_control(
     model_evaluator.load_network_from_ir([{"model": xml_path, "weights": bin_path}])
     model_evaluator.select_dataset("")
 
-    transform_fn = get_transform_fn(model_evaluator)
-    calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
+    transform_fn = get_transform_fn(model_evaluator, ov_model)
+    dataset = get_dataset(model_evaluator, quantization_parameters)
+    calibration_dataset = nncf.Dataset(dataset, transform_fn)
     validation_dataset = nncf.Dataset(list(range(model_evaluator.dataset.full_size)))
 
     if get_allow_reshape_input(accuracy_checker_config):
