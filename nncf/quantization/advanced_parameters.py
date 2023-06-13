@@ -115,7 +115,7 @@ class AdvancedBiasCorrectionParameters:
 @dataclass
 class AdvancedQuantizationParameters:
     """
-    Contains advanced parameters for fine-tuning qunatization algorithm.
+    Contains advanced parameters for fine-tuning quantization algorithm.
 
     :param overflow_fix: This option controls whether to apply the overflow issue fix
         for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
@@ -159,7 +159,7 @@ class AdvancedQuantizationParameters:
     # Advanced BiasCorrection algorithm parameters
     bias_correction_params: AdvancedBiasCorrectionParameters = field(default_factory=AdvancedBiasCorrectionParameters)
 
-    # backend specific parameters
+    # Backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -283,46 +283,64 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
             "min_percentile": 1 - params.min.quantile_outlier_prob,
             "max_percentile": 1 - params.max.quantile_outlier_prob,
         }
+    elif (
+        params.min.statistics_type is None
+        and params.min.aggregator_type is None
+        and params.max.statistics_type is None
+        and params.max.aggregator_type is None
+    ):
+        return {}
     else:
         raise RuntimeError("The following range estimator parameters are not supported: " f"{str(params)}")
 
     return result
 
 
-def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) -> Dict[str, Any]:
+def apply_advanced_parameters_to_config(
+    config: Dict[str, Any], params: AdvancedQuantizationParameters
+) -> Dict[str, Any]:
     """
-    Converts advanced parameters to the dict in the legacy format
+    Apply advanced parameters to the config in the legacy format
 
+    :param config: NNCF config in legacy format
     :param params: Advanced quantization parameters
     :return: advanced quantization parameters as dict in the legacy format
     """
-    result = {
-        "overflow_fix": params.overflow_fix.value,
-        "quantize_outputs": params.quantize_outputs,
-    }
+    config["overflow_fix"] = params.overflow_fix.value
+    config["quantize_outputs"] = params.quantize_outputs
 
     if params.disable_bias_correction:
-        result["batchnorm_adaptation"] = {"num_bn_adaptation_samples": 0}
+        config["initializer"]["batchnorm_adaptation"] = {"num_bn_adaptation_samples": 0}
 
     activations_config = convert_quantization_parameters_to_dict(params.activations_quantization_params)
     if activations_config:
-        result["activations"] = activations_config
+        config["activations"] = activations_config
 
     weights_config = convert_quantization_parameters_to_dict(params.weights_quantization_params)
     if weights_config:
-        result["weights"] = weights_config
+        config["weights"] = weights_config
 
     activations_init_range_config = convert_range_estimator_parameters_to_dict(
         params.activations_range_estimator_params
     )
-    weights_init_range_config = convert_range_estimator_parameters_to_dict(params.weigths_range_estimator_params)
+    weights_init_range_config = convert_range_estimator_parameters_to_dict(params.weights_range_estimator_params)
+
     if activations_init_range_config or weights_init_range_config:
+        init_range = config["initializer"]["range"]
+
         activations_init_range_config["target_quantizer_group"] = "activations"
         activations_init_range_config["target_scopes"] = "{re}.*"
+        activations_init_range_config["num_init_samples"] = init_range["num_init_samples"]
+        if type not in activations_init_range_config:
+            activations_init_range_config["type"] = init_range["type"]
+
         weights_init_range_config["target_quantizer_group"] = "weights"
         weights_init_range_config["target_scopes"] = "{re}.*"
+        weights_init_range_config["num_init_samples"] = init_range["num_init_samples"]
+        if type not in weights_init_range_config:
+            weights_init_range_config["type"] = init_range["type"]
 
-        result["initializer"]["range"] = [activations_init_range_config, weights_init_range_config]
+        config["initializer"]["range"] = [activations_init_range_config, weights_init_range_config]
 
     if params.bias_correction_params.apply_for_all_nodes:
         raise RuntimeError(
@@ -332,4 +350,4 @@ def convert_advanced_parameters_to_dict(params: AdvancedQuantizationParameters) 
     if params.bias_correction_params.threshold is not None:
         raise RuntimeError("threshold parameter of the BiasCorrection algorithm is not supported in the legacy format")
 
-    return result
+    return config

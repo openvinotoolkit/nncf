@@ -22,7 +22,7 @@ from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import convert_advanced_parameters_to_dict
+from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 from nncf.torch.dynamic_graph.context import no_nncf_trace
@@ -39,7 +39,7 @@ DEFAULT_RANGE_TYPE = "mean_min_max"
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
-class CalibrarionDataLoader(PTInitializingDataLoader):
+class CalibrationDataLoader(PTInitializingDataLoader):
     """
     This class wraps the nncf.Dataset.
 
@@ -61,7 +61,7 @@ class CalibrarionDataLoader(PTInitializingDataLoader):
     def __len__(self):
         if self._length is None:
             data = self._data_loader.get_inference_data()
-            self._length = CalibrarionDataLoader._get_length(data)
+            self._length = CalibrationDataLoader._get_length(data)
         return self._length
 
     def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
@@ -171,16 +171,7 @@ def _create_nncf_config(
             compression_config["ignored_scopes"] = _ignored_scope
 
     if advanced_parameters is not None:
-        advanced_config = convert_advanced_parameters_to_dict(advanced_parameters)
-
-        ranges = advanced_config.get("initializer", {}).get("range")
-        if ranges is not None:
-            for rconfig in ranges:
-                rconfig["num_init_samples"] = subset_size
-                if "type" not in rconfig:
-                    rconfig["type"] = DEFAULT_RANGE_TYPE
-
-        compression_config.update(advanced_config)
+        compression_config = apply_advanced_parameters_to_config(compression_config, advanced_parameters)
 
     return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 
@@ -214,7 +205,7 @@ def quantize_impl(
         preset, target_device, subset_size, model_type, ignored_scope, advanced_parameters
     )
 
-    calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
+    calibration_data_loader = CalibrationDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(
         [
             QuantizationRangeInitArgs(data_loader=calibration_data_loader),
