@@ -54,7 +54,8 @@ def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgrap
     1) External predecessors of starting nodes.
     2) External successors of the last nodes.
     3) External successors or predecessors of the nodes which are not starting and last.
-    If any of these conditions is True then returns False, otherwise - True.
+    If any of these conditions is True, than returns False, otherwise - True.
+    The checks are skipped for NON_PATTERN_NODE_TYPE.
     Example:
     This subgraph matching is not strict.
     (conv2d + BN + ReLU pattern):
@@ -83,6 +84,8 @@ def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgrap
             last_nodes.append(node)
 
     for node_from_graph, node_from_pattern in subgraph.items():
+        if GraphPattern.NON_PATTERN_NODE_TYPE in pattern.nodes[node_from_pattern].get(GraphPattern.METATYPE_ATTR):
+            continue
         predecessors_keys = graph.pred[node_from_graph].keys()
         successor_keys = graph.succ[node_from_graph].keys()
         has_external_successors = any(successor_key not in subgraph for successor_key in successor_keys)
