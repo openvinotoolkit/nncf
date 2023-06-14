@@ -717,6 +717,17 @@ def test_ptq_timm(data, output, result, report_model_name, backends_list, eval_f
     """
     model_args = VALIDATION_SCOPE[report_model_name]
     backends = [PipelineType[backend] for backend in backends_list.split(",")]
+    if model_args.get("skipped_by_backends"):
+        for backend_name, skip_message in model_args["skipped_by_backends"].items():
+            skipped_backend = PipelineType[backend_name]
+            if skipped_backend in backends:
+                print(
+                    f"Model {report_model_name} is skipped by {backend_name} backend due to the reason: {skip_message}"
+                )
+                backends.remove(skipped_backend)
+    if not backends:
+        return
+
     model_name = model_args["model_name"]
     quantization_params = model_args["quantization_params"]
     main_connection, process_connection = Pipe()
