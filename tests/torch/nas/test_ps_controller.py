@@ -158,7 +158,7 @@ class TestProgressiveTrainingController:
         mock_dataloader = create_ones_mock_dataloader(
             nncf_config, num_samples=batch_size * number_of_iters, batch_size=batch_size
         )
-        # model.mode = ThreeConvModelMode.SUPERNET
+        model.mode = ThreeConvModelMode.SUPERNET
         training_algorithm = EpochBasedTrainingAlgorithm.from_config(deepcopy(model), nncf_config)
         actual_outputs = run_actual(training_algorithm._training_ctrl, training_algorithm._model, mock_dataloader)
         training_algorithm = EpochBasedTrainingAlgorithm.from_config(deepcopy(model), nncf_config)
