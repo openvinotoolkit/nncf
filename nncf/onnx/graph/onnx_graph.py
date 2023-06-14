@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import numpy as np
 import onnx
@@ -209,17 +209,15 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> int:
+    def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> Optional[int]:
         """
         Returns input port id, where a bias tensor should output.
 
         :param node: Node, for which input port id is returned,
-        :return: input port id, where a weight bias should output.
+        :return: input port id, where a weight bias should output or None if node can not have bias.
         """
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-        if metatype.bias_port_id is not None:
-            return metatype.bias_port_id
-        raise RuntimeError(f"The node {node} does not have bias_port_id attribute")
+        return metatype.bias_port_id
 
     def get_node_index(self, node_name: str) -> int:
         """

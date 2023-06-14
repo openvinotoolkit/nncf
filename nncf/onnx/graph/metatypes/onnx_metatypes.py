@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 from typing import List, Optional, Type
 
 import onnx
@@ -55,8 +54,10 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
     Metatype which could have weights.
 
     :param weight_channel_axis: Axis for weight per-channel quantization, meaning the number of output filters.
-    :param weight_port_ids: Input ports of the node's weight. If the value is None the weight_port_id should be determined dynamically.
-    :param bias_port_id: Input port of the node's bias. If the value is None it means that the Metatype does not have bias.
+    :param weight_port_ids: Input ports of the node's weight.
+    If the value is None the weight_port_id should be determined dynamically.
+    :param bias_port_id: Input port of the node's bias.
+    If the value is None it means that the Metatype does not have bias.
     """
 
     weight_channel_axis: int
@@ -119,6 +120,7 @@ class ONNXMatMulMetatype(ONNXOpMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
+    weight_channel_axis = -1
     weight_port_id = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
