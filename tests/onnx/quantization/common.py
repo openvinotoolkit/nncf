@@ -81,7 +81,7 @@ def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str)
 
 
 class ModelToTest:
-    def __init__(self, model_name: str, input_shape: List[int]):
+    def __init__(self, model_name: str, input_shape: Optional[List[int]] = None):
         self.model_name = model_name
         self.path_ref_graph = self.model_name + ".dot"
         self.input_shape = input_shape

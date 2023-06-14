@@ -8,16 +8,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
+from argparse import ArgumentParser
 
-from nncf.onnx.graph.onnx_graph import ONNXGraph
-from tests.onnx.models import MatMulWeightModel
-from tests.onnx.models import MatMulWeightModel_2
+import onnx
 
+from tests.onnx.weightless_model import save_model_without_tensors
 
-@pytest.mark.parametrize("model", [MatMulWeightModel(), MatMulWeightModel_2()])
-def test_is_node_with_weight(model):
-    onnx_graph = ONNXGraph(model.onnx_model)
-    node = onnx_graph.get_node_by_name("MatMul")
-    onnx_graph.is_node_with_weight(node, 0)
-    onnx_graph.is_node_with_weight(node, 1)
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("model")
+    parser.add_argument("output_model")
+    args = parser.parse_args()
+    model = onnx.load(args.model)
+    save_model_without_tensors(model, args.output_model)
