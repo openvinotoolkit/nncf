@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set
 
 import onnx
 
@@ -21,12 +21,97 @@ from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import POSSIBLE_WEIGHT_LAYER_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import get_weight_port_ids
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_constant_weight_port_ids
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_possible_weight_port_ids
 from nncf.onnx.graph.onnx_graph import ONNXGraph
+
+
+class ONNXConstantLayerAttributes(BaseLayerAttributes):
+    """
+    This class stores extended attributes of modules/layers for the algorithms.
+    """
+
+    def __init__(self, weight_attrs: Dict[int, Dict], bias_attrs: Dict[int, Dict]):
+        """
+        :param const_attrs: Map of weights port ID to corresponding const attributes.
+        """
+        self.weight_attrs = weight_attrs
+        self.bias_attrs = bias_attrs
+
+    def get_weight_port_ids(self) -> List[int]:
+        """
+        Returns indices of input ports corresponding to the constant nodes.
+
+        :returns: List of input port indices with constants.
+        """
+        return list(self.weight_attrs.keys())
+
+    def get_bias_port_ids(self) -> List[int]:
+        """
+        Returns indices of input ports corresponding to the constant nodes.
+
+        :returns: List of input port indices with constants.
+        """
+        return list(self.bias_attrs.keys())
+
+
+def get_is_shared_weight_edge_name(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]) -> Optional[str]:
+    for port_id in port_ids:
+        if onnx_graph.is_node_shared(node, port_id):
+            return onnx_graph.get_weight_edge_name(node, port_id)
+    return None
+
+
+def get_weight_port_ids(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph) -> Set[int]:
+    port_ids = set()
+    constant_port_ids = get_constant_weight_port_ids(metatype)
+    port_ids.extend(constant_port_ids)
+    possible_port_ids = get_possible_weight_port_ids(metatype)
+    for port_id in possible_port_ids:
+        if onnx_graph.is_node_with_weight(node, port_id):
+            port_ids.add(port_id)
+    return port_ids
+
+
+def is_node_with_bias(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph) -> bool:
+    if metatype in OPERATIONS_WITH_BIAS_METATYPES:
+        bias_tensor_port_id = onnx_graph.get_bias_tensor_port_id(node)
+        if len(node.input) > bias_tensor_port_id:
+            return True
+    return False
+
+
+def _get_const_attrs(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_ids: Set[int]) -> Dict[str, str]:
+    const_attrs = {}
+    for port_id in weight_port_ids:
+        if onnx_graph.is_node_with_weight(node, port_id):
+            weight_edge_name = onnx_graph.get_weight_edge_name(node, port_id)
+            edge = onnx_graph.get_edge(weight_edge_name)
+            weight_shape = ONNXGraph.get_edge_shape(edge)
+            const_attrs[port_id] = {"weight_shape": weight_shape}
+    return const_attrs
+
+
+def _get_bias_attrs(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph) -> Dict[str, str]:
+    bias_attrs = {}
+    if is_node_with_bias(node, metatype, onnx_graph):
+        bias_tensor_port_id = onnx_graph.get_bias_tensor_port_id(node)
+        bias_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][bias_tensor_port_id]
+        edge = onnx_graph.get_edge(bias_edge_name)
+        bias_shape = ONNXGraph.get_edge_shape(edge)
+        bias_attrs[bias_tensor_port_id] = {'bias_shape': bias_shape}
+    return bias_attrs
+
+
+def _get_constant_layer_attr(
+    node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph, weight_port_ids: Set[int]
+) -> ONNXConstantLayerAttributes:
+    const_attrs = _get_const_attrs(node, onnx_graph, weight_port_ids)
+    bias_attrs = _get_bias_attrs(node, metatype, onnx_graph)
+    return ONNXConstantLayerAttributes(weight_attrs=const_attrs, bias_attrs=bias_attrs)
 
 
 class GraphConverter:
@@ -161,33 +246,12 @@ class GraphConverter:
                 subtype = metatype.determine_subtype(onnx_model, node)
                 if subtype is not None:
                     metatype = subtype
-            is_shared, weight_edge_name, layer_attributes = None, None, None
-            const_attrs = {}
-            bias_attrs = {}
-            if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
-                port_id = metatype.weight_definitions.weight_port_id
-                is_shared = onnx_graph.is_node_shared(node, port_id)
-                weight_edge_name = onnx_graph.get_weight_edge_name(node, port_id)
-                edge = onnx_graph.get_edge(weight_edge_name)
-                weight_shape = ONNXGraph.get_edge_shape(edge)
-                const_attrs[port_id] = {"weight_shape": weight_shape}
-            elif metatype in POSSIBLE_WEIGHT_LAYER_METATYPES:
-                for port_id in get_weight_port_ids(metatype):
-                    if onnx_graph.is_node_with_weight(node, port_id):
-                        is_shared = onnx_graph.is_node_shared(node, port_id)
-                        weight_edge_name = onnx_graph.get_weight_edge_name(node, port_id)
-                        edge = onnx_graph.get_edge(weight_edge_name)
-                        weight_shape = ONNXGraph.get_edge_shape(edge)
-                        const_attrs[port_id] = {"weight_shape": weight_shape}
-            if metatype in OPERATIONS_WITH_BIAS_METATYPES:
-                bias_tensor_port_id = onnx_graph.get_bias_tensor_port_id(node)
-                if len(node.input) > bias_tensor_port_id:
-                    bias_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][bias_tensor_port_id]
-                    edge = onnx_graph.get_edge(bias_edge_name)
-                    bias_shape = ONNXGraph.get_edge_shape(edge)
-                    bias_attrs[bias_tensor_port_id] = {'bias_shape': bias_shape}
-            if len(const_attrs) or len(bias_attrs):
-                layer_attributes = ONNXConstantLayerAttributes(weight_attrs=const_attrs, bias_attrs=bias_attrs)
+            weight_edge_name, layer_attributes = None, None, None
+            port_ids = get_weight_port_ids(metatype)
+            if port_ids:
+                weight_edge_name = get_is_shared_weight_edge_name(node, onnx_graph, port_ids)
+                layer_attributes = _get_constant_layer_attr(node, metatype, onnx_graph, port_ids)
+            is_shared = True if weight_edge_name is not None else False
             nncf_graph.add_nncf_node(
                 node_name=node.name,
                 node_type=node.op_type,
@@ -226,32 +290,3 @@ class GraphConverter:
         GraphConverter._add_nncf_input_nodes(onnx_graph, nncf_graph)
         GraphConverter._add_nncf_output_nodes(onnx_graph, nncf_graph)
         return nncf_graph
-
-
-class ONNXConstantLayerAttributes(BaseLayerAttributes):
-    """
-    This class stores extended attributes of modules/layers for the algorithms.
-    """
-
-    def __init__(self, weight_attrs: Dict[int, Dict], bias_attrs: Dict[int, Dict]):
-        """
-        :param const_attrs: Map of weights port ID to corresponding const attributes.
-        """
-        self.weight_attrs = weight_attrs
-        self.bias_attrs = bias_attrs
-
-    def get_weight_port_ids(self) -> List[int]:
-        """
-        Returns indices of input ports corresponding to the constant nodes.
-
-        :returns: List of input port indices with constants.
-        """
-        return list(self.weight_attrs.keys())
-
-    def get_bias_port_ids(self) -> List[int]:
-        """
-        Returns indices of input ports corresponding to the constant nodes.
-
-        :returns: List of input port indices with constants.
-        """
-        return list(self.bias_attrs.keys())

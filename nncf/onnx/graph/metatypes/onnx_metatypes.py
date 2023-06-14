@@ -571,20 +571,15 @@ CONSTANT_WEIGHT_LAYER_METATYPES = [
     ONNXConvolutionTransposeMetatype,
 ]
 
-POSSIBLE_WEIGHT_LAYER_METATYPES = [
-    ONNXGemmMetatype,
-    ONNXMatMulMetatype,
-]
+MATMUL_METATYPES = [ONNXGemmMetatype, ONNXMatMulMetatype]
 
-GENERAL_WEIGHT_LAYER_METATYPES = CONSTANT_WEIGHT_LAYER_METATYPES + POSSIBLE_WEIGHT_LAYER_METATYPES
+GENERAL_WEIGHT_LAYER_METATYPES = CONSTANT_WEIGHT_LAYER_METATYPES + MATMUL_METATYPES
 
 # Contains the operation metatypes for which bias can be applied.
 OPERATIONS_WITH_BIAS_METATYPES = [
     ONNXConvolutionMetatype,
     ONNXDepthwiseConvolutionMetatype,
 ]
-
-MATMUL_METATYPES = [ONNXGemmMetatype, ONNXMatMulMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
@@ -596,11 +591,15 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     return list(ONNX_OPERATION_METATYPES.registry_dict.values())
 
 
-def get_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
-    if metatype in POSSIBLE_WEIGHT_LAYER_METATYPES:
-        return [0, 1]
+def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
     if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
         return [metatype.weight_definitions.weight_port_id]
+    return []
+
+
+def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
+    if metatype in MATMUL_METATYPES:
+        return metatype.possible_weight_ports
     return []
 
 
