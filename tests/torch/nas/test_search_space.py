@@ -30,7 +30,7 @@ KERNEL_SIZE_AND_SEARCH_SPACE = [(5, [5, 3]), (7, [7, 5, 3]), (1, [1])]
 LIST_KERNEL_SS_DESCS = [
     ElasticityDesc(
         ElasticityDim.KERNEL,
-        model_cls=partial(BasicConvTestModel, 1, 1, kernel_size),
+        model_cls=partial(BasicConvTestModel, 1, 1, kernel_size, padding=2),
         name=f"kernel_{kernel_size}_{search_space}",
         input_size=[1, 1, kernel_size, kernel_size],
         ref_search_space=[search_space],
@@ -93,7 +93,7 @@ LIST_SEARCH_SPACE_DESCS = [
         ElasticityDim.DEPTH,
         model_cls=DepthBasicConvTestModel,
         params={"min_block_size": 1, "hw_fused_ops": False},
-        ref_search_space=[[]],
+        ref_search_space=[[0], []],
     ),
     COMMON_DEPTH_SUPERNET_DESC,
     ElasticityDesc(
