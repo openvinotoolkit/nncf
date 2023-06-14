@@ -128,6 +128,8 @@ class AdvancedQuantizationParameters:
     :type inplace_statistics: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
+    :param alpha: SmoothQuantize-related parameter.
+    :type alpha: float
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -147,6 +149,7 @@ class AdvancedQuantizationParameters:
     quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_bias_correction: bool = False
+    alpha: float = 0.95
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)

@@ -53,7 +53,7 @@ class SmoothQuantize(Algorithm):
         self,
         subset_size: int = 300,
         inplace_statistics: bool = True,
-        alfa: Optional[int] = 0.95,
+        alpha: Optional[int] = 0.95,
         backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
@@ -62,7 +62,7 @@ class SmoothQuantize(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
-        :param alfa: The parameter that regulates the calculation of the scale.
+        :param alpha: The parameter that regulates the calculation of the scale.
             The default value is 0.95. Negative value switches off the algorithm.
         :param backend_params: Backend specific parameters.
         """
@@ -71,7 +71,7 @@ class SmoothQuantize(Algorithm):
         self._inplace_statistics = inplace_statistics
         self._backend_params = backend_params
         self._backend_entity = None
-        self._alpha = alfa
+        self._alpha = alpha
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
