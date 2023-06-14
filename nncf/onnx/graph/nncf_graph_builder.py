@@ -58,17 +58,20 @@ class ONNXConstantLayerAttributes(BaseLayerAttributes):
         return list(self.bias_attrs.keys())
 
 
-def get_is_shared_weight_edge_name(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]) -> Optional[str]:
+def get_weight_edge_name(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]) -> Optional[str]:
     for port_id in port_ids:
-        if onnx_graph.is_node_shared(node, port_id):
-            return onnx_graph.get_weight_edge_name(node, port_id)
-    return None
+        return onnx_graph.get_weight_edge_name(node, port_id)
+
+
+def is_shared_node(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]):
+    for port_id in port_ids:
+        return onnx_graph.is_node_shared(node, port_id)
 
 
 def get_weight_port_ids(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph) -> Set[int]:
     port_ids = set()
     constant_port_ids = get_constant_weight_port_ids(metatype)
-    port_ids.extend(constant_port_ids)
+    port_ids.update(constant_port_ids)
     possible_port_ids = get_possible_weight_port_ids(metatype)
     for port_id in possible_port_ids:
         if onnx_graph.is_node_with_weight(node, port_id):
@@ -87,11 +90,10 @@ def is_node_with_bias(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph
 def _get_const_attrs(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_ids: Set[int]) -> Dict[str, str]:
     const_attrs = {}
     for port_id in weight_port_ids:
-        if onnx_graph.is_node_with_weight(node, port_id):
-            weight_edge_name = onnx_graph.get_weight_edge_name(node, port_id)
-            edge = onnx_graph.get_edge(weight_edge_name)
-            weight_shape = ONNXGraph.get_edge_shape(edge)
-            const_attrs[port_id] = {"weight_shape": weight_shape}
+        weight_edge_name = onnx_graph.get_weight_edge_name(node, port_id)
+        edge = onnx_graph.get_edge(weight_edge_name)
+        weight_shape = ONNXGraph.get_edge_shape(edge)
+        const_attrs[port_id] = {"weight_shape": weight_shape}
     return const_attrs
 
 
@@ -102,7 +104,7 @@ def _get_bias_attrs(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: 
         bias_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][bias_tensor_port_id]
         edge = onnx_graph.get_edge(bias_edge_name)
         bias_shape = ONNXGraph.get_edge_shape(edge)
-        bias_attrs[bias_tensor_port_id] = {'bias_shape': bias_shape}
+        bias_attrs[bias_tensor_port_id] = {"bias_shape": bias_shape}
     return bias_attrs
 
 
@@ -246,12 +248,12 @@ class GraphConverter:
                 subtype = metatype.determine_subtype(onnx_model, node)
                 if subtype is not None:
                     metatype = subtype
-            weight_edge_name, layer_attributes = None, None, None
-            port_ids = get_weight_port_ids(metatype)
+            is_shared, weight_edge_name, layer_attributes = None, None, None
+            port_ids = get_weight_port_ids(node, metatype, onnx_graph)
             if port_ids:
-                weight_edge_name = get_is_shared_weight_edge_name(node, onnx_graph, port_ids)
+                is_shared = is_shared_node(node, onnx_graph, port_ids)
+                weight_edge_name = get_weight_edge_name(node, onnx_graph, port_ids)
                 layer_attributes = _get_constant_layer_attr(node, metatype, onnx_graph, port_ids)
-            is_shared = True if weight_edge_name is not None else False
             nncf_graph.add_nncf_node(
                 node_name=node.name,
                 node_type=node.op_type,
