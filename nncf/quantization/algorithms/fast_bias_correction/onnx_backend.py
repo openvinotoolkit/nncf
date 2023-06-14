@@ -107,10 +107,13 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> bool:
+        is_quantized_weights = False
         input_nodes = [edge.from_node for edge in nncf_graph.get_input_edges(node)]
-        weight_port_id = node.metatype.weight_definitions.weight_port_id
-        weight_node = input_nodes[weight_port_id]
-        return weight_node.metatype == ONNXDequantizeLinearMetatype
+        weight_port_ids = node.metatype.weight_port_ids
+        for weight_port_id in weight_port_ids:
+            weight_node = input_nodes[weight_port_id]
+            is_quantized_weights = is_quantized_weights or weight_node.metatype == ONNXDequantizeLinearMetatype
+        return is_quantized_weights
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> bool:

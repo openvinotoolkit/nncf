@@ -15,7 +15,6 @@ import numpy as np
 import onnx
 from onnx import numpy_helper
 
-from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
@@ -23,7 +22,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
 
 
 # pylint: disable=too-many-public-methods
@@ -211,43 +209,6 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    @staticmethod
-    def _get_weight_definitions(node: onnx.NodeProto) -> OpWeightDef:
-        """
-        Returns the weight_definitions of the node's metatype.
-
-        :param node: Node from which weight definition is obtained.
-        :return: weight definition of the node.
-        """
-        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-        if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
-            return metatype.weight_definitions
-        raise RuntimeError(f"The metatype {metatype} does not belong to a list of metatypes with a weight tensor.")
-
-    def get_weight_port_id(self, node: onnx.NodeProto) -> int:
-        """
-        Returns input port id, where a weight tensor should output.
-
-        :param node: Node, for which input port id is returned,
-        :return: input port id, where a weight tensor should output.
-        """
-        weight_definitions = self._get_weight_definitions(node)
-        if weight_definitions.weight_port_id is not None:
-            return weight_definitions.weight_port_id
-        raise RuntimeError(f"The metatype {node} does not have weight_port_id attribute")
-
-    def get_weight_channel_axis(self, node: onnx.NodeProto) -> int:
-        """
-        Returns a channel axis for weight per-channel quantization.
-
-        :param node: Node, for which weight per-channel axis id is returned,
-        :return: Channel axis for per-channel quantization.
-        """
-        weight_definitions = self._get_weight_definitions(node)
-        if weight_definitions.weight_channel_axis is not None:
-            return weight_definitions.weight_channel_axis
-        raise RuntimeError(f"The node {node} does not have weight_channel_axis attribute")
-
     def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> int:
         """
         Returns input port id, where a bias tensor should output.
@@ -255,9 +216,9 @@ class ONNXGraph:
         :param node: Node, for which input port id is returned,
         :return: input port id, where a weight bias should output.
         """
-        weight_definitions = self._get_weight_definitions(node)
-        if weight_definitions.bias_port_id is not None:
-            return weight_definitions.bias_port_id
+        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+        if metatype.bias_port_id is not None:
+            return metatype.bias_port_id
         raise RuntimeError(f"The node {node} does not have bias_port_id attribute")
 
     def get_node_index(self, node_name: str) -> int:
@@ -369,17 +330,6 @@ class ONNXGraph:
         for node_edge in node_edges:
             output.extend(self.get_nodes_by_input(node_edge))
         return output
-
-    def get_weight_tensor_edge(self, node: onnx.NodeProto) -> str:
-        """
-        Returns weight edge name.
-
-        :param node: Node with weight tensor.
-        :return: Weight edge name.
-        """
-        weight_port_id = self.get_weight_port_id(node)
-        weight_tensor_edge = self.get_node_edge_names(node.name)["input"][weight_port_id]
-        return weight_tensor_edge
 
     def is_node_shared(self, node: onnx.NodeProto, weight_port_id) -> bool:
         """

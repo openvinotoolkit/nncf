@@ -50,25 +50,18 @@ class ONNXOpMetatype(OperatorMetatype):
         return matches[0]
 
 
-@dataclass
-class OpWeightDef:
+class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
     """
-    Contains the information about the weight and bias of the operation.
+    Metatype which could have weights.
 
     :param weight_channel_axis: Axis for weight per-channel quantization, meaning the number of output filters.
-    :param weight_port_id: Input port of the node's weight.
-    If the value is None the weight_port_id should be determined dynamically.
-    :param bias_port_id: Input port of the node's bias.
-    If the value is None it means that the Metatype does not have bias.
+    :param weight_port_ids: Input ports of the node's weight. If the value is None the weight_port_id should be determined dynamically.
+    :param bias_port_id: Input port of the node's bias. If the value is None it means that the Metatype does not have bias.
     """
 
     weight_channel_axis: int
-    weight_port_id: Optional[int] = None
+    weight_port_ids: Optional[List[int]] = None
     bias_port_id: Optional[int] = None
-
-
-class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
-    weight_definitions = None  # type: OpWeightDef
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -76,7 +69,9 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "DepthwiseConvOp"
     op_names = ["Conv"]
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
-    weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+    weight_channel_axis = 0
+    weight_port_ids = [1]
+    bias_port_id = 2
     output_channel_axis = 1
 
     @classmethod
@@ -89,7 +84,9 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "ConvOp"
     op_names = ["Conv"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+    weight_channel_axis = 0
+    weight_port_ids = [1]
+    bias_port_id = 2
     output_channel_axis = 1
     subtypes = [ONNXDepthwiseConvolutionMetatype]
 
@@ -99,7 +96,9 @@ class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
     name = "ConvTransposeOp"
     op_names = ["ConvTranspose"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    weight_definitions = OpWeightDef(weight_channel_axis=1, weight_port_id=1, bias_port_id=2)
+    weight_channel_axis = 1
+    weight_port_ids = [1]
+    bias_port_id = 2
     output_channel_axis = 1
 
 
@@ -108,7 +107,9 @@ class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
     name = "GemmOp"
     op_names = ["Gemm"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    weight_definitions = OpWeightDef(weight_channel_axis=-1, weight_port_id=None, bias_port_id=2)
+    weight_channel_axis = -1
+    weight_port_id = None
+    bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
 
@@ -118,7 +119,8 @@ class ONNXMatMulMetatype(ONNXOpMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    weight_definitions = OpWeightDef(weight_channel_axis=-1, weight_port_id=None, bias_port_id=None)
+    weight_port_id = None
+    bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
 
@@ -593,7 +595,7 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
 
 def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
     if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
-        return [metatype.weight_definitions.weight_port_id]
+        return metatype.weight_port_ids
     return []
 
 

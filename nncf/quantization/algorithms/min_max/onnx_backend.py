@@ -150,7 +150,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if not target_point.is_weight_target_point():
             return 1
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        return node.metatype.weight_definitions.weight_channel_axis
+        return node.metatype.weight_channel_axis
 
     @staticmethod
     def _get_reduction_shape_and_use_abs_max(
@@ -167,7 +167,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         # Calculate reduction shape for weight statistic collector
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         assert isinstance(node.layer_attributes, ONNXConstantLayerAttributes)
-        weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]['weight_shape']
+        weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["weight_shape"]
         reduction_shape = list(range(len(weight_shape)))
 
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
@@ -215,8 +215,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
-        if node in CONSTANT_WEIGHT_LAYER_METATYPES:
-            return [node.metatype.weight_definitions.weight_port_id]
         return node.layer_attributes.get_weight_port_ids()
 
     @staticmethod
