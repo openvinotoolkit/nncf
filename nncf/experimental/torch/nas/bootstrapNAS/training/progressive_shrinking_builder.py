@@ -20,8 +20,12 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_con
 )
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSchedulerParams
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.knowledge_distillation.knowledge_distillation_loss import KnowledgeDistillationLoss
+from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -88,6 +92,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
     def _build_controller(self, model: NNCFNetwork) -> "ProgressiveShrinkingController":
         elasticity_ctrl = self._elasticity_builder.build_controller(model)
         schedule_params = NASSchedulerParams.from_config(self._algo_config.get("schedule", {}))
+        compression_loss_func = self._build_compression_loss_function(model)
         return ProgressiveShrinkingController(
             model,
             elasticity_ctrl,
@@ -95,7 +100,18 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
             self._progressivity_of_elasticity,
             schedule_params,
             self._lr_schedule_config,
+            compression_loss_func,
         )
+
+    def _build_compression_loss_function(self, model: NNCFNetwork) -> "PTCompressionLoss":
+        compression_builder = create_compression_algorithm_builder(self._algo_config)
+        compressed_model = compression_builder.apply_to(model)
+        compression_ctrl = compression_builder.build_controller(compressed_model)
+        assert type(compression_ctrl.loss) in [
+            ZeroCompressionLoss,
+            KnowledgeDistillationLoss,
+        ], "Currently only knowledge distillation loss is supported."
+        return compression_ctrl.loss
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         available_elasticity_dims = self._elasticity_builder.get_available_elasticity_dims()

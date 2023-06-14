@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, List, NoReturn
+from typing import Any, Callable, Dict, List, NoReturn
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
@@ -25,7 +25,6 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import Stage
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSchedulerParams
 from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
-from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -53,13 +52,14 @@ class ProgressiveShrinkingController(BNASTrainingController):
         progressivity_of_elasticity: List[ElasticityDim],
         schedule_params: NASSchedulerParams,
         lr_schedule_config: Dict[str, Any],
+        compression_loss_func: Callable,
     ):
         super().__init__(target_model)
         self._elasticity_ctrl = elasticity_ctrl
         self._bn_adaptation = bn_adaptation
         self._progressivity_of_elasticity = progressivity_of_elasticity
         self._target_model = target_model
-        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._loss = compression_loss_func
         self._available_elasticity_dims = self.multi_elasticity_handler.get_available_elasticity_dims()
         self._lr_schedule_config = lr_schedule_config
         self._scheduler = BootstrapNASScheduler(

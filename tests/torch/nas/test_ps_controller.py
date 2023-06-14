@@ -8,17 +8,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from copy import deepcopy
+from functools import reduce
 from typing import Any, Dict, List, NamedTuple
 
 import pytest
+import torch
+from torch.optim import SGD
 
 from nncf import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS import EpochBasedTrainingAlgorithm
 from nncf.torch.model_creation import create_nncf_network
+from nncf.torch.utils import get_model_device
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import ThreeConvModel
+from tests.torch.nas.models.synthetic import ThreeConvModelMode
 from tests.torch.nas.test_scheduler import fixture_schedule_params  # pylint: disable=unused-import
 
 
@@ -40,7 +46,7 @@ class PSControllerTestDesc(NamedTuple):
         return name
 
 
-def prepare_test_model(ps_ctrl_desc, bn_adapt_section_is_called):
+def prepare_test_model(ps_ctrl_desc, bn_adapt_section_is_called, knowledge_distillation_loss_is_called: bool = False):
     config = {
         "input_info": {"sample_size": ps_ctrl_desc.input_sizes},
         "bootstrapNAS": {
@@ -51,6 +57,7 @@ def prepare_test_model(ps_ctrl_desc, bn_adapt_section_is_called):
     }
     nncf_config = NNCFConfig.from_dict(config)
     update_train_bn_adapt_section(nncf_config, bn_adapt_section_is_called)
+    update_train_kd_loss_section(nncf_config, knowledge_distillation_loss_is_called)
     bn_adapt_args = BNAdaptationInitArgs(data_loader=create_ones_mock_dataloader(nncf_config))
     nncf_config.register_extra_structs([bn_adapt_args])
     model = ps_ctrl_desc.model_creator()
@@ -61,6 +68,52 @@ def prepare_test_model(ps_ctrl_desc, bn_adapt_section_is_called):
 def update_train_bn_adapt_section(nncf_config, bn_adapt_section_is_called):
     if not bn_adapt_section_is_called:
         nncf_config["bootstrapNAS"]["training"]["batchnorm_adaptation"]["num_bn_adaptation_samples"] = 0
+
+
+def update_train_kd_loss_section(nncf_config, knowledge_distillation_loss_is_called):
+    if knowledge_distillation_loss_is_called:
+        nncf_config["bootstrapNAS"]["training"].update(
+            {"compression": [{"algorithm": "knowledge_distillation", "type": "mse"}]}
+        )
+
+
+def run_actual(training_ctrl, model, mock_dataloader):
+    optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
+    training_ctrl.set_training_lr_scheduler_args(optimizer, len(mock_dataloader))
+    training_ctrl.scheduler.epoch_step()
+    training_ctrl.multi_elasticity_handler.activate_minimum_subnet()
+    model.train()
+    output_storage = []
+    for _, (input_, __) in enumerate(mock_dataloader):
+        input_ = input_.to(get_model_device(model))
+        output = model(input_)
+        output_storage.append(output)
+        loss = training_ctrl.loss()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    return output_storage
+
+
+def run_reference(training_ctrl, model, kd_model, mock_dataloader):
+    optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
+    training_ctrl.set_training_lr_scheduler_args(optimizer, len(mock_dataloader))
+    training_ctrl.scheduler.epoch_step()
+    training_ctrl.multi_elasticity_handler.activate_minimum_subnet()
+    mse = torch.nn.MSELoss().cuda()
+    model.train()
+    kd_model.train()
+    output_storage = []
+    for _, (input_, __) in enumerate(mock_dataloader):
+        input_ = input_.to(get_model_device(model))
+        output = model(input_)
+        kd_output = kd_model(input_)
+        output_storage.append(output)
+        loss = mse(output, kd_output)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    return output_storage
 
 
 # pylint: disable=protected-access
@@ -88,3 +141,31 @@ class TestProgressiveTrainingController:
             bn_adapt_run_patch.assert_called()
         else:
             bn_adapt_run_patch.assert_not_called()
+
+    def test_knowledge_distillation_training_process(self):
+        test_desc = PSControllerTestDesc(
+            model_creator=ThreeConvModel,
+            algo_params={"width": {"min_width": 1, "width_step": 1}},
+            input_sizes=ThreeConvModel.INPUT_SIZE,
+        )
+        model, _, nncf_config = prepare_test_model(test_desc, False, True)
+        model = create_nncf_network(model, nncf_config)
+
+        torch.manual_seed(2)
+        number_of_iters = 2
+        batch_size = 1
+
+        mock_dataloader = create_ones_mock_dataloader(
+            nncf_config, num_samples=batch_size * number_of_iters, batch_size=batch_size
+        )
+        # model.mode = ThreeConvModelMode.SUPERNET
+        training_algorithm = EpochBasedTrainingAlgorithm.from_config(deepcopy(model), nncf_config)
+        actual_outputs = run_actual(training_algorithm._training_ctrl, training_algorithm._model, mock_dataloader)
+        training_algorithm = EpochBasedTrainingAlgorithm.from_config(deepcopy(model), nncf_config)
+        reference_outputs = run_reference(
+            training_algorithm._training_ctrl, training_algorithm._model, deepcopy(model), mock_dataloader
+        )
+        assert reduce(lambda a, b: a and torch.allclose(b[0], b[1]), zip(actual_outputs, reference_outputs), True), (
+            "Outputs of model with actual KD implementation doesn't match outputs from model with reference "
+            "Knowledge Distillation implementation"
+        )
