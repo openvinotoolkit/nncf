@@ -18,9 +18,10 @@ import numpy as np
 import torch
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.problem import Problem
-from pymoo.factory import get_crossover
-from pymoo.factory import get_mutation
-from pymoo.factory import get_sampling
+from pymoo.operators.crossover.sbx import SBX
+from pymoo.operators.mutation.pm import PM
+from pymoo.operators.repair.rounding import RoundingRepair
+from pymoo.operators.sampling.rnd import IntegerRandomSampling
 from pymoo.optimize import minimize
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -205,15 +206,21 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         if evo_algo == EvolutionaryAlgorithms.NSGA2.value:
             self._algorithm = NSGA2(
                 pop_size=self.search_params.population,
-                sampling=get_sampling("int_lhs"),
-                crossover=get_crossover(
-                    "int_sbx", prob=self.search_params.crossover_prob, eta=self.search_params.crossover_eta
+                sampling=IntegerRandomSampling(),
+                crossover=SBX(
+                    prob=self.search_params.crossover_prob,
+                    eta=self.search_params.crossover_eta,
+                    vtype=float,
+                    repair=RoundingRepair(),
                 ),
-                mutation=get_mutation(
-                    "int_pm", prob=self.search_params.mutation_prob, eta=self.search_params.mutation_eta
+                mutation=PM(
+                    prob=self.search_params.mutation_prob,
+                    eta=self.search_params.mutation_eta,
+                    vtype=float,
+                    repair=RoundingRepair(),
                 ),
                 eliminate_duplicates=True,
-                save_history=True,
+                save_history=False,
             )
         else:
             raise NotImplementedError(f"Evolutionary Search Algorithm {evo_algo} not implemented")
@@ -362,6 +369,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
             ("n_gen", int(self.search_params.num_evals / self.search_params.population)),
             seed=self.search_params.seed,
             # save_history=True,
+            copy_algorithm=False,
             verbose=self._verbose,
         )
 
