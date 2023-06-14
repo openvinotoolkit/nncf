@@ -28,6 +28,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -41,7 +42,12 @@ STATISTIC_BRANCH_KEY = "abs_max"
 
 
 class SmoothQuantize(Algorithm):
-    """ """
+    """
+    Post-training SmoothQuantize algorithm implementation.
+
+    The main purpose of this algorithm is to reduce activation quantization error
+    via the insertion of nodes with smoothing scales for weighted layers.
+    """
 
     def __init__(
         self,
@@ -50,6 +56,16 @@ class SmoothQuantize(Algorithm):
         alfa: Optional[int] = 0.95,
         backend_params: Optional[Dict[str, Any]] = None,
     ):
+        """
+        :param subset_size: Size of a subset for the statistics collection,
+            default is 300.
+        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+            by backend graph operations or by default Python implementation, defaults
+            to True.
+        :param alfa: The parameter that regulates the calculation of the scale.
+            The default value is 0.95. Negative value switches off the algorithm.
+        :param backend_params: Backend specific parameters.
+        """
         super().__init__()
         self._subset_size = subset_size
         self._inplace_statistics = inplace_statistics
@@ -83,6 +99,10 @@ class SmoothQuantize(Algorithm):
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
+        if self._alpha < 0:
+            nncf_logger.info("Skipping SmoothQuantize algorithm because alfa parameter is negative.")
+            return model
+
         nncf_graph = NNCFGraphFactory.create(model)
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(nncf_graph)
         model_transformer = ModelTransformerFactory.create(model)
@@ -131,6 +151,13 @@ class SmoothQuantize(Algorithm):
         return transformed_model
 
     def _group_nodes_by_source(self, nodes_to_smooth: List[Dict], nncf_graph: NNCFGraph) -> Dict[tuple, List]:
+        """
+        Groups nodes that will be smoothed by source (parent node).
+
+        :param nodes_to_smooth: List of the nodes that will be smoothed.
+        :param nncf_graph: NNCFGraph instance.
+        :return: Dictionary with the source info as key and grouped nodes as value.
+        """
         groups = {}
         for node_data in nodes_to_smooth:
             node_to_smooth = node_data["node_to_smooth"]
@@ -148,6 +175,15 @@ class SmoothQuantize(Algorithm):
     def _get_statistics_for_node(
         self, statistic_points: StatisticPointsContainer, node_name: str, act_port: int
     ) -> List[TTensor]:
+        """
+        Collects statistics for node.
+
+        :param statistic_points: StatisticPointsContainer instance.
+        :param node_name: Name of the node for collection.
+        :param act_port: Activation port id.
+        :return: List of the TTensor instances.
+        """
+
         def filter_func(point: StatisticPoint) -> bool:
             return (
                 SmoothQuantize in point.algorithm_to_tensor_collectors
@@ -162,6 +198,13 @@ class SmoothQuantize(Algorithm):
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         statistic_container = StatisticPointsContainer()
+
+        if self._alpha < 0:
+            nncf_logger.debug(
+                "Skipping statistics collection for SmoothQuantize algorithm because alfa parameter is negative."
+            )
+            return statistic_container
+
         self._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model)
 
@@ -189,7 +232,13 @@ class SmoothQuantize(Algorithm):
             )
         return statistic_container
 
-    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph) -> Dict[str, Any]:
+    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph) -> List[Dict]:
+        """
+        Collects layers whose activations will be smoothed.
+
+        :param nncf_graph: NNCFGraph instance.
+        :return: List with the data for each layer.
+        """
         nodes_with_weights = nncf_graph.get_nodes_by_metatypes(self._backend_entity.weighted_metatypes)
         nodes_to_smooth_data = []
 

@@ -473,7 +473,12 @@ class OVModelTransformer(ModelTransformer):
     def _apply_smooth_insertion_transformations(
         model: ov.Model, transformations: List[OVSmoothInsertionCommand]
     ) -> ov.Model:
-        """ """
+        """
+        Inserts SmoothQuant (Multiply) with provided value for corresponding layer.
+
+        :param transformations: List of the smooth insertion transformations.
+        :returns: Transformed model with SmoothQuant nodes.
+        """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
@@ -489,7 +494,7 @@ class OVModelTransformer(ModelTransformer):
 
             scale_dtype = ov.Type(np.float32)
             fp16_dtype = ov.Type(np.float16)
-            if all([p.get_element_type() == fp16_dtype for p in destination_ports]):
+            if all(p.get_element_type() == fp16_dtype for p in destination_ports):
                 scale_dtype = fp16_dtype
             scale_constant = opset.constant(
                 transformation.scale_value, dtype=scale_dtype, name=f"{node.name}/smooth_quant_const"

@@ -36,8 +36,6 @@ from nncf.quantization.algorithms.smooth_quantize.backend import SmoothQuantizeA
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
-    """ """
-
     @property
     def weighted_metatypes(self) -> List[OperatorMetatype]:
         return [OVMatMulMetatype]
@@ -87,8 +85,8 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
         return np.max(abs_value, axis=0)
 
     @staticmethod
-    def get_weight_value(node: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
-        return get_weight_value(node, model, port_id)
+    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
+        return get_weight_value(node_with_weight, model, port_id)
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
@@ -120,11 +118,11 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
 
         activation_shapes = [n.layer_attributes.act_attrs["shape"] for n in nodes]
         activation_shape = activation_shapes[0]
-        if not all([shape == activation_shape for shape in activation_shapes]):
+        if not all(shape == activation_shape for shape in activation_shapes):
             raise RuntimeError(f"Shapes for nodes {[n.node_name for n in nodes]} are not identical")
 
         transpose_attrs = [n.layer_attributes.act_attrs["transpose"] for n in nodes]
-        if not all([attr == transpose_attrs[0] for attr in transpose_attrs]):
+        if not all(attr == transpose_attrs[0] for attr in transpose_attrs):
             raise RuntimeError(f"Transpose attributes for nodes {[n.node_name for n in nodes]} are not identical")
 
         a_scales = np.expand_dims(a_scales, axis=0)
