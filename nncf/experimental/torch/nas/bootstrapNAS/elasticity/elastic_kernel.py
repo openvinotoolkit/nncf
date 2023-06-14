@@ -181,6 +181,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         :param max_kernel_size: maximum kernel size value in the original operation.
         :param node_name: string representation of operation address. It's used for more informative messages only.
         :param params: parameters to configure elastic kernel for the operation.
+        :param original_padding_value: the padding value used in the original model.
         """
         super().__init__(max_kernel_size=max_kernel_size, node_name=node_name)
         self._max_num_params = params.max_num_kernels
@@ -207,6 +208,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         Generates list of available kernel size values.
 
         :param max_kernel_size: maximum value of kernel size, it's supposed to be odd
+        :param original_padding_value: the padding value used in the original model.
         :return: list of kernel size values.
         """
         DEFAULT_KERNEL_SIZE_STEP = 2
