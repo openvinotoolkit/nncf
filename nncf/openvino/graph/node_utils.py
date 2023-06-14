@@ -240,7 +240,7 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
         if len(input_shape) < 3:
             return opset.reduce_mean(
                 node.output(output_port_id),
-                reduction_axes=0,
+                reduction_axes=np.array([0]),
                 keep_dims=False,
                 name=get_ov_model_reduce_node_name(output_name, op_type, name_output_port_id),
             )
