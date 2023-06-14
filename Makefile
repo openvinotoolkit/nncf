@@ -31,7 +31,12 @@ pylint-onnx:
 		$(shell python3 tools/collect_pylint_input_files_for_backend.py onnx)
 
 test-install-onnx:
-	pytest tests/cross_fw/install/ -s       \
+	pytest tests/cross_fw/install -s       \
+		--backend onnx                      \
+		--junitxml ${JUNITXML_PATH}
+
+test-examples-onnx:
+	pytest tests/cross_fw/examples -s       \
 		--backend onnx                      \
 		--junitxml ${JUNITXML_PATH}
 
@@ -64,6 +69,11 @@ test-install-openvino:
 		--backend openvino                  \
 		--junitxml ${JUNITXML_PATH}
 
+test-examples-openvino:
+	pytest tests/cross_fw/examples -s        \
+		--backend openvino                  \
+		--junitxml ${JUNITXML_PATH}
+
 ###############################################################################
 # TensorFlow backend
 install-tensorflow-test:
@@ -86,7 +96,10 @@ pylint-tensorflow:
 		$(shell python3 tools/collect_pylint_input_files_for_backend.py tensorflow)
 
 test-install-tensorflow:
-	pytest tests/cross_fw/install/ -s --backend tf --junitxml ${JUNITXML_PATH}
+	pytest tests/cross_fw/install -s --backend tf --junitxml ${JUNITXML_PATH}
+
+test-examples-tensorflow:
+	pytest tests/cross_fw/examples -s --backend tf --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # PyTorch backend
@@ -111,7 +124,7 @@ pylint-torch:
 		$(shell python3 tools/collect_pylint_input_files_for_backend.py torch)
 
 test-install-torch-cpu:
-	pytest tests/cross_fw/install/ -s       \
+	pytest tests/cross_fw/install -s       \
 		--backend torch                     \
 		--host-configuration cpu            \
 		--junitxml ${JUNITXML_PATH}
@@ -121,14 +134,29 @@ test-install-torch-gpu:
 		--backend torch                     \
 		--junitxml ${JUNITXML_PATH}
 
+test-examples-torch:
+	pytest tests/cross_fw/examples -s        \
+		--backend torch                     \
+		--junitxml ${JUNITXML_PATH}
+
 ###############################################################################
 # Common part
+install-common-test:
+	pip install -U pip
+	pip install -e .
+	pip install -r tests/common/requirements.txt
+	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
+
 pylint-common:
 	pylint --rcfile .pylintrc   \
 		$(COMMON_PYFILES)
 
 test-common:
 	pytest tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+
+test-examples:
+	pytest tests/cross_fw/examples -s --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # Pre commit check
