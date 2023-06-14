@@ -129,14 +129,14 @@ def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, b
 class BasicConvTestModel(nn.Module):
     INPUT_SIZE = [1, 1, 4, 4]
 
-    def __init__(self, in_channels=1, out_channels=2, kernel_size=2, weight_init=-1, bias_init=-2):
+    def __init__(self, in_channels=1, out_channels=2, kernel_size=2, weight_init=-1, bias_init=-2, padding=0):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.weight_init = weight_init
         self.bias_init = bias_init
-        self.conv = create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init)
+        self.conv = create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, padding)
         self.wq_scale_shape_per_channel = (out_channels, 1, 1, 1)
         self.aq_scale_shape_per_channel = (1, in_channels, 1, 1)
 

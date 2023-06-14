@@ -133,9 +133,11 @@ def create_supernet(
     return ctrl.multi_elasticity_handler, model
 
 
-def create_single_conv_kernel_supernet(kernel_size=5, out_channels=1) -> Tuple[ElasticKernelHandler, NNCFNetwork]:
+def create_single_conv_kernel_supernet(
+    kernel_size=5, out_channels=1, padding=2
+) -> Tuple[ElasticKernelHandler, NNCFNetwork]:
     params = {"available_elasticity_dims": [ElasticityDim.KERNEL.value]}
-    model_creator = partial(BasicConvTestModel, 1, out_channels=out_channels, kernel_size=kernel_size)
+    model_creator = partial(BasicConvTestModel, 1, out_channels=out_channels, kernel_size=kernel_size, padding=padding)
     input_sample_sizes = [1, 1, kernel_size, kernel_size]
     multi_elasticity_handler, supernet = create_supernet(model_creator, input_sample_sizes, params)
     move_model_to_cuda_if_available(supernet)
