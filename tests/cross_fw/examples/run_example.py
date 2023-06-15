@@ -47,9 +47,7 @@ def post_training_quantization_onnx_mobilenet_v2() -> Dict[str, float]:
 
 
 def post_training_quantization_openvino_mobilenet_v2_quantize() -> Dict[str, float]:
-    example_root = str(
-        PROJECT_ROOT / "examples" / "post_training_quantization" / "openvino" / "quantize" / "mobilenet_v2"
-    )
+    example_root = str(PROJECT_ROOT / "examples" / "post_training_quantization" / "openvino" / "mobilenet_v2")
     return post_training_quantization_mobilenet_v2(example_root)
 
 
@@ -75,7 +73,7 @@ def format_results(results: Tuple[float]) -> Dict[str, float]:
 
 
 def post_training_quantization_openvino_yolo8_quantize() -> Dict[str, float]:
-    from examples.post_training_quantization.openvino.quantize.yolov8.main import main as yolo8_main
+    from examples.post_training_quantization.openvino.yolov8.main import main as yolo8_main
 
     results = yolo8_main()
 
@@ -83,7 +81,7 @@ def post_training_quantization_openvino_yolo8_quantize() -> Dict[str, float]:
 
 
 def post_training_quantization_openvino_yolo8_quantize_with_accuracy_control() -> Dict[str, float]:
-    from examples.post_training_quantization.openvino.quantize_with_accuracy_control.yolov8.main import (
+    from examples.post_training_quantization.openvino.yolov8_quantize_with_accuracy_control.main import (
         main as yolo8_main,
     )
 
@@ -99,8 +97,7 @@ def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_con
             / "examples"
             / "post_training_quantization"
             / "openvino"
-            / "quantize_with_accuracy_control"
-            / "anomaly_stfpm"
+            / "anomaly_stfpm_quantize_with_accuracy_control"
         )
     )
     import main as stfpm

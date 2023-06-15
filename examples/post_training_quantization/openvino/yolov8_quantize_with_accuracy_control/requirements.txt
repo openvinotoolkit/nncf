@@ -1,3 +1,2 @@
 ultralytics==8.0.43
-onnx
 openvino-dev==2023.0.0

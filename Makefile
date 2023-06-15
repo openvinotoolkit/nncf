@@ -52,10 +52,10 @@ install-openvino-test:
 install-openvino-dev: install-openvino-test install-pre-commit install-pylint
 	pip install -r examples/experimental/openvino/bert/requirements.txt
 	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/quantize/mobilenet_v2/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/quantize_with_accuracy_control/anomaly_stfpm/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/quantize/yolov8/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/quantize_with_accuracy_control/yolov8/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
 	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}

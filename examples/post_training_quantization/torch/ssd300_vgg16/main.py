@@ -14,7 +14,7 @@ import re
 import subprocess
 from pathlib import Path
 
-# NNCF should be imported before import torch
+# nncf.torch must be imported before torchvision
 import nncf
 from nncf.torch import disable_tracing
 

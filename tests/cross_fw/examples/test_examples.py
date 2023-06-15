@@ -60,15 +60,15 @@ def test_examples(tmp_path, example_name, example_params, backends_list, is_chec
     run_cmd_line = f"{python_executable_with_venv} {run_example_py} --name {example_name} --output {metrics_file_path}"
     subprocess.run(run_cmd_line, check=True, shell=True, env=env, cwd=PROJECT_ROOT)
 
-    mesured_metrics = load_json(metrics_file_path)
+    measured_metrics = load_json(metrics_file_path)
 
     for name, value in example_params[ACCURACY_METRICS].items():
-        assert mesured_metrics[name] == pytest.approx(value, abs=ACCURACY_TOLERANCE)
+        assert measured_metrics[name] == pytest.approx(value, abs=ACCURACY_TOLERANCE)
 
     if MODEL_SIZE_METRICS in example_params:
         for name, value in example_params[MODEL_SIZE_METRICS].items():
-            assert mesured_metrics[name] == pytest.approx(value, rel=MODEL_SIZE_RELATIVE_TOLERANCE)
+            assert measured_metrics[name] == pytest.approx(value, rel=MODEL_SIZE_RELATIVE_TOLERANCE)
 
     if is_check_performance and PERFORMNACE_METRICS in example_params:
         for name, value in example_params[PERFORMNACE_METRICS].items():
-            assert mesured_metrics[name] == pytest.approx(value, rel=PERFORMANCE_RELATIVE_TOLERANCE)
+            assert measured_metrics[name] == pytest.approx(value, rel=PERFORMANCE_RELATIVE_TOLERANCE)
