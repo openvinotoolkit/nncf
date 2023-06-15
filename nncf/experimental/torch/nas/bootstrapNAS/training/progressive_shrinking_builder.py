@@ -22,7 +22,6 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSched
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
-from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.knowledge_distillation.knowledge_distillation_loss import KnowledgeDistillationLoss
 from nncf.torch.model_creation import create_compression_algorithm_builder
