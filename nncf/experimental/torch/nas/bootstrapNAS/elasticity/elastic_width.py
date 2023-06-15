@@ -20,8 +20,6 @@ import torch
 from torch import nn
 
 from nncf.common.graph import BaseLayerAttributes
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
@@ -34,7 +32,9 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.node_selector import PruningNodeSelector
+from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.pruning.structs import PrunedLayerInfoBase
+from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.tensor import NNCFTensor
@@ -46,7 +46,6 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import Sin
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.filter_reorder import FilterReorderingAlgorithm
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.nas_shape_pruning_processor import NASShapePruningProcessor
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleBatchNormMetatype
@@ -530,10 +529,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
         graph = self._target_model.nncf.get_original_graph()
         prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name]
-        self._shape_pruning_processor = NASShapePruningProcessor(
-            prunable_types=prunable_types,
-            pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
-            get_input_masks_func=self.get_input_masks_with_add_dynamic_inputs,
+        self._shape_pruning_processor = ShapePruningProcessor(
+            prunable_types=prunable_types, pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES
         )
         self._next_nodes = self._shape_pruning_processor.get_next_nodes(graph, pruned_module_groups_info)
         # Need a copy because it will be used for adding `output_mask`/`input_masks` to nodes that are relevant to
@@ -663,7 +660,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
         for node_name, dynamic_input_width_op in self._node_name_vs_dynamic_input_width_op_map.items():
             node = self._propagation_graph.get_node_by_name(node_name)
-            input_masks = self.get_input_masks_with_add_dynamic_inputs(node, self._propagation_graph)
+            input_masks = get_input_masks(node, self._propagation_graph)
             was_set = False
             if input_masks:
                 input_mask = input_masks[0]
@@ -675,44 +672,35 @@ class ElasticWidthHandler(SingleElasticityHandler):
             if not was_set and node_name not in names_of_processed_nodes:
                 nncf_logger.debug(f"input width was not set in scope={node.node_name}")
 
-    def get_input_masks_with_add_dynamic_inputs(self, node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTensor]]:
-        """
-        Returns input masks for all inputs of given NNCFNode. Compared to get_input_masks in the common folder,
-        this function also computes input masks for nodes in self._add_dynamic_inputs, which are nodes used in
-        special elastic configurations in NAS.
-
-        :param node: Given NNCFNode.
-        :param graph: Graph to work with.
-        :return: Input masks.
-        """
-        retval = []
-        input_masks = [input_node.data["output_mask"] for input_node in graph.get_previous_nodes(node)]
-        if self._add_dynamic_inputs:
-            if node.node_name in self._add_dynamic_inputs and any(elem is None for elem in input_masks):
-                nncf_logger.debug(f"getting input mask by user's request for scope={node.node_name}")
-                nodes_to_check = [node]
-                while any(elem is None for elem in input_masks):
-                    previous_nodes = []
-                    for check_node in nodes_to_check:
-                        previous_nodes.append(graph.get_previous_nodes(check_node))
-                    nodes_to_check.clear()
-                    previous_nodes = [item for nodes in previous_nodes for item in nodes]
-                    if not previous_nodes:
-                        break
-                    for previous in previous_nodes:
-                        print(previous)
-                        if "output_mask" in previous.data:
-                            if previous.data["output_mask"] is not None:
-                                input_masks.append(previous.data["output_mask"])
-                                input_masks = [i for i in input_masks if i]
+            if self._add_dynamic_inputs:
+                if node_name in self._add_dynamic_inputs and not was_set:
+                    nncf_logger.debug(f"setting input width by user's request for scope={node_name}")
+                    nodes_to_check = [node]
+                    while any(elem is None for elem in input_masks):
+                        previous_nodes = []
+                        for node in nodes_to_check:
+                            previous_nodes.append(self._propagation_graph.get_previous_nodes(node))
+                        nodes_to_check.clear()
+                        previous_nodes = [item for nodes in previous_nodes for item in nodes]
+                        if not previous_nodes:
+                            break
+                        for previous in previous_nodes:
+                            if "output_mask" in previous.data:
+                                if previous.data["output_mask"] is not None:
+                                    input_masks.append(previous.data["output_mask"])
+                                    input_masks = [i for i in input_masks if i]
+                                else:
+                                    nodes_to_check.append(previous)
                             else:
                                 nodes_to_check.append(previous)
-                        else:
-                            nodes_to_check.append(previous)
-
-        for input_mask in input_masks:
-            retval.append(input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask)
-        return retval
+                    if input_masks:
+                        input_mask = input_masks[0]
+                        input_width = self.mask_to_width(input_mask)
+                        if input_width:
+                            dynamic_input_width_op.set_active_width(input_width)
+                            was_set = True
+                    if was_set:
+                        nncf_logger.debug(f"Success setting up user's request for dynamic input at scope={node_name}")
 
     def get_active_in_out_width_values(self) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
         """
