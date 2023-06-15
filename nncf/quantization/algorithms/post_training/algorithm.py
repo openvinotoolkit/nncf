@@ -85,13 +85,14 @@ class PostTrainingQuantization(Algorithm):
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
 
-        smooth_quantize_algorithm = SmoothQuantize(
-            subset_size=subset_size,
-            inplace_statistics=advanced_parameters.inplace_statistics,
-            alpha=advanced_parameters.alpha,
-            backend_params=advanced_parameters.backend_params,
-        )
-        self.first_stage_algorithms.append(smooth_quantize_algorithm)
+        if model_type == ModelType.TRANSFORMER:
+            smooth_quantize_algorithm = SmoothQuantize(
+                subset_size=subset_size,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                alpha=advanced_parameters.alpha,
+                backend_params=advanced_parameters.backend_params,
+            )
+            self.first_stage_algorithms.append(smooth_quantize_algorithm)
 
         min_max_quantization = MinMaxQuantization(
             preset=preset,

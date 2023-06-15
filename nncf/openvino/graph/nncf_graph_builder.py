@@ -194,7 +194,8 @@ class GraphConverter:
                         assert len(attribute_names) == 1
                         act_attrs["transpose"] = node_attributes[attribute_names[0]]
                         assert len(node_inputs) == 1
-                        act_attrs["shape"] = tuple(node_inputs[0].get_shape())
+                        partial_shape = node_inputs[0].get_partial_shape()
+                        act_attrs["shape"] = tuple(partial_shape.get_max_shape())
 
                 nncf_node = nncf_graph.get_node_by_name(node_name)
                 nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs, act_attrs)

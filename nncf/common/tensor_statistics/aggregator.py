@@ -50,6 +50,9 @@ class StatisticsAggregator(ABC):
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = EngineFactory.create(model_with_outputs)
 
+        if not self.statistic_points:
+            return
+
         for input_data in tqdm(
             islice(self.dataset.get_inference_data(), self.stat_subset_size),
             total=self.stat_subset_size,
