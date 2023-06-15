@@ -17,7 +17,6 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.ADD_SCALE_SHIFT_OUTPUT: "Not relevant for Torch.",
     HWFusedPatternNames.BATCH_INDEX: "Not relevant for Torch.",
     HWFusedPatternNames.EQUAL_LOGICALNOT: "Not relevant for Torch.",
-    HWFusedPatternNames.FC_BN_HSWISH_ACTIVATION: "Not relevant for Torch.",
     HWFusedPatternNames.LINEAR_WITH_BIAS: "Not relevant for Torch.",
     HWFusedPatternNames.MVN_SCALE_SHIFT: "Not relevant for Torch.",
     HWFusedPatternNames.NORMALIZE_L2_MULTIPLY: "Not relevant for Torch.",

@@ -76,3 +76,23 @@ def create_multihead_attention_output() -> GraphPattern:
     _add_softmax_matmul(pattern)
     _add_softmax_reshape_matmul(pattern)
     return pattern
+
+
+@OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.FC_BN_HSWISH_ACTIVATION)
+def create_fc_bn_hswish() -> GraphPattern:
+    pattern = GraphPattern()
+    unsqueeze_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.METATYPE_ATTR: om.OVUnsqueezeMetatype}
+    )
+    multiply_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+    )
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    squeeze_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "SQUEEZE", GraphPattern.METATYPE_ATTR: om.OVSqueezeMetatype}
+    )
+
+    pattern.add_edge(unsqueeze_node, multiply_node)
+    pattern.add_edge(multiply_node, add_node)
+    pattern.add_edge(add_node, squeeze_node)
+    return pattern
