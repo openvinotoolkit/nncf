@@ -164,7 +164,9 @@ class OVNullBiasInsertionCommand(TransformationCommand):
 
 
 class OVSmoothInsertionCommand(TransformationCommand):
-    """ """
+    """
+    Inserts SmoothQuant nodes for the corresponding node.
+    """
 
     def __init__(self, target_point: OVTargetPoint, scale_value: np.ndarray, destination_node_names: List[str]):
         """

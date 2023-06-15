@@ -14,6 +14,7 @@ from typing import Dict, Optional, TypeVar
 import numpy as np
 
 from nncf import Dataset
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -187,6 +188,9 @@ class PostTrainingQuantization(Algorithm):
 
         if statistic_points is None:
             for algorithm in self.pre_algorithms:
+                if isinstance(algorithm, SmoothQuantize) and backend != BackendType.OPENVINO:
+                    nncf_logger.debug(f"{backend.name} does not support SmoothQuantize algorithm yet.")
+                    continue
                 statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
                 statistics_aggregator.register_statistic_points(algo_statistic_points)
