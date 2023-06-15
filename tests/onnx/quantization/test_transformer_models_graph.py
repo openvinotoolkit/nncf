@@ -20,12 +20,10 @@ from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import mock_collect_statistics
 from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 
-BERT_TEST_DATA = [ModelToTest("bertsquad-12")]
+TEST_DATA = [ModelToTest("bertsquad-12"), ModelToTest("gpt2-10")]
 
 
-@pytest.mark.parametrize(
-    ("model_to_test"), BERT_TEST_DATA, ids=[model_to_test.model_name for model_to_test in BERT_TEST_DATA]
-)
+@pytest.mark.parametrize(("model_to_test"), TEST_DATA, ids=[model_to_test.model_name for model_to_test in TEST_DATA])
 def test_min_max_quantization_transformers(tmp_path, mocker, model_to_test):
     mock_collect_statistics(mocker)
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + ".onnx")
