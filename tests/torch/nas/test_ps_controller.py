@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
+from functools import partial
 from functools import reduce
 from typing import Any, Dict, List, NamedTuple
 
@@ -77,7 +78,17 @@ def update_train_kd_loss_section(nncf_config, knowledge_distillation_loss_is_cal
         )
 
 
-def run_actual(training_ctrl, model, mock_dataloader):
+def cal_loss_actual(output, input_, training_ctrl):
+    return training_ctrl.loss()
+
+
+def calc_loss_reference(output, input_, kd_model):
+    mse = torch.nn.MSELoss().to(get_model_device(kd_model))
+    kd_output = kd_model(input_)
+    return mse(output, kd_output)
+
+
+def run_train(training_ctrl, model, mock_dataloader, calc_loss_fn):
     optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
     training_ctrl.set_training_lr_scheduler_args(optimizer, len(mock_dataloader))
     training_ctrl.scheduler.epoch_step()
@@ -88,28 +99,7 @@ def run_actual(training_ctrl, model, mock_dataloader):
         input_ = input_.to(get_model_device(model))
         output = model(input_)
         output_storage.append(output)
-        loss = training_ctrl.loss()
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    return output_storage
-
-
-def run_reference(training_ctrl, model, kd_model, mock_dataloader):
-    optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
-    training_ctrl.set_training_lr_scheduler_args(optimizer, len(mock_dataloader))
-    training_ctrl.scheduler.epoch_step()
-    training_ctrl.multi_elasticity_handler.activate_minimum_subnet()
-    mse = torch.nn.MSELoss().cuda()
-    model.train()
-    kd_model.train()
-    output_storage = []
-    for _, (input_, __) in enumerate(mock_dataloader):
-        input_ = input_.to(get_model_device(model))
-        output = model(input_)
-        kd_output = kd_model(input_)
-        output_storage.append(output)
-        loss = mse(output, kd_output)
+        loss = calc_loss_fn(output, input_)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -160,10 +150,18 @@ class TestProgressiveTrainingController:
         )
         model.mode = ThreeConvModelMode.SUPERNET
         training_algorithm = EpochBasedTrainingAlgorithm.from_config(deepcopy(model), nncf_config)
-        actual_outputs = run_actual(training_algorithm._training_ctrl, training_algorithm._model, mock_dataloader)
+        actual_outputs = run_train(
+            training_algorithm._training_ctrl,
+            training_algorithm._model,
+            mock_dataloader,
+            partial(cal_loss_actual, training_ctrl=training_algorithm._training_ctrl),
+        )
         training_algorithm = EpochBasedTrainingAlgorithm.from_config(deepcopy(model), nncf_config)
-        reference_outputs = run_reference(
-            training_algorithm._training_ctrl, training_algorithm._model, deepcopy(model), mock_dataloader
+        reference_outputs = run_train(
+            training_algorithm._training_ctrl,
+            training_algorithm._model,
+            mock_dataloader,
+            partial(calc_loss_reference, kd_model=deepcopy(model)),
         )
         assert reduce(lambda a, b: a and torch.allclose(b[0], b[1]), zip(actual_outputs, reference_outputs), True), (
             "Outputs of model with actual KD implementation doesn't match outputs from model with reference "
