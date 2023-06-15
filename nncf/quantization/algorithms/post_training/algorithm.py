@@ -80,7 +80,7 @@ class PostTrainingQuantization(Algorithm):
         """
         super().__init__()
         self.algorithms = []
-        self.pre_algorithms = []
+        self.first_stage_algorithms = []
 
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
@@ -91,7 +91,7 @@ class PostTrainingQuantization(Algorithm):
             alpha=advanced_parameters.alpha,
             backend_params=advanced_parameters.backend_params,
         )
-        self.pre_algorithms.append(smooth_quantize_algorithm)
+        self.first_stage_algorithms.append(smooth_quantize_algorithm)
 
         min_max_quantization = MinMaxQuantization(
             preset=preset,
@@ -187,15 +187,16 @@ class PostTrainingQuantization(Algorithm):
         backend = get_backend(modified_model)
 
         if statistic_points is None:
-            for algorithm in self.pre_algorithms:
+            for algorithm in self.first_stage_algorithms:
                 if isinstance(algorithm, SmoothQuantize) and backend != BackendType.OPENVINO:
                     nncf_logger.debug(f"{backend.name} does not support SmoothQuantize algorithm yet.")
                     continue
                 statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
-                statistics_aggregator.register_statistic_points(algo_statistic_points)
-                statistics_aggregator.collect_statistics(modified_model)
-                modified_model = algorithm.apply(modified_model, statistics_aggregator.statistic_points)
+                if algo_statistic_points:
+                    statistics_aggregator.register_statistic_points(algo_statistic_points)
+                    statistics_aggregator.collect_statistics(modified_model)
+                    modified_model = algorithm.apply(modified_model, statistics_aggregator.statistic_points)
 
         if statistic_points is None:
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
