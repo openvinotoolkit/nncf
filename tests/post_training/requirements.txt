@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==1.13.1
+torch==2.0.1
 --extra-index-url https://download.pytorch.org/whl/cpu
-torchvision==0.14.1
+torchvision==0.15.2
 onnx==1.13.1
 onnxruntime==1.14.1
 pytest
