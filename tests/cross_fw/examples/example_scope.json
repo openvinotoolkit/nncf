@@ -109,19 +109,19 @@
         "requirements": "examples/post_training_quantization/torch/mobilenet_v2/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "fp32_top1": 0.8761783439490446,
-            "int8_top1": 0.8736305732484076,
-            "accuracy_drop": 0.002547770700636942
+            "fp32_top1": 0.9864968152866243,
+            "int8_top1": 0.9829299363057324,
+            "accuracy_drop": 0.0035668789808918078
         },
         "performance_metrics": {
-            "fp32_fps": 1684.51,
-            "int8_fps": 5877.1,
-            "performance_speed_up": 3.488907753590065
+            "fp32_fps": 1624.67,
+            "int8_fps": 5981.95,
+            "performance_speed_up": 3.681947718613626
         },
         "model_size_metrics": {
             "fp32_model_size": 8.605537414550781,
-            "int8_model_size": 2.740738868713379,
-            "model_compression_rate": 3.1398603904904636
+            "int8_model_size": 2.748152732849121,
+            "model_compression_rate": 3.131389792018245
         }
     },
     "post_training_quantization_torch_ssd300_vgg16": {
