@@ -21,8 +21,15 @@ from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTransposeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_bias_tensor_port_id
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_constant_weight_port_ids
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_metatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_possible_weight_port_ids
@@ -58,18 +65,57 @@ class ONNXConstantLayerAttributes(BaseLayerAttributes):
         return list(self.bias_attrs.keys())
 
 
-def _get_layer_name(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]) -> Optional[str]:
-    """_summary_
+def _get_weight_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> Optional[str]:
+    # There are several cases here
+    # (Constant) -> (Operation)
+    # (Identity) -> (Operation)
+    # (Constant) -> (QuantizeLinear) -> (DequantizeLinear) -> (Operation)
+    # (Constant) -> (QuantizeLinear) -> (DequantizeLinear) -> (Operation)
+    # (Reshape) -> (Operation)
+    #  and etc. We need properly find the constant node. So we start with
+    # `node` and traverse up until the constant node is not found.
 
-    :param onnx.NodeProto node: _description_
-    :param ONNXGraph onnx_graph: _description_
-    :param Set[int] port_ids: _description_
-    :return Optional[str]: _description_
+    # If Constant on the port
+    ALLOWED_OP_TYPES = (
+        ONNXConstantMetatype.get_all_aliases()
+        + ONNXIdentityMetatype.get_all_aliases()
+        + ONNXReshapeMetatype.get_all_aliases()
+        + ONNXQuantizeLinearMetatype.get_all_aliases()
+        + ONNXDequantizeLinearMetatype.get_all_aliases()
+        + ONNXTransposeMetatype.get_all_aliases()
+    )
+    if onnx_graph.has_initializer(node.input[port_id]):
+        return node.input[port_id]
+    queue = onnx_graph.get_parent(node, port_id)
+    while queue:
+        node = queue.pop()
+        if node.op_type not in ALLOWED_OP_TYPES:
+            return None
+        if onnx_graph.has_initializer(node.input[0]):
+            return node.input[0]
+        queue.extend(onnx_graph.get_parent(node, 0))
+    return None
+
+
+def _is_node_with_weight(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> bool:
+    if _get_weight_edge_name(onnx_graph, node, port_id):
+        return True
+    return False
+
+
+def _get_layer_name(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]) -> str:
+    """
+    Returns layer group name for weight nodes, which are used in QPS for determing shared group nodes.
+
+    :param node: Node.
+    :param onnx_graph: ONNXGraph instance.
+    :param port_ids: Ports with weights.
+    :return: Layer group name
     """
     layer_name = []
     for port_id in port_ids:
-        layer_name.append(onnx_graph.get_weight_edge_name(node, port_id))
-    return "_".join(layer_name)
+        layer_name.append(_get_weight_edge_name(onnx_graph, node, port_id))
+    return "_".join(layer_name) if layer_name else None
 
 
 def is_node_has_shared_weight(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]):
@@ -87,48 +133,71 @@ def is_node_has_shared_weight(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_
     return is_shared
 
 
-def _get_weight_port_ids(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph) -> Set[int]:
+def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int]:
     """
     Returns all weight input ports.
 
-    :param onnx.NodeProto node: _description_
-    :param ONNXOpMetatype metatype: _description_
-    :param ONNXGraph onnx_graph: _description_
-    :return Set[int]: _description_
+    :param node: ONNX node.
+    :param onnx_graph: ONNXGraph.
+    :return Set[int]: Port ids with weights.
     """
     port_ids = set()
-    metatype
+    metatype = get_metatype(onnx_graph, node)
     constant_port_ids = get_constant_weight_port_ids(metatype)
     port_ids.update(constant_port_ids)
     possible_port_ids = get_possible_weight_port_ids(metatype)
     for port_id in possible_port_ids:
-        if onnx_graph.is_node_with_weight(node, port_id):
+        if _is_node_with_weight(onnx_graph, node, port_id):
             port_ids.add(port_id)
     return port_ids
 
 
-def _is_node_with_bias(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph) -> bool:
+def _is_node_with_bias(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> bool:
+    """
+    Returns True if node has bias tensor, otherwise - False.
+
+    :param node: ONNX node.
+    :param onnx_graph: ONNXGraph.
+    :return bool: True if node has bias tensor, otherwise - False.
+    """
+    metatype = get_metatype(onnx_graph, node)
     if metatype in OPERATIONS_WITH_BIAS_METATYPES:
-        bias_tensor_port_id = onnx_graph.get_bias_tensor_port_id(node)
+        bias_tensor_port_id = get_bias_tensor_port_id(metatype)
         if len(node.input) > bias_tensor_port_id:
             return True
     return False
 
 
-def _get_const_attrs(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_ids: Set[int]) -> Dict[str, str]:
-    const_attrs = {}
+def _get_weight_attrs(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_ids: Set[int]) -> Dict[str, str]:
+    """
+    Returns weight attributes.
+
+    :param node: ONNX node.
+    :param onnx_graph: ONNXGraph.
+    :param weight_port_ids: Port ids with weights location.
+    :return: Weight attributes.
+    """
+    weight_attrs = {}
     for port_id in weight_port_ids:
-        weight_edge_name = onnx_graph.get_weight_edge_name(node, port_id)
+        weight_edge_name = _get_weight_edge_name(onnx_graph, node, port_id)
         edge = onnx_graph.get_edge(weight_edge_name)
         weight_shape = ONNXGraph.get_edge_shape(edge)
-        const_attrs[port_id] = {"weight_shape": weight_shape}
-    return const_attrs
+        weight_attrs[port_id] = {"weight_shape": weight_shape}
+    return weight_attrs
 
 
-def _get_bias_attrs(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph) -> Dict[str, str]:
+def _get_bias_attrs(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, str]:
+    """
+    Returns bias tensor attributes.
+
+    :param node: ONNX node.
+    :param onnx_graph: ONNXGraph.
+    :return: Bias tensor attributes.
+    """
     bias_attrs = {}
-    if _is_node_with_bias(node, metatype, onnx_graph):
-        bias_tensor_port_id = onnx_graph.get_bias_tensor_port_id(node)
+    metatype = get_metatype(onnx_graph, node)
+    if _is_node_with_bias(node, onnx_graph):
+        bias_tensor_port_id = get_bias_tensor_port_id(metatype)
         bias_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][bias_tensor_port_id]
         edge = onnx_graph.get_edge(bias_edge_name)
         bias_shape = ONNXGraph.get_edge_shape(edge)
@@ -137,11 +206,19 @@ def _get_bias_attrs(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: 
 
 
 def _get_constant_layer_attr(
-    node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph, weight_port_ids: Set[int]
+    node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_ids: Set[int]
 ) -> ONNXConstantLayerAttributes:
-    const_attrs = _get_const_attrs(node, onnx_graph, weight_port_ids)
-    bias_attrs = _get_bias_attrs(node, metatype, onnx_graph)
-    return ONNXConstantLayerAttributes(weight_attrs=const_attrs, bias_attrs=bias_attrs)
+    """
+    Returns LayerAttributes to add to a node with constants.
+
+    :param node: ONNX node.
+    :param onnx_graph: ONNXGraph.
+    :param weight_port_ids:  Port ids with weights location.
+    :return: LayerAttributes to add to a node with constants
+    """
+    weight_attrs = _get_weight_attrs(node, onnx_graph, weight_port_ids)
+    bias_attrs = _get_bias_attrs(node, onnx_graph)
+    return ONNXConstantLayerAttributes(weight_attrs=weight_attrs, bias_attrs=bias_attrs)
 
 
 class GraphConverter:
@@ -271,13 +348,13 @@ class GraphConverter:
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
         for node in onnx_graph.get_all_nodes():
-            metatype = get_metatype(onnx_model, node)
+            metatype = get_metatype(onnx_graph, node)
             is_shared, weight_edge_name, layer_attributes = None, None, None
-            port_ids = _get_weight_port_ids(node, metatype, onnx_graph)
+            port_ids = _get_weight_port_ids(node, onnx_graph)
             if port_ids:
                 is_shared = is_node_has_shared_weight(node, onnx_graph, port_ids)
                 weight_edge_name = _get_layer_name(node, onnx_graph, port_ids)
-                layer_attributes = _get_constant_layer_attr(node, metatype, onnx_graph, port_ids)
+                layer_attributes = _get_constant_layer_attr(node, onnx_graph, port_ids)
             nncf_graph.add_nncf_node(
                 node_name=node.name,
                 node_type=node.op_type,

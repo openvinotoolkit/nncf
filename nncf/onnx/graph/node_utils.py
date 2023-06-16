@@ -19,6 +19,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_bias_tensor_port_id
 from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
@@ -49,7 +50,7 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     """
     onnx_graph = ONNXGraph(model)
     onnx_node = onnx_graph.get_node_by_name(node_with_bias.node_name)
-    bias_port_id = onnx_graph.get_bias_tensor_port_id(onnx_node)
+    bias_port_id = get_bias_tensor_port_id(node_with_bias.metatype)
     bias_input_name = onnx_node.input[bias_port_id]
     if onnx_graph.has_initializer(bias_input_name):
         return onnx_graph.get_initializers_value(bias_input_name)

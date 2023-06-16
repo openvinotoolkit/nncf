@@ -15,14 +15,6 @@ import numpy as np
 import onnx
 from onnx import numpy_helper
 
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTransposeMetatype
-
 
 # pylint: disable=too-many-public-methods
 class ONNXGraph:
@@ -209,16 +201,6 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> Optional[int]:
-        """
-        Returns input port id, where a bias tensor should output.
-
-        :param node: Node, for which input port id is returned,
-        :return: input port id, where a weight bias should output or None if node can not have bias.
-        """
-        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-        return metatype.bias_port_id
-
     def get_node_index(self, node_name: str) -> int:
         """
         Returns the node index in the model.
@@ -339,39 +321,3 @@ class ONNXGraph:
         weight_tensor_edge = self.get_node_edge_names(node.name)["input"][weight_port_id]
         nodes = self.get_nodes_by_input(weight_tensor_edge)
         return len(nodes) > 1
-
-    def get_weight_edge_name(self, node: onnx.NodeProto, port_id: int) -> Optional[str]:
-        # There are several cases here
-        # (Constant) -> (Operation)
-        # (Identity) -> (Operation)
-        # (Constant) -> (QuantizeLinear) -> (DequantizeLinear) -> (Operation)
-        # (Constant) -> (QuantizeLinear) -> (DequantizeLinear) -> (Operation)
-        # (Reshape) -> (Operation)
-        #  and etc. We need properly find the constant node. So we start with
-        # `node` and traverse up until the constant node is not found.
-
-        # If Constant on the port
-        ALLOWED_OP_TYPES = (
-            ONNXConstantMetatype.get_all_aliases()
-            + ONNXIdentityMetatype.get_all_aliases()
-            + ONNXReshapeMetatype.get_all_aliases()
-            + ONNXQuantizeLinearMetatype.get_all_aliases()
-            + ONNXDequantizeLinearMetatype.get_all_aliases()
-            + ONNXTransposeMetatype.get_all_aliases()
-        )
-        if self.has_initializer(node.input[port_id]):
-            return node.input[port_id]
-        queue = self.get_parent(node, port_id)
-        while queue:
-            node = queue.pop()
-            if node.op_type not in ALLOWED_OP_TYPES:
-                return None
-            if self.has_initializer(node.input[0]):
-                return node.input[0]
-            queue.extend(self.get_parent(node, 0))
-        return None
-
-    def is_node_with_weight(self, node: onnx.NodeProto, port_id: int) -> bool:
-        if self.get_weight_edge_name(node, port_id):
-            return True
-        return False

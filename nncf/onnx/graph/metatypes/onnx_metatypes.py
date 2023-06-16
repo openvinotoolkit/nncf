@@ -16,6 +16,7 @@ import onnx
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
+from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry("onnx_operator_metatypes")
 
@@ -33,14 +34,14 @@ class ONNXOpMetatype(OperatorMetatype):
         return cls.subtypes
 
     @classmethod
-    def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[bool]:
+    def matches(cls, onnx_graph: ONNXGraph, node: onnx.NodeProto) -> Optional[bool]:
         return node.op_type in cls.op_names
 
     @classmethod
-    def determine_subtype(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
+    def determine_subtype(cls, onnx_graph: ONNXGraph, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
         matches = []
         for subtype in cls.get_subtypes():
-            if subtype.matches(model, node):
+            if subtype.matches(onnx_graph, node):
                 matches.append(subtype)
         if len(matches) > 1:
             raise RuntimeError("Multiple subtypes match operator call - cannot determine single subtype.")
@@ -76,8 +77,8 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     output_channel_axis = 1
 
     @classmethod
-    def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
-        return _is_depthwise_conv(model, node)
+    def matches(cls, onnx_graph: ONNXGraph, node: onnx.NodeProto) -> bool:
+        return _is_depthwise_conv(onnx_graph, node)
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -595,10 +596,17 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     return list(ONNX_OPERATION_METATYPES.registry_dict.values())
 
 
-def get_metatype(model: onnx.ModelProto, node: onnx.NodeProto) -> ONNXOpMetatype:
+def get_metatype(onnx_graph: ONNXGraph, node: onnx.NodeProto) -> ONNXOpMetatype:
+    """
+    Returns matched ONNXOpMetatype metatype to a ONNX node.
+
+    :param model: ONNX model.
+    :param node: Node from ONNX model.
+    :return ONNXOpMetatype: matched metatype.
+    """
     metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
     if metatype.get_subtypes():
-        subtype = metatype.determine_subtype(model, node)
+        subtype = metatype.determine_subtype(onnx_graph, node)
         if subtype is not None:
             metatype = subtype
     return metatype
@@ -616,7 +624,18 @@ def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
     return []
 
 
-def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
+def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int]:
+    """
+    Returns input port id, where a bias tensor should output.
+
+    :param node: Node, for which input port id is returned,
+    :return: input port id, where a weight bias should output or None if node can not have bias.
+    """
+    assert metatype in OPERATIONS_WITH_BIAS_METATYPES
+    return metatype.bias_port_id
+
+
+def _is_depthwise_conv(onnx_graph: ONNXGraph, node: onnx.NodeProto) -> bool:
     """
     Returns True if the convolution is depthwise, False - otherwise.
     Depthwise convolution is a convolution satisfies the following rule:
@@ -624,7 +643,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     Weight tensor of a convolution consists of the following dimension:
     (out_channels, in_channels / groups, kernel_size[0], kernel_size[1]).
 
-    :param model: ONNX model to get the node's weight.
+    :param onnx_graph: ONNXGraph to get the node's weight.
     :param node: Convolution node to check whether it is depthwise.
     :return: True if the convolution is depthwise, False - otherwise.
     """
@@ -636,9 +655,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         return False
     weight_tensor_value = None
     initializer_name = node.input[1]
-    for init in model.graph.initializer:
-        if init.name == initializer_name:
-            weight_tensor_value = onnx.numpy_helper.to_array(init)
+    weight_tensor_value = onnx_graph.get_initializers_value(initializer_name)
     if weight_tensor_value is None:
         return False
     conv_out_channels = weight_tensor_value.shape[0]
