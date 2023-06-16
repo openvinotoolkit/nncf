@@ -128,6 +128,9 @@ class AdvancedQuantizationParameters:
     :type inplace_statistics: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
+    :param strict_check_scopes: If set to True, then a RuntimeError will be raised if the names of the
+      ignored/target scopes do not match the names of the scopes in the model graph.
+    :type strict_check_scopes: bool
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -147,6 +150,7 @@ class AdvancedQuantizationParameters:
     quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_bias_correction: bool = False
+    strict_check_scopes: bool = True
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)
@@ -349,5 +353,7 @@ def apply_advanced_parameters_to_config(
 
     if params.bias_correction_params.threshold is not None:
         raise RuntimeError("threshold parameter of the BiasCorrection algorithm is not supported in the legacy format")
+
+    config["strict_check_scopes"] = params.strict_check_scopes
 
     return config

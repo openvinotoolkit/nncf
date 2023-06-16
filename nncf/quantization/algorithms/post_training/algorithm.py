@@ -88,6 +88,7 @@ class PostTrainingQuantization(Algorithm):
             subset_size=subset_size,
             model_type=model_type,
             ignored_scope=ignored_scope,
+            strict_check_scopes=advanced_parameters.strict_check_scopes,
             overflow_fix=advanced_parameters.overflow_fix,
             quantize_outputs=advanced_parameters.quantize_outputs,
             inplace_statistics=advanced_parameters.inplace_statistics,
