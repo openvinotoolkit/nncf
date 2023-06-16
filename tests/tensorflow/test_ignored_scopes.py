@@ -62,19 +62,15 @@ NOT_SUPPORT_SCOPES_ALGO = ["NoCompressionAlgorithm"]
 
 
 @pytest.mark.parametrize("algo_name", TF_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
-@pytest.mark.parametrize("strict_check_scopes", (True, False))
+@pytest.mark.parametrize("strict_check_scopes", (True, False, None))
 def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, strict_check_scopes):
     model = get_mock_model()
     config = get_empty_config()
     config["compression"] = {
         "algorithm": algo_name,
         "ignored_scopes": ["unknown"],
-        "strict_check_scopes": strict_check_scopes,
     }
 
-    if strict_check_scopes:
-        with pytest.raises(RuntimeError, match="scope definitions"):
-            create_compressed_model_and_algo_for_test(model, config)
     if strict_check_scopes is not None:
         config["compression"]["strict_check_scopes"] = strict_check_scopes
 
