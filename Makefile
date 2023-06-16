@@ -18,10 +18,11 @@ install-onnx-test:
 	pip install -e .[onnx]
 	pip install -r tests/onnx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install -r tests/onnx/benchmarking/requirements.txt
-	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
 install-onnx-dev: install-onnx-test install-pre-commit install-pylint
+	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
 test-onnx:
 	pytest tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
@@ -31,7 +32,12 @@ pylint-onnx:
 		$(shell python3 tools/collect_pylint_input_files_for_backend.py onnx)
 
 test-install-onnx:
-	pytest tests/cross_fw/install/ -s       \
+	pytest tests/cross_fw/install -s       \
+		--backend onnx                      \
+		--junitxml ${JUNITXML_PATH}
+
+test-examples-onnx:
+	pytest tests/cross_fw/examples -s       \
 		--backend onnx                      \
 		--junitxml ${JUNITXML_PATH}
 
@@ -42,13 +48,14 @@ install-openvino-test:
 	pip install -e .[openvino]
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
-	pip install -r examples/experimental/openvino/bert/requirements.txt
-	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git@dcbf53280a95dae3c6538689bafe760470f08ec2#subdirectory=tools/model_tools
 
 install-openvino-dev: install-openvino-test install-pre-commit install-pylint
+	pip install -r examples/experimental/openvino/bert/requirements.txt
+	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/quantize_with_accuracy_control/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
@@ -64,6 +71,11 @@ test-install-openvino:
 		--backend openvino                  \
 		--junitxml ${JUNITXML_PATH}
 
+test-examples-openvino:
+	pytest tests/cross_fw/examples -s        \
+		--backend openvino                  \
+		--junitxml ${JUNITXML_PATH}
+
 ###############################################################################
 # TensorFlow backend
 install-tensorflow-test:
@@ -71,9 +83,11 @@ install-tensorflow-test:
 	pip install -e .[tf]
 	pip install -r tests/tensorflow/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install -r examples/tensorflow/requirements.txt
 
 install-tensorflow-dev: install-tensorflow-test install-pre-commit install-pylint
+	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
 
 test-tensorflow:
 	pytest tests/common tests/tensorflow    \
@@ -85,7 +99,10 @@ pylint-tensorflow:
 		$(shell python3 tools/collect_pylint_input_files_for_backend.py tensorflow)
 
 test-install-tensorflow:
-	pytest tests/cross_fw/install/ -s --backend tf --junitxml ${JUNITXML_PATH}
+	pytest tests/cross_fw/install -s --backend tf --junitxml ${JUNITXML_PATH}
+
+test-examples-tensorflow:
+	pytest tests/cross_fw/examples -s --backend tf --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # PyTorch backend
@@ -94,9 +111,11 @@ install-torch-test:
 	pip install -e .[torch]
 	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install -r examples/torch/requirements.txt
 
 install-torch-dev: install-torch-test install-pre-commit install-pylint
+	pip install -r examples/post_training_quantization/torch/mobilenet_v2/requirements.txt
 	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
 test-torch:
@@ -109,7 +128,7 @@ pylint-torch:
 		$(shell python3 tools/collect_pylint_input_files_for_backend.py torch)
 
 test-install-torch-cpu:
-	pytest tests/cross_fw/install/ -s       \
+	pytest tests/cross_fw/install -s       \
 		--backend torch                     \
 		--host-configuration cpu            \
 		--junitxml ${JUNITXML_PATH}
@@ -119,14 +138,29 @@ test-install-torch-gpu:
 		--backend torch                     \
 		--junitxml ${JUNITXML_PATH}
 
+test-examples-torch:
+	pytest tests/cross_fw/examples -s        \
+		--backend torch                     \
+		--junitxml ${JUNITXML_PATH}
+
 ###############################################################################
 # Common part
+install-common-test:
+	pip install -U pip
+	pip install -e .
+	pip install -r tests/common/requirements.txt
+	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
+
 pylint-common:
 	pylint --rcfile .pylintrc   \
 		$(COMMON_PYFILES)
 
 test-common:
 	pytest tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+
+test-examples:
+	pytest tests/cross_fw/examples -s --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # Pre commit check
