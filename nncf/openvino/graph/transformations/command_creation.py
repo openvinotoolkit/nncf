@@ -19,8 +19,8 @@ from nncf.common.graph.transformations.command_creation import CommandCreator
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
+from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
-from nncf.openvino.graph.transformations.commands import OVSmoothInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 
@@ -59,9 +59,9 @@ class OVCommandCreator(CommandCreator):
         return OVNullBiasInsertionCommand(target_point)
 
     @staticmethod
-    def smooth_insertion_command(
+    def multiply_insertion_command(
         source_node: NNCFNode, destination_nodes: List[NNCFNode], source_out_port: int, scale_value: np.ndarray
-    ) -> OVSmoothInsertionCommand:
+    ) -> OVMultiplyInsertionCommand:
         target_point = OVTargetPoint(TargetType.POST_LAYER_OPERATION, source_node.node_name, source_out_port)
         destination_node_names = [d.node_name for d in destination_nodes]
-        return OVSmoothInsertionCommand(target_point, scale_value, destination_node_names)
+        return OVMultiplyInsertionCommand(target_point, scale_value, destination_node_names)

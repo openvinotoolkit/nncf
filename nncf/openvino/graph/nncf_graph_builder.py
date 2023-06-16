@@ -197,8 +197,9 @@ class GraphConverter:
                         partial_shape = node_inputs[0].get_partial_shape()
                         act_attrs["shape"] = tuple(partial_shape.get_max_shape())
 
-                nncf_node = nncf_graph.get_node_by_name(node_name)
-                nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs, act_attrs)
+                    if const_attrs or act_attrs:
+                        nncf_node = nncf_graph.get_node_by_name(node_name)
+                        nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs, act_attrs)
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph

@@ -27,10 +27,10 @@ from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
-from nncf.openvino.graph.transformations.commands import OVSmoothInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
@@ -51,7 +51,7 @@ class OVModelTransformer(ModelTransformer):
             (OVInplaceFnInsertionCommand, self._apply_insert_operation),
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
             (OVNullBiasInsertionCommand, self._apply_bias_insertion_transformations),
-            (OVSmoothInsertionCommand, self._apply_smooth_insertion_transformations),
+            (OVMultiplyInsertionCommand, self._apply_smooth_insertion_transformations),
         ]
 
     @staticmethod
@@ -471,7 +471,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_smooth_insertion_transformations(
-        model: ov.Model, transformations: List[OVSmoothInsertionCommand]
+        model: ov.Model, transformations: List[OVMultiplyInsertionCommand]
     ) -> ov.Model:
         """
         Inserts SmoothQuant (Multiply) with provided value for corresponding layer.

@@ -50,8 +50,8 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
 @pytest.mark.parametrize(
     "node_creator, ref_layer_attrs",
     [
-        (get_conv, OVConstantLayerAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}})),
-        (get_convert_conv, OVConstantLayerAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}})),
+        (get_conv, OVConstantLayerAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {})),
+        (get_convert_conv, OVConstantLayerAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {})),
         (get_shape_node, None),
     ],
 )

@@ -25,7 +25,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
-from nncf.openvino.graph.transformations.commands import OVSmoothInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
@@ -46,7 +46,7 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
-        return node.layer_attributes is not None and node.layer_attributes.const_attrs is not None
+        return node.layer_attributes and node.layer_attributes.const_attrs
 
     @staticmethod
     def get_input_ports_map(node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, int]:
@@ -102,7 +102,7 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
         return np.clip(squeezed, a_min=a_min, a_max=None)
 
     @staticmethod
-    def calculate_scales(
+    def calculate_scale_and_ratio(
         activations: np.ndarray, weights: np.ndarray, alpha: float, quantile: Optional[float] = 0.1
     ) -> np.ndarray:
         scales = np.power(activations, alpha) / (np.power(weights, 1 - alpha) + np.finfo(float).eps)
@@ -110,11 +110,13 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
         a_min = np.quantile(scales, quantile)
         a_max = 1e2
 
-        return np.clip(scales, a_min=a_min, a_max=a_max)
+        scales = np.clip(scales, a_min=a_min, a_max=a_max)
+        ratio = scales.min() / scales.max()
+        return scales, ratio
 
     @staticmethod
     def calculate_activation_scale(scale_value: np.ndarray, nodes: List[NNCFNode]) -> np.ndarray:
-        a_scales = scale_value ** (-1)
+        activation_scales = scale_value ** (-1)
 
         activation_shapes = [n.layer_attributes.act_attrs["shape"] for n in nodes]
         activation_shape = activation_shapes[0]
@@ -125,14 +127,14 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
         if not all(attr == transpose_attrs[0] for attr in transpose_attrs):
             raise RuntimeError(f"Transpose attributes for nodes {[n.node_name for n in nodes]} are not identical")
 
-        a_scales = np.expand_dims(a_scales, axis=0)
+        activation_scales = np.expand_dims(activation_scales, axis=0)
 
         if len(activation_shape) > 2:
             if all(transpose_attrs):
-                a_scales = np.expand_dims(a_scales, axis=2)
+                activation_scales = np.expand_dims(activation_scales, axis=2)
             else:
-                a_scales = np.expand_dims(a_scales, axis=1)
-        return a_scales
+                activation_scales = np.expand_dims(activation_scales, axis=1)
+        return activation_scales
 
     @staticmethod
     def calculate_weight_scale(scale_value: np.ndarray) -> np.ndarray:
@@ -145,7 +147,7 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
         return OVCommandCreator.create_command_to_update_weight(node_with_weight, weight_value, weight_port_id)
 
     @staticmethod
-    def smooth_insertion_command(
+    def scale_insertion_command(
         source_node: NNCFNode, scale_value: np.ndarray, port_id: int, nodes: List[NNCFNode]
-    ) -> OVSmoothInsertionCommand:
-        return OVCommandCreator.smooth_insertion_command(source_node, nodes, port_id, scale_value)
+    ) -> OVMultiplyInsertionCommand:
+        return OVCommandCreator.multiply_insertion_command(source_node, nodes, port_id, scale_value)

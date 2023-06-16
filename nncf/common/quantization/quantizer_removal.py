@@ -116,7 +116,7 @@ def revert_operations_to_floating_point_precision(
                 command_creator.create_command_to_update_bias(node, original_bias, quantized_model_graph)
             )
 
-        if node.layer_attributes is not None:
+        if node.layer_attributes and node.layer_attributes.const_attrs is not None:
             weight_port_ids = node.layer_attributes.get_const_port_ids()
             for port_id in weight_port_ids:
                 original_weight = node.data.get(f"original_weight.{port_id}", None)

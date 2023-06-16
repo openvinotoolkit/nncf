@@ -140,15 +140,17 @@ class SmoothQuantizeAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def calculate_scales(activations: TTensor, weights: TTensor, alpha: float, quantile: Optional[float]) -> TTensor:
+    def calculate_scale_and_ratio(
+        activations: TTensor, weights: TTensor, alpha: float, quantile: Optional[float]
+    ) -> Tuple[TTensor, TTensor]:
         """
-        Calculates base scale value.
+        Calculates base scale value and it's ratio.
 
         :param activations: Activation statistics value.
         :param weights: Weights statistics value.
         :param alpha: Base value for exponentiation.
         :param quantile: Base quantile value.
-        :return: Calculated base scale value.
+        :return: Calculated base scale value & ratio.
         """
 
     @staticmethod
@@ -188,7 +190,7 @@ class SmoothQuantizeAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def smooth_insertion_command(
+    def scale_insertion_command(
         source_node: NNCFNode, scale_value: TTensor, port_id: int, nodes: List[NNCFNode]
     ) -> TransformationCommand:
         """

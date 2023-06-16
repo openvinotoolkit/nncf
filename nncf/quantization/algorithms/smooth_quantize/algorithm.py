@@ -121,31 +121,31 @@ class SmoothQuantize(Algorithm):
                 weights_value = self._backend_entity.get_weight_statistics(node_to_smooth, model, weights_port)
                 weights_value = self._backend_entity.clip_statistics(weights_value)
 
-                scales = self._backend_entity.calculate_scales(activations_value, weights_value, self._alpha)
-
-                ratio = scales.min() / scales.max()
+                scales, ratio = self._backend_entity.calculate_scale_and_ratio(
+                    activations_value, weights_value, self._alpha
+                )
 
                 if ratio > best_ratio:
                     best_ratio = ratio
                     best_scale = deepcopy(scales)
 
-            a_scales = self._backend_entity.calculate_activation_scale(best_scale, nodes)
-            w_scales = self._backend_entity.calculate_weight_scale(best_scale)
+            activation_scales = self._backend_entity.calculate_activation_scale(best_scale, nodes)
+            weight_scales = self._backend_entity.calculate_weight_scale(best_scale)
 
             for node_to_smooth in nodes:
                 weights_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
                 weights_value = self._backend_entity.get_weight_value(node_to_smooth, model, weights_port)
 
-                scaled_weights = weights_value * w_scales
+                scaled_weights = weights_value * weight_scales
                 weight_update_command = self._backend_entity.weight_update_command(
                     node_to_smooth, scaled_weights, weights_port
                 )
                 transformation_layout.register(weight_update_command)
 
-            smooth_insertion_command = self._backend_entity.smooth_insertion_command(
-                source_node, a_scales, port_id, nodes
+            scale_insertion_command = self._backend_entity.scale_insertion_command(
+                source_node, activation_scales, port_id, nodes
             )
-            transformation_layout.register(smooth_insertion_command)
+            transformation_layout.register(scale_insertion_command)
 
         transformed_model = model_transformer.transform(transformation_layout)
         return transformed_model

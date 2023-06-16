@@ -163,19 +163,15 @@ class OVNullBiasInsertionCommand(TransformationCommand):
         raise NotImplementedError()
 
 
-class OVSmoothInsertionCommand(TransformationCommand):
+class OVMultiplyInsertionCommand(OVInsertionCommand):
     """
-    Inserts SmoothQuant nodes for the corresponding node.
+    Inserts Multiply nodes before the corresponding nodes.
     """
 
     def __init__(self, target_point: OVTargetPoint, scale_value: np.ndarray, destination_node_names: List[str]):
         """
         :param target_point: The TargetPoint instance for the insertion that contains layer's information.
         """
-        super().__init__(TransformationType.INSERT, target_point)
+        super().__init__(target_point)
         self.scale_value = scale_value
         self.destination_node_names = destination_node_names
-
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
