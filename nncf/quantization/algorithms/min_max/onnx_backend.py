@@ -30,6 +30,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReciprocalMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqrtMetatype
@@ -229,6 +230,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ONNXReduceMeanMetatype,
                 ONNXDivLayerMetatype,
                 ONNXSqrtMetatype,
+                ONNXReciprocalMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(ONNXMulLayerMetatype)

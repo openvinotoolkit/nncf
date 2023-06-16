@@ -21,10 +21,10 @@ from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_constant_weight_port_ids
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_metatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_possible_weight_port_ids
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
@@ -59,21 +59,45 @@ class ONNXConstantLayerAttributes(BaseLayerAttributes):
 
 
 def _get_layer_name(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]) -> Optional[str]:
+    """_summary_
+
+    :param onnx.NodeProto node: _description_
+    :param ONNXGraph onnx_graph: _description_
+    :param Set[int] port_ids: _description_
+    :return Optional[str]: _description_
+    """
     layer_name = []
     for port_id in port_ids:
         layer_name.append(onnx_graph.get_weight_edge_name(node, port_id))
     return "_".join(layer_name)
 
 
-def _is_shared_node(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]):
+def is_node_has_shared_weight(node: onnx.NodeProto, onnx_graph: ONNXGraph, port_ids: Set[int]):
+    """
+    Returns True if node has shared weight.
+
+    :param node: Node.
+    :param onnx_graph: ONNXGraph instance.
+    :param port_ids: Ports with weights.
+    :return: True if node has shared weight, otherwise - False.
+    """
     is_shared = False
     for port_id in port_ids:
-        is_shared = is_shared or onnx_graph.is_node_shared(node, port_id)
+        is_shared = is_shared or onnx_graph.is_node_has_shared_weight(node, port_id)
     return is_shared
 
 
 def _get_weight_port_ids(node: onnx.NodeProto, metatype: ONNXOpMetatype, onnx_graph: ONNXGraph) -> Set[int]:
+    """
+    Returns all weight input ports.
+
+    :param onnx.NodeProto node: _description_
+    :param ONNXOpMetatype metatype: _description_
+    :param ONNXGraph onnx_graph: _description_
+    :return Set[int]: _description_
+    """
     port_ids = set()
+    metatype
     constant_port_ids = get_constant_weight_port_ids(metatype)
     port_ids.update(constant_port_ids)
     possible_port_ids = get_possible_weight_port_ids(metatype)
@@ -247,15 +271,11 @@ class GraphConverter:
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
         for node in onnx_graph.get_all_nodes():
-            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-            if metatype.get_subtypes():
-                subtype = metatype.determine_subtype(onnx_model, node)
-                if subtype is not None:
-                    metatype = subtype
+            metatype = get_metatype(onnx_model, node)
             is_shared, weight_edge_name, layer_attributes = None, None, None
             port_ids = _get_weight_port_ids(node, metatype, onnx_graph)
             if port_ids:
-                is_shared = _is_shared_node(node, onnx_graph, port_ids)
+                is_shared = is_node_has_shared_weight(node, onnx_graph, port_ids)
                 weight_edge_name = _get_layer_name(node, onnx_graph, port_ids)
                 layer_attributes = _get_constant_layer_attr(node, metatype, onnx_graph, port_ids)
             nncf_graph.add_nncf_node(

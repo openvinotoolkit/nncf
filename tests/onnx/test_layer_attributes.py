@@ -100,7 +100,7 @@ def get_one_layer_model(op_name: str, node_creator: ONNXNodeCreator, input_shape
         (
             ONNXConvCreator,
             ONNXConstantLayerAttributes(
-                weight_attrs={1: {'weight_shape': [3, 3, 1, 1]}}, bias_attrs={2: {'bias_shape': [3]}}
+                weight_attrs={1: {"weight_shape": [3, 3, 1, 1]}}, bias_attrs={2: {"bias_shape": [3]}}
             ),
         ),
     ],

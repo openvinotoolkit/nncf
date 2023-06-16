@@ -15,8 +15,8 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.backend import BackendType
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint

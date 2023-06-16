@@ -595,6 +595,15 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     return list(ONNX_OPERATION_METATYPES.registry_dict.values())
 
 
+def get_metatype(model: onnx.ModelProto, node: onnx.NodeProto) -> ONNXOpMetatype:
+    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+    if metatype.get_subtypes():
+        subtype = metatype.determine_subtype(model, node)
+        if subtype is not None:
+            metatype = subtype
+    return metatype
+
+
 def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
     if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
         return metatype.weight_port_ids

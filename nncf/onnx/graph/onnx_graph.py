@@ -329,7 +329,7 @@ class ONNXGraph:
             output.extend(self.get_nodes_by_input(node_edge))
         return output
 
-    def is_node_shared(self, node: onnx.NodeProto, weight_port_id) -> bool:
+    def is_node_has_shared_weight(self, node: onnx.NodeProto, weight_port_id: int) -> bool:
         """
         Returns whether the node share a weight.
 
