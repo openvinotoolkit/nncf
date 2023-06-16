@@ -101,6 +101,7 @@ def _get_transformer_quantization_config(subset_size: int) -> Dict[str, Any]:
             "{re}.*matmul_1",
             "{re}.*__truediv__*",
         ],
+        "strict_check_scopes": False,
         "overflow_fix": "first_layer_only",
     }
 
@@ -172,8 +173,6 @@ def _create_nncf_config(
 
     if advanced_parameters is not None:
         compression_config = apply_advanced_parameters_to_config(compression_config, advanced_parameters)
-
-    compression_config["strict_check_scopes"] = False
 
     return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 
