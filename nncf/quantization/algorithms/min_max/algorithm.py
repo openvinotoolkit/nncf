@@ -290,7 +290,9 @@ class MinMaxQuantization(Algorithm):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_ignored_names(self, nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> Set[str]:
+    def _get_ignored_names(
+        self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph, ignored_patterns: GraphPattern
+    ) -> Set[str]:
         """
         Returns all node names that are ignored for quantization:
         Firstly, the ignored names are obtained from user-defined ignored the scope.
@@ -298,6 +300,7 @@ class MinMaxQuantization(Algorithm):
         Lastly, the ignored names are updated from ignored_patterns.
 
         :param nncf_graph: NNCFGraph instance.
+        :param inference_nncf_graph: Inference graph without constant flows.
         :param ignored_patterns: Ignored patterns.
         :return: Node names are ignored for quantization.
         """
@@ -313,21 +316,23 @@ class MinMaxQuantization(Algorithm):
             get_ignored_node_names_from_ignored_scope(model_type_ignore_scope, nncf_graph, strict=False)
         )
 
-        ignored_scope = self._get_ignored_scope(nncf_graph, ignored_patterns)
+        ignored_scope = self._get_ignored_scope(inference_nncf_graph, ignored_patterns)
 
         ignored_names.update(get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph))
 
         return ignored_names
 
-    def _get_ignored_scope(self, nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> IgnoredScope:
+    def _get_ignored_scope(self, inference_nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> IgnoredScope:
         """
         Returns IgnoredScope with node names matched ignored_patterns.
 
-        :param nncf_graph: NNCFGraph instance.
+        :param nncf_graph: Inference graph without constant flows.
         :param ignored_patterns: Ignored patterns.
         :return: IgnoredScope with all node names mathced ignored_patterns.
         """
-        nncf_node_names = [nncf_node.node_name for nncf_node in nncf_graph.find_matching_nodes(ignored_patterns)]
+        nncf_node_names = [
+            nncf_node.node_name for nncf_node in inference_nncf_graph.find_matching_nodes(ignored_patterns)
+        ]
         return IgnoredScope(names=nncf_node_names)
 
     def _get_quantizer_setup(
@@ -345,7 +350,10 @@ class MinMaxQuantization(Algorithm):
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
 
-        ignored_names = self._get_ignored_names(nncf_graph, ignored_patterns)
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph), self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
+        )
+        ignored_names = self._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
         weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph)
 
         default_weight_qconfig = self._get_default_qconfig(self._global_quantizer_constraints[QuantizerGroup.WEIGHTS])
@@ -360,9 +368,6 @@ class MinMaxQuantization(Algorithm):
             QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list in weighted_node_and_qconf_lists.items()
         ]
 
-        inference_nncf_graph = transform_to_inference_graph(
-            deepcopy(nncf_graph), self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
-        )
         ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(hw_patterns)
         post_processing_types = self._backend_entity.post_processing_metatypes
