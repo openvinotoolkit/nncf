@@ -9,24 +9,24 @@
 [Tutorials and Samples](#Model-compression-tutorials-and-samples) •
 [Third-party integration](#Third-party-repository-integration) •
 [Model Zoo](#NNCF-Compressed-Model-Zoo)
- 
+
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
 [![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Flatest%2Fopenvino_docs_model_optimization_guide.html)](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](LICENSE)
 [![PyPI Downloads](https://static.pepy.tech/badge/nncf)](https://pypi.org/project/nncf/)
- 
+
 </div>
 
 Neural Network Compression Framework (NNCF) provides a suite of post-training and training-time algorithms for neural networks inference optimization in [OpenVINO&trade;](https://docs.openvino.ai) with minimal accuracy drop.
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
-NNCF provides [samples](#Model-Compression-Samples) that demonstrate the usage of compression algorithms for different use cases and models. 
-[Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
+NNCF provides [samples](#Model-Compression-Samples) that demonstrate the usage of compression algorithms for different use cases and models.
+[Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at
 the end of this document.
 
-The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework 
-architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep 
+The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
+architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
 learning frameworks.
 
 ## Key Features
@@ -53,14 +53,14 @@ learning frameworks.
 - GPU-accelerated layers for faster compressed model fine-tuning.
 - Distributed training support.
 - Git patch for prominent third-party repository ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
-- Seamless combination of pruning, sparsity and quantization algorithms. Please refer to [optimum-intel](https://github.com/huggingface/optimum-intel/tree/main/examples/openvino) for examples of 
+- Seamless combination of pruning, sparsity and quantization algorithms. Please refer to [optimum-intel](https://github.com/huggingface/optimum-intel/tree/main/examples/openvino) for examples of
 joint (movement) pruning, quantization and distillation (JPQD), end-to-end from NNCF optimization to compressed OpenVINO IR.
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai).
 - Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 ## Documentation
 
-This documentation covers detailed information about NNCF algorithms and functions needed for the contribution to NNCF.  
+This documentation covers detailed information about NNCF algorithms and functions needed for the contribution to NNCF.
 
 The latest user documentation for NNCF is available [here](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html).
 
@@ -109,7 +109,7 @@ import torch
 from torchvision import datasets, models
 
 # Instantiate your uncompressed model
-model = models.mobilenet_v2() 
+model = models.mobilenet_v2()
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
 val_dataset = datasets.ImageFolder("/path")
 dataset_loader = torch.utils.data.DataLoader(val_dataset)
@@ -138,7 +138,7 @@ import tensorflow_datasets as tfds
 # Instantiate your uncompressed model
 model = tf.keras.applications.MobileNetV2()
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = tfds.load("/path", split="validation", 
+val_dataset = tfds.load("/path", split="validation",
                         shuffle_files=False, as_supervised=True)
 
 # Step 1: Initialize transformation function
@@ -214,7 +214,7 @@ nncf_config = register_default_init_args(nncf_config, init_loader)
 # Apply the specified compression algorithms to the model
 compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
 
-# Now use compressed_model as a usual torch.nn.Module 
+# Now use compressed_model as a usual torch.nn.Module
 # to fine-tune compression parameters along with the model weights
 
 # ... the rest of the usual PyTorch-powered training pipeline
@@ -255,7 +255,7 @@ compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
 
 # ... the rest of the usual TensorFlow-powered training pipeline
 
-# Export to Frozen Graph, TensorFlow SavedModel or .h5  when done fine-tuning 
+# Export to Frozen Graph, TensorFlow SavedModel or .h5  when done fine-tuning
 compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
 ```
 
@@ -267,7 +267,7 @@ For a more detailed description of NNCF usage in your training code, see [this t
 
 For a quicker start with NNCF-powered compression, try sample notebooks and scripts presented below.
 
-### Model Compression Tutorials 
+### Model Compression Tutorials
 
 A collection of ready-to-run Jupyter* notebooks are available to demonstrate how to use NNCF compression algorithms to optimize models for inference with the OpenVINO Toolkit:
 - [Accelerate Inference of NLP models with Post-Training Qunatization API of NNCF](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/105-language-quantize-bert)
@@ -283,7 +283,7 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [Accelerate Inference of Sparse Transformer Models with OpenVINO and 4th Gen Intel Xeon Scalable Processors](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/116-sparsity-optimization)
 
 ### Post-Training Quantization Samples
-Compact scripts demonstrating quantization and corresponding inference speed boost: 
+Compact scripts demonstrating quantization and corresponding inference speed boost:
 - [Post-Training Quantization of MobileNet v2 OpenVINO Model](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 - [Post-Training Quantization of YOLOv8 OpenVINO Model](examples/post_training_quantization/openvino/yolov8/README.md)
 - [Post-Training Quantization of Anomaly Classification OpenVINO model with control of accuracy metric](examples/post_training_quantization/openvino/quantize_with_accuracy_control/README.md)
@@ -310,10 +310,10 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
 ### Used by
 
 - [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
-  
+
   NNCF is integrated into OpenVINO Training Extensions as model optimization backend. So you can train, optimize and export new models based on the available model templates as well as run exported models with OpenVINO.
 
-- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov) 
+- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
 
@@ -345,17 +345,17 @@ You may also use one of the Dockerfiles in the [docker](./docker) directory to b
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.7 or later
 - Supported frameworks:
-  - PyTorch\* >=1.9.1, <1.14
+  - PyTorch\* >=1.13.0, <2.1
   - TensorFlow\* >=2.4.0, <=2.11.1
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 1.13.1 (NVidia CUDA\* Toolkit 11.6) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
+This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolkit 11.7) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
 
 ## NNCF Compressed Model Zoo
 
-Results achieved using sample scripts, example patches to third-party repositories and NNCF configuration files provided 
-with this repository. See README.md files for [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration) 
+Results achieved using sample scripts, example patches to third-party repositories and NNCF configuration files provided
+with this repository. See README.md files for [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration)
 to find instruction and links to exact configuration files and final checkpoints.
 - [PyTorch models](#pytorch-models)
   * [Classification](#pytorch_classification)
