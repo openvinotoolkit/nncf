@@ -166,11 +166,12 @@ class SmoothQuantizeAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def calculate_weight_scale(scale_value: TTensor) -> TTensor:
+    def calculate_weight_scale(scale_value: TTensor, nodes: List[NNCFNode]) -> TTensor:
         """
         Calculates scales for weight tensor.
 
         :oaram scale_value: Base scale value.
+        :param nodes: List of consumers for Smooth node.
         :return: Calculated per-channel scale for weights.
         """
 

@@ -82,7 +82,9 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
     def get_weight_statistics(node: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
         weights = deepcopy(get_weight_value(node, model, port_id))
         abs_value = np.abs(weights)
-        return np.max(abs_value, axis=0)
+        transpose = node.layer_attributes.const_attrs[port_id]["transpose"]
+        axis = 0 if transpose else -1
+        return np.max(abs_value, axis=axis)
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -137,8 +139,22 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
         return activation_scales
 
     @staticmethod
-    def calculate_weight_scale(scale_value: np.ndarray) -> np.ndarray:
-        return np.expand_dims(scale_value, axis=0)
+    def calculate_weight_scale(scale_value: np.ndarray, nodes: List[NNCFNode]) -> np.ndarray:
+        transpose_attrs = []
+        for node in nodes:
+            port_id = OVSmoothQuantizeAlgoBackend.get_weight_tensor_port_id(node)
+            transpose = node.layer_attributes.const_attrs[port_id]["transpose"]
+            transpose_attrs.append(transpose)
+
+        if not all(attr == transpose_attrs[0] for attr in transpose_attrs):
+            raise RuntimeError(f"Transpose attributes for nodes {[n.node_name for n in nodes]} are not identical")
+
+        if all(transpose_attrs):
+            weight_scales = np.expand_dims(scale_value, axis=0)
+        else:
+            weight_scales = np.expand_dims(scale_value, axis=-1)
+
+        return weight_scales
 
     @staticmethod
     def weight_update_command(

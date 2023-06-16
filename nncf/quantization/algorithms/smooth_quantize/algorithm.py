@@ -130,7 +130,7 @@ class SmoothQuantize(Algorithm):
                     best_scale = deepcopy(scales)
 
             activation_scales = self._backend_entity.calculate_activation_scale(best_scale, nodes)
-            weight_scales = self._backend_entity.calculate_weight_scale(best_scale)
+            weight_scales = self._backend_entity.calculate_weight_scale(best_scale, nodes)
 
             for node_to_smooth in nodes:
                 weights_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
