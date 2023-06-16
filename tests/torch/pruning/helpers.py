@@ -342,6 +342,21 @@ class PruningTestModelEltwise(nn.Module):
         return x
 
 
+class PruningTestMeanMetatype(nn.Module):
+    def __init__(self, mean_dim):
+        super().__init__()
+        self.mean_dim = mean_dim
+        conv2_input_dim = 1 if mean_dim == 1 else 16
+        self.conv1 = create_conv(1, 16, 2, 1, -2)
+        self.last_conv = create_conv(conv2_input_dim, 32, 1, 2, -2)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = torch.mean(x, self.mean_dim, keepdim=True)
+        x = self.last_conv(x)
+        return x
+
+
 class BigPruningTestModel(nn.Module):
     def __init__(self, dim=2):
         super().__init__()

@@ -287,7 +287,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         return self._vars_upper
 
     @property
-    def num_vars(self) -> float:
+    def num_vars(self) -> int:
         """
         Number of design variables used by the search algorithm.
         :return:
