@@ -655,8 +655,9 @@ def _is_depthwise_conv(onnx_graph: ONNXGraph, node: onnx.NodeProto) -> bool:
         return False
     weight_tensor_value = None
     initializer_name = node.input[1]
-    weight_tensor_value = onnx_graph.get_initializers_value(initializer_name)
-    if weight_tensor_value is None:
+    if onnx_graph.has_initializer(initializer_name):
+        weight_tensor_value = onnx_graph.get_initializers_value(initializer_name)
+    else:
         return False
     conv_out_channels = weight_tensor_value.shape[0]
     conv_in_channels = weight_tensor_value.shape[1] * conv_group
