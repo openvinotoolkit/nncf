@@ -202,7 +202,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         self._algo_config = self._get_algo_specific_config_section()
 
         self.ignored_scopes = self.config.get("ignored_scopes")
-
+        self.strict_check_scopes = self._algo_config.get("strict_check_scopes")
         if "ignored_scopes" in self._algo_config:
             algo_ignored_scopes = self._algo_config["ignored_scopes"]
             if self.ignored_scopes is not None:

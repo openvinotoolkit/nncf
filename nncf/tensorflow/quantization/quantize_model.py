@@ -126,6 +126,8 @@ def _create_nncf_config(
     if advanced_parameters is not None:
         compression_config = apply_advanced_parameters_to_config(compression_config, advanced_parameters)
 
+    compression_config["strict_check_scopes"] = False
+
     return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 
 
