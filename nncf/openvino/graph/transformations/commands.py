@@ -175,3 +175,7 @@ class OVMultiplyInsertionCommand(OVInsertionCommand):
         super().__init__(target_point)
         self.scale_value = scale_value
         self.destination_node_names = destination_node_names
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
