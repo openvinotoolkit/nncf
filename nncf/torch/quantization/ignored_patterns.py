@@ -38,10 +38,10 @@ def _add_softmax_matmul(
 def _add_softmax_reshape_matmul(
     pattern: GraphPattern, matmul_aliases, reshape_squeeze_aliases, gather_aliases, transpose_aliases
 ) -> None:
-    #       SOFTMAX  NON_PATTERN_NODE
-    #           \       /
-    #            \     /
-    #             \   /
+    #       SOFTMAX
+    #           \
+    #            \
+    #             \
     #             RESHAPE   RESHAPE||TRANSPOSE||GATHER||SQUEEZE
     #                 \                 /
     #                  \               /
@@ -56,14 +56,10 @@ def _add_softmax_reshape_matmul(
         **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: reshape_squeeze_aliases}
     )
     matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_aliases})
-    non_pattern_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "NON_PATTERN", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
-    )
     matmul_branch_nodes = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER", GraphPattern.METATYPE_ATTR: branch_matmul_nodes}
     )
     pattern.add_edge(softmax, reshape)
-    pattern.add_edge(non_pattern_node, reshape)
     pattern.add_edge(reshape, matmul)
     pattern.add_edge(matmul_branch_nodes, matmul)
     return pattern
