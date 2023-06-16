@@ -696,8 +696,7 @@ class MinMaxQuantization(Algorithm):
                             continue
                         if (
                             quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC
-                            and node.layer_attributes
-                            and node.layer_attributes.const_attrs is None
+                            and node.layer_attributes is None
                         ):
                             quantization_point.qconfig.mode = QuantizationMode.SYMMETRIC
                             nncf_logger.debug(

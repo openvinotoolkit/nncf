@@ -51,7 +51,7 @@ class OVModelTransformer(ModelTransformer):
             (OVInplaceFnInsertionCommand, self._apply_insert_operation),
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
             (OVNullBiasInsertionCommand, self._apply_bias_insertion_transformations),
-            (OVMultiplyInsertionCommand, self._apply_smooth_insertion_transformations),
+            (OVMultiplyInsertionCommand, self._apply_multiply_insertion_transformations),
         ]
 
     @staticmethod
@@ -470,14 +470,14 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _apply_smooth_insertion_transformations(
+    def _apply_multiply_insertion_transformations(
         model: ov.Model, transformations: List[OVMultiplyInsertionCommand]
     ) -> ov.Model:
         """
-        Inserts SmoothQuant (Multiply) with provided value for corresponding layer.
+        Inserts Multiply with provided value for corresponding layer.
 
         :param transformations: List of the smooth insertion transformations.
-        :returns: Transformed model with SmoothQuant nodes.
+        :returns: Transformed model with Multiply nodes.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:

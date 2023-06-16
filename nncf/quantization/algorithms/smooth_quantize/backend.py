@@ -159,7 +159,7 @@ class SmoothQuantizeAlgoBackend(ABC):
         """
         Calculates activation scales for Smooth node.
 
-        :oaram scale_value: Base scale value.
+        :param scale_value: Base scale value.
         :param nodes: List of consumers for Smooth node.
         :return: Calculated per-channel activation scale.
         """
@@ -170,7 +170,7 @@ class SmoothQuantizeAlgoBackend(ABC):
         """
         Calculates scales for weight tensor.
 
-        :oaram scale_value: Base scale value.
+        :param scale_value: Base scale value.
         :param nodes: List of consumers for Smooth node.
         :return: Calculated per-channel scale for weights.
         """

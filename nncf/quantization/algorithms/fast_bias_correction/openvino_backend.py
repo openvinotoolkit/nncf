@@ -96,7 +96,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> bool:
         # At first, checks whether the node has weight tensor
-        if node.layer_attributes and node.layer_attributes.const_attrs is None:
+        if node.layer_attributes is None:
             return False
         const_port_ids = node.layer_attributes.get_const_port_ids()
         assert len(const_port_ids) == 1

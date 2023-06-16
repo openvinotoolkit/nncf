@@ -101,7 +101,7 @@ def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optio
     :param nncf_graph: NNCFGraph instance.
     :return: Optional NNCFNode with bias value.
     """
-    if add_node.layer_attributes and add_node.layer_attributes.const_attrs is None:
+    if add_node.layer_attributes is None:
         return None
 
     const_port_ids = add_node.layer_attributes.get_const_port_ids()

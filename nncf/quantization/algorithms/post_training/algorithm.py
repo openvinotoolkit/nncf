@@ -198,7 +198,6 @@ class PostTrainingQuantization(Algorithm):
                 statistics_aggregator.collect_statistics(modified_model)
                 modified_model = algorithm.apply(modified_model, statistics_aggregator.statistic_points)
 
-        if statistic_points is None:
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
