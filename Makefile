@@ -18,6 +18,7 @@ install-onnx-test:
 	pip install -e .[onnx]
 	pip install -r tests/onnx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install -r tests/onnx/benchmarking/requirements.txt
 
 install-onnx-dev: install-onnx-test install-pre-commit install-pylint
@@ -47,6 +48,7 @@ install-openvino-test:
 	pip install -e .[openvino]
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install git+https://github.com/openvinotoolkit/open_model_zoo.git@dcbf53280a95dae3c6538689bafe760470f08ec2#subdirectory=tools/model_tools
 
 install-openvino-dev: install-openvino-test install-pre-commit install-pylint
@@ -81,6 +83,7 @@ install-tensorflow-test:
 	pip install -e .[tf]
 	pip install -r tests/tensorflow/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install -r examples/tensorflow/requirements.txt
 
 install-tensorflow-dev: install-tensorflow-test install-pre-commit install-pylint
@@ -108,6 +111,7 @@ install-torch-test:
 	pip install -e .[torch]
 	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install -r examples/torch/requirements.txt
 
 install-torch-dev: install-torch-test install-pre-commit install-pylint
