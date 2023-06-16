@@ -136,5 +136,4 @@ def check_scopes_in_graph(
 
         if strict_check_scopes:
             raise RuntimeError(err_message)
-        else:
-            nncf_logger.warning(err_message)
+        nncf_logger.warning(err_message)

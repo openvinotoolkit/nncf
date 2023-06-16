@@ -906,22 +906,3 @@ def test_works_when_wrapped_with_dataparallel():
     model, _ = create_compressed_model_and_algo_for_test(model, config)
     model = torch.nn.DataParallel(model.cuda())
     model(torch.ones([10, 1, 1, 1], device="cuda"))
-
-
-@pytest.mark.parametrize("strict_check_scopes", (True, False))
-def test_check_ignored_scope(strict_check_scopes):
-    model = BasicConvTestModel()
-    config = get_empty_config(input_sample_sizes=[1, 1, 4, 4])
-    config["compression"] = {
-        "algorithm": "quantization",
-        "ignored_scopes": ["some_node"],
-        "strict_check_scopes": strict_check_scopes,
-    }
-
-    register_bn_adaptation_init_args(config)
-
-    if strict_check_scopes:
-        with pytest.raises(RuntimeError, match="scope definitions"):
-            create_compressed_model_and_algo_for_test(model, config)
-    else:
-        create_compressed_model_and_algo_for_test(model, config)
