@@ -497,10 +497,10 @@ class OVModelTransformer(ModelTransformer):
             if all(p.get_element_type() == fp16_dtype for p in destination_ports):
                 scale_dtype = fp16_dtype
             scale_constant = opset.constant(
-                transformation.scale_value, dtype=scale_dtype, name=f"{node.name}/smooth_quant_const"
+                transformation.scale_value, dtype=scale_dtype, name=f"{node_name}/smooth_quant_const"
             )
 
-            multiply_node = opset.multiply(node_output_port, scale_constant, name=f"{node.name}/smooth_quant_multiply")
+            multiply_node = opset.multiply(node_output_port, scale_constant, name=f"{node_name}/smooth_quant_multiply")
 
             for destination_port in destination_ports:
                 destination_port.replace_source_output(multiply_node.output(0))
