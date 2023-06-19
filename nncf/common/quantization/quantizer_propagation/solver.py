@@ -672,7 +672,7 @@ class QuantizerPropagationSolver:
         # pylint:disable=too-many-branches
         # pylint:disable=too-many-statements
         curr_node_key = curr_prop_quantizer.current_location_node_key
-        curr_node = quant_prop_graph.nodes[curr_prop_quantizer.current_location_node_key]
+        curr_node = quant_prop_graph.nodes[curr_node_key]
         curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
         assert QuantizerPropagationStateGraph.is_insertion_point(curr_node_type)
 
@@ -1220,6 +1220,10 @@ class QuantizerPropagationSolver:
           that branches downwards.
         :return: The TransitionStatus indicating in which fashion the transition should occur.
         """
+        is_dominating_outputs = quant_prop_graph.is_branching_node_dominating_outputs(branching_node_key)
+        if is_dominating_outputs and not self._quantize_outputs:
+            return TransitionStatus.SHOULD_NOT_TRANSITION
+
         dom_op_node_keys = quant_prop_graph.get_non_quant_agnostic_op_nodes_immediately_dominated_by_node(
             branching_node_key
         )

@@ -12,11 +12,14 @@
 from collections import deque
 from copy import copy
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 import networkx as nx
 
+from nncf import nncf_logger
 from nncf.common.graph import INPUT_NOOP_METATYPES
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
@@ -26,7 +29,6 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
-from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_propagation.grouping import UnifiedScalePropagatingQuantizerGroupManager
 from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
@@ -84,6 +86,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         self._unified_scale_group_manager = UnifiedScalePropagatingQuantizerGroupManager()
         self._input_node_keys_vs_nncf_nodes = {}  # type: Dict[str, NNCFNode]
+        self._output_node_keys_vs_nncf_nodes = {}  # type: Dict[str, NNCFNode]
         self._pqs_after_weight_dependent_output_quantized_nodes = {}  # type: Dict[PropagatingQuantizer, str]
         self.op_node_keys_to_underlying_nodes_mapping = {}  # type: Dict[str, List[NNCFNode]]
 
@@ -139,6 +142,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
                 if nncf_node_ref.metatype in INPUT_NOOP_METATYPES:
                     self._input_node_keys_vs_nncf_nodes[node_key] = nncf_node_ref
+                if nncf_node_ref.metatype in OUTPUT_NOOP_METATYPES:
+                    self._output_node_keys_vs_nncf_nodes[node_key] = nncf_node_ref
 
                 if nncf_node_ref.is_in_iteration_scope():
                     iteration_scope_node_keys.append(node_key)
@@ -153,6 +158,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         for barred_node_key in list(self.ignored_node_keys.keys()) + iteration_scope_node_keys:
             self._add_barrier_after_node(barred_node_key)
+        self._branch_nodes_directly_dominating_outputs = None
 
     def get_node_keys_by_metatype(self, metatype: Type[OperatorMetatype]) -> List[str]:
         """
@@ -167,8 +173,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 output.append(node)
         return output
 
+    @staticmethod
     def _insertion_point_to_quant_insertion_point(
-        self, ip: Union[PreHookInsertionPoint, PostHookInsertionPoint]
+        ip: Union[PreHookInsertionPoint, PostHookInsertionPoint]
     ) -> QuantizationInsertionPointBase:
         if isinstance(ip, PreHookInsertionPoint):
             return ActivationQuantizationInsertionPoint(ip.target_node_name, input_port_id=ip.input_port_id)
@@ -233,8 +240,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             and self._pqs_after_weight_dependent_output_quantized_nodes[pq] != operator_node_key
         ):
             raise RuntimeError(
-                "Propagating quantizer {} is already marked as depending on node {} weight "
-                "quantization!".format(pq.id, operator_node_key)
+                f"Propagating quantizer {pq.id} is already marked as depending on node "
+                f"{operator_node_key} weight quantization!"
             )
         self._pqs_after_weight_dependent_output_quantized_nodes[pq] = operator_node_key
 
@@ -847,6 +854,55 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self.traverse_graph(node_key, traverse_fn, retval)
         return retval
 
+    def _build_branch_direct_output_dominators_info(self) -> Set[str]:
+        """
+        Traverses the graph backwards starting from outputs. If there is a path from an output to a branching node
+        that only passes through quantization-agnostic ops, then this branching node is directly dominating an output.
+        :return: The set of node names that directly dominate at least one output.
+        """
+
+        @dataclass
+        class LocalState:
+            global_result_ref: Set[str]
+            encountered_quantizer_aware_ops: bool = False
+
+        def traverse_fn(curr_node_key: str, local_state: LocalState) -> Tuple[bool, LocalState]:
+            curr_node = self.nodes[curr_node_key]
+            if len(list(self.successors(curr_node_key))) > 1:
+                if not local_state.encountered_quantizer_aware_ops:
+                    local_state.global_result_ref.add(curr_node_key)
+                return True, local_state
+
+            curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+            if curr_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
+                node_trait = curr_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
+                op_meta = curr_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
+                if op_meta not in OUTPUT_NOOP_METATYPES and node_trait in [
+                    QuantizationTrait.INPUTS_QUANTIZABLE,
+                    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
+                    QuantizationTrait.NON_QUANTIZABLE,
+                ]:
+                    local_state.encountered_quantizer_aware_ops = True
+            return False, local_state
+
+        visited_node_keys = set()
+        result = set()
+        for output_node_key in self._output_node_keys_vs_nncf_nodes:
+            output_state = LocalState(result)
+            self._traverse_graph_recursive_helper(
+                output_node_key, visited_node_keys, traverse_fn, output_state, traverse_backward=True, visit_once=False
+            )
+        return result
+
+    def is_branching_node_dominating_outputs(self, from_node_key: str) -> bool:
+        """
+        Checks that all branches outgoing from the branching node can be quantized
+        (They do not contain an output that should not be quantized).
+        """
+        if self._branch_nodes_directly_dominating_outputs is None:
+            self._branch_nodes_directly_dominating_outputs = self._build_branch_direct_output_dominators_info()
+        return from_node_key in self._branch_nodes_directly_dominating_outputs
+
     def get_visualized_graph(self):
         out_graph = nx.DiGraph()
         unified_scale_group_vs_pq_node_id_dict = {}  # type: Dict[int, List[str]]
@@ -967,18 +1023,21 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         visited_node_keys: Set[str],
         traverse_function: Callable[[str, Any], Tuple[bool, Any]],
         output: Any,
-        traverse_forward: bool,
+        traverse_backward: bool = False,
+        visit_once: bool = True,
     ):
         """This is DFS, and may fail with 'maximum recursion depth exceeded' for complex graphs."""
         is_finished, output = traverse_function(curr_node_key, output)
-        visited_node_keys.add(curr_node_key)
-        next_node_keys_indexer = self.succ if traverse_forward else self.pred
+        if visit_once:
+            visited_node_keys.add(curr_node_key)
+        next_node_keys_indexer = self.pred if traverse_backward else self.succ
         if not is_finished:
             for node_key in next_node_keys_indexer[curr_node_key]:
-                if node_key not in visited_node_keys:
-                    self._traverse_graph_recursive_helper(
-                        node_key, visited_node_keys, traverse_function, output, traverse_forward
-                    )
+                if visit_once and node_key in visited_node_keys:
+                    continue
+                self._traverse_graph_recursive_helper(
+                    node_key, visited_node_keys, traverse_function, output, traverse_backward, visit_once
+                )
         return output
 
     def _get_next_prop_quantizer_id(self):

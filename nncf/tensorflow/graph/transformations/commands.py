@@ -91,6 +91,9 @@ class TFMultiLayerPoint:
     def target_points(self) -> List[TargetPoint]:
         return self._target_points
 
+    def __str__(self) -> str:
+        return f"TFMultiLayerPoint: {[str(t) for t in self._target_points]}"
+
 
 class TFLayerStateNames:
     LAYER_NAME = "layer_name"
@@ -170,7 +173,7 @@ class TFBeforeLayer(TFLayerPoint):
         )
 
     def __str__(self) -> str:
-        return " ".join([super().__str__(), self.instance_idx, str(self.input_port_id)])
+        return " ".join([super().__str__(), str(self.instance_idx), str(self.input_port_id)])
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -238,7 +241,7 @@ class TFAfterLayer(TFLayerPoint):
         )
 
     def __str__(self) -> str:
-        return " ".join([super().__str__(), self.instance_idx, str(self.output_port_id)])
+        return " ".join([super().__str__(), str(self.instance_idx), str(self.output_port_id)])
 
     def __hash__(self) -> int:
         return hash(str(self))
