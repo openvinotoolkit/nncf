@@ -63,8 +63,11 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
     @staticmethod
     def calculate_input_reduction_shape(nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-
         channels = shape[node.metatype.output_channel_axis]
+
+        if node.layer_attributes.act_attrs["transpose"]:
+            channels = shape[1]
+
         reduction_shape = tuple(i for i, val in enumerate(shape) if val != channels)
         return reduction_shape
 
