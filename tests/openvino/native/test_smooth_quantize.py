@@ -16,9 +16,7 @@ import openvino.runtime as ov
 import pytest
 
 from tests.openvino.native.models import LinearModel
-from tests.post_training.test_templates.test_smooth_quantize import (
-    TemplateTestSQAlgorithm,
-)
+from tests.post_training.test_templates.test_smooth_quantize import TemplateTestSQAlgorithm
 
 
 class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
@@ -44,9 +42,7 @@ class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
             assert const_node.get_type_name() == "Constant"
 
             value = const_node.data
-            assert np.all(
-                np.isclose(value, ref_value, atol=0.0001)
-            ), f"{value} != {ref_value}"
+            assert np.all(np.isclose(value, ref_value, atol=0.0001)), f"{value} != {ref_value}"
 
     @staticmethod
     def get_dataset_shape(model: ov.Model) -> Tuple[int]:
@@ -57,11 +53,7 @@ class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
         (
             (
                 LinearModel().ov_model,
-                {
-                    "Reshape/smooth_quant_multiply": np.array(
-                        [0.984319, 1.032351, 1.1578148, 1.0598988]
-                    )
-                },
+                {"Reshape/smooth_quant_multiply": np.array([0.984319, 1.032351, 1.1578148, 1.0598988])},
             ),
         ),
     )

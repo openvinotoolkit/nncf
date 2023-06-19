@@ -15,9 +15,7 @@ from typing import Callable, Dict, Tuple, TypeVar
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
-from nncf.quantization.algorithms.post_training.algorithm import (
-    PostTrainingQuantization,
-)
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from tests.post_training.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
@@ -55,16 +53,12 @@ class TemplateTestSQAlgorithm:
         return PostTrainingQuantization(
             subset_size=1,
             model_type=ModelType.TRANSFORMER,
-            advanced_parameters=AdvancedQuantizationParameters(
-                overflow_fix=OverflowFix.DISABLE
-            ),
+            advanced_parameters=AdvancedQuantizationParameters(overflow_fix=OverflowFix.DISABLE),
         )
 
     def test_smooth_quant_algo(self, model, reference_values):
         input_shape = self.get_dataset_shape(model)
-        dataset = get_static_dataset(
-            input_shape, self.get_transform_fn(), self.fn_to_type
-        )
+        dataset = get_static_dataset(input_shape, self.get_transform_fn(), self.fn_to_type)
 
         quantization_algorithm = self.get_quantization_algorithm()
         quantized_model = quantization_algorithm.apply(model, dataset=dataset)

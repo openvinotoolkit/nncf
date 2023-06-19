@@ -20,9 +20,9 @@ from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
 from nncf.quantization.algorithms.smooth_quantize.algorithm import SmoothQuantize
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
-from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import dump_model
+from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv4DModel
@@ -97,9 +97,11 @@ def test_transformer_models_fq_placement(model_creator_func, tmp_path):
     dump_model(quantized_model, str(xml_path), str(bin_path))
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
+
 OMZ_MODELS_SQ_PARAMS = {
     "swin-tiny-patch4-window7-224": {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}
 }
+
 
 @pytest.mark.parametrize("model_name_params", OMZ_MODELS_SQ_PARAMS.items(), ids=list(OMZ_MODELS_SQ_PARAMS))
 def test_omz_models_sq_placement(model_name_params, tmp_path):
