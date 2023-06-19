@@ -12,7 +12,7 @@ from nncf.config.schemata.basic import BOOLEAN
 from nncf.config.schemata.basic import make_string_or_array_of_strings_schema
 from nncf.config.schemata.basic import with_attributes
 from nncf.config.schemata.common.initialization import BATCHNORM_ADAPTATION_SCHEMA
-from nncf.config.schemata.defaults import STRICT_CHECK_SCOPES
+from nncf.config.schemata.defaults import VALIDATE_SCOPES
 
 IGNORED_SCOPES_DESCRIPTION = (
     "A list of model control flow graph node scopes to be ignored for this "
@@ -22,7 +22,7 @@ TARGET_SCOPES_DESCRIPTION = (
     "A list of model control flow graph node scopes to be considered for this operation"
     " - functions as a 'denylist'. Optional."
 )
-STRICT_CHECK_SCOPES_DESCRIPTION = (
+VALIDATE_SCOPES_DESCRIPTION = (
     "If set to True, then a RuntimeError will be raised if the names of the "
     "ignored/target scopes do not match the names of the scopes in the model graph."
 )
@@ -45,10 +45,10 @@ SCOPING_PROPERTIES = {
             "UNet/ModuleList\\[up_path\\].*",
         ],
     ),
-    "strict_check_scopes": with_attributes(
+    "validate_scopes": with_attributes(
         BOOLEAN,
-        description=STRICT_CHECK_SCOPES_DESCRIPTION,
-        default=STRICT_CHECK_SCOPES,
+        description=VALIDATE_SCOPES_DESCRIPTION,
+        default=VALIDATE_SCOPES,
     ),
 }
 GENERIC_INITIALIZER_SCHEMA = {

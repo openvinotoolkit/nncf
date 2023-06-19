@@ -259,15 +259,15 @@ class TemplateTestPTQParams:
         )
         assert Counter([t_p.target_node_name for t_p in target_points_overflow_fix]) == Counter(affected_target_points)
 
-    @pytest.mark.parametrize("strict_check_scopes", (True, False))
-    def test_strict_check_ignored_scope(self, test_params, strict_check_scopes):
+    @pytest.mark.parametrize("validate_scopes", (True, False))
+    def test_validate_scope(self, test_params, validate_scopes):
         nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
         algo = MinMaxQuantization(
-            strict_check_scopes=strict_check_scopes, ignored_scope=IgnoredScope(names=["some_node"])
+            ignored_scope=IgnoredScope(names=["some_node"], validate=validate_scopes),
         )
         algo._backend_entity = self.get_algo_backend()
-        if strict_check_scopes:
+        if validate_scopes:
             with pytest.raises(RuntimeError, match="Ignored nodes with name"):
                 algo._get_ignored_names(nncf_graph, ignored_patterns)
         else:

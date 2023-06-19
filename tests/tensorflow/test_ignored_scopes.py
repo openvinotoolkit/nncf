@@ -14,7 +14,7 @@ import pytest
 import tensorflow as tf
 from tensorflow.keras import layers
 
-from nncf.config.schemata.defaults import STRICT_CHECK_SCOPES
+from nncf.config.schemata.defaults import VALIDATE_SCOPES
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization import FakeQuantize
@@ -62,8 +62,8 @@ NOT_SUPPORT_SCOPES_ALGO = ["NoCompressionAlgorithm"]
 
 
 @pytest.mark.parametrize("algo_name", TF_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
-@pytest.mark.parametrize("strict_check_scopes", (True, False, None))
-def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, strict_check_scopes):
+@pytest.mark.parametrize("validate_scopes", (True, False, None))
+def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, validate_scopes):
     model = get_mock_model()
     config = get_empty_config()
     config["compression"] = {
@@ -71,10 +71,10 @@ def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, strict_check_
         "ignored_scopes": ["unknown"],
     }
 
-    if strict_check_scopes is not None:
-        config["compression"]["strict_check_scopes"] = strict_check_scopes
+    if validate_scopes is not None:
+        config["compression"]["validate_scopes"] = validate_scopes
 
-    if strict_check_scopes or (strict_check_scopes is None and STRICT_CHECK_SCOPES is True):
+    if validate_scopes or (validate_scopes is None and VALIDATE_SCOPES is True):
         with pytest.raises(RuntimeError, match="scope definitions"):
             create_compressed_model_and_algo_for_test(model, config)
     else:

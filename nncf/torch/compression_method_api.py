@@ -137,7 +137,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
         check_scopes_in_graph(
-            model.nncf.get_original_graph(), self.ignored_scopes, self.target_scopes, self.strict_check_scopes
+            model.nncf.get_original_graph(), self.ignored_scopes, self.target_scopes, self.validate_scopes
         )
 
         layout = self._get_transformation_layout(model)

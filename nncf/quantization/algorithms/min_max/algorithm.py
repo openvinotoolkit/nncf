@@ -100,7 +100,6 @@ class MinMaxQuantization(Algorithm):
         subset_size: int = 300,
         model_type: Optional[ModelType] = None,
         ignored_scope: Optional[IgnoredScope] = None,
-        strict_check_scopes=True,
         overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
@@ -122,7 +121,6 @@ class MinMaxQuantization(Algorithm):
             in the model. Supported only `transformer` now.
         :param ignored_scope: An ignored scope that defined the list of model control
             flow graph nodes to be ignored during quantization.
-        :param strict_check_scopes:
         :param overflow_fix: This option controls whether to apply the overflow issue
             fix for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
         :param quantize_outputs: Whether to insert additional quantizers right before
@@ -143,7 +141,6 @@ class MinMaxQuantization(Algorithm):
         self._subset_size = subset_size
         self._model_type = model_type
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
-        self._strict_check_scopes = strict_check_scopes
         self._overflow_fix = overflow_fix
         self._quantize_outputs = quantize_outputs
         self._inplace_statistics = inplace_statistics
@@ -309,7 +306,9 @@ class MinMaxQuantization(Algorithm):
         ignored_names = set()
 
         ignored_names.update(
-            get_ignored_node_names_from_ignored_scope(self._ignored_scope, nncf_graph, strict=self._strict_check_scopes)
+            get_ignored_node_names_from_ignored_scope(
+                self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
+            )
         )
 
         model_type_ignore_scope = self._backend_entity.get_ignored_scope(model_type, device)
@@ -321,7 +320,7 @@ class MinMaxQuantization(Algorithm):
         ignored_scope = self._get_ignored_scope(nncf_graph, ignored_patterns)
 
         ignored_names.update(
-            get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph, strict=self._strict_check_scopes)
+            get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph, strict=self._ignored_scope.validate)
         )
 
         return ignored_names

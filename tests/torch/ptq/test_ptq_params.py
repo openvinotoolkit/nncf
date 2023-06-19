@@ -151,7 +151,7 @@ class TestPTQParams(TemplateTestPTQParams):
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
-            "test_strict_check_ignored_scope": {
+            "test_validate_scope": {
                 "nncf_graph": get_single_conv_nncf_graph().nncf_graph,
                 "ignored_patterns": get_ignored_patterns(),
             },

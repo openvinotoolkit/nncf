@@ -22,7 +22,7 @@ from torch import nn
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
-from nncf.config.schemata.defaults import STRICT_CHECK_SCOPES
+from nncf.config.schemata.defaults import VALIDATE_SCOPES
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
 from tests.torch.helpers import BasicConvTestModel
@@ -399,8 +399,8 @@ NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation", "NoCompressionAlgorithm"]
 
 
 @pytest.mark.parametrize("algo_name", PT_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
-@pytest.mark.parametrize("strict_check_scopes", (True, False, None))
-def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, strict_check_scopes):
+@pytest.mark.parametrize("validate_scopes", (True, False, None))
+def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, validate_scopes):
     model = BasicLinearTestModel()
     config = ConfigCreator().add_algo(algo_name).create()
     config["compression"][0]["ignored_scopes"] = ["unknown"]
@@ -417,10 +417,10 @@ def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, strict_check_
             "steps_per_epoch": 4,
         }
 
-    if strict_check_scopes is not None:
-        config["compression"][0]["strict_check_scopes"] = strict_check_scopes
+    if validate_scopes is not None:
+        config["compression"][0]["validate_scopes"] = validate_scopes
 
-    if strict_check_scopes or (strict_check_scopes is None and STRICT_CHECK_SCOPES is True):
+    if validate_scopes or (validate_scopes is None and VALIDATE_SCOPES is True):
         with pytest.raises(RuntimeError, match="scope definitions"):
             create_compressed_model_and_algo_for_test(model, config)
     else:
