@@ -116,7 +116,7 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
         a_max = 1e2
 
         scales = np.clip(scales, a_min=a_min, a_max=a_max)
-        ratio = scales.min() / scales.max()
+        ratio = scales.min() / (scales.max() + np.finfo(float).eps)
         return scales, ratio
 
     @staticmethod
