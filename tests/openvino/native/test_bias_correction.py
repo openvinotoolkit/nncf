@@ -13,15 +13,11 @@ from typing import Dict, List
 
 import numpy as np
 import openvino.runtime as ov
-import pytest
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.openvino.graph.node_utils import get_bias_value
-from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import MultipleConvTestModel
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.shared.command import Command
 
@@ -59,32 +55,16 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return transform_fn
 
     @staticmethod
+    def map_references(ref_biases: Dict) -> Dict[str, List]:
+        mapping = {f"{name}/WithoutBiases": val for name, val in ref_biases.items()}
+        return mapping
+
+    @staticmethod
     def check_bias(model: ov.Model, ref_biases: Dict):
         nncf_graph = NNCFGraphFactory.create(model)
-        for node in nncf_graph.get_all_nodes():
-            if not is_node_with_bias(node, nncf_graph):
-                continue
-            ref_bias = ref_biases[node.node_name]
-            ref_bias = np.array(ref_bias)
-            bias_value = get_bias_value(node, nncf_graph, model)
-            bias_value = bias_value.reshape(ref_bias.shape)
-            assert np.all(np.isclose(bias_value, ref_bias, atol=0.0001)), f"{bias_value} != {ref_bias}"
-
-    @pytest.mark.parametrize(
-        "model_cls, ref_biases",
-        (
-            (
-                MultipleConvTestModel,
-                {
-                    "/conv_1/Conv/WithoutBiases": [0.6658976, -0.70563036],
-                    "/conv_2/Conv/WithoutBiases": [-0.307696, -0.42806846, 0.44965455],
-                    "/conv_3/Conv/WithoutBiases": [-0.0033792169, 1.0661412],
-                    "/conv_4/Conv/WithoutBiases": [-0.6941606, 0.9958957, 0.6081058],
-                    "/conv_5/Conv/WithoutBiases": [0.07476559, -0.75797373],
-                },
-            ),
-            (ConvTestModel, {"/conv/Conv/WithoutBiases": [0.11085186, 1.0017344]}),
-        ),
-    )
-    def test_update_bias(self, model_cls, ref_biases, tmpdir):
-        return super().test_update_bias(model_cls, ref_biases, tmpdir)
+        for ref_name, ref_value in ref_biases.items():
+            node = nncf_graph.get_node_by_name(ref_name)
+            ref_value = np.array(ref_value)
+            curr_value = get_bias_value(node, nncf_graph, model)
+            curr_value = curr_value.reshape(ref_value.shape)
+            assert np.all(np.isclose(curr_value, ref_value, atol=0.0001)), f"{curr_value} != {ref_value}"

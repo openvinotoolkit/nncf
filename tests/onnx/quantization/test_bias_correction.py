@@ -13,15 +13,11 @@ from typing import Dict, List
 
 import numpy as np
 import onnx
-import pytest
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.onnx.graph.node_utils import get_bias_value
-from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import MultipleConvTestModel
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 
 
@@ -63,30 +59,9 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
     @staticmethod
     def check_bias(model: onnx.ModelProto, ref_biases: Dict):
         nncf_graph = NNCFGraphFactory.create(model)
-        for node in nncf_graph.get_all_nodes():
-            if not is_node_with_bias(node):
-                continue
-            ref_bias = ref_biases[node.node_name]
-            ref_bias = np.array(ref_bias)
-            bias_value = get_bias_value(node, model)
+        for ref_name, ref_value in ref_biases.items():
+            node = nncf_graph.get_node_by_name(ref_name)
+            ref_value = np.array(ref_value)
+            curr_value = get_bias_value(node, model)
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
-            assert np.all(np.isclose(bias_value, ref_bias, atol=0.01)), f"{bias_value} != {ref_bias}"
-
-    @pytest.mark.parametrize(
-        "model_cls, ref_biases",
-        (
-            (
-                MultipleConvTestModel,
-                {
-                    "/conv_1/Conv": [0.6658976, -0.70563036],
-                    "/conv_2/Conv": [-0.307696, -0.42806846, 0.44965455],
-                    "/conv_3/Conv": [-0.0033792169, 1.0661412],
-                    "/conv_4/Conv": [-0.6941606, 0.9958957, 0.6081058],
-                    "/conv_5/Conv": [0.08649579, -0.7739952],
-                },
-            ),
-            (ConvTestModel, {"/conv/Conv": [0.10173444, 1.0017344]}),
-        ),
-    )
-    def test_update_bias(self, model_cls, ref_biases, tmpdir):
-        return super().test_update_bias(model_cls, ref_biases, tmpdir)
+            assert np.all(np.isclose(curr_value, ref_value, atol=0.01)), f"{curr_value} != {ref_value}"

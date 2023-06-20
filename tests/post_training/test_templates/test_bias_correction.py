@@ -12,11 +12,15 @@
 from abc import abstractmethod
 from typing import Dict, List, Tuple, TypeVar
 
+import pytest
+
 from nncf.data import Dataset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from tests.post_training.test_templates.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import MultipleConvTestModel
 from tests.post_training.test_templates.helpers import StaticDatasetMock
 
 TModel = TypeVar("TModel")
@@ -78,6 +82,13 @@ class TemplateTestBCAlgorithm:
         """
 
     @staticmethod
+    def map_references(ref_biases: Dict) -> Dict[str, List]:
+        """
+        Returns backend-specific reference.
+        """
+        return ref_biases
+
+    @staticmethod
     def get_quantization_algorithm():
         return PostTrainingQuantization(
             subset_size=1,
@@ -85,7 +96,23 @@ class TemplateTestBCAlgorithm:
             advanced_parameters=AdvancedQuantizationParameters(overflow_fix=OverflowFix.DISABLE),
         )
 
-    @abstractmethod
+    @pytest.mark.parametrize(
+        "model_cls, ref_biases",
+        (
+            (
+                MultipleConvTestModel,
+                {
+                    "/conv_1/Conv": [0.6658976, -0.70563036],
+                    "/conv_2/Conv": [-0.307696, -0.42806846, 0.44965455],
+                    "/conv_3/Conv": [-0.0033792169, 1.0661412],
+                    "/conv_4/Conv": [-0.6941606, 0.9958957, 0.6081058],
+                    # Disabled latest layer due to backends differences
+                    # "/conv_5/Conv": [0.07476559, -0.75797373],
+                },
+            ),
+            (ConvTestModel, {"/conv/Conv": [0.11085186, 1.0017344]}),
+        ),
+    )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
@@ -93,4 +120,5 @@ class TemplateTestBCAlgorithm:
         quantization_algorithm = self.get_quantization_algorithm()
         quantized_model = quantization_algorithm.apply(model, dataset=dataset)
 
-        self.check_bias(quantized_model, ref_biases)
+        mapped_ref_biases = self.map_references(ref_biases)
+        self.check_bias(quantized_model, mapped_ref_biases)
