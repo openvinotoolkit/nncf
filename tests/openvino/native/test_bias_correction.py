@@ -13,13 +13,16 @@ from typing import Dict, List
 
 import numpy as np
 import openvino.runtime as ov
+import pytest
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
-from tests.post_training.test_bias_correction import TemplateTestBCAlgorithm
+from tests.post_training.test_templates.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import MultipleConvTestModel
+from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.shared.command import Command
 
 
@@ -66,3 +69,22 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
             bias_value = get_bias_value(node, nncf_graph, model)
             bias_value = bias_value.reshape(ref_bias.shape)
             assert np.all(np.isclose(bias_value, ref_bias, atol=0.0001)), f"{bias_value} != {ref_bias}"
+
+    @pytest.mark.parametrize(
+        "model_cls, ref_biases",
+        (
+            (
+                MultipleConvTestModel,
+                {
+                    "/conv_1/Conv/WithoutBiases": [0.6658976, -0.70563036],
+                    "/conv_2/Conv/WithoutBiases": [-0.307696, -0.42806846, 0.44965455],
+                    "/conv_3/Conv/WithoutBiases": [-0.0033792169, 1.0661412],
+                    "/conv_4/Conv/WithoutBiases": [-0.6941606, 0.9958957, 0.6081058],
+                    "/conv_5/Conv/WithoutBiases": [0.07476559, -0.75797373],
+                },
+            ),
+            (ConvTestModel, {"/conv/Conv/WithoutBiases": [0.11085186, 1.0017344]}),
+        ),
+    )
+    def test_update_bias(self, model_cls, ref_biases, tmpdir):
+        return super().test_update_bias(model_cls, ref_biases, tmpdir)

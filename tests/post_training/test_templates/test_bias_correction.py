@@ -12,16 +12,12 @@
 from abc import abstractmethod
 from typing import Dict, List, Tuple, TypeVar
 
-import pytest
-
 from nncf.data import Dataset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from tests.post_training.helpers import ConvTestModel
-from tests.post_training.helpers import MultipleConvTestModel
-from tests.post_training.helpers import StaticDatasetMock
+from tests.post_training.test_templates.helpers import StaticDatasetMock
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -89,22 +85,7 @@ class TemplateTestBCAlgorithm:
             advanced_parameters=AdvancedQuantizationParameters(overflow_fix=OverflowFix.DISABLE),
         )
 
-    @pytest.mark.parametrize(
-        "model_cls, ref_biases",
-        (
-            (
-                MultipleConvTestModel,
-                {
-                    "/conv_1/Conv/WithoutBiases": [0.6658976, -0.70563036],
-                    "/conv_2/Conv/WithoutBiases": [-0.307696, -0.42806846, 0.44965455],
-                    "/conv_3/Conv/WithoutBiases": [-0.0033792169, 1.0661412],
-                    "/conv_4/Conv/WithoutBiases": [-0.6941606, 0.9958957, 0.6081058],
-                    "/conv_5/Conv/WithoutBiases": [0.07476559, -0.75797373],
-                },
-            ),
-            (ConvTestModel, {"/conv/Conv/WithoutBiases": [0.10173444, 1.0017344]}),
-        ),
-    )
+    @abstractmethod
     def test_update_bias(self, model_cls, ref_biases, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())

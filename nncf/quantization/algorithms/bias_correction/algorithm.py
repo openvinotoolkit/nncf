@@ -21,6 +21,7 @@ from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -265,9 +266,12 @@ class BiasCorrection(Algorithm):
         # In case the outputs were not found during the collection of statistics nodes,
         # we use the latter as the outputs of the subgraph.
         subgraph_output_nodes = subgraph_output_nodes if subgraph_output_nodes else statistic_nodes
+        subgraph_output_nodes = [
+            n.node_name for n in subgraph_output_nodes if NNCFGraphNodeType.OUTPUT_NODE not in n.node_name
+        ]
         subgraph_data = {
-            "subgraph_input_names": {n.node_name for n in subgraph_input_nodes},
-            "subgraph_output_names": {n.node_name for n in subgraph_output_nodes},
+            "subgraph_input_names": [n.node_name for n in subgraph_input_nodes],
+            "subgraph_output_names": subgraph_output_nodes,
         }
 
         return subgraph_data
