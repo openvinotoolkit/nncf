@@ -60,7 +60,8 @@ class IgnoredScope:
     :type patterns: List[str]
     :param types: List of ignored operation types.
     :type types: List[str]
-    :param validate: If set to True, then a RuntimeError will be raised if any ignored scope does not match in the model graph.
+    :param validate: If set to True, then a RuntimeError will be raised if any ignored scope does not match
+      in the model graph.
     :type types: bool
     """
 
