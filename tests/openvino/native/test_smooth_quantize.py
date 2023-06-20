@@ -9,14 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict
 
 import numpy as np
 import openvino.runtime as ov
-import pytest
+import torch
 
-from tests.openvino.native.models import LinearModel
 from tests.post_training.test_templates.test_smooth_quantize import TemplateTestSQAlgorithm
+from tests.shared.command import Command
 
 
 class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
@@ -28,9 +28,20 @@ class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
     def get_transform_fn() -> Callable:
         def transform_fn(data_item):
             tensor, _ = data_item
-            return {"Input": tensor}
+            return {"input.1": tensor}
 
         return transform_fn
+
+    @staticmethod
+    def backend_specific_model(model: bool, tmp_dir: str):
+        onnx_path = f"{tmp_dir}/model.onnx"
+        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
+        ov_path = f"{tmp_dir}/model.xml"
+        runner = Command(f"mo -m {onnx_path} -o {tmp_dir} -n model")
+        runner.run()
+        core = ov.Core()
+        ov_model = core.read_model(ov_path)
+        return ov_model
 
     @staticmethod
     def check_scales(model: ov.Model, reference_values: Dict[str, np.ndarray]) -> None:
@@ -42,21 +53,6 @@ class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
             assert const_node.get_type_name() == "Constant"
 
             value = const_node.data
+            ref_value = np.array(ref_value)
             assert value.shape == ref_value.shape
             assert np.all(np.isclose(value, ref_value, atol=0.0001)), f"{value} != {ref_value}"
-
-    @staticmethod
-    def get_dataset_shape(model: ov.Model) -> Tuple[int]:
-        return tuple(model.input(0).shape)
-
-    @pytest.mark.parametrize(
-        "model, reference_values",
-        (
-            (
-                LinearModel().ov_model,
-                {"Reshape/smooth_quant_multiply": np.array([[[0.984319, 1.032351, 1.1578148, 1.0598988]]])},
-            ),
-        ),
-    )
-    def test_smooth_quant_algo(self, model, reference_values):
-        return super().test_smooth_quant_algo(model, reference_values)

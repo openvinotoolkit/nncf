@@ -10,12 +10,15 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Callable, Dict, Tuple, TypeVar
+from typing import Callable, Dict, TypeVar
+
+import pytest
 
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from tests.post_training.test_templates.helpers import LinearModel
 from tests.post_training.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
@@ -36,16 +39,16 @@ class TemplateTestSQAlgorithm:
 
     @staticmethod
     @abstractmethod
-    def check_scales(model: TModel, reference_values: Dict[str, TTensor]) -> None:
+    def backend_specific_model(model: TModel, tmp_dir: str) -> TModel:
         """
-        Checking scales from model with references.
+        Return backend specific model.
         """
 
     @staticmethod
     @abstractmethod
-    def get_dataset_shape(model: TModel) -> Tuple[int]:
+    def check_scales(model: TModel, reference_values: Dict[str, TTensor]) -> None:
         """
-        Returns input shape for dataset.
+        Checking scales from model with references.
         """
 
     @staticmethod
@@ -56,9 +59,18 @@ class TemplateTestSQAlgorithm:
             advanced_parameters=AdvancedQuantizationParameters(overflow_fix=OverflowFix.DISABLE),
         )
 
-    def test_smooth_quant_algo(self, model, reference_values):
-        input_shape = self.get_dataset_shape(model)
-        dataset = get_static_dataset(input_shape, self.get_transform_fn(), self.fn_to_type)
+    @pytest.mark.parametrize(
+        "model_cls, reference_values",
+        (
+            (
+                LinearModel,
+                {"/Reshape/smooth_quant_multiply": [[[1.0708091, 1.0854627, 1.2070981, 1.1213733]]]},
+            ),
+        ),
+    )
+    def test_smooth_quant_algo(self, model_cls, reference_values, tmpdir):
+        model = self.backend_specific_model(model_cls(), tmpdir)
+        dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
         quantization_algorithm = self.get_quantization_algorithm()
         quantized_model = quantization_algorithm.apply(model, dataset=dataset)
