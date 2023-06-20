@@ -809,19 +809,17 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_imp
     return quantized_model
 
 
-# TODO(andrey-churkin): This class is a workaround for the proper integration
-# with the POT AA implementation.
 class ACDataset:
-    def __init__(self, data_source, transform_func):
-        self._data_source = data_source
-        self._indices = list(range(data_source.full_size))
+    def __init__(self, model_evaluator, transform_func):
+        self._model_evaluator = model_evaluator
+        self._indices = list(range(model_evaluator.dataset.full_size))
         self._transform_func = transform_func
 
     def get_data(self, indices: Optional[List[int]] = None):
         return DataProvider(self._indices, None, indices)
 
     def get_inference_data(self, indices: Optional[List[int]] = None):
-        return DataProvider(self._data_source, self._transform_func, indices)
+        return DataProvider(ACDattasetWrapper(self._model_evaluator), self._transform_func, indices)
 
 
 def initialize_model_and_evaluator(xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str):
@@ -849,7 +847,7 @@ def quantize_model_with_accuracy_control(
     transform_fn = get_transform_fn(model_evaluator, ov_model)
     dataset = get_dataset(model_evaluator, quantization_parameters)
     calibration_dataset = nncf.Dataset(dataset, transform_fn)
-    validation_dataset = ACDataset(model_evaluator.dataset, transform_fn)
+    validation_dataset = ACDataset(model_evaluator, transform_fn)
 
     if get_allow_reshape_input(accuracy_checker_config):
         ov_model = maybe_reshape_model(
