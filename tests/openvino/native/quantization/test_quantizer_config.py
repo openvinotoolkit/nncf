@@ -21,10 +21,10 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolut
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
 from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from tests.post_training.models import NNCFGraphToTest
-from tests.post_training.models import NNCFGraphToTestDepthwiseConv
-from tests.post_training.models import NNCFGraphToTestSumAggregation
-from tests.post_training.test_quantizer_config import TemplateTestQuantizerConfig
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
+from tests.post_training.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
 ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
 

@@ -20,6 +20,7 @@ import pytest
 from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
 from tests.cross_fw.install.conftest import TESTED_BACKENDS
+from tests.shared.case_collection import skip_if_backend_not_selected
 from tests.shared.helpers import create_venv_with_nncf
 from tests.shared.helpers import get_pip_executable_with_venv
 from tests.shared.helpers import get_python_executable_with_venv
@@ -94,11 +95,6 @@ def backend_to_test_(request, backend_clopt: List[str]):
         else:
             backends_to_test.add(be)
     return request.param
-
-
-def skip_if_backend_not_selected(backend: str, backends_from_cl: List[str]):
-    if "all" not in backends_from_cl and backend not in backends_from_cl:
-        pytest.skip("not selected for testing")
 
 
 @pytest.mark.parametrize("backend", TESTED_BACKENDS)

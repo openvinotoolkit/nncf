@@ -510,6 +510,10 @@ def test_quantize_outputs():
     config["compression"]["quantize_outputs"] = True
     register_bn_adaptation_init_args(config)
     model, qctrl = create_compressed_model_and_algo_for_test(model, config)
+    # The quantizers below will not have been set up due to quantizer propagation,
+    # and no configuration can be determined for them from the HW config. The
+    # configuration is also missing in this case in the NNCFConfig, so will
+    # set up a quantizer with default config.
     REF_QUANTIZED_OUTPUT_MODULE_SCOPES = [
         "QuantizeOutputsTestModel/NNCFConv2d[conv1]/conv2d_0|OUTPUT",
         "QuantizeOutputsTestModel/NNCFConv2d[conv2]/conv2d_0|OUTPUT",
@@ -558,6 +562,44 @@ def test_quantize_outputs_with_scope_overrides():
 
     assert output_quantizers[0].num_bits == 4
     assert isinstance(output_quantizers[0], AsymmetricQuantizer)
+
+
+class IntermediateOutputModel(nn.Module):
+    """
+    When quantized with "quantize_outputs": False (which is the default behaviour),
+    the activation quantizer of `conv2` shall not propagate to the output of `conv1`,
+    but shall stay as a pre-hook to the `conv2`, so as not to impact the
+    return value of `conv1` which is also an intermediate output of the model.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv2 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+
+    def forward(self, x):
+        x1 = self.conv1(x)
+        return x1, self.conv2(x1)
+
+
+def test_intermediate_output_model():
+    config = get_quantization_config_without_range_init()
+    config["input_info"] = [
+        {
+            "sample_size": [2, 3, 32, 32],
+        }
+    ]
+    model = IntermediateOutputModel()
+    config["compression"]["quantize_outputs"] = False
+    register_bn_adaptation_init_args(config)
+    model, qctrl = create_compressed_model_and_algo_for_test(model, config)
+    activation_quantizer_scopes = [str(aq_id) for aq_id in qctrl.non_weight_quantizers]
+    assert Counter(activation_quantizer_scopes) == Counter(
+        [
+            "/nncf_model_input_0|OUTPUT",  # activation quantizer of conv1
+            "IntermediateOutputModel/NNCFConv2d[conv2]/conv2d_0|INPUT0",
+        ]
+    )  # act. quant. of conv2
 
 
 def test_debug_mode():

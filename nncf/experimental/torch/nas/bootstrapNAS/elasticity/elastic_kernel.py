@@ -168,18 +168,26 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
     and modifies in the way that kernel size is changing to a given value.
     """
 
-    def __init__(self, max_kernel_size: KernelSizeType, node_name: NNCFNodeName, params: ElasticKernelParams):
+    def __init__(
+        self,
+        max_kernel_size: KernelSizeType,
+        node_name: NNCFNodeName,
+        params: ElasticKernelParams,
+        original_padding_value: Optional[int] = 0,
+    ):
         """
         Constructor.
 
         :param max_kernel_size: maximum kernel size value in the original operation.
         :param node_name: string representation of operation address. It's used for more informative messages only.
         :param params: parameters to configure elastic kernel for the operation.
+        :param original_padding_value: the padding value used in the original model.
         """
         super().__init__(max_kernel_size=max_kernel_size, node_name=node_name)
         self._max_num_params = params.max_num_kernels
+        self._original_padding_value = original_padding_value
         # Create kernel_size_list based on max module kernel size
-        self._kernel_size_list = self.generate_kernel_size_list(max_kernel_size)
+        self._kernel_size_list = self.generate_kernel_size_list(max_kernel_size, original_padding_value)
         self._ks_set = list(set(self.kernel_size_list))
         self._ks_set.sort()
 
@@ -193,11 +201,14 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         for name, param in scale_params.items():
             self.register_parameter(name, param)
 
-    def generate_kernel_size_list(self, max_kernel_size: KernelSizeType) -> List[KernelSizeType]:
+    def generate_kernel_size_list(
+        self, max_kernel_size: KernelSizeType, original_padding_value: int
+    ) -> List[KernelSizeType]:
         """
         Generates list of available kernel size values.
 
         :param max_kernel_size: maximum value of kernel size, it's supposed to be odd
+        :param original_padding_value: the padding value used in the original model.
         :return: list of kernel size values.
         """
         DEFAULT_KERNEL_SIZE_STEP = 2
@@ -206,7 +217,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
             return [1]
         kernel = max_kernel_size
         ks_list = []
-        while kernel > 1:
+        while kernel >= max(max_kernel_size - 2 * original_padding_value, 3):
             ks_list.append(kernel)
             kernel -= DEFAULT_KERNEL_SIZE_STEP
             if self._max_num_params == len(ks_list):
@@ -281,6 +292,10 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
             filters = start_filter
         return filters
 
+    @property
+    def original_padding_value(self) -> int:
+        return self._original_padding_value
+
 
 class ElasticKernelPaddingAdjustment:
     """
@@ -293,7 +308,10 @@ class ElasticKernelPaddingAdjustment:
         self._elastic_k_w_op = elastic_k_w_op
 
     def __call__(self, _) -> int:
-        return self._elastic_k_w_op.get_active_kernel_size() // 2
+        shift_padding_value = (
+            self._elastic_k_w_op.max_kernel_size - self._elastic_k_w_op.get_active_kernel_size()
+        ) // 2
+        return self._elastic_k_w_op.original_padding_value - shift_padding_value
 
 
 class ElasticKernelInputForExternalPadding:
@@ -464,7 +482,8 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
             layer_attrs = node.layer_attributes
             assert isinstance(layer_attrs, ConvolutionLayerAttributes), "Conv2D can have elastic kernel only"
             max_kernel_size = layer_attrs.kernel_size[0]
-            elastic_kernel_op = ElasticKernelConv2DOp(max_kernel_size, node_name, self._params)
+            original_padding_values = layer_attrs.padding_values[0]
+            elastic_kernel_op = ElasticKernelConv2DOp(max_kernel_size, node_name, self._params, original_padding_values)
             elastic_kernel_op.to(device)
             update_conv_params_op = UpdateWeight(elastic_kernel_op)
             transformation_commands.append(

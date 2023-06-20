@@ -19,7 +19,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.fast_bias_correction.openvino_backend import OVFastBiasCorrectionAlgoBackend
-from tests.post_training.test_fast_bias_correction import TemplateTestFBCAlgorithm
+from tests.post_training.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
 from tests.shared.command import Command
 
 

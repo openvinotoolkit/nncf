@@ -19,10 +19,10 @@ from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
-from tests.post_training.models import NNCFGraphToTest
-from tests.post_training.models import NNCFGraphToTestDepthwiseConv
-from tests.post_training.models import NNCFGraphToTestSumAggregation
-from tests.post_training.test_quantizer_config import TemplateTestQuantizerConfig
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
+from tests.post_training.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
 ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
 

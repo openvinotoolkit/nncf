@@ -30,6 +30,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import Bootstra
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSchedulerParams
 from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import DEFAULT_STAGE_LR_RATE
 from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
+from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.torch.helpers import MockModel
 
@@ -138,6 +139,7 @@ class TestScheduler:
             ProgressiveShrinkingBuilder.DEFAULT_PROGRESSIVITY,
             schedule_params,
             lr_schedule_config,
+            ZeroCompressionLoss(next(mock_model.parameters()).device),
         )
         scheduler = training_algo.scheduler
         lr_scheduler = GlobalLRScheduler(mocker.stub(), mocker.stub(), base_lr=None, num_epochs=None)

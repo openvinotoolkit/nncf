@@ -19,14 +19,17 @@ import openvino.runtime as ov
 import torch
 from tqdm import tqdm
 from ultralytics import YOLO
-from ultralytics.yolo.configs import get_config
-from ultralytics.yolo.data.utils import check_dataset_yaml
+from ultralytics.yolo.cfg import get_cfg
+from ultralytics.yolo.data.utils import check_det_dataset
 from ultralytics.yolo.engine.validator import BaseValidator as Validator
-from ultralytics.yolo.utils import DEFAULT_CONFIG
+from ultralytics.yolo.utils import DATASETS_DIR
+from ultralytics.yolo.utils import DEFAULT_CFG
 from ultralytics.yolo.utils import ops
 from ultralytics.yolo.utils.metrics import ConfusionMatrix
 
 import nncf
+
+ROOT = Path(__file__).parent.resolve()
 
 
 def validate(
@@ -50,7 +53,7 @@ def validate(
         else:
             preds = [
                 torch.from_numpy(results[compiled_model.output(0)]),
-                [torch.from_numpy(results[compiled_model.output(1)])],
+                torch.from_numpy(results[compiled_model.output(1)]),
             ]
         preds = validator.postprocess(preds)
         validator.update_metrics(preds, batch)
@@ -88,12 +91,12 @@ def print_statistics(stats: np.ndarray, total_images: int, total_objects: int) -
 
 
 def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.data.DataLoader]:
-    data = check_dataset_yaml(args.data)
-    dataset = data["val"]
+    validator = model.ValidatorClass(args)
+    validator.data = check_det_dataset(args.data)
+    dataset = validator.data["val"]
     print(f"{dataset}")
 
-    validator = model.ValidatorClass(args)
-    data_loader = validator.get_dataloader("../datasets/coco128-seg", 1)
+    data_loader = validator.get_dataloader(f"{DATASETS_DIR}/coco128-seg", 1)
 
     validator = model.ValidatorClass(args)
 
@@ -119,7 +122,7 @@ def benchmark_performance(model_path, config) -> float:
 
 
 def prepare_openvino_model(model: YOLO, model_name: str) -> Tuple[ov.Model, Path]:
-    model_path = Path(f"{model_name}_openvino_model/{model_name}.xml")
+    model_path = Path(f"{ROOT}/{model_name}_openvino_model/{model_name}.xml")
     if not model_path.exists():
         model.export(format="openvino", dynamic=True, half=False)
 
@@ -156,7 +159,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
             else:
                 preds = [
                     torch.from_numpy(results[compiled_model.output(0)]),
-                    [torch.from_numpy(results[compiled_model.output(1)])],
+                    torch.from_numpy(results[compiled_model.output(1)]),
                 ]
             preds = validator.postprocess(preds)
             validator.update_metrics(preds, batch)
@@ -204,8 +207,8 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
 def main():
     MODEL_NAME = "yolov8n-seg"
 
-    model = YOLO(f"{MODEL_NAME}.pt")
-    args = get_config(config=DEFAULT_CONFIG)
+    model = YOLO(f"{ROOT}/{MODEL_NAME}.pt")
+    args = get_cfg(cfg=DEFAULT_CFG)
     args.data = "coco128-seg.yaml"
 
     # Prepare validation dataset and helper
@@ -217,7 +220,7 @@ def main():
     # Quantize mode in OpenVINO representation
     quantized_model = quantize_ac(ov_model, data_loader, validator)
 
-    quantized_model_path = Path(f"{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
+    quantized_model_path = Path(f"{ROOT}/{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
     ov.serialize(quantized_model, str(quantized_model_path))
 
     # Validate FP32 model

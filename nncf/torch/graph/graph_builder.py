@@ -96,6 +96,7 @@ class GraphConverter:
                 input_port_id=dynamic_graph_edge.input_port_id,
                 output_port_id=dynamic_graph_edge.output_port_id,
                 dtype=dynamic_graph_edge.dtype,
+                edge_multiplicity=dynamic_graph_edge.edge_multiplicity,
             )
 
         set_nodes_attributes_in_nncf_graph(nncf_graph)
