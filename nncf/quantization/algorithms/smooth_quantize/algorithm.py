@@ -19,6 +19,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, TypeVar
 
@@ -103,7 +104,7 @@ class SmoothQuantize(Algorithm):
             nncf_logger.info("Skipping SmoothQuantize algorithm because alfa parameter is negative.")
             return model
 
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(nncf_graph)
         model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
@@ -158,16 +159,13 @@ class SmoothQuantize(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: Dictionary with the source info as key and grouped nodes as value.
         """
-        groups = {}
+        groups = defaultdict(list)
         for node_data in nodes_to_smooth:
             node_to_smooth = node_data["node_to_smooth"]
             input_act_port = node_data["input_act_port"]
 
             source_node = nncf_graph.get_input_edges(node_to_smooth)[input_act_port].from_node
             group_id = (source_node, input_act_port)
-
-            if group_id not in groups:
-                groups[group_id] = []
             groups[group_id].append(node_to_smooth)
 
         return groups
@@ -230,6 +228,7 @@ class SmoothQuantize(Algorithm):
                     algorithm=SmoothQuantize,
                 )
             )
+        self.nncf_graph = nncf_graph
         return statistic_container
 
     def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph) -> List[Dict]:
