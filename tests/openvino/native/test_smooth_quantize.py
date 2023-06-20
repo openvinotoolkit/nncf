@@ -42,6 +42,7 @@ class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
             assert const_node.get_type_name() == "Constant"
 
             value = const_node.data
+            assert value.shape == ref_value.shape
             assert np.all(np.isclose(value, ref_value, atol=0.0001)), f"{value} != {ref_value}"
 
     @staticmethod
@@ -53,7 +54,7 @@ class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
         (
             (
                 LinearModel().ov_model,
-                {"Reshape/smooth_quant_multiply": np.array([0.984319, 1.032351, 1.1578148, 1.0598988])},
+                {"Reshape/smooth_quant_multiply": np.array([[[0.984319, 1.032351, 1.1578148, 1.0598988]]])},
             ),
         ),
     )
