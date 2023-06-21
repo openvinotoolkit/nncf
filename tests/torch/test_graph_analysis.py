@@ -57,7 +57,7 @@ def test_graph_pattern_io_building():
             output_port_id=output_port_id,
             tensor_shape=[1, 1, 1, 1],
             dtype=Dtype.FLOAT,
-            edge_multiplicity=1,
+            parallel_input_port_ids=[],
         )
 
     def get_node(name: NNCFNodeName):

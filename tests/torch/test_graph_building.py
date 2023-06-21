@@ -734,3 +734,23 @@ def test_integer_path_marking():
 def test_trace_output_with_no_tensors():
     output = None
     trace_tensors(output, MagicMock())
+
+
+class ModelWithRepeatInputs(torch.nn.Module):
+    def forward(self, x):
+        y = x * 2
+        return torch.stack([x, y, x, y])
+
+
+def test_dynamic_graph_assigns_contiguous_input_ports_for_edges_with_multiplicity():
+    input_infos = [
+        ModelInputInfo([1, 3, 3, 3]),
+    ]
+    tracer = GraphTracer(create_dummy_forward_fn(input_infos, with_input_tracing=True, with_output_tracing=True))
+    dynamic_graph = tracer.trace_graph(ModelWithRepeatInputs())
+    stack_in_edges = [e for e in dynamic_graph.get_all_edges() if e.to_node_id == 2]  # node id 2 == torch.stack
+    all_input_port_ids = set()
+    for edge in stack_in_edges:
+        all_input_port_ids.add(edge.input_port_id)
+        all_input_port_ids.update(edge.parallel_input_port_ids)
+    assert all_input_port_ids == {0, 1, 2, 3}
