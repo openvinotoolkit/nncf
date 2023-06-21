@@ -163,7 +163,6 @@ class MinMaxQuantization(Algorithm):
                 quantizer_group, preset, self._quantization_params[quantizer_group]
             )
 
-        self.nncf_graph = None
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
         self._quantization_target_points_to_qconfig = (
@@ -442,7 +441,9 @@ class MinMaxQuantization(Algorithm):
             )
         return activation_quantization_target_point
 
-    def _get_quantization_target_points(self, model: TModel) -> OrderedDict[TargetPoint, QuantizerConfig]:
+    def _get_quantization_target_points(
+        self, model: TModel, nncf_graph: NNCFGraph
+    ) -> OrderedDict[TargetPoint, QuantizerConfig]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
@@ -454,8 +455,6 @@ class MinMaxQuantization(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: Set of Quantization Target Points.
         """
-        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
-
         if self._quantization_target_points_to_qconfig:
             return self._quantization_target_points_to_qconfig, self._unified_scale_groups
         backend = get_backend(model)
@@ -584,9 +583,9 @@ class MinMaxQuantization(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         transformation_layout = TransformationLayout()
-        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
+        nncf_graph = NNCFGraphFactory.create(model)
         model_transformer = ModelTransformerFactory.create(model)
-        quantization_target_points, unified_scale_groups = self._get_quantization_target_points(model)
+        quantization_target_points, unified_scale_groups = self._get_quantization_target_points(model, nncf_graph)
         quantization_points_overflow_fix = self._get_quantization_points_overflow_fix(
             self._overflow_fix, quantization_target_points, nncf_graph
         )
@@ -656,9 +655,9 @@ class MinMaxQuantization(Algorithm):
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
+        nncf_graph = NNCFGraphFactory.create(model)
 
-        quantization_target_points, _ = self._get_quantization_target_points(model)
+        quantization_target_points, _ = self._get_quantization_target_points(model, nncf_graph)
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
             nncf_logger.debug(
