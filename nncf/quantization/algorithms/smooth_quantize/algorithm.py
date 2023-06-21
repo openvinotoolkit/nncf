@@ -104,7 +104,7 @@ class SmoothQuantize(Algorithm):
             nncf_logger.info("Skipping SmoothQuantize algorithm because alfa parameter is negative.")
             return model
 
-        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
+        nncf_graph = NNCFGraphFactory.create(model)
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(nncf_graph)
         model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
@@ -228,7 +228,6 @@ class SmoothQuantize(Algorithm):
                     algorithm=SmoothQuantize,
                 )
             )
-        self.nncf_graph = nncf_graph
         return statistic_container
 
     def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph) -> List[Dict]:
