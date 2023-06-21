@@ -50,12 +50,7 @@ class SmoothQuant(Algorithm):
     via the insertion of nodes with smoothing scales for weighted layers.
     """
 
-    def __init__(
-        self,
-        subset_size: int = 300,
-        inplace_statistics: bool = True,
-        alpha: Optional[int] = 0.95
-    ):
+    def __init__(self, subset_size: int = 300, inplace_statistics: bool = True, alpha: Optional[int] = 0.95):
         """
         :param subset_size: Size of a subset for the statistics collection,
             default is 300.
