@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
@@ -96,7 +97,7 @@ class BiasCorrection(Algorithm):
         self.nncf_graph = None
         self._backend_entity = None
         self._collected_stat_inputs_map = {}
-        self._fp_inputs = {}
+        self._fp_inputs = defaultdict(list)
 
         if self.apply_for_all_nodes:
             raise RuntimeError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
@@ -266,12 +267,12 @@ class BiasCorrection(Algorithm):
         # In case the outputs were not found during the collection of statistics nodes,
         # we use the latter as the outputs of the subgraph.
         subgraph_output_nodes = subgraph_output_nodes if subgraph_output_nodes else statistic_nodes
-        subgraph_output_nodes = [
+        subgraph_output_names = [
             n.node_name for n in subgraph_output_nodes if NNCFGraphNodeType.OUTPUT_NODE not in n.node_name
         ]
         subgraph_data = {
-            "subgraph_input_names": [n.node_name for n in subgraph_input_nodes],
-            "subgraph_output_names": subgraph_output_nodes,
+            "subgraph_input_names": set(n.node_name for n in subgraph_input_nodes),
+            "subgraph_output_names": set(subgraph_output_names),
         }
 
         return subgraph_data
@@ -401,8 +402,6 @@ class BiasCorrection(Algorithm):
             new_q_output = engine.infer(feed_dict)
             for output_node_name in subgraph_data["subgraph_output_names"]:
                 output_tensor_name = self._backend_entity.get_output_name(model, output_node_name)
-                if output_node_name not in self._fp_inputs:
-                    self._fp_inputs[output_node_name] = []
                 self._fp_inputs[output_node_name].append(new_q_output[output_tensor_name])
 
     def _remove_unnecessary_stats(self, position: int, subgraphs_data: Dict[str, Dict]) -> None:
@@ -529,11 +528,13 @@ class BiasCorrection(Algorithm):
         # Then we need also to collect model input statistics to prevent cases when nodes with bias have no input data.
         for input_node in model_inputs:
             # We assume that input node has only one output port
-            output_port_id = 0
+            input_name = input_node.node_name
+            if input_name in statistic_container:
+                continue
             for next_layer in nncf_graph.get_next_nodes(input_node):
-                self._collected_stat_inputs_map[next_layer.node_name] = (input_node.node_name, output_port_id)
+                self._collected_stat_inputs_map[next_layer.node_name] = (input_node.node_name, OUTPUT_PORT_OF_NODE)
             statistic_point = self._backend_entity.target_point(
-                TargetType.POST_LAYER_OPERATION, input_node.node_name, port_id=output_port_id
+                TargetType.POST_LAYER_OPERATION, input_node.node_name, port_id=OUTPUT_PORT_OF_NODE
             )
             stat_collector = self._backend_entity.raw_statistic_collector(
                 num_samples=self.subset_size, inplace=self.inplace_statistics
