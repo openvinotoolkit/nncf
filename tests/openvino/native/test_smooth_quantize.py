@@ -33,7 +33,7 @@ class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
         return transform_fn
 
     @staticmethod
-    def backend_specific_model(model: bool, tmp_dir: str):
+    def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         ov_path = f"{tmp_dir}/model.xml"
