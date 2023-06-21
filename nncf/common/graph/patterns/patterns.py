@@ -346,6 +346,7 @@ class HWFusedPatternNames(Enum):
     LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_scale_shift_activations")
     LINEAR_CONST_MULTIPLY = PatternDesc("linear_const_multiply")
     LINEAR_SQUEEZE_ACTIVATIONS = PatternDesc("linear_squeeze_activations")
+    LINEAR_ACTIVATIONS_UNSQUEEZE_BN_SQUEEZE = PatternDesc("linear_activations_unsqueeze_bn_squeeze")
     SCALE_SHIFT_ACTIVATIONS = PatternDesc("scale_shift_activations")
     MVN_SCALE_SHIFT_ACTIVATIONS = PatternDesc("mvn_scale_shift_activations")
 
