@@ -35,16 +35,16 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.smooth_quantize.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.smooth_quant.backend import ALGO_BACKENDS
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 STATISTIC_BRANCH_KEY = "abs_max"
 
 
-class SmoothQuantize(Algorithm):
+class SmoothQuant(Algorithm):
     """
-    Post-training SmoothQuantize algorithm implementation.
+    Post-training SmoothQuant algorithm implementation.
 
     The main purpose of this algorithm is to reduce activation quantization error
     via the insertion of nodes with smoothing scales for weighted layers.
@@ -54,8 +54,7 @@ class SmoothQuantize(Algorithm):
         self,
         subset_size: int = 300,
         inplace_statistics: bool = True,
-        alpha: Optional[int] = 0.95,
-        backend_params: Optional[Dict[str, Any]] = None,
+        alpha: Optional[int] = 0.95
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -65,12 +64,10 @@ class SmoothQuantize(Algorithm):
             to True.
         :param alpha: The parameter that regulates the calculation of the scale.
             The default value is 0.95. Negative value switches off the algorithm.
-        :param backend_params: Backend specific parameters.
         """
         super().__init__()
         self._subset_size = subset_size
         self._inplace_statistics = inplace_statistics
-        self._backend_params = backend_params
         self._backend_entity = None
         self._alpha = alpha
 
@@ -86,9 +83,9 @@ class SmoothQuantize(Algorithm):
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.smooth_quantize.openvino_backend import OVSmoothQuantizeAlgoBackend
+            from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 
-            self._backend_entity = OVSmoothQuantizeAlgoBackend()
+            self._backend_entity = OVSmoothQuantAlgoBackend()
         else:
             raise RuntimeError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
@@ -101,7 +98,7 @@ class SmoothQuantize(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         if self._alpha < 0:
-            nncf_logger.info("Skipping SmoothQuantize algorithm because alfa parameter is negative.")
+            nncf_logger.info("Skipping SmoothQuant algorithm because alfa parameter is negative.")
             return model
 
         nncf_graph = NNCFGraphFactory.create(model)
@@ -184,13 +181,13 @@ class SmoothQuantize(Algorithm):
 
         def filter_func(point: StatisticPoint) -> bool:
             return (
-                SmoothQuantize in point.algorithm_to_tensor_collectors
+                SmoothQuant in point.algorithm_to_tensor_collectors
                 and point.target_point.type == TargetType.PRE_LAYER_OPERATION
                 and point.target_point.port_id == act_port
             )
 
         statistics_for_node = []
-        for tensor_collector in statistic_points.get_algo_statistics_for_node(node_name, filter_func, SmoothQuantize):
+        for tensor_collector in statistic_points.get_algo_statistics_for_node(node_name, filter_func, SmoothQuant):
             statistics_for_node.append(tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY])
         return statistics_for_node
 
@@ -199,7 +196,7 @@ class SmoothQuantize(Algorithm):
 
         if self._alpha < 0:
             nncf_logger.debug(
-                "Skipping statistics collection for SmoothQuantize algorithm because alfa parameter is negative."
+                "Skipping statistics collection for SmoothQuant algorithm because alfa parameter is negative."
             )
             return statistic_container
 
@@ -225,7 +222,7 @@ class SmoothQuantize(Algorithm):
                 StatisticPoint(
                     target_point=target_point,
                     tensor_collector=stat_collector,
-                    algorithm=SmoothQuantize,
+                    algorithm=SmoothQuant,
                 )
             )
         return statistic_container

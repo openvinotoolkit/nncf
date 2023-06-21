@@ -30,12 +30,12 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.quantization.algorithms.smooth_quantize.backend import ALGO_BACKENDS
-from nncf.quantization.algorithms.smooth_quantize.backend import SmoothQuantizeAlgoBackend
+from nncf.quantization.algorithms.smooth_quant.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
-class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
+class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
     def weighted_metatypes(self) -> List[OperatorMetatype]:
         return [OVMatMulMetatype]
@@ -145,7 +145,7 @@ class OVSmoothQuantizeAlgoBackend(SmoothQuantizeAlgoBackend):
     def calculate_weight_scale(scale_value: np.ndarray, nodes: List[NNCFNode]) -> np.ndarray:
         transpose_attrs = []
         for node in nodes:
-            port_id = OVSmoothQuantizeAlgoBackend.get_weight_tensor_port_id(node)
+            port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
             transpose = node.layer_attributes.const_attrs[port_id]["transpose"]
             transpose_attrs.append(transpose)
 

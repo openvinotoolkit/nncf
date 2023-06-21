@@ -27,7 +27,7 @@ TTensor = TypeVar("TTensor")
 ALGO_BACKENDS = Registry("algo_backends")
 
 
-class SmoothQuantizeAlgoBackend(ABC):
+class SmoothQuantAlgoBackend(ABC):
     @property
     @abstractmethod
     def weighted_metatypes(self) -> List[OperatorMetatype]:

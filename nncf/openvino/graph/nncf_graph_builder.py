@@ -188,13 +188,11 @@ class GraphConverter:
                         attribute_names = ["transpose_a", "transpose_b"]
                         node_attributes = node.get_attributes()
                         const_transpose_name = attribute_names.pop(const_port_id)
-                        node_inputs.pop(const_port_id)
                         const_attrs[const_port_id]["transpose"] = node_attributes[const_transpose_name]
 
-                        assert len(attribute_names) == 1
                         act_attrs["transpose"] = node_attributes[attribute_names[0]]
-                        assert len(node_inputs) == 1
-                        partial_shape = node_inputs[0].get_partial_shape()
+                        act_port_id = abs(const_port_id - 1)
+                        partial_shape = node_inputs[act_port_id].get_partial_shape()
                         act_attrs["shape"] = tuple(partial_shape.get_max_shape())
 
                     if const_attrs or act_attrs:
@@ -208,6 +206,7 @@ class GraphConverter:
 class OVConstantLayerAttributes(BaseLayerAttributes):
     """
     This class stores mapping weights port indices to constant name and shape.
+    For MatMul layers, it also stores transpose parameter and shape for activations.
     """
 
     def __init__(self, const_attrs: Dict[int, Dict], act_attrs: Optional[Dict[Any, Any]] = None):

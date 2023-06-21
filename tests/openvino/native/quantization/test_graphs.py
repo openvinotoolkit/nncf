@@ -18,7 +18,7 @@ import pytest
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
-from nncf.quantization.algorithms.smooth_quantize.algorithm import SmoothQuantize
+from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import dump_model
@@ -125,7 +125,7 @@ def test_omz_models_sq_placement(model_name_params, tmp_path):
 def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
     dataset = get_dataset_for_test(ov_model)
 
-    smooth_quant_algo = SmoothQuantize(subset_size=1)
+    smooth_quant_algo = SmoothQuant(subset_size=1)
     statistics_aggregator = OVStatisticsAggregator(dataset)
     statistic_points = smooth_quant_algo.get_statistic_points(ov_model)
     statistics_aggregator.register_statistic_points(statistic_points)
