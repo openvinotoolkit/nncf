@@ -768,6 +768,21 @@ def create_mvn_scale_shift_activations() -> GraphPattern:
     return pattern
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ACTIVATIONS_UNSQUEEZE_BN_SQUEEZE)
+def create_linear_activations_unsqueeze_bn_squeeze():
+    linear_biased = create_biased_op()
+    activations = atomic_activations_operations()
+    unsqueeze_op = unsqueeze_operation()
+    scale_shift = create_scale_shift()
+    squeeze_op = squeeze_operation()
+
+    linear_biased.join_patterns(activations)
+    linear_biased.join_patterns(unsqueeze_op)
+    linear_biased.join_patterns(scale_shift)
+    linear_biased.join_patterns(squeeze_op)
+    return linear_biased
+
+
 # DEVICE PATTERNS
 
 
@@ -896,6 +911,12 @@ def arithmetic_operations() -> GraphPattern:
 def squeeze_operation() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(**{GraphPattern.LABEL_ATTR: "SQUEEZE", GraphPattern.METATYPE_ATTR: om.OVSqueezeMetatype})
+    return pattern
+
+
+def unsqueeze_operation() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.METATYPE_ATTR: om.OVUnsqueezeMetatype})
     return pattern
 
 
