@@ -5,22 +5,40 @@
 // to separate translation units will require relocatable device code compilation,
 // which is rumoured to degrade performance.
 
+#include "dispatch.h"
 #include "common_cuda_defs.cuh"
 #define DISABLE_FP16(TYPE_NAME) std::enable_if_t< \
                      std::is_same<float, TYPE_NAME>::value || \
-                     std::is_same<double, TYPE_NAME>::value, bool> = true
+                     std::is_same<double, TYPE_NAME>::value || \
+                     std::is_same<at::BFloat16, TYPE_NAME>::value, bool> = true
 
+// Volatile c10::Half and c10::BFloat16 arithmetic is not supported, thus will have to sacrifice
+// the implicit warp-synchronous programming in favor of explicit intra-warp thread
+// synchronization
 // support only warp size = 32
 template <typename scalar_t, DISABLE_FP16(scalar_t)>
-__device__ void sum_warp(volatile scalar_t* sharr) {
+__device__ void sum_warp(scalar_t* sharr) {
     int tidx = threadIdx.x & 31;
     if (tidx < 16) {
         sharr[tidx] += sharr[tidx + 16];
+    }
+    __syncwarp();
+    if (tidx < 16) {
         sharr[tidx] += sharr[tidx + 8];
+    }
+    __syncwarp();
+    if (tidx < 16) {
         sharr[tidx] += sharr[tidx + 4];
+    }
+    __syncwarp();
+    if (tidx < 16) {
         sharr[tidx] += sharr[tidx + 2];
+    }
+    __syncwarp();
+    if (tidx < 16) {
         sharr[tidx] += sharr[tidx + 1];
     }
+    __syncwarp();
 }
 
 
@@ -98,6 +116,5 @@ __device__ void reduce_with_shared_memory(
     }
 }
 
-#define DISPATCH_TENSOR_DATA_TYPES(...) AT_DISPATCH_FLOATING_TYPES_AND2(at::kHalf, at::kBFloat16, __VA__ARGS__)
 
 #endif // _COMMON_CUDA_FUNCS_CUH_
