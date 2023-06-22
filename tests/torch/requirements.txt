@@ -9,7 +9,7 @@ virtualenv
 pyparsing<3.0
 
 # Required for search_building_blocks tests
-transformers~=4.30.0
+transformers[torch]~=4.30.0
 
 # Required for movement_sparsity tests
 datasets~=2.12.0
