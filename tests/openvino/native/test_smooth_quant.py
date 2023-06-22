@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Callable, Dict
 
 import numpy as np
@@ -39,9 +40,9 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
-        onnx_path = f"{tmp_dir}/model.onnx"
+        onnx_path = Path(f"{tmp_dir}/model.onnx")
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
-        ov_path = f"{tmp_dir}/model.xml"
+        ov_path = Path(f"{tmp_dir}/model.xml")
         runner = Command(f"mo -m {onnx_path} -o {tmp_dir} -n model")
         runner.run()
         core = ov.Core()
