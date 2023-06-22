@@ -14,10 +14,13 @@ from typing import Callable, Dict, TypeVar
 
 import pytest
 
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from tests.post_training.test_templates.helpers import LinearModel
 from tests.post_training.test_templates.helpers import get_static_dataset
 
@@ -52,6 +55,13 @@ class TemplateTestSQAlgorithm:
         """
 
     @staticmethod
+    @abstractmethod
+    def get_backend() -> SmoothQuantAlgoBackend:
+        """
+        Returns backend-specific SmoothQuantAlgoBackend.
+        """
+
+    @staticmethod
     def get_quantization_algorithm():
         return PostTrainingQuantization(
             subset_size=1,
@@ -76,3 +86,25 @@ class TemplateTestSQAlgorithm:
         quantized_model = quantization_algorithm.apply(model, dataset=dataset)
 
         self.check_scales(quantized_model, reference_values)
+
+    # pylint:disable=protected-access
+    def test_smooth_quant(self):
+        backend = self.get_backend()
+        reduction_shape = (3, 2, 1)
+        samples = 1
+
+        for inplace_type in [False, True]:
+            backend_tensor_collector = backend.get_abs_max_channel_collector(
+                num_samples=samples,
+                stats_reduction_shape=reduction_shape,
+                inplace=inplace_type,
+                branch_key="test_branch",
+            )
+
+            for aggregator in backend_tensor_collector.aggregators.values():
+                assert isinstance(aggregator, MaxAggregator)
+
+            for reducer in backend_tensor_collector.reducers:
+                assert isinstance(reducer, AbsMaxReducer)
+                assert reducer.inplace == inplace_type
+                assert reducer._reduction_shape == reduction_shape

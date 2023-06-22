@@ -15,11 +15,12 @@ import numpy as np
 import openvino.runtime as ov
 import torch
 
-from tests.post_training.test_templates.test_smooth_quantize import TemplateTestSQAlgorithm
+from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
+from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 from tests.shared.command import Command
 
 
-class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
+class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
     def fn_to_type(tensor) -> np.ndarray:
         return np.array(tensor)
@@ -31,6 +32,10 @@ class TestOVFBCAlgorithm(TemplateTestSQAlgorithm):
             return {"input.1": tensor}
 
         return transform_fn
+
+    @staticmethod
+    def get_backend() -> OVSmoothQuantAlgoBackend:
+        return OVSmoothQuantAlgoBackend()
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
