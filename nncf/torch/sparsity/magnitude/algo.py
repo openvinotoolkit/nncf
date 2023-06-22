@@ -70,13 +70,10 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         self._scheduler = None
         sparsity_init = self._algo_config.get("sparsity_init", SPARSITY_INIT)
 
-        if self._mode == "global":
-            scheduler_params = deepcopy(params)
-            scheduler_params["sparsity_init"] = sparsity_init
-            scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
-            self._scheduler = scheduler_cls(self, scheduler_params)
-        else:
-            self._scheduler = StubCompressionScheduler()
+        scheduler_params = deepcopy(params)
+        scheduler_params["sparsity_init"] = sparsity_init
+        scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
+        self._scheduler = scheduler_cls(self, scheduler_params)
 
         self._bn_adaptation = None
 
@@ -140,8 +137,13 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             target_sparsified_module_info_list = self.sparsified_module_info  # List[SparseModuleInfo]
         else:
             target_sparsified_module_info_list = [target_sparsified_module_info]
-        threshold = self._select_threshold(sparsity_level, target_sparsified_module_info_list)
-        self._set_masks_for_threshold(threshold, target_sparsified_module_info_list)
+        if self._mode == "global":
+            threshold = self._select_threshold(sparsity_level, target_sparsified_module_info_list)
+            self._set_masks_for_threshold(threshold, target_sparsified_module_info_list)
+        else:
+            for module_info in target_sparsified_module_info_list:
+                threshold = self._select_threshold(sparsity_level, [module_info])
+                self._set_masks_for_threshold(threshold, [module_info])
 
         if run_batchnorm_adaptation:
             self._run_batchnorm_adaptation()
