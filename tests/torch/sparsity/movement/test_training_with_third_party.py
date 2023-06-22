@@ -37,13 +37,13 @@ class TestMovementWithTransformers:
         self.env = TransformersVirtualEnvInstaller(temp_folder["venv"], temp_folder["repo"])
 
     @pytest.mark.dependency(name="install_transformers")
-    def test_install_transformers_env(self, third_party, pip_cache_dir, torch_with_cuda11):
+    def test_install_transformers_env(self, third_party, pip_cache_dir):
         if not third_party:
             pytest.skip(
                 "Skip tests of movement sparsity with patched transformers package "
                 "since `--third-party-sanity` is False."
             )
-        self.env.install_env(pip_cache_dir, torch_with_cuda11)
+        self.env.install_env(pip_cache_dir)
 
     @pytest.mark.dependency(depends=["install_transformers"], name="glue_movement_train")
     def test_movement_glue_train(self):
