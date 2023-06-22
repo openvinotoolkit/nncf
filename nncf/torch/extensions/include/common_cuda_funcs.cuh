@@ -98,5 +98,6 @@ __device__ void reduce_with_shared_memory(
     }
 }
 
+#define DISPATCH_TENSOR_DATA_TYPES(...) AT_DISPATCH_FLOATING_TYPES_AND2(at::kHalf, at::kBFloat16, __VA__ARGS__)
 
 #endif // _COMMON_CUDA_FUNCS_CUH_
