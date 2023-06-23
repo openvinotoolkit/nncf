@@ -25,6 +25,7 @@ from nncf.config.extractors import BNAdaptDataLoaderNotFoundError
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import has_bn_section
+from nncf.config.schemata.defaults import VALIDATE_SCOPES
 
 TModel = TypeVar("TModel")
 
@@ -201,8 +202,9 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         self.should_init = should_init
         self._algo_config = self._get_algo_specific_config_section()
 
-        self.ignored_scopes = self.config.get("ignored_scopes")
+        self.validate_scopes = self._algo_config.get("validate_scopes", VALIDATE_SCOPES)
 
+        self.ignored_scopes = self.config.get("ignored_scopes")
         if "ignored_scopes" in self._algo_config:
             algo_ignored_scopes = self._algo_config["ignored_scopes"]
             if self.ignored_scopes is not None:

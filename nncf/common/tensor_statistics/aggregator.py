@@ -43,6 +43,9 @@ class StatisticsAggregator(ABC):
 
         :param model: backend-specific model instance
         """
+        if not self.statistic_points:
+            return
+
         model_transformer = ModelTransformerFactory.create(model)
 
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model)

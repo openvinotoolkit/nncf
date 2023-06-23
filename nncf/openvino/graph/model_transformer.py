@@ -27,6 +27,7 @@ from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
@@ -50,6 +51,7 @@ class OVModelTransformer(ModelTransformer):
             (OVInplaceFnInsertionCommand, self._apply_insert_operation),
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
             (OVNullBiasInsertionCommand, self._apply_bias_insertion_transformations),
+            (OVMultiplyInsertionCommand, self._apply_multiply_insertion_transformations),
         ]
 
     @staticmethod
@@ -488,5 +490,43 @@ class OVModelTransformer(ModelTransformer):
 
             for node_output_source_port in node_output_source_ports:
                 node_output_source_port.replace_source_output(add_node.output(0))
+
+        return model
+
+    @staticmethod
+    def _apply_multiply_insertion_transformations(
+        model: ov.Model, transformations: List[OVMultiplyInsertionCommand]
+    ) -> ov.Model:
+        """
+        Inserts Multiply with provided value for corresponding layer.
+
+        :param transformations: List of the smooth insertion transformations.
+        :returns: Transformed model with Multiply nodes.
+        """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        for transformation in transformations:
+            node_name = transformation.target_point.target_node_name
+            node = name_to_node_mapping[node_name]
+            node_output_port = node.output(transformation.target_point.port_id)
+
+            destination_ports = []
+
+            for target_input_port in node_output_port.get_target_inputs():
+                target_node = target_input_port.get_node()
+                if target_node.get_friendly_name() in transformation.destination_node_names:
+                    destination_ports.append(target_input_port)
+
+            scale_dtype = ov.Type(np.float32)
+            fp16_dtype = ov.Type(np.float16)
+            if all(p.get_element_type() == fp16_dtype for p in destination_ports):
+                scale_dtype = fp16_dtype
+            scale_constant = opset.constant(
+                transformation.scale_value, dtype=scale_dtype, name=f"{node_name}/smooth_quant_const"
+            )
+
+            multiply_node = opset.multiply(node_output_port, scale_constant, name=f"{node_name}/smooth_quant_multiply")
+
+            for destination_port in destination_ports:
+                destination_port.replace_source_output(multiply_node.output(0))
 
         return model

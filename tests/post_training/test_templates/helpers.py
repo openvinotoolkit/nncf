@@ -131,3 +131,21 @@ class MultipleConvTestModel(nn.Module):
         x_2 = self.conv_4(F.relu(x_2))
         x_1_2 = torch.concat([x_1, x_2])
         return self.conv_5(F.relu(x_1_2))
+
+
+class LinearModel(nn.Module):
+    INPUT_SIZE = [1, 3, 4, 2]
+    RESHAPE_SHAPE = (1, 3, 2, 4)
+    MATMUL_W_SHAPE = (4, 5)
+
+    def __init__(self) -> None:
+        super().__init__()
+        with set_torch_seed():
+            self.matmul_data = torch.randn(self.MATMUL_W_SHAPE, dtype=torch.float32) - torch.tensor(0.5)
+            self.add_data = torch.randn(self.RESHAPE_SHAPE, dtype=torch.float32)
+
+    def forward(self, x):
+        x = torch.reshape(x, self.RESHAPE_SHAPE)
+        x_1 = torch.matmul(x, self.matmul_data)
+        x_2 = torch.add(x, self.add_data)
+        return x_1, x_2

@@ -115,7 +115,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         converter = TFModelConverterFactory.create(model)
         self._graph = converter.convert()
 
-        check_scopes_in_graph(self._graph, self.ignored_scopes, self.target_scopes)
+        check_scopes_in_graph(self._graph, self.ignored_scopes, self.target_scopes, self.validate_scopes)
 
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(self._graph)
 
