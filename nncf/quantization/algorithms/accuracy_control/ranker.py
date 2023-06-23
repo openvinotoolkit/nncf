@@ -226,9 +226,7 @@ class Ranker:
                 modified_model, self._dataset, ranking_subset_indices
             )
             reference_outputs = [self._reference_values_for_each_item[i] for i in ranking_subset_indices]
-            errors = [
-                self._ranking_fn(a, b) for a, b in zip(reference_outputs, approximate_outputs)
-            ]
+            errors = [self._ranking_fn(a, b) for a, b in zip(reference_outputs, approximate_outputs)]
             ranking_score = sum(errors) / len(errors)
 
         return ranking_score
