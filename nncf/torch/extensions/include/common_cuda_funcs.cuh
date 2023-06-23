@@ -7,7 +7,9 @@
 
 #include "dispatch.h"
 #include "common_cuda_defs.cuh"
-#define DISABLE_FP16(TYPE_NAME) std::enable_if_t< \
+
+
+#define ENABLE_ONLY_FOR_NONREDUCED_FP_TYPES(TYPE_NAME) std::enable_if_t< \
                      std::is_same<float, TYPE_NAME>::value || \
                      std::is_same<double, TYPE_NAME>::value || \
                      std::is_same<at::BFloat16, TYPE_NAME>::value, bool> = true
@@ -18,7 +20,7 @@
 // For more information, see https://developer.nvidia.com/blog/using-cuda-warp-level-primitives/ and
 // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=__shfl#warp-shuffle-functions
 
-template <typename scalar_accum_t, DISABLE_FP16(scalar_accum_t)>
+template <typename scalar_accum_t, ENABLE_ONLY_FOR_NONREDUCED_FP_TYPES(scalar_accum_t)>
 __device__ void sum_warp(scalar_accum_t* sharr) {
     int tidx = threadIdx.x & 31;
     scalar_accum_t v = sharr[tidx];
@@ -31,16 +33,16 @@ __device__ void sum_warp(scalar_accum_t* sharr) {
 }
 
 
-template <typename scalar_t, DISABLE_FP16(scalar_t)>
-__device__ inline void gather_warp_execution_results(scalar_t* sharr, const uint16_t tidx) {
-    sharr[tidx] = tidx * CUDA_WARP_SIZE < CUDA_MAX_NUM_THREADS_PER_BLOCK ? sharr[tidx * CUDA_WARP_SIZE] : static_cast<scalar_t>(0.0);
+template <typename scalar_accum_t, ENABLE_ONLY_FOR_NONREDUCED_FP_TYPES(scalar_accum_t)>
+__device__ inline void gather_warp_execution_results(scalar_accum_t* sharr, const uint16_t tidx) {
+    sharr[tidx] = tidx * CUDA_WARP_SIZE < CUDA_MAX_NUM_THREADS_PER_BLOCK ? sharr[tidx * CUDA_WARP_SIZE] : static_cast<scalar_accum_t>(0.0);
 }
 
 
 // Reduces the contents of a shared memory array of CUDA_MAX_NUM_THREADS_PER_BLOCK using
 // warp-powered reduction. The final sum will be stored in the 0-th element of the shared memory array.
-template <typename scalar_t, DISABLE_FP16(scalar_t)>
-__device__ void reduce_in_block_using_warp_sums(scalar_t* __restrict__ sh_mem,
+template <typename scalar_accum_t, ENABLE_ONLY_FOR_NONREDUCED_FP_TYPES(scalar_accum_t)>
+__device__ void reduce_in_block_using_warp_sums(scalar_accum_t* __restrict__ sh_mem,
         uint16_t tidx) {
     __syncthreads();
     // Will reduce the summation to CUDA_MAX_WARPS_PER_BLOCK elements that are
@@ -69,7 +71,7 @@ __device__ bool last_block(int32_t* counter, uint32_t total_blocks_count) {
 }
 
 
-template <typename scalar_t, typename scalar_accum_t = scalar_t, DISABLE_FP16(scalar_accum_t)>
+template <typename scalar_t, typename scalar_accum_t = scalar_t, ENABLE_ONLY_FOR_NONREDUCED_FP_TYPES(scalar_accum_t)>
 __device__ void reduce_with_shared_memory(
         scalar_accum_t* __restrict__ sh_arr,
         scalar_accum_t current_thread_sum,
