@@ -89,7 +89,7 @@ class MinMaxQuantization(Algorithm):
 
     The algorithm modifies the model by inserting additional nodes, which emulates the quantization of the data flow.
     The algorithm calibrates the parameters of the inserted nodes by collecting the statistics in the insertion points.
-    The modified model is returned after the work of the algorithm, which can be perfomed via the original framework.
+    The modified model is returned after the work of the algorithm, which can be performed via the original framework.
     It is expected that the inference of the obtained model in the int8 mode would be faster than the original model.
     """
 
@@ -130,7 +130,7 @@ class MinMaxQuantization(Algorithm):
             to True.
         :param activations_quantization_params: Quantization parameters for model
             activations.
-        :param weights_quantization_params: Quantization parameters for model weigths.
+        :param weights_quantization_params: Quantization parameters for model weights.
         :param activations_range_estimator_params: Quantization range estimation
             parameters for activation.
         :param weights_range_estimator_params: Quantization range estimation parameters
@@ -175,28 +175,28 @@ class MinMaxQuantization(Algorithm):
         return ALGO_BACKENDS.registry_dict
 
     def _get_quantizer_constraints(
-        self, group: QuantizerGroup, preset: QuantizationPreset, quantizaton_params: Optional[QuantizationParameters]
+        self, group: QuantizerGroup, preset: QuantizationPreset, quantization_params: Optional[QuantizationParameters]
     ) -> QuantizationConstraints:
         """
         Returns QuantizationConstraints for the provided quantizer group.
 
         :param group: Quantizer group.
         :param preset: Quantization preset.
-        :param quantizaton_parameters: Quantization parameters.
+        :param quantization_params: Quantization parameters.
         :return: QuantizationConstraints.
         """
         constraints = {"mode": preset.get_params_configured_by_preset(group)["mode"]}
-        if quantizaton_params is None:
+        if quantization_params is None:
             return QuantizationConstraints(**constraints)
 
-        if quantizaton_params.mode is not None:
-            constraints["mode"] = quantizaton_params.mode
-        if quantizaton_params.num_bits is not None:
-            constraints["num_bits"] = quantizaton_params.num_bits
-        if quantizaton_params.per_channel is not None:
-            constraints["per_channel"] = quantizaton_params.per_channel
-        if quantizaton_params.signedness_to_force is not None:
-            constraints["signedness_to_force"] = quantizaton_params.signedness_to_force
+        if quantization_params.mode is not None:
+            constraints["mode"] = quantization_params.mode
+        if quantization_params.num_bits is not None:
+            constraints["num_bits"] = quantization_params.num_bits
+        if quantization_params.per_channel is not None:
+            constraints["per_channel"] = quantization_params.per_channel
+        if quantization_params.signedness_to_force is not None:
+            constraints["signedness_to_force"] = quantization_params.signedness_to_force
 
         return QuantizationConstraints(**constraints)
 
@@ -304,7 +304,11 @@ class MinMaxQuantization(Algorithm):
         device = self._target_device
         ignored_names = set()
 
-        ignored_names.update(get_ignored_node_names_from_ignored_scope(self._ignored_scope, nncf_graph))
+        ignored_names.update(
+            get_ignored_node_names_from_ignored_scope(
+                self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
+            )
+        )
 
         model_type_ignore_scope = self._backend_entity.get_ignored_scope(model_type, device)
 
@@ -314,7 +318,9 @@ class MinMaxQuantization(Algorithm):
 
         ignored_scope = self._get_ignored_scope(nncf_graph, ignored_patterns)
 
-        ignored_names.update(get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph))
+        ignored_names.update(
+            get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph, strict=self._ignored_scope.validate)
+        )
 
         return ignored_names
 
@@ -324,7 +330,7 @@ class MinMaxQuantization(Algorithm):
 
         :param nncf_graph: NNCFGraph instance.
         :param ignored_patterns: Ignored patterns.
-        :return: IgnoredScope with all node names mathced ignored_patterns.
+        :return: IgnoredScope with all node names matched ignored_patterns.
         """
         nncf_node_names = [nncf_node.node_name for nncf_node in nncf_graph.find_matching_nodes(ignored_patterns)]
         return IgnoredScope(names=nncf_node_names)

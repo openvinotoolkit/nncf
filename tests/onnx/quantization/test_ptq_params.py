@@ -109,6 +109,10 @@ class TestPTQParams(TemplateTestPTQParams):
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
+            "test_validate_scope": {
+                "nncf_graph": NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
+                "ignored_patterns": get_ignored_patterns(),
+            },
         }
 
     @pytest.fixture(params=[(IgnoredScope([]), 1, 1), (IgnoredScope(["/Conv_1_0"]), 0, 0)])
