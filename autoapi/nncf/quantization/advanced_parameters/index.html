@@ -414,6 +414,9 @@ of the model outputs.</p></li>
 <li><p><strong>inplace_statistics</strong> (<em>bool</em>) – Defines whether to calculate quantizers statistics by
 backend graph operations or by default Python implementation, defaults to True.</p></li>
 <li><p><strong>disable_bias_correction</strong> (<em>bool</em>) – Whether to disable the bias correction.</p></li>
+<li><p><strong>smooth_quant_alpha</strong> (<em>float</em>) – SmoothQuant-related parameter. It regulates the calculation of the smooth scale.
+The default value is 0.95. A negative value switches off the algorithm. In case of inaccurate results,
+this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.</p></li>
 <li><p><strong>activations_quantization_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><em>nncf.quantization.advanced_parameters.QuantizationParameters</em></a>) – Quantization parameters for activations.</p></li>
 <li><p><strong>weights_quantization_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><em>nncf.quantization.advanced_parameters.QuantizationParameters</em></a>) – Quantization parameters for weights.</p></li>
 <li><p><strong>activations_range_estimator_params</strong> (<a class="reference internal" href="../range_estimator/index.html#nncf.quantization.range_estimator.RangeEstimatorParameters" title="nncf.quantization.range_estimator.RangeEstimatorParameters"><em>nncf.quantization.range_estimator.RangeEstimatorParameters</em></a>) – Range estimator parameters for activations.</p></li>

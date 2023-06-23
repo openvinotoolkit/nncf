@@ -528,7 +528,7 @@ the resolution of the redefinable parameter should occur.</p></li>
 <dd class="field-even"><p>The value of the parameter that should be applied for the algo specified by <cite>algo_name</cite>.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Optional</p>
+<dd class="field-odd"><p>Optional[str]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -790,7 +790,9 @@ quantization, pruning and etc.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>names</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of ignored node names.</p></li>
 <li><p><strong>patterns</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of regular expressions that define patterns for names of ignored nodes.</p></li>
-<li><p><strong>types</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of ignored operation types.</p></li>
+<li><p><strong>types</strong> (<em>bool</em>) – List of ignored operation types.</p></li>
+<li><p><strong>validate</strong> – If set to True, then a RuntimeError will be raised if any ignored scope does not match
+in the model graph.</p></li>
 </ul>
 </dd>
 </dl>

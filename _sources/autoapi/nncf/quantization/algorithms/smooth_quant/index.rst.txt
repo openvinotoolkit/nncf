@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.smooth_quant`
+===================================================
+
+.. py:module:: nncf.quantization.algorithms.smooth_quant
+
+
