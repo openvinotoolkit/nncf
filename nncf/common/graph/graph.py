@@ -717,3 +717,12 @@ class NNCFGraph:
             for node_key in matched_subgraph:
                 output.append(self.get_node_by_key(node_key))
         return output
+
+    def find_matching_subgraphs(self, patterns: GraphPattern) -> List[List[NNCFNode]]:
+        output = []
+        for matched_subgraph in find_subgraphs_matching_pattern(self._nx_graph, patterns):
+            subgraph_list = []
+            for node_key in matched_subgraph:
+                subgraph_list.append(self.get_node_by_key(node_key))
+            output.append(subgraph_list)
+        return output

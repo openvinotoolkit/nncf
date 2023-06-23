@@ -61,6 +61,18 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return 0, 1
 
     @staticmethod
+    def get_conv_metatypes():
+        return [OVConvolutionMetatype, OVGroupConvolutionMetatype]
+
+    @staticmethod
+    def get_linear_metatypes():
+        return [OVConvolutionMetatype, OVGroupConvolutionMetatype, OVMatMulMetatype]
+
+    @staticmethod
+    def get_add_metatypes():
+        return [OVAddMetatype, OVSubtractMetatype]
+
+    @staticmethod
     def get_conv_nodes(nncf_graph: NNCFGraph):
         return nncf_graph.get_nodes_by_metatypes([OVConvolutionMetatype, OVGroupConvolutionMetatype])
 

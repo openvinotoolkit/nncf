@@ -23,6 +23,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -123,7 +124,9 @@ class ChannelAlignment(Algorithm):
         def filter_func(point: StatisticPoint) -> bool:
             return ChannelAlignment in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
-        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel allignment"):
+        for conv_in, add_in, conv_out in tqdm(
+            self._get_node_pairs_by_graph_matcher(nncf_graph), desc="Channel allignment"
+        ):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, ChannelAlignment)
@@ -245,34 +248,77 @@ class ChannelAlignment(Algorithm):
             return False
         return True
 
-    def _get_node_pairs(self, nncf_graph: NNCFGraph):
-        # Return conv pairs that correspond to
-        # Conv -> Add -> Conv pattern
-        def get_previous_node(node, port_id):
-            if node is None:
-                return None
+    def _get_target_patterns(self):
+        producer_attrs = {
+            GraphPattern.LABEL_ATTR: "CONV_PRODUCER",
+            GraphPattern.NODE_TYPE_ATTR: [
+                op for op in self._backend_entity.get_conv_metatypes() + self._backend_entity.get_linear_metatypes()
+            ],
+        }
+        bias_attrs = {
+            GraphPattern.LABEL_ATTR: "BIAS_PRODUCER",
+            GraphPattern.NODE_TYPE_ATTR: [op for op in self._backend_entity.get_add_metatypes()],
+        }
+        bias_const_attrs = {
+            GraphPattern.LABEL_ATTR: "BIAS_CONSTANT",
+            GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
+        }
+        consumer_attrs = {
+            GraphPattern.LABEL_ATTR: "CONV_CONSUMER",
+            GraphPattern.NODE_TYPE_ATTR: [op for op in self._backend_entity.get_conv_metatypes()],
+        }
+        conv_const = {
+            GraphPattern.LABEL_ATTR: "CONV_CONSTANT",
+            GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
+        }
 
-            input_edges = nncf_graph.get_input_edges(node)
-            input_edges = [edge for edge in input_edges if edge.input_port_id == port_id]
-            if len(input_edges) > 1:
-                return None
-            return input_edges[0].from_node
+        def get_conv_conv_pattern():
+            conv_conv = GraphPattern()
+            producer_constant = conv_conv.add_node(**conv_const)
+            consumer_constant = conv_conv.add_node(**conv_const)
 
+            pattern_conv_producer = conv_conv.add_node(**producer_attrs)
+            pattern_conv_consumer = conv_conv.add_node(**consumer_attrs)
+
+            conv_conv.add_edge(producer_constant, pattern_conv_producer)
+            conv_conv.add_edge(consumer_constant, pattern_conv_consumer)
+
+            conv_conv.add_edge(pattern_conv_producer, pattern_conv_consumer)
+            return conv_conv
+
+        def get_conv_add_conv_pattern():
+            conv_bias_conv = GraphPattern()
+            producer_constant = conv_bias_conv.add_node(**conv_const)
+            bias_producer_const = conv_bias_conv.add_node(**bias_const_attrs)
+            consumer_constant = conv_bias_conv.add_node(**conv_const)
+
+            pattern_conv_producer = conv_bias_conv.add_node(**producer_attrs)
+            pattern_bias_producer = conv_bias_conv.add_node(**bias_attrs)
+            pattern_conv_consumer = conv_bias_conv.add_node(**consumer_attrs)
+
+            conv_bias_conv.add_edge(producer_constant, pattern_conv_producer)
+            conv_bias_conv.add_edge(consumer_constant, pattern_conv_consumer)
+            conv_bias_conv.add_edge(bias_producer_const, pattern_bias_producer)
+
+            conv_bias_conv.add_edge(pattern_conv_producer, pattern_bias_producer)
+            conv_bias_conv.add_edge(pattern_bias_producer, pattern_conv_consumer)
+            return conv_bias_conv
+
+        pattern = get_conv_conv_pattern()
+        pattern.add_pattern_alternative(get_conv_add_conv_pattern())
+        return pattern
+
+    def _get_node_pairs_by_graph_matcher(self, nncf_graph: NNCFGraph):
         pairs = []
-        for conv_out in self._backend_entity.get_conv_nodes(nncf_graph):
-            if not self._check_consumer_conv_node(conv_out):
-                continue
+        patterns = self._get_target_patterns()
+        for subgraph in nncf_graph.find_matching_subgraphs(patterns):
+            if len(subgraph) == 2:
+                add_in = None
+                conv_in, conv_out = subgraph
+            else:
+                conv_in, add_in, conv_out = subgraph
 
-            conv_in = get_previous_node(conv_out, 0)
-            if conv_in is None:
-                continue
-
-            add_in = None
-            if self._backend_entity.is_node_add_operation(conv_in):
-                add_in = conv_in
-                conv_in = get_previous_node(add_in, 0)
-
-            if not self._check_producer_node(conv_in, add_in, nncf_graph):
+            if not self._check_consumer_conv_node(conv_in):
                 continue
 
             pairs.append((conv_in, add_in, conv_out))
@@ -291,7 +337,7 @@ class ChannelAlignment(Algorithm):
         self.nncf_graph = NNCFGraphFactory.create(model)
 
         statistic_container = StatisticPointsContainer()
-        for conv_in, add_in, _ in self._get_node_pairs(self.nncf_graph):
+        for conv_in, add_in, _ in self._get_node_pairs_by_graph_matcher(self.nncf_graph):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             channel_axis = conv_in.metatype.output_channel_axis
             reduction_shape = list(range(len(self.nncf_graph.get_output_edges(node_in)[0].tensor_shape)))
