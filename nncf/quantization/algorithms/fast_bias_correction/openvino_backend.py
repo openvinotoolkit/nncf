@@ -19,10 +19,8 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.registry import Registry
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
-from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
@@ -38,10 +36,6 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCo
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-    @property
-    def operation_metatypes(self) -> Registry:
-        return OV_OPERATOR_METATYPES
-
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor
