@@ -10,14 +10,19 @@
 # limitations under the License.
 
 
+from typing import Dict
+
 import openvino.runtime as ov
 import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
+from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import dump_model
+from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv4DModel
@@ -91,3 +96,42 @@ def test_transformer_models_fq_placement(model_creator_func, tmp_path):
     bin_path = tmp_path / (model.ref_model_name + ".bin")
     dump_model(quantized_model, str(xml_path), str(bin_path))
     compare_nncf_graphs(quantized_model, path_ref_graph)
+
+
+OMZ_MODELS_SQ_PARAMS = {
+    "swin-tiny-patch4-window7-224": {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}
+}
+
+
+@pytest.mark.parametrize("model_name_params", OMZ_MODELS_SQ_PARAMS.items(), ids=list(OMZ_MODELS_SQ_PARAMS))
+def test_omz_models_sq_placement(model_name_params, tmp_path):
+    model_name, q_params = model_name_params
+    q_params.update({"inplace_statistics": True})
+    download_model(model_name, tmp_path)
+    convert_model(model_name, tmp_path)
+    model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
+    model = ov.Core().read_model(model_path)
+
+    quantized_model = smooth_quant_model(model, q_params, quantize=False)
+
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"{model_name}_sq.dot"
+    xml_path = tmp_path / (model_name + ".xml")
+    bin_path = tmp_path / (model_name + ".bin")
+    dump_model(quantized_model, str(xml_path), str(bin_path))
+    compare_nncf_graphs(quantized_model, path_ref_graph)
+
+
+# pylint: disable=protected-access
+def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
+    dataset = get_dataset_for_test(ov_model)
+
+    smooth_quant_algo = SmoothQuant(subset_size=1)
+    statistics_aggregator = OVStatisticsAggregator(dataset)
+    statistic_points = smooth_quant_algo.get_statistic_points(ov_model)
+    statistics_aggregator.register_statistic_points(statistic_points)
+    statistics_aggregator.collect_statistics(ov_model)
+    modified_model = smooth_quant_algo._apply(ov_model, statistics_aggregator.statistic_points)
+
+    if quantize:
+        modified_model = quantize_model(modified_model, q_params)
+    return modified_model

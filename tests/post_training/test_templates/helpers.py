@@ -18,6 +18,7 @@ from torch import nn
 from nncf import Dataset
 from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_conv
+from tests.torch.helpers import set_torch_seed
 
 TTensor = TypeVar("TTensor")
 
@@ -102,3 +103,21 @@ class FCTestModel(nn.Module):
     def forward(self, x):
         x = self.fc(x)
         return x
+
+
+class LinearModel(nn.Module):
+    INPUT_SIZE = [1, 3, 4, 2]
+    RESHAPE_SHAPE = (1, 3, 2, 4)
+    MATMUL_W_SHAPE = (4, 5)
+
+    def __init__(self) -> None:
+        super().__init__()
+        with set_torch_seed():
+            self.matmul_data = torch.randn(self.MATMUL_W_SHAPE, dtype=torch.float32) - torch.tensor(0.5)
+            self.add_data = torch.randn(self.RESHAPE_SHAPE, dtype=torch.float32)
+
+    def forward(self, x):
+        x = torch.reshape(x, self.RESHAPE_SHAPE)
+        x_1 = torch.matmul(x, self.matmul_data)
+        x_2 = torch.add(x, self.add_data)
+        return x_1, x_2
