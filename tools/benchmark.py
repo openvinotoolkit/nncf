@@ -1,5 +1,7 @@
 import math
 import time
+from typing import Dict
+from typing import List
 
 import torch
 import torch.distributed as dist
@@ -15,7 +17,7 @@ def warmup(layer, input_, runs, forward_only=False):
             new_i[0].sum().backward()
 
 
-def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float, output=None):
+def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float) -> Dict[str, float]:
     input_ = torch.randn(input_size_, device=torch.device(device), dtype=dtype)
 
     # Force CUDA initialization & warm up
@@ -35,17 +37,15 @@ def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float,
 
     if is_print:
         print("Forward&Backward: {0:.3f} {1}".format(fbtime, ctime))
-    if output is not None:
-        output.append({"forward + backward": fbtime})
+    return {"forward + backward": fbtime}
 
 
-def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torch.float, output=None):
+def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torch.float) -> Dict[str, float]:
     input_ = torch.randn(input_size_, device=torch.device(device), dtype=dtype)
 
     # Force CUDA initialization & warm up
     warmup(layer, input_, 100, forward_only)
 
-    start = time.time()
     forward_min = math.inf
     forward_time = 0
     backward_min = math.inf
@@ -82,18 +82,15 @@ def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torc
         )
     )
 
-    if output is not None:
-        output.append(
-            {
-                "forward_min": forward_min,
-                "forward_avg": forward_average,
-                "backward_min": backward_min,
-                "backward_avg": backward_average,
-            }
-        )
+    return {
+        "forward_min": forward_min,
+        "forward_avg": forward_average,
+        "backward_min": backward_min,
+        "backward_avg": backward_average,
+    }
 
 
-def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, output=None):
+def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, output: List[Dict[str, int]] = None):
     dist.init_process_group(backend="nccl", init_method="tcp://127.0.0.1:8899", world_size=world_size, rank=gpu)
 
     device = torch.device("cuda:%d" % gpu)
@@ -110,4 +107,6 @@ def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, out
     run_model = layer.to(device)
     run_model = nn.parallel.DistributedDataParallel(run_model, device_ids=[gpu])
 
-    run_wall(run_model, run_size, device, runs, (gpu == 0), dtype, output)
+    retval = run_wall(run_model, run_size, device, runs, (gpu == 0), dtype)
+    if output is not None:
+        output.append(retval)
