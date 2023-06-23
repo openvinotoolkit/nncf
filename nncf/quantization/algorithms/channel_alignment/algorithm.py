@@ -124,9 +124,7 @@ class ChannelAlignment(Algorithm):
         def filter_func(point: StatisticPoint) -> bool:
             return ChannelAlignment in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
-        for conv_in, add_in, conv_out in tqdm(
-            self._get_node_pairs_by_graph_matcher(nncf_graph), desc="Channel allignment"
-        ):
+        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel allignment"):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, ChannelAlignment)
@@ -143,7 +141,7 @@ class ChannelAlignment(Algorithm):
                     conv_in_cont.bias, conv_out_cont.bias, conv_out_cont.weight, amean, dims_descriptor
                 )
 
-            ascale = stat.max_values - stat.min_values
+            ascale = (stat.max_values - stat.min_values).astype(np.float32)
             eps = np.finfo(ascale.dtype).eps
             if (ascale > eps).any():
                 conv_in_cont.weight, conv_out_cont.weight, conv_in_cont.bias = self._align_scales(
@@ -172,29 +170,45 @@ class ChannelAlignment(Algorithm):
         return transformed_model
 
     @staticmethod
-    def _align_means(bias_in_value, bias_out_value, conv_out_value, amean, dims_descriptor: DimsDescriptor):
+    def _align_means(
+        bias_in_value: np.ndarray,
+        bias_out_value: np.ndarray,
+        conv_out_value: np.ndarray,
+        amean: np.ndarray,
+        dims_descriptor: DimsDescriptor,
+    ):
         updated_add_in_value = bias_in_value - amean.reshape(bias_in_value.shape)
 
-        weight_dims = len(conv_out_value.shape)
+        weight_dims = conv_out_value.ndim
         updated_conv_out_value = conv_out_value
         if weight_dims > 2:
             axes = list(range(weight_dims))
             axes.remove(dims_descriptor.conv_weight_in_channels_dim)
             axes.remove(dims_descriptor.conv_weight_out_channels_dim)
             updated_conv_out_value = np.sum(conv_out_value, axis=tuple(axes))
+
+        out_channel_dim, in_channel_dim = 0, 1
+        if dims_descriptor.conv_weight_out_channels_dim > dims_descriptor.conv_weight_in_channels_dim:
+            out_channel_dim, in_channel_dim = in_channel_dim, out_channel_dim
+
         updated_conv_out_value = np.transpose(
             updated_conv_out_value,
-            (dims_descriptor.conv_weight_out_channels_dim, dims_descriptor.conv_weight_in_channels_dim),
+            (out_channel_dim, in_channel_dim),
         )
-        shift = updated_conv_out_value.dot(
-            amean.reshape(updated_conv_out_value.shape[dims_descriptor.conv_weight_in_channels_dim])
-        )
+        shift = updated_conv_out_value.dot(amean.reshape(updated_conv_out_value.shape[1]))
 
         updated_add_out_value = bias_out_value + shift.reshape(bias_out_value.shape)
         return updated_add_in_value, updated_add_out_value
 
     @staticmethod
-    def _align_scales(conv_in_value, conv_out_value, bias_in_value, ascale, dims_descr: DimsDescriptor, eps):
+    def _align_scales(
+        conv_in_value: np.ndarray,
+        conv_out_value: np.ndarray,
+        bias_in_value: np.ndarray,
+        ascale: np.ndarray,
+        dims_descr: DimsDescriptor,
+        eps: float,
+    ):
         # scale producer convolution weights
         conv_in_shape = conv_in_value.shape
         if conv_in_shape[dims_descr.conv_weight_out_channels_dim] == ascale.shape[dims_descr.bias_channels_dim]:
@@ -308,7 +322,7 @@ class ChannelAlignment(Algorithm):
         pattern.add_pattern_alternative(get_conv_add_conv_pattern())
         return pattern
 
-    def _get_node_pairs_by_graph_matcher(self, nncf_graph: NNCFGraph):
+    def _get_node_pairs(self, nncf_graph: NNCFGraph):
         pairs = []
         patterns = self._get_target_patterns()
         for subgraph in nncf_graph.find_matching_subgraphs(patterns):
@@ -337,7 +351,7 @@ class ChannelAlignment(Algorithm):
         self.nncf_graph = NNCFGraphFactory.create(model)
 
         statistic_container = StatisticPointsContainer()
-        for conv_in, add_in, _ in self._get_node_pairs_by_graph_matcher(self.nncf_graph):
+        for conv_in, add_in, _ in self._get_node_pairs(self.nncf_graph):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             channel_axis = conv_in.metatype.output_channel_axis
             reduction_shape = list(range(len(self.nncf_graph.get_output_edges(node_in)[0].tensor_shape)))
