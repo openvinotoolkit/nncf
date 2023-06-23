@@ -12,26 +12,22 @@
                      std::is_same<double, TYPE_NAME>::value || \
                      std::is_same<at::BFloat16, TYPE_NAME>::value, bool> = true
 
-// Volatile c10::Half and c10::BFloat16 arithmetic is not supported, thus will have to sacrifice
-// the implicit warp-synchronous programming in favor of explicit intra-warp thread
-// synchronization
-// support only warp size = 32
-template <typename scalar_t, DISABLE_FP16(scalar_t)>
-__device__ void sum_warp(scalar_t* sharr) {
+// Volatile c10::Half and c10::BFloat16 arithmetic is not supported, thus the implicit warp-synchronous
+// programming via "volatile" (which is deprecated anyway) cannot be used.
+// Using modern explicit intra-warp thread synchronization primitives.
+// For more information, see https://developer.nvidia.com/blog/using-cuda-warp-level-primitives/ and
+// https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=__shfl#warp-shuffle-functions
+
+template <typename scalar_accum_t, DISABLE_FP16(scalar_accum_t)>
+__device__ void sum_warp(scalar_accum_t* sharr) {
     int tidx = threadIdx.x & 31;
-    scalar_t v{0.0};
-    if (tidx < 16) {
-        v += sharr[tidx + 16]; __syncwarp();
-        sharr[tidx] = v;       __syncwarp();
-        v += sharr[tidx + 8];  __syncwarp();
-        sharr[tidx] = v;       __syncwarp();
-        v += sharr[tidx + 4];  __syncwarp();
-        sharr[tidx] = v;       __syncwarp();
-        v += sharr[tidx + 2];  __syncwarp();
-        sharr[tidx] = v;       __syncwarp();
-        v += sharr[tidx + 1];  __syncwarp();
-        sharr[tidx] = v;       __syncwarp();
-    }
+    scalar_accum_t v = sharr[tidx];
+    v += __shfl_down_sync(-1, v, 16);
+    v += __shfl_down_sync(-1, v, 8);
+    v += __shfl_down_sync(-1, v, 4);
+    v += __shfl_down_sync(-1, v, 2);
+    v += __shfl_down_sync(-1, v, 1);
+    sharr[tidx] = v;
 }
 
 
