@@ -12,6 +12,7 @@
 import sys
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+import operator
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
@@ -29,6 +30,9 @@ from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
+from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_subset_indices_pot_version
+from nncf.quantization.algorithms.tune_hyperparams.algorithm import ParamsGridSearchAlgorithm
+from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -163,6 +167,7 @@ class QuantizationAccuracyRestorer:
         max_drop: float = 0.01,
         drop_type: DropType = DropType.ABSOLUTE,
         num_ranking_processes: Optional[int] = None,
+        tune_hyperparams_algorithm: Optional[ParamsGridSearchAlgorithm] = None,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
@@ -174,12 +179,14 @@ class QuantizationAccuracyRestorer:
             calculated.
         :param num_ranking_processes: The number of parallel processes that are used to rank
             quantization operations.
+        :param tune_hyperparams_algorithm: Tune hyperparameters algorithm.
         """
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations
         self.max_drop = max_drop
         self.drop_type = drop_type
         self.num_ranking_processes = num_ranking_processes
+        self.tune_hyperparams_algorithm = tune_hyperparams_algorithm
 
     def apply(
         self,
@@ -224,14 +231,11 @@ class QuantizationAccuracyRestorer:
             initial_metric_results.metric_value, quantized_metric_results.metric_value, self.max_drop, self.drop_type
         )
 
-        if should_terminate:
+        if False:
             QuantizationAccuracyRestorer._print_completion_message(accuracy_drop, self.drop_type)
             return quantized_model
 
         nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({self.drop_type})")
-
-        if accuracy_drop <= self.max_drop:
-            return quantized_model
 
         # Accuracy drop is greater than the maximum drop so we need to restore accuracy
         return self._apply(
@@ -276,6 +280,27 @@ class QuantizationAccuracyRestorer:
         :return: The quantized model whose metric `final_metric` is satisfied
             the maximum accuracy drop condition.
         """
+        # Accuracy drop is greater than the maximum drop so we need to restore accuracy
+
+        if self.tune_hyperparams_algorithm:
+            subset_indices = QuantizationAccuracyRestorer._select_subset(initial_model,
+                                                                         quantized_model,
+                                                                         validation_dataset,
+                                                                         self.ranking_subset_size,
+                                                                         reference_values_for_each_item,
+                                                                         approximate_values_for_each_item,
+                                                                         evaluator)
+            quantized_model = self.tune_hyperparams_algorithm.apply(initial_model, validation_dataset, subset_indices)
+            quantized_metric, approximate_values_for_each_item = self._collect_metric_and_values(
+                quantized_model, validation_dataset, evaluator, "quantized"
+            )
+            should_terminate, accuracy_drop = calculate_accuracy_drop(
+                initial_metric, quantized_metric, self.max_drop, self.drop_type
+            )
+            if should_terminate:
+                QuantizationAccuracyRestorer._print_completion_message(accuracy_drop, self.drop_type)
+                return quantized_model
+
         initial_model_graph = NNCFGraphFactory.create(initial_model)
         quantized_model_graph = NNCFGraphFactory.create(quantized_model)
 
@@ -524,3 +549,41 @@ class QuantizationAccuracyRestorer:
                 )
 
         return MetricResults(metric, values_for_each_item, preparation_time(), validation_time())
+
+    @staticmethod
+    def _select_subset(initial_model: TModel,
+                       quantized_model: TModel,
+                       validation_dataset: Dataset,
+                       subset_size: int,
+                       reference_values_for_each_item: Union[List[float], List[List[TTensor]], None],
+                       approximate_values_for_each_item: Union[List[float], List[List[TTensor]], None],
+                       evaluator: Evaluator):
+
+        ranking_fn = QuantizationAccuracyRestorer._create_ranking_fn(evaluator, get_backend(initial_model))
+
+        if reference_values_for_each_item is None:
+            nncf_logger.info("Collecting metrics for each data item using an initial model")
+            with timer():
+                reference_values_for_each_item = evaluator.collect_values_for_each_item(initial_model, validation_dataset)
+
+        if approximate_values_for_each_item is None:
+            nncf_logger.info("Collecting metrics for each data item using a quantized model")
+            with timer():
+                approximate_values_for_each_item = evaluator.collect_values_for_each_item(quantized_model, validation_dataset)
+
+        scores = [
+            ranking_fn(ref_val, approx_val)
+            for ref_val, approx_val in zip(reference_values_for_each_item, approximate_values_for_each_item)
+        ]
+
+        subset_indices = get_ranking_subset_indices_pot_version(scores, subset_size)
+
+        return subset_indices
+
+    @staticmethod
+    def _create_ranking_fn(evaluator: Evaluator, backend: BackendType) -> Callable[[List[TTensor], List[TTensor]], float]:
+        if evaluator.is_metric_mode():
+            ranking_fn = operator.sub
+        else:
+            ranking_fn = create_normalized_mse_func(backend)
+        return ranking_fn
