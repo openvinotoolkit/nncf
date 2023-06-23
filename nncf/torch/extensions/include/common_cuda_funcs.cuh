@@ -11,8 +11,7 @@
 
 #define ENABLE_ONLY_FOR_NONREDUCED_FP_TYPES(TYPE_NAME) std::enable_if_t< \
                      std::is_same<float, TYPE_NAME>::value || \
-                     std::is_same<double, TYPE_NAME>::value || \
-                     std::is_same<at::BFloat16, TYPE_NAME>::value, bool> = true
+                     std::is_same<double, TYPE_NAME>::value, bool> = true
 
 // Volatile c10::Half and c10::BFloat16 arithmetic is not supported, thus the implicit warp-synchronous
 // programming via "volatile" (which is deprecated anyway) cannot be used.
