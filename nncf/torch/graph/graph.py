@@ -35,8 +35,10 @@ class PTNNCFGraph(NNCFGraph):
             edge_attr_dict = self._nx_graph.edges[in_edge]
             port_id = edge_attr_dict[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]
             assert port_id not in retval
-            for i in range(edge_attr_dict[NNCFGraph.EDGE_MULTIPLICITY_ATTR]):
-                retval[port_id - i] = edge_attr_dict[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            for p in [
+                port_id,
+            ] + edge_attr_dict[NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]:
+                retval[p] = edge_attr_dict[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
         return retval
 
     def get_input_shape_for_insertion_point(self, insertion_point: PTTargetPoint) -> Tuple[int]:

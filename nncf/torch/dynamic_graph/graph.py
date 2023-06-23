@@ -227,7 +227,7 @@ class DynamicGraphEdge:
         input_port_id: int,
         output_port_id: int,
         dtype: Dtype,
-        edge_multiplicity: int,
+        parallel_input_port_ids: List[int],
     ):
         """
         :param from_node_id - A numeric identifier of the starting node of the edge
@@ -249,7 +249,7 @@ class DynamicGraphEdge:
         self.input_port_id = input_port_id
         self.output_port_id = output_port_id
         self.dtype = dtype
-        self.edge_multiplicity = edge_multiplicity
+        self.parallel_input_port_ids = parallel_input_port_ids
 
     @classmethod
     def build_between_two_nx_nodes(
@@ -264,7 +264,7 @@ class DynamicGraphEdge:
             input_port_id=nx_edge[DynamicGraph.INPUT_PORT_ID_EDGE_ATTR],
             output_port_id=nx_edge[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR],
             dtype=nx_edge[DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR],
-            edge_multiplicity=nx_edge[DynamicGraph.EDGE_MULTIPLICITY_ATTR],
+            parallel_input_port_ids=nx_edge[DynamicGraph.PARALLEL_INPUT_PORT_IDS],
         )
 
 
@@ -340,19 +340,21 @@ class DefaultScopeNodeMatcher:
 
         has_traced_inputs = False
         for i, info in enumerate(op_exec_context.tensor_metas):
+            input_port_id = i
             if info is None or info.creator_id is None:
                 continue
-            parent = self._node_id_to_key_dict[info.creator_id]
-            edge_multiplicity = 1
-            if self._nx_graph.get_edge_data(parent, node_key) is not None:
-                edge_multiplicity = self._nx_graph.edges[parent, node_key][DynamicGraph.EDGE_MULTIPLICITY_ATTR] + 1
-            self._nx_graph.add_edge(parent, node_key)
+
             has_traced_inputs = True
+            parent = self._node_id_to_key_dict[info.creator_id]
+            if self._nx_graph.get_edge_data(parent, node_key) is not None:
+                self._nx_graph.edges[parent, node_key][DynamicGraph.PARALLEL_INPUT_PORT_IDS] += [input_port_id]
+                continue
+            self._nx_graph.add_edge(parent, node_key)
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
-            self._nx_graph.edges[parent, node_key][DynamicGraph.INPUT_PORT_ID_EDGE_ATTR] = i
+            self._nx_graph.edges[parent, node_key][DynamicGraph.INPUT_PORT_ID_EDGE_ATTR] = input_port_id
             self._nx_graph.edges[parent, node_key][DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR] = info.index
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR] = info.dtype
-            self._nx_graph.edges[parent, node_key][DynamicGraph.EDGE_MULTIPLICITY_ATTR] = edge_multiplicity
+            self._nx_graph.edges[parent, node_key][DynamicGraph.PARALLEL_INPUT_PORT_IDS] = []
 
         nx_node_dict = self._nx_graph.nodes[node_key]
         node = DynamicGraphNode.build_from_nx_node(nx_node_dict)
@@ -598,7 +600,7 @@ class DynamicGraph:
     IS_CALLED_INSIDE_NNCF_MODULE = "is_called_inside_nncf_module"
     IS_IN_ITERATION_SCOPE_NODE_ATTR = "is_in_iteration_scope"
     CALLING_MODULE_ID = "calling_module_id"
-    EDGE_MULTIPLICITY_ATTR = "edge_multiplicity"
+    PARALLEL_INPUT_PORT_IDS = "parallel_input_port_ids"
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()

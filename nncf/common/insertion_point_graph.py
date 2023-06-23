@@ -128,13 +128,13 @@ class InsertionPointGraph(nx.DiGraph):
         for edge in self._base_nx_graph.edges:
             input_port_id = self._base_nx_graph.edges[edge][NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]
             dtype = self._base_nx_graph.edges[edge][NNCFGraph.DTYPE_EDGE_ATTR]
-            edge_multiplicity = self._base_nx_graph.edges[edge][NNCFGraph.EDGE_MULTIPLICITY_ATTR]
+            parallel_input_port_ids = self._base_nx_graph.edges[edge][NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]
             from_node, to_node = edge
 
             attrs = {
                 INPUT_PORT_ID: input_port_id,
                 self.IS_INTEGER_PATH_EDGE_ATTR: dtype is Dtype.INTEGER,
-                NNCFGraph.EDGE_MULTIPLICITY_ATTR: edge_multiplicity,
+                NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR: parallel_input_port_ids,
             }
             self.add_edge(from_node, to_node, **attrs)
 
@@ -157,9 +157,11 @@ class InsertionPointGraph(nx.DiGraph):
                 input_port_id_vs_edge = {}
                 for edge in in_edges:
                     input_port_id = self.edges[edge][INPUT_PORT_ID]
-                    for i in range(self.edges[edge][NNCFGraph.EDGE_MULTIPLICITY_ATTR]):
-                        input_port_id_vs_edge[input_port_id - i] = edge
+                    input_port_id_vs_edge[input_port_id] = edge
+                    for parallel_input_port_id in self.edges[edge][NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]:
+                        input_port_id_vs_edge[parallel_input_port_id] = edge
 
+                encountered_input_edges = set()
                 for pre_hook_point in pre_hook_ips:
                     edge = input_port_id_vs_edge[pre_hook_point.input_port_id]
                     original_edge_attrs = self.edges[edge]
@@ -172,12 +174,14 @@ class InsertionPointGraph(nx.DiGraph):
                     }
 
                     self.add_node(ip_node_key, **pre_hook_ip_attrs)
-                    self.edges[edge][NNCFGraph.EDGE_MULTIPLICITY_ATTR] -= 1
-                    if self.edges[edge][NNCFGraph.EDGE_MULTIPLICITY_ATTR] == 0:
-                        self.remove_edge(from_node_key, to_node_key)
+
+                    encountered_input_edges.add(edge)
                     self.add_edge(from_node_key, ip_node_key, **original_edge_attrs)
                     self.add_edge(ip_node_key, operator_node_key, **original_edge_attrs)
                     operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
+
+                for edge in encountered_input_edges:
+                    self.remove_edge(*edge)
 
             if original_node.node_name in target_node_name_vs_post_hook_ips:
                 post_hook_ips = target_node_name_vs_post_hook_ips[original_node.node_name]

@@ -15,6 +15,7 @@ import subprocess
 import pytest
 
 from tests.shared.case_collection import skip_if_backend_not_selected
+from tests.shared.command import Command
 from tests.shared.helpers import create_venv_with_nncf
 from tests.shared.helpers import get_pip_executable_with_venv
 from tests.shared.helpers import get_python_executable_with_venv
@@ -58,7 +59,8 @@ def test_examples(tmp_path, example_name, example_params, backends_list, is_chec
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
     run_example_py = EXAMPLE_TEST_ROOT / "run_example.py"
     run_cmd_line = f"{python_executable_with_venv} {run_example_py} --name {example_name} --output {metrics_file_path}"
-    subprocess.run(run_cmd_line, check=True, shell=True, env=env, cwd=PROJECT_ROOT)
+    cmd = Command(run_cmd_line, cwd=PROJECT_ROOT, env=env)
+    cmd.run()
 
     measured_metrics = load_json(metrics_file_path)
 
