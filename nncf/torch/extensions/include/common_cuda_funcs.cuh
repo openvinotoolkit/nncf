@@ -19,26 +19,19 @@
 template <typename scalar_t, DISABLE_FP16(scalar_t)>
 __device__ void sum_warp(scalar_t* sharr) {
     int tidx = threadIdx.x & 31;
+    scalar_t v{0.0};
     if (tidx < 16) {
-        sharr[tidx] += sharr[tidx + 16];
+        v += sharr[tidx + 16]; __syncwarp();
+        sharr[tidx] = v;       __syncwarp();
+        v += sharr[tidx + 8];  __syncwarp();
+        sharr[tidx] = v;       __syncwarp();
+        v += sharr[tidx + 4];  __syncwarp();
+        sharr[tidx] = v;       __syncwarp();
+        v += sharr[tidx + 2];  __syncwarp();
+        sharr[tidx] = v;       __syncwarp();
+        v += sharr[tidx + 1];  __syncwarp();
+        sharr[tidx] = v;       __syncwarp();
     }
-    __syncwarp();
-    if (tidx < 16) {
-        sharr[tidx] += sharr[tidx + 8];
-    }
-    __syncwarp();
-    if (tidx < 16) {
-        sharr[tidx] += sharr[tidx + 4];
-    }
-    __syncwarp();
-    if (tidx < 16) {
-        sharr[tidx] += sharr[tidx + 2];
-    }
-    __syncwarp();
-    if (tidx < 16) {
-        sharr[tidx] += sharr[tidx + 1];
-    }
-    __syncwarp();
 }
 
 
