@@ -9,20 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import sys
 from dataclasses import asdict
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, Optional, Tuple
-from typing import Dict
-from typing import List
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import torch
 import torch.multiprocessing as mp
-from torch import nn
 from tqdm import tqdm
 
 from nncf.common.quantization.structs import QuantizationMode
@@ -85,15 +81,23 @@ TEST_SYMMETRIC: List[bool] = [True, False]
 TEST_DEVICES: List[torch.device] = [torch.device("cuda"), torch.device("cpu")]
 
 TEST_BATCHES: List[BatchDescriptor] = [
-    BatchDescriptor(mode=BatchMode.LOW,
-                    input_size=LOW_BATCH_INPUT_SIZE,
-                    num_runs={torch.device("cuda"): GPU_RUNS_LOW_BATCH, torch.device("cpu"): CPU_RUNS}),
-    BatchDescriptor(mode=BatchMode.HIGH,
-                    input_size=HIGH_BATCH_INPUT_SIZE,
-                    num_runs={torch.device("cuda"): GPU_RUNS_HIGH_BATCH, torch.device("cpu"): CPU_RUNS})
+    BatchDescriptor(
+        mode=BatchMode.LOW,
+        input_size=LOW_BATCH_INPUT_SIZE,
+        num_runs={torch.device("cuda"): GPU_RUNS_LOW_BATCH, torch.device("cpu"): CPU_RUNS},
+    ),
+    BatchDescriptor(
+        mode=BatchMode.HIGH,
+        input_size=HIGH_BATCH_INPUT_SIZE,
+        num_runs={torch.device("cuda"): GPU_RUNS_HIGH_BATCH, torch.device("cpu"): CPU_RUNS},
+    ),
 ]
 TEST_DTYPES: List[torch.dtype] = [torch.float, torch.half]
-TEST_EXEC_TYPES: List[ExecutionType] = [ExecutionType.REGULAR, ExecutionType.DISTRIBUTED_DATA_PARALLEL, ExecutionType.DATA_PARALLEL]
+TEST_EXEC_TYPES: List[ExecutionType] = [
+    ExecutionType.REGULAR,
+    ExecutionType.DISTRIBUTED_DATA_PARALLEL,
+    ExecutionType.DATA_PARALLEL,
+]
 TEST_NARROW_RANGE: List[bool] = [False, True]
 TEST_TIMING_MODE: List[TimingMode] = [TimingMode.WALL, TimingMode.KERNEL]
 TEST_REFERENCE: List[bool] = [False, True]
@@ -120,19 +124,20 @@ class ParamStruct:
         return dct
 
 
-TEST_PARAM_STRUCTS: List[ParamStruct] = [ParamStruct(dtype=dtype,
-                                                     device=device,
-                                                     exec_type=exec_type,
-                                                     batch=batch,
-                                                     tensor_type=tensor_type,
-                                                     granularity=granularity,
-                                                     symmetric=symmetric,
-                                                     narrow_range=narrow_range,
-                                                     timing_mode=timing,
-                                                     ref=ref)
-                                         for
-                                         ref, timing, narrow_range, dtype, exec_type, batch, device, tensor_type, granularity, symmetric,
-                                         in product(
+TEST_PARAM_STRUCTS: List[ParamStruct] = [
+    ParamStruct(
+        dtype=dtype,
+        device=device,
+        exec_type=exec_type,
+        batch=batch,
+        tensor_type=tensor_type,
+        granularity=granularity,
+        symmetric=symmetric,
+        narrow_range=narrow_range,
+        timing_mode=timing,
+        ref=ref,
+    )
+    for ref, timing, narrow_range, dtype, exec_type, batch, device, tensor_type, granularity, symmetric, in product(
         TEST_REFERENCE,
         TEST_TIMING_MODE,
         TEST_NARROW_RANGE,
@@ -144,9 +149,9 @@ TEST_PARAM_STRUCTS: List[ParamStruct] = [ParamStruct(dtype=dtype,
         TEST_GRANULARITY,
         TEST_SYMMETRIC,
     )
-                                         if not (device == torch.device("cpu") and dtype == torch.half)
-                                         and not (device == torch.device("cpu") and exec_type == ExecutionType.DISTRIBUTED_DATA_PARALLEL)
-                                         ]
+    if not (device == torch.device("cpu") and dtype == torch.half)
+    and not (device == torch.device("cpu") and exec_type == ExecutionType.DISTRIBUTED_DATA_PARALLEL)
+]
 
 
 class DefaultedPTQuantizerSpec(PTQuantizerSpec):
@@ -170,19 +175,20 @@ def get_module(params_struct: ParamStruct) -> BaseQuantizer:
     input_shape = params_struct.batch.input_size
     is_weights = params_struct.tensor_type == TensorType.WEIGHTS
 
-    scale_shape = [1, ]
+    scale_shape = [
+        1,
+    ]
     if params_struct.granularity == GranularityType.PER_CHANNEL:
         scale_shape = get_per_channel_scale_shape(input_shape, is_weights=is_weights)
-    specs = DefaultedPTQuantizerSpec(scale_shape=scale_shape,
-                                     narrow_range=params_struct.narrow_range, num_bits=NBITS)
+    specs = DefaultedPTQuantizerSpec(scale_shape=scale_shape, narrow_range=params_struct.narrow_range, num_bits=NBITS)
 
     module_cls = SymmetricQuantizer if params_struct.symmetric else AsymmetricQuantizer
-    module = module_cls(specs)
-    module = module.to(params_struct.device)
+    m = module_cls(specs)
+    m = m.to(params_struct.device)
     if params_struct.dtype == torch.half:
-        module.half()
+        m.half()
 
-    return module
+    return m
 
 
 if __name__ == "__main__":
@@ -203,12 +209,15 @@ if __name__ == "__main__":
         input_size = param_struct.batch.input_size
         if param_struct.exec_type == ExecutionType.DISTRIBUTED_DATA_PARALLEL:
             output = []  # type: List[Dict[str, float]]
-            mp.spawn(
-                run_worker,
-                nprocs=ngpus_per_node,
-                args=(world_size, module, input_size, num_runs, param_struct.dtype, output),
-            )
-            run_data = output[0]
+            try:
+                mp.spawn(
+                    run_worker,
+                    nprocs=ngpus_per_node,
+                    args=(world_size, module, input_size, num_runs, param_struct.dtype, output),
+                )
+                run_data = output[0]
+            except:  # pylint:disable=bare-except
+                run_data = {"time": -1}
         else:
             run_data = call_fn(module, input_size, param_struct.device, num_runs, dtype=param_struct.dtype)
 
