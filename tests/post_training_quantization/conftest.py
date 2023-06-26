@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 from pathlib import Path
 
 import pandas as pd
@@ -18,8 +19,9 @@ from tests.shared.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):
-    parser.addoption("--cache_dir", action="store")
-    parser.addoption("--output_dir", action="store", default="./tmp/")
+    parser.addoption("--data", action="store")
+    parser.addoption("--output", action="store", default="./tmp/")
+    # parser.addoption("--mode", action="store", default="short", choices=("full", "short", "no_val", "quantize_only"))
 
 
 def pytest_configure(config):
@@ -35,11 +37,11 @@ def pytest_runtest_makereport(item, call):
     result = outcome.get_result()
 
     if result.when == "call":
-        test_results = item.config.test_results
+        test_results = collections.OrderedDict(sorted(item.config.test_results.items()))
         df = pd.DataFrame()
-        for test_case_name, test_result in test_results.items():
+        for _, test_result in test_results.items():
             df = df.append(test_result, ignore_index=True)
 
-        output_folder = Path(item.config.getoption("--output_dir"))
+        output_folder = Path(item.config.getoption("--output"))
         output_folder.mkdir(parents=True, exist_ok=True)
-        df.to_csv(output_folder / "results.csv")
+        df.to_csv(output_folder / "results.csv", index=False)

@@ -10,71 +10,27 @@
 # limitations under the License.
 
 
-import copy
 from pathlib import Path
 
-import pandas as pd
 import pytest
-import transformers
+import yaml
 
-from nncf import QuantizationPreset
-from tests.post_training_quantization.pipelines.automatic_speech_recognition import AutomaticSpeechRecognitionHF
-from tests.post_training_quantization.pipelines.base import ALL_NNCF_PTQ_BACKENDS
-from tests.post_training_quantization.pipelines.base import BackendType
-from tests.post_training_quantization.pipelines.image_classification import ImageClassificationHF
-from tests.post_training_quantization.pipelines.masked_language_modeling import MaskedLanguageModelingHF
+from tests.post_training_quantization.model_scope import TEST_CASES
+from tests.post_training_quantization.pipelines.base import RunInfo
 
-TEST_MODELS = [
-    {
-        "reported_name": "microsoft/resnet-18",
-        "model_id": "microsoft/resnet-18",
-        "pipeline_cls": ImageClassificationHF,
-        "ptq_params": {"preset": QuantizationPreset.MIXED},
-        "backends": ALL_NNCF_PTQ_BACKENDS,
-        "params": {"pt_model_class": transformers.ResNetForImageClassification},
-    },
-    # {
-    #     "reported_name": "openai/whisper-tiny",
-    #     "model_id": "openai/whisper-tiny",
-    #     "pipeline_cls": AutomaticSpeechRecognitionHF,
-    #     "ptq_params": {"preset": QuantizationPreset.MIXED},
-    #     "backends": ALL_NNCF_PTQ_BACKENDS,
-    #     "params": {"pt_model_class": transformers.WhisperForConditionalGeneration},
-    # },
-    {
-        "reported_name": "bert-base-uncased",
-        "model_id": "bert-base-uncased",
-        "pipeline_cls": MaskedLanguageModelingHF,
-        "ptq_params": {"preset": QuantizationPreset.MIXED},
-        "backends": [BackendType.OPTIMUM],
-        "params": {},
-    },
-]
+# @pytest.fixture(scope="session", name="mode")
+# def fixture_output(pytestconfig):
+#     return pytestconfig.getoption("mode")
 
 
-def generate_tests_scope():
-    tests_scope = {}
-    for test_model_param in TEST_MODELS:
-        for backend in test_model_param["backends"]:
-            model_param = copy.deepcopy(test_model_param)
-            test_case_name = f"{model_param['reported_name']}_{backend.value}"
-            model_param["backend"] = backend
-            model_param.pop("backends")
-            tests_scope[test_case_name] = model_param
-    return tests_scope
-
-
-TEST_CASES = generate_tests_scope()
-
-
-@pytest.fixture(scope="session", name="cache_dir")
+@pytest.fixture(scope="session", name="data")
 def fixture_data(pytestconfig):
-    return pytestconfig.getoption("cache_dir")
+    return pytestconfig.getoption("data")
 
 
-@pytest.fixture(scope="session", name="output_dir")
+@pytest.fixture(scope="session", name="output")
 def fixture_output(pytestconfig):
-    return pytestconfig.getoption("output_dir")
+    return pytestconfig.getoption("output")
 
 
 @pytest.fixture(scope="session", name="result")
@@ -82,37 +38,58 @@ def fixture_result(pytestconfig):
     return pytestconfig.test_results
 
 
+def read_reference_data():
+    path_reference = Path(__file__).parent / "reference_data.yaml"
+    with path_reference.open() as f:
+        data = yaml.safe_load(f)
+    return data
+
+
+REFERENCE_DATA = read_reference_data()
+
+
 @pytest.mark.parametrize("test_case_name", TEST_CASES.keys())
-def test_ptq_hf(test_case_name, output_dir, cache_dir, result):
+def test_ptq_hf(test_case_name, data, output, result):
     pipeline = None
     err_msg = None
 
     try:
+        if test_case_name not in REFERENCE_DATA:
+            RuntimeError(f"{test_case_name} does not exists in 'reference_data.yaml'")
+
         test_model_param = TEST_CASES[test_case_name]
         pipeline_cls = test_model_param["pipeline_cls"]
+
+        print("\n")
+        print(f"Model: {test_model_param['reported_name']}")
+        print(f"Backend: {test_model_param['backend']}")
+        print(f"PTQ params: {test_model_param['ptq_params']}")
 
         pipeline_kwargs = {
             "reported_name": test_model_param["reported_name"],
             "model_id": test_model_param["model_id"],
             "backend": test_model_param["backend"],
             "ptq_params": test_model_param["ptq_params"],
-            "num_samples": 1,
             "params": test_model_param["params"],
-            "output_dir": Path(output_dir),
-            "cache_dir": cache_dir,
+            "output_dir": output,
+            "data_dir": data,
+            "mode": "full",
+            "reference_data": REFERENCE_DATA[test_case_name],
         }
 
         pipeline = pipeline_cls(**pipeline_kwargs)
-
-        pipeline.prepare()
-        pipeline.quantize()
+        pipeline.run()
 
     except Exception as e:
-        err_msg = str(e)
+        err_msg = f"{type(e)}: {e}"
         raise Exception() from e
     finally:
-        result_dict = {}
         if pipeline is not None:
-            result_dict.update(pipeline.get_result_dict())
-        result_dict["err_msg"] = err_msg
+            result_dict = pipeline.get_result_dict()
+        else:
+            result_dict = RunInfo(
+                model=test_model_param["reported_name"],
+                backend=test_model_param["backend"],
+                error_message=err_msg,
+            )
         result[test_case_name] = result_dict

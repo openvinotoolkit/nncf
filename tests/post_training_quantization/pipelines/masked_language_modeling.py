@@ -46,23 +46,23 @@ class MaskedLanguageModelingHF(BaseHFTestPipeline):
     def prepare_calibration_dataset(self):
         quantizer = OVQuantizer.from_pretrained(self.model_hf)
 
+        num_samples = self.ptq_params.get("subset_size", 300)
         calibration_dataset = quantizer.get_calibration_dataset(
             "glue",
             dataset_config_name="sst2",
             preprocess_function=self.get_transform_calibration_fn(),
-            num_samples=self.num_samples,
+            num_samples=num_samples,
             dataset_split="train",
             preprocess_batch=True,
         )
 
         if self.backend == BackendType.OPTIMUM:
             self.calibration_dataset = calibration_dataset
-        else:
-            # TODO: not works
-            def transform_fn(x):
-                return x["input_ids"], x["token_type_ids"], x["attention_mask"]
+        # else:
+        #     def transform_fn(x):
+        #         return x["input_ids"], x["token_type_ids"], x["attention_mask"]
 
-            self.calibration_dataset = nncf.Dataset(calibration_dataset, transform_fn)
+        #     self.calibration_dataset = nncf.Dataset(calibration_dataset, transform_fn)
 
     def _validate(self):
         pass

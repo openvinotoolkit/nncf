@@ -1,0 +1,18 @@
+timm/resnet-18_backend_Legacy_Torch:
+    metric_value: 0.69392
+    metric_value_fp32: 0.70104
+timm/resnet-18_backend_Torch:
+    metric_value: 0.69748
+    metric_value_fp32: 0.70104
+timm/resnet-18_backend_ONNX:
+    metric_value: 0.6979
+    metric_value_fp32: 0.70104
+timm/resnet-18_backend_OV:
+    metric_value: 0.69774
+    metric_value_fp32: 0.70104
+timm/resnet-18_backend_POT:
+    metric_value: 0.69792
+    metric_value_fp32: 0.70104
+
+bert-base-uncased_backend_OPTIMUM:
+    metric_value: null
