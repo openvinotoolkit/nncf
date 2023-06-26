@@ -211,7 +211,8 @@ class BaseTestPipeline(ABC):
         """
         print("Quantization...")
         start_time = time.perf_counter()
-        self.run_info.quant_memory_usage = memory_usage(self._quantize, max_usage=True)
+        self._quantize()
+        # self.run_info.quant_memory_usage = memory_usage(self._quantize, max_usage=True)
         self.run_info.time_quantization = time.perf_counter() - start_time
 
     def post_quantize(self) -> None:
