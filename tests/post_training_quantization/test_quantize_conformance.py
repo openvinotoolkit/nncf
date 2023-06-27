@@ -10,6 +10,7 @@
 # limitations under the License.
 
 
+import traceback
 from pathlib import Path
 
 import pytest
@@ -55,7 +56,7 @@ def test_ptq_hf(test_case_name, data, output, result):
 
     try:
         if test_case_name not in REFERENCE_DATA:
-            RuntimeError(f"{test_case_name} does not exists in 'reference_data.yaml'")
+            raise RuntimeError(f"{test_case_name} does not exists in 'reference_data.yaml'")
 
         test_model_param = TEST_CASES[test_case_name]
         pipeline_cls = test_model_param["pipeline_cls"]
@@ -79,17 +80,20 @@ def test_ptq_hf(test_case_name, data, output, result):
 
         pipeline = pipeline_cls(**pipeline_kwargs)
         pipeline.run()
-
     except Exception as e:
         err_msg = f"{type(e)}: {e}"
-        raise Exception() from e
-    finally:
-        if pipeline is not None:
-            result_dict = pipeline.get_result_dict()
-        else:
-            result_dict = RunInfo(
-                model=test_model_param["reported_name"],
-                backend=test_model_param["backend"],
-                error_message=err_msg,
-            )
-        result[test_case_name] = result_dict
+        traceback.print_exc()
+
+    if pipeline is not None:
+        run_info = pipeline.get_run_info()
+        run_info.error_message = err_msg
+    else:
+        run_info = RunInfo(
+            model=test_model_param["reported_name"],
+            backend=test_model_param["backend"],
+            error_message=err_msg,
+        )
+    result[test_case_name] = run_info.get_result_dict()
+
+    if err_msg:
+        pytest.fail(err_msg)

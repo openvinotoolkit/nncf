@@ -20,7 +20,7 @@ from tests.post_training_quantization.pipelines.masked_language_modeling import 
 
 TEST_MODELS = [
     {
-        "reported_name": "timm/resnet-18",
+        "reported_name": "timm/resnet18",
         "model_id": "resnet18",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {},

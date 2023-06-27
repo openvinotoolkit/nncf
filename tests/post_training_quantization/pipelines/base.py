@@ -17,6 +17,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import onnx
 import openvino.runtime as ov
 import torch
@@ -77,7 +78,7 @@ class RunInfo:
             return None
         return int(memory)
 
-    def to_result_dict(self):
+    def get_result_dict(self):
         return {
             "Model": self.model,
             "Backend": self.backend.value if self.backend else None,
@@ -211,8 +212,7 @@ class BaseTestPipeline(ABC):
         """
         print("Quantization...")
         start_time = time.perf_counter()
-        self._quantize()
-        # self.run_info.quant_memory_usage = memory_usage(self._quantize, max_usage=True)
+        self.run_info.quant_memory_usage = memory_usage(self._quantize, max_usage=True)
         self.run_info.time_quantization = time.perf_counter() - start_time
 
     def post_quantize(self) -> None:
@@ -251,12 +251,23 @@ class BaseTestPipeline(ABC):
     def _validate(self) -> None:
         pass
 
-    def validate(self):
+    def validate(self) -> None:
+        print("Validation...")
         self._validate()
-        if "metric_value_fp32" in self.reference_data and self.run_info.metric_value is not None:
+
+        metric_value = self.run_info.metric_value
+        metric_reference = self.reference_data.get("metric_value")
+        metric_value_fp32 = self.reference_data.get("metric_value_fp32")
+
+        if metric_value is not None and metric_value_fp32 is not None:
             self.run_info.metric_diff = self.reference_data["metric_value_fp32"] - self.run_info.metric_value
 
-    def run(self):
+        if metric_value is not None and metric_reference is not None:
+            print(f"{np.isclose(metric_value, metric_reference)}")
+            if not np.isclose(metric_value, metric_reference):
+                raise ValueError(f"Metric value {metric_value} is not close to reference {metric_reference}")
+
+    def run(self) -> None:
         start_time = time.perf_counter()
         self.prepare()
         self.quantize()
@@ -265,8 +276,8 @@ class BaseTestPipeline(ABC):
         self.validate()
         self.run_info.time_full = time.perf_counter() - start_time
 
-    def get_result_dict(self):
-        return self.run_info.to_result_dict()
+    def get_run_info(self) -> RunInfo:
+        return self.run_info
 
 
 class BaseHFTestPipeline(BaseTestPipeline):
