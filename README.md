@@ -354,7 +354,7 @@ This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolk
 
 ## NNCF Compressed Model Zoo
 
-List of models and compression results for them can be found at our [Model Zoo page](../../../docs/ModelZoo.md).
+List of models and compression results for them can be found at our [Model Zoo page](./docs/ModelZoo.md).
 
 ## Citing
 
