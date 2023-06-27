@@ -18,6 +18,7 @@ import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
@@ -86,6 +87,11 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
+    def get_weights_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
+        pass
+
+    @staticmethod
+    @abstractmethod
     def get_statistic_collector(
         reduction_shape, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
@@ -113,7 +119,7 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def get_conv_layer_attributes(node: NNCFNode):
+    def get_conv_layer_attributes(node: NNCFNode) -> Optional[ConvolutionLayerAttributes]:
         pass
 
 

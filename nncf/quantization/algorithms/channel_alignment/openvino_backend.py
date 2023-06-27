@@ -5,6 +5,7 @@ import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
@@ -14,6 +15,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
@@ -57,12 +59,16 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return 0, 0
 
     @staticmethod
+    def get_weights_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
+        return 0, 1
+
+    @staticmethod
     def get_conv_metatypes():
-        return [OVConvolutionMetatype, OVGroupConvolutionMetatype]
+        return [OVConvolutionMetatype, OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype]
 
     @staticmethod
     def get_linear_metatypes():
-        return [OVConvolutionMetatype, OVGroupConvolutionMetatype, OVMatMulMetatype]
+        return [OVMatMulMetatype]
 
     @staticmethod
     def get_add_metatypes():
@@ -70,7 +76,9 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
     @staticmethod
     def get_conv_nodes(nncf_graph: NNCFGraph):
-        return nncf_graph.get_nodes_by_metatypes([OVConvolutionMetatype, OVGroupConvolutionMetatype])
+        return nncf_graph.get_nodes_by_metatypes(
+            [OVConvolutionMetatype, OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype]
+        )
 
     @staticmethod
     def get_statistic_collector(
@@ -102,12 +110,22 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
     @staticmethod
     def get_dims_descriptor(node: NNCFNode):
-        return DimsDescriptor(
-            conv_weight_out_channels_dim=0,
-            conv_weight_in_channels_dim=1,
-            bias_channels_dim=node.metatype.output_channel_axis,
-        )
+        if node.metatype == OVConvolutionMetatype:
+            return DimsDescriptor(
+                conv_weight_out_channels_dim=0,
+                conv_weight_in_channels_dim=1,
+                bias_channels_dim=node.metatype.output_channel_axis,
+            )
+        if node.metatype in [OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype]:
+            return DimsDescriptor(
+                conv_weight_out_channels_dim=1,
+                conv_weight_in_channels_dim=2,
+                bias_channels_dim=node.metatype.output_channel_axis,
+            )
+        raise RuntimeError(f"Could not retrieve dims description for node {node} with metatype {node.metatype}")
 
     @staticmethod
-    def get_conv_layer_attributes(node: NNCFNode):
+    def get_conv_layer_attributes(node: NNCFNode) -> Optional[ConvolutionLayerAttributes]:
+        if node.layer_attributes is None:
+            return None
         return node.layer_attributes.common_layer_attrs[1]

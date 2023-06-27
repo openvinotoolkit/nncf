@@ -34,22 +34,20 @@ from tests.post_training.test_templates.models import NNCFGraphCAWithBias
 
 EPS = 1e-3
 
-VALID_CONV_LAYER_ATTRS = [
-    ConvolutionLayerAttributes(
-        weight_requires_grad=False,
-        in_channels=5,
-        out_channels=5,
-        kernel_size=(5, 5),
-        stride=(1, 1),
-        dilations=(1, 1),
-        groups=1,
-        transpose=False,
-        padding_values=(0, 0, 0, 0),
-    )
-]
+VALID_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
+    weight_requires_grad=False,
+    in_channels=5,
+    out_channels=5,
+    kernel_size=(5, 5),
+    stride=(1, 1),
+    dilations=(1, 1),
+    groups=1,
+    transpose=False,
+    padding_values=(0, 0, 0, 0),
+)
 
 
-INVALID_CONV_LAYER_ATTRS = [
+INVALID_CONSUMER_CONV_LAYER_ATTRS = [
     ConvolutionLayerAttributes(
         weight_requires_grad=False,
         in_channels=5,
@@ -90,22 +88,24 @@ INVALID_CONV_LAYER_ATTRS = [
         kernel_size=(5, 5),
         stride=(1, 1),
         dilations=(1, 1),
-        groups=5,
-        transpose=False,
-        padding_values=(0, 0, 0, 0),
-    ),
-    ConvolutionLayerAttributes(
-        weight_requires_grad=False,
-        in_channels=5,
-        out_channels=5,
-        kernel_size=(5, 5),
-        stride=(1, 1),
-        dilations=(1, 1),
         groups=1,
         transpose=False,
         padding_values=(1, 0, 0, 0),
     ),
 ]
+
+
+INVALID_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
+    weight_requires_grad=False,
+    in_channels=5,
+    out_channels=5,
+    kernel_size=(5, 5),
+    stride=(1, 1),
+    dilations=(1, 1),
+    groups=5,
+    transpose=False,
+    padding_values=(0, 0, 0, 0),
+)
 
 
 class TemplateTestChannelAlignment:
@@ -203,15 +203,35 @@ class TemplateTestChannelAlignment:
         else:
             assert np.allclose(updated_bias_in, self.REF_UPDATED_BIAS_IN)
 
-    @pytest.mark.parametrize(
-        "layer_attributes,ref_match",
-        [(attr, True) for attr in VALID_CONV_LAYER_ATTRS] + [(attr, False) for attr in INVALID_CONV_LAYER_ATTRS],
+    GET_NODES_TEST_CASES = []
+    GET_NODES_TEST_CASES = [(VALID_CONV_LAYER_ATTR, VALID_CONV_LAYER_ATTR, True)]
+    GET_NODES_TEST_CASES.extend([(attr, VALID_CONV_LAYER_ATTR, True) for attr in INVALID_CONSUMER_CONV_LAYER_ATTRS])
+    GET_NODES_TEST_CASES.extend([(VALID_CONV_LAYER_ATTR, attr, False) for attr in INVALID_CONSUMER_CONV_LAYER_ATTRS])
+    GET_NODES_TEST_CASES.extend(
+        [
+            (INVALID_CONV_LAYER_ATTR, VALID_CONV_LAYER_ATTR, False),
+            (VALID_CONV_LAYER_ATTR, INVALID_CONV_LAYER_ATTR, False),
+            (INVALID_CONV_LAYER_ATTR, INVALID_CONV_LAYER_ATTR, False),
+        ]
     )
-    def test_get_node_pairs(self, layer_attributes, ref_match):
+    GET_NODES_TEST_CASES.extend(
+        [(VALID_CONV_LAYER_ATTR, None, False), (None, VALID_CONV_LAYER_ATTR, False), (None, None, False)]
+    )
+
+    @pytest.mark.parametrize("first_conv_attrs,second_conv_attrs,ref_match", GET_NODES_TEST_CASES)
+    def test_get_node_pairs(self, first_conv_attrs, second_conv_attrs, ref_match):
         algorithm = ChannelAlignment()
         algorithm._backend_entity = self.get_backend_cls()
-        conv_layer_attrs = self.convert_conv_layer_attrs(layer_attributes)
-        nncf_graph = NNCFGraphCA(self.get_conv_metatype(), conv_layer_attrs)
+        if not first_conv_attrs is None:
+            first_conv_attrs = self.convert_conv_layer_attrs(first_conv_attrs)
+        if not second_conv_attrs is None:
+            second_conv_attrs = self.convert_conv_layer_attrs(second_conv_attrs)
+        nncf_graph = NNCFGraphCA(
+            self.get_conv_metatype(),
+            conv_layer_attrs=first_conv_attrs,
+            conv_2_layer_attrs=second_conv_attrs,
+            use_one_layer_attrs=False,
+        )
         pairs = algorithm._get_node_pairs(nncf_graph.nncf_graph)
         if ref_match:
             assert len(pairs) == 1
@@ -223,7 +243,7 @@ class TemplateTestChannelAlignment:
             assert len(pairs) == 0
 
     def _get_nncf_graph(self, num_biases: int) -> NNCFGraph:
-        cla = self.convert_conv_layer_attrs(VALID_CONV_LAYER_ATTRS[0])
+        cla = self.convert_conv_layer_attrs(VALID_CONV_LAYER_ATTR)
         if num_biases == 0:
             return NNCFGraphCA(self.get_conv_metatype(), cla).nncf_graph
         bla = self.get_add_layer_attrs()

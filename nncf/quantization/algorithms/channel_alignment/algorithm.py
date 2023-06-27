@@ -19,7 +19,6 @@ from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -225,9 +224,9 @@ class ChannelAlignment(Algorithm):
         return conv_in_value, conv_out_value, bias_in_value
 
     def _check_consumer_conv_node(self, conv_node: NNCFNode) -> bool:
-        if conv_node is None:
+        attrs = self._backend_entity.get_conv_layer_attributes(conv_node)
+        if attrs is None:
             return False
-        attrs: ConvolutionLayerAttributes = self._backend_entity.get_conv_layer_attributes(conv_node)
         # Check groups amount == 1
         if attrs.groups != 1:
             return False
@@ -239,6 +238,15 @@ class ChannelAlignment(Algorithm):
             return False
         # Check Node has vaild dilation
         if any(elem != 1 for elem in attrs.dilations):
+            return False
+        return True
+
+    def _check_producer_conv_node(self, conv_node: NNCFNode):
+        attrs = self._backend_entity.get_conv_layer_attributes(conv_node)
+        if attrs is None:
+            return False
+        # Check groups amount == 1
+        if attrs.groups != 1:
             return False
         return True
 
@@ -312,7 +320,10 @@ class ChannelAlignment(Algorithm):
             else:
                 conv_in, add_in, conv_out = subgraph
 
-            if not self._check_consumer_conv_node(conv_in):
+            if not self._check_producer_conv_node(conv_in):
+                continue
+
+            if not self._check_consumer_conv_node(conv_out):
                 continue
 
             pairs.append((conv_in, add_in, conv_out))

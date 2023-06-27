@@ -99,7 +99,14 @@ class NNCFGraphToTestMatMul:
 
 
 class NNCFGraphCA:
-    def __init__(self, conv_metatype, conv_layer_attrs=None, nncf_graph_cls=NNCFGraph):
+    def __init__(
+        self,
+        conv_metatype,
+        conv_layer_attrs=None,
+        conv_2_layer_attrs=None,
+        use_one_layer_attrs=True,
+        nncf_graph_cls=NNCFGraph,
+    ):
         #       Original graph
         #          Input_1
         #             |
@@ -108,12 +115,14 @@ class NNCFGraphCA:
         #           Conv_2
         #             |
         #           Output_1
+        if use_one_layer_attrs and not conv_layer_attrs is None and conv_2_layer_attrs is None:
+            conv_2_layer_attrs = conv_layer_attrs
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype),
             NodeWithType("Conv_1_W", ConstantTestMetatype),
             NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
             NodeWithType("Conv_2_W", ConstantTestMetatype),
-            NodeWithType("Conv_2", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Conv_2", conv_metatype, layer_attributes=conv_2_layer_attrs),
             NodeWithType("Output_1", OutputNoopMetatype),
         ]
         node_edges = [
