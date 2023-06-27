@@ -89,6 +89,7 @@ class RunInfo:
             "Quant. RAM MiB": self.format_memory_usage(self.quant_memory_usage),
             "Quant. time": self.format_time(self.time_quantization),
             "Full time": self.format_time(self.time_full),
+            "Error": self.error_message,
         }
 
 
