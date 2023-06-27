@@ -1,12 +1,8 @@
-from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple, TypeVar
+from typing import Any, Dict, List
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
-from nncf.common.graph.layer_attributes import MultipleWeightsLayerAttributes
-from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype

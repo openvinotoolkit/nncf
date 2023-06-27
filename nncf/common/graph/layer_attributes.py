@@ -100,14 +100,6 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
         return 0
 
 
-WeightID = TypeVar("WeightID")
-
-
-class MultipleWeightsLayerAttributes(BaseLayerAttributes):
-    def __init__(self, weights_attributes: Dict[WeightID, GenericWeightedLayerAttributes]):
-        self.weights_attributes = weights_attributes
-
-
 class LinearLayerAttributes(WeightedLayerAttributes):
     def __init__(self, weight_requires_grad: bool, in_features: int, out_features: int, bias: bool = True):
         """

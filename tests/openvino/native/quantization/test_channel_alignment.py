@@ -27,13 +27,6 @@ from nncf.quantization.algorithms.channel_alignment.openvino_backend import OVCh
 from tests.post_training.test_templates.test_channel_alignment import TemplateTestChannelAlignment
 
 
-def create_nncf_graph_for_ca_algo():
-    NNCFGraph()
-
-
-NNCF_GRAPH_FOR_CA = None
-
-
 class TestOVChannelAlignment(TemplateTestChannelAlignment):
     def get_backend_cls(self) -> Type[OVChannelAlignmentAlgoBackend]:
         return OVChannelAlignmentAlgoBackend
@@ -58,7 +51,3 @@ class TestOVChannelAlignment(TemplateTestChannelAlignment):
 
     def get_transformation_commands(self):
         return OVBiasCorrectionCommand, OVWeightUpdateCommand
-
-    @pytest.fixture(scope="session")
-    def test_params(self):
-        return {"test_get_node_pairs": {"NNCFGraph": {{"bad": None, "good": None}}}}

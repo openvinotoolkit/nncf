@@ -86,24 +86,9 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def get_weights_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
-        pass
-
-    @staticmethod
-    @abstractmethod
     def get_statistic_collector(
         reduction_shape, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def is_node_add_operation(node: NNCFNode) -> bool:
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def is_node_conv_or_matmul_operation(node: NNCFNode) -> bool:
         pass
 
     @staticmethod

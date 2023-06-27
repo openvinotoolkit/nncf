@@ -9,32 +9,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
 from tqdm import tqdm
 
 from nncf import Dataset
-from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import ConvParamsContainer
 from nncf.quantization.algorithms.channel_alignment.backend import DimsDescriptor
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
@@ -176,7 +171,7 @@ class ChannelAlignment(Algorithm):
         conv_out_value: np.ndarray,
         amean: np.ndarray,
         dims_descriptor: DimsDescriptor,
-    ):
+    ) -> Tuple[np.ndarray, np.ndarray]:
         updated_add_in_value = bias_in_value - amean.reshape(bias_in_value.shape)
 
         weight_dims = conv_out_value.ndim
@@ -208,7 +203,7 @@ class ChannelAlignment(Algorithm):
         ascale: np.ndarray,
         dims_descr: DimsDescriptor,
         eps: float,
-    ):
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         # scale producer convolution weights
         conv_in_shape = conv_in_value.shape
         if conv_in_shape[dims_descr.conv_weight_out_channels_dim] == ascale.shape[dims_descr.bias_channels_dim]:
@@ -229,7 +224,7 @@ class ChannelAlignment(Algorithm):
             conv_out_value = conv_out_value * scale_factor.reshape(scale_out_shape)
         return conv_in_value, conv_out_value, bias_in_value
 
-    def _check_consumer_conv_node(self, conv_node: NNCFNode):
+    def _check_consumer_conv_node(self, conv_node: NNCFNode) -> bool:
         if conv_node is None:
             return False
         attrs: ConvolutionLayerAttributes = self._backend_entity.get_conv_layer_attributes(conv_node)
@@ -247,22 +242,7 @@ class ChannelAlignment(Algorithm):
             return False
         return True
 
-    def _check_producer_node(self, conv_node, add_node, nncf_graph):
-        # Check node exists
-        if conv_node is None:
-            return False
-        # Check node is conv
-        if not self._backend_entity.is_node_conv_or_matmul_operation(conv_node):
-            return False
-        # Check conv has only one consumer node
-        if len(nncf_graph.get_next_nodes(conv_node)) > 1:
-            return False
-        # Check add has only one consumer node
-        if add_node is not None and len(nncf_graph.get_next_nodes(add_node)) > 1:
-            return False
-        return True
-
-    def _get_target_patterns(self):
+    def _get_target_patterns(self) -> GraphPattern:
         producer_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_PRODUCER",
             GraphPattern.NODE_TYPE_ATTR: [
@@ -281,15 +261,15 @@ class ChannelAlignment(Algorithm):
             GraphPattern.LABEL_ATTR: "CONV_CONSUMER",
             GraphPattern.NODE_TYPE_ATTR: [op for op in self._backend_entity.get_conv_metatypes()],
         }
-        conv_const = {
+        conv_const_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_CONSTANT",
             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
         }
 
-        def get_conv_conv_pattern():
+        def get_conv_conv_pattern() -> GraphPattern:
             conv_conv = GraphPattern()
-            producer_constant = conv_conv.add_node(**conv_const)
-            consumer_constant = conv_conv.add_node(**conv_const)
+            producer_constant = conv_conv.add_node(**conv_const_attrs)
+            consumer_constant = conv_conv.add_node(**conv_const_attrs)
 
             pattern_conv_producer = conv_conv.add_node(**producer_attrs)
             pattern_conv_consumer = conv_conv.add_node(**consumer_attrs)
@@ -300,11 +280,11 @@ class ChannelAlignment(Algorithm):
             conv_conv.add_edge(pattern_conv_producer, pattern_conv_consumer)
             return conv_conv
 
-        def get_conv_add_conv_pattern():
+        def get_conv_add_conv_pattern() -> GraphPattern:
             conv_bias_conv = GraphPattern()
-            producer_constant = conv_bias_conv.add_node(**conv_const)
+            producer_constant = conv_bias_conv.add_node(**conv_const_attrs)
             bias_producer_const = conv_bias_conv.add_node(**bias_const_attrs)
-            consumer_constant = conv_bias_conv.add_node(**conv_const)
+            consumer_constant = conv_bias_conv.add_node(**conv_const_attrs)
 
             pattern_conv_producer = conv_bias_conv.add_node(**producer_attrs)
             pattern_bias_producer = conv_bias_conv.add_node(**bias_attrs)
@@ -322,7 +302,7 @@ class ChannelAlignment(Algorithm):
         pattern.add_pattern_alternative(get_conv_add_conv_pattern())
         return pattern
 
-    def _get_node_pairs(self, nncf_graph: NNCFGraph):
+    def _get_node_pairs(self, nncf_graph: NNCFGraph) -> List[Tuple[NNCFNode, Optional[NNCFNode], NNCFNode]]:
         pairs = []
         patterns = self._get_target_patterns()
         for subgraph in nncf_graph.find_matching_subgraphs(patterns):
@@ -338,7 +318,7 @@ class ChannelAlignment(Algorithm):
             pairs.append((conv_in, add_in, conv_out))
         return pairs
 
-    def _get_target_point_and_node_in(self, conv_in, add_in):
+    def _get_target_point_and_node_in(self, conv_in, add_in) -> Tuple[TargetPoint, NNCFNode]:
         node_in = conv_in if add_in is None else add_in
         input_port_id, _ = self._backend_entity.get_activation_port_ids_for_node(node_in)
         return (

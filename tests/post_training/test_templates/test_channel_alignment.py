@@ -284,15 +284,18 @@ class TemplateTestChannelAlignment:
         )
         statistic_points.add_statistic_point(StatisticPoint(target_point, tensor_collector, ChannelAlignment))
 
+        class MockBackend(backend_cls):
+            pass
+
         ref_weights_val = "ref_weights_val"
-        backend_cls.get_weight_value = get_constant_lambda(ref_weights_val, True)
+        MockBackend.get_weight_value = get_constant_lambda(ref_weights_val, True)
         ref_bias_val = "ref_bias_val"
-        backend_cls.get_bias_value = get_constant_lambda(ref_bias_val, True)
+        MockBackend.get_bias_value = get_constant_lambda(ref_bias_val, True)
         ref_dims_descr = "ref_dims_descr"
-        backend_cls.get_dims_descriptor = get_constant_lambda(ref_dims_descr)
+        MockBackend.get_dims_descriptor = get_constant_lambda(ref_dims_descr)
 
         algorithm = ChannelAlignment()
-        algorithm._backend_entity = backend_cls
+        algorithm._backend_entity = MockBackend
         algorithm._set_backend_entity = mocker.MagicMock()
         ref_bias_in_after_align = "ref_bias_in_after_align"
         ref_bias_out_after_align = "ref_bias_out_after_align"
@@ -385,10 +388,14 @@ class TemplateTestChannelAlignment:
         ref_inplace = "ref_inplace"
         algorithm = ChannelAlignment(ref_subset_size, ref_inplace)
         algorithm._set_backend_entity = mocker.MagicMock()
-        mocked_backed = self.get_backend_cls()
+        backend_cls = self.get_backend_cls()
         ref_stat_collector = "ref_stat_collector"
-        mocked_backed.get_statistic_collector = mocker.MagicMock(return_value=ref_stat_collector)
-        algorithm._backend_entity = mocked_backed
+
+        class MockBackend(backend_cls):
+            pass
+
+        MockBackend.get_statistic_collector = mocker.MagicMock(return_value=ref_stat_collector)
+        algorithm._backend_entity = MockBackend
 
         statistic_container = algorithm.get_statistic_points(None)
 
@@ -407,7 +414,7 @@ class TemplateTestChannelAlignment:
         tensor_collectors = stat_points[0].algorithm_to_tensor_collectors[ChannelAlignment]
         assert len(tensor_collectors) == 1
         assert tensor_collectors[0] == ref_stat_collector
-        mocked_backed.get_statistic_collector.assert_called_once_with((0, 2, 3), 1e-4, ref_subset_size, ref_inplace)
+        MockBackend.get_statistic_collector.assert_called_once_with((0, 2, 3), 1e-4, ref_subset_size, ref_inplace)
 
         target_point = stat_points[0].target_point
         assert target_point.target_node_name == target_node_name
@@ -417,10 +424,9 @@ class TemplateTestChannelAlignment:
     @pytest.mark.parametrize("inplace_ref", [False, True])
     @pytest.mark.parametrize("q_ref", [1e-4, 0.3])
     def test_statistic_collectors(self, inplace_ref, q_ref):
-        backend_cls = self.get_backend_cls()
         reduction_shape_ref = (0, 2, 3)
         num_samples_ref = 123
-        statistic_collector: TensorCollector = backend_cls.get_statistic_collector(
+        statistic_collector: TensorCollector = self.get_backend_cls().get_statistic_collector(
             reduction_shape=reduction_shape_ref, q=q_ref, num_samples=num_samples_ref, inplace=inplace_ref
         )
 

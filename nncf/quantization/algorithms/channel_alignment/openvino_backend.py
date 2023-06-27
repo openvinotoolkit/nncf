@@ -57,10 +57,6 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def get_weights_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
-        return 0, 1
-
-    @staticmethod
     def get_conv_metatypes():
         return [OVConvolutionMetatype, OVGroupConvolutionMetatype]
 
@@ -75,14 +71,6 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     @staticmethod
     def get_conv_nodes(nncf_graph: NNCFGraph):
         return nncf_graph.get_nodes_by_metatypes([OVConvolutionMetatype, OVGroupConvolutionMetatype])
-
-    @staticmethod
-    def is_node_add_operation(node: NNCFNode) -> bool:
-        return node.metatype in [OVAddMetatype, OVSubtractMetatype]
-
-    @staticmethod
-    def is_node_conv_or_matmul_operation(node: NNCFNode) -> bool:
-        return node.metatype in [OVConvolutionMetatype, OVGroupConvolutionMetatype, OVMatMulMetatype]
 
     @staticmethod
     def get_statistic_collector(

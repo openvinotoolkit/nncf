@@ -9,19 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import UserDict
 from collections import deque
-from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple, Type
+from typing import List, Type
 
 import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph.layer_attributes import BaseLayerAttributes
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.common.graph.layer_attributes import MultipleWeightsLayerAttributes
-from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
@@ -30,10 +24,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
