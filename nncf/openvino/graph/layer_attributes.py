@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -11,14 +11,30 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionM
 class OVConstantLayerAttributesContainer(BaseLayerAttributes):
     """
     This class stores mapping weights port indices to constant name and shape.
+    For MatMul layers, it also stores transpose parameter and shape for activations.
     """
 
-    def __init__(self, const_attrs: Dict[int, Any], common_layer_attrs: Dict[int, BaseLayerAttributes]):
+    def __init__(
+        self,
+        const_attrs: Dict[int, Any],
+        common_layer_attrs: Dict[int, BaseLayerAttributes],
+        act_attrs: Optional[Dict[Any, Any]] = None,
+    ):
         """
         :param const_attrs: Map of weights port ID to corresponding const attributes.
+        :param act_attrs: Activation attributes.
         """
-        self.const_attrs = const_attrs
+        self._const_attrs = const_attrs
         self.common_layer_attrs = common_layer_attrs
+        self._act_attrs = act_attrs
+
+    @property
+    def const_attrs(self):
+        return self._const_attrs if self._const_attrs != {} else None
+
+    @property
+    def act_attrs(self):
+        return self._act_attrs if self._act_attrs != {} else None
 
     def get_const_port_ids(self) -> List[int]:
         """

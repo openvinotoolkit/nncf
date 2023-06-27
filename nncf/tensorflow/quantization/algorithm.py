@@ -443,7 +443,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         nncf_graph = converter.convert()
         nncf_graph = QuantizationBuilder._preprocess_cast_nodes(nncf_graph, CAST_METATYPES)
 
-        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
+        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes, self.validate_scopes)
 
         self._raise_not_supported_warning(nncf_graph)
 

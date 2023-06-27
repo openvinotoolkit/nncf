@@ -78,7 +78,7 @@ class TransformersVirtualEnvInstaller:
             )
         )
 
-    def install_env(self, pip_cache_dir, torch_with_cuda11):
+    def install_env(self, pip_cache_dir):
         version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
         subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_PATH), shell=True)
         pip_runner = CachedPipRunner(self.VENV_ACTIVATE, pip_cache_dir)
@@ -87,8 +87,6 @@ class TransformersVirtualEnvInstaller:
         pip_runner.run_pip("install setuptools")
         pip_runner.run_pip("install onnx")
         torch_install_cmd = "install torch=={}".format(BKC_TORCH_VERSION)
-        if torch_with_cuda11:
-            pip_runner.run_pip(torch_install_cmd + "+cu116 --extra-index-url https://download.pytorch.org/whl/cu116")
         pip_runner.run_pip(torch_install_cmd)
         subprocess.run(
             "git clone https://github.com/huggingface/transformers {}".format(self.TRANSFORMERS_REPO_PATH),
@@ -121,8 +119,8 @@ class TestTransformers:
         self.env = TransformersVirtualEnvInstaller(temp_folder["venv"], temp_folder["repo"])
 
     @pytest.mark.dependency(name="install_trans")
-    def test_install_trans_(self, pip_cache_dir, torch_with_cuda11):
-        self.env.install_env(pip_cache_dir, torch_with_cuda11)
+    def test_install_trans_(self, pip_cache_dir):
+        self.env.install_env(pip_cache_dir)
 
     @pytest.mark.dependency(depends=["install_trans"], name="xnli_train")
     def test_xnli_train(self, temp_folder):

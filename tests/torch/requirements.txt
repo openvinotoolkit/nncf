@@ -8,8 +8,8 @@ virtualenv
 # Ticket 69520
 pyparsing<3.0
 
-# Required for search_buidling_blocks tests
-transformers==4.23.1
+# Required for search_building_blocks tests
+transformers[torch]~=4.30.0
 
 # Required for movement_sparsity tests
 datasets~=2.12.0

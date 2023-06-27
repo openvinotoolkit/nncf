@@ -25,16 +25,11 @@ from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
-from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
-from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
-from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVQuantileReducer
-from nncf.openvino.statistics.collectors import get_mean_batch_stat_collector
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
-from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend

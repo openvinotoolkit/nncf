@@ -14,6 +14,7 @@ from typing import Dict, Optional, TypeVar
 import numpy as np
 
 from nncf import Dataset
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -30,6 +31,7 @@ from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlig
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FAST_BIAS_CORRECTION_THRESHOLD
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
@@ -83,6 +85,14 @@ class PostTrainingQuantization(Algorithm):
 
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
+
+        if model_type == ModelType.TRANSFORMER:
+            smooth_quant_algorithm = SmoothQuant(
+                subset_size=subset_size,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                alpha=advanced_parameters.smooth_quant_alpha,
+            )
+            self.first_stage_algorithms.append(smooth_quant_algorithm)
 
         min_max_quantization = MinMaxQuantization(
             preset=preset,
@@ -187,6 +197,10 @@ class PostTrainingQuantization(Algorithm):
 
         if statistic_points is None:
             for algorithm in self.first_stage_algorithms:
+                if isinstance(algorithm, SmoothQuant) and backend != BackendType.OPENVINO:
+                    nncf_logger.debug(f"{backend.name} does not support SmoothQuant algorithm yet.")
+                    continue
+
                 statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
                 statistics_aggregator.register_statistic_points(algo_statistic_points)

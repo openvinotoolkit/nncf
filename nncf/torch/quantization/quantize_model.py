@@ -169,9 +169,13 @@ def _create_nncf_config(
             compression_config["ignored_scopes"].extend(_ignored_scope)
         else:
             compression_config["ignored_scopes"] = _ignored_scope
+        compression_config["validate_scopes"] = ignored_scope.validate
 
     if advanced_parameters is not None:
         compression_config = apply_advanced_parameters_to_config(compression_config, advanced_parameters)
+
+    if model_type == ModelType.TRANSFORMER:
+        compression_config["validate_scopes"] = False
 
     return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 

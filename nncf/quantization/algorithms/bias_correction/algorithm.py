@@ -9,8 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import deque
-from typing import Any, Dict, List, Optional, TypeVar
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
 from tqdm import tqdm
@@ -22,6 +22,7 @@ from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -36,6 +37,7 @@ from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 TModel = TypeVar("TModel")
 
 BIAS_CORRECTION_THRESHOLD = 1000
+OUTPUT_PORT_OF_NODE = 0
 
 
 class BiasCorrection(Algorithm):
@@ -94,8 +96,8 @@ class BiasCorrection(Algorithm):
         self.backend_params = backend_params
         self.nncf_graph = None
         self._backend_entity = None
-        self._collected_stat_inputs = set()
-        self._fp_inputs = {}
+        self._collected_stat_inputs_map = {}
+        self._fp_inputs = defaultdict(list)
 
         if self.apply_for_all_nodes:
             raise RuntimeError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
@@ -136,7 +138,7 @@ class BiasCorrection(Algorithm):
         main_model_transformer = ModelTransformerFactory.create(model)
 
         model_copy = copy_model(model)
-        model_copy = self._remove_fq_from_inputs(model_copy)
+        model_copy = self._backend_entity.remove_fq_from_inputs(model_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
 
         nodes_with_bias = []
@@ -145,10 +147,17 @@ class BiasCorrection(Algorithm):
                 node, nncf_graph
             ):
                 nodes_with_bias.append(node)
+
+        # We pre-collect information about the subgraph we need in order
+        # to collect statistics for the change in the bias of each layer.
+        # Also here we collect a list of layers that depend on the current one.
+
+        # The collected information contains lists of input and output layers,
+        # for which we will create a subgraph for inference and collection of statistics.
         subgraphs_data = [self._get_subgraph_data_for_node(node, nncf_graph) for node in nodes_with_bias]
 
         for position, (node, subgraph_data) in tqdm(
-            list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="Biases correction"
+            list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="Applying Bias correction"
         ):
             node_name = node.node_name
 
@@ -156,6 +165,8 @@ class BiasCorrection(Algorithm):
             # the model transformer (that uses during sub-graph extraction) already does this internally when creating.
             model_copy_subgraph = self._prepare_subgraph(node, model_copy, nncf_graph, subgraph_data)
 
+            # Then we create the necessary data lists from the previously collected statistics,
+            # for the subgraph inference.
             feed_dicts = self._create_feed_dicts(model_copy_subgraph, subgraph_data, statistic_points)
 
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
@@ -182,40 +193,15 @@ class BiasCorrection(Algorithm):
             else:
                 nncf_logger.debug(f"{node_name} bias skipped by threshold. Magnitude: {magnitude}")
 
-            self._collect_new_stats(nncf_graph, model_copy_subgraph, feed_dicts, subgraph_data)
+            # After collecting data to change the bias value, we need to collect statistics for subsequent nodes,
+            # but already take into account the bias update made earlier.
+            self._collect_new_stats(model_copy_subgraph, feed_dicts, subgraph_data)
+
+            # Also, we need to remove unnecessary statistics that we don't need anymore,
+            # to reduce memory usage during the algorithm's pipeline.
             self._remove_unnecessary_stats(position, subgraphs_data)
+
         return main_model_transformer.transform(main_transformations_layout)
-
-    def _remove_fq_from_inputs(self, model: TModel) -> TModel:
-        """
-        This model removes the activation Fake Quantize nodes (or Quantize-Dequantize pairs) from the model.
-        It's needed for the further bias shift calculation that relates on quantized weights.
-
-        :param model: Backend-specific model.
-        :return: Backend-specific model without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
-        """
-        transformation_layout = TransformationLayout()
-        nncf_graph = NNCFGraphFactory.create(model)
-
-        model_transformer = ModelTransformerFactory.create(model)
-
-        seen_nodes = []
-        nodes_queue = deque(nncf_graph.get_input_nodes())
-        while nodes_queue:
-            current_node = nodes_queue.popleft()
-            current_node_name = current_node.node_name
-
-            if current_node_name in seen_nodes:
-                continue
-
-            seen_nodes.append(current_node_name)
-            if current_node.metatype in self._backend_entity.quantizer_types:
-                target_point = self._backend_entity.target_point(TargetType.LAYER, current_node_name, 0)
-                command = self._backend_entity.node_removing_command(target_point)
-                transformation_layout.register(command)
-            nodes_queue.extend(nncf_graph.get_next_nodes(current_node))
-
-        return model_transformer.transform(transformation_layout)
 
     def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, List[str]]:
         """
@@ -223,44 +209,70 @@ class BiasCorrection(Algorithm):
         This data contains the nodes (NNCFNode) for the subgraph building
         and statistics collection (for the next step).
 
-        :param node: NNCFNode instance. This is the main node that with bias that would be corrected (or not).
+        :param node: NNCFNode instance. This is the main node with bias that would be corrected (or not).
         :param nncf_graph: NNCFGraph instance for graph analysis.
         :return: A dict with the list of the nodes for the subgraph input and statistics collection.
         """
-        stats_nodes, input_nodes, output_nodes = [], [], []
+        statistic_nodes, subgraph_input_nodes, subgraph_output_nodes = [], [], []
 
-        def traverse_to_layers_with_bias(node, output):
-            if node in output:
-                return True, output
-            if self._backend_entity.is_node_with_bias(node, nncf_graph):
-                output.append(node)
-                self._collected_stat_inputs.add(node.node_name)
-                activation_input = nncf_graph.get_input_edges(node)[0].from_node
+        def fill_statistic_nodes(node):
+            # A small hack to speed up graph traversal.
+            if node in statistic_nodes or node in visited_nodes:
+                return
+            visited_nodes.append(node)
 
-                output_nodes.append(activation_input)
-                return True, output
-            return False, output
+            # If we found a node with bias, we have to collect it as a statistic node,
+            # and its input for _collected_stat_inputs_map,
+            # which will be used during the collection of statistics for the next node.
+            if self._backend_entity.is_node_with_bias(node, nncf_graph) and self._backend_entity.is_quantized_weights(
+                node, nncf_graph
+            ):
+                statistic_nodes.append(node)
+                activation_node, output_port_id = self._get_activation_node_and_port(node, nncf_graph)
+                subgraph_output_nodes.append(activation_node)
+                self._collected_stat_inputs_map[node.node_name] = (activation_node.node_name, output_port_id)
+                return
 
-        def traverse_to_input_layers(node, output):
-            if node in output + input_nodes:
-                return True, output
-            if node.node_name in self._collected_stat_inputs and node not in stats_nodes:
-                output.append(node)
-                return True, output
-            return False, output
+            for next_node in nncf_graph.get_next_nodes(node):
+                fill_statistic_nodes(next_node)
 
+        def fill_subgraph_input_nodes(node):
+            # A small hack to speed up graph traversal.
+            if node in subgraph_input_nodes or node in visited_nodes:
+                return
+            visited_nodes.append(node)
+
+            # Since we need to find the inputs for the subgraph,
+            # we can take only those layers for which we have already collected statistics.
+            if node.node_name in self._collected_stat_inputs_map and node not in statistic_nodes:
+                subgraph_input_nodes.append(node)
+                return
+
+            for previous_node in nncf_graph.get_previous_nodes(node):
+                fill_subgraph_input_nodes(previous_node)
+
+        # First, we need to find out the nodes with bias that follow by main node.
+        # To collect statistics for next nodes.
+        visited_nodes = []
         for next_node in nncf_graph.get_next_nodes(node):
-            stats_nodes.extend(nncf_graph.traverse_graph(next_node, traverse_to_layers_with_bias))
+            fill_statistic_nodes(next_node)
 
-        stats_nodes = stats_nodes if stats_nodes else nncf_graph.get_next_nodes(node)
-        for stat_node in stats_nodes:
-            input_nodes.extend(nncf_graph.traverse_graph(stat_node, traverse_to_input_layers, traverse_forward=False))
+        # We then need to find nodes for which statistics have already been collected,
+        # to use them as inputs for the subgraph.
+        statistic_nodes = statistic_nodes if statistic_nodes else nncf_graph.get_next_nodes(node)
+        visited_nodes = []
+        for stat_node in statistic_nodes:
+            fill_subgraph_input_nodes(stat_node)
 
-        output_nodes = output_nodes if output_nodes else stats_nodes
+        # In case the outputs were not found during the collection of statistics nodes,
+        # we use the latter as the outputs of the subgraph.
+        subgraph_output_nodes = subgraph_output_nodes if subgraph_output_nodes else statistic_nodes
+        subgraph_output_names = [
+            n.node_name for n in subgraph_output_nodes if NNCFGraphNodeType.OUTPUT_NODE not in n.node_name
+        ]
         subgraph_data = {
-            "input_node_names": [input_node.node_name for input_node in input_nodes],
-            "output_node_names": [n.node_name for n in output_nodes],
-            "statistic_node_names": [stat_node.node_name for stat_node in stats_nodes],
+            "subgraph_input_names": set(n.node_name for n in subgraph_input_nodes),
+            "subgraph_output_names": set(subgraph_output_names),
         }
 
         return subgraph_data
@@ -275,14 +287,16 @@ class BiasCorrection(Algorithm):
         :param subgraph_data: A dictionary with the layers for the graph building.
         :return: Backend-specific subgraph extracted from the model.
         """
-        input_node_names, output_node_names = subgraph_data["input_node_names"], subgraph_data["output_node_names"]
-        extracted_model = self.extract_model(model, input_node_names, output_node_names)
+        extracted_model = self.extract_model(
+            model, subgraph_data["subgraph_input_names"], subgraph_data["subgraph_output_names"]
+        )
 
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(extracted_model)
-        _, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
+
+        # For layes with weights, there is only one output port - 0.
         statistic_point = self._backend_entity.target_point(
-            TargetType.POST_LAYER_OPERATION, node.node_name, output_port_id
+            TargetType.POST_LAYER_OPERATION, node.node_name, port_id=OUTPUT_PORT_OF_NODE
         )
         output_insertion_command = self._backend_entity.output_insertion_command(nncf_graph, statistic_point)
         transformation_layout.register(output_insertion_command)
@@ -303,19 +317,22 @@ class BiasCorrection(Algorithm):
         statistics_size = self.subset_size
         statistics_per_input = {}
 
-        for input_node_name in subgraph_data["input_node_names"]:
+        for input_node_name in subgraph_data["subgraph_input_names"]:
             input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
-            input_fp = self._get_fp_inputs(statistic_points, input_node_name)
+            activation_name, port_id = self._collected_stat_inputs_map[input_node_name]
+            input_fp = self._get_fp_inputs(statistic_points, node_name=activation_name, port_id=port_id)
             statistics_per_input[input_tensor_name] = input_fp
             statistics_size = min(statistics_size, len(input_fp))
 
         for stat_id in range(statistics_size):
             feed_dict = {}
-            for input_node_name in subgraph_data["input_node_names"]:
+            for input_node_name in subgraph_data["subgraph_input_names"]:
                 input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
-                feed_dict[input_tensor_name] = np.mean(
-                    statistics_per_input[input_tensor_name][stat_id], axis=0, keepdims=True
-                )
+                # Since we do not use as inputs the layers from which the statistics are gathered,
+                # but those that follow them, we need to take this into account when creating feed dicts.
+                activation_name, port_id = self._collected_stat_inputs_map[input_node_name]
+                input_fp = self._get_fp_inputs(statistic_points, node_name=activation_name, port_id=port_id)
+                feed_dict[input_tensor_name] = statistics_per_input[input_tensor_name][stat_id]
             feed_dicts.append(feed_dict)
         return feed_dicts
 
@@ -340,6 +357,7 @@ class BiasCorrection(Algorithm):
             q_output = engine.infer(feed_dict)
             q_output = self._backend_entity.process_model_output(q_output, output_tensor_name)
             q_outputs.append(self._backend_entity.tensor_processor.mean_per_channel(q_output, channel_axis).tensor)
+        # Here we get the per-sample average, so the axis is 0.
         q_output = np.mean(q_outputs, axis=0)
         return output_fp - q_output
 
@@ -370,12 +388,11 @@ class BiasCorrection(Algorithm):
         transformation_layout.register(bias_correction_command)
         return model_transformer.transform(transformation_layout)
 
-    def _collect_new_stats(self, nncf_graph: NNCFGraph, model: TModel, feed_dicts: List, subgraph_data: Dict) -> None:
+    def _collect_new_stats(self, model: TModel, feed_dicts: List, subgraph_data: Dict) -> None:
         """
         Updates the self._fp_inputs with the new statistics for the next layers
         after the correction of the bias for the current.
 
-        :param nncf_graph: NNCFGraph instance.
         :param model: Backend-specific subgraph.
         :param feed_dicts: List of dictionaries with the input data for the subgraph.
         :param subgraph_data: A dictionary with the needed list of the statistic nodes that will be updated.
@@ -383,12 +400,9 @@ class BiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         for feed_dict in feed_dicts:
             new_q_output = engine.infer(feed_dict)
-            output_data = zip(subgraph_data["statistic_node_names"], subgraph_data["output_node_names"])
-            for stat_node_name, output_node_name in output_data:
+            for output_node_name in subgraph_data["subgraph_output_names"]:
                 output_tensor_name = self._backend_entity.get_output_name(model, output_node_name)
-                if stat_node_name not in self._fp_inputs:
-                    self._fp_inputs[stat_node_name] = []
-                self._fp_inputs[stat_node_name].append(new_q_output[output_tensor_name])
+                self._fp_inputs[output_node_name].append(new_q_output[output_tensor_name])
 
     def _remove_unnecessary_stats(self, position: int, subgraphs_data: Dict[str, Dict]) -> None:
         """
@@ -401,27 +415,34 @@ class BiasCorrection(Algorithm):
         # Collects list of the statistics that needed for the future layers.
         needed_stats_list = []
         for i in range(position + 1, len(subgraphs_data)):
-            needed_stats_list.extend(subgraphs_data[i]["input_node_names"])
+            input_names = subgraphs_data[i]["subgraph_input_names"]
+            needed_stats_list.extend([self._collected_stat_inputs_map[name][0] for name in input_names])
 
-        node_inputs_name = subgraphs_data[position]["input_node_names"]
+        node_inputs_name = subgraphs_data[position]["subgraph_input_names"]
         for node_input_name in node_inputs_name:
-            if node_input_name not in needed_stats_list and node_input_name in self._fp_inputs:
-                nncf_logger.debug(f"Dropped {node_input_name}")
-                self._fp_inputs[node_input_name] = []
+            activation_name, _ = self._collected_stat_inputs_map[node_input_name]
+            if activation_name not in needed_stats_list and activation_name in self._fp_inputs:
+                nncf_logger.debug(f"Dropped {activation_name} output statistics.")
+                self._fp_inputs[activation_name] = []
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> np.ndarray:
+    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
         """
         Makes out pre-layer needed data from the floating-point collected statistics.
 
         :param statistic_points: Filled StatisticPointsContainer.
         :param node_name: Name of the current layer.
+        :param port_id: Port id for statistics collection.
         :return: Collected mean tensor data and shape for the further bias calculation.
         """
 
         def input_filter_func(point):
+            # For the floating-point statistics collected in POST_LAYER style,
+            # we also need to determine the output port id.
+            # For the cases when the layer has more than one (0) output port.
             return (
                 BiasCorrection in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.PRE_LAYER_OPERATION
+                and point.target_point.type == TargetType.POST_LAYER_OPERATION
+                and point.target_point.port_id == port_id
             )
 
         if node_name in self._fp_inputs:
@@ -459,7 +480,7 @@ class BiasCorrection(Algorithm):
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        model_copy = self._remove_fq_from_inputs(copy_model(model))
+        model_copy = self._backend_entity.remove_fq_from_inputs(copy_model(model))
         model_copy = self._backend_entity.insert_null_biases(model_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
         statistic_container = StatisticPointsContainer()
@@ -468,27 +489,15 @@ class BiasCorrection(Algorithm):
             node for node in nncf_graph.topological_sort() if self._backend_entity.is_node_with_bias(node, nncf_graph)
         ]
         model_inputs = nncf_graph.get_input_nodes()
-        biased_after_input_nodes = self._get_biased_after_input_nodes(nncf_graph, model_inputs)
 
+        # Collection of statistics after layers where biases will be corrected.
         for node in nodes_with_bias:
             node_name = node.node_name
             channel_axis = node.metatype.output_channel_axis
-            input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
-            if node_name in biased_after_input_nodes:
-                self._collected_stat_inputs.add(node_name)
-                statistic_point = self._backend_entity.target_point(
-                    TargetType.PRE_LAYER_OPERATION, node_name, input_port_id
-                )
-                stat_collector = self._backend_entity.batch_statistic_collector(
-                    num_samples=self.subset_size, inplace=self.inplace_statistics
-                )
-                statistic_container.add_statistic_point(
-                    StatisticPoint(
-                        target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection
-                    )
-                )
+
+            # For layes with weights, there is only one output port - 0.
             statistic_point = self._backend_entity.target_point(
-                TargetType.POST_LAYER_OPERATION, node_name, output_port_id
+                TargetType.POST_LAYER_OPERATION, node_name, port_id=OUTPUT_PORT_OF_NODE
             )
             stat_collector = self._backend_entity.mean_statistic_collector(
                 reduction_shape=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
@@ -497,48 +506,101 @@ class BiasCorrection(Algorithm):
                 StatisticPoint(target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection)
             )
 
+        # We must collect the nodes with biases following the model inputs.
+        biased_after_input_nodes = self._get_biased_after_nodes(nncf_graph, model_inputs, model_copy)
+
+        for biased_after_input_node in biased_after_input_nodes:
+            # We need to collect activation input to register it for the biased layer as the layer with statistics.
+            activation_node, output_port_id = self._get_activation_node_and_port(biased_after_input_node, nncf_graph)
+            activation_node_name = activation_node.node_name
+
+            self._collected_stat_inputs_map[biased_after_input_node.node_name] = (activation_node_name, output_port_id)
+            statistic_point = self._backend_entity.target_point(
+                TargetType.POST_LAYER_OPERATION, activation_node_name, port_id=output_port_id
+            )
+            stat_collector = self._backend_entity.raw_statistic_collector(
+                num_samples=self.subset_size, inplace=self.inplace_statistics
+            )
+            statistic_container.add_statistic_point(
+                StatisticPoint(target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection)
+            )
+
+        # Then we need also to collect model input statistics to prevent cases when nodes with bias have no input data.
         for input_node in model_inputs:
-            for next_input_node in nncf_graph.get_next_nodes(input_node):
-                self._collected_stat_inputs.add(next_input_node.node_name)
-                statistic_point = self._backend_entity.target_point(
-                    TargetType.PRE_LAYER_OPERATION, next_input_node.node_name, port_id=0
-                )
-                stat_collector = self._backend_entity.batch_statistic_collector(
-                    num_samples=self.subset_size, inplace=self.inplace_statistics
-                )
-                statistic_container.add_statistic_point(
-                    StatisticPoint(
-                        target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection
-                    )
-                )
+            # We assume that input node has only one output port
+            input_name = input_node.node_name
+            if input_name in statistic_container:
+                continue
+            for next_layer in nncf_graph.get_next_nodes(input_node):
+                self._collected_stat_inputs_map[next_layer.node_name] = (input_node.node_name, OUTPUT_PORT_OF_NODE)
+            statistic_point = self._backend_entity.target_point(
+                TargetType.POST_LAYER_OPERATION, input_node.node_name, port_id=OUTPUT_PORT_OF_NODE
+            )
+            stat_collector = self._backend_entity.raw_statistic_collector(
+                num_samples=self.subset_size, inplace=self.inplace_statistics
+            )
+            statistic_container.add_statistic_point(
+                StatisticPoint(target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection)
+            )
 
         return statistic_container
 
-    def _get_biased_after_input_nodes(self, nncf_graph: NNCFGraph, model_inputs: List[NNCFNode]) -> Dict[str, str]:
+    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
         """
-        This method finds and returns the first nodes with the bias in the model that follows after the input nodes.
+        This method returns the activation layer and corresponding port id for the node.
+
+        :param node: NNCFGraph node for which the activation is sought.
+        :param nncf_graph: NNCFGraph instance with the node.
+        :return: Tuple with the activation node and port id.
+        """
+        activation_port = self._backend_entity.get_activation_port_id(node, nncf_graph)
+        activation_node = nncf_graph.get_input_edges(node)[activation_port].from_node
+        port_id = nncf_graph.get_edge(activation_node, node).output_port_id
+        return activation_node, port_id
+
+    def _get_biased_after_nodes(self, nncf_graph: NNCFGraph, nodes: List[NNCFNode], model: TModel) -> List[NNCFNode]:
+        """
+        This method finds and returns nodes with the bias in the model that follows after the input nodes.
 
         :param nncf_graph: NNCFGraph instance.
-        :param model_inputs: List of the model inputs as NNCFNodes.
-        :return: A dictionary with the names of the nodes with bias as keys and their input node names as values.
+        :param nodes: List of the model inputs as NNCFNodes.
+        :param model: TModel instance.
+        :return: List of the nodes with bias.
         """
 
-        def traverse_to_biased(node, output):
-            if node in output:
-                return True, output
+        def traverse_to_biased(node, condition_container):
+            # A small hack to speed up graph traversal.
+            if node in visited_nodes:
+                return
+            visited_nodes.append(node)
+
+            # We need to collect nodes for the next recursion step.
+            node_children = nncf_graph.get_next_nodes(node)
+
+            # Check that node is with bias.
             if self._backend_entity.is_node_with_bias(node, nncf_graph):
-                output.append(node)
-                return True, output
-            return False, output
+                condition_container.add(node)
+                return
 
-        biased_after_param_nodes = {}
+            for node_child in node_children:
+                traverse_to_biased(node_child, condition_container)
 
-        for model_input in model_inputs:
-            nodes_with_bias = nncf_graph.traverse_graph(model_input, traverse_to_biased)
-            for node in nodes_with_bias:
-                activation_input = nncf_graph.get_input_edges(node)[0].from_node
-                biased_after_param_nodes[node.node_name] = activation_input.node_name
-        return biased_after_param_nodes
+        biased_nodes = set()
+        visited_nodes = []
+        for node in nodes:
+            nncf_logger.debug(f"Looking for biased nodes after {node.node_name} layer.")
+            traverse_to_biased(node, condition_container=biased_nodes)
+
+        dependant_nodes = set()
+        # After finding the nodes following the provided layers, we need to make sure
+        # that the found nodes really only depend on the main layers, and not on each other.
+        for biased_node in biased_nodes:
+            visited_nodes = []
+            nncf_logger.debug(f"Filtering biased nodes after {biased_node.node_name} layer.")
+            for next_node in nncf_graph.get_next_nodes(biased_node):
+                traverse_to_biased(next_node, condition_container=dependant_nodes)
+
+        return list(biased_nodes - dependant_nodes)
 
     def extract_model(self, model: TModel, input_node_names: List[str], output_node_names: List[str]) -> TModel:
         """
@@ -551,8 +613,6 @@ class BiasCorrection(Algorithm):
         """
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model)
-        model_extraction_command = self._backend_entity.model_extraction_command(
-            set(input_node_names), set(output_node_names)
-        )
+        model_extraction_command = self._backend_entity.model_extraction_command(input_node_names, output_node_names)
         transformation_layout.register(model_extraction_command)
         return model_transformer.transform(transformation_layout)

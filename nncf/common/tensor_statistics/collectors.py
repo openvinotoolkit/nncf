@@ -486,9 +486,9 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         return self._all_shapes[0]
 
 
-class BatchStatisticCollector(OfflineTensorStatisticCollector):
+class RawStatisticCollector(OfflineTensorStatisticCollector):
     """
-    Collects tensor samples, where each tensor is averaged along the batch axis (and only that axis).
+    Collects tensor samples, where each tensor represented in raw format.
     Each sample stays available for usage in further stages of the algorithm.
     """
 
@@ -498,7 +498,6 @@ class BatchStatisticCollector(OfflineTensorStatisticCollector):
             the number of samples that will be processed.
         """
         super().__init__(num_samples=num_samples)
-        self._tensor_processor = self._get_processor()
         self._all_values = []
 
     @staticmethod
@@ -507,7 +506,7 @@ class BatchStatisticCollector(OfflineTensorStatisticCollector):
         pass
 
     def _register_input_common(self, x: NNCFTensor):
-        self._all_values.append(self._tensor_processor.batch_mean(x).tensor)
+        self._all_values.append(x.tensor)
 
     def _reset(self):
         self._all_values.clear()

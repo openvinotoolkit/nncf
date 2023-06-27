@@ -28,6 +28,7 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import IdentityTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -257,3 +258,17 @@ class TemplateTestPTQParams:
             overflow_fix, filtered_weight_target_points, nncf_graph
         )
         assert Counter([t_p.target_node_name for t_p in target_points_overflow_fix]) == Counter(affected_target_points)
+
+    @pytest.mark.parametrize("validate_scopes", (True, False))
+    def test_validate_scope(self, test_params, validate_scopes):
+        nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
+        ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
+        algo = MinMaxQuantization(
+            ignored_scope=IgnoredScope(names=["some_node"], validate=validate_scopes),
+        )
+        algo._backend_entity = self.get_algo_backend()
+        if validate_scopes:
+            with pytest.raises(RuntimeError, match="Ignored nodes with name"):
+                algo._get_ignored_names(nncf_graph, ignored_patterns)
+        else:
+            algo._get_ignored_names(nncf_graph, ignored_patterns)

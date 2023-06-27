@@ -55,15 +55,6 @@
             "FP32 top 1": 0.77728
         }
     },
-    "xception": {
-        "model_name": "xception",
-        "quantization_params": {
-            "preset": "MIXED"
-        },
-        "metrics": {
-            "FP32 top 1": 0.78506
-        }
-    },
     "efficientnet_b0": {
         "model_name": "efficientnet_b0",
         "quantization_params": {

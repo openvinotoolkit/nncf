@@ -128,6 +128,10 @@ class AdvancedQuantizationParameters:
     :type inplace_statistics: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
+    :param smooth_quant_alpha: SmoothQuant-related parameter. It regulates the calculation of the smooth scale.
+        The default value is 0.95. A negative value switches off the algorithm. In case of inaccurate results,
+        this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.
+    :type smooth_quant_alpha: float
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -148,6 +152,7 @@ class AdvancedQuantizationParameters:
     inplace_statistics: bool = True
     disable_channel_alignment: bool = False
     disable_bias_correction: bool = False
+    smooth_quant_alpha: float = 0.95
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)

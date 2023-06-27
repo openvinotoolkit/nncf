@@ -15,14 +15,14 @@ import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
-from nncf.common.tensor_statistics.collectors import BatchStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
-from nncf.onnx.statistics.statistics import ONNXBatchTensorStatistic
+from nncf.common.tensor_statistics.collectors import RawStatisticCollector
 from nncf.onnx.statistics.statistics import ONNXMeanTensorStatistic
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
+from nncf.onnx.statistics.statistics import ONNXRawTensorStatistic
 from nncf.onnx.tensor import ONNXNNCFTensor
 
 
@@ -166,7 +166,7 @@ class ONNXMeanStatisticCollector(MeanStatisticCollector):
         return ONNXMeanTensorStatistic(self._mean_aggregate().tensor, self._shape())
 
 
-class ONNXBatchStatisticCollector(BatchStatisticCollector):
+class ONNXRawStatisticCollector(RawStatisticCollector):
     @staticmethod
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
@@ -174,5 +174,5 @@ class ONNXBatchStatisticCollector(BatchStatisticCollector):
     def _register_input(self, x: ONNXNNCFTensor):
         self._register_input_common(x)
 
-    def _get_statistics(self) -> ONNXBatchTensorStatistic:
-        return ONNXBatchTensorStatistic(self._all_values)
+    def _get_statistics(self) -> ONNXRawTensorStatistic:
+        return ONNXRawTensorStatistic(self._all_values)

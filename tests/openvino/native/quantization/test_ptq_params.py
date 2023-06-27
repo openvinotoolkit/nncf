@@ -109,6 +109,10 @@ class TestPTQParams(TemplateTestPTQParams):
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
+            "test_validate_scope": {
+                "nncf_graph": GraphConverter.create_nncf_graph(LinearModel().ov_model),
+                "ignored_patterns": get_ignored_patterns(),
+            },
         }
 
     @pytest.fixture(
