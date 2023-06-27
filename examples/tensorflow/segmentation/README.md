@@ -143,9 +143,4 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 ## Results
 <a name="results"></a>
-
-|Model|Compression algorithm|Dataset|            mAP (_drop_) %             |NNCF config file|Checkpoint|
-| :---: | :---: | :---: |:-------------------------------------:| :---: | :---: |
-|Mask-R-CNN|None|COCO 2017|        bbox: 37.33 segm: 33.56        |[mask_rcnn_coco.json](configs/mask_rcnn_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz)|
-|Mask-R-CNN|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017| bbox: 37.19 (0.14) segm: 33.54 (0.02) |[mask_rcnn_coco_int8.json](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz)|
-|Mask-R-CNN|Magnitude sparsity, 50%|COCO 2017| bbox: 36.94 (0.39) segm: 33.23 (0.33) |[mask_rcnn_coco_magnitude_sparsity.json](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz)|
+Please see compression results for Tensorflow instance segmentation at our [Model Zoo page](../../../docs/ModelZoo.md).
