@@ -19,6 +19,7 @@ import timm
 import torch
 import tqdm
 from sklearn.metrics import accuracy_score
+from timm.layers.config import set_fused_attn
 from torchvision import datasets
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
@@ -27,13 +28,16 @@ import nncf
 from nncf.experimental.torch.replace_custom_modules.timm_custom_modules import (
     replace_timm_custom_modules_with_torch_native,
 )
-from tests.post_training_quantization.pipelines.base import DEFAULT_VAL_THREADS
-from tests.post_training_quantization.pipelines.base import OV_BACKENDS
-from tests.post_training_quantization.pipelines.base import PT_BACKENDS
-from tests.post_training_quantization.pipelines.base import BackendType
-from tests.post_training_quantization.pipelines.base import BaseTestPipeline
-from tests.post_training_quantization.pipelines.base import export_to_ir
-from tests.post_training_quantization.pipelines.base import export_to_onnx
+from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
+from tests.post_training.pipelines.base import OV_BACKENDS
+from tests.post_training.pipelines.base import PT_BACKENDS
+from tests.post_training.pipelines.base import BackendType
+from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import export_to_ir
+from tests.post_training.pipelines.base import export_to_onnx
+
+# Disable using aten::scaled_dot_product_attention
+set_fused_attn(False, False)
 
 
 class ImageClassificationTimm(BaseTestPipeline):
@@ -45,7 +49,8 @@ class ImageClassificationTimm(BaseTestPipeline):
         self.model_cfg = timm_model.default_cfg
         input_size = [1] + list(timm_model.default_cfg["input_size"])
         self.dummy_tensor = torch.rand(input_size)
-        if self.backend in [BackendType.TORCH, BackendType.LEGACY_TORCH]:
+
+        if self.backend in PT_BACKENDS:
             self.model = timm_model
 
         if self.backend == BackendType.ONNX:
@@ -103,7 +108,7 @@ class ImageClassificationTimm(BaseTestPipeline):
             return transform_fn
 
     def prepare_calibration_dataset(self):
-        batch_size = 128 if self.backend == BackendType.LEGACY_TORCH else 1
+        batch_size = 128 if self.backend == BackendType.OLD_TORCH else 1
         dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
         loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=2, shuffle=False)
 

@@ -10,38 +10,36 @@
 # limitations under the License.
 
 
+from functools import partial
+
 import onnx
 import transformers
 from optimum.intel import OVQuantizer
+from optimum.intel.openvino import OVModelForCausalLM
 from optimum.intel.openvino import OVModelForSequenceClassification
-from optimum.onnxruntime import ORTModelForSequenceClassification
+from optimum.intel.openvino import OVQuantizer
 
-from tests.post_training_quantization.pipelines.base import BackendType
-from tests.post_training_quantization.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import OV_BACKENDS
+from tests.post_training.pipelines.base import PT_BACKENDS
+from tests.post_training.pipelines.base import BackendType
+from tests.post_training.pipelines.base import BaseTestPipeline
 
 
-class MaskedLanguageModelingHF(BaseTestPipeline):
-    """Pipeline for Image Classification model from Hugging Face repository"""
+class CausalLMHF(BaseTestPipeline):
+    """Pipeline for causal language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
-        if self.backend in [BackendType.TORCH, BackendType.LEGACY_TORCH]:
-            self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(self.model_id)
-            self.model = self.model_hf
-
-        if self.backend in [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]:
-            self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
+        if self.backend in OV_BACKENDS:
+            self.model_hf = OVModelForCausalLM.from_pretrained(self.model_id, export=True, compile=False)
             self.model = self.model_hf.model
-
-        if self.backend in [BackendType.ONNX]:
-            self.model_hf = ORTModelForSequenceClassification.from_pretrained(self.model_id, export=True)
-            self.model = onnx.load(self.model_hf.model_path)
 
     def prepare_preprocessor(self) -> None:
         self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
         def transform_func(examples):
-            return self.preprocessor(examples["sentence"], padding=True, truncation=True, max_length=128)
+            data = self.preprocessor(examples["sentence"])
+            return data
 
         return transform_func
 
@@ -54,7 +52,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
             dataset_config_name="sst2",
             preprocess_function=self.get_transform_calibration_fn(),
             num_samples=num_samples,
-            dataset_split="train",
+            dataset_split="validation",
             preprocess_batch=True,
         )
 

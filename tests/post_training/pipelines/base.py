@@ -36,17 +36,17 @@ DEFAULT_VAL_THREADS = 4
 
 class BackendType(Enum):
     FP32 = "FP32"
-    LEGACY_TORCH = "LEGACY_TORCH"
-    TORCH = "TORCH"
+    OLD_TORCH = "OLD_TORCH"  # Quantization via create_compressed_model
+    TORCH = "TORCH"  # PTQ implementation
     ONNX = "ONNX"
     OV = "OV"
     POT = "POT"
     OPTIMUM = "OPTIMUM"
 
 
-ALL_NNCF_PTQ_BACKENDS = [BackendType.LEGACY_TORCH, BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT]
-PT_BACKENDS = [BackendType.TORCH, BackendType.LEGACY_TORCH]
-OV_BACKENDS = [BackendType.OV, BackendType.POT]
+ALL_NNCF_PTQ_BACKENDS = [BackendType.OLD_TORCH, BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT]
+PT_BACKENDS = [BackendType.TORCH, BackendType.OLD_TORCH]
+OV_BACKENDS = [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]
 
 
 @dataclass
@@ -64,7 +64,7 @@ class RunInfo:
     quant_memory_usage: Optional[int] = None
     time_total: Optional[float] = None
     time_quantization: Optional[float] = None
-    error_message: Optional[str] = None
+    status: Optional[str] = None
 
     @staticmethod
     def format_time(time_elapsed):
@@ -89,7 +89,7 @@ class RunInfo:
             "RAM MiB": self.format_memory_usage(self.quant_memory_usage),
             "Quant. time": self.format_time(self.time_quantization),
             "Total time": self.format_time(self.time_total),
-            "Error": self.error_message,
+            "Status": self.status,
         }
 
 
@@ -193,6 +193,8 @@ class BaseTestPipeline(ABC):
                     self.ptq_params["preset"] = nncf.QuantizationPreset.PERFORMANCE
                 if "subset_size" not in self.ptq_params:
                     self.ptq_params["subset_size"] = 300
+                if "fast_bias_correction" not in self.ptq_params:
+                    self.ptq_params["fast_bias_correction"] = True
 
             if self.backend == BackendType.POT:
                 self.ptq_params["advanced_parameters"] = AdvancedQuantizationParameters(
@@ -202,7 +204,6 @@ class BaseTestPipeline(ABC):
             self.quantized_model = quantize_fn(
                 model=self.model,
                 target_device=TargetDevice.CPU,
-                fast_bias_correction=True,
                 calibration_dataset=self.calibration_dataset,
                 **self.ptq_params,
             )
@@ -250,9 +251,13 @@ class BaseTestPipeline(ABC):
 
     @abstractmethod
     def _validate(self) -> None:
+        """Validate IR"""
         pass
 
     def validate(self) -> None:
+        """
+        Validate and compare result with reference
+        """
         print("Validation...")
         self._validate()
 
@@ -264,18 +269,24 @@ class BaseTestPipeline(ABC):
             self.run_info.metric_diff = self.run_info.metric_value - self.reference_data["metric_value_fp32"]
 
         if metric_value is not None and metric_reference is not None:
-            print(f"{np.isclose(metric_value, metric_reference)}")
             if not np.isclose(metric_value, metric_reference):
-                raise ValueError(f"Metric value {metric_value} is not close to reference {metric_reference}")
+                if metric_value < metric_reference:
+                    status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
+                    raise ValueError(status_msg)
+                else:
+                    self.run_info.status = (
+                        f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+                    )
 
     def run(self) -> None:
-        start_time = time.perf_counter()
+        """
+        Run full pipeline of quantization
+        """
         self.prepare()
         self.quantize()
         self.post_quantize()
         self.get_num_fq()
         self.validate()
-        self.run_info.time_total = time.perf_counter() - start_time
 
     def get_run_info(self) -> RunInfo:
         return self.run_info
