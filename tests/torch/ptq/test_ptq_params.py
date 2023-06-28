@@ -151,6 +151,10 @@ class TestPTQParams(TemplateTestPTQParams):
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
+            "test_validate_scope": {
+                "nncf_graph": get_single_conv_nncf_graph().nncf_graph,
+                "ignored_patterns": get_ignored_patterns(),
+            },
         }
 
     @pytest.fixture(params=[(IgnoredScope([]), 1, 1), (IgnoredScope(["/Conv_1_0"]), 0, 0)])
@@ -202,9 +206,9 @@ class TestPTQParams(TemplateTestPTQParams):
                 quantize_outputs=True,
                 disable_bias_correction=False,
                 activations_quantization_params=QuantizationParameters(num_bits=8, mode=QuantizationMode.SYMMETRIC),
-                activations_range_estimator_params=RangeEstimatorParametersSet.MINMAX,
+                activations_range_estimator_params=RangeEstimatorParametersSet.MEAN_MINMAX,
                 weights_quantization_params=QuantizationParameters(num_bits=8, mode=QuantizationMode.SYMMETRIC),
-                weights_range_estimator_params=RangeEstimatorParametersSet.MINMAX,
+                weights_range_estimator_params=RangeEstimatorParametersSet.MEAN_MINMAX,
             ),
         },
     ),

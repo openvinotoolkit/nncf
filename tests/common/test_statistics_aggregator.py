@@ -439,7 +439,7 @@ class TemplateTestStatisticsAggregator:
 
     class BCStatsCollectors(Enum):
         MEAN = "mean"
-        BATCH_MEAN = "batch_mean"
+        RAW = "raw"
 
     @dataclass
     class BCTestParameters:
@@ -516,7 +516,7 @@ class TemplateTestStatisticsAggregator:
                 axis=2,
             ),
             BCTestParameters(
-                BiasCorrectionAlgos.BIAS_CORRECTION, BCStatsCollectors.BATCH_MEAN, TargetType.POST_LAYER_OPERATION
+                BiasCorrectionAlgos.BIAS_CORRECTION, BCStatsCollectors.RAW, TargetType.POST_LAYER_OPERATION
             ),
             # TargeType: weights
             BCTestParameters(
@@ -575,8 +575,8 @@ class TemplateTestStatisticsAggregator:
             tensor_collector = algo_backend.mean_statistic_collector(
                 test_params.axis, inplace_statistics, len(dataset_samples)
             )
-        elif test_params.collector_type == self.BCStatsCollectors.BATCH_MEAN:
-            tensor_collector = algo_backend.batch_statistic_collector(inplace_statistics, len(dataset_samples))
+        elif test_params.collector_type == self.BCStatsCollectors.RAW:
+            tensor_collector = algo_backend.raw_statistic_collector(inplace_statistics, len(dataset_samples))
         else:
             raise RuntimeError()
 
@@ -607,7 +607,7 @@ class TemplateTestStatisticsAggregator:
             stat = tensor_collector.get_statistics()
             if test_params.collector_type == self.BCStatsCollectors.MEAN:
                 ret_val = [stat.mean_values, stat.shape]
-            elif test_params.collector_type == self.BCStatsCollectors.BATCH_MEAN:
+            elif test_params.collector_type == self.BCStatsCollectors.RAW:
                 ret_val = stat.values
                 test_params.ref_values = dataset_samples
                 if not is_stat_in_shape_of_scale:

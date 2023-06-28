@@ -603,9 +603,11 @@ class NNCFNetworkInterface(torch.nn.Module):
             # a port ID attribute.
             in_edges = nncf_graph.get_input_edges(node)
             for edge in in_edges:
-                port_id = edge.input_port_id
-                pre_hook_ip = PreHookInsertionPoint(target_node_name=node.node_name, input_port_id=port_id)
-                pre_hooks.append(pre_hook_ip)
+                for port_id in [
+                    edge.input_port_id,
+                ] + edge.parallel_input_port_ids:
+                    pre_hook_ip = PreHookInsertionPoint(target_node_name=node.node_name, input_port_id=port_id)
+                    pre_hooks.append(pre_hook_ip)
 
             if issubclass(node.metatype, PTSplitMetatype):
                 # chunk returns a tuple of tensors, which can only be handled in NNCF

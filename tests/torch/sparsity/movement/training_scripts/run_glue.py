@@ -16,6 +16,7 @@ import datasets
 import evaluate
 import jstyleson
 import numpy as np
+from transformers.training_args import ParallelMode
 
 # isort: off
 from nncf import NNCFConfig
@@ -122,7 +123,11 @@ class CompressionTrainer(Trainer):
             self._compression_callback = CompressionCallback(compression_ctrl)
             callbacks = [self._compression_callback] + (callbacks or [])
         super().__init__(callbacks=callbacks, *args, **kwargs)
-        if not (self.args.local_rank == -1 or self.args.no_cuda or compression_ctrl is None):
+        if (
+            self.args.parallel_mode == ParallelMode.DISTRIBUTED
+            and not self.args.no_cuda
+            and compression_ctrl is not None
+        ):
             compression_ctrl.distributed()
 
     def compute_loss(self, model, inputs, return_outputs=False):

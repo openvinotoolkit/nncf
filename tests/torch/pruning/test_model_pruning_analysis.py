@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=too-many-lines
 
 from collections import Counter
 from functools import partial
@@ -49,6 +50,7 @@ from tests.torch.pruning.helpers import MultipleDepthwiseConvolutionModel
 from tests.torch.pruning.helpers import MultipleSplitConcatModel
 from tests.torch.pruning.helpers import NASnetBlock
 from tests.torch.pruning.helpers import PruningTestBatchedLinear
+from tests.torch.pruning.helpers import PruningTestMeanMetatype
 from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinearWithConcat
 from tests.torch.pruning.helpers import PruningTestModelDiffChInPruningCluster
 from tests.torch.pruning.helpers import PruningTestModelEltwise
@@ -382,26 +384,26 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         model=partial(MobilenetV3BlockSEReshape, mode='linear_mean'),
         name='MobilenetV3BlockSEReshape with linear mean',
         non_pruned_module_nodes=
-            ['MobilenetV3BlockSEReshape/NNCFConv2d[last_conv]/conv2d_0',
-             'MobilenetV3BlockSEReshape/NNCFConv2d[first_conv]/conv2d_0',
-             'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
-             'NNCFConv2d[4]/conv2d_0',
+            ['MobilenetV3BlockSEReshape/NNCFConv2d[last_conv]/conv2d_0'],
+        pruned_groups=[
+            ['MobilenetV3BlockSEReshape/NNCFConv2d[first_conv]/conv2d_0',
              'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
              'NNCFConv2d[0]/conv2d_0',
              'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
-             'SELayerWithReshapeAndLinearAndMean[3]/Sequential[fc]/NNCFLinear[2]/linear_0'],
-        pruned_groups=[
+             'SELayerWithReshapeAndLinearAndMean[3]/Sequential[fc]/NNCFLinear[2]/linear_0',
+             'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
+             'NNCFConv2d[4]/conv2d_0'],
             ['MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
              'SELayerWithReshapeAndLinearAndMean[3]/Sequential[fc]/NNCFLinear[0]/linear_0']
             ],
-        pruned_groups_by_node_id=[[6]],
-        can_prune_after_analysis={0: True, 1: False, 2: False, 3: False, 4: False, 5: False, 6: True, 7: True,
-                                  8: False, 9: False, 10: False, 11: False, 12: False, 13: True, 14: False, 15: True,
+        pruned_groups_by_node_id=[[1, 2, 8, 12], [6]],
+        can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
+                                  8: True, 9: True, 10: True, 11: True, 12: True, 13: True, 14: True, 15: True,
                                   16: True},
-        final_can_prune={1: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+        final_can_prune={1: PruningAnalysisDecision(True),
                          6: PruningAnalysisDecision(True),
-                         8: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                         12: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+                         8: PruningAnalysisDecision(True),
+                         12: PruningAnalysisDecision(True),
                          15: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
 
         prune_params=(True, True)),
@@ -614,6 +616,29 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                          5: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
                          7: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
         prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=partial(PruningTestMeanMetatype, mean_dim=1),
+        name='PruningTestMeanMetatype with mean dimension 1',
+        non_pruned_module_nodes=['PruningTestMeanMetatype/NNCFConv2d[last_conv]/conv2d_0',
+                                 'PruningTestMeanMetatype/NNCFConv2d[conv1]/conv2d_0'],
+        pruned_groups=[],
+        pruned_groups_by_node_id=[],
+        can_prune_after_analysis={0: True, 1: False, 2: False, 3: True},
+        final_can_prune={1: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+                         3: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
+        prune_params=(True, True)
+    ),
+    GroupPruningModulesTestStruct(
+        model=partial(PruningTestMeanMetatype, mean_dim=2),
+        name='PruningTestMeanMetatype with mean dimension 2',
+        non_pruned_module_nodes=['PruningTestMeanMetatype/NNCFConv2d[last_conv]/conv2d_0'],
+        pruned_groups=[['PruningTestMeanMetatype/NNCFConv2d[conv1]/conv2d_0']],
+        pruned_groups_by_node_id=[[1]],
+        can_prune_after_analysis={0: True, 1: True, 2: True, 3: True},
+        final_can_prune={1: PruningAnalysisDecision(True),
+                         3: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
+        prune_params=(True, True)
+    ),
 ]  # fmt: skip
 
 
@@ -785,8 +810,8 @@ MODEL_ANALYSER_TEST_CASES = [
     ),
     ModelAnalyserTestStruct(
         model=partial(MobilenetV3BlockSEReshape, mode='linear_mean'),
-        ref_can_prune={0: True, 1: False, 2: False, 3: False, 4: False, 5: False, 6: True, 7: True,
-                       8: True, 9: True, 10: True, 11: False, 12: True, 13: True, 14: False, 15: True,
+        ref_can_prune={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
+                       8: True, 9: True, 10: True, 11: True, 12: True, 13: True, 14: True, 15: True,
                        16: True}
     )
 ]  # fmt: skip

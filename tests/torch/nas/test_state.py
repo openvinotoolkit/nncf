@@ -89,7 +89,7 @@ def ref_kernel_output_fn(model, x):
 
 COMMON_KERNEL_DESC = ElasticityDesc(
     ElasticityDim.KERNEL,
-    model_cls=partial(BasicConvTestModel, 1, out_channels=1, kernel_size=5),
+    model_cls=partial(BasicConvTestModel, 1, out_channels=1, kernel_size=5, padding=2),
     params=BASIC_ELASTIC_KERNEL_PARAMS,
     ref_output_fn=ref_kernel_output_fn,
     ref_state={

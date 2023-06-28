@@ -54,13 +54,8 @@ class Algorithm(ABC):
         :param statistic_points: StatisticPointsContainer
         :return: model after algorithm
         """
-        if statistic_points is None:
-            return self._apply(model, statistic_points=None, dataset=dataset)
-        _statistic_points = self.get_statistic_points(model)
-        for edge_name in _statistic_points.keys():
-            if statistic_points.get(edge_name) is None:
-                raise RuntimeError(f"No statistics collected for the layer {edge_name}")
-        return self._apply(model, statistic_points)
+        # TODO (asuslov): add validation statistic_points
+        return self._apply(model, statistic_points=statistic_points, dataset=dataset)
 
     @abstractmethod
     def _apply(

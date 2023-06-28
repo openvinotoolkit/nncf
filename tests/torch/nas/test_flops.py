@@ -94,7 +94,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(175_952_896, 2_202_560),
             kernel_stage=ModelStats(175_952_896, 2_202_560),
             depth_stage=ModelStats(151_966_720, 2_180_336),
-            width_stage=ModelStats(15_401_984, 88_144),
+            width_stage=ModelStats(14_099_072, 35_728),
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),

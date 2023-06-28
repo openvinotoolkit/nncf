@@ -120,10 +120,18 @@ examples/post_training_quantization/onnx/mobilenet_v2/mobilenet_v2_*
 examples/post_training_quantization/openvino/mobilenet_v2/mobilenet_v2_*
 examples/post_training_quantization/tensorflow/mobilenet_v2/mobilenet_v2_*
 examples/post_training_quantization/torch/mobilenet_v2/mobilenet_v2_*
+examples/post_training_quantization/torch/ssd300_vgg16/ssd300_vgg16_*
+examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/stfpm_*
+examples/post_training_quantization/openvino/yolov8/yolov8n*
+examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/yolov8n*
 examples/**/runs/**
 examples/**/results/**
+compressed_graph.dot
+original_graph.dot
+datasets/**
 
 # Tests
 tests/**/runs/**
 tests/**/tmp*/**
 open_model_zoo/
+nncf-tests.xml

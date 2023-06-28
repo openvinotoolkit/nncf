@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Optional, Tuple, TypeVar
+from typing import List, Optional, TypeVar
 
 import numpy as np
 
@@ -37,13 +37,6 @@ class BiasCorrectionAlgoBackend(ABC):
     def tensor_processor(self):
         """
         Returns backend-specific instance of the NNCFCollectorTensorProcessor.
-        """
-
-    @property
-    @abstractmethod
-    def quantizer_types(self):
-        """
-        Returns backend-specific list of the quantizer metatypes.
         """
 
     @staticmethod
@@ -93,16 +86,6 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def node_removing_command(target_point: TargetPoint) -> TransformationCommand:
-        """
-        Returns backend-specific command that removes node.
-
-        :param target_point: TargetPoint instance.
-        :return: Backend-specific command that remove node.
-        """
-
-    @staticmethod
-    @abstractmethod
     def mean_statistic_collector(
         reduction_shape: ReductionShape,
         inplace: bool,
@@ -121,9 +104,10 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def batch_statistic_collector(inplace: bool, num_samples: int = None) -> TensorStatisticCollectorBase:
+    def raw_statistic_collector(inplace: bool, num_samples: int = None) -> TensorStatisticCollectorBase:
         """
-        Returns backend-specific batch statistic collector.
+        Returns backend-specific raw statistic collector.
+        This statistic collector uses for raw data calculation, without aggregating.
 
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
@@ -143,13 +127,15 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
         """
-        Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
+        Returns input port id corresponding to activation input edge for
         the node.
         Supports only nodes that could have bias value.
 
         :param node: Node of NNCFGraph with bias value.
+        :param nncf_graph: NNCFGraph instance with the node.
+        :return: boolean port id.
         """
 
     @staticmethod
@@ -206,6 +192,17 @@ class BiasCorrectionAlgoBackend(ABC):
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph instance with the node.
         :return: Boolean indicating whether the node has a bias or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def remove_fq_from_inputs(model: TModel) -> TModel:
+        """
+        This method removes the activation Fake Quantize nodes (or Quantize-Dequantize pairs) from the model.
+        It's needed for the further bias shift calculation that relates on quantized weights.
+
+        :param model: TModel instance.
+        :return: TModel without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
         """
 
     @staticmethod

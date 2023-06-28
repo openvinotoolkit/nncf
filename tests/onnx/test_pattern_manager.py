@@ -53,6 +53,7 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.LINEAR_ACTIVATION_ELEMENTWISE: "Not relevant for ONNX.",
     HWFusedPatternNames.LINEAR_BIASED_ACTIVATION_ELEMENTWISE: "Not relevant for ONNX.",
     HWFusedPatternNames.MVN_SCALE_SHIFT_ACTIVATIONS: "Not relevant for ONNX.",
+    HWFusedPatternNames.LINEAR_ACTIVATIONS_UNSQUEEZE_BN_SQUEEZE: "Not relevant for ONNX.",
 }
 
 IGNORING_IGNORED_PATTERN_REASONS = {}

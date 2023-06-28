@@ -35,7 +35,7 @@ def validate(model: ov.Model, val_loader: tf.data.Dataset) -> tf.Tensor:
 
     metric = tf.keras.metrics.CategoricalAccuracy(name="acc@1")
     for images, labels in tqdm(val_loader):
-        pred = compiled_model(images)[output]
+        pred = compiled_model(images.numpy())[output]
         metric.update_state(labels, pred)
 
     return metric.result()

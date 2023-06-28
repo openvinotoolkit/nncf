@@ -1,5 +1,6 @@
 fastdownload
-openvino-dev
+openvino-dev==2023.0.0
 torchmetrics
-torchvision>=0.14.1
+torchvision~=0.15.1
 tqdm
+onnx

@@ -170,6 +170,7 @@ class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
         PTMaxPool2dMetatype,
         PTAvgPool3dMetatype,
         PTMaxPool3dMetatype,
+        PTMeanMetatype,
         PTDropoutMetatype,
         PTSILUMetatype,
         PTPowerMetatype,
@@ -610,7 +611,7 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register("stop_propagation_ops")
 class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
-    subtypes = [PTMeanMetatype, PTMaxMetatype, PTMinMetatype, PTSumMetatype, UnknownMetatype]
+    subtypes = [PTMaxMetatype, PTMinMetatype, PTSumMetatype, UnknownMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register("reshape")

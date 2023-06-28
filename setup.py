@@ -113,7 +113,7 @@ INSTALL_REQUIRES = [
     # Ticket: 69520
     "packaging>=20.0",
     "pyparsing<3.0",
-    "pymoo==0.5.0",
+    "pymoo @ git+https://github.com/anyoptimization/pymoo.git@695cb26923903f872c7256a9013609769f3cc2bd",
     "jsonschema>=3.2.0",
     "pydot>=1.4.1",
     "jstyleson>=0.0.2",

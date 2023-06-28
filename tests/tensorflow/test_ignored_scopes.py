@@ -14,6 +14,7 @@ import pytest
 import tensorflow as tf
 from tensorflow.keras import layers
 
+from nncf.config.schemata.defaults import VALIDATE_SCOPES
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization import FakeQuantize
@@ -61,11 +62,20 @@ NOT_SUPPORT_SCOPES_ALGO = ["NoCompressionAlgorithm"]
 
 
 @pytest.mark.parametrize("algo_name", TF_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
-def test_raise_runtimeerror_for_not_matched_scope_names(algo_name):
+@pytest.mark.parametrize("validate_scopes", (True, False, None))
+def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, validate_scopes):
     model = get_mock_model()
     config = get_empty_config()
-    config["compression"] = {"algorithm": algo_name, "ignored_scopes": ["unknown"]}
+    config["compression"] = {
+        "algorithm": algo_name,
+        "ignored_scopes": ["unknown"],
+    }
 
-    with pytest.raises(RuntimeError) as exc_info:
+    if validate_scopes is not None:
+        config["compression"]["validate_scopes"] = validate_scopes
+
+    if validate_scopes or (validate_scopes is None and VALIDATE_SCOPES is True):
+        with pytest.raises(RuntimeError, match="scope definitions"):
+            create_compressed_model_and_algo_for_test(model, config)
+    else:
         create_compressed_model_and_algo_for_test(model, config)
-    assert "No match has been found among the model" in str(exc_info.value)
