@@ -206,10 +206,11 @@ def test_matches_with_any_pattern_node_type():
 
 def test_not_match_edges_inside_pattern():
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("0")
+    ref_graph.add_node("0", **{GraphPattern.METATYPE_ATTR: "0"})
     ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
     ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "b"})
     ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_edge("0", "1")
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "3")
     ref_graph.add_edge("1", "3")

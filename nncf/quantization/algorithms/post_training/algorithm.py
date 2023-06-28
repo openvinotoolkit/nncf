@@ -92,6 +92,14 @@ class PostTrainingQuantization(Algorithm):
             )
             self.first_stage_algorithms.append(smooth_quant_algorithm)
 
+        if not advanced_parameters.disable_channel_alignment:
+            channel_alignment = ChannelAlignment(
+                subset_size=subset_size,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                backend_params=advanced_parameters.backend_params,
+            )
+            self.first_stage_algorithms.append(channel_alignment)
+
         min_max_quantization = MinMaxQuantization(
             preset=preset,
             target_device=target_device,
@@ -109,14 +117,6 @@ class PostTrainingQuantization(Algorithm):
         )
 
         self.algorithms.append(min_max_quantization)
-
-        if not advanced_parameters.disable_channel_alignment:
-            channel_alignment = ChannelAlignment(
-                subset_size=subset_size,
-                inplace_statistics=advanced_parameters.inplace_statistics,
-                backend_params=advanced_parameters.backend_params,
-            )
-            self.first_stage_algorithms.append(channel_alignment)
 
         if advanced_parameters.disable_bias_correction:
             return
@@ -197,6 +197,10 @@ class PostTrainingQuantization(Algorithm):
             for algorithm in self.first_stage_algorithms:
                 if isinstance(algorithm, SmoothQuant) and backend != BackendType.OPENVINO:
                     nncf_logger.debug(f"{backend.name} does not support SmoothQuant algorithm yet.")
+                    continue
+
+                if isinstance(algorithm, ChannelAlignment) and backend != BackendType.OPENVINO:
+                    nncf_logger.debug(f"{backend.name} does not support ChannelAlignment algorithm yet.")
                     continue
 
                 statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
