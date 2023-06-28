@@ -26,6 +26,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MA
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDivideMetatype
@@ -94,6 +95,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return [OVReadValueMetatype]
+
+    @property
+    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
+        return {OVConcatMetatype: self.overflow_fix_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:

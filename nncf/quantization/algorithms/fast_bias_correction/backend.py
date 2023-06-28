@@ -34,13 +34,6 @@ ALGO_BACKENDS = Registry("algo_backends")
 class FastBiasCorrectionAlgoBackend(ABC):
     @property
     @abstractmethod
-    def operation_metatypes(self):
-        """
-        Property for the backend-specific metatypes.
-        """
-
-    @property
-    @abstractmethod
     def tensor_processor(self):
         """
         Returns backend-specific instance of the NNCFCollectorTensorProcessor.

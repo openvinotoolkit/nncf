@@ -86,18 +86,18 @@ class PercentileTensorStatistic(TensorStatistic):
         return True
 
 
-class BatchTensorStatistic(TensorStatistic):
+class RawTensorStatistic(TensorStatistic):
     VALUES_STATS = "values"
 
     """
-    Base class for the statistics that collects as mean per-batch
+    Base class for the raw statistics, without any aggregation.
     """
 
     def __init__(self, values):
         """
-        :param values: Collected per-batch values.
+        :param values: Collected raw values.
         """
         self.values = values
 
-    def __eq__(self, other: "BatchTensorStatistic") -> bool:
+    def __eq__(self, other: "RawTensorStatistic") -> bool:
         return self.tensor_eq(self.values, other.values)

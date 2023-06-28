@@ -603,9 +603,11 @@ class NNCFNetworkInterface(torch.nn.Module):
             # a port ID attribute.
             in_edges = nncf_graph.get_input_edges(node)
             for edge in in_edges:
-                port_id = edge.input_port_id
-                pre_hook_ip = PreHookInsertionPoint(target_node_name=node.node_name, input_port_id=port_id)
-                pre_hooks.append(pre_hook_ip)
+                for port_id in [
+                    edge.input_port_id,
+                ] + edge.parallel_input_port_ids:
+                    pre_hook_ip = PreHookInsertionPoint(target_node_name=node.node_name, input_port_id=port_id)
+                    pre_hooks.append(pre_hook_ip)
 
             if issubclass(node.metatype, PTSplitMetatype):
                 # chunk returns a tuple of tensors, which can only be handled in NNCF
@@ -737,6 +739,21 @@ class NNCFNetworkInterface(torch.nn.Module):
 
     def set_compression_controller(self, ctrl: "PTCompressionAlgorithmController"):
         self.compression_controller = ctrl
+
+    def strip(self, do_copy: bool = True) -> "NNCFNetwork":
+        """
+        Returns the model object with as much custom NNCF additions as possible removed
+        while still preserving the functioning of the model object as a compressed model.
+        :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
+          will return the currently associated model object "stripped" in-place.
+        :return: The stripped model.
+        """
+        if self.compression_controller is None:
+            # PTQ algorithm does not set compressed controller
+            from nncf.torch.quantization.strip import strip_quantized_model
+
+            return strip_quantized_model(self._model_ref)
+        return self.compression_controller.strip(do_copy)
 
 
 class NNCFNetworkMeta(type):

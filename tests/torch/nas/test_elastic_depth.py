@@ -63,10 +63,10 @@ class DepthBasicConvTestModel(nn.Module):
         super().__init__()
         self._depth = depth
         self._skipped_layers = []
-        self.conv1 = create_conv(1, 3, 3, weight_init=1, bias_init=1)
+        self.conv1 = create_conv(1, 3, 3, weight_init=1, bias_init=1, padding=1)
         self.branch_with_blocks = nn.Sequential()
         for idx in range(depth):
-            conv = create_conv(3, 3, 5, weight_init=idx + 1, bias_init=idx + 1)
+            conv = create_conv(3, 3, 5, weight_init=idx + 1, bias_init=idx + 1, padding=2)
             self.branch_with_blocks.add_module("conv{}".format(idx), conv)
         self.last_conv = create_conv(3, 1, 1)
 

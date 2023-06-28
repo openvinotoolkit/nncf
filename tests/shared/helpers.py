@@ -47,9 +47,10 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     version_string = f"{sys.version_info[0]}.{sys.version_info[1]}"
 
     if venv_type == "virtualenv":
-        subprocess.check_call(f"virtualenv -ppython{version_string} {venv_path}", shell=True)
+        virtualenv = Path(sys.executable).parent / "virtualenv"
+        subprocess.check_call(f"{virtualenv} -ppython{version_string} {venv_path}", shell=True)
     elif venv_type == "venv":
-        subprocess.check_call(f"python -m venv {venv_path}", shell=True)
+        subprocess.check_call(f"{sys.executable} -m venv {venv_path}", shell=True)
 
     subprocess.check_call(f"{pip_with_venv} install --upgrade pip", shell=True)
     subprocess.check_call(f"{pip_with_venv} install --upgrade wheel setuptools", shell=True)
@@ -62,15 +63,16 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     extra_reqs_str = ""
     if extra_reqs is not None and extra_reqs:
         extra_reqs_str = ",".join(extra_reqs)
+        extra_reqs_str = f"[{extra_reqs_str}]"
 
     if package_type == "pip_pypi":
-        run_cmd_line = f"{pip_with_venv} install nncf[{extra_reqs_str}]"
+        run_cmd_line = f"{pip_with_venv} install nncf{extra_reqs_str}"
     elif package_type == "pip_local":
-        run_cmd_line = f"{pip_with_venv} install {PROJECT_ROOT}[{extra_reqs_str}]"
+        run_cmd_line = f"{pip_with_venv} install {PROJECT_ROOT}{extra_reqs_str}"
     elif package_type == "pip_e_local":
-        run_cmd_line = f"{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs_str}]"
+        run_cmd_line = f"{pip_with_venv} install -e {PROJECT_ROOT}{extra_reqs_str}"
     elif package_type == "pip_git_develop":
-        run_cmd_line = f"{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs_str}]"
+        run_cmd_line = f"{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf{extra_reqs_str}"
     elif package_type == "build_s":
         run_cmd_line = f"{python_executable_with_venv} -m build -n -s"
     elif package_type == "build_w":
@@ -83,7 +85,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     # compiled for CUDA 10.2. Thus need to direct pip installation specifically for
     # torch, otherwise the NNCF will only work in CPU mode.
     torch_extra_index = " --extra-index-url https://download.pytorch.org/whl/cu116"
-    if "torch" in extra_reqs and "build" not in package_type:
+    if extra_reqs is not None and "torch" in extra_reqs and "build" not in package_type:
         run_cmd_line += torch_extra_index
 
     subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)

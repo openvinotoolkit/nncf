@@ -22,6 +22,7 @@ from torch import nn
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
+from nncf.config.schemata.defaults import VALIDATE_SCOPES
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
 from tests.torch.helpers import BasicConvTestModel
@@ -394,20 +395,36 @@ def test_compression_loss_gpu_device_compatibility(config):
     compression_ctrl.loss()
 
 
-NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation"]
+NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation", "NoCompressionAlgorithm"]
 
 
 @pytest.mark.parametrize("algo_name", PT_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
-def test_raise_runtimeerror_for_not_matched_scope_names(algo_name):
-    if algo_name == "NoCompressionAlgorithm":
-        pytest.skip()
+@pytest.mark.parametrize("validate_scopes", (True, False, None))
+def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, validate_scopes):
     model = BasicLinearTestModel()
     config = ConfigCreator().add_algo(algo_name).create()
     config["compression"][0]["ignored_scopes"] = ["unknown"]
 
-    with pytest.raises(RuntimeError) as exc_info:
+    if algo_name == "movement_sparsity":
+        config["compression"][0]["params"] = {
+            "warmup_start_epoch": 1,
+            "warmup_end_epoch": 3,
+            "enable_structured_masking": False,
+            "init_importance_threshold": -0.1,
+            "final_importance_threshold": 0.0,
+            "importance_regularization_factor": 0.2,
+            "power": 3,
+            "steps_per_epoch": 4,
+        }
+
+    if validate_scopes is not None:
+        config["compression"][0]["validate_scopes"] = validate_scopes
+
+    if validate_scopes or (validate_scopes is None and VALIDATE_SCOPES is True):
+        with pytest.raises(RuntimeError, match="scope definitions"):
+            create_compressed_model_and_algo_for_test(model, config)
+    else:
         create_compressed_model_and_algo_for_test(model, config)
-    assert "No match has been found among the model" in str(exc_info.value)
 
 
 @pytest.mark.parametrize(

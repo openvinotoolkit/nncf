@@ -30,6 +30,8 @@ from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
@@ -554,3 +556,76 @@ def test_null_biases_insertion(model_with_parameters):
         assert bias_node.get_type_name() == "Constant"
 
         assert all(bias_node.get_vector() == np.zeros(layer_shape[1], dtype=bias_dtype))
+
+
+MODELS_WITH_DATA = [
+    {"model": ConvModel(), "input_layers": ["Conv"], "output_layers": ["Conv"]},
+    {"model": QuantizedModel(), "input_layers": ["Relu_1", "Transpose"], "output_layers": ["Conv_3", "Add_2"]},
+]
+
+
+@pytest.mark.parametrize("model_with_data", MODELS_WITH_DATA)
+def test_model_extraction(model_with_data):
+    model_to_test = model_with_data["model"]
+    model = model_to_test.ov_model
+    transformation_layout = TransformationLayout()
+    command = OVModelExtractionCommand(model_with_data["input_layers"], model_with_data["output_layers"])
+    transformation_layout.register(command)
+
+    model_transformer = OVModelTransformer(model)
+    transformed_model = model_transformer.transform(transformation_layout)
+
+    path_to_dot = REFERENCE_GRAPHS_DIR / f"exctracted_{model_to_test.ref_graph_name}"
+    compare_nncf_graphs(transformed_model, path_to_dot)
+
+
+MODELS_WITH_PARAMETERS = [
+    {
+        "model": LinearModel().ov_model,
+        "layers": ["Reshape"],
+        "destination_node_names": ["MatMul"],
+        "scale": np.ones((1, 1, 1, 4)),
+    },
+    {
+        "model": WeightsModel().ov_model,
+        "layers": ["MatMul_1"],
+        "destination_node_names": ["MatMul_0"],
+        "scale": np.ones((1, 1, 1, 1)),
+    },
+]
+
+
+@pytest.mark.parametrize("model_with_parameters", MODELS_WITH_PARAMETERS)
+def test_multiply_insertion(model_with_parameters):
+    model = model_with_parameters["model"]
+    layers = model_with_parameters["layers"]
+    dest_nodes = model_with_parameters["destination_node_names"]
+    scale = model_with_parameters["scale"]
+    output_port_id = 0
+
+    transformed_model = create_transformed_model(
+        model,
+        layers,
+        TargetType.POST_LAYER_OPERATION,
+        OVMultiplyInsertionCommand,
+        port_id=output_port_id,
+        **{"scale_value": scale, "destination_node_names": dest_nodes},
+    )
+    ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
+
+    for dest_node_name in dest_nodes:
+        dest_node = ops_dict[dest_node_name]
+
+        for dest_input in dest_node.inputs():
+            input_node = dest_input.get_source_output().get_node()
+            if input_node.get_type_name() == "Constant":
+                continue
+            scale_node = input_node
+
+        assert scale_node.get_type_name() == "Multiply"
+        scale_const = scale_node.input(1).get_source_output().get_node()
+
+        assert scale_const.get_type_name() == "Constant"
+        scale_const_data = scale_const.data
+
+        assert np.all(scale_const_data == scale)

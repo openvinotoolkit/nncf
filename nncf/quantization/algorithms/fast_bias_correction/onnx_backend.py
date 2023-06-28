@@ -19,8 +19,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.registry import Registry
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
@@ -38,10 +36,6 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCo
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-    @property
-    def operation_metatypes(self) -> Registry:
-        return ONNX_OPERATION_METATYPES
-
     @property
     def types_to_insert_bias(self):
         return []

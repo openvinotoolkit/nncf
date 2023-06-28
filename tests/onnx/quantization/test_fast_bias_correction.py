@@ -19,7 +19,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
-from tests.post_training.test_fast_bias_correction import TemplateTestFBCAlgorithm
+from tests.post_training.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
 
 
 def get_data_from_node(model: onnx.ModelProto, node_name: str):

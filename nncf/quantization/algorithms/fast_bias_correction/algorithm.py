@@ -139,7 +139,7 @@ class FastBiasCorrection(Algorithm):
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []
 
-        for node, bias_value in tqdm(node_and_bias_value, desc="Biases correction"):
+        for node, bias_value in tqdm(node_and_bias_value, desc="Applying Fast Bias correction"):
             node_name = node.node_name
 
             if not self._backend_entity.is_quantized_weights(node, nncf_graph, model):

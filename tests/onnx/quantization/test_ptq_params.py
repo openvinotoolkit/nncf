@@ -31,9 +31,9 @@ from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.onnx.models import LinearModel
 from tests.onnx.models import OneDepthwiseConvolutionalModel
-from tests.post_training.models import NNCFGraphToTest
-from tests.post_training.models import NNCFGraphToTestMatMul
-from tests.post_training.test_ptq_params import TemplateTestPTQParams
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestMatMul
+from tests.post_training.test_templates.test_ptq_params import TemplateTestPTQParams
 
 # pylint: disable=protected-access
 
@@ -107,6 +107,10 @@ class TestPTQParams(TemplateTestPTQParams):
             "test_model_type_pass": {
                 "nncf_graph": NNCFGraphToTestMatMul(MATMUL_METATYPES[0]).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
+            },
+            "test_validate_scope": {
+                "nncf_graph": NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
                 "ignored_patterns": get_ignored_patterns(),
             },
         }

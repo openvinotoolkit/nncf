@@ -63,7 +63,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
 
-        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
+        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes, self.validate_scopes)
 
         transformations = TFTransformationLayout()
 

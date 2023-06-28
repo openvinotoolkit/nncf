@@ -144,11 +144,15 @@ def test_shared_op_unified_scales(target_device):
     nncf_config = get_basic_quantization_config()
     nncf_config["target_device"] = target_device
 
+    non_weight_quantizers_ref = 8
+    if target_device == "VPU":
+        non_weight_quantizers_ref = 5
+
     model = get_shared_conv_test_model()
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config, force_no_init=True)
 
     non_weight_quantizers = len(collect_fake_quantize_layers(compressed_model))
-    assert non_weight_quantizers == 5
+    assert non_weight_quantizers == non_weight_quantizers_ref
 
     total_quantizations = get_total_quantizations(compressed_model)
     assert total_quantizations == 8

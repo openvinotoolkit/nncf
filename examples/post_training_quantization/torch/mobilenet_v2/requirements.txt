@@ -1,5 +1,6 @@
-torchvision~=0.14
+torchvision>=0.10.1,<0.16
 tqdm
 scikit-learn
 fastdownload
-openvino-dev~=2022.3.0.dev
+openvino-dev==2023.0.0
+onnx

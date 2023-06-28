@@ -34,8 +34,8 @@ from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import LinearModel
-from tests.post_training.models import NNCFGraphToTestMatMul
-from tests.post_training.test_ptq_params import TemplateTestPTQParams
+from tests.post_training.test_templates.models import NNCFGraphToTestMatMul
+from tests.post_training.test_templates.test_ptq_params import TemplateTestPTQParams
 
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
@@ -107,6 +107,10 @@ class TestPTQParams(TemplateTestPTQParams):
             "test_model_type_pass": {
                 "nncf_graph": NNCFGraphToTestMatMul(OVMatMulMetatype).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
+            },
+            "test_validate_scope": {
+                "nncf_graph": GraphConverter.create_nncf_graph(LinearModel().ov_model),
                 "ignored_patterns": get_ignored_patterns(),
             },
         }

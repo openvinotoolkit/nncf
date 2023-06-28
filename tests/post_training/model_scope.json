@@ -55,15 +55,6 @@
             "FP32 top 1": 0.77728
         }
     },
-    "xception": {
-        "model_name": "xception",
-        "quantization_params": {
-            "preset": "MIXED"
-        },
-        "metrics": {
-            "FP32 top 1": 0.78506
-        }
-    },
     "efficientnet_b0": {
         "model_name": "efficientnet_b0",
         "quantization_params": {
@@ -136,6 +127,9 @@
         }
     },
     "levit_128": {
+        "skipped_by_backends": {
+            "TORCH": "Wrong quantization config, skipped as the model could be quantized by TORCH PTQ and TORCH backend will be deprecated eventially"
+        },
         "model_name": "levit_128",
         "quantization_params": {
             "preset": "MIXED",
@@ -174,6 +168,9 @@
         }
     },
     "visformer_small": {
+        "skipped_by_backends": {
+            "TORCH": "Wrong quantization config, skipped as the model could be quantized by TORCH PTQ and TORCH backend will be deprecated eventially"
+        },
         "model_name": "visformer_small",
         "quantization_params": {
             "preset": "MIXED",
@@ -184,6 +181,9 @@
         }
     },
     "crossvit_9_240": {
+        "skipped_by_backends": {
+            "TORCH": "Wrong quantization config, skipped as the model could be quantized by TORCH PTQ and TORCH backend will be deprecated eventially"
+        },
         "model_name": "crossvit_9_240",
         "quantization_params": {
             "preset": "MIXED",

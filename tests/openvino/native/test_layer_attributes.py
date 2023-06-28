@@ -35,6 +35,23 @@ def get_convert_conv(input_1, node_name, input_shape):
     return get_conv(input_1, node_name, input_shape, convert)
 
 
+def get_matmul_b(input_1, node_name, input_shape):
+    return get_matmul(input_1, node_name, input_shape, transpose_b=True)
+
+
+def get_matmul_a(input_1, node_name, input_shape):
+    return get_matmul(input_1, node_name, input_shape, transpose_a=True)
+
+
+def get_matmul(input_1, node_name, input_shape, transpose_a=False, transpose_b=False):
+    channel_position = 1 if transpose_a else -1
+    data_shape = [input_shape[channel_position], 1]
+    if transpose_b:
+        data_shape = data_shape[::-1]
+    data = opset.constant(np.ones(tuple(data_shape)), dtype=np.float32, name="Const")
+    return opset.matmul(input_1, data, transpose_a=transpose_a, transpose_b=transpose_b, name=node_name)
+
+
 def get_shape_node(input_, op_name, input_shape):
     return opset.shape_of(input_, name=op_name)
 
@@ -48,15 +65,28 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
 
 
 @pytest.mark.parametrize(
-    "node_creator, ref_layer_attrs",
+    "node_creator, input_shape, ref_layer_attrs",
     [
-        (get_conv, OVConstantLayerAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}})),
-        (get_convert_conv, OVConstantLayerAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}})),
-        (get_shape_node, None),
+        (get_conv, (1, 3, 3, 3), OVConstantLayerAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {})),
+        (get_convert_conv, (1, 3, 3, 3), OVConstantLayerAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {})),
+        (get_shape_node, (1, 3, 3, 3), None),
+        (
+            get_matmul_b,
+            (1, 3, 4),
+            OVConstantLayerAttributes(
+                {1: {"name": "Const", "shape": (1, 4), "transpose": True}}, {"shape": (1, 3, 4), "transpose": False}
+            ),
+        ),
+        (
+            get_matmul_a,
+            (1, 3, 4),
+            OVConstantLayerAttributes(
+                {1: {"name": "Const", "shape": (3, 1), "transpose": False}}, {"shape": (1, 3, 4), "transpose": True}
+            ),
+        ),
     ],
 )
-def test_layer_attributes(node_creator, ref_layer_attrs):
-    input_shape = [1, 3, 3, 3]
+def test_layer_attributes(node_creator, input_shape, ref_layer_attrs):
     op_name = "test_node"
     ov_model = get_one_layer_model(op_name, node_creator, input_shape)
     nncf_graph = GraphConverter.create_nncf_graph(ov_model)

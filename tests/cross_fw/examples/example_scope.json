@@ -1,0 +1,147 @@
+{
+    "post_training_quantization_onnx_mobilenet_v2": {
+        "backend": "onnx",
+        "requirements": "examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "fp32_top1": 0.9864968152866243,
+            "int8_top1": 0.9844585987261146,
+            "accuracy_drop": 0.0020382165605096203
+        },
+        "performance_metrics": {
+            "fp32_fps": 1732.8,
+            "int8_fps": 6013.68,
+            "performance_speed_up": 3.470498614958449
+        }
+    },
+    "post_training_quantization_openvino_mobilenet_v2_quantize": {
+        "backend": "openvino",
+        "requirements": "examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "fp32_top1": 0.9864968152866243,
+            "int8_top1": 0.9844585987261146,
+            "accuracy_drop": 0.0020382165605096203
+        },
+        "performance_metrics": {
+            "fp32_fps": 1725.97,
+            "int8_fps": 6003.05,
+            "performance_speed_up": 3.478073199418298
+        },
+        "model_size_metrics": {
+            "fp32_model_size": 8.605232238769531,
+            "int8_model_size": 2.6038694381713867,
+            "model_compression_rate": 3.30478637393306
+        }
+    },
+    "post_training_quantization_openvino_yolo8_quantize": {
+        "backend": "openvino",
+        "requirements": "examples/post_training_quantization/openvino/yolov8/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "fp32_mAP": 0.45252755065175254,
+            "int8_mAP": 0.4425154975267813,
+            "accuracy_drop": 0.01001205312497122
+        },
+        "performance_metrics": {
+            "fp32_fps": 170.69,
+            "int8_fps": 444.15,
+            "performance_speed_up": 2.6020856523522173
+        }
+    },
+    "post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control": {
+        "backend": "openvino",
+        "requirements": "examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "fp32_top1": 0.9356223344802856,
+            "int8_top1": 0.9356223344802856,
+            "accuracy_drop": 0.0
+        },
+        "performance_metrics": {
+            "fp32_fps": 331.61,
+            "int8_fps": 937.34,
+            "performance_speed_up": 2.8266336962094027
+        },
+        "model_size_metrics": {
+            "fp32_model_size": 21.33378505706787,
+            "int8_model_size": 5.616154670715332,
+            "model_compression_rate": 3.7986462816471147
+        }
+    },
+    "post_training_quantization_openvino_yolo8_quantize_with_accuracy_control": {
+        "backend": "openvino",
+        "requirements": "examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "fp32_mAP": 0.44964819083938,
+            "int8_mAP": 0.4428344895334926,
+            "accuracy_drop": 0.006813701305887432
+        },
+        "performance_metrics": {
+            "fp32_fps": 134.48,
+            "int8_fps": 274.58,
+            "performance_speed_up": 2.0417906008328375
+        }
+    },
+    "post_training_quantization_tensorflow_mobilenet_v2": {
+        "backend": "tensorflow",
+        "requirements": "examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "fp32_top1": 0.987770676612854,
+            "int8_top1": 0.9775795936584473,
+            "accuracy_drop": 0.010191082954406738
+        },
+        "performance_metrics": {
+            "fp32_fps": 1703.04,
+            "int8_fps": 5796.3,
+            "performance_speed_up": 3.403501972942503
+        },
+        "model_size_metrics": {
+            "fp32_model_size": 8.596238136291504,
+            "int8_model_size": 2.69466495513916,
+            "model_compression_rate": 3.1900953474371994
+        }
+    },
+    "post_training_quantization_torch_mobilenet_v2": {
+        "backend": "torch",
+        "requirements": "examples/post_training_quantization/torch/mobilenet_v2/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "fp32_top1": 0.9864968152866243,
+            "int8_top1": 0.9829299363057324,
+            "accuracy_drop": 0.0035668789808918078
+        },
+        "performance_metrics": {
+            "fp32_fps": 1624.67,
+            "int8_fps": 5981.95,
+            "performance_speed_up": 3.681947718613626
+        },
+        "model_size_metrics": {
+            "fp32_model_size": 8.605537414550781,
+            "int8_model_size": 2.748152732849121,
+            "model_compression_rate": 3.131389792018245
+        }
+    },
+    "post_training_quantization_torch_ssd300_vgg16": {
+        "backend": "torch",
+        "requirements": "examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "fp32_mAP": 0.5232756733894348,
+            "int8_mAP": 0.5140125155448914,
+            "accuracy_drop": 0.009263157844543457
+        },
+        "performance_metrics": {
+            "fp32_fps": 33.7,
+            "int8_fps": 132.81,
+            "performance_speed_up": 3.940949554896142
+        },
+        "model_size_metrics": {
+            "fp32_model_size": 137.3418207168579,
+            "int8_model_size": 35.55147361755371,
+            "model_compression_rate": 3.8631822183889652
+        }
+    }
+}

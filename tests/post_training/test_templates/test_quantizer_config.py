@@ -32,9 +32,9 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
-from tests.post_training.models import NNCFGraphToTest
-from tests.post_training.models import NNCFGraphToTestDepthwiseConv
-from tests.post_training.models import NNCFGraphToTestSumAggregation
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
 
 
 # pylint: disable=protected-access,too-many-branches

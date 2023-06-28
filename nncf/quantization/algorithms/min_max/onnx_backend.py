@@ -24,6 +24,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import CONSTANT_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
@@ -83,6 +84,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
+
+    @property
+    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
+        return {ONNXConcatMetatype: self.overflow_fix_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:

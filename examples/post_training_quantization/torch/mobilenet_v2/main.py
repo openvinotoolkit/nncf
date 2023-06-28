@@ -139,13 +139,38 @@ def transform_fn(data_item):
 # (default: 300 samples) of the calibration dataset.
 
 calibration_dataset = nncf.Dataset(val_data_loader, transform_fn)
-torch_quantized_model = nncf.quantize(torch_model, calibration_dataset)
+torch_quantized_model = nncf.quantize(
+    torch_model,
+    calibration_dataset,
+    advanced_parameters=nncf.AdvancedQuantizationParameters(disable_bias_correction=True),
+)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
-ov_model = mo.convert_model(torch_model.cpu(), input_shape=[-1, 3, 224, 224])
-ov_quantized_model = mo.convert_model(torch_quantized_model.cpu(), input_shape=[-1, 3, 224, 224])
+dummy_input = torch.randn(1, 3, 224, 224)
+
+fp32_onnx_path = f"{ROOT}/mobilenet_v2_fp32.onnx"
+torch.onnx.export(
+    torch_model.cpu(),
+    dummy_input,
+    fp32_onnx_path,
+    input_names=["input"],
+    output_names=["output"],
+    dynamic_axes={"input": {0: "-1"}},
+)
+ov_model = mo.convert_model(fp32_onnx_path)
+
+int8_onnx_path = f"{ROOT}/mobilenet_v2_int8.onnx"
+torch.onnx.export(
+    torch_quantized_model.cpu(),
+    dummy_input,
+    int8_onnx_path,
+    input_names=["input"],
+    output_names=["output"],
+    dynamic_axes={"input": {0: "-1"}},
+)
+ov_quantized_model = mo.convert_model(int8_onnx_path)
 
 fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
 ov.serialize(ov_model, fp32_ir_path)

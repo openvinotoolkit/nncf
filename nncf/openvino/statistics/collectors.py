@@ -37,8 +37,8 @@ from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_min_op
 from nncf.openvino.graph.node_utils import get_reducer_output_node_names
 from nncf.openvino.graph.node_utils import get_result_node_name
-from nncf.openvino.statistics.statistics import OVBatchTensorStatistic
 from nncf.openvino.statistics.statistics import OVMeanTensorStatistic
+from nncf.openvino.statistics.statistics import OVRawTensorStatistic
 from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.advanced_parameters import StatisticsType
 
@@ -265,15 +265,12 @@ def get_mean_stat_collector(num_samples, channel_axis, window_size=None, inplace
     return collector
 
 
-def get_mean_batch_stat_collector(num_samples, inplace=True):
-    # TODO(dlyakhov): use inplace OVBatchMeanReducer
-    # after migration on openvino-dev=2023.0
-    inplace = False
-    reducer = OVBatchMeanReducer(inplace=inplace)
+def get_raw_stat_collector(num_samples, inplace=False):
+    reducer = OVNoopReducer()
     aggregator = NoopAggregator(num_samples)
 
-    collector = TensorCollector(OVBatchTensorStatistic)
-    collector.register_statistic_branch(OVBatchTensorStatistic.VALUES_STATS, reducer, aggregator)
+    collector = TensorCollector(OVRawTensorStatistic)
+    collector.register_statistic_branch(OVRawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
 
 

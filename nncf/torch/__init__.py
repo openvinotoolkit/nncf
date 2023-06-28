@@ -56,6 +56,7 @@ from nncf.torch.dynamic_graph.io_handling import nncf_model_output
 from nncf.torch.dynamic_graph.context import disable_tracing
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
+from nncf.torch.strip import strip
 
 # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
 # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
