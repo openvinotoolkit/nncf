@@ -36,8 +36,8 @@ DEFAULT_VAL_THREADS = 4
 
 class BackendType(Enum):
     FP32 = "FP32"
-    LEGACY_TORCH = "Legacy_Torch"
-    TORCH = "Torch"
+    LEGACY_TORCH = "LEGACY_TORCH"
+    TORCH = "TORCH"
     ONNX = "ONNX"
     OV = "OV"
     POT = "POT"
@@ -62,7 +62,7 @@ class RunInfo:
     metric_diff: Optional[float] = None
     num_fq_nodes: Optional[float] = None
     quant_memory_usage: Optional[int] = None
-    time_full: Optional[float] = None
+    time_total: Optional[float] = None
     time_quantization: Optional[float] = None
     error_message: Optional[str] = None
 
@@ -86,9 +86,9 @@ class RunInfo:
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
             "Num FQ": self.num_fq_nodes,
-            "Quant. RAM MiB": self.format_memory_usage(self.quant_memory_usage),
+            "RAM MiB": self.format_memory_usage(self.quant_memory_usage),
             "Quant. time": self.format_time(self.time_quantization),
-            "Full time": self.format_time(self.time_full),
+            "Total time": self.format_time(self.time_total),
             "Error": self.error_message,
         }
 
@@ -123,21 +123,21 @@ class BaseTestPipeline(ABC):
         model_id: str,
         backend: BackendType,
         ptq_params: dict,
-        params: dict,
         output_dir: Path,
         data_dir: Path,
         mode: str,
         reference_data: dict,
+        params: dict = None,
     ) -> None:
         self.reported_name = reported_name
         self.model_id = model_id
         self.backend = backend
         self.ptq_params = ptq_params
-        self.params = params
         self.output_dir = Path(output_dir)
         self.data_dir = Path(data_dir)
         self.mode = mode
         self.reference_data = reference_data
+        self.params = params or {}
 
         self.output_model_dir = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
@@ -261,7 +261,7 @@ class BaseTestPipeline(ABC):
         metric_value_fp32 = self.reference_data.get("metric_value_fp32")
 
         if metric_value is not None and metric_value_fp32 is not None:
-            self.run_info.metric_diff = self.reference_data["metric_value_fp32"] - self.run_info.metric_value
+            self.run_info.metric_diff = self.run_info.metric_value - self.reference_data["metric_value_fp32"]
 
         if metric_value is not None and metric_reference is not None:
             print(f"{np.isclose(metric_value, metric_reference)}")
@@ -275,22 +275,7 @@ class BaseTestPipeline(ABC):
         self.post_quantize()
         self.get_num_fq()
         self.validate()
-        self.run_info.time_full = time.perf_counter() - start_time
+        self.run_info.time_total = time.perf_counter() - start_time
 
     def get_run_info(self) -> RunInfo:
         return self.run_info
-
-
-class BaseHFTestPipeline(BaseTestPipeline):
-    def prepare_model(self) -> None:
-        if self.backend in [BackendType.TORCH, BackendType.LEGACY_TORCH]:
-            self.model_hf = self.params["pt_model_class"].from_pretrained(self.model_id)
-            self.model = self.model_hf
-
-        if self.backend in [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]:
-            self.model_hf = self.params["ov_model_class"].from_pretrained(self.model_id, export=True, compile=False)
-            self.model = self.model_hf.model
-
-        if self.backend in [BackendType.ONNX]:
-            self.model_hf = self.params["onnx_model_class"].from_pretrained(self.model_id, export=True)
-            self.model = onnx.load(self.model_hf.model_path)

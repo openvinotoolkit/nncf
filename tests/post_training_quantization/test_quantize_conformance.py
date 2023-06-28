@@ -17,6 +17,7 @@ import pytest
 import yaml
 
 from tests.post_training_quantization.model_scope import TEST_CASES
+from tests.post_training_quantization.pipelines.base import BackendType
 from tests.post_training_quantization.pipelines.base import RunInfo
 
 # @pytest.fixture(scope="session", name="mode")
@@ -53,10 +54,11 @@ REFERENCE_DATA = read_reference_data()
 def test_ptq_hf(test_case_name, data, output, result):
     pipeline = None
     err_msg = None
+    test_model_param = None
 
     try:
         if test_case_name not in REFERENCE_DATA:
-            raise RuntimeError(f"{test_case_name} does not exists in 'reference_data.yaml'")
+            raise RuntimeError(f"{test_case_name} does not exist in 'reference_data.yaml'")
 
         test_model_param = TEST_CASES[test_case_name]
         pipeline_cls = test_model_param["pipeline_cls"]
@@ -71,7 +73,7 @@ def test_ptq_hf(test_case_name, data, output, result):
             "model_id": test_model_param["model_id"],
             "backend": test_model_param["backend"],
             "ptq_params": test_model_param["ptq_params"],
-            "params": test_model_param["params"],
+            "params": test_model_param.get("params"),
             "output_dir": output,
             "data_dir": data,
             "mode": "full",
@@ -81,18 +83,27 @@ def test_ptq_hf(test_case_name, data, output, result):
         pipeline = pipeline_cls(**pipeline_kwargs)
         pipeline.run()
     except Exception as e:
-        err_msg = f"{type(e)}: {e}"
+        err_msg = str(e)
         traceback.print_exc()
 
     if pipeline is not None:
         run_info = pipeline.get_run_info()
         run_info.error_message = err_msg
     else:
-        run_info = RunInfo(
-            model=test_model_param["reported_name"],
-            backend=test_model_param["backend"],
-            error_message=err_msg,
-        )
+        if test_model_param is not None:
+            run_info = RunInfo(
+                model=test_model_param["reported_name"],
+                backend=test_model_param["backend"],
+                error_message=err_msg,
+            )
+        else:
+            splitted = test_case_name.split("_backend_")
+            run_info = RunInfo(
+                model=splitted[0],
+                backend=BackendType[splitted[1]],
+                error_message=err_msg,
+            )
+
     result[test_case_name] = run_info.get_result_dict()
 
     if err_msg:

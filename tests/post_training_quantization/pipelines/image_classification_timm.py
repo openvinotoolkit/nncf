@@ -37,7 +37,7 @@ from tests.post_training_quantization.pipelines.base import export_to_onnx
 
 
 class ImageClassificationTimm(BaseTestPipeline):
-    """Pipeline for Image Classification model from Hugging Face repository"""
+    """Pipeline for Image Classification model from timm repository"""
 
     def prepare_model(self) -> None:
         timm_model = timm.create_model(self.model_id, num_classes=1000, in_chans=3, pretrained=True, checkpoint_path="")
@@ -154,7 +154,7 @@ class ImageClassificationTimm(BaseTestPipeline):
 
         predictions = np.concatenate(predictions, axis=0)
         references = np.concatenate(references, axis=0)
-        top1 = accuracy_score(predictions, references)
+        acc_top1 = accuracy_score(predictions, references)
 
-        self.run_info.metric_name = "Top1"
-        self.run_info.metric_value = top1
+        self.run_info.metric_name = "Acc@1"
+        self.run_info.metric_value = acc_top1

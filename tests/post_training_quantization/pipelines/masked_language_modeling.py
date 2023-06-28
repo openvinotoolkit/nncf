@@ -9,30 +9,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-import torch
+
+import onnx
 import transformers
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForSequenceClassification
 from optimum.onnxruntime import ORTModelForSequenceClassification
 
-import nncf
-from tests.post_training_quantization.pipelines.base import OV_BACKENDS
-from tests.post_training_quantization.pipelines.base import PT_BACKENDS
 from tests.post_training_quantization.pipelines.base import BackendType
-from tests.post_training_quantization.pipelines.base import BaseHFTestPipeline
+from tests.post_training_quantization.pipelines.base import BaseTestPipeline
 
 
-class MaskedLanguageModelingHF(BaseHFTestPipeline):
+class MaskedLanguageModelingHF(BaseTestPipeline):
     """Pipeline for Image Classification model from Hugging Face repository"""
 
-    def post_init(self):
-        if "pt_model_class" not in self.params:
-            self.params["pt_model_class"] = transformers.AutoModelForSequenceClassification
-        if "ov_model_class" not in self.params:
-            self.params["ov_model_class"] = OVModelForSequenceClassification
-        if "onnx_model_class" not in self.params:
-            self.params["onnx_model_class"] = ORTModelForSequenceClassification
+    def prepare_model(self) -> None:
+        if self.backend in [BackendType.TORCH, BackendType.LEGACY_TORCH]:
+            self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(self.model_id)
+            self.model = self.model_hf
+
+        if self.backend in [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]:
+            self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
+            self.model = self.model_hf.model
+
+        if self.backend in [BackendType.ONNX]:
+            self.model_hf = ORTModelForSequenceClassification.from_pretrained(self.model_id, export=True)
+            self.model = onnx.load(self.model_hf.model_path)
 
     def prepare_preprocessor(self) -> None:
         self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)
@@ -58,11 +60,6 @@ class MaskedLanguageModelingHF(BaseHFTestPipeline):
 
         if self.backend == BackendType.OPTIMUM:
             self.calibration_dataset = calibration_dataset
-        # else:
-        #     def transform_fn(x):
-        #         return x["input_ids"], x["token_type_ids"], x["attention_mask"]
-
-        #     self.calibration_dataset = nncf.Dataset(calibration_dataset, transform_fn)
 
     def _validate(self):
         pass
