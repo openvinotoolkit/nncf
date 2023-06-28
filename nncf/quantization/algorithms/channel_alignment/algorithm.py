@@ -253,13 +253,12 @@ class ChannelAlignment(Algorithm):
     def _get_target_patterns(self) -> GraphPattern:
         producer_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_PRODUCER",
-            GraphPattern.NODE_TYPE_ATTR: [
-                op for op in self._backend_entity.get_conv_metatypes() + self._backend_entity.get_linear_metatypes()
-            ],
+            GraphPattern.NODE_TYPE_ATTR: self._backend_entity.get_conv_metatypes()
+            + self._backend_entity.get_linear_metatypes(),
         }
         bias_attrs = {
             GraphPattern.LABEL_ATTR: "BIAS_PRODUCER",
-            GraphPattern.NODE_TYPE_ATTR: [op for op in self._backend_entity.get_add_metatypes()],
+            GraphPattern.NODE_TYPE_ATTR: self._backend_entity.get_add_metatypes(),
         }
         bias_const_attrs = {
             GraphPattern.LABEL_ATTR: "BIAS_CONSTANT",
@@ -267,7 +266,7 @@ class ChannelAlignment(Algorithm):
         }
         consumer_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_CONSUMER",
-            GraphPattern.NODE_TYPE_ATTR: [op for op in self._backend_entity.get_conv_metatypes()],
+            GraphPattern.NODE_TYPE_ATTR: self._backend_entity.get_conv_metatypes(),
         }
         conv_const_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_CONSTANT",

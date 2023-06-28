@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Any, Dict, List, Optional, Type
+from typing import List, Type
 
 import openvino.runtime as ov
 

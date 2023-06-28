@@ -14,8 +14,8 @@ import openvino.runtime as ov
 import pytest
 from openvino.runtime import opset9 as opset
 
+from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
-from nncf.openvino.graph.nncf_graph_builder import OVConstantAttributes
 
 
 def get_conv(input_1, node_name, input_shape, kernel=None):
@@ -67,20 +67,24 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
 @pytest.mark.parametrize(
     "node_creator, input_shape, ref_layer_attrs",
     [
-        (get_conv, (1, 3, 3, 3), OVConstantAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {})),
-        (get_convert_conv, (1, 3, 3, 3), OVConstantAttributes({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {})),
+        (get_conv, (1, 3, 3, 3), OVConstantLayerAttributesContainer({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {})),
+        (
+            get_convert_conv,
+            (1, 3, 3, 3),
+            OVConstantLayerAttributesContainer({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {}),
+        ),
         (get_shape_node, (1, 3, 3, 3), None),
         (
             get_matmul_b,
             (1, 3, 4),
-            OVConstantAttributes(
+            OVConstantLayerAttributesContainer(
                 {1: {"name": "Const", "shape": (1, 4), "transpose": True}}, {"shape": (1, 3, 4), "transpose": False}
             ),
         ),
         (
             get_matmul_a,
             (1, 3, 4),
-            OVConstantAttributes(
+            OVConstantLayerAttributesContainer(
                 {1: {"name": "Const", "shape": (3, 1), "transpose": False}}, {"shape": (1, 3, 4), "transpose": True}
             ),
         ),

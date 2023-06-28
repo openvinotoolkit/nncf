@@ -23,7 +23,7 @@ from nncf.common.pruning.utils import is_batched_linear
 def test_is_batched_linear(batched, has_output_edges, res):
     graph = NNCFGraph()
     linear = graph.add_nncf_node(
-        "linear", "linear", "linear", LinearLayerAttributes(True, in_features=5, out_fatures=5)
+        "linear", "linear", "linear", LinearLayerAttributes(True, in_features=5, out_features=5)
     )
     if has_output_edges:
         last_linear = graph.add_nncf_node(
