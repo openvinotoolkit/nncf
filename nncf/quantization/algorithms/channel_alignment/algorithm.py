@@ -251,6 +251,10 @@ class ChannelAlignment(Algorithm):
         return True
 
     def _get_target_patterns(self) -> GraphPattern:
+        input_attrs = {
+            GraphPattern.LABEL_ATTR: "INPUT",
+            GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
+        }
         producer_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_PRODUCER",
             GraphPattern.NODE_TYPE_ATTR: self._backend_entity.get_conv_metatypes()
@@ -273,33 +277,43 @@ class ChannelAlignment(Algorithm):
             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
         }
 
+        use_constant = True
+
         def get_conv_conv_pattern() -> GraphPattern:
             conv_conv = GraphPattern()
-            producer_constant = conv_conv.add_node(**conv_const_attrs)
-            consumer_constant = conv_conv.add_node(**conv_const_attrs)
+            if use_constant:
+                input_node = conv_conv.add_node(**input_attrs)
+                producer_constant = conv_conv.add_node(**conv_const_attrs)
+                consumer_constant = conv_conv.add_node(**conv_const_attrs)
 
             pattern_conv_producer = conv_conv.add_node(**producer_attrs)
             pattern_conv_consumer = conv_conv.add_node(**consumer_attrs)
 
-            conv_conv.add_edge(producer_constant, pattern_conv_producer)
-            conv_conv.add_edge(consumer_constant, pattern_conv_consumer)
+            if use_constant:
+                conv_conv.add_edge(input_node, pattern_conv_producer)
+                conv_conv.add_edge(producer_constant, pattern_conv_producer)
+                conv_conv.add_edge(consumer_constant, pattern_conv_consumer)
 
             conv_conv.add_edge(pattern_conv_producer, pattern_conv_consumer)
             return conv_conv
 
         def get_conv_add_conv_pattern() -> GraphPattern:
             conv_bias_conv = GraphPattern()
-            producer_constant = conv_bias_conv.add_node(**conv_const_attrs)
-            bias_producer_const = conv_bias_conv.add_node(**bias_const_attrs)
-            consumer_constant = conv_bias_conv.add_node(**conv_const_attrs)
+            if use_constant:
+                input_node = conv_bias_conv.add_node(**input_attrs)
+                producer_constant = conv_bias_conv.add_node(**conv_const_attrs)
+                bias_producer_const = conv_bias_conv.add_node(**bias_const_attrs)
+                consumer_constant = conv_bias_conv.add_node(**conv_const_attrs)
 
             pattern_conv_producer = conv_bias_conv.add_node(**producer_attrs)
             pattern_bias_producer = conv_bias_conv.add_node(**bias_attrs)
             pattern_conv_consumer = conv_bias_conv.add_node(**consumer_attrs)
 
-            conv_bias_conv.add_edge(producer_constant, pattern_conv_producer)
-            conv_bias_conv.add_edge(consumer_constant, pattern_conv_consumer)
-            conv_bias_conv.add_edge(bias_producer_const, pattern_bias_producer)
+            if use_constant:
+                conv_bias_conv.add_edge(input_node, pattern_conv_producer)
+                conv_bias_conv.add_edge(producer_constant, pattern_conv_producer)
+                conv_bias_conv.add_edge(consumer_constant, pattern_conv_consumer)
+                conv_bias_conv.add_edge(bias_producer_const, pattern_bias_producer)
 
             conv_bias_conv.add_edge(pattern_conv_producer, pattern_bias_producer)
             conv_bias_conv.add_edge(pattern_bias_producer, pattern_conv_consumer)
