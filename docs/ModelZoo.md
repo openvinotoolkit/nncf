@@ -3,21 +3,21 @@
 Results achieved using sample scripts, example patches to third-party repositories and NNCF configuration files provided
 with this repository. See README.md files for [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration)
 to find instruction and links to exact configuration files and final checkpoints.
-- [PyTorch models](#pytorch-models)
-  * [Classification](#pytorch-classification)
-  * [Object detection](#pytorch-object-detection)
+- [PyTorch models](#pytorch_models)
+  * [Classification](#pytorch_classification)
+  * [Object detection](#pytorch_object_detection)
   * [Semantic segmentation](#pytorch_semantic_segmentation)
   * [Natural language processing (3rd-party training pipelines)](#pytorch_nlp)
-- [TensorFlow models](#tensorflow-models)
+- [TensorFlow models](#tensorflow_models)
   * [Classification](#tensorflow_classification)
   * [Object detection](#tensorflow_object_detection)
   * [Instance segmentation](#tensorflow_instance_segmentation)
-- [ONNX models](#onnx-models)
+- [ONNX models](#onnx_models)
 
-<a name="pytorch_models"></a>
+<a id="pytorch_models"></a>
 ## PyTorch
 
-<a name="pytorch_classification"></a>
+<a id="pytorch_classification"></a>
 ### Classification
 
 #### Quantization
@@ -79,7 +79,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |ResNet-18|Filter pruning, 60%, geometric median criterion|ImageNet|69.2 (-0.6)|[resnet18_imagenet_accuracy_aware.json](configs/pruning/resnet18_imagenet_pruning_accuracy_aware.json)|
 
 
-<a name="pytorch_object_detection"></a>
+<a id="pytorch_object_detection"></a>
 ### Object detection
 
 #### Quantization
@@ -103,7 +103,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC07 eval|78.35 (-0.07)|[ssd300_vgg_voc_pruning_geometric_median.json](configs/ssd300_vgg_voc_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_pruning_geometric_median.pth)|
 
 
-<a name="pytorch_semantic_segmentation"></a>
+<a id="pytorch_semantic_segmentation"></a>
 ### Semantic segmentation
 
 #### Quantization
@@ -128,7 +128,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.64 (0.60)|[unet_mapillary_pruning_geometric_median.json](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_pruning_geometric_median.pth)|
 
 
-<a name="pytorch_nlp"></a>
+<a id="pytorch_nlp"></a>
 ### NLP (HuggingFace Transformers-powered models)
 
 |PyTorch Model|<img width="20" height="1">Compression algorithm<img width="20" height="1">|Dataset|Accuracy (Drop) %|
@@ -143,10 +143,10 @@ to find instruction and links to exact configuration files and final checkpoints
 |GPT-2|INT8|WikiText-2 (raw)|perplexity: 20.9 (-1.17)|
 
 
-<a name="tensorflow_models"></a>
+<a id="tensorflow_models"></a>
 ## TensorFlow models
 
-<a name="tensorflow_classification"></a>
+<a id="tensorflow_classification"></a>
 ### Classification
 
 #### Quantization
@@ -189,7 +189,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 
 
-<a name="tensorflow_object_detection"></a>
+<a id="tensorflow_object_detection"></a>
 ### Object detection
 
 #### Quantization
@@ -212,7 +212,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%|COCO 2017|32.67 (0.76)|[retinanet_coco_pruning_geometric_median_int8.json](configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median_int8.tar.gz)|
 
 
-<a name="tensorflow_instance_segmentation"></a>
+<a id="tensorflow_instance_segmentation"></a>
 ### Instance segmentation
 
 |Model|Compression algorithm|Dataset|            mAP (_drop_) %             |NNCF config file|Checkpoint|
@@ -222,10 +222,10 @@ to find instruction and links to exact configuration files and final checkpoints
 |Mask-R-CNN|Magnitude sparsity, 50%|COCO 2017| bbox: 36.94 (0.39) segm: 33.23 (0.33) |[mask_rcnn_coco_magnitude_sparsity.json](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz)|
 
 
-<a name="onnx_models"></a>
+<a id="onnx_models"></a>
 ## ONNX models
 
-<a name="onnx_classification"></a>
+<a id="onnx_classification"></a>
 ### Classification
 
 |   ONNX Model    | Compression algorithm |Dataset|Accuracy (Drop) %|
@@ -239,7 +239,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |VGG-16| INT8 (Post-Training)  |ImageNet|72.02 (0.0)|
 
 
-<a name="onnx_object_detection"></a>
+<a id="onnx_object_detection"></a>
 ### Object detection
 
 |ONNX Model| Compression algorithm | Dataset |mAP (drop) %|
