@@ -793,10 +793,10 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
 
     return ConvolutionLayerAttributes(
         weight_requires_grad=layer.trainable,
-        in_features=in_channels,
-        out_features=out_channels,
+        in_channels=in_channels,
+        out_channels=out_channels,
         kernel_size=kernel_size,
-        strides=strides,
+        stride=strides,
         dilations=dilations,
         groups=groups,
         transpose=transpose,
