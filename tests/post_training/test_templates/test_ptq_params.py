@@ -10,6 +10,7 @@
 # limitations under the License.
 from abc import abstractmethod
 from collections import Counter
+from copy import deepcopy
 from typing import Dict
 
 import pytest
@@ -27,6 +28,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
@@ -262,6 +264,7 @@ class TemplateTestPTQParams:
     @pytest.mark.parametrize("validate_scopes", (True, False))
     def test_validate_scope(self, test_params, validate_scopes):
         nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
+        inference_nncf_graph = transform_to_inference_graph(deepcopy(nncf_graph), [])
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
         algo = MinMaxQuantization(
             ignored_scope=IgnoredScope(names=["some_node"], validate=validate_scopes),
@@ -269,6 +272,6 @@ class TemplateTestPTQParams:
         algo._backend_entity = self.get_algo_backend()
         if validate_scopes:
             with pytest.raises(RuntimeError, match="Ignored nodes with name"):
-                algo._get_ignored_names(nncf_graph, ignored_patterns)
+                algo._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
         else:
-            algo._get_ignored_names(nncf_graph, ignored_patterns)
+            algo._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
