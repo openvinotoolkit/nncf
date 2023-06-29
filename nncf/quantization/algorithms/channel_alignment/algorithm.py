@@ -128,11 +128,12 @@ class ChannelAlignment(Algorithm):
 
             conv_in_cont = ConvParamsContainer(conv_in, model, nncf_graph, self._backend_entity)
             conv_out_cont = ConvParamsContainer(conv_out, model, nncf_graph, self._backend_entity)
-            dims_descriptor: DimsDescriptor = self._backend_entity.get_dims_descriptor(conv_in)
+            covn_in_descriptor = self._backend_entity.get_dims_descriptor(conv_in)
+            conv_out_descriptor = self._backend_entity.get_dims_descriptor(conv_out)
             if conv_in_cont.has_bias() and conv_out_cont.has_bias():
                 amean = (stat.max_values + stat.min_values) * 0.5
                 conv_in_cont.bias, conv_out_cont.bias = self._align_means(
-                    conv_in_cont.bias, conv_out_cont.bias, conv_out_cont.weight, amean, dims_descriptor
+                    conv_in_cont.bias, conv_out_cont.bias, conv_out_cont.weight, amean, conv_out_descriptor
                 )
 
             ascale = (stat.max_values - stat.min_values).astype(np.float32)
@@ -143,7 +144,8 @@ class ChannelAlignment(Algorithm):
                     conv_out_cont.weight,
                     conv_in_cont.bias,
                     ascale,
-                    dims_descriptor,
+                    covn_in_descriptor,
+                    conv_out_descriptor,
                     eps,
                 )
 
@@ -200,26 +202,31 @@ class ChannelAlignment(Algorithm):
         conv_out_value: np.ndarray,
         bias_in_value: np.ndarray,
         ascale: np.ndarray,
-        dims_descr: DimsDescriptor,
+        conv_in_descr: DimsDescriptor,
+        conv_out_descr: DimsDescriptor,
         eps: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         # scale producer convolution weights
         conv_in_shape = conv_in_value.shape
-        if conv_in_shape[dims_descr.conv_weight_out_channels_dim] == ascale.shape[dims_descr.bias_channels_dim]:
+        if conv_in_shape[conv_in_descr.conv_weight_out_channels_dim] == ascale.shape[conv_in_descr.bias_channels_dim]:
             positive_scales_mask = ascale > eps
             scale_factor = ascale / np.median(ascale[positive_scales_mask])
             scale_factor[~positive_scales_mask] = 1
             scale_factor = np.clip(scale_factor, 1e-2, 1e2)
 
             scale_in_shape = np.ones(len(conv_in_shape), dtype=int)
-            scale_in_shape[dims_descr.conv_weight_out_channels_dim] = scale_factor.shape[dims_descr.bias_channels_dim]
+            scale_in_shape[conv_in_descr.conv_weight_out_channels_dim] = scale_factor.shape[
+                conv_in_descr.bias_channels_dim
+            ]
             conv_in_value = conv_in_value / scale_factor.reshape(scale_in_shape)
 
             if bias_in_value is not None:
                 bias_in_value = bias_in_value / scale_factor.reshape(bias_in_value.shape)
 
             scale_out_shape = np.ones(len(conv_out_value.shape), dtype=int)
-            scale_out_shape[dims_descr.conv_weight_in_channels_dim] = scale_factor.shape[dims_descr.bias_channels_dim]
+            scale_out_shape[conv_out_descr.conv_weight_in_channels_dim] = scale_factor.shape[
+                conv_in_descr.bias_channels_dim
+            ]
             conv_out_value = conv_out_value * scale_factor.reshape(scale_out_shape)
         return conv_in_value, conv_out_value, bias_in_value
 

@@ -8,7 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from nncf.common.graph.patterns import HWFusedPatternNames
+from nncf.common.graph.patterns import IgnoredPatternNames
 from nncf.common.utils.backend import BackendType
 from tests.shared.patterns import check_hw_patterns
 from tests.shared.patterns import check_ignored_patterns
@@ -25,7 +27,6 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.SE_BLOCK: "Not relevant for ONNX.",
     HWFusedPatternNames.SOFTMAX_DIV: "Not relevant for ONNX.",
     HWFusedPatternNames.EQUAL_LOGICALNOT: "Not relevant for ONNX.",
-    HWFusedPatternNames.FC_BN_HSWISH_ACTIVATION: "Not relevant for ONNX.",
     HWFusedPatternNames.HSWISH_ACTIVATION: "Not relevant for ONNX.",
     HWFusedPatternNames.HSWISH_ACTIVATION_V2: "Not relevant for ONNX.",
     HWFusedPatternNames.HSWISH_ACTIVATION_WITHOUT_DENOMINATOR: "Not relevant for ONNX.",
@@ -52,7 +53,9 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.LINEAR_ACTIVATIONS_UNSQUEEZE_BN_SQUEEZE: "Not relevant for ONNX.",
 }
 
-IGNORING_IGNORED_PATTERN_REASONS = {}
+IGNORING_IGNORED_PATTERN_REASONS = {
+    IgnoredPatternNames.FC_BN_HSWISH_ACTIVATION: "Not relevant for ONNX.",
+}
 
 
 def test_pattern_manager():
