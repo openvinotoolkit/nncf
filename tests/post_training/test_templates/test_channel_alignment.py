@@ -211,7 +211,7 @@ class TemplateTestChannelAlignment:
     GET_NODES_TEST_CASES.extend([(VALID_CONV_LAYER_ATTR, attr, False) for attr in INVALID_CONSUMER_CONV_LAYER_ATTRS])
     GET_NODES_TEST_CASES.extend(
         [
-            (INVALID_CONV_LAYER_ATTR, VALID_CONV_LAYER_ATTR, False),
+            (INVALID_CONV_LAYER_ATTR, VALID_CONV_LAYER_ATTR, True),
             (VALID_CONV_LAYER_ATTR, INVALID_CONV_LAYER_ATTR, False),
             (INVALID_CONV_LAYER_ATTR, INVALID_CONV_LAYER_ATTR, False),
         ]

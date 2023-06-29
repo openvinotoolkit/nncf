@@ -245,9 +245,6 @@ class ChannelAlignment(Algorithm):
         attrs = self._backend_entity.get_conv_layer_attributes(conv_node)
         if attrs is None:
             return False
-        # Check groups amount == 1
-        if attrs.groups != 1:
-            return False
         return True
 
     def _get_target_patterns(self) -> GraphPattern:
