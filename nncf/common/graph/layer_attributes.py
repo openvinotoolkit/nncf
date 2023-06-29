@@ -220,7 +220,7 @@ class PermuteLayerAttributes(BaseLayerAttributes):
     :param permutation: the desired ordering of dimensions.
     """
 
-    permutation: List[int]
+    permutation: Tuple[int, ...]
 
 
 @dataclass

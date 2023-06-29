@@ -181,6 +181,17 @@ class TemplateTestChannelAlignment:
 
     @pytest.mark.parametrize("bias_in_value", [np.array([2, 4, 6, 8, 10]), None])
     def test_align_scales(self, bias_in_value):
+        def check_updated_values(updated_conv_in, updated_conv_out, updated_bias_in):
+            assert updated_conv_in.shape == self.REF_UPDATED_CONV_IN.shape
+            assert np.allclose(updated_conv_in, self.REF_UPDATED_CONV_IN)
+            assert updated_conv_out.shape == self.REF_UPDATED_CONV_OUT.shape
+            assert np.allclose(updated_conv_out, self.REF_UPDATED_CONV_OUT)
+            if bias_in_value is None:
+                assert updated_bias_in is None
+            else:
+                assert updated_bias_in.shape == self.REF_UPDATED_BIAS_IN.shape
+                assert np.allclose(updated_bias_in, self.REF_UPDATED_BIAS_IN)
+
         conv_in_value = np.arange(5).reshape(5, 1)
         conv_out_value = np.arange(10).reshape(2, 5) * 2
         ascale = np.array([-5.0, 0.0, 1e-3, 1e3, 2])
@@ -188,7 +199,7 @@ class TemplateTestChannelAlignment:
         # Check nothing will happen if dims are wrong
         dims_descriptor = DimsDescriptor(1, 0, 0)
         updated_conv_in, updated_conv_out, updated_bias_in = ChannelAlignment._align_scales(
-            conv_in_value, conv_out_value, bias_in_value, ascale, dims_descriptor, eps
+            conv_in_value, conv_out_value, bias_in_value, ascale, dims_descriptor, dims_descriptor, eps
         )
         assert updated_conv_in is conv_in_value
         assert updated_conv_out is conv_out_value
@@ -196,14 +207,19 @@ class TemplateTestChannelAlignment:
 
         dims_descriptor = DimsDescriptor(0, 1, 0)
         updated_conv_in, updated_conv_out, updated_bias_in = ChannelAlignment._align_scales(
-            conv_in_value, conv_out_value, bias_in_value, ascale, dims_descriptor, eps
+            conv_in_value, conv_out_value, bias_in_value, ascale, dims_descriptor, dims_descriptor, eps
         )
-        assert np.allclose(updated_conv_in, self.REF_UPDATED_CONV_IN)
-        assert np.allclose(updated_conv_out, self.REF_UPDATED_CONV_OUT)
-        if bias_in_value is None:
-            assert updated_bias_in is None
-        else:
-            assert np.allclose(updated_bias_in, self.REF_UPDATED_BIAS_IN)
+        check_updated_values(updated_conv_in, updated_conv_out, updated_bias_in)
+
+        # Check group conv producer case
+        conv_in_value = conv_in_value.reshape(1, 5, 1)
+        dims_descriptor_in = DimsDescriptor(1, 2, 0)
+        dims_descriptor_out = DimsDescriptor(0, 1, 0)
+        updated_conv_in, updated_conv_out, updated_bias_in = ChannelAlignment._align_scales(
+            conv_in_value, conv_out_value, bias_in_value, ascale, dims_descriptor_in, dims_descriptor_out, eps
+        )
+        updated_conv_in = updated_conv_in.reshape(updated_conv_in.shape[1:])
+        check_updated_values(updated_conv_in, updated_conv_out, updated_bias_in)
 
     GET_NODES_TEST_CASES = []
     GET_NODES_TEST_CASES = [(VALID_CONV_LAYER_ATTR, VALID_CONV_LAYER_ATTR, True)]
@@ -315,7 +331,7 @@ class TemplateTestChannelAlignment:
         ref_bias_val = "ref_bias_val"
         MockBackend.get_bias_value = get_constant_lambda(ref_bias_val, True)
         ref_dims_descr = "ref_dims_descr"
-        MockBackend.get_dims_descriptor = get_constant_lambda(ref_dims_descr)
+        MockBackend.get_dims_descriptor = get_constant_lambda(ref_dims_descr, True)
 
         algorithm = ChannelAlignment()
         algorithm._backend_entity = MockBackend
@@ -343,7 +359,7 @@ class TemplateTestChannelAlignment:
                 ref_bias_val + "2",
                 ref_weights_val + "2",
                 np.array(0.5, dtype=np.float32),
-                ref_dims_descr,
+                ref_dims_descr + "2",
             )
 
         assert algorithm._align_scales.call_count == 1
@@ -357,8 +373,9 @@ class TemplateTestChannelAlignment:
         else:
             assert args[2] is None
         assert ((args[3] - 3) < EPS).all()
-        assert args[4] == ref_dims_descr
-        assert args[5] < EPS
+        assert args[4] == ref_dims_descr + "1"
+        assert args[5] == ref_dims_descr + "2"
+        assert args[6] < EPS
 
         mocked_transformer.transform.assert_called_once()
         arg = mocked_transformer.transform.call_args.args[0]

@@ -36,8 +36,8 @@ class OVConstantLayerAttributesContainer(BaseLayerAttributes):
         :param act_attrs: Activation attributes.
         """
         self._const_attrs = const_attrs
-        self.common_layer_attrs = common_layer_attrs
-        self._act_attrs = act_attrs
+        self.common_layer_attrs = {} if common_layer_attrs is None else common_layer_attrs
+        self._act_attrs = {} if act_attrs is None else act_attrs
 
     @property
     def const_attrs(self):

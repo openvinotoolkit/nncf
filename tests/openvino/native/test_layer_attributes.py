@@ -14,6 +14,8 @@ import openvino.runtime as ov
 import pytest
 from openvino.runtime import opset9 as opset
 
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 
@@ -23,9 +25,19 @@ def get_conv(input_1, node_name, input_shape, kernel=None):
     pads = [0, 0]
     dilations = [1, 1]
     if kernel is None:
-        shape = (input_shape[1], input_shape[1], 1, 1)
+        shape = (input_shape[1], input_shape[1], 2, 1)
         kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
     return opset.convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)
+
+
+def get_group_conv(input_1, node_name, input_shape, kernel=None):
+    strides = [1, 2]
+    pads = [0, 1]
+    dilations = [3, 1]
+    if kernel is None:
+        shape = (input_shape[1], input_shape[1], 1, 1, 1)
+        kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
+    return opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)
 
 
 def get_convert_conv(input_1, node_name, input_shape):
@@ -67,25 +79,83 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
 @pytest.mark.parametrize(
     "node_creator, input_shape, ref_layer_attrs",
     [
-        (get_conv, (1, 3, 3, 3), OVConstantLayerAttributesContainer({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {})),
+        (
+            get_conv,
+            (1, 3, 3, 3),
+            OVConstantLayerAttributesContainer(
+                {1: {"name": "Const", "shape": (3, 3, 2, 1)}},
+                {
+                    1: ConvolutionLayerAttributes(
+                        weight_requires_grad=False,
+                        in_channels=3,
+                        out_channels=3,
+                        kernel_size=(2, 1),
+                        stride=(1, 1),
+                        dilations=[1, 1],
+                        groups=1,
+                        transpose=False,
+                        padding_values=(0, 0, 0, 0),
+                    ),
+                },
+            ),
+        ),
         (
             get_convert_conv,
             (1, 3, 3, 3),
-            OVConstantLayerAttributesContainer({1: {"name": "Const", "shape": (3, 3, 1, 1)}}, {}),
+            OVConstantLayerAttributesContainer(
+                {1: {"name": "Const", "shape": (3, 3, 1, 1)}},
+                {
+                    1: ConvolutionLayerAttributes(
+                        weight_requires_grad=False,
+                        in_channels=3,
+                        out_channels=3,
+                        kernel_size=(1, 1),
+                        stride=(1, 1),
+                        dilations=[1, 1],
+                        groups=1,
+                        transpose=False,
+                        padding_values=(0, 0, 0, 0),
+                    ),
+                },
+            ),
+        ),
+        (
+            get_group_conv,
+            (1, 3, 3, 3),
+            OVConstantLayerAttributesContainer(
+                {1: {"name": "Const", "shape": (3, 3, 1, 1, 1)}},
+                {
+                    1: ConvolutionLayerAttributes(
+                        weight_requires_grad=False,
+                        in_channels=1,
+                        out_channels=3,
+                        kernel_size=(1, 1),
+                        stride=(1, 2),
+                        dilations=[3, 1],
+                        groups=3,
+                        transpose=False,
+                        padding_values=(0, 1, 0, 1),
+                    ),
+                },
+            ),
         ),
         (get_shape_node, (1, 3, 3, 3), None),
         (
             get_matmul_b,
             (1, 3, 4),
             OVConstantLayerAttributesContainer(
-                {1: {"name": "Const", "shape": (1, 4), "transpose": True}}, {"shape": (1, 3, 4), "transpose": False}
+                {1: {"name": "Const", "shape": (1, 4), "transpose": True}},
+                {1: GenericWeightedLayerAttributes(False, (1, 4))},
+                {"shape": (1, 3, 4), "transpose": False},
             ),
         ),
         (
             get_matmul_a,
             (1, 3, 4),
             OVConstantLayerAttributesContainer(
-                {1: {"name": "Const", "shape": (3, 1), "transpose": False}}, {"shape": (1, 3, 4), "transpose": True}
+                {1: {"name": "Const", "shape": (3, 1), "transpose": False}},
+                {1: GenericWeightedLayerAttributes(False, (3, 1))},
+                {"shape": (1, 3, 4), "transpose": True},
             ),
         ),
     ],
