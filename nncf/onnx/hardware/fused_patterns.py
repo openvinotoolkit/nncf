@@ -82,6 +82,25 @@ def create_swish_with_hard_sigmoid() -> GraphPattern:
     return pattern
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION)
+def create_hswish() -> GraphPattern:
+    pattern = GraphPattern()
+    any_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
+    )
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    relu_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RELU", GraphPattern.METATYPE_ATTR: om.ONNXReluMetatype})
+    multiply_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+    )
+
+    pattern.add_edge(any_node, add_node)
+    pattern.add_edge(add_node, relu_node)
+    pattern.add_edge(relu_node, multiply_node)
+    pattern.add_edge(any_node, multiply_node)
+    return pattern
+
+
 # INPUT PROCESSING
 
 
@@ -256,6 +275,16 @@ def create_linear_batch_norm_activations() -> GraphPattern:
     return linear_batch_norm
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_NORM_ACTIVATIONS_ARITHMETIC)
+def create_linear_batch_norm_activations_arithmetic() -> GraphPattern:
+    linear_batch_norm = create_linear_batch_norm()
+    activations = atomic_activations_operations()
+    arithmetic = arithmetic_operations()
+    linear_batch_norm.join_patterns(activations)
+    linear_batch_norm.join_patterns(arithmetic)
+    return linear_batch_norm
+
+
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SCALE_SHIFT_ACTIVATIONS)
 def create_linear_scale_shift_activations() -> GraphPattern:
     linear_scale_shift = create_linear_scale_shift()
@@ -345,6 +374,9 @@ def atomic_activations_operations() -> GraphPattern:
 
     swish_hard_sigmoid = create_swish_with_hard_sigmoid()
     pattern.add_pattern_alternative(swish_hard_sigmoid)
+
+    hswish = create_hswish()
+    pattern.add_pattern_alternative(hswish)
     return pattern
 
 

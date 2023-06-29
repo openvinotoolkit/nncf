@@ -14,6 +14,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 import onnx
 from onnx import numpy_helper
+from onnx.external_data_helper import _get_all_tensors
 
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
@@ -297,7 +298,7 @@ class ONNXGraph:
         :param initializer_name: Name of the tensor.
         :return: The value of the tensor.
         """
-        for init in self.onnx_model.graph.initializer:
+        for init in _get_all_tensors(self.onnx_model):
             if init.name == initializer_name:
                 tensor = numpy_helper.to_array(init)
                 return tensor
@@ -310,7 +311,7 @@ class ONNXGraph:
         :param initializer_name: Name of the initializer.
         :return: True if the model has such initializer, False - otherwise.
         """
-        for init in self.onnx_model.graph.initializer:
+        for init in _get_all_tensors(self.onnx_model):
             if init.name == initializer_name:
                 return True
         return False
@@ -322,7 +323,7 @@ class ONNXGraph:
         :param initializer_name: Name of the Initializer.
         :return: The Initializer.
         """
-        for init in self.onnx_model.graph.initializer:
+        for init in _get_all_tensors(self.onnx_model):
             if init.name == initializer_name:
                 return init
         raise RuntimeError("There is no initializer with the name {}".format(initializer_name))
