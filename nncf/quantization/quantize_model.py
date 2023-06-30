@@ -221,10 +221,7 @@ def quantize_with_accuracy_control(
 
 
 @api(canonical_alias="nncf.weights_compression")
-def weights_compression(
-    model: TModel,
-    compress_weights: bool = False
-) -> TModel:
+def weights_compression(model: TModel, compress_weights: bool = False) -> TModel:
     """
     Applies weights compression with dequantization or fake quantize insertion.
 
@@ -241,8 +238,6 @@ def weights_compression(
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import weights_compression_impl
 
-        return weights_compression_impl(
-            model, compress_weights
-        )
+        return weights_compression_impl(model, compress_weights)
 
     raise RuntimeError(f"Unsupported type of backend: {backend}")
