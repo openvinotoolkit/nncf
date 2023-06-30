@@ -86,7 +86,7 @@ def create_swish_with_hard_sigmoid() -> GraphPattern:
 def create_hswish() -> GraphPattern:
     pattern = GraphPattern()
     any_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
+        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
     )
     add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
     relu_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RELU", GraphPattern.METATYPE_ATTR: om.ONNXReluMetatype})
