@@ -32,10 +32,10 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_ob
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nested_objects_traversal import objwalk
-from nncf.torch.utils import get_model_device
-from nncf.torch.utils import is_tensor
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.quantization.weights_compression import insert_pre_compression_operations
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_tensor
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
 

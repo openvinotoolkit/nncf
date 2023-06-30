@@ -1,8 +1,10 @@
-import torch
-from torch import nn
 from typing import Optional
 
-from nncf.torch.layers import NNCFLinear, NNCFEmbedding
+import torch
+from torch import nn
+
+from nncf.torch.layers import NNCFEmbedding
+from nncf.torch.layers import NNCFLinear
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 
 
