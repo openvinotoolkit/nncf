@@ -21,12 +21,14 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
+from nncf.openvino.graph.model_utils import insert_null_biases
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -74,12 +76,6 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return [OVAddMetatype, OVSubtractMetatype]
 
     @staticmethod
-    def get_conv_nodes(nncf_graph: NNCFGraph):
-        return nncf_graph.get_nodes_by_metatypes(
-            [OVConvolutionMetatype, OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype]
-        )
-
-    @staticmethod
     def get_statistic_collector(
         reduction_shape, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
@@ -116,9 +112,34 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
                 bias_channels_dim=node.metatype.output_channel_axis,
             )
         if node.metatype in [OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype]:
+            # Using groups dim as output channels dim for ChannelAlignment algorithm
+            # TODO(dlyakhov) support group convolutions with groups nubmer not in [1, out_channels]
             return DimsDescriptor(
-                conv_weight_out_channels_dim=1,
+                conv_weight_out_channels_dim=0,
                 conv_weight_in_channels_dim=2,
+                bias_channels_dim=node.metatype.output_channel_axis,
+            )
+        if node.metatype == OVMatMulMetatype:
+            if node.layer_attributes is None:
+                raise RuntimeError(f"Attempt to align matmul node {node.node_name} that have no any constant inputs")
+            layer_attributes: OVConstantLayerAttributesContainer = node.layer_attributes
+            key = layer_attributes.get_const_port_ids()
+            assert len(key) == 1
+            key = key[0]
+            const_attr = layer_attributes.const_attrs[key]
+            a, b = list(range(const_attr["shape"]))[-2:]
+            assert key in [a, b]
+            if key == a:
+                out_ch_dim = a
+                in_ch_dim = b
+            else:
+                out_ch_dim = b
+                in_ch_dim = a
+            if const_attr.get("transpose", False):
+                out_ch_dim, in_ch_dim = in_ch_dim, out_ch_dim
+            return DimsDescriptor(
+                conv_weight_in_channels_dim=in_ch_dim,
+                conv_weight_out_channels_dim=out_ch_dim,
                 bias_channels_dim=node.metatype.output_channel_axis,
             )
         raise RuntimeError(f"Could not retrieve dims description for node {node} with metatype {node.metatype}")
@@ -128,3 +149,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         if node.layer_attributes is None:
             return None
         return node.layer_attributes.common_layer_attrs[1]
+
+    @staticmethod
+    def insert_null_biases(model: ov.Model) -> ov.Model:
+        return insert_null_biases(model)

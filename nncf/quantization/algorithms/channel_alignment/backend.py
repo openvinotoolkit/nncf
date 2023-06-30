@@ -119,6 +119,10 @@ class ChannelAlignmentAlgoBackend:
     def get_conv_layer_attributes(node: NNCFNode) -> Optional[ConvolutionLayerAttributes]:
         pass
 
+    @staticmethod
+    def insert_null_biases(model: TModel) -> TModel:
+        pass
+
 
 class ConvParamsContainer:
     def __init__(self, conv_op, model, nncf_graph, backend_entity: ChannelAlignmentAlgoBackend):

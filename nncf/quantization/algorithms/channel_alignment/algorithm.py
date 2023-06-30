@@ -27,6 +27,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.channel_alignment.backend import ConvParamsContainer
@@ -82,7 +83,7 @@ class ChannelAlignment(Algorithm):
         self.subset_size = subset_size
         self.inplace_statistics = inplace_statistics
         self.backend_params = backend_params
-        self.nncf_graph = None
+        self._original_nncf_graph = None
         self._backend_entity = None
         self._nncf_grpah = None
         self._q = 1e-4
@@ -110,15 +111,23 @@ class ChannelAlignment(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-
-        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
-        model_transformer = ModelTransformerFactory.create(model)
+        model_copy = self._backend_entity.insert_null_biases(copy_model(model))
+        original_nncf_graph = (
+            NNCFGraphFactory.create(model) if self._original_nncf_graph is None else self._original_nncf_graph
+        )
+        modified_nncf_graph = NNCFGraphFactory.create(model_copy)
+        model_transformer = ModelTransformerFactory.create(model_copy)
         transformation_layout = TransformationLayout()
 
         def filter_func(point: StatisticPoint) -> bool:
             return ChannelAlignment in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
-        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel allignment"):
+        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(original_nncf_graph), desc="Channel allignment"):
+            conv_in = modified_nncf_graph.get_node_by_name(conv_in.node_name)
+            conv_out = modified_nncf_graph.get_node_by_name(conv_out.node_name)
+            if add_in is not None:
+                add_in = modified_nncf_graph.get_node_by_name(add_in.node_name)
+
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, ChannelAlignment)
@@ -126,8 +135,8 @@ class ChannelAlignment(Algorithm):
             assert len(tensor_collectors) == 1
             stat: MinMaxTensorStatistic = tensor_collectors[0].get_statistics()
 
-            conv_in_cont = ConvParamsContainer(conv_in, model, nncf_graph, self._backend_entity)
-            conv_out_cont = ConvParamsContainer(conv_out, model, nncf_graph, self._backend_entity)
+            conv_in_cont = ConvParamsContainer(conv_in, model_copy, modified_nncf_graph, self._backend_entity)
+            conv_out_cont = ConvParamsContainer(conv_out, model_copy, modified_nncf_graph, self._backend_entity)
             covn_in_descriptor = self._backend_entity.get_dims_descriptor(conv_in)
             conv_out_descriptor = self._backend_entity.get_dims_descriptor(conv_out)
             if conv_in_cont.has_bias() and conv_out_cont.has_bias():
@@ -159,7 +168,9 @@ class ChannelAlignment(Algorithm):
 
                 if not np.equal(container.bias, container.original_bias).all():
                     transformation_layout.register(
-                        self._backend_entity.create_bias_update_command(container.op, container.bias, nncf_graph)
+                        self._backend_entity.create_bias_update_command(
+                            container.op, container.bias, modified_nncf_graph
+                        )
                     )
 
         transformed_model = model_transformer.transform(transformation_layout)
@@ -208,6 +219,7 @@ class ChannelAlignment(Algorithm):
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         # scale producer convolution weights
         conv_in_shape = conv_in_value.shape
+        # TODO(dlyakhov) support group convolutions with groups nubmer not in [1, out_channels]
         if conv_in_shape[conv_in_descr.conv_weight_out_channels_dim] == ascale.shape[conv_in_descr.bias_channels_dim]:
             positive_scales_mask = ascale > eps
             scale_factor = ascale / np.median(ascale[positive_scales_mask])
@@ -356,13 +368,13 @@ class ChannelAlignment(Algorithm):
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        self.nncf_graph = NNCFGraphFactory.create(model)
+        self._original_nncf_graph = NNCFGraphFactory.create(model)
 
         statistic_container = StatisticPointsContainer()
-        for conv_in, add_in, _ in self._get_node_pairs(self.nncf_graph):
+        for conv_in, add_in, _ in self._get_node_pairs(self._original_nncf_graph):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             channel_axis = conv_in.metatype.output_channel_axis
-            reduction_shape = list(range(len(self.nncf_graph.get_output_edges(node_in)[0].tensor_shape)))
+            reduction_shape = list(range(len(self._original_nncf_graph.get_output_edges(node_in)[0].tensor_shape)))
             reduction_shape.remove(channel_axis)
 
             statistic_collector = self._backend_entity.get_statistic_collector(
