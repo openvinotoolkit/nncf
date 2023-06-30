@@ -27,7 +27,6 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.SE_BLOCK: "Not relevant for ONNX.",
     HWFusedPatternNames.SOFTMAX_DIV: "Not relevant for ONNX.",
     HWFusedPatternNames.EQUAL_LOGICALNOT: "Not relevant for ONNX.",
-    HWFusedPatternNames.HSWISH_ACTIVATION: "Not relevant for ONNX.",
     HWFusedPatternNames.HSWISH_ACTIVATION_V2: "Not relevant for ONNX.",
     HWFusedPatternNames.HSWISH_ACTIVATION_WITHOUT_DENOMINATOR: "Not relevant for ONNX.",
     HWFusedPatternNames.SOFTMAX: "Not relevant for ONNX.",
