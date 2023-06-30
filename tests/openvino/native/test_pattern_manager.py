@@ -30,6 +30,7 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.LINEAR_ACTIVATIONS_SCALE_SHIFT: "Not relevant for OpenVINO.",
     HWFusedPatternNames.LINEAR_BATCH_NORM: "Not relevant for OpenVINO.",
     HWFusedPatternNames.LINEAR_BATCH_NORM_ACTIVATIONS: "Not relevant for OpenVINO.",
+    HWFusedPatternNames.LINEAR_BATCH_NORM_ACTIVATIONS_ARITHMETIC: "Not relevant for OpenVINO.",
     HWFusedPatternNames.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS: "Not relevant for OpenVINO.",
     HWFusedPatternNames.LINEAR_SCALE_SHIFT_ACTIVATIONS: "Not relevant for OpenVINO.",
 }

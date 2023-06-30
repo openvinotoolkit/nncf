@@ -65,6 +65,7 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.MVN_SCALE_SHIFT_ACTIVATIONS: "Not relevant for Torch.",
     HWFusedPatternNames.LINEAR_SQUEEZE_ACTIVATIONS: "Not relevant for Torch.",
     HWFusedPatternNames.LINEAR_ACTIVATIONS_UNSQUEEZE_BN_SQUEEZE: "Not relevant for Torch.",
+    HWFusedPatternNames.LINEAR_BATCH_NORM_ACTIVATIONS_ARITHMETIC: "Not relevant for Torch.",
 }
 
 IGNORING_IGNORED_PATTERN_REASONS = {
