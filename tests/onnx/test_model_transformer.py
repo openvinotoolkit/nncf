@@ -132,9 +132,9 @@ def test_inserted_quantizer_parameters(test_parameters):
         if op_type == "QuantizeLinear":
             for attr in node.attribute:
                 assert test_parameters.onnx_attributes[attr.name] == onnx.helper.get_attribute_value(attr)
-            assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), np.array(test_parameters.scale))
-            assert np.allclose(onnx_graph.get_initializers_value(node.input[2]), np.array(test_parameters.zero_point))
-            assert onnx_graph.get_initializers_value(node.input[2]).dtype == test_parameters.onnx_dtype
+            assert np.allclose(onnx_graph.get_tensor_value(node.input[1]), np.array(test_parameters.scale))
+            assert np.allclose(onnx_graph.get_tensor_value(node.input[2]), np.array(test_parameters.zero_point))
+            assert onnx_graph.get_tensor_value(node.input[2]).dtype == test_parameters.onnx_dtype
 
 
 TARGET_LAYERS = [["ReLU1"], ["Conv1", "BN1"], ["Conv1", "BN1", "ReLU1"]]
@@ -186,7 +186,7 @@ def test_bias_correction(layers, values, refs):
 
     for conv_layer, bias_reference in zip(layers, refs):
         bias_tensor_name = onnx_graph.get_node_by_name(conv_layer).input[2]
-        bias_tensor = onnx_graph.get_initializer(bias_tensor_name)
+        bias_tensor = onnx_graph.get_tensor(bias_tensor_name)
         bias_value = onnx.numpy_helper.to_array(bias_tensor)
         assert np.all(bias_value == bias_reference)
 

@@ -51,12 +51,12 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     onnx_node = onnx_graph.get_node_by_name(node_with_bias.node_name)
     bias_port_id = onnx_graph.get_bias_tensor_port_id(onnx_node)
     bias_input_name = onnx_node.input[bias_port_id]
-    if onnx_graph.has_initializer(bias_input_name):
-        return onnx_graph.get_initializers_value(bias_input_name)
+    if onnx_graph.has_tensor(bias_input_name):
+        return onnx_graph.get_tensor_value(bias_input_name)
     node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
     metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
     if metatype == ONNXIdentityMetatype:
-        return onnx_graph.get_initializers_value(node.input[0])
+        return onnx_graph.get_tensor_value(node.input[0])
     raise RuntimeError("Could not find the bias value of the node")
 
 
