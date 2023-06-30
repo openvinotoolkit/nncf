@@ -127,7 +127,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
             assert len(key) == 1
             key = key[0]
             const_attr = layer_attributes.const_attrs[key]
-            a, b = list(range(const_attr["shape"]))[-2:]
+            a, b = list(range(len(const_attr["shape"])))[-2:]
             assert key in [a, b]
             if key == a:
                 out_ch_dim = a

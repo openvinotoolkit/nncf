@@ -27,7 +27,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.channel_alignment.backend import ConvParamsContainer

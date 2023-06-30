@@ -10,10 +10,8 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from collections import defaultdict
-from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, TypeVar
+from typing import Optional, Tuple, TypeVar
 
 import numpy as np
 
