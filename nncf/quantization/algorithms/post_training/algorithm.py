@@ -84,7 +84,7 @@ class PostTrainingQuantization(Algorithm):
         """
         super().__init__()
         self.algorithms = []
-        self.first_stage_algorithms = []
+        self.first_stage_algorithms: List[self.FirstStageAlgorithm] = []
 
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
@@ -210,8 +210,8 @@ class PostTrainingQuantization(Algorithm):
                     nncf_logger.debug(f"{backend.name} does not support ChannelAlignment algorithm yet.")
                     continue
 
-                # for pre_pass in first_stage_algorithm.pre_passes:
-                #    modified_model = pre_pass(modified_model)
+                for pre_pass in first_stage_algorithm.pre_passes:
+                    modified_model = pre_pass(modified_model)
 
                 statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)

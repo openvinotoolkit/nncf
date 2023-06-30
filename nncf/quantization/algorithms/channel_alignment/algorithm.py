@@ -111,38 +111,31 @@ class ChannelAlignment(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        model_copy = self._backend_entity.insert_null_biases(copy_model(model))
-        original_nncf_graph = (
-            NNCFGraphFactory.create(model) if self._original_nncf_graph is None else self._original_nncf_graph
-        )
-        modified_nncf_graph = NNCFGraphFactory.create(model_copy)
-        model_transformer = ModelTransformerFactory.create(model_copy)
+        nncf_graph = NNCFGraphFactory.create(model) if self._original_nncf_graph is None else self._original_nncf_graph
+        model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
 
         def filter_func(point: StatisticPoint) -> bool:
             return ChannelAlignment in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
-        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(original_nncf_graph), desc="Channel allignment"):
-            conv_in = modified_nncf_graph.get_node_by_name(conv_in.node_name)
-            conv_out = modified_nncf_graph.get_node_by_name(conv_out.node_name)
-            if add_in is not None:
-                add_in = modified_nncf_graph.get_node_by_name(add_in.node_name)
-
+        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel allignment"):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, ChannelAlignment)
             )
             assert len(tensor_collectors) == 1
             stat: MinMaxTensorStatistic = tensor_collectors[0].get_statistics()
+            conv_in_cont = ConvParamsContainer(conv_in, model, nncf_graph, self._backend_entity)
+            conv_out_cont = ConvParamsContainer(conv_out, model, nncf_graph, self._backend_entity)
 
-            conv_in_cont = ConvParamsContainer(conv_in, model_copy, modified_nncf_graph, self._backend_entity)
-            conv_out_cont = ConvParamsContainer(conv_out, model_copy, modified_nncf_graph, self._backend_entity)
-            covn_in_descriptor = self._backend_entity.get_dims_descriptor(conv_in)
-            conv_out_descriptor = self._backend_entity.get_dims_descriptor(conv_out)
             if conv_in_cont.has_bias() and conv_out_cont.has_bias():
                 amean = (stat.max_values + stat.min_values) * 0.5
                 conv_in_cont.bias, conv_out_cont.bias = self._align_means(
-                    conv_in_cont.bias, conv_out_cont.bias, conv_out_cont.weight, amean, conv_out_descriptor
+                    conv_in_cont.bias,
+                    conv_out_cont.bias,
+                    conv_out_cont.weight,
+                    amean,
+                    conv_out_cont.dims,
                 )
 
             ascale = (stat.max_values - stat.min_values).astype(np.float32)
@@ -153,24 +146,22 @@ class ChannelAlignment(Algorithm):
                     conv_out_cont.weight,
                     conv_in_cont.bias,
                     ascale,
-                    covn_in_descriptor,
-                    conv_out_descriptor,
+                    conv_in_cont.dims,
+                    conv_out_cont.dims,
                     eps,
                 )
 
             for container in [conv_in_cont, conv_out_cont]:
-                if not np.equal(container.weight, container.original_weight).all():
+                if container.stated_weight.is_modified():
                     transformation_layout.register(
                         self._backend_entity.create_weights_update_command(
                             container.op, container.weight, container.weight_port_id
                         )
                     )
 
-                if not np.equal(container.bias, container.original_bias).all():
+                if container.stated_bias.is_modified():
                     transformation_layout.register(
-                        self._backend_entity.create_bias_update_command(
-                            container.op, container.bias, modified_nncf_graph
-                        )
+                        self._backend_entity.create_bias_update_command(container.op, container.bias, nncf_graph)
                     )
 
         transformed_model = model_transformer.transform(transformation_layout)

@@ -10,8 +10,10 @@
 # limitations under the License.
 
 from abc import abstractmethod
+from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional, Tuple, TypeVar
+from typing import Any, Optional, Tuple, TypeVar
 
 import numpy as np
 
@@ -124,15 +126,52 @@ class ChannelAlignmentAlgoBackend:
         pass
 
 
+class StatedTensor:
+    def __init__(self, value: np.ndarray):
+        self._value = value
+        self._mod_times = 0
+
+    @property
+    def val(self):
+        return self._value
+
+    @val.setter
+    def val(self, value):
+        if self._value is None and value is None:
+            return
+        self._mod_times += 1
+        self._value = value
+
+    def is_modified(self) -> bool:
+        return self._mod_times > 0
+
+
 class ConvParamsContainer:
     def __init__(self, conv_op, model, nncf_graph, backend_entity: ChannelAlignmentAlgoBackend):
         _, self._weights_port_id = backend_entity.get_weights_port_ids_for_node(conv_op)
-        self.weight = self._original_weight = backend_entity.get_weight_value(conv_op, model, self._weights_port_id)
-        self.bias = None
+        self.stated_weight = StatedTensor(backend_entity.get_weight_value(conv_op, model, self._weights_port_id))
+        bias = None
         if backend_entity.is_node_with_bias(conv_op, nncf_graph):
-            self.bias = backend_entity.get_bias_value(conv_op, model, nncf_graph)
-        self._original_bias = self.bias
+            bias = backend_entity.get_bias_value(conv_op, model, nncf_graph)
+        self.stated_bias = StatedTensor(bias)
         self._op = conv_op
+        self._dims = backend_entity.get_dims_descriptor(conv_op)
+
+    @property
+    def weight(self):
+        return self.stated_weight.val
+
+    @weight.setter
+    def weight(self, value):
+        self.stated_weight.val = value
+
+    @property
+    def bias(self):
+        return self.stated_bias.val
+
+    @bias.setter
+    def bias(self, value):
+        self.stated_bias.val = value
 
     @property
     def op(self):
@@ -143,12 +182,8 @@ class ConvParamsContainer:
         return self._weights_port_id
 
     @property
-    def original_weight(self):
-        return self._original_weight
-
-    @property
-    def original_bias(self):
-        return self._original_bias
+    def dims(self) -> DimsDescriptor:
+        return self._dims
 
     def has_bias(self) -> bool:
         return self.bias is not None
