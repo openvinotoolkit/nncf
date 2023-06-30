@@ -9,13 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import numpy as np
 import onnx
+import torch
 import transformers
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForSequenceClassification
 from optimum.onnxruntime import ORTModelForSequenceClassification
 
+import nncf
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -29,6 +31,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
         if self.backend in PT_BACKENDS:
             self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(self.model_id)
             self.model = self.model_hf
+            self.dummy_tensor = torch.Tensor([[0] * 53]).type(dtype=torch.LongTensor)
 
         if self.backend in OV_BACKENDS:
             self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
@@ -42,8 +45,20 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
         self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
-        def transform_func(examples):
-            return self.preprocessor(examples["sentence"], padding=True, truncation=True, max_length=128)
+        if self.backend in PT_BACKENDS:
+
+            def transform_func(data):
+                return torch.Tensor([data["input_ids"]]).type(dtype=torch.LongTensor)
+
+        else:
+
+            def transform_func(data):
+                print(data)
+                return {
+                    "input_ids": np.expand_dims(data["input_ids"], axis=0),
+                    "token_type_ids": np.expand_dims(data["token_type_ids"], axis=0),
+                    "attention_mask": np.expand_dims(data["attention_mask"], axis=0),
+                }
 
         return transform_func
 
@@ -51,10 +66,14 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
         quantizer = OVQuantizer.from_pretrained(self.model_hf)
 
         num_samples = self.ptq_params.get("subset_size", 300)
+
+        def preprocess_function(examples):
+            return self.preprocessor(examples["sentence"], padding=True, truncation=True, max_length=128)
+
         calibration_dataset = quantizer.get_calibration_dataset(
             "glue",
             dataset_config_name="sst2",
-            preprocess_function=self.get_transform_calibration_fn(),
+            preprocess_function=preprocess_function,
             num_samples=num_samples,
             dataset_split="validation",
             preprocess_batch=True,
@@ -62,6 +81,8 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
 
         if self.backend == BackendType.OPTIMUM:
             self.calibration_dataset = calibration_dataset
+        else:
+            self.calibration_dataset = nncf.Dataset(calibration_dataset, self.get_transform_calibration_fn())
 
     def _validate(self):
         pass
