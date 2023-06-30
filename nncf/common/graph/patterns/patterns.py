@@ -341,7 +341,6 @@ class HWFusedPatternNames(Enum):
     LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc("linear_arithmetic_activations")
     LINEAR_BATCH_NORM = PatternDesc("linear_batch_norm")
     LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc("linear_batch_norm_activations")
-    LINEAR_BATCH_NORM_ACTIVATIONS_ARITHMETIC = PatternDesc("linear_batch_norm_activations_arithmetic")
     LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_batch_norm_scale_shift_activations")
     LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_scale_shift_activations")
     LINEAR_CONST_MULTIPLY = PatternDesc("linear_const_multiply")

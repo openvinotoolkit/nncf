@@ -93,11 +93,13 @@ def create_hswish() -> GraphPattern:
     multiply_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
     )
+    div_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIV", GraphPattern.METATYPE_ATTR: om.ONNXDivLayerMetatype})
 
     pattern.add_edge(any_node, add_node)
     pattern.add_edge(add_node, relu_node)
     pattern.add_edge(relu_node, multiply_node)
     pattern.add_edge(any_node, multiply_node)
+    pattern.add_edge(multiply_node, div_node)
     return pattern
 
 
@@ -272,16 +274,6 @@ def create_linear_batch_norm_activations() -> GraphPattern:
     linear_batch_norm = create_linear_batch_norm()
     activations = atomic_activations_operations()
     linear_batch_norm.join_patterns(activations)
-    return linear_batch_norm
-
-
-@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_NORM_ACTIVATIONS_ARITHMETIC)
-def create_linear_batch_norm_activations_arithmetic() -> GraphPattern:
-    linear_batch_norm = create_linear_batch_norm()
-    activations = atomic_activations_operations()
-    arithmetic = arithmetic_operations()
-    linear_batch_norm.join_patterns(activations)
-    linear_batch_norm.join_patterns(arithmetic)
     return linear_batch_norm
 
 
