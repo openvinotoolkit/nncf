@@ -25,14 +25,22 @@ TEST_MODELS = [
         "reported_name": "hf/bert-base-uncased",
         "model_id": "bert-base-uncased",
         "pipeline_cls": MaskedLanguageModelingHF,
-        "ptq_params": {"preset": QuantizationPreset.MIXED},
+        "ptq_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
         "backends": ALL_NNCF_PTQ_BACKENDS + [BackendType.OPTIMUM],
     },
     {
         "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
         "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
         "pipeline_cls": CausalLMHF,
-        "ptq_params": {"preset": QuantizationPreset.MIXED},
+        "ptq_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
         "backends": [BackendType.OPTIMUM],
     },
     # Timm models

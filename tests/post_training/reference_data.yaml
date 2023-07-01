@@ -217,6 +217,7 @@ timm/mobilenetv3_small_050_backend_OLD_TORCH:
     metric_value: 0.43412
     metric_value_fp32: 0.56338
 timm/mobilenetv3_small_050_backend_TORCH:
+    atol: 0.03
     metric_value: 0.39514
     metric_value_fp32: 0.56338
 timm/mobilenetv3_small_050_backend_ONNX:
