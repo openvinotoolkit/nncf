@@ -26,7 +26,7 @@ TEST_MODELS = [
         "model_id": "bert-base-uncased",
         "pipeline_cls": MaskedLanguageModelingHF,
         "ptq_params": {"preset": QuantizationPreset.MIXED},
-        "backends": ALL_NNCF_PTQ_BACKENDS,  # + [BackendType.OPTIMUM],
+        "backends": ALL_NNCF_PTQ_BACKENDS + [BackendType.OPTIMUM],
     },
     {
         "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
