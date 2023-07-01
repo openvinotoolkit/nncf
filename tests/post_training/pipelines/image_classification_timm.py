@@ -97,15 +97,13 @@ class ImageClassificationTimm(BaseTestPipeline):
                 images, _ = data_item
                 return images
 
-            return transform_fn
-
-        if self.backend in OV_BACKENDS or self.backend == BackendType.ONNX:
+        else:
 
             def transform_fn(data_item):
                 images, _ = data_item
                 return {self.input_name: np.array(images, dtype=np.float32)}
 
-            return transform_fn
+        return transform_fn
 
     def prepare_calibration_dataset(self):
         batch_size = 128 if self.backend == BackendType.OLD_TORCH else 1

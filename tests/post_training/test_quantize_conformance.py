@@ -84,6 +84,7 @@ def test_ptq_hf(test_case_name, data, output, result):
 
         pipeline = pipeline_cls(**pipeline_kwargs)
         pipeline.run()
+    # pylint:disable=broad-except
     except Exception as e:
         err_msg = str(e)
         traceback.print_exc()

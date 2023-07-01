@@ -17,6 +17,9 @@ import pytest
 
 from tests.shared.paths import TEST_ROOT
 
+PTQ_TEST_ROOT = TEST_ROOT / "post_training"
+FQ_CALCULATED_PARAMETERS_PATH = PTQ_TEST_ROOT / "data" / "fq_params" / "fq_params.json"
+
 
 def pytest_addoption(parser):
     parser.addoption("--data", action="store")

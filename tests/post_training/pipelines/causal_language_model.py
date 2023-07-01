@@ -10,17 +10,11 @@
 # limitations under the License.
 
 
-from functools import partial
-
-import onnx
 import transformers
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForCausalLM
-from optimum.intel.openvino import OVModelForSequenceClassification
-from optimum.intel.openvino import OVQuantizer
 
 from tests.post_training.pipelines.base import OV_BACKENDS
-from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 

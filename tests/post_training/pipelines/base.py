@@ -21,9 +21,9 @@ import numpy as np
 import onnx
 import openvino.runtime as ov
 import torch
-import torch.nn as nn
 from memory_profiler import memory_usage
 from optimum.intel import OVQuantizer
+from torch import nn
 
 import nncf
 from nncf import TargetDevice
@@ -142,29 +142,30 @@ class BaseTestPipeline(ABC):
         self.output_model_dir = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
+
         self.model = None
+        self.model_hf = None
+        self.calibration_dataset = None
+        self.dummy_tensor = None
 
         self.run_info = RunInfo(model=reported_name, backend=self.backend)
 
         self.post_init()
 
     def post_init(self):
-        pass
+        """Post init actions"""
 
     @abstractmethod
     def prepare_preprocessor(self) -> None:
-        """Prepare preprocessor for the target model."""
-        pass
+        """Prepare preprocessor for the target model"""
 
     @abstractmethod
     def prepare_calibration_dataset(self) -> None:
-        """Prepare calibration dataset for the target model."""
-        pass
+        """Prepare calibration dataset for the target model"""
 
     @abstractmethod
     def prepare_model(self) -> None:
         """Prepare model"""
-        pass
 
     def prepare(self):
         """
@@ -252,7 +253,6 @@ class BaseTestPipeline(ABC):
     @abstractmethod
     def _validate(self) -> None:
         """Validate IR"""
-        pass
 
     def validate(self) -> None:
         """
@@ -273,7 +273,7 @@ class BaseTestPipeline(ABC):
                 if metric_value < metric_reference:
                     status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
                     raise ValueError(status_msg)
-                else:
+                if metric_value > metric_reference:
                     self.run_info.status = (
                         f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
                     )
