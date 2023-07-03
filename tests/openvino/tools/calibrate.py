@@ -98,6 +98,8 @@ class ACValidationFunction:
         "coco_orig_precision": "coco_precision",
         "coco_orig_keypoints_precision": "coco_precision",
         "coco_orig_segm_precision": "coco_segm_precision",
+        "hit_ratio": "sigmoid_recom_loss",
+        "ndcg": "sigmoid_recom_loss",
     }
 
     def __init__(self, model_evaluator: ModelEvaluator, metric_name: str, requests_number: Optional[int] = None):

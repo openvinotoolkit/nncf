@@ -145,7 +145,7 @@ class Evaluator:
             raise RuntimeError("Unexpected return value from provided validation function.")
 
     def collect_values_for_each_item(
-        self, model: Any, dataset: Dataset, indices: Optional[List[int]] = None
+        self, model: TModel, dataset: Dataset, indices: Optional[List[int]] = None
     ) -> Union[List[float], List[List[TTensor]]]:
         """
         Collects value for each item from the dataset. If `is_metric_mode()`
