@@ -72,7 +72,6 @@ class ChannelAlignment(Algorithm):
         self.backend_params = backend_params
         self._original_nncf_graph = None
         self._backend_entity = None
-        self._nncf_graph = None
         self._quantile = 1e-4
 
     @property
