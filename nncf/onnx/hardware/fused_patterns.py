@@ -103,6 +103,25 @@ def create_hswish() -> GraphPattern:
     return pattern
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION_WITHOUT_DENOMINATOR)
+def create_hswish_without_denominator() -> GraphPattern:
+    pattern = GraphPattern()
+    any_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
+    )
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    relu_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RELU", GraphPattern.METATYPE_ATTR: om.ONNXReluMetatype})
+    multiply_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+    )
+
+    pattern.add_edge(any_node, add_node)
+    pattern.add_edge(add_node, relu_node)
+    pattern.add_edge(relu_node, multiply_node)
+    pattern.add_edge(any_node, multiply_node)
+    return pattern
+
+
 # INPUT PROCESSING
 
 
