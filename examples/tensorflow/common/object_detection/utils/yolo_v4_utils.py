@@ -49,7 +49,7 @@ def letterbox_resize(image, target_size):
     offset = (dx, dy)
 
     # create letterbox resized image
-    image = image.resize(padding_size, Image.BICUBIC)
+    image = image.resize(padding_size, Image.Resampling.BICUBIC)
     new_image = Image.new("RGB", target_size, (128, 128, 128))
     new_image.paste(image, offset)
 
@@ -91,7 +91,7 @@ def random_resize_crop_pad(image, target_size, aspect_ratio_jitter=0.1, scale_ji
         padding_w = int(rand_scale * target_w)
         padding_h = int(padding_w / rand_aspect_ratio)
     padding_size = (padding_w, padding_h)
-    image = image.resize(padding_size, Image.BICUBIC)
+    image = image.resize(padding_size, Image.Resampling.BICUBIC)
 
     # get random offset in padding image
     dx = int(rand(0, target_w - padding_w))
@@ -170,7 +170,7 @@ def random_horizontal_flip(image, prob=0.5):
     """
     flip = rand() < prob
     if flip:
-        image = image.transpose(Image.FLIP_LEFT_RIGHT)
+        image = image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
 
     return image, flip
 
