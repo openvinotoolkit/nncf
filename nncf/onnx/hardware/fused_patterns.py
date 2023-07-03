@@ -82,27 +82,6 @@ def create_swish_with_hard_sigmoid() -> GraphPattern:
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION)
-def create_hswish() -> GraphPattern:
-    pattern = GraphPattern()
-    any_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
-    )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
-    relu_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RELU", GraphPattern.METATYPE_ATTR: om.ONNXReluMetatype})
-    multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
-    )
-    div_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIV", GraphPattern.METATYPE_ATTR: om.ONNXDivLayerMetatype})
-
-    pattern.add_edge(any_node, add_node)
-    pattern.add_edge(add_node, relu_node)
-    pattern.add_edge(relu_node, multiply_node)
-    pattern.add_edge(any_node, multiply_node)
-    pattern.add_edge(multiply_node, div_node)
-    return pattern
-
-
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION_WITHOUT_DENOMINATOR)
 def create_hswish_without_denominator() -> GraphPattern:
     pattern = GraphPattern()
@@ -120,6 +99,15 @@ def create_hswish_without_denominator() -> GraphPattern:
     pattern.add_edge(relu_node, multiply_node)
     pattern.add_edge(any_node, multiply_node)
     return pattern
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION)
+def create_hswish() -> GraphPattern:
+    div_pattern = GraphPattern()
+    hswish = create_hswish_without_denominator()
+    div_pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIV", GraphPattern.METATYPE_ATTR: om.ONNXDivLayerMetatype})
+    hswish.join_patterns(div_pattern)
+    return hswish
 
 
 # INPUT PROCESSING
