@@ -36,15 +36,19 @@ class OVLayerAttributes(BaseLayerAttributes):
         :param act_attrs: Activation attributes.
         """
         self._const_attrs = const_attrs
-        self.common_layer_attrs = {} if common_layer_attrs is None else common_layer_attrs
+        self._common_layer_attrs = {} if common_layer_attrs is None else common_layer_attrs
         self._act_attrs = {} if act_attrs is None else act_attrs
 
     @property
-    def const_attrs(self):
+    def const_attrs(self) -> Dict[int, Any]:
         return self._const_attrs if self._const_attrs != {} else None
 
     @property
-    def act_attrs(self):
+    def common_layer_attrs(self) -> Optional[Dict[int, BaseLayerAttributes]]:
+        return self._common_layer_attrs
+
+    @property
+    def act_attrs(self) -> Optional[Dict[Any, Any]]:
         return self._act_attrs if self._act_attrs != {} else None
 
     def get_const_port_ids(self) -> List[int]:

@@ -442,7 +442,7 @@ class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
         reduction_shape: Optional[ReductionShape] = None,
-        quantile: Optional[Union[float, List[float]]] = None,
+        quantile: Optional[Union[float, Tuple[float]]] = None,
         inplace: bool = False,
     ):
         super().__init__(reduction_shape, False)
