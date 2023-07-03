@@ -151,7 +151,7 @@ class AdvancedQuantizationParameters:
     quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_bias_correction: bool = False
-    smooth_quant_alpha: float = 0.95
+    smooth_quant_alpha: float = -1.0
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)
