@@ -388,6 +388,9 @@ def atomic_activations_operations() -> GraphPattern:
 
     hswish = create_hswish()
     pattern.add_pattern_alternative(hswish)
+
+    hswish_without_denominator = create_hswish_without_denominator()
+    pattern.add_pattern_alternative(hswish_without_denominator)
     return pattern
 
 
