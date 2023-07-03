@@ -16,7 +16,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
@@ -60,16 +60,14 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
-        conv_layer_attrs = OVConstantLayerAttributesContainer({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
         return NNCFGraphToTest(OVConvolutionMetatype, conv_layer_attrs)
 
     @pytest.fixture
     def depthwise_conv_nncf_graph(self):
-        return NNCFGraphToTestDepthwiseConv(
-            OVDepthwiseConvolutionMetatype, conv_layer_attrs=OVConstantLayerAttributesContainer({})
-        )
+        return NNCFGraphToTestDepthwiseConv(OVDepthwiseConvolutionMetatype, conv_layer_attrs=OVLayerAttributes({}))
 
     @pytest.fixture
     def conv_sum_aggregation_nncf_graph(self) -> NNCFGraphToTestSumAggregation:
-        conv_layer_attrs = OVConstantLayerAttributesContainer({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
         return NNCFGraphToTestSumAggregation(OVConvolutionMetatype, OVSumMetatype, conv_layer_attrs)

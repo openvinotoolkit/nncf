@@ -16,7 +16,7 @@ from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
-from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 
 
@@ -82,7 +82,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
         (
             get_conv,
             (1, 3, 3, 3),
-            OVConstantLayerAttributesContainer(
+            OVLayerAttributes(
                 {1: {"name": "Const", "shape": (3, 3, 2, 1)}},
                 {
                     1: ConvolutionLayerAttributes(
@@ -102,7 +102,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
         (
             get_convert_conv,
             (1, 3, 3, 3),
-            OVConstantLayerAttributesContainer(
+            OVLayerAttributes(
                 {1: {"name": "Const", "shape": (3, 3, 1, 1)}},
                 {
                     1: ConvolutionLayerAttributes(
@@ -122,7 +122,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
         (
             get_group_conv,
             (1, 3, 3, 3),
-            OVConstantLayerAttributesContainer(
+            OVLayerAttributes(
                 {1: {"name": "Const", "shape": (3, 3, 1, 1, 1)}},
                 {
                     1: ConvolutionLayerAttributes(
@@ -143,7 +143,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
         (
             get_matmul_b,
             (1, 3, 4),
-            OVConstantLayerAttributesContainer(
+            OVLayerAttributes(
                 {1: {"name": "Const", "shape": (1, 4), "transpose": True}},
                 {1: GenericWeightedLayerAttributes(False, (1, 4))},
                 {"shape": (1, 3, 4), "transpose": False},
@@ -152,7 +152,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
         (
             get_matmul_a,
             (1, 3, 4),
-            OVConstantLayerAttributesContainer(
+            OVLayerAttributes(
                 {1: {"name": "Const", "shape": (3, 1), "transpose": False}},
                 {1: GenericWeightedLayerAttributes(False, (3, 1))},
                 {"shape": (1, 3, 4), "transpose": True},

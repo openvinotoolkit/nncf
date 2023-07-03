@@ -18,7 +18,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
-from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
 from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
@@ -199,9 +199,7 @@ class GraphConverter:
                     if const_attrs or act_attrs:
                         nncf_node = nncf_graph.get_node_by_name(node_name)
                         common_layer_attrs = get_weighted_layer_attributes(node, metatype, const_attrs)
-                        nncf_node.layer_attributes = OVConstantLayerAttributesContainer(
-                            const_attrs, common_layer_attrs, act_attrs
-                        )
+                        nncf_node.layer_attributes = OVLayerAttributes(const_attrs, common_layer_attrs, act_attrs)
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph

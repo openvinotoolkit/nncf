@@ -50,7 +50,7 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
         dilations=1,
         kernel_size=(1, 1),
         stride=(1, 1),
-        groups=1,
+        groups=3,
         transpose=False,
         padding_values=(1, 1),
     )

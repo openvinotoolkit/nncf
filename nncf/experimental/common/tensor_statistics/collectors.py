@@ -442,11 +442,11 @@ class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
         reduction_shape: Optional[ReductionShape] = None,
-        quantile: Union[float, List[float]] = (0.01, 0.99),
+        quantile: Optional[Union[float, List[float]]] = None,
         inplace: bool = False,
     ):
         super().__init__(reduction_shape, False)
-        self._quantile = quantile
+        self._quantile = (0.01, 0.99) if quantile is None else quantile
 
     def __eq__(self, __o: object) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile

@@ -28,7 +28,7 @@ from nncf.experimental.common.tensor_statistics.collectors import QuantileReduce
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
-from nncf.quantization.algorithms.channel_alignment.backend import DimsDescriptor
+from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 from tests.post_training.test_templates.models import NNCFGraphCA
 from tests.post_training.test_templates.models import NNCFGraphCAWithBias
 
@@ -159,14 +159,14 @@ class TemplateTestChannelAlignment:
     @pytest.mark.parametrize("transposed", [False, True])
     def test_align_means(self, conv_out_value, refs, transposed):
         amean = np.array([10, 20, 30])
-        dims_descriptor = DimsDescriptor(0, 1, 1)
+        dims_descriptor = LayoutDescriptor(0, 1, 1)
         if transposed:
             if conv_out_value.ndim == 2:
                 conv_out_value = np.transpose(conv_out_value, (1, 0))
-                dims_descriptor = DimsDescriptor(1, 0, 1)
+                dims_descriptor = LayoutDescriptor(1, 0, 1)
             else:
                 conv_out_value = np.transpose(conv_out_value, (3, 1, 2, 0))
-                dims_descriptor = DimsDescriptor(3, 1, 1)
+                dims_descriptor = LayoutDescriptor(3, 1, 1)
         bias_in_value = np.array([2, 4, 6])
         bias_out_value = np.array([3, 5, 9, 11])
         updated_add_in_vals, updated_add_out_vals = ChannelAlignment._align_means(
@@ -197,7 +197,7 @@ class TemplateTestChannelAlignment:
         ascale = np.array([-5.0, 0.0, 1e-3, 1e3, 2])
         eps = 1e-10
         # Check nothing will happen if dims are wrong
-        dims_descriptor = DimsDescriptor(1, 0, 0)
+        dims_descriptor = LayoutDescriptor(1, 0, 0)
         updated_conv_in, updated_conv_out, updated_bias_in = ChannelAlignment._align_scales(
             conv_in_value, conv_out_value, bias_in_value, ascale, dims_descriptor, dims_descriptor, eps
         )
@@ -205,7 +205,7 @@ class TemplateTestChannelAlignment:
         assert updated_conv_out is conv_out_value
         assert updated_bias_in is bias_in_value
 
-        dims_descriptor = DimsDescriptor(0, 1, 0)
+        dims_descriptor = LayoutDescriptor(0, 1, 0)
         updated_conv_in, updated_conv_out, updated_bias_in = ChannelAlignment._align_scales(
             conv_in_value, conv_out_value, bias_in_value, ascale, dims_descriptor, dims_descriptor, eps
         )
@@ -213,8 +213,8 @@ class TemplateTestChannelAlignment:
 
         # Check group conv producer case
         conv_in_value = conv_in_value.reshape(1, 5, 1)
-        dims_descriptor_in = DimsDescriptor(1, 2, 0)
-        dims_descriptor_out = DimsDescriptor(0, 1, 0)
+        dims_descriptor_in = LayoutDescriptor(1, 2, 0)
+        dims_descriptor_out = LayoutDescriptor(0, 1, 0)
         updated_conv_in, updated_conv_out, updated_bias_in = ChannelAlignment._align_scales(
             conv_in_value, conv_out_value, bias_in_value, ascale, dims_descriptor_in, dims_descriptor_out, eps
         )

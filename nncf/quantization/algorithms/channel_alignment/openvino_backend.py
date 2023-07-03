@@ -19,16 +19,16 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
-from nncf.openvino.graph.model_utils import insert_null_biases
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -38,10 +38,12 @@ from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
+from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
-from nncf.quantization.algorithms.channel_alignment.backend import DimsDescriptor
+from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
 
+@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -106,7 +108,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     @staticmethod
     def get_dims_descriptor(node: NNCFNode):
         if node.metatype == OVConvolutionMetatype:
-            return DimsDescriptor(
+            return LayoutDescriptor(
                 conv_weight_out_channels_dim=0,
                 conv_weight_in_channels_dim=1,
                 bias_channels_dim=node.metatype.output_channel_axis,
@@ -114,7 +116,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         if node.metatype in [OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype]:
             # Using groups dim as output channels dim for ChannelAlignment algorithm
             # TODO(dlyakhov) support group convolutions with groups nubmer not in [1, out_channels]
-            return DimsDescriptor(
+            return LayoutDescriptor(
                 conv_weight_out_channels_dim=0,
                 conv_weight_in_channels_dim=2,
                 bias_channels_dim=node.metatype.output_channel_axis,
@@ -122,7 +124,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         if node.metatype == OVMatMulMetatype:
             if node.layer_attributes is None:
                 raise RuntimeError(f"Attempt to align matmul node {node.node_name} that have no any constant inputs")
-            layer_attributes: OVConstantLayerAttributesContainer = node.layer_attributes
+            layer_attributes: OVLayerAttributes = node.layer_attributes
             key = layer_attributes.get_const_port_ids()
             assert len(key) == 1
             key = key[0]
@@ -137,7 +139,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
                 in_ch_dim = a
             if const_attr.get("transpose", False):
                 out_ch_dim, in_ch_dim = in_ch_dim, out_ch_dim
-            return DimsDescriptor(
+            return LayoutDescriptor(
                 conv_weight_in_channels_dim=in_ch_dim,
                 conv_weight_out_channels_dim=out_ch_dim,
                 bias_channels_dim=node.metatype.output_channel_axis,
@@ -149,7 +151,3 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         if node.layer_attributes is None:
             return None
         return node.layer_attributes.common_layer_attrs[1]
-
-    @staticmethod
-    def insert_null_biases(model: ov.Model) -> ov.Model:
-        return insert_null_biases(model)

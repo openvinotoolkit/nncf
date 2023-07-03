@@ -24,7 +24,7 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.layer_attributes import OVConstantLayerAttributesContainer
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
@@ -162,7 +162,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             axes = tuple(i for i in range(len(shape)) if i != channel_axis)
             return axes, use_abs_max
 
-        assert isinstance(node.layer_attributes, OVConstantLayerAttributesContainer)
+        assert isinstance(node.layer_attributes, OVLayerAttributes)
         const_shape = node.layer_attributes.const_attrs[target_point.port_id]["shape"]
 
         if quantizer_config.per_channel:
@@ -258,8 +258,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [
             node
             for node in nncf_graph.get_all_nodes()
-            if isinstance(node.layer_attributes, OVConstantLayerAttributesContainer)
-            and node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
+            if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
         ]
 
     @staticmethod

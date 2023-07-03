@@ -25,35 +25,31 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.channel_alignment.backend import ConvParamsContainer
-from nncf.quantization.algorithms.channel_alignment.backend import DimsDescriptor
-from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
+from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
 TModel = TypeVar("TModel")
-TTensor = TypeVar("TTensor")
-
-FAST_BIAS_CORRECTION_THRESHOLD = 2
 
 
 class ChannelAlignment(Algorithm):
     """
-    Post-training FastBiasCorrection algorithm implementation.
+    Post-training ChannelAlignment algorithm implementation.
 
     The main purpose of this algorithm to reduce quantization error
-    via correction the bias of the Convolutions, FullyConnected, etc. layers.
-    The algorithm pipeline is very simple:
-        - we collects floating-point statistics from the corresponding model for the layers with bias;
-        - then we gets the quantized model and try to reduce it's error by correction of the bias;
-        - the shift calculates using the sub-graph that consists of the correction layer and
-        weight quantizer-dequantizer pair or fake quantize node;
-        - the floating-point statistics uses as input for
-        the sub-graph and further quantization output calculation;
-        - in the end we corrects the original bias by the difference (shift)
-        between floating-point and quantized outputs.
+    via correction the parameters of the Convolutions, FullyConnected and their biases.
+    Algorithm consists of following steps:
+        - algorithm is searching for convolution -> convolution pairs in the target model.
+        - minimal and maximal activations quantiles of first convolutions are collected on the target subset.
+        - algorithm calculates median of collected values, it is used then to adjust
+            convolution layers biases and weights.
+        - biases of matched subgraphs convolutions are adjusted, so mean points of first
+            convolution activations quantile medians are translated to zero.
+        - weights of matched subgraph convolutions are adjusted, so all first convolutions activations
+            which were between median of low quantile and median of high quantile are translated to [-1, 1] range.
     """
 
     def __init__(
@@ -65,14 +61,6 @@ class ChannelAlignment(Algorithm):
         """
         :param subset_size: Size of a subset for the statistics collection,
             defaults to 100.
-        :param threshold: The magnitude threshold that regulates the application of the
-            shift. Magnitude calculates as the maximum of the absolute ratio of the
-            shift to the original bias value. If the calculated value is less than the
-            threshold, the shift will apply to the bias, defaults to 2.
-        :param apply_for_all_nodes: If True, then the bias correction be applied to all
-            quantized nodes, if the node has no bias then a bias node will be inserted,
-            and if False, then the bias correction will only be applied to quantized
-            nodes that have a bias.
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
@@ -84,8 +72,8 @@ class ChannelAlignment(Algorithm):
         self.backend_params = backend_params
         self._original_nncf_graph = None
         self._backend_entity = None
-        self._nncf_grpah = None
-        self._q = 1e-4
+        self._nncf_graph = None
+        self._quantile = 1e-4
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -117,13 +105,13 @@ class ChannelAlignment(Algorithm):
         def filter_func(point: StatisticPoint) -> bool:
             return ChannelAlignment in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
-        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel allignment"):
+        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel alignment"):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, ChannelAlignment)
             )
             assert len(tensor_collectors) == 1
-            stat: MinMaxTensorStatistic = tensor_collectors[0].get_statistics()
+            stat = tensor_collectors[0].get_statistics()
             conv_in_cont = ConvParamsContainer(conv_in, model, nncf_graph, self._backend_entity)
             conv_out_cont = ConvParamsContainer(conv_out, model, nncf_graph, self._backend_entity)
 
@@ -172,20 +160,30 @@ class ChannelAlignment(Algorithm):
         bias_out_value: np.ndarray,
         conv_out_value: np.ndarray,
         amean: np.ndarray,
-        dims_descriptor: DimsDescriptor,
+        conv_out_descr: LayoutDescriptor,
     ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Function which calculates new add_in_value and add_out_value
+        in ChannelAlignment pattern, so output activations of the second convolution bias
+        are the same, but the first convolution bias is shifted with minus by amean value.
+
+        :param bias_in_value: Bias of the first convolution in the ChannelAlighment pattern.
+        :param bias_in_value: Bias of the second convolution in the ChannelAlighment pattern.
+        :param amean: Mean value to shift first and second convolutions biases.
+        :param conv_out_descr: The second convolution weights layout descriptor.
+        """
         updated_add_in_value = bias_in_value - amean.reshape(bias_in_value.shape)
 
         weight_dims = conv_out_value.ndim
         updated_conv_out_value = conv_out_value
         if weight_dims > 2:
             axes = list(range(weight_dims))
-            axes.remove(dims_descriptor.conv_weight_in_channels_dim)
-            axes.remove(dims_descriptor.conv_weight_out_channels_dim)
+            axes.remove(conv_out_descr.conv_weight_in_channels_dim)
+            axes.remove(conv_out_descr.conv_weight_out_channels_dim)
             updated_conv_out_value = np.sum(conv_out_value, axis=tuple(axes))
 
         out_channel_dim, in_channel_dim = 0, 1
-        if dims_descriptor.conv_weight_out_channels_dim > dims_descriptor.conv_weight_in_channels_dim:
+        if conv_out_descr.conv_weight_out_channels_dim > conv_out_descr.conv_weight_in_channels_dim:
             out_channel_dim, in_channel_dim = in_channel_dim, out_channel_dim
 
         updated_conv_out_value = np.transpose(
@@ -201,36 +199,51 @@ class ChannelAlignment(Algorithm):
     def _align_scales(
         conv_in_value: np.ndarray,
         conv_out_value: np.ndarray,
-        bias_in_value: np.ndarray,
+        bias_in_value: Optional[np.ndarray],
         ascale: np.ndarray,
-        conv_in_descr: DimsDescriptor,
-        conv_out_descr: DimsDescriptor,
+        conv_in_descr: LayoutDescriptor,
+        conv_out_descr: LayoutDescriptor,
         eps: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        # scale producer convolution weights
+        """
+        Function which calculates new conv_in_value, conv_out_value and bias_in_value
+        in ChannelAlignment pattern, so output activations of conv_out are the same,
+        but activations of conv_in are scale times smaller. Negative scales are skipped,
+        too small (<1e-2) and too big (>1e2) scales are claped.
+
+        :param conv_in_value: Weights of the first convolution in the ChannelAlighment pattern.
+        :param conv_out_value: Weights of the second convolution in the ChannelAlighment pattern.
+        :param bias_in_value: Bias of the first convolution in the ChannelAlighment pattern. Could be None.
+        :param ascale: Scale value to apply to convolutions weights.
+        :param conv_in_descr: The first convolution weights layout descriptor.
+        :param conv_out_descr: The second convolution weights layout descriptor.
+        :param eps: Minimal significant value > 0 for convolution weights and biases precision.
+        """
         conv_in_shape = conv_in_value.shape
         # TODO(dlyakhov) support group convolutions with groups nubmer not in [1, out_channels]
-        if conv_in_shape[conv_in_descr.conv_weight_out_channels_dim] == ascale.shape[conv_in_descr.bias_channels_dim]:
-            positive_scales_mask = ascale > eps
-            scale_factor = ascale / np.median(ascale[positive_scales_mask])
-            scale_factor[~positive_scales_mask] = 1
-            scale_factor = np.clip(scale_factor, 1e-2, 1e2)
+        if conv_in_shape[conv_in_descr.conv_weight_out_channels_dim] != ascale.shape[conv_in_descr.bias_channels_dim]:
+            return conv_in_value, conv_out_value, bias_in_value
 
-            scale_in_shape = np.ones(len(conv_in_shape), dtype=int)
-            scale_in_shape[conv_in_descr.conv_weight_out_channels_dim] = scale_factor.shape[
-                conv_in_descr.bias_channels_dim
-            ]
-            conv_in_value = conv_in_value / scale_factor.reshape(scale_in_shape)
+        positive_scales_mask = ascale > eps
+        scale_factor = ascale / np.median(ascale[positive_scales_mask])
+        scale_factor[~positive_scales_mask] = 1
+        scale_factor = np.clip(scale_factor, 1e-2, 1e2)
 
-            if bias_in_value is not None:
-                bias_in_value = bias_in_value / scale_factor.reshape(bias_in_value.shape)
+        scale_in_shape = np.ones(len(conv_in_shape), dtype=int)
+        scale_in_shape[conv_in_descr.conv_weight_out_channels_dim] = scale_factor.shape[conv_in_descr.bias_channels_dim]
+        updated_conv_in_value = conv_in_value / scale_factor.reshape(scale_in_shape)
 
-            scale_out_shape = np.ones(len(conv_out_value.shape), dtype=int)
-            scale_out_shape[conv_out_descr.conv_weight_in_channels_dim] = scale_factor.shape[
-                conv_in_descr.bias_channels_dim
-            ]
-            conv_out_value = conv_out_value * scale_factor.reshape(scale_out_shape)
-        return conv_in_value, conv_out_value, bias_in_value
+        if bias_in_value is not None:
+            updated_bias_in_value = bias_in_value / scale_factor.reshape(bias_in_value.shape)
+        else:
+            updated_bias_in_value = None
+
+        scale_out_shape = np.ones(len(conv_out_value.shape), dtype=int)
+        scale_out_shape[conv_out_descr.conv_weight_in_channels_dim] = scale_factor.shape[
+            conv_in_descr.bias_channels_dim
+        ]
+        updated_conv_out_value = conv_out_value * scale_factor.reshape(scale_out_shape)
+        return updated_conv_in_value, updated_conv_out_value, updated_bias_in_value
 
     def _check_consumer_conv_node(self, conv_node: NNCFNode) -> bool:
         attrs = self._backend_entity.get_conv_layer_attributes(conv_node)
@@ -251,10 +264,7 @@ class ChannelAlignment(Algorithm):
         return True
 
     def _check_producer_conv_node(self, conv_node: NNCFNode):
-        attrs = self._backend_entity.get_conv_layer_attributes(conv_node)
-        if attrs is None:
-            return False
-        return True
+        return not conv_node.layer_attributes is None
 
     def _get_target_patterns(self) -> GraphPattern:
         input_attrs = {
@@ -368,7 +378,7 @@ class ChannelAlignment(Algorithm):
             reduction_shape.remove(channel_axis)
 
             statistic_collector = self._backend_entity.get_statistic_collector(
-                tuple(reduction_shape), self._q, self.subset_size, self.inplace_statistics
+                tuple(reduction_shape), self._quantile, self.subset_size, self.inplace_statistics
             )
             statistic_container.add_statistic_point(
                 StatisticPoint(
@@ -379,3 +389,88 @@ class ChannelAlignment(Algorithm):
             )
 
         return statistic_container
+
+
+class StatedTensor:
+    """
+    Tensor wrapper with additional method is_modified which is true if
+    given tensor was modified at least once after the initialization.
+    """
+
+    def __init__(self, value: np.ndarray):
+        """
+        :param value: Tensor to wrap.
+        """
+        self._value = value
+        self._mod_times = 0
+
+    @property
+    def val(self):
+        return self._value
+
+    @val.setter
+    def val(self, value):
+        if self._value is None and value is None:
+            return
+        self._mod_times += 1
+        self._value = value
+
+    def is_modified(self) -> bool:
+        """
+        :return: True if wrapped tensor was changed at least once after the
+            initialization else False.
+        """
+        return self._mod_times > 0
+
+
+class ConvParamsContainer:
+    """
+    Convolution container class which is incapsulating common convolutional parameters collection.
+    """
+
+    def __init__(self, conv_op, model, nncf_graph, backend_entity: ChannelAlignmentAlgoBackend):
+        """
+        :param conv_op: Backend-specific conv node.
+        :param model: Backend-specific model instance.
+        :param nncf_grpah: NNCFGraph of given backend-specific model.
+        :param backend_entity: Current backend entity to retrieve parameters from given conv node
+        """
+        _, self._weights_port_id = backend_entity.get_weights_port_ids_for_node(conv_op)
+        self.stated_weight = StatedTensor(backend_entity.get_weight_value(conv_op, model, self._weights_port_id))
+        bias = None
+        if backend_entity.is_node_with_bias(conv_op, nncf_graph):
+            bias = backend_entity.get_bias_value(conv_op, model, nncf_graph)
+        self.stated_bias = StatedTensor(bias)
+        self._op = conv_op
+        self._dims = backend_entity.get_dims_descriptor(conv_op)
+
+    @property
+    def weight(self):
+        return self.stated_weight.val
+
+    @weight.setter
+    def weight(self, value):
+        self.stated_weight.val = value
+
+    @property
+    def bias(self):
+        return self.stated_bias.val
+
+    @bias.setter
+    def bias(self, value):
+        self.stated_bias.val = value
+
+    @property
+    def op(self):
+        return self._op
+
+    @property
+    def weight_port_id(self):
+        return self._weights_port_id
+
+    @property
+    def dims(self) -> LayoutDescriptor:
+        return self._dims
+
+    def has_bias(self) -> bool:
+        return self.bias is not None

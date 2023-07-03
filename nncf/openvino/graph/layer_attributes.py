@@ -14,15 +14,15 @@ from typing import Any, Dict, List, Optional
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 
 
-class OVConstantLayerAttributesContainer(BaseLayerAttributes):
+class OVLayerAttributes(BaseLayerAttributes):
     """
-    This class stores mapping weights port indices to constant name and shape.
-    For MatMul layers, it also stores transpose parameter and shape for activations.
+    This class stores additional information about nodes that needs to be processed during compression.
     """
 
     def __init__(
@@ -56,7 +56,15 @@ class OVConstantLayerAttributesContainer(BaseLayerAttributes):
         return list(self.const_attrs.keys())
 
 
-def get_weighted_layer_attributes(ov_node, ov_metatype, constant_attributes: Dict[str, Any]):
+def get_weighted_layer_attributes(ov_node, ov_metatype, constant_attributes: Dict[str, Any]) -> WeightedLayerAttributes:
+    """
+    Funciton retrieves common layer attributes from the given node.
+
+    :param ov_node: TargetOpenvino graph node instance.
+    :param ov_metatype: NNCF Openvino metatype of the given node.
+    :param constant_attributes: Constant attributes collected for the given node.
+    :return: Weighted layer attributes for the given node.
+    """
     retval = {}
     for port_id, attrs in constant_attributes.items():
         if ov_metatype in [OVConvolutionMetatype, OVDepthwiseConvolutionMetatype, OVGroupConvolutionMetatype]:

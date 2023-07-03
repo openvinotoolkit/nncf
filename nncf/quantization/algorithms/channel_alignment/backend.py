@@ -24,12 +24,15 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.registry import Registry
 
 TModel = TypeVar("TModel")
-OutputType = TypeVar("OutputType")
 ALGO_BACKENDS = Registry("algo_backends")
 
 
 @dataclass
-class DimsDescriptor:
+class LayoutDescriptor:
+    """
+    Container to store convolutional and linear layers layout information.
+    """
+
     conv_weight_out_channels_dim: int
     conv_weight_in_channels_dim: int
     bias_channels_dim: int
@@ -85,103 +88,82 @@ class ChannelAlignmentAlgoBackend:
     @staticmethod
     @abstractmethod
     def get_weights_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
-        pass
+        """
+        Returns Input Port ID and Output Port ID corresponding to node weights inputr port id and
+        constant output port id the node.
+
+        :param node: Node of NNCFGraph.
+        """
 
     @staticmethod
     @abstractmethod
     def get_statistic_collector(
         reduction_shape, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
-        pass
+        """
+        Get backend-specific tensor collector that collects medians of minimal and maximal quantiles.
+
+        :param reduction_shape: Target reduction shape for the reduction.
+        :param q: Minimal quantile for the tensor collector.
+        :param num_samples: Num samples to collect by the tensor collector.
+        :param inplace: Should statistic be calculated inplace or out of place.
+        :return: Backend-specific tensor collector that collects medians of minimal and maximal quantiles.
+        """
 
     @staticmethod
     @abstractmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        pass
+        """
+        Checks if the node has a bias or not.
+
+        :param node: The node to check.
+        :param nncf_graph: The NNCF graph.
+        :return: True` if `node` corresponds to the operation with bias
+            (bias is added to the output tensor of that operation), `False` otherwise.
+        """
 
     @staticmethod
     @abstractmethod
     def create_bias_update_command(node_with_bias: NNCFNode, updated_value: np.ndarray, nncf_graph: NNCFGraph):
-        pass
+        """
+        Creates backend-specific command to update bias value.
+
+        :param node: The node for which bias should be updated.
+        :param bias_value: New value for the bias.
+        :param nncf_graph: NNCFGraph of the target model.
+        :return: Backend-specific command to update bias value.
+        """
 
     @staticmethod
     @abstractmethod
     def create_weights_update_command(node_with_weights: NNCFNode, updated_value: np.array, weights_port_id: int):
-        pass
+        """
+        Creates backend-specific command to update convolution or linear layer
+        weights.
+
+        :param node: The node for which weights should be updated.
+        :param updated_value: New weights for the node.
+        :param weights_port_id: Target node weights input port id.
+        :return: Backend-specific command to update bias value.
+        """
 
     @staticmethod
     @abstractmethod
-    def get_dims_descriptor(node: NNCFNode) -> DimsDescriptor:
-        pass
+    def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
+        """
+        Return weights layout descriptor of the given node if it is possible and None otherwise.
+        Only convolutional and linear nodes are supported.
+
+        :param node: NNCFNode to get layout descriptor from.
+        :return: Weights layout descriptor of the given node if it is possible and None otherwise.
+        """
 
     @staticmethod
     @abstractmethod
     def get_conv_layer_attributes(node: NNCFNode) -> Optional[ConvolutionLayerAttributes]:
-        pass
+        """
+        Returns convolutional layer attributes of given node if they are present and None otherwise.
 
-    @staticmethod
-    def insert_null_biases(model: TModel) -> TModel:
-        pass
-
-
-class StatedTensor:
-    def __init__(self, value: np.ndarray):
-        self._value = value
-        self._mod_times = 0
-
-    @property
-    def val(self):
-        return self._value
-
-    @val.setter
-    def val(self, value):
-        if self._value is None and value is None:
-            return
-        self._mod_times += 1
-        self._value = value
-
-    def is_modified(self) -> bool:
-        return self._mod_times > 0
-
-
-class ConvParamsContainer:
-    def __init__(self, conv_op, model, nncf_graph, backend_entity: ChannelAlignmentAlgoBackend):
-        _, self._weights_port_id = backend_entity.get_weights_port_ids_for_node(conv_op)
-        self.stated_weight = StatedTensor(backend_entity.get_weight_value(conv_op, model, self._weights_port_id))
-        bias = None
-        if backend_entity.is_node_with_bias(conv_op, nncf_graph):
-            bias = backend_entity.get_bias_value(conv_op, model, nncf_graph)
-        self.stated_bias = StatedTensor(bias)
-        self._op = conv_op
-        self._dims = backend_entity.get_dims_descriptor(conv_op)
-
-    @property
-    def weight(self):
-        return self.stated_weight.val
-
-    @weight.setter
-    def weight(self, value):
-        self.stated_weight.val = value
-
-    @property
-    def bias(self):
-        return self.stated_bias.val
-
-    @bias.setter
-    def bias(self, value):
-        self.stated_bias.val = value
-
-    @property
-    def op(self):
-        return self._op
-
-    @property
-    def weight_port_id(self):
-        return self._weights_port_id
-
-    @property
-    def dims(self) -> DimsDescriptor:
-        return self._dims
-
-    def has_bias(self) -> bool:
-        return self.bias is not None
+        :param node: NNCFNode to take convolutional layer attributes from.
+        :return: Convolutional layer attributes of given node if they are present and None otherwise
+        """
