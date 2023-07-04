@@ -11,15 +11,13 @@
 
 import importlib
 from copy import deepcopy
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.backend import get_backend
-from nncf.common.utils.timer import timer
 from nncf.data import Dataset
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
@@ -30,7 +28,6 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
-from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
@@ -38,6 +35,8 @@ from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 USE_POT_AS_DEFAULT = False
+
+TTensor = TypeVar("TTensor")
 
 
 def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]) -> bool:
@@ -139,7 +138,7 @@ def native_quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], float],
+    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
@@ -184,22 +183,6 @@ def native_quantize_with_accuracy_control_impl(
         copied_parameters,
     )
 
-    # Backends
-    backend = get_backend(model)
-    algo_backend = get_algo_backend(backend)
-
-    nncf_logger.info("Validation of initial model was started")
-    with timer():
-        initial_metric = validation_fn(algo_backend.prepare_for_inference(model), validation_dataset.get_data())
-    nncf_logger.info(f"Metric of initial model: {initial_metric}")
-
-    nncf_logger.info("Validation of quantized model was started")
-    with timer():
-        quantized_metric = validation_fn(
-            algo_backend.prepare_for_inference(quantized_model), validation_dataset.get_data()
-        )
-    nncf_logger.info(f"Metric of quantized model: {quantized_metric}")
-
     ranking_subset_size = subset_size
     if advanced_accuracy_restorer_parameters.ranking_subset_size is not None:
         ranking_subset_size = advanced_accuracy_restorer_parameters.ranking_subset_size
@@ -210,9 +193,7 @@ def native_quantize_with_accuracy_control_impl(
         max_drop=max_drop,
         drop_type=drop_type,
     )
-    quantized_model = accuracy_aware_loop.restore_accuracy(
-        model, initial_metric, quantized_model, quantized_metric, validation_dataset, validation_fn
-    )
+    quantized_model = accuracy_aware_loop.apply(model, quantized_model, validation_dataset, validation_fn)
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
@@ -268,6 +249,23 @@ def quantize_impl(
     )
 
 
+def wrap_validation_fn(validation_fn):
+    """
+    Wraps validation function to support case when it only returns metric value.
+
+    :param validation_fn: Validation function to wrap.
+    :return: Wrapped validation function.
+    """
+
+    def wrapper(*args, **kwargs):
+        retval = validation_fn(*args, **kwargs)
+        if isinstance(retval, float):
+            return retval, None
+        return retval
+
+    return wrapper
+
+
 def quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
@@ -295,11 +293,14 @@ def quantize_with_accuracy_control_impl(
         quantize_with_accuracy_control_fn = pot_quantize_with_accuracy_control_impl
     else:
         quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
+
+    val_func = wrap_validation_fn(validation_fn)
+
     return quantize_with_accuracy_control_fn(
         model,
         calibration_dataset,
         validation_dataset,
-        validation_fn,
+        val_func,
         max_drop,
         drop_type,
         preset,
