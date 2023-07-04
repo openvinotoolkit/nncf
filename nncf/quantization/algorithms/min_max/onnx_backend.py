@@ -172,7 +172,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         # Calculate reduction shape for weight statistic collector
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         assert isinstance(node.layer_attributes, ONNXConstantLayerAttributes)
-        weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["weight_shape"]
+        weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
         reduction_shape = list(range(len(weight_shape)))
 
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
@@ -253,7 +253,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> str:
-        return nncf_graph.get_node_by_name(target_point.target_node_name).layer_name
+        node_name, port_id = target_point.target_node_name, target_point.port_id
+        return nncf_graph.get_node_by_name(node_name).layer_attributes.weight_attrs[port_id]["name"]
 
     @staticmethod
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:

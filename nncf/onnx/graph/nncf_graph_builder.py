@@ -117,18 +117,6 @@ def _get_weight_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: 
     return None
 
 
-def _get_layer_name(weight_edge_names: List[str]) -> str:
-    """
-    Returns layer group name for weight nodes, which are used for determing shared group nodes.
-
-    :param node: Node.
-    :param onnx_graph: ONNXGraph instance.
-    :param port_ids: Ports with weights.
-    :return: Layer group name
-    """
-    return "_".join(weight_edge_names)
-
-
 def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int]:
     """
     Returns all weight input ports.
@@ -179,9 +167,7 @@ def _get_weight_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_id
     weight_edge_name = _get_weight_edge_name(onnx_graph, node, weight_port_id)
     edge = onnx_graph.get_edge(weight_edge_name)
     weight_shape = ONNXGraph.get_edge_shape(edge)
-    metatype = get_metatype(onnx_graph, node)
-
-    weight_attrs[weight_port_id] = {"weight_shape": weight_shape}
+    weight_attrs[weight_port_id] = {"name": weight_edge_name, "shape": weight_shape}
     return weight_attrs
 
 
@@ -200,7 +186,7 @@ def _get_bias_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, str
         bias_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][bias_tensor_port_id]
         edge = onnx_graph.get_edge(bias_edge_name)
         bias_shape = ONNXGraph.get_edge_shape(edge)
-        bias_attrs[bias_tensor_port_id] = {"bias_shape": bias_shape}
+        bias_attrs[bias_tensor_port_id] = {"shape": bias_shape}
     return bias_attrs
 
 
@@ -333,7 +319,7 @@ class GraphConverter:
         for node in onnx_graph.get_all_nodes():
             metatype = get_metatype(onnx_graph, node)
             port_ids = _get_weight_port_ids(node, onnx_graph)
-            is_shared, layer_name, layer_attributes = None, None, None
+            is_shared, layer_attributes = None, None
             if port_ids:  # If node has weight
                 weight_attrs = {}
                 weight_edge_names = []
@@ -344,15 +330,13 @@ class GraphConverter:
                     weight_attrs.update(weight_attr)
                     if not is_shared and onnx_graph.is_node_has_shared_weight(node, port_id):
                         is_shared = True
-                layer_name = _get_layer_name(weight_edge_names)
                 layer_attributes = ONNXConstantLayerAttributes(weight_attrs=weight_attrs, bias_attrs=bias_attrs)
-
             nncf_graph.add_nncf_node(
                 node_name=node.name,
                 node_type=node.op_type,
                 node_metatype=metatype,
                 layer_attributes=layer_attributes,
-                layer_name=layer_name,
+                layer_name=node.name,
                 is_shared=is_shared,
             )
         for output_node in onnx_graph.get_all_nodes():
