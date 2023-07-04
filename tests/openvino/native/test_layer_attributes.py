@@ -25,7 +25,7 @@ def get_conv(input_1, node_name, input_shape, kernel=None):
     pads = [0, 0]
     dilations = [1, 1]
     if kernel is None:
-        shape = (input_shape[1], input_shape[1], 2, 1)
+        shape = (input_shape[1] + 1, input_shape[1], 2, 1)
         kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
     return opset.convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)
 
@@ -40,8 +40,32 @@ def get_group_conv(input_1, node_name, input_shape, kernel=None):
     return opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)
 
 
+def get_transpose_conv(input_1, node_name, input_shape, kernel=None):
+    strides = [1, 1]
+    pads = [0, 0]
+    dilations = [1, 1]
+    if kernel is None:
+        shape = (input_shape[1], input_shape[1] + 1, 2, 1)
+        kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
+    return opset.convolution_backprop_data(
+        input_1, kernel, strides, pads_begin=pads, pads_end=pads, dilations=dilations, name=node_name
+    )
+
+
+def get_transpose_group_conv(input_1, node_name, input_shape, kernel=None):
+    strides = [1, 2]
+    pads = [0, 1]
+    dilations = [3, 1]
+    if kernel is None:
+        shape = (input_shape[1], 1, input_shape[1], 1, 1)
+        kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
+    return opset.group_convolution_backprop_data(
+        input_1, kernel, strides, pads_begin=pads, pads_end=pads, dilations=dilations, name=node_name
+    )
+
+
 def get_convert_conv(input_1, node_name, input_shape):
-    shape = (input_shape[1], input_shape[1], 1, 1)
+    shape = (input_shape[1] + 1, input_shape[1], 1, 1)
     const = opset.constant(np.ones(shape), dtype=np.float64, name="Const")
     convert = opset.convert(const, np.float32)
     return get_conv(input_1, node_name, input_shape, convert)
@@ -83,12 +107,12 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
             get_conv,
             (1, 3, 3, 3),
             OVLayerAttributes(
-                {1: {"name": "Const", "shape": (3, 3, 2, 1)}},
+                {1: {"name": "Const", "shape": (4, 3, 2, 1)}},
                 {
                     1: ConvolutionLayerAttributes(
                         weight_requires_grad=False,
                         in_channels=3,
-                        out_channels=3,
+                        out_channels=4,
                         kernel_size=(2, 1),
                         stride=(1, 1),
                         dilations=[1, 1],
@@ -103,12 +127,12 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
             get_convert_conv,
             (1, 3, 3, 3),
             OVLayerAttributes(
-                {1: {"name": "Const", "shape": (3, 3, 1, 1)}},
+                {1: {"name": "Const", "shape": (4, 3, 1, 1)}},
                 {
                     1: ConvolutionLayerAttributes(
                         weight_requires_grad=False,
                         in_channels=3,
-                        out_channels=3,
+                        out_channels=4,
                         kernel_size=(1, 1),
                         stride=(1, 1),
                         dilations=[1, 1],
@@ -134,6 +158,46 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
                         dilations=[3, 1],
                         groups=3,
                         transpose=False,
+                        padding_values=(0, 1, 0, 1),
+                    ),
+                },
+            ),
+        ),
+        (
+            get_transpose_conv,
+            (1, 3, 3, 3),
+            OVLayerAttributes(
+                {1: {"name": "Const", "shape": (3, 4, 2, 1)}},
+                {
+                    1: ConvolutionLayerAttributes(
+                        weight_requires_grad=False,
+                        in_channels=3,
+                        out_channels=4,
+                        kernel_size=(2, 1),
+                        stride=(1, 1),
+                        dilations=[1, 1],
+                        groups=1,
+                        transpose=True,
+                        padding_values=(0, 0, 0, 0),
+                    ),
+                },
+            ),
+        ),
+        (
+            get_transpose_group_conv,
+            (1, 3, 3, 3),
+            OVLayerAttributes(
+                {1: {"name": "Const", "shape": (3, 1, 3, 1, 1)}},
+                {
+                    1: ConvolutionLayerAttributes(
+                        weight_requires_grad=False,
+                        in_channels=1,
+                        out_channels=3,
+                        kernel_size=(1, 1),
+                        stride=(1, 2),
+                        dilations=[3, 1],
+                        groups=3,
+                        transpose=True,
                         padding_values=(0, 1, 0, 1),
                     ),
                 },

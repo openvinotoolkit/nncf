@@ -15,6 +15,7 @@ import numpy as np
 from tqdm import tqdm
 
 from nncf import Dataset
+from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -137,17 +138,18 @@ class ChannelAlignment(Algorithm):
                     eps,
                 )
 
+            command_creator = CommandCreatorFactory.create(model)
             for container in [conv_in_cont, conv_out_cont]:
                 if container.stated_weight.is_modified():
                     transformation_layout.register(
-                        self._backend_entity.create_weights_update_command(
+                        command_creator.create_command_to_update_weight(
                             container.op, container.weight, container.weight_port_id
                         )
                     )
 
                 if container.stated_bias.is_modified():
                     transformation_layout.register(
-                        self._backend_entity.create_bias_update_command(container.op, container.bias, nncf_graph)
+                        command_creator.create_command_to_update_bias(container.op, container.bias, nncf_graph),
                     )
 
         transformed_model = model_transformer.transform(transformation_layout)

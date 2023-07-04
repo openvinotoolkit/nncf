@@ -103,18 +103,6 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return bias_constant is not None
 
     @staticmethod
-    def create_bias_update_command(
-        node_with_bias: NNCFNode, updated_value: np.ndarray, nncf_graph: NNCFGraph
-    ) -> OVWeightUpdateCommand:
-        return OVCommandCreator.create_command_to_update_bias(node_with_bias, updated_value, nncf_graph)
-
-    @staticmethod
-    def create_weights_update_command(
-        node_with_weights: NNCFNode, updated_value: np.array, weights_port_id: int
-    ) -> OVWeightUpdateCommand:
-        return OVCommandCreator.create_command_to_update_weight(node_with_weights, updated_value, weights_port_id)
-
-    @staticmethod
     def get_dims_descriptor(node: NNCFNode):
         if node.metatype == OVConvolutionMetatype:
             return LayoutDescriptor(

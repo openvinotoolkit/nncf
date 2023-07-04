@@ -15,8 +15,10 @@ from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 
 
@@ -37,12 +39,12 @@ class OVLayerAttributes(BaseLayerAttributes):
         :param act_attrs: Activation attributes.
         """
         self._const_attrs = const_attrs
-        self._common_layer_attrs = {} if common_layer_attrs is None else common_layer_attrs
-        self._act_attrs = {} if act_attrs is None else act_attrs
+        self._common_layer_attrs = common_layer_attrs
+        self._act_attrs = act_attrs
 
     @property
     def const_attrs(self) -> Dict[int, Any]:
-        return self._const_attrs if self._const_attrs != {} else None
+        return self._const_attrs
 
     @property
     def common_layer_attrs(self) -> Optional[Dict[int, BaseLayerAttributes]]:
@@ -50,7 +52,7 @@ class OVLayerAttributes(BaseLayerAttributes):
 
     @property
     def act_attrs(self) -> Optional[Dict[Any, Any]]:
-        return self._act_attrs if self._act_attrs != {} else None
+        return self._act_attrs
 
     def get_const_port_ids(self) -> List[int]:
         """
@@ -58,7 +60,9 @@ class OVLayerAttributes(BaseLayerAttributes):
 
         :returns: List of input port indices with constants.
         """
-        return list(self.const_attrs.keys())
+        if self._const_attrs is not None:
+            return list(self._const_attrs.keys())
+        return []
 
 
 def get_weighted_layer_attributes(ov_node, ov_metatype, constant_attributes: Dict[str, Any]) -> WeightedLayerAttributes:
@@ -72,19 +76,25 @@ def get_weighted_layer_attributes(ov_node, ov_metatype, constant_attributes: Dic
     """
     retval = {}
     for port_id, attrs in constant_attributes.items():
-        if ov_metatype in [OVConvolutionMetatype, OVDepthwiseConvolutionMetatype, OVGroupConvolutionMetatype]:
+        if ov_metatype in [
+            OVConvolutionMetatype,
+            OVDepthwiseConvolutionMetatype,
+            OVGroupConvolutionMetatype,
+            OVConvolutionBackpropDataMetatype,
+            OVGroupConvolutionBackpropDataMetatype,
+        ]:
             node_attrs = ov_node.get_attributes()
             kwargs = {
                 "weight_requires_grad": False,
                 "stride": tuple(node_attrs["strides"]),
                 "dilations": node_attrs["dilations"],
-                "transpose": attrs.get("transpose", False),
+                "transpose": ov_metatype in [OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype],
                 # TODO: Unify pad attribute
                 "padding_values": tuple(node_attrs["pads_begin"] + node_attrs["pads_end"]),
             }
 
             const_shape = attrs["shape"]
-            if ov_metatype == OVConvolutionMetatype:
+            if ov_metatype in [OVConvolutionMetatype, OVConvolutionBackpropDataMetatype]:
                 kwargs.update(
                     {
                         "in_channels": const_shape[1],
@@ -102,6 +112,8 @@ def get_weighted_layer_attributes(ov_node, ov_metatype, constant_attributes: Dic
                         "groups": const_shape[0],
                     }
                 )
+            if kwargs["transpose"]:
+                kwargs["in_channels"], kwargs["out_channels"] = kwargs["out_channels"], kwargs["in_channels"]
 
             common_layer_attr = ConvolutionLayerAttributes(**kwargs)
         else:

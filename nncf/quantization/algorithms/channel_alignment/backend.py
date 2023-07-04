@@ -124,31 +124,6 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def create_bias_update_command(node_with_bias: NNCFNode, updated_value: np.ndarray, nncf_graph: NNCFGraph):
-        """
-        Creates backend-specific command to update bias value.
-
-        :param node: The node for which bias should be updated.
-        :param bias_value: New value for the bias.
-        :param nncf_graph: NNCFGraph of the target model.
-        :return: Backend-specific command to update bias value.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def create_weights_update_command(node_with_weights: NNCFNode, updated_value: np.array, weights_port_id: int):
-        """
-        Creates backend-specific command to update convolution or linear layer
-        weights.
-
-        :param node: The node for which weights should be updated.
-        :param updated_value: New weights for the node.
-        :param weights_port_id: Target node weights input port id.
-        :return: Backend-specific command to update bias value.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
         """
         Return weights layout descriptor of the given node if it is possible and None otherwise.
