@@ -163,7 +163,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             return axes, use_abs_max
 
         assert isinstance(node.layer_attributes, OVLayerAttributes)
-        const_shape = node.layer_attributes.const_attrs[target_point.port_id]["shape"]
+        const_shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
 
         if quantizer_config.per_channel:
             channel_axes = get_weight_channel_axes(node, target_point.port_id)
@@ -264,7 +264,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> str:
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        return node.layer_attributes.const_attrs[target_point.port_id]["name"]
+        return node.layer_attributes.constant_attributes[target_point.port_id]["name"]
 
     @staticmethod
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:

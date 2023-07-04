@@ -198,8 +198,8 @@ class GraphConverter:
 
                     if const_attrs or act_attrs:
                         nncf_node = nncf_graph.get_node_by_name(node_name)
-                        common_layer_attrs = get_weighted_layer_attributes(node, metatype, const_attrs)
-                        nncf_node.layer_attributes = OVLayerAttributes(const_attrs, common_layer_attrs, act_attrs)
+                        layer_attributes = get_weighted_layer_attributes(node, metatype, const_attrs)
+                        nncf_node.layer_attributes = OVLayerAttributes(const_attrs, layer_attributes, act_attrs)
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph

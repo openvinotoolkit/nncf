@@ -123,7 +123,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
             key = layer_attributes.get_const_port_ids()
             assert len(key) == 1
             key = key[0]
-            const_attr = layer_attributes.const_attrs[key]
+            const_attr = layer_attributes.constant_attributes[key]
             a, b = list(range(len(const_attr["shape"])))[-2:]
             assert key in [a, b]
             if key == a:
@@ -145,4 +145,4 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     def get_conv_layer_attributes(node: NNCFNode) -> Optional[ConvolutionLayerAttributes]:
         if node.layer_attributes is None:
             return None
-        return node.layer_attributes.common_layer_attrs[1]
+        return node.layer_attributes.layer_attributes[1]

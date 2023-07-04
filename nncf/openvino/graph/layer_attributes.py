@@ -11,6 +11,8 @@
 
 from typing import Any, Dict, List, Optional
 
+import openvino.runtime as ov
+
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
@@ -20,6 +22,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetaty
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 
 
 class OVLayerAttributes(BaseLayerAttributes):
@@ -29,30 +32,30 @@ class OVLayerAttributes(BaseLayerAttributes):
 
     def __init__(
         self,
-        const_attrs: Dict[int, Any],
-        common_layer_attrs: Optional[Dict[int, BaseLayerAttributes]] = None,
-        act_attrs: Optional[Dict[Any, Any]] = None,
+        constant_attributes: Dict[int, Any],
+        layer_attributes: Optional[Dict[int, BaseLayerAttributes]] = None,
+        inputs_attributes: Optional[Dict[Any, Any]] = None,
     ):
         """
-        :param const_attrs: Map of weights port ID to corresponding const attributes.
-        :param common_layer_attrs: Map of weights port ID to corresponding common layer attributes.
-        :param act_attrs: Activation attributes.
+        :param constant_attributes: Map of weights port ID to corresponding const attributes.
+        :param layer_attributes: Map of weights port ID to corresponding common layer attributes.
+        :param inputs_attributes: Activation attributes.
         """
-        self._const_attrs = const_attrs
-        self._common_layer_attrs = common_layer_attrs
-        self._act_attrs = act_attrs
+        self._constant_attributes = constant_attributes
+        self._layer_attributes = layer_attributes
+        self._inputs_attributes = inputs_attributes
 
     @property
-    def const_attrs(self) -> Dict[int, Any]:
-        return self._const_attrs
+    def constant_attributes(self) -> Dict[int, Any]:
+        return self._constant_attributes
 
     @property
-    def common_layer_attrs(self) -> Optional[Dict[int, BaseLayerAttributes]]:
-        return self._common_layer_attrs
+    def layer_attributes(self) -> Optional[Dict[int, BaseLayerAttributes]]:
+        return self._layer_attributes
 
     @property
-    def act_attrs(self) -> Optional[Dict[Any, Any]]:
-        return self._act_attrs
+    def input_attributes(self) -> Optional[Dict[Any, Any]]:
+        return self._inputs_attributes
 
     def get_const_port_ids(self) -> List[int]:
         """
@@ -60,12 +63,14 @@ class OVLayerAttributes(BaseLayerAttributes):
 
         :returns: List of input port indices with constants.
         """
-        if self._const_attrs is not None:
-            return list(self._const_attrs.keys())
+        if self._constant_attributes is not None:
+            return list(self._constant_attributes.keys())
         return []
 
 
-def get_weighted_layer_attributes(ov_node, ov_metatype, constant_attributes: Dict[str, Any]) -> WeightedLayerAttributes:
+def get_weighted_layer_attributes(
+    ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: Dict[str, Any]
+) -> WeightedLayerAttributes:
     """
     Funciton retrieves common layer attributes from the given node.
 
