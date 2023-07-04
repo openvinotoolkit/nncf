@@ -31,8 +31,8 @@ def get_q_nodes_params(model: onnx.ModelProto) -> Dict[str, np.ndarray]:
     onnx_graph = ONNXGraph(model)
     for node in onnx_graph.get_all_nodes():
         if node.op_type == "QuantizeLinear":
-            scale = onnx_graph.get_initializers_value(node.input[1])
-            zero_point = onnx_graph.get_initializers_value(node.input[2])
+            scale = onnx_graph.get_tensor_value(node.input[1])
+            zero_point = onnx_graph.get_tensor_value(node.input[2])
             output[node.name] = {"scale": scale, "zero_point": zero_point}
     return output
 
