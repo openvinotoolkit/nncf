@@ -1,0 +1,1 @@
+../../../../2.5/quantized/hw/GPU/resnet50.pb
