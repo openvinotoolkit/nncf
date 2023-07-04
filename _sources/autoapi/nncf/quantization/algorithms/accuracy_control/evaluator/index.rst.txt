@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.accuracy_control.evaluator`
+=================================================================
+
+.. py:module:: nncf.quantization.algorithms.accuracy_control.evaluator
+
+
