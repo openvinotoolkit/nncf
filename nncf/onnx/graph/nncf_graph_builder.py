@@ -107,7 +107,9 @@ def _get_weight_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: 
             return None
         if node.op_type in WEIGHT_CONSUMING_NODES:
             if node.op_type in ONNXReshapeMetatype.get_all_aliases():
-                return node.output[0]
+                if not onnx_graph.get_parent(node, 0):
+                    return node.output[0]
+                return None
             elif onnx_graph.has_tensor(node.input[weight_index]):
                 return node.input[weight_index]
             return None
