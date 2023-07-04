@@ -22,6 +22,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
@@ -58,6 +59,9 @@ class TestOVChannelAlignment(TemplateTestChannelAlignment):
 
     def get_transformation_commands(self):
         return OVBiasCorrectionCommand, OVWeightUpdateCommand
+
+    def mock_command_creation_factory(self, mocker) -> None:
+        mocker.patch("nncf.common.factory.CommandCreatorFactory.create", return_value=OVCommandCreator)
 
     @pytest.mark.parametrize("transpose", [False, True])
     @pytest.mark.parametrize("shape", [[3, 4], [1, 2, 3, 4]])

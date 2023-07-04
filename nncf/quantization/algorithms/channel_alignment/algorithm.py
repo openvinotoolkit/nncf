@@ -51,6 +51,9 @@ class ChannelAlignment(Algorithm):
             convolution activations quantile medians are translated to zero.
         - weights of matched subgraph convolutions are adjusted, so all first convolutions activations
             which were between median of low quantile and median of high quantile are translated to [-1, 1] range.
+    In case processed network has one or more convolution -> convolution pairs, activations of the first convolution
+    become more quantization friendly as, in most cases activations mean is equal to zero and
+    most activations values are in range [-1, 1].
     """
 
     def __init__(

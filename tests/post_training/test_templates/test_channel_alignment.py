@@ -143,6 +143,10 @@ class TemplateTestChannelAlignment:
     def get_transformation_commands(self):
         pass
 
+    @abstractmethod
+    def mock_command_creation_factory(self, mocker) -> None:
+        pass
+
     def mock_nncf_graph_factory(self, mocker, nncf_graph: NNCFGraph) -> None:
         mocker.patch("nncf.common.factory.NNCFGraphFactory.create", return_value=nncf_graph)
 
@@ -291,6 +295,8 @@ class TemplateTestChannelAlignment:
 
         nncf_graph = self._get_nncf_graph(num_biases)
         self.mock_nncf_graph_factory(mocker, nncf_graph)
+
+        self.mock_command_creation_factory(mocker)
 
         statistic_points = StatisticPointsContainer()
         target_node_name = "/Add_1_0" if num_biases else "/Conv_1_0"

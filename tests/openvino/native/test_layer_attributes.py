@@ -121,6 +121,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
                         padding_values=(0, 0, 0, 0),
                     ),
                 },
+                {},
             ),
         ),
         (
@@ -141,6 +142,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
                         padding_values=(0, 0, 0, 0),
                     ),
                 },
+                {},
             ),
         ),
         (
@@ -161,6 +163,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
                         padding_values=(0, 1, 0, 1),
                     ),
                 },
+                {},
             ),
         ),
         (
@@ -181,6 +184,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
                         padding_values=(0, 0, 0, 0),
                     ),
                 },
+                {},
             ),
         ),
         (
@@ -201,6 +205,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
                         padding_values=(0, 1, 0, 1),
                     ),
                 },
+                {},
             ),
         ),
         (get_shape_node, (1, 3, 3, 3), None),

@@ -89,7 +89,7 @@ def get_weighted_layer_attributes(ov_node, ov_metatype, constant_attributes: Dic
                 "stride": tuple(node_attrs["strides"]),
                 "dilations": node_attrs["dilations"],
                 "transpose": ov_metatype in [OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype],
-                # TODO: Unify pad attribute
+                # TODO: ticket 114378: unify pad attribute
                 "padding_values": tuple(node_attrs["pads_begin"] + node_attrs["pads_end"]),
             }
 
