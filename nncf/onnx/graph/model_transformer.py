@@ -357,7 +357,7 @@ class ONNXModelTransformer(ModelTransformer):
             node_name = transformation.target_point.target_node_name
             onnx_node = onnx_graph.get_node_by_name(node_name)
             bias_initializer_name = onnx_node.input[bias_tensor_position]
-            bias_initializer = onnx_graph.get_initializer(bias_initializer_name)
+            bias_initializer = onnx_graph.get_tensor(bias_initializer_name)
 
             new_bias_tensor = onnx.numpy_helper.from_array(transformation.bias_value, bias_initializer_name)
             bias_initializer.CopyFrom(new_bias_tensor)
