@@ -9,7 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Optional, TypeVar
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.logging import nncf_logger
@@ -30,6 +31,7 @@ from nncf.quantization.algorithms.fast_bias_correction.algorithm import FAST_BIA
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
+from nncf.quantization.passes import insert_null_biases_pass
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
@@ -43,6 +45,11 @@ class PostTrainingQuantization(Algorithm):
     2) MinMaxQuantization
     3) FastBiasCorrection or BiasCorrection
     """
+
+    @dataclass
+    class FirstStageAlgorithm:
+        algorithm: "Algorithm"
+        pre_passes: List[TPass]
 
     def __init__(
         self,
@@ -77,7 +84,7 @@ class PostTrainingQuantization(Algorithm):
         """
         super().__init__()
         self.algorithms = []
-        self.first_stage_algorithms = []
+        self.first_stage_algorithms: List[self.FirstStageAlgorithm] = []
 
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
@@ -88,7 +95,7 @@ class PostTrainingQuantization(Algorithm):
                 inplace_statistics=advanced_parameters.inplace_statistics,
                 alpha=advanced_parameters.smooth_quant_alpha,
             )
-            self.first_stage_algorithms.append(smooth_quant_algorithm)
+            self.first_stage_algorithms.append(self.FirstStageAlgorithm(smooth_quant_algorithm, []))
 
         if not advanced_parameters.disable_channel_alignment:
             channel_alignment = ChannelAlignment(
@@ -96,7 +103,7 @@ class PostTrainingQuantization(Algorithm):
                 inplace_statistics=advanced_parameters.inplace_statistics,
                 backend_params=advanced_parameters.backend_params,
             )
-            self.first_stage_algorithms.append(channel_alignment)
+            self.first_stage_algorithms.append(self.FirstStageAlgorithm(channel_alignment, [insert_null_biases_pass]))
 
         min_max_quantization = MinMaxQuantization(
             preset=preset,
@@ -192,7 +199,9 @@ class PostTrainingQuantization(Algorithm):
         backend = get_backend(modified_model)
 
         if statistic_points is None:
-            for algorithm in self.first_stage_algorithms:
+            for first_stage_algorithm in self.first_stage_algorithms:
+                algorithm = first_stage_algorithm.algorithm
+
                 if isinstance(algorithm, SmoothQuant) and backend != BackendType.OPENVINO:
                     nncf_logger.debug(f"{backend.name} does not support SmoothQuant algorithm yet.")
                     continue
@@ -200,6 +209,9 @@ class PostTrainingQuantization(Algorithm):
                 if isinstance(algorithm, ChannelAlignment) and backend != BackendType.OPENVINO:
                     nncf_logger.debug(f"{backend.name} does not support ChannelAlignment algorithm yet.")
                     continue
+
+                for pre_pass in first_stage_algorithm.pre_passes:
+                    modified_model = pre_pass(modified_model)
 
                 statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)

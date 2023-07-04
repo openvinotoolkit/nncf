@@ -30,8 +30,8 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionM
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.openvino.graph.node_utils import get_bias_value
+from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
-from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
@@ -91,7 +91,16 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        return is_node_with_bias(node, nncf_graph)
+        next_nodes = nncf_graph.get_next_nodes(node)
+        if not next_nodes:
+            return False
+
+        add_node = next_nodes[0]
+        if add_node.metatype != OVAddMetatype:
+            return False
+
+        bias_constant = get_node_with_bias_value(add_node, nncf_graph)
+        return bias_constant is not None
 
     @staticmethod
     def create_bias_update_command(
