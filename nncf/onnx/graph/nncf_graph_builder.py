@@ -98,7 +98,7 @@ def _get_weight_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: 
     ALLOWED_OP_TYPES = WEIGHT_CONSUMING_NODES + ONNXDequantizeLinearMetatype.get_all_aliases()
 
     weight_index = 0
-    if onnx_graph.has_initializer(node.input[port_id]):
+    if onnx_graph.has_tensor(node.input[port_id]):
         return node.input[port_id]
     queue = onnx_graph.get_parent(node, port_id)
     while queue:
@@ -106,7 +106,9 @@ def _get_weight_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: 
         if node.op_type not in ALLOWED_OP_TYPES:
             return None
         if node.op_type in WEIGHT_CONSUMING_NODES:
-            if onnx_graph.has_initializer(node.input[weight_index]):
+            if node.op_type in ONNXReshapeMetatype.get_all_aliases():
+                return node.output[0]
+            elif onnx_graph.has_tensor(node.input[weight_index]):
                 return node.input[weight_index]
             return None
         queue.extend(onnx_graph.get_parent(node, 0))
@@ -175,6 +177,8 @@ def _get_weight_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_id
     weight_edge_name = _get_weight_edge_name(onnx_graph, node, weight_port_id)
     edge = onnx_graph.get_edge(weight_edge_name)
     weight_shape = ONNXGraph.get_edge_shape(edge)
+    metatype = get_metatype(onnx_graph, node)
+
     weight_attrs[weight_port_id] = {"weight_shape": weight_shape}
     return weight_attrs
 
