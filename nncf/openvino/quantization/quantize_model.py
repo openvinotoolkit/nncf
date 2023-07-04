@@ -249,6 +249,23 @@ def quantize_impl(
     )
 
 
+def wrap_validation_fn(validation_fn):
+    """
+    Wraps validation function to support case when it only returns metric value.
+
+    :param validation_fn: Validation function to wrap.
+    :return: Wrapped validation function.
+    """
+
+    def wrapper(*args, **kwargs):
+        retval = validation_fn(*args, **kwargs)
+        if isinstance(retval, float):
+            return retval, None
+        return retval
+
+    return wrapper
+
+
 def quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
@@ -276,11 +293,14 @@ def quantize_with_accuracy_control_impl(
         quantize_with_accuracy_control_fn = pot_quantize_with_accuracy_control_impl
     else:
         quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
+
+    val_func = wrap_validation_fn(validation_fn)
+
     return quantize_with_accuracy_control_fn(
         model,
         calibration_dataset,
         validation_dataset,
-        validation_fn,
+        val_func,
         max_drop,
         drop_type,
         preset,

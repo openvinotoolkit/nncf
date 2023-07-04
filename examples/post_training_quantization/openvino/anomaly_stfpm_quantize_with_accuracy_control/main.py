@@ -16,7 +16,7 @@ import subprocess
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
 import openvino.runtime as ov
@@ -61,7 +61,7 @@ def get_anomaly_images(data_loader: Iterable[Any]) -> List[Dict[str, torch.Tenso
     return anomaly_images_
 
 
-def validate(model: ov.CompiledModel, val_loader: Iterable[Any], val_params: Dict[str, float]) -> Tuple[float, None]:
+def validate(model: ov.CompiledModel, val_loader: Iterable[Any], val_params: Dict[str, float]) -> float:
     metric = create_metric_collection(["F1Score"], prefix="image_")["F1Score"]
     metric.threshold = 0.5
 
@@ -77,7 +77,7 @@ def validate(model: ov.CompiledModel, val_loader: Iterable[Any], val_params: Dic
 
     metric_value = metric.compute()
     print(f"Validate: dataset lenght = {counter}, " f"metric value = {metric_value:.3f}")
-    return metric_value, None
+    return metric_value
 
 
 def run_benchmark(model_path: str, shape: Optional[List[int]] = None, verbose: bool = True) -> float:
