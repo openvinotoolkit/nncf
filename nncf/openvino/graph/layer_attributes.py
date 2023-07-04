@@ -33,6 +33,7 @@ class OVLayerAttributes(BaseLayerAttributes):
     ):
         """
         :param const_attrs: Map of weights port ID to corresponding const attributes.
+        :param common_layer_attrs: Map of weights port ID to corresponding common layer attributes.
         :param act_attrs: Activation attributes.
         """
         self._const_attrs = const_attrs

@@ -166,8 +166,8 @@ class ChannelAlignment(Algorithm):
         in ChannelAlignment pattern, so output activations of the second convolution bias
         are the same, but the first convolution bias is shifted with minus by amean value.
 
-        :param bias_in_value: Bias of the first convolution in the ChannelAlighment pattern.
-        :param bias_in_value: Bias of the second convolution in the ChannelAlighment pattern.
+        :param bias_in_value: Bias of the first convolution in the ChannelAlignment pattern.
+        :param bias_out_value: Bias of the second convolution in the ChannelAlignment pattern.
         :param amean: Mean value to shift first and second convolutions biases.
         :param conv_out_descr: The second convolution weights layout descriptor.
         """
@@ -210,9 +210,9 @@ class ChannelAlignment(Algorithm):
         but activations of conv_in are scale times smaller. Negative scales are skipped,
         too small (<1e-2) and too big (>1e2) scales are claped.
 
-        :param conv_in_value: Weights of the first convolution in the ChannelAlighment pattern.
-        :param conv_out_value: Weights of the second convolution in the ChannelAlighment pattern.
-        :param bias_in_value: Bias of the first convolution in the ChannelAlighment pattern. Could be None.
+        :param conv_in_value: Weights of the first convolution in the ChannelAlignment pattern.
+        :param conv_out_value: Weights of the second convolution in the ChannelAlignment pattern.
+        :param bias_in_value: Bias of the first convolution in the ChannelAlignment pattern. Could be None.
         :param ascale: Scale value to apply to convolutions weights.
         :param conv_in_descr: The first convolution weights layout descriptor.
         :param conv_out_descr: The second convolution weights layout descriptor.
