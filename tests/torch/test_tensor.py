@@ -9,15 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.common.tensor_numpy import NUMPYNNCFTensor
-from nncf.parameters import TargetDevice
+import torch
+
+from nncf.torch.tensor import PTNNCFTensor
+from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
 
-class ONNXNNCFTensor(NUMPYNNCFTensor):
-    """
-    A realisation of ONNX tensors wrapper for common NNCF algorithms.
-    """
+class TestPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
+    @staticmethod
+    def to_tensor(x):
+        return torch.tensor(x)
 
-    @property
-    def device(self):
-        return TargetDevice.CPU.value
+    @staticmethod
+    def to_nncf_tensor(x):
+        return PTNNCFTensor(x)

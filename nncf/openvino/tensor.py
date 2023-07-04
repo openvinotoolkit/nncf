@@ -9,19 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-
-from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_numpy import NUMPYNNCFTensor
 from nncf.parameters import TargetDevice
 
 
-class OVNNCFTensor(NNCFTensor):
+class OVNNCFTensor(NUMPYNNCFTensor):
     """
     A realisation of OpenVINO tensor wrapper for common NNCF algorithms.
     """
-
-    def __init__(self, tensor: np.ndarray):
-        super().__init__(tensor)
 
     @property
     def device(self):
