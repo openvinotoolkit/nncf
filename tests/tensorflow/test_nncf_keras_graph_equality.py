@@ -59,7 +59,4 @@ def test_nncf_keras_model_graph_equality(nncf_model_builder, keras_application_m
     keras_application_model = keras_application_model_builder(weights=None)
     graph_def_keras = get_graph(keras_application_model)
 
-    # print(type(graph_def_nncf), type(graph_def_keras))
-    # tf.io.write_graph(graph_def_nncf, './', 'InceptionResNetV2_nncf', as_text=True)
-    # tf.io.write_graph(graph_def_keras, './', 'InceptionResNetV2_keras', as_text=True)
     tf.test.assert_equal_graph_def(graph_def_nncf, graph_def_keras)
