@@ -22,7 +22,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Quantization
 
-<table>
+<table align="center">
 	<thead>
 		<tr>
 			<th style="text-align: center;">Model</th>
@@ -33,7 +33,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<th style="text-align: center;">Checkpoint</th>
 		</tr>
 	</thead>
-	<tbody>
+	<tbody align="center">
 		<tr>
 			<td align="center">ResNet-50</td>
 			<td style="text-align: center;">None</td>
