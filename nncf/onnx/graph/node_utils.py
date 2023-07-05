@@ -22,7 +22,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATY
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_bias_tensor_port_id
-from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
+from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 
@@ -35,10 +35,8 @@ def is_node_with_bias(node: NNCFNode) -> bool:
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
-    if node.metatype in OPERATIONS_WITH_BIAS_METATYPES and isinstance(
-        node.layer_attributes, ONNXConstantLayerAttributes
-    ):
-        return node.layer_attributes.bias_attrs
+    if node.metatype in OPERATIONS_WITH_BIAS_METATYPES:
+        return len(node.layer_attributes.bias_attrs.keys()) > 0
     return False
 
 
@@ -109,9 +107,7 @@ def is_any_weight_quantized(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     False - if all weights are not quantized or the node can not have weight.
     """
     is_quanitzed_weight = False
-    if node.metatype in GENERAL_WEIGHT_LAYER_METATYPES and isinstance(
-        node.layer_attributes, ONNXConstantLayerAttributes
-    ):
+    if node.metatype in GENERAL_WEIGHT_LAYER_METATYPES and len(node.layer_attributes.weight_attrs) > 0:
         for port_id in node.layer_attributes.weight_attrs.keys():
             is_quanitzed_weight = is_quanitzed_weight or is_port_quantized(node, nncf_graph, port_id)
     return is_quanitzed_weight

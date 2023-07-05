@@ -15,7 +15,7 @@ import pytest
 
 from nncf.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
+from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from tests.onnx.models import OPSET_VERSION
 from tests.onnx.models import create_initializer_tensor
 
@@ -99,7 +99,7 @@ def get_one_layer_model(op_name: str, node_creator: ONNXNodeCreator, input_shape
         (ONNXIdentityCreator, None),
         (
             ONNXConvCreator,
-            ONNXConstantLayerAttributes(
+            ONNXLayerAttributes(
                 weight_attrs={1: {"name": "Conv1_W", "shape": [3, 3, 1, 1]}}, bias_attrs={2: {"shape": [3]}}
             ),
         ),
@@ -114,4 +114,4 @@ def test_layer_attributes(node_creator, ref_layer_attrs):
     if node.metatype in GENERAL_WEIGHT_LAYER_METATYPES:
         assert node.layer_attributes.__dict__ == ref_layer_attrs.__dict__
     else:
-        assert node.layer_attributes is None
+        assert node.layer_attributes.__dict__ == ONNXLayerAttributes().__dict__

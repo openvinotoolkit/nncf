@@ -1284,3 +1284,56 @@ class MatMulWeightModel_2(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "weight_matmul_model_2.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class GEMMTransposeWeightModel(ONNXReferenceModel):
+    #         X       W(Transposed)
+    #         |       |
+    #      Identity   |
+    #          \     /
+    #           Gemm
+    #             |
+    #          softmax
+    def __init__(self):
+        model_input_name, model_output_name = "X", "Y"
+        model_input_channels, model_output_channels = 10, 5
+        input_shape = [1, model_input_channels]
+
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_output_channels])
+
+        rng = np.random.default_rng(seed=0)
+        shape = [model_output_channels, model_input_channels]
+        w_tensor = create_initializer_tensor(
+            name="W", tensor_array=rng.uniform(0, 1, shape).astype(np.float32), data_type=onnx.TensorProto.FLOAT
+        )
+
+        identity_node = onnx.helper.make_node(
+            name="Identity", op_type="Identity", inputs=[model_input_name], outputs=["identity"]
+        )
+
+        gemm_node = onnx.helper.make_node(
+            name="Gemm", op_type="Gemm", inputs=["identity", "W"], outputs=["logit"], transB=1
+        )
+
+        softmax_node = onnx.helper.make_node(
+            name="Softmax",
+            op_type="Softmax",
+            inputs=["logit"],
+            outputs=["Y"],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[identity_node, gemm_node, softmax_node],
+            name="Net",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[w_tensor],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "gemm_weight_transpose_model.dot")

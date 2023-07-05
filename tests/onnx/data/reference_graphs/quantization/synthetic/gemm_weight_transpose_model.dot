@@ -1,0 +1,19 @@
+strict digraph  {
+"0 QuantizeLinear_X_1" [id=0, type=QuantizeLinear];
+"1 DequantizeLinear_X_1" [id=1, type=DequantizeLinear];
+"2 Identity" [id=2, type=Identity];
+"3 QuantizeLinear_W_1" [id=3, type=QuantizeLinear];
+"4 DequantizeLinear_W_1" [id=4, type=DequantizeLinear];
+"5 Gemm" [id=5, type=Gemm];
+"6 Softmax" [id=6, type=Softmax];
+"7 nncf_model_input_0" [id=7, type=nncf_model_input];
+"8 nncf_model_output_0" [id=8, type=nncf_model_output];
+"0 QuantizeLinear_X_1" -> "1 DequantizeLinear_X_1"  [label="[1, 10]", style=dashed];
+"1 DequantizeLinear_X_1" -> "2 Identity"  [label="[1, 10]", style=solid];
+"2 Identity" -> "5 Gemm"  [label="[1, 10]", style=solid];
+"3 QuantizeLinear_W_1" -> "4 DequantizeLinear_W_1"  [label="[5, 10]", style=dashed];
+"4 DequantizeLinear_W_1" -> "5 Gemm"  [label="[5, 10]", style=solid];
+"5 Gemm" -> "6 Softmax"  [label="[1, 5]", style=solid];
+"6 Softmax" -> "8 nncf_model_output_0"  [label="[1, 5]", style=solid];
+"7 nncf_model_input_0" -> "0 QuantizeLinear_X_1"  [label="[1, 10]", style=solid];
+}

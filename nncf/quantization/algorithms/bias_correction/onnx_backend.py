@@ -113,7 +113,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return node.output[0]
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_any_weight_quantized(node, nncf_graph)
 
     @staticmethod

@@ -19,7 +19,7 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         onnx_metatypes.ONNXConvolutionMetatype,
         onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
         onnx_metatypes.ONNXConvolutionTransposeMetatype,
-        onnx_metatypes.ONNXMatMulMetatype,
+        *onnx_metatypes.MATMUL_METATYPES,
         onnx_metatypes.ONNXAveragePoolMetatype,
         onnx_metatypes.ONNXGlobalAveragePoolMetatype,
         onnx_metatypes.ONNXAddLayerMetatype,
@@ -30,7 +30,6 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         onnx_metatypes.ONNXResizeMetatype,
         onnx_metatypes.ONNXPowMetatype,
         onnx_metatypes.ONNXReciprocalMetatype,
-        *onnx_metatypes.MATMUL_METATYPES,
     ],
     QuantizationTrait.QUANTIZATION_AGNOSTIC: [
         onnx_metatypes.ONNXMaxPoolMetatype,
