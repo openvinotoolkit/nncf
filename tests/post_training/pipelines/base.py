@@ -125,7 +125,6 @@ class BaseTestPipeline(ABC):
         ptq_params: dict,
         output_dir: Path,
         data_dir: Path,
-        mode: str,
         reference_data: dict,
         params: dict = None,
     ) -> None:
@@ -135,7 +134,6 @@ class BaseTestPipeline(ABC):
         self.ptq_params = ptq_params
         self.output_dir = Path(output_dir)
         self.data_dir = Path(data_dir)
-        self.mode = mode
         self.reference_data = reference_data
         self.params = params or {}
 

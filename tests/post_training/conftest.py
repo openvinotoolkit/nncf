@@ -24,7 +24,6 @@ FQ_CALCULATED_PARAMETERS_PATH = PTQ_TEST_ROOT / "data" / "fq_params" / "fq_param
 def pytest_addoption(parser):
     parser.addoption("--data", action="store")
     parser.addoption("--output", action="store", default="./tmp/")
-    # parser.addoption("--mode", action="store", default="short", choices=("full", "short", "no_val", "quantize_only"))
 
 
 def pytest_configure(config):

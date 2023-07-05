@@ -31,8 +31,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
         if self.backend in PT_BACKENDS:
             self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(self.model_id)
             self.model = self.model_hf
-            self.dummy_tensor = torch.Tensor([[0] * 53]).type(dtype=torch.LongTensor)
-
+            self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
         if self.backend in OV_BACKENDS:
             self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
             self.model = self.model_hf.model
@@ -53,7 +52,6 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
         else:
 
             def transform_func(data):
-                print(data)
                 return {
                     "input_ids": np.expand_dims(data["input_ids"], axis=0),
                     "token_type_ids": np.expand_dims(data["token_type_ids"], axis=0),

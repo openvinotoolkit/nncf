@@ -21,10 +21,6 @@ from tests.post_training.model_scope import TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import RunInfo
 
-# @pytest.fixture(scope="session", name="mode")
-# def fixture_output(pytestconfig):
-#     return pytestconfig.getoption("mode")
-
 
 @pytest.fixture(scope="session", name="data")
 def fixture_data(pytestconfig):
@@ -78,7 +74,6 @@ def test_ptq_hf(test_case_name, data, output, result):
             "params": test_model_param.get("params"),
             "output_dir": output,
             "data_dir": data,
-            "mode": "full",
             "reference_data": REFERENCE_DATA[test_case_name],
         }
 
