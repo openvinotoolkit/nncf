@@ -113,7 +113,7 @@ def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int
 
     :param node: ONNX node.
     :param onnx_graph: ONNXGraph.
-    :return Set[int]: Port ids with weights.
+    :return: Port ids with weights.
     """
     port_ids = set()
     metatype = get_metatype(onnx_graph, node)
@@ -132,7 +132,7 @@ def _is_node_with_bias(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> bool:
 
     :param node: ONNX node.
     :param onnx_graph: ONNXGraph.
-    :return bool: True if node has bias tensor, otherwise - False.
+    :return: True if node has bias tensor, otherwise - False.
     """
     metatype = get_metatype(onnx_graph, node)
     if metatype in OPERATIONS_WITH_BIAS_METATYPES:
