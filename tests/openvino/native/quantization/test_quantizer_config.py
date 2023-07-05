@@ -16,10 +16,10 @@ from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
-from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -60,16 +60,14 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
-        conv_layer_attrs = OVConstantLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
         return NNCFGraphToTest(OVConvolutionMetatype, conv_layer_attrs)
 
     @pytest.fixture
     def depthwise_conv_nncf_graph(self):
-        return NNCFGraphToTestDepthwiseConv(
-            OVDepthwiseConvolutionMetatype, conv_layer_attrs=OVConstantLayerAttributes({})
-        )
+        return NNCFGraphToTestDepthwiseConv(OVDepthwiseConvolutionMetatype, conv_layer_attrs=OVLayerAttributes({}))
 
     @pytest.fixture
     def conv_sum_aggregation_nncf_graph(self) -> NNCFGraphToTestSumAggregation:
-        conv_layer_attrs = OVConstantLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
         return NNCFGraphToTestSumAggregation(OVConvolutionMetatype, OVSumMetatype, conv_layer_attrs)

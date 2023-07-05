@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -26,6 +27,9 @@ class BaseLayerAttributes(ABC):
     of modules/layers.
     """
 
+    def __eq__(self, __o: object) -> bool:
+        return isinstance(__o, self.__class__) and self.__dict__ == __o.__dict__
+
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
     def __init__(self, axis: int):
@@ -34,9 +38,6 @@ class MultipleInputLayerAttributes(BaseLayerAttributes):
         :param axis: the dimension over which the inputs are combined (e.g. concatenated).
         """
         self.axis = axis
-
-    def __eq__(self, other: Any):
-        return isinstance(other, MultipleInputLayerAttributes) and self.axis == other.axis
 
 
 class MultipleOutputLayerAttributes(BaseLayerAttributes):
@@ -49,11 +50,6 @@ class MultipleOutputLayerAttributes(BaseLayerAttributes):
         self.chunks = chunks
         self.axis = axis
 
-    def __eq__(self, other: Any):
-        return (
-            isinstance(other, MultipleOutputLayerAttributes) and self.chunks == other.chunks and self.axis == other.axis
-        )
-
 
 class WeightedLayerAttributes(BaseLayerAttributes):
     def __init__(self, weight_requires_grad: bool, dtype: Dtype = Dtype.FLOAT):
@@ -65,9 +61,6 @@ class WeightedLayerAttributes(BaseLayerAttributes):
         """
         self.weight_requires_grad = weight_requires_grad
         self.dtype = dtype
-
-    def __eq__(self, other: Any):
-        return isinstance(other, WeightedLayerAttributes) and self.weight_requires_grad == other.weight_requires_grad
 
     @abstractmethod
     def get_weight_shape(self) -> List[int]:
@@ -140,6 +133,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         out_channels: int,
         kernel_size: Tuple[int, ...],
         stride: Tuple[int, ...],
+        dilations: Tuple[int, ...],
         groups: int,
         transpose: bool,
         padding_values: Tuple[int, ...],
@@ -161,21 +155,10 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
+        self.dilations = dilations
         self.groups = groups
         self.transpose = transpose
         self.padding_values = padding_values
-
-    def __eq__(self, other: Any):
-        return (
-            isinstance(other, ConvolutionLayerAttributes)
-            and super().__eq__(other)
-            and self.in_channels == other.in_channels
-            and self.out_channels == other.out_channels
-            and self.kernel_size == other.kernel_size
-            and self.stride == other.stride
-            and self.groups == other.groups
-            and self.transpose == other.transpose
-        )
 
     def get_weight_shape(self) -> List[int]:
         if not self.transpose:
@@ -201,14 +184,6 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
         super().__init__(weight_requires_grad)
         self.num_channels = num_channels
         self.num_groups = num_groups
-
-    def __eq__(self, other: Any):
-        return (
-            isinstance(other, GroupNormLayerAttributes)
-            and super().__eq__(other)
-            and self.num_channels == other.num_channels
-            and self.num_groups == other.num_groups
-        )
 
     def get_weight_shape(self) -> List[int]:
         return [self.num_channels]
@@ -238,14 +213,6 @@ class TransposeLayerAttributes(BaseLayerAttributes):
     dim0: int
     dim1: int
 
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, TransposeLayerAttributes)
-            and super().__eq__(other)
-            and self.dim0 == other.dim0
-            and self.dim1 == other.dim1
-        )
-
 
 @dataclass
 class PermuteLayerAttributes(BaseLayerAttributes):
@@ -253,15 +220,7 @@ class PermuteLayerAttributes(BaseLayerAttributes):
     :param permutation: the desired ordering of dimensions.
     """
 
-    permutation: List[int]
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, PermuteLayerAttributes)
-            and super().__eq__(other)
-            and len(self.permutation) == len(other.permutation)
-            and (l == r for l, r in zip(self.permutation, other.permutation))
-        )
+    permutation: Tuple[int, ...]
 
 
 @dataclass

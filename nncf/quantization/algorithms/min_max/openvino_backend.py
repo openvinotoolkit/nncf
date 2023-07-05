@@ -24,6 +24,7 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
@@ -45,7 +46,6 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVSquaredDifference
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSqueezeMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVTopKMetatype
-from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -162,8 +162,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             axes = tuple(i for i in range(len(shape)) if i != channel_axis)
             return axes, use_abs_max
 
-        assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
-        const_shape = node.layer_attributes.const_attrs[target_point.port_id]["shape"]
+        assert isinstance(node.layer_attributes, OVLayerAttributes)
+        const_shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
 
         if quantizer_config.per_channel:
             channel_axes = get_weight_channel_axes(node, target_point.port_id)
@@ -258,14 +258,13 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [
             node
             for node in nncf_graph.get_all_nodes()
-            if isinstance(node.layer_attributes, OVConstantLayerAttributes)
-            and node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
+            if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
         ]
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> str:
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        return node.layer_attributes.const_attrs[target_point.port_id]["name"]
+        return node.layer_attributes.constant_attributes[target_point.port_id]["name"]
 
     @staticmethod
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
