@@ -413,6 +413,7 @@ for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.</p></li>
 of the model outputs.</p></li>
 <li><p><strong>inplace_statistics</strong> (<em>bool</em>) – Defines whether to calculate quantizers statistics by
 backend graph operations or by default Python implementation, defaults to True.</p></li>
+<li><p><strong>disable_channel_alignment</strong> (<em>bool</em>) – Whether to disable the channel alignment.</p></li>
 <li><p><strong>disable_bias_correction</strong> (<em>bool</em>) – Whether to disable the bias correction.</p></li>
 <li><p><strong>smooth_quant_alpha</strong> (<em>float</em>) – SmoothQuant-related parameter. It regulates the calculation of the smooth scale.
 The default value is 0.95. A negative value switches off the algorithm. In case of inaccurate results,

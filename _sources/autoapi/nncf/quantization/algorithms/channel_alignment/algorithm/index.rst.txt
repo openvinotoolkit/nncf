@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.channel_alignment.algorithm`
+==================================================================
+
+.. py:module:: nncf.quantization.algorithms.channel_alignment.algorithm
+
+
