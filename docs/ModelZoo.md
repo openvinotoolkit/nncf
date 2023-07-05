@@ -25,198 +25,198 @@ to find instruction and links to exact configuration files and final checkpoints
 <table>
 	<thead>
 		<tr>
-			<th>Model</th>
-			<th>Compression algorithm</th>
-			<th>Dataset</th>
-			<th>Accuracy (<em>drop</em>) %</th>
-			<th>NNCF config file</th>
-			<th>Checkpoint</th>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
 		</tr>
 	</thead>
 	<tbody align="center">
 		<tr>
-			<td>ResNet-50</td>
-			<td>None</td>
-			<td>ImageNet</td>
-			<td>76.15</td>
-			<td><a href='configs/quantization/resnet50_imagenet.json'>resnet50_imagenet.json</a></td>
-			<td>-</td>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">76.15</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet.json">resnet50_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
-			<td>ResNet-50</td>
-			<td>INT8</td>
-			<td>ImageNet</td>
-			<td>76.46 (-0.31)</td>
-			<td><a href='configs/quantization/resnet50_imagenet_int8.json'>resnet50_imagenet_int8.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8.pth'>Link</a></td>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">76.46 (-0.31)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet_int8.json">resnet50_imagenet_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>ResNet-50</td>
-			<td>INT8 (per-tensor only)</td>
-			<td>ImageNet</td>
-			<td>76.39 (-0.24)</td>
-			<td><a href='configs/quantization/resnet50_imagenet_int8_per_tensor.json'>resnet50_imagenet_int8_per_tensor.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8_per_tensor.pth'>Link</a></td>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">INT8 (per-tensor only)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">76.39 (-0.24)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet_int8_per_tensor.json">resnet50_imagenet_int8_per_tensor.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8_per_tensor.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>ResNet-50</td>
-			<td>Mixed, 43.12% INT8 / 56.88% INT4</td>
-			<td>ImageNet</td>
-			<td>76.05 (0.10)</td>
-			<td><a href='configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json'>resnet50_imagenet_mixed_int_hawq.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int4_int8.pth'>Link</a></td>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">Mixed, 43.12% INT8 / 56.88% INT4</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">76.05 (0.10)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json">resnet50_imagenet_mixed_int_hawq.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int4_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>ResNet-50</td>
-			<td>INT8 + Sparsity 61% (RB)</td>
-			<td>ImageNet</td>
-			<td>75.42 (0.73)</td>
-			<td><a href='configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json'>resnet50_imagenet_rb_sparsity_int8.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity_int8.pth'>Link</a></td>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">INT8 + Sparsity 61% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.42 (0.73)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json">resnet50_imagenet_rb_sparsity_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>ResNet-50</td>
-			<td>INT8 + Sparsity 50% (RB)</td>
-			<td>ImageNet</td>
-			<td>75.50 (0.65)</td>
-			<td><a href='configs/sparsity_quantization/resnet50_imagenet_rb_sparsity50_int8.json'>resnet50_imagenet_rb_sparsity50_int8.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity50_int8.pth'>Link</a></td>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">INT8 + Sparsity 50% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.50 (0.65)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity50_int8.json">resnet50_imagenet_rb_sparsity50_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity50_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>Inception V3</td>
-			<td>None</td>
-			<td>ImageNet</td>
-			<td>77.33</td>
-			<td><a href='configs/quantization/inception_v3_imagenet.json'>inception_v3_imagenet.json</a></td>
-			<td>-</td>
+			<td style="text-align: center;">Inception V3</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">77.33</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/inception_v3_imagenet.json">inception_v3_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
-			<td>Inception V3</td>
-			<td>INT8</td>
-			<td>ImageNet</td>
-			<td>77.45 (-0.12)</td>
-			<td><a href='configs/quantization/inception_v3_imagenet_int8.json'>inception_v3_imagenet_int8.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_int8.pth'>Link</a></td>
+			<td style="text-align: center;">Inception V3</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">77.45 (-0.12)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json">inception_v3_imagenet_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>Inception V3</td>
-			<td>INT8 + Sparsity 61% (RB)</td>
-			<td>ImageNet</td>
-			<td>76.36 (0.97)</td>
-			<td><a href='configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json'>inception_v3_imagenet_rb_sparsity_int8.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_rb_sparsity_int8.pth'>Link</a></td>
+			<td style="text-align: center;">Inception V3</td>
+			<td style="text-align: center;">INT8 + Sparsity 61% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">76.36 (0.97)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json">inception_v3_imagenet_rb_sparsity_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_rb_sparsity_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>MobileNet V2</td>
-			<td>None</td>
-			<td>ImageNet</td>
-			<td>71.87</td>
-			<td><a href='configs/quantization/mobilenet_v2_imagenet.json'>mobilenet_v2_imagenet.json</a></td>
-			<td>-</td>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">71.87</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet.json">mobilenet_v2_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
-			<td>MobileNet V2</td>
-			<td>INT8</td>
-			<td>ImageNet</td>
-			<td>71.07 (0.80)</td>
-			<td><a href='configs/quantization/mobilenet_v2_imagenet_int8.json'>mobilenet_v2_imagenet_int8.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8.pth'>Link</a></td>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">71.07 (0.80)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8.json">mobilenet_v2_imagenet_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>MobileNet V2</td>
-			<td>INT8 (per-tensor only)</td>
-			<td>ImageNet</td>
-			<td>71.24 (0.63)</td>
-			<td><a href='configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json'>mobilenet_v2_imagenet_int8_per_tensor.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8_per_tensor.pth'>Link</a></td>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">INT8 (per-tensor only)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">71.24 (0.63)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json">mobilenet_v2_imagenet_int8_per_tensor.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8_per_tensor.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>MobileNet V2</td>
-			<td>Mixed, 58.88% INT8 / 41.12% INT4</td>
-			<td>ImageNet</td>
-			<td>70.95 (0.92)</td>
-			<td><a href='configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json'>mobilenet_v2_imagenet_mixed_int_hawq.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int4_int8.pth'>Link</a></td>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">Mixed, 58.88% INT8 / 41.12% INT4</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">70.95 (0.92)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json">mobilenet_v2_imagenet_mixed_int_hawq.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int4_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>MobileNet V2</td>
-			<td>INT8 + Sparsity 52% (RB)</td>
-			<td>ImageNet</td>
-			<td>71.09 (0.78)</td>
-			<td><a href='configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json'>mobilenet_v2_imagenet_rb_sparsity_int8.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_rb_sparsity_int8.pth'>Link</a></td>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">INT8 + Sparsity 52% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">71.09 (0.78)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json">mobilenet_v2_imagenet_rb_sparsity_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_rb_sparsity_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>MobileNet V3 small</td>
-			<td>None</td>
-			<td>ImageNet</td>
-			<td>67.66</td>
-			<td><a href='configs/quantization/mobilenet_v3_small_imagenet.json'>mobilenet_v3_small_imagenet.json</a></td>
-			<td>-</td>
+			<td style="text-align: center;">MobileNet V3 small</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">67.66</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet.json">mobilenet_v3_small_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
-			<td>MobileNet V3 small</td>
-			<td>INT8</td>
-			<td>ImageNet</td>
-			<td>66.98 (0.68)</td>
-			<td><a href='configs/quantization/mobilenet_v3_small_imagenet_int8.json'>mobilenet_v3_small_imagenet_int8.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v3_small_imagenet_int8.pth'>Link</a></td>
+			<td style="text-align: center;">MobileNet V3 small</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">66.98 (0.68)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json">mobilenet_v3_small_imagenet_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v3_small_imagenet_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>SqueezeNet V1.1</td>
-			<td>None</td>
-			<td>ImageNet</td>
-			<td>58.19</td>
-			<td><a href='configs/quantization/squeezenet1_1_imagenet.json'>squeezenet1_1_imagenet.json</a></td>
-			<td>-</td>
+			<td style="text-align: center;">SqueezeNet V1.1</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">58.19</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet.json">squeezenet1_1_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
-			<td>SqueezeNet V1.1</td>
-			<td>INT8</td>
-			<td>ImageNet</td>
-			<td>58.22 (-0.03)</td>
-			<td><a href='configs/quantization/squeezenet1_1_imagenet_int8.json'>squeezenet1_1_imagenet_int8.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8.pth'>Link</a></td>
+			<td style="text-align: center;">SqueezeNet V1.1</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">58.22 (-0.03)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8.json">squeezenet1_1_imagenet_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>SqueezeNet V1.1</td>
-			<td>INT8 (per-tensor only)</td>
-			<td>ImageNet</td>
-			<td>58.11 (0.08)</td>
-			<td><a href='configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json'>squeezenet1_1_imagenet_int8_per_tensor.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8_per_tensor.pth'>Link</a></td>
+			<td style="text-align: center;">SqueezeNet V1.1</td>
+			<td style="text-align: center;">INT8 (per-tensor only)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">58.11 (0.08)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json">squeezenet1_1_imagenet_int8_per_tensor.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8_per_tensor.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>SqueezeNet V1.1</td>
-			<td>Mixed, 52.83% INT8 / 47.17% INT4</td>
-			<td>ImageNet</td>
-			<td>57.57 (0.62)</td>
-			<td><a href='configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json'>squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json</a></td>
-			<td><a href='https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int4_int8.pth'>Link</a></td>
+			<td style="text-align: center;">SqueezeNet V1.1</td>
+			<td style="text-align: center;">Mixed, 52.83% INT8 / 47.17% INT4</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">57.57 (0.62)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json">squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int4_int8.pth">Link</a></td>
 		</tr>
 		<tr>
-			<td>ResNet-18</td>
-			<td>None</td>
-			<td>ImageNet</td>
-			<td>69.76</td>
-			<td><a href='configs/binarization/resnet18_imagenet.json'>resnet18_imagenet.json</a></td>
-			<td>-</td>
+			<td style="text-align: center;">ResNet-18</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.76</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">resnet18_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
-			<td>ResNet-34</td>
-			<td>None</td>
-			<td>ImageNet</td>
-			<td>73.30</td>
-			<td><a href='configs/pruning/resnet34_imagenet.json'>resnet34_imagenet.json</a></td>
-			<td>-</td>
+			<td style="text-align: center;">ResNet-34</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">73.30</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet.json">resnet34_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
-			<td>GoogLeNet</td>
-			<td>None</td>
-			<td>ImageNet</td>
-			<td>69.77</td>
-			<td><a href='configs/pruning/googlenet_imagenet.json'>googlenet_imagenet.json</a></td>
-			<td>-</td>
+			<td style="text-align: center;">GoogLeNet</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.77</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet.json">googlenet_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 	</tbody>
 </table>
