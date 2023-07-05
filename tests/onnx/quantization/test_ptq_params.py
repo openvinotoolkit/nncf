@@ -17,6 +17,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -78,7 +79,7 @@ class TestPTQParams(TemplateTestPTQParams):
     def metatypes_mapping(self):
         return {
             Conv2dTestMetatype: ONNXConvolutionMetatype,
-            LinearTestMetatype: MATMUL_METATYPES[0],
+            LinearTestMetatype: ONNXGemmMetatype,
             SoftmaxTestMetatype: ONNXSoftmaxMetatype,
         }
 
@@ -105,12 +106,12 @@ class TestPTQParams(TemplateTestPTQParams):
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_model_type_pass": {
-                "nncf_graph": NNCFGraphToTestMatMul(MATMUL_METATYPES[0]).nncf_graph,
+                "nncf_graph": NNCFGraphToTestMatMul(ONNXGemmMetatype).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_validate_scope": {
-                "nncf_graph": NNCFGraphToTestMatMul(MATMUL_METATYPES[0]).nncf_graph,
+                "nncf_graph": NNCFGraphToTestMatMul(ONNXGemmMetatype).nncf_graph,
                 "ignored_patterns": get_ignored_patterns(),
             },
         }
