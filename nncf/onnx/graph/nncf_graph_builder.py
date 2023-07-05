@@ -66,49 +66,42 @@ class ONNXConstantLayerAttributes(BaseLayerAttributes):
 
 def _get_weight_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> Optional[str]:
     """
-    Finds an edge associated with a node weight on a input port_id.
-    If an edge was not found then returns None.
-    If edge associated with a weight was found then returns edge name.
+    Returns an edge name associated with a weight of a node laying on  an input port_id.
+
+    Checks whether a node has a tensor on input port_id.
+    If does then it is a weight and returns corresponding edge name. If not - take a parent node into this port id and does the same check for it.
+
+    If an edge with a weight was not found then returns None.
+
+    METATYPES THAT COULD CONSUME A WEIGHT TENSOR:
+        ONNXConstantMetatype
+        ONNXIdentityMetatype
+        ONNXReshapeMetatype
+        ONNXTransposeMetatype
+        ONNXQuantizeLinearMetatype
 
     :param onnx_graph: ONNXGraph.
     :param node: Node.
-    :param int port_id: Port id on which a weight edge is seeking.
+    :param port_id: Port id on which a weight edge is seeking.
     :return: Edge name associated with a weight.
     """
-
-    # There are several cases
-    # (Constant) -> (Operation)
-    # (Identity) -> (Operation)
-    # (Reshape) -> (Operation)
-    # (Transpose) -> (Operation)
-    # (Constant) -> (QuantizeLinear) -> (DequantizeLinear) -> (Operation)
-    # (Constant) -> (QuantizeLinear) -> (DequantizeLinear) -> (Operation)
-
-    #  We need properly find the constant node. So we start with
-    # Operation and traverse up until the constant node is not found.
-
-    # If Constant on the port
-    WEIGHT_CONSUMING_NODES = (
+    WEIGHT_CONSUMING_TYPES = (
         ONNXConstantMetatype.get_all_aliases()
         + ONNXIdentityMetatype.get_all_aliases()
         + ONNXReshapeMetatype.get_all_aliases()
         + ONNXTransposeMetatype.get_all_aliases()
         + ONNXQuantizeLinearMetatype.get_all_aliases()
     )
-    PROPAGATING_OP_TYPES = WEIGHT_CONSUMING_NODES + ONNXDequantizeLinearMetatype.get_all_aliases()
+    PROPAGATING_ONLY_TYPES = ONNXDequantizeLinearMetatype.get_all_aliases()
 
-    if onnx_graph.has_tensor(node.input[port_id]):
+    if node.op_type not in PROPAGATING_ONLY_TYPES and onnx_graph.has_tensor(node.input[port_id]):
         if node.op_type in ONNXReshapeMetatype.get_all_aliases():
             return node.output[0]
         return node.input[port_id]
 
     parent = onnx_graph.get_parent(node, port_id)
-    if parent:
-        weight_port_id = 0
-        if parent.op_type in WEIGHT_CONSUMING_NODES:
-            return _get_weight_edge_name(onnx_graph, parent, weight_port_id)
-        if parent.op_type in PROPAGATING_OP_TYPES:
-            return _get_weight_edge_name(onnx_graph, parent, weight_port_id)
+    if parent and parent.op_type in (WEIGHT_CONSUMING_TYPES + PROPAGATING_ONLY_TYPES):
+        return _get_weight_edge_name(onnx_graph, parent, 0)
     return None
 
 

@@ -591,7 +591,7 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
 
-    :return: List of operator metatypes .
+    :return: List of operator metatypes.
     """
     return list(ONNX_OPERATION_METATYPES.registry_dict.values())
 
@@ -602,7 +602,7 @@ def get_metatype(onnx_graph: ONNXGraph, node: onnx.NodeProto) -> ONNXOpMetatype:
 
     :param model: ONNX model.
     :param node: Node from ONNX model.
-    :return ONNXOpMetatype: matched metatype.
+    :return: matched metatype.
     """
     metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
     if metatype.get_subtypes():
@@ -613,12 +613,25 @@ def get_metatype(onnx_graph: ONNXGraph, node: onnx.NodeProto) -> ONNXOpMetatype:
 
 
 def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
+    """
+    Returns port ids on which metatype must have a weight based on Operation definition.
+
+    :param metatype: Metatype.
+    :return: Port ids.
+    """
     if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
         return metatype.weight_port_ids
     return []
 
 
 def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
+    """
+    Returns weight port ids on which metatype could have a weight.
+    Example: ONNXMatMulMetatype could have activations or weights on input port ids: 0, 1
+
+    :param metatype: Metatype.
+    :return: Port ids.
+    """
     if metatype in MATMUL_METATYPES:
         return metatype.possible_weight_ports
     return []
