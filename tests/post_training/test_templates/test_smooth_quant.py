@@ -66,7 +66,9 @@ class TemplateTestSQAlgorithm:
         return PostTrainingQuantization(
             subset_size=1,
             model_type=ModelType.TRANSFORMER,
-            advanced_parameters=AdvancedQuantizationParameters(overflow_fix=OverflowFix.DISABLE),
+            advanced_parameters=AdvancedQuantizationParameters(
+                overflow_fix=OverflowFix.DISABLE, smooth_quant_alpha=0.95
+            ),
         )
 
     @pytest.mark.parametrize(
