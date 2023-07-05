@@ -127,7 +127,7 @@ INSTALL_REQUIRES = [
 
 TF_EXTRAS = [
     "tensorflow~=2.12.0",
-    "protobuf<=3.20.3"
+    "protobuf<4"
 ]
 
 TORCH_EXTRAS = [
