@@ -16,8 +16,10 @@ import onnx
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_bias_tensor_port_id
 from nncf.onnx.graph.nncf_graph_builder import ONNXConstantLayerAttributes
@@ -94,3 +96,36 @@ def get_input_edge(input_node_name: str, input_edges_mapping: Dict[str, Tuple[st
         input_edges.add(onnx_graph.get_node_edge_names(name)["input"][port_id])
     assert len(input_edges) == 1
     return input_edges.pop()
+
+
+def is_any_weight_quantized(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    """
+    Returns True if any weight port id of node is quantized,
+    False - if all weights are not quantized or the node can not have weight.
+
+    :param node: NNCFNode.
+    :param nncf_graph: NNCGraph.
+    :return: True if any weight port id of node is quantized,
+    False - if all weights are not quantized or the node can not have weight.
+    """
+    is_quanitzed_weight = False
+    if node.metatype in GENERAL_WEIGHT_LAYER_METATYPES and isinstance(
+        node.layer_attributes, ONNXConstantLayerAttributes
+    ):
+        for port_id in node.layer_attributes.weight_attrs.keys():
+            is_quanitzed_weight = is_quanitzed_weight or is_port_quantized(node, nncf_graph, port_id)
+    return is_quanitzed_weight
+
+
+def is_port_quantized(node: NNCFNode, nncf_graph: NNCFGraph, port_id: int) -> bool:
+    """
+    Returns True if a port_id is quantized - have ONNXDequantizeLinearMetatype as a parent node.
+
+    :param node: NNCFNode.
+    :param nncf_graph: NNCFGraph.
+    :param port_id: Input port id of a node.
+    :return: True if a port_id is quantized - have ONNXDequantizeLinearMetatype as a parent node.
+    """
+    input_nodes = [edge.from_node for edge in nncf_graph.get_input_edges(node)]
+    weight_node = input_nodes[port_id]
+    return weight_node.metatype == ONNXDequantizeLinearMetatype

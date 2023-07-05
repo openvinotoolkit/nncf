@@ -19,9 +19,9 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.node_utils import get_bias_value
+from nncf.onnx.graph.node_utils import is_any_weight_quantized
 from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
@@ -113,14 +113,8 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return node.output[0]
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        is_quantized_weights = False
-        input_nodes = [edge.from_node for edge in nncf_graph.get_input_edges(node)]
-        weight_port_ids = node.metatype.weight_port_ids
-        for weight_port_id in weight_port_ids:
-            weight_node = input_nodes[weight_port_id]
-            is_quantized_weights = is_quantized_weights or weight_node.metatype == ONNXDequantizeLinearMetatype
-        return is_quantized_weights
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> bool:
+        return is_any_weight_quantized(node, nncf_graph)
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
