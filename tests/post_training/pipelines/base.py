@@ -218,11 +218,11 @@ class BaseTestPipeline(ABC):
         self.run_info.quant_memory_usage = memory_usage(self._quantize, max_usage=True)
         self.run_info.time_quantization = time.perf_counter() - start_time
 
-    def post_quantize(self) -> None:
+    def save_quantized_model(self) -> None:
         """
         Save quantized model to IR.
         """
-        print("Post quantization...")
+        print("Save quantized model...")
         if self.backend == BackendType.OPTIMUM:
             self.path_quantized_ir = self.output_model_dir / "openvino_model.xml"
         elif self.backend in PT_BACKENDS:
@@ -243,11 +243,16 @@ class BaseTestPipeline(ABC):
         """
         Get number of the FakeQuantize nodes in the quantized IR.
         """
+
+        ie = ov.Core()
+        model = ie.read_model(model=self.path_quantized_ir)
+
         num_fq = 0
-        with open(self.path_quantized_ir, "r", encoding="UTF-8") as stream:
-            for line in stream.readlines():
-                if 'type="FakeQuantize"' in line:
-                    num_fq += 1
+        for node in model.get_ops():
+            node_type = node.type_info.name
+            if node_type == "FakeQuantize":
+                num_fq += 1
+
         self.run_info.num_fq_nodes = num_fq
 
     @abstractmethod
@@ -284,7 +289,7 @@ class BaseTestPipeline(ABC):
         """
         self.prepare()
         self.quantize()
-        self.post_quantize()
+        self.save_quantized_model()
         self.get_num_fq()
         self.validate()
 

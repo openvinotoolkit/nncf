@@ -37,7 +37,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
             self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
             self.model = self.model_hf.model
 
-        if self.backend in [BackendType.ONNX]:
+        if self.backend == BackendType.ONNX:
             self.model_hf = ORTModelForSequenceClassification.from_pretrained(self.model_id, export=True)
             self.model = onnx.load(self.model_hf.model_path)
 
