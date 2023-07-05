@@ -110,14 +110,17 @@ class ONNXGraph:
         """
         return list(self.onnx_model.graph.output)
 
-    def get_nodes_by_output(self, output_name: str) -> List[onnx.NodeProto]:
+    def get_node_by_output(self, output_name: str) -> Optional[onnx.NodeProto]:
         """
-        Returns all nodes that have output edge with the name 'output_name'.
+        Returns node that have output edge with the name 'output_name'.
 
         :param output_name: The name of output edge.
-        :return: Nodes with corresponding output.
+        :return: Node with corresponding output.
         """
-        return self._get_nodes_by_lambda(output_name, lambda node: node.output)
+        for node in self.get_all_nodes():
+            if output_name in node.output:
+                return node
+        return None
 
     def get_nodes_by_input(self, input_name: str) -> List[onnx.NodeProto]:
         """
@@ -126,14 +129,9 @@ class ONNXGraph:
         :param input_name: The name of input edge.
         :return: Nodes with corresponding input.
         """
-        return self._get_nodes_by_lambda(input_name, lambda node: node.input)
-
-    def _get_nodes_by_lambda(
-        self, name: str, func: Callable[[onnx.NodeProto], List[onnx.NodeProto]]
-    ) -> List[onnx.NodeProto]:
         output = []
         for node in self.get_all_nodes():
-            if name in func(node):
+            if input_name in node.input:
                 output.append(node)
         return output
 
@@ -307,7 +305,7 @@ class ONNXGraph:
         :param node: The child node.
         :return: All children nodes.
         """
-        return self.get_nodes_by_output(node.input[port_id])
+        return self.get_node_by_output(node.input[port_id])
 
     def get_children(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
         """

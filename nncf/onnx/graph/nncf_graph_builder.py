@@ -95,25 +95,20 @@ def _get_weight_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: 
         + ONNXTransposeMetatype.get_all_aliases()
         + ONNXQuantizeLinearMetatype.get_all_aliases()
     )
-    ALLOWED_OP_TYPES = WEIGHT_CONSUMING_NODES + ONNXDequantizeLinearMetatype.get_all_aliases()
+    PROPAGATING_OP_TYPES = WEIGHT_CONSUMING_NODES + ONNXDequantizeLinearMetatype.get_all_aliases()
 
-    weight_index = 0
     if onnx_graph.has_tensor(node.input[port_id]):
+        if node.op_type in ONNXReshapeMetatype.get_all_aliases():
+            return node.output[0]
         return node.input[port_id]
-    queue = onnx_graph.get_parent(node, port_id)
-    while queue:
-        node = queue.pop()
-        if node.op_type not in ALLOWED_OP_TYPES:
-            return None
-        if node.op_type in WEIGHT_CONSUMING_NODES:
-            if node.op_type in ONNXReshapeMetatype.get_all_aliases():
-                if not onnx_graph.get_parent(node, 0):
-                    return node.output[0]
-                return None
-            elif onnx_graph.has_tensor(node.input[weight_index]):
-                return node.input[weight_index]
-            return None
-        queue.extend(onnx_graph.get_parent(node, 0))
+
+    parent = onnx_graph.get_parent(node, port_id)
+    if parent:
+        weight_port_id = 0
+        if parent.op_type in WEIGHT_CONSUMING_NODES:
+            return _get_weight_edge_name(onnx_graph, parent, weight_port_id)
+        if parent.op_type in PROPAGATING_OP_TYPES:
+            return _get_weight_edge_name(onnx_graph, parent, weight_port_id)
     return None
 
 
@@ -272,7 +267,7 @@ class GraphConverter:
                 node_type=NNCFGraphNodeType.OUTPUT_NODE,
                 node_metatype=OutputNoopMetatype,
             )
-            from_nodes = onnx_graph.get_nodes_by_output(output_name)
+            from_node = onnx_graph.get_node_by_output(output_name)
 
             output_node_node_id = output_node.node_id
             edge = onnx_graph.get_edge(output_name)
@@ -280,18 +275,17 @@ class GraphConverter:
             onnx_dtype = ONNXGraph.get_edge_dtype(edge)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             input_port_id = 0
-            for node in from_nodes:
-                from_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                output_port_id = ONNXGraph.get_output_port_id_for_node_before_output(output_name, node)
-                nncf_graph.add_edge_between_nncf_nodes(
-                    from_node_id=from_node_id,
-                    to_node_id=output_node_node_id,
-                    tensor_shape=output_shape,
-                    input_port_id=input_port_id,
-                    output_port_id=output_port_id,
-                    dtype=nncf_dtype,
-                )
-                input_port_id += 1
+            from_node_id = nncf_graph.get_node_by_name(from_node.name).node_id
+            output_port_id = ONNXGraph.get_output_port_id_for_node_before_output(output_name, from_node)
+            nncf_graph.add_edge_between_nncf_nodes(
+                from_node_id=from_node_id,
+                to_node_id=output_node_node_id,
+                tensor_shape=output_shape,
+                input_port_id=input_port_id,
+                output_port_id=output_port_id,
+                dtype=nncf_dtype,
+            )
+            input_port_id += 1
 
     @staticmethod
     def convert_onnx_dtype_to_nncf_dtype(onnx_dtype: int) -> Dtype:

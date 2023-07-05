@@ -54,7 +54,7 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     bias_input_name = onnx_node.input[bias_port_id]
     if onnx_graph.has_tensor(bias_input_name):
         return onnx_graph.get_tensor_value(bias_input_name)
-    node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
+    node = onnx_graph.get_node_by_output(bias_input_name)
     metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
     if metatype == ONNXIdentityMetatype:
         return onnx_graph.get_tensor_value(node.input[0])
