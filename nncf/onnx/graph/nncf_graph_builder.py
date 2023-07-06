@@ -355,7 +355,6 @@ class GraphConverter:
                 node_type=node.op_type,
                 node_metatype=metatype,
                 layer_attributes=layer_attributes,
-                layer_name=node.name,
                 is_shared=is_shared,
             )
         for output_node in onnx_graph.get_all_nodes():
