@@ -48,7 +48,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.46 (-0.31)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet_int8.json">resnet50_imagenet_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-50</td>
@@ -56,7 +56,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.39 (-0.24)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet_int8_per_tensor.json">resnet50_imagenet_int8_per_tensor.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8_per_tensor.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8_per_tensor.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-50</td>
@@ -64,7 +64,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.05 (0.10)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json">resnet50_imagenet_mixed_int_hawq.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int4_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int4_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-50</td>
@@ -72,7 +72,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">75.42 (0.73)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json">resnet50_imagenet_rb_sparsity_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-50</td>
@@ -80,7 +80,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">75.50 (0.65)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity50_int8.json">resnet50_imagenet_rb_sparsity50_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity50_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity50_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">Inception V3</td>
@@ -96,7 +96,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">77.45 (-0.12)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json">inception_v3_imagenet_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">Inception V3</td>
@@ -104,7 +104,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.36 (0.97)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json">inception_v3_imagenet_rb_sparsity_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_rb_sparsity_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_rb_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">MobileNet V2</td>
@@ -120,7 +120,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">71.07 (0.80)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8.json">mobilenet_v2_imagenet_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">MobileNet V2</td>
@@ -128,7 +128,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">71.24 (0.63)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json">mobilenet_v2_imagenet_int8_per_tensor.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8_per_tensor.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8_per_tensor.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">MobileNet V2</td>
@@ -136,7 +136,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">70.95 (0.92)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json">mobilenet_v2_imagenet_mixed_int_hawq.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int4_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int4_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">MobileNet V2</td>
@@ -144,7 +144,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">71.09 (0.78)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json">mobilenet_v2_imagenet_rb_sparsity_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_rb_sparsity_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_rb_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">MobileNet V3 small</td>
@@ -160,7 +160,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">66.98 (0.68)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json">mobilenet_v3_small_imagenet_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v3_small_imagenet_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v3_small_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SqueezeNet V1.1</td>
@@ -176,7 +176,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">58.22 (-0.03)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8.json">squeezenet1_1_imagenet_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SqueezeNet V1.1</td>
@@ -184,7 +184,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">58.11 (0.08)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json">squeezenet1_1_imagenet_int8_per_tensor.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8_per_tensor.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8_per_tensor.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SqueezeNet V1.1</td>
@@ -192,7 +192,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">57.57 (0.62)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json">squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int4_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int4_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
@@ -250,7 +250,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">61.67 (8.09)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json">resnet18_imagenet_binarization_xnor.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_xnor.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_xnor.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
@@ -258,7 +258,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">61.63 (8.13)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json">resnet18_imagenet_binarization_dorefa.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth">Download</a></td>
 		</tr>
 	</tbody>
 </table>
@@ -290,7 +290,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">75.57 (0.58)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_geometric_median.json">resnet50_imagenet_pruning_geometric_median.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_pruning_geometric_median.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
@@ -306,7 +306,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.27 (0.49)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_magnitude.json">resnet18_imagenet_pruning_magnitude.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_magnitude.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_magnitude.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
@@ -314,7 +314,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.31 (0.45)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_geometric_median.json">resnet18_imagenet_pruning_geometric_median.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_geometric_median.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-34</td>
@@ -330,7 +330,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">73.11 (0.19)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json">resnet34_imagenet_pruning_geometric_median_kd.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet34_imagenet_pruning_geometric_median_kd.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet34_imagenet_pruning_geometric_median_kd.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">GoogLeNet</td>
@@ -346,7 +346,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.47 (0.30)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet_pruning_geometric_median.json">googlenet_imagenet_pruning_geometric_median.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/googlenet_imagenet_pruning_geometric_median.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/googlenet_imagenet_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 	</tbody>
 </table>
@@ -417,7 +417,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">62.23</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc.json">ssd300_mobilenet_voc.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SSD300-MobileNet</td>
@@ -425,7 +425,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">62.95 (-0.72)</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc_magnitude_int8.json">ssd300_mobilenet_voc_magnitude_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SSD300-VGG-BN</td>
@@ -433,7 +433,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">78.28</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc.json">ssd300_vgg_voc.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SSD300-VGG-BN</td>
@@ -441,7 +441,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">77.81 (0.47)</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_int8.json">ssd300_vgg_voc_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SSD300-VGG-BN</td>
@@ -449,7 +449,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">77.66 (0.62)</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_magnitude_sparsity_int8.json">ssd300_vgg_voc_magnitude_sparsity_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_magnitude_sparsity_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SSD512-VGG-BN</td>
@@ -457,7 +457,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">80.26</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc.json">ssd512_vgg_voc.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SSD512-VGG-BN</td>
@@ -465,7 +465,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">80.04 (0.22)</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc_int8.json">ssd512_vgg_voc_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SSD512-VGG-BN</td>
@@ -473,7 +473,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">79.68 (0.58)</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json">ssd512_vgg_voc_magnitude_sparsity_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 	</tbody>
 </table>
@@ -498,7 +498,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">78.28</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc.json">ssd300_vgg_voc.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">SSD300-VGG-BN</td>
@@ -506,7 +506,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">78.35 (-0.07)</td>
 			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_pruning_geometric_median.json">ssd300_vgg_voc_pruning_geometric_median.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_pruning_geometric_median.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 	</tbody>
 </table>
@@ -533,7 +533,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">71.95</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_camvid.json">unet_camvid.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">UNet</td>
@@ -541,7 +541,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">71.89 (0.06)</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_camvid_int8.json">unet_camvid_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">UNet</td>
@@ -549,7 +549,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">72.46 (-0.51)</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_camvid_magnitude_sparsity_int8.json">unet_camvid_magnitude_sparsity_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_magnitude_sparsity_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ICNet</td>
@@ -557,7 +557,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">67.89</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid.json">icnet_camvid.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ICNet</td>
@@ -565,7 +565,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">67.89 (0.00)</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid_int8.json">icnet_camvid_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ICNet</td>
@@ -573,7 +573,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">67.16 (0.73)</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json">icnet_camvid_magnitude_sparsity_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_magnitude_sparsity_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">UNet</td>
@@ -581,7 +581,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">56.24</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary.json">unet_mapillary.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">UNet</td>
@@ -589,7 +589,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">56.09 (0.15)</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_int8.json">unet_mapillary_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_int8.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">UNet</td>
@@ -597,7 +597,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">55.69 (0.55)</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json">unet_mapillary_magnitude_sparsity_int8.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_magnitude_sparsity_int8.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 	</tbody>
 </table>
@@ -622,7 +622,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">56.24</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary.json">unet_mapillary.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Download</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">UNet</td>
@@ -630,7 +630,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">55.64 (0.60)</td>
 			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json">unet_mapillary_pruning_geometric_median.json</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_pruning_geometric_median.pth">Link</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 	</tbody>
 </table>
@@ -713,32 +713,32 @@ to find instruction and links to exact configuration files and final checkpoints
 |Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |Inception V3|None|ImageNet|77.91|[inception_v3_imagenet.json](configs/inception_v3_imagenet.json)|-|
-|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|78.39 (-0.48)|[inception_v3_imagenet_int8.json](configs/quantization/inception_v3_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_int8.tar.gz)|
-|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)|ImageNet|77.52 (0.39)|[inception_v3_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_rb_sparsity_int8.tar.gz)|
-|Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.86 (0.05)|[inception_v3_imagenet_magnitude_sparsity.json](configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_magnitude_sparsity.tar.gz)|
+|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|78.39 (-0.48)|[inception_v3_imagenet_int8.json](configs/quantization/inception_v3_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_int8.tar.gz)|
+|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)|ImageNet|77.52 (0.39)|[inception_v3_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_rb_sparsity_int8.tar.gz)|
+|Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.86 (0.05)|[inception_v3_imagenet_magnitude_sparsity.json](configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_magnitude_sparsity.tar.gz)|
 |MobileNet V2|None|ImageNet|71.85|[mobilenet_v2_imagenet.json](configs/mobilenet_v2_imagenet.json)|-|
-|MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|71.63 (0.22)|[mobilenet_v2_imagenet_int8.json](configs/quantization/mobilenet_v2_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_int8.tar.gz)|
-|MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 52% (RB)|ImageNet|70.94 (0.91)|[mobilenet_v2_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity_int8.tar.gz)|
-|MobileNet V2| Sparsity 50% (RB)|ImageNet|71.34 (0.51)|[mobilenet_v2_imagenet_rb_sparsity.json](configs/sparsity/mobilenet_v2_imagenet_rb_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity.tar.gz)|
-|MobileNet V2 (TensorFlow Hub MobileNet V2)|Sparsity 35% (Magnitude)|ImageNet|71.87 (-0.02)|[mobilenet_v2_hub_imagenet_magnitude_sparsity.json](configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_hub_imagenet_magnitude_sparsity.tar.gz)|
+|MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|71.63 (0.22)|[mobilenet_v2_imagenet_int8.json](configs/quantization/mobilenet_v2_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_int8.tar.gz)|
+|MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 52% (RB)|ImageNet|70.94 (0.91)|[mobilenet_v2_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity_int8.tar.gz)|
+|MobileNet V2| Sparsity 50% (RB)|ImageNet|71.34 (0.51)|[mobilenet_v2_imagenet_rb_sparsity.json](configs/sparsity/mobilenet_v2_imagenet_rb_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity.tar.gz)|
+|MobileNet V2 (TensorFlow Hub MobileNet V2)|Sparsity 35% (Magnitude)|ImageNet|71.87 (-0.02)|[mobilenet_v2_hub_imagenet_magnitude_sparsity.json](configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_hub_imagenet_magnitude_sparsity.tar.gz)|
 |MobileNet V3 (Small)|None|ImageNet|68.38|[mobilenet_v3_small_imagenet.json](configs/mobilenet_v3_small_imagenet.json)|-|
-|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|67.79 (0.59)|[mobilenet_v3_small_imagenet_int8.json](configs/quantization/mobilenet_v3_small_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_int8.tar.gz)|
-|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)|ImageNet|67.44 (0.94)|[mobilenet_v3_small_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_rb_sparsity_int8.tar.gz)|
+|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|67.79 (0.59)|[mobilenet_v3_small_imagenet_int8.json](configs/quantization/mobilenet_v3_small_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_int8.tar.gz)|
+|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)|ImageNet|67.44 (0.94)|[mobilenet_v3_small_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_rb_sparsity_int8.tar.gz)|
 |MobileNet V3 (Large)|None|ImageNet|75.80|[mobilenet_v3_large_imagenet.json](configs/mobilenet_v3_large_imagenet.json)|-|
-|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|75.04 (0.76)|[mobilenet_v3_large_imagenet_int8.json](configs/quantization/mobilenet_v3_large_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_int8.tar.gz)|
-|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (RB)|ImageNet|75.24 (0.56)|[mobilenet_v3_large_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_rb_sparsity_int8.tar.gz)|
+|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|75.04 (0.76)|[mobilenet_v3_large_imagenet_int8.json](configs/quantization/mobilenet_v3_large_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_int8.tar.gz)|
+|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (RB)|ImageNet|75.24 (0.56)|[mobilenet_v3_large_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_rb_sparsity_int8.tar.gz)|
 |ResNet-50|None|ImageNet|75.05|[resnet50_imagenet.json](configs/resnet50_imagenet.json)|-|
-|ResNet-50|INT8|ImageNet|74.99 (0.06)|[resnet50_imagenet_int8.json](configs/quantization/resnet50_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_int8.tar.gz)|
-|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 65% (RB)|ImageNet|74.36 (0.69)|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity_int8.tar.gz)|
-|ResNet-50|Sparsity 80% (RB)|ImageNet|74.38 (0.67)|[resnet50_imagenet_rb_sparsity.json](configs/sparsity/resnet50_imagenet_rb_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity.tar.gz)|
+|ResNet-50|INT8|ImageNet|74.99 (0.06)|[resnet50_imagenet_int8.json](configs/quantization/resnet50_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_int8.tar.gz)|
+|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 65% (RB)|ImageNet|74.36 (0.69)|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity_int8.tar.gz)|
+|ResNet-50|Sparsity 80% (RB)|ImageNet|74.38 (0.67)|[resnet50_imagenet_rb_sparsity.json](configs/sparsity/resnet50_imagenet_rb_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity.tar.gz)|
 
 #### Filter pruning
 
 |Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet-50|None|ImageNet|75.05|[resnet50_imagenet.json](configs/resnet50_imagenet.json)|-|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|74.96 (0.09)|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median.tar.gz)|
-|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion|ImageNet|75.09 (-0.04)|[resnet50_imagenet_pruning_geometric_median_int8.json](configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median_int8.tar.gz)|
+|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|74.96 (0.09)|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median.tar.gz)|
+|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion|ImageNet|75.09 (-0.04)|[resnet50_imagenet_pruning_geometric_median_int8.json](configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median_int8.tar.gz)|
 
 #### Accuracy-aware compressed training
 
@@ -755,20 +755,20 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|None|COCO 2017|33.43|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz)|
-|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|33.12 (0.31)|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_int8.tar.gz)|
-|RetinaNet|Magnitude sparsity (50%)|COCO 2017|33.10 (0.33)|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_magnitude_sparsity.tar.gz)|
-|YOLO v4|None|COCO 2017|47.07|[yolo_v4_coco.json](configs/yolo_v4_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco.tar.gz)|
-|YOLO v4|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|46.20 (0.87)|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_int8.tar.gz)|
-|YOLO v4|Magnitude sparsity, 50%|COCO 2017|46.49 (0.58)|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_magnitude_sparsity.tar.gz)|
+|RetinaNet|None|COCO 2017|33.43|[retinanet_coco.json](configs/retinanet_coco.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz)|
+|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|33.12 (0.31)|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_int8.tar.gz)|
+|RetinaNet|Magnitude sparsity (50%)|COCO 2017|33.10 (0.33)|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_magnitude_sparsity.tar.gz)|
+|YOLO v4|None|COCO 2017|47.07|[yolo_v4_coco.json](configs/yolo_v4_coco.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco.tar.gz)|
+|YOLO v4|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|46.20 (0.87)|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_int8.tar.gz)|
+|YOLO v4|Magnitude sparsity, 50%|COCO 2017|46.49 (0.58)|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_magnitude_sparsity.tar.gz)|
 
 #### Filter pruning
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|None|COCO 2017|33.43|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz)|
-|RetinaNet|Filter pruning, 40%|COCO 2017|32.72 (0.71)|[retinanet_coco_pruning_geometric_median.json](configs/pruning/retinanet_coco_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median.tar.gz)|
-|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%|COCO 2017|32.67 (0.76)|[retinanet_coco_pruning_geometric_median_int8.json](configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median_int8.tar.gz)|
+|RetinaNet|None|COCO 2017|33.43|[retinanet_coco.json](configs/retinanet_coco.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz)|
+|RetinaNet|Filter pruning, 40%|COCO 2017|32.72 (0.71)|[retinanet_coco_pruning_geometric_median.json](configs/pruning/retinanet_coco_pruning_geometric_median.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median.tar.gz)|
+|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%|COCO 2017|32.67 (0.76)|[retinanet_coco_pruning_geometric_median_int8.json](configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median_int8.tar.gz)|
 
 
 <a id="tensorflow_instance_segmentation"></a>
@@ -776,9 +776,9 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |Model|Compression algorithm|Dataset|            mAP (_drop_) %             |NNCF config file|Checkpoint|
 | :---: | :---: | :---: |:-------------------------------------:| :---: | :---: |
-|Mask-R-CNN|None|COCO 2017|        bbox: 37.33 segm: 33.56        |[mask_rcnn_coco.json](configs/mask_rcnn_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz)|
-|Mask-R-CNN|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017| bbox: 37.19 (0.14) segm: 33.54 (0.02) |[mask_rcnn_coco_int8.json](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz)|
-|Mask-R-CNN|Magnitude sparsity, 50%|COCO 2017| bbox: 36.94 (0.39) segm: 33.23 (0.33) |[mask_rcnn_coco_magnitude_sparsity.json](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz)|
+|Mask-R-CNN|None|COCO 2017|        bbox: 37.33 segm: 33.56        |[mask_rcnn_coco.json](configs/mask_rcnn_coco.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz)|
+|Mask-R-CNN|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017| bbox: 37.19 (0.14) segm: 33.54 (0.02) |[mask_rcnn_coco_int8.json](configs/quantization/mask_rcnn_coco_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz)|
+|Mask-R-CNN|Magnitude sparsity, 50%|COCO 2017| bbox: 36.94 (0.39) segm: 33.23 (0.33) |[mask_rcnn_coco_magnitude_sparsity.json](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz)|
 
 
 <a id="onnx_models"></a>
