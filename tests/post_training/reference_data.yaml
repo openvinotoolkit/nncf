@@ -1,0 +1,356 @@
+# Hugging Face
+hf/bert-base-uncased_backend_OPTIMUM:
+    metric_value: null
+    metric_value_fp32: null
+hf/bert-base-uncased_backend_OLD_TORCH:
+    metric_value: null
+    metric_value_fp32: null
+hf/bert-base-uncased_backend_TORCH:
+    metric_value: null
+    metric_value_fp32: null
+hf/bert-base-uncased_backend_ONNX:
+    metric_value: null
+    metric_value_fp32: null
+hf/bert-base-uncased_backend_OV:
+    metric_value: null
+    metric_value_fp32: null
+hf/bert-base-uncased_backend_POT:
+    metric_value: null
+    metric_value_fp32: null
+
+hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_backend_OPTIMUM:
+    metric_value: null
+    metric_value_fp32: null
+
+# Timm
+timm/crossvit_9_240_backend_TORCH:
+    metric_value: 0.68136
+    metric_value_fp32: 0.69966
+timm/crossvit_9_240_backend_ONNX:
+    metric_value: 0.6479
+    metric_value_fp32: 0.69966
+timm/crossvit_9_240_backend_OV:
+    metric_value: 0.67296
+    metric_value_fp32: 0.69966
+timm/crossvit_9_240_backend_POT:
+    metric_value: 0.68862
+    metric_value_fp32: 0.69966
+
+timm/darknet53_backend_OLD_TORCH:
+    metric_value: 0.78534
+    metric_value_fp32: 0.79858
+timm/darknet53_backend_TORCH:
+    metric_value: 0.79176
+    metric_value_fp32: 0.79858
+timm/darknet53_backend_ONNX:
+    metric_value: 0.79224
+    metric_value_fp32: 0.79858
+timm/darknet53_backend_OV:
+    metric_value: 0.79192
+    metric_value_fp32: 0.79858
+timm/darknet53_backend_POT:
+    metric_value: 0.79206
+    metric_value_fp32: 0.79858
+
+timm/deit3_small_patch16_224_backend_OLD_TORCH:
+    metric_value: 0.76514
+    metric_value_fp32: 0.76974
+timm/deit3_small_patch16_224_backend_TORCH:
+    metric_value: 0.7621
+    metric_value_fp32: 0.76974
+timm/deit3_small_patch16_224_backend_ONNX:
+    metric_value: 0.76806
+    metric_value_fp32: 0.76974
+timm/deit3_small_patch16_224_backend_OV:
+    metric_value: 0.75166
+    metric_value_fp32: 0.76974
+timm/deit3_small_patch16_224_backend_POT:
+    metric_value: 0.7676
+    metric_value_fp32: 0.76974
+
+timm/dla34_backend_OLD_TORCH:
+    metric_value: 0.7364
+    metric_value_fp32: 0.74416
+timm/dla34_backend_TORCH:
+    metric_value: 0.73978
+    metric_value_fp32: 0.74416
+timm/dla34_backend_ONNX:
+    metric_value: 0.74202
+    metric_value_fp32: 0.74416
+timm/dla34_backend_OV:
+    metric_value: 0.74224
+    metric_value_fp32: 0.74416
+timm/dla34_backend_POT:
+    metric_value: 0.74222
+    metric_value_fp32: 0.74416
+
+timm/dpn68_backend_OLD_TORCH:
+    metric_value: 0.7479
+    metric_value_fp32: 0.75964
+timm/dpn68_backend_TORCH:
+    metric_value: 0.75492
+    metric_value_fp32: 0.75964
+timm/dpn68_backend_ONNX:
+    metric_value: 0.75488
+    metric_value_fp32: 0.75964
+timm/dpn68_backend_OV:
+    metric_value: 0.75544
+    metric_value_fp32: 0.75964
+timm/dpn68_backend_POT:
+    metric_value: 0.7554
+    metric_value_fp32: 0.75964
+
+timm/efficientnet_b0_backend_OLD_TORCH:
+    metric_value: 0.74976
+    metric_value_fp32: 0.77292
+timm/efficientnet_b0_backend_TORCH:
+    metric_value: 0.76476
+    metric_value_fp32: 0.77292
+timm/efficientnet_b0_backend_ONNX:
+    metric_value: 0.76582
+    metric_value_fp32: 0.77292
+timm/efficientnet_b0_backend_OV:
+    metric_value: 0.76796
+    metric_value_fp32: 0.77292
+timm/efficientnet_b0_backend_POT:
+    metric_value: 0.76866
+    metric_value_fp32: 0.77292
+
+timm/efficientnet_b0_BC_backend_ONNX:
+    metric_value: 0.76446
+    metric_value_fp32: 0.77292
+timm/efficientnet_b0_BC_backend_OV:
+    metric_value: 0.76794
+    metric_value_fp32: 0.77292
+timm/efficientnet_b0_BC_backend_POT:
+    metric_value: 0.76878
+    metric_value_fp32: 0.77292
+
+timm/efficientnet_lite0_backend_OLD_TORCH:
+    metric_value: 0.74172
+    metric_value_fp32: 0.7496
+timm/efficientnet_lite0_backend_TORCH:
+    metric_value: 0.74686
+    metric_value_fp32: 0.7496
+timm/efficientnet_lite0_backend_ONNX:
+    metric_value: 0.7468
+    metric_value_fp32: 0.7496
+timm/efficientnet_lite0_backend_OV:
+    metric_value: 0.74704
+    metric_value_fp32: 0.7496
+timm/efficientnet_lite0_backend_POT:
+    metric_value: 0.74686
+    metric_value_fp32: 0.7496
+
+timm/hrnet_w18_backend_OLD_TORCH:
+    metric_value: 0.7672
+    metric_value_fp32: 0.77504
+timm/hrnet_w18_backend_TORCH:
+    metric_value: 0.76712
+    metric_value_fp32: 0.77504
+timm/hrnet_w18_backend_ONNX:
+    metric_value: 0.76916
+    metric_value_fp32: 0.77504
+timm/hrnet_w18_backend_OV:
+    metric_value: 0.76926
+    metric_value_fp32: 0.77504
+timm/hrnet_w18_backend_POT:
+    metric_value: 0.76968
+    metric_value_fp32: 0.77504
+
+timm/inception_resnet_v2_backend_OLD_TORCH:
+    metric_value: 0.79722
+    metric_value_fp32: 0.80102
+timm/inception_resnet_v2_backend_TORCH:
+    metric_value: 0.80024
+    metric_value_fp32: 0.80102
+timm/inception_resnet_v2_backend_ONNX:
+    metric_value: 0.80108
+    metric_value_fp32: 0.80102
+timm/inception_resnet_v2_backend_OV:
+    metric_value: 0.80152
+    metric_value_fp32: 0.80102
+timm/inception_resnet_v2_backend_POT:
+    metric_value: 0.80118
+    metric_value_fp32: 0.80102
+
+timm/levit_128_backend_TORCH:
+    metric_value: 0.72938
+    metric_value_fp32: 0.7405
+timm/levit_128_backend_ONNX:
+    metric_value: 0.73082
+    metric_value_fp32: 0.7405
+timm/levit_128_backend_OV:
+    metric_value: 0.71358
+    metric_value_fp32: 0.7405
+timm/levit_128_backend_POT:
+    metric_value: 0.73284
+    metric_value_fp32: 0.7405
+
+timm/mobilenetv2_050_backend_OLD_TORCH:
+    metric_value: 0.6338
+    metric_value_fp32: 0.64568
+timm/mobilenetv2_050_backend_TORCH:
+    metric_value: 0.64278
+    metric_value_fp32: 0.64568
+timm/mobilenetv2_050_backend_ONNX:
+    metric_value: 0.64358
+    metric_value_fp32: 0.64568
+timm/mobilenetv2_050_backend_OV:
+    metric_value: 0.64134
+    metric_value_fp32: 0.64568
+timm/mobilenetv2_050_backend_POT:
+    metric_value: 0.64234
+    metric_value_fp32: 0.64568
+
+timm/mobilenetv2_050_BC_backend_ONNX:
+    metric_value: 0.64498
+    metric_value_fp32: 0.64568
+timm/mobilenetv2_050_BC_backend_OV:
+    metric_value: 0.64412
+    metric_value_fp32: 0.64568
+timm/mobilenetv2_050_BC_backend_POT:
+    metric_value: 0.64376
+    metric_value_fp32: 0.64568
+
+timm/mobilenetv3_small_050_backend_OLD_TORCH:
+    metric_value: 0.43412
+    metric_value_fp32: 0.56338
+timm/mobilenetv3_small_050_backend_TORCH:
+    atol: 0.03
+    metric_value: 0.39514
+    metric_value_fp32: 0.56338
+timm/mobilenetv3_small_050_backend_ONNX:
+    metric_value: 0.53962
+    metric_value_fp32: 0.56338
+timm/mobilenetv3_small_050_backend_OV:
+    metric_value: 0.38638
+    metric_value_fp32: 0.56338
+timm/mobilenetv3_small_050_backend_POT:
+    metric_value: 0.27062
+    metric_value_fp32: 0.56338
+
+timm/regnetx_002_backend_OLD_TORCH:
+    metric_value: 0.66612
+    metric_value_fp32: 0.67826
+timm/regnetx_002_backend_TORCH:
+    metric_value: 0.67452
+    metric_value_fp32: 0.67826
+timm/regnetx_002_backend_ONNX:
+    metric_value: 0.67394
+    metric_value_fp32: 0.67826
+timm/regnetx_002_backend_OV:
+    metric_value: 0.6738
+    metric_value_fp32: 0.67826
+timm/regnetx_002_backend_POT:
+    metric_value: 0.67472
+    metric_value_fp32: 0.67826
+
+timm/resnest14d_backend_OLD_TORCH:
+    metric_value: 0.7418
+    metric_value_fp32: 0.74862
+timm/resnest14d_backend_TORCH:
+    metric_value: 0.74176
+    metric_value_fp32: 0.74862
+timm/resnest14d_backend_ONNX:
+    metric_value: 0.74316
+    metric_value_fp32: 0.74862
+timm/resnest14d_backend_OV:
+    metric_value: 0.74358
+    metric_value_fp32: 0.74862
+timm/resnest14d_backend_POT:
+    metric_value: 0.74352
+    metric_value_fp32: 0.74862
+
+timm/resnet18_backend_OLD_TORCH:
+    metric_value: 0.69392
+    metric_value_fp32: 0.70104
+timm/resnet18_backend_TORCH:
+    metric_value: 0.69748
+    metric_value_fp32: 0.70104
+timm/resnet18_backend_ONNX:
+    metric_value: 0.6979
+    metric_value_fp32: 0.70104
+timm/resnet18_backend_OV:
+    metric_value: 0.69774
+    metric_value_fp32: 0.70104
+timm/resnet18_backend_POT:
+    metric_value: 0.69792
+    metric_value_fp32: 0.70104
+
+timm/swin_base_patch4_window7_224_backend_OLD_TORCH:
+    metric_value: 0.79586
+    metric_value_fp32: 0.81462
+timm/swin_base_patch4_window7_224_backend_TORCH:
+    metric_value: 0.78026
+    metric_value_fp32: 0.81462
+timm/swin_base_patch4_window7_224_backend_ONNX:
+    metric_value: 0.81108
+    metric_value_fp32: 0.81462
+timm/swin_base_patch4_window7_224_backend_OV:
+    metric_value: 0.79582
+    metric_value_fp32: 0.81462
+timm/swin_base_patch4_window7_224_backend_POT:
+    metric_value: 0.79514
+    metric_value_fp32: 0.81462
+
+timm/tf_inception_v3_backend_OLD_TORCH:
+    metric_value: 0.7723
+    metric_value_fp32: 0.77728
+timm/tf_inception_v3_backend_TORCH:
+    metric_value: 0.77542
+    metric_value_fp32: 0.77728
+timm/tf_inception_v3_backend_ONNX:
+    metric_value: 0.77748
+    metric_value_fp32: 0.77728
+timm/tf_inception_v3_backend_OV:
+    metric_value: 0.77736
+    metric_value_fp32: 0.77728
+timm/tf_inception_v3_backend_POT:
+    metric_value: 0.77792
+    metric_value_fp32: 0.77728
+
+timm/vgg11_backend_OLD_TORCH:
+    metric_value: 0.68296
+    metric_value_fp32: 0.68344
+timm/vgg11_backend_TORCH:
+    metric_value: 0.6809
+    metric_value_fp32: 0.68344
+timm/vgg11_backend_ONNX:
+    metric_value: 0.681
+    metric_value_fp32: 0.68344
+timm/vgg11_backend_OV:
+    metric_value: 0.6809
+    metric_value_fp32: 0.68344
+timm/vgg11_backend_POT:
+    metric_value: 0.6809
+    metric_value_fp32: 0.68344
+
+timm/visformer_small_backend_TORCH:
+    metric_value: 0.77446
+    metric_value_fp32: 0.77902
+timm/visformer_small_backend_ONNX:
+    metric_value: 0.77432
+    metric_value_fp32: 0.77902
+timm/visformer_small_backend_OV:
+    metric_value: 0.77686
+    metric_value_fp32: 0.77902
+timm/visformer_small_backend_POT:
+    metric_value: 0.77736
+    metric_value_fp32: 0.77902
+
+timm/wide_resnet50_2_backend_OLD_TORCH:
+    metric_value: 0.80588
+    metric_value_fp32: 0.81414
+timm/wide_resnet50_2_backend_TORCH:
+    metric_value: 0.81186
+    metric_value_fp32: 0.81414
+timm/wide_resnet50_2_backend_ONNX:
+    metric_value: 0.81214
+    metric_value_fp32: 0.81414
+timm/wide_resnet50_2_backend_OV:
+    metric_value: 0.81136
+    metric_value_fp32: 0.81414
+timm/wide_resnet50_2_backend_POT:
+    metric_value: 0.8114
+    metric_value_fp32: 0.81414
