@@ -23,9 +23,9 @@ class NNCFGraphToTest:
         self,
         conv_metatype,
         conv_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
         input_layer_attrs=None,
         output_layer_attrs=None,
-        nncf_graph_cls=NNCFGraph,
     ):
         #       Original graph
         #          Input_1
@@ -73,10 +73,10 @@ class NNCFGraphToTestSumAggregation:
         conv_metatype,
         sum_metatype,
         conv_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
         sum_layer_attrs=None,
         input_layer_attrs=None,
         output_layer_attrs=None,
-        nncf_graph_cls=NNCFGraph,
     ):
         #       Original graph
         #          Input_1
@@ -106,9 +106,9 @@ class NNCFGraphToTestMatMul:
         self,
         matmul_metatype,
         matmul_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
         input_layer_attrs=None,
         output_layer_attrs=None,
-        nncf_graph_cls=NNCFGraph,
     ):
         #       Original graphs
         #          Input_1

@@ -53,15 +53,20 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
         conv_layer_attrs = ONNXLayerAttributes(weight_attrs={1: {"shape": [4, 4, 4, 4]}}, bias_attrs={})
-        return NNCFGraphToTest(ONNXConvolutionMetatype, conv_layer_attrs, ONNXLayerAttributes(), ONNXLayerAttributes())
+        return NNCFGraphToTest(
+            ONNXConvolutionMetatype,
+            conv_layer_attrs,
+            input_layer_attrs=ONNXLayerAttributes(),
+            output_layer_attrs=ONNXLayerAttributes(),
+        )
 
     @pytest.fixture
     def depthwise_conv_nncf_graph(self) -> NNCFGraphToTestDepthwiseConv:
         return NNCFGraphToTestDepthwiseConv(
             ONNXDepthwiseConvolutionMetatype,
             ONNXLayerAttributes(weight_attrs={1: {"shape": [4, 4, 4, 4]}}, bias_attrs={}),
-            ONNXLayerAttributes(),
-            ONNXLayerAttributes(),
+            input_layer_attrs=ONNXLayerAttributes(),
+            output_layer_attrs=ONNXLayerAttributes(),
         )
 
     @pytest.fixture
@@ -71,7 +76,7 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             ONNXConvolutionMetatype,
             ONNXAddLayerMetatype,
             conv_layer_attrs,
-            ONNXLayerAttributes(),
-            ONNXLayerAttributes(),
-            ONNXLayerAttributes(),
+            sum_layer_attrs=ONNXLayerAttributes(),
+            input_layer_attrs=ONNXLayerAttributes(),
+            output_layer_attrs=ONNXLayerAttributes(),
         )
