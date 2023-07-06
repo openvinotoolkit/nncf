@@ -11,7 +11,6 @@
 
 import numpy as np
 
-from nncf.common.tensor_numpy import NUMPYNNCFTensor
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
 
@@ -19,7 +18,3 @@ class TestNPNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
         return np.array(x)
-
-    @staticmethod
-    def to_nncf_tensor(x):
-        return NUMPYNNCFTensor(x)

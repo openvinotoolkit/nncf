@@ -13,7 +13,7 @@ from typing import TypeVar
 
 import pytest
 
-from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_new import Tensor
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -25,18 +25,13 @@ class TemplateTestNNCFTensorOperators:
     def to_tensor(x: TTensor) -> TTensor:
         pass
 
-    @staticmethod
-    @abstractmethod
-    def to_nncf_tensor(x) -> NNCFTensor:
-        pass
-
     @pytest.mark.parametrize("operator", ("add", "sub", "mul", "pow", "truediv", "floordiv"))
     def test_builtin_operator_tensor(self, operator):
         tensor_a = self.to_tensor([1, 2])
         tensor_b = self.to_tensor([22, 11])
 
-        nncf_tensor_a = self.to_nncf_tensor(tensor_a)
-        nncf_tensor_b = self.to_nncf_tensor(tensor_b)
+        nncf_tensor_a = Tensor(tensor_a)
+        nncf_tensor_b = Tensor(tensor_b)
 
         if operator == "add":
             res_tensor = tensor_a + tensor_b
@@ -57,8 +52,8 @@ class TemplateTestNNCFTensorOperators:
             res_tensor = tensor_a // tensor_b
             res_nncf_tensor = nncf_tensor_a // nncf_tensor_b
 
-        assert res_tensor.dtype == res_nncf_tensor.tensor.dtype
-        assert all(res_tensor == res_nncf_tensor.tensor)
+        assert res_tensor.dtype == res_nncf_tensor.data.dtype
+        assert all(res_tensor == res_nncf_tensor.data)
 
     @pytest.mark.parametrize(
         "operator", ("add", "radd", "sub", "rsub", "neg", "mul", "rmul", "pow", "truediv", "floordiv")
@@ -66,7 +61,7 @@ class TemplateTestNNCFTensorOperators:
     def test_builtin_operator_int(self, operator):
         tensor = self.to_tensor([1, 2])
 
-        nncf_tensor = self.to_nncf_tensor(tensor)
+        nncf_tensor = Tensor(tensor)
 
         if operator == "add":
             res_tensor = tensor + 2
@@ -99,16 +94,16 @@ class TemplateTestNNCFTensorOperators:
             res_tensor = tensor // 2
             res_nncf_tensor = nncf_tensor // 2
 
-        assert res_tensor.dtype == res_nncf_tensor.tensor.dtype
-        assert all(res_tensor == res_nncf_tensor.tensor)
+        assert res_tensor.dtype == res_nncf_tensor.data.dtype
+        assert all(res_tensor == res_nncf_tensor.data)
 
     @pytest.mark.parametrize("operator", ("lt", "le", "eq", "nq", "gt", "ge"))
     def test_comparison_operator_tensor(self, operator):
         tensor_a = self.to_tensor((1,))
         tensor_b = self.to_tensor((2,))
 
-        nncf_tensor_a = self.to_nncf_tensor(tensor_a)
-        nncf_tensor_b = self.to_nncf_tensor(tensor_b)
+        nncf_tensor_a = Tensor(tensor_a)
+        nncf_tensor_b = Tensor(tensor_b)
 
         if operator == "lt":
             res = tensor_a < tensor_b
@@ -134,7 +129,7 @@ class TemplateTestNNCFTensorOperators:
     @pytest.mark.parametrize("operator", ("lt", "le", "gt", "ge"))
     def test_comparison_operator_int(self, operator):
         tensor = self.to_tensor((1,))
-        nncf_tensor = self.to_nncf_tensor(tensor)
+        nncf_tensor = Tensor(tensor)
 
         if operator == "lt":
             res = tensor < 2
@@ -161,8 +156,8 @@ class TemplateTestNNCFTensorOperators:
         ),
     )
     def test_size(self, val, axis, ref):
-        nncf_tensor = self.to_nncf_tensor(self.to_tensor(val))
-        ref_tensor = self.to_nncf_tensor(self.to_tensor(ref))
+        nncf_tensor = Tensor(self.to_tensor(val))
+        ref_tensor = Tensor(self.to_tensor(ref))
         if isinstance(ref, list):
             assert all(nncf_tensor.size(axis) == ref_tensor)
         else:
@@ -180,8 +175,8 @@ class TemplateTestNNCFTensorOperators:
     )
     def test_squeeze(self, val, axis, ref):
         tensor = self.to_tensor(val)
-        nncf_tensor = self.to_nncf_tensor(tensor)
-        ref_tensor = self.to_nncf_tensor(self.to_tensor(ref))
+        nncf_tensor = Tensor(tensor)
+        ref_tensor = Tensor(self.to_tensor(ref))
         if isinstance(ref, list):
             assert all(nncf_tensor.squeeze(axis=axis).size() == ref_tensor)
         else:
@@ -189,8 +184,10 @@ class TemplateTestNNCFTensorOperators:
 
     def test_zeros_like(self):
         tensor = self.to_tensor([1, 2])
-        nncf_tensor = self.to_nncf_tensor(tensor)
-        assert all(nncf_tensor.zeros_like() == self.to_nncf_tensor(tensor * 0))
+        nncf_tensor = Tensor(tensor)
+
+        a = nncf_tensor[1]
+        assert all(nncf_tensor.zeros_like() == Tensor(tensor * 0))
 
     @pytest.mark.parametrize(
         "axis, ref",
@@ -201,8 +198,8 @@ class TemplateTestNNCFTensorOperators:
     )
     def test_count_nonzero(self, axis, ref):
         tensor = self.to_tensor([[1, 2], [1, 0]])
-        nncf_tensor = self.to_nncf_tensor(tensor)
-        nncf_ref_tensor = self.to_nncf_tensor(self.to_tensor(ref))
+        nncf_tensor = Tensor(tensor)
+        nncf_ref_tensor = Tensor(self.to_tensor(ref))
 
         if axis is None:
             assert nncf_tensor.count_nonzero() == nncf_ref_tensor
@@ -220,8 +217,8 @@ class TemplateTestNNCFTensorOperators:
     )
     def test_max(self, val, axis, ref):
         tensor = self.to_tensor(val)
-        nncf_tensor = self.to_nncf_tensor(tensor)
-        ref_tensor = self.to_nncf_tensor(self.to_tensor(ref))
+        nncf_tensor = Tensor(tensor)
+        ref_tensor = Tensor(self.to_tensor(ref))
         if isinstance(ref, list):
             assert all(nncf_tensor.max(axis=axis) == ref_tensor)
         else:
@@ -238,8 +235,8 @@ class TemplateTestNNCFTensorOperators:
     )
     def test_min(self, val, axis, ref):
         tensor = self.to_tensor(val)
-        nncf_tensor = self.to_nncf_tensor(tensor)
-        ref_tensor = self.to_nncf_tensor(self.to_tensor(ref))
+        nncf_tensor = Tensor(tensor)
+        ref_tensor = Tensor(self.to_tensor(ref))
         if isinstance(ref, list):
             assert all(nncf_tensor.min(axis=axis) == ref_tensor)
         else:
@@ -253,10 +250,24 @@ class TemplateTestNNCFTensorOperators:
         ),
     )
     def test_abs(self, val, ref):
-        nncf_tensor = self.to_nncf_tensor(self.to_tensor(val))
-        nncf_ref_tensor = self.to_nncf_tensor(self.to_tensor(ref))
+        nncf_tensor = Tensor(self.to_tensor(val))
+        nncf_ref_tensor = Tensor(self.to_tensor(ref))
 
         if isinstance(ref, list):
             assert all(nncf_tensor.abs() == nncf_ref_tensor)
         else:
             assert nncf_tensor.abs() == nncf_ref_tensor
+
+    def test_getitem(self):
+        arr = [0, 1, 2]
+        nncf_tensor = Tensor(self.to_tensor(arr))
+
+        assert nncf_tensor[1] == 1
+
+    def test_iter(self):
+        arr = [0, 1, 2]
+        nncf_tensor = Tensor(self.to_tensor(arr))
+        i = 0
+        for x in nncf_tensor:
+            assert x == arr[i]
+            i += 1
