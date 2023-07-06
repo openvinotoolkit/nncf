@@ -9,9 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import operator
 import sys
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
@@ -21,15 +20,15 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
 from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
-from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
-from nncf.quantization.algorithms.accuracy_control.ranker import LogitsBasedRanker
-from nncf.quantization.algorithms.accuracy_control.ranker import MetricBasedRanker
+from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 
 TModel = TypeVar("TModel")
+TTensor = TypeVar("TTensor")
 
 
 def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
@@ -155,23 +154,19 @@ class QuantizationAccuracyRestorer:
         self.max_drop = max_drop
         self.drop_type = drop_type
 
-    def restore_accuracy(
+    def apply(
         self,
         initial_model: TModel,
-        initial_metric: float,
         quantized_model: TModel,
-        quantized_metric: float,
         validation_dataset: Dataset,
-        validation_fn: Callable[[Any, Iterable[Any]], float],
+        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     ) -> TModel:
         """
         Restores the accuracy of the quantized model by removing the groups of quantizers
         that contribute the most to the drop in accuracy.
 
         :param initial_model: Initial model (not quantized).
-        :param initial_metric: Metric value for initial model.
         :param quantized_model: Quantized model.
-        :param quantized_metric: Metric value for quantized model.
         :param validation_dataset: A dataset for the validation process.
         :param validation_fn: A validation function to validate the model. It should take
             two argumets:
@@ -183,8 +178,16 @@ class QuantizationAccuracyRestorer:
         :return: The quantized model whose metric `final_metric` is satisfied
             the maximum accuracy drop condition.
         """
-        backend = get_backend(initial_model)
-        algo_backend = get_algo_backend(backend)
+        algo_backend = get_algo_backend(get_backend(initial_model))
+
+        # Validate initial and quantized model
+        evaluator = Evaluator(validation_fn, algo_backend)
+        initial_metric, reference_values_for_each_item = self._collect_metric_and_values(
+            initial_model, validation_dataset, evaluator, "initial"
+        )
+        quantized_metric, approximate_values_for_each_item = self._collect_metric_and_values(
+            quantized_model, validation_dataset, evaluator, "quantized"
+        )
 
         should_terminate, accuracy_drop = calculate_accuracy_drop(
             initial_metric, quantized_metric, self.max_drop, self.drop_type
@@ -199,6 +202,7 @@ class QuantizationAccuracyRestorer:
         if accuracy_drop <= self.max_drop:
             return quantized_model
 
+        # Accuracy drop is greater than the maximum drop so we need to restore accuracy
         initial_model_graph = NNCFGraphFactory.create(initial_model)
         quantized_model_graph = NNCFGraphFactory.create(quantized_model)
 
@@ -217,18 +221,22 @@ class QuantizationAccuracyRestorer:
         )
         nncf_logger.info(f"Total number of quantized operations in the model: {report.num_quantized_operations}")
 
-        nncf_logger.info("Ranking groups of quantizers was started")
-        ranker = QuantizationAccuracyRestorer._create_ranker(
-            initial_model, validation_fn, validation_dataset, self.ranking_subset_size, algo_backend
-        )
+        ranker = Ranker(self.ranking_subset_size, validation_dataset, algo_backend, evaluator)
         groups_to_rank = ranker.find_groups_of_quantizers_to_rank(quantized_model_graph)
         ranked_groups = ranker.rank_groups_of_quantizers(
-            groups_to_rank, initial_model, quantized_model, quantized_model_graph
+            groups_to_rank,
+            initial_model,
+            quantized_model,
+            quantized_model_graph,
+            reference_values_for_each_item,
+            approximate_values_for_each_item,
         )
 
         previous_model = quantized_model
+        previous_approximate_values_for_each_item = approximate_values_for_each_item
         previous_accuracy_drop = accuracy_drop
         current_model = None
+        current_approximate_values_for_each_item = None
         current_accuracy_drop = None
         is_step_back = True
 
@@ -254,8 +262,8 @@ class QuantizationAccuracyRestorer:
             )
 
             # Calculate drop for new quantization scope.
-            current_metric = validation_fn(
-                algo_backend.prepare_for_inference(current_model), validation_dataset.get_data()
+            current_metric, current_approximate_values_for_each_item = evaluator.validate(
+                current_model, validation_dataset
             )
 
             should_terminate, current_accuracy_drop = calculate_accuracy_drop(
@@ -290,6 +298,7 @@ class QuantizationAccuracyRestorer:
 
             if current_accuracy_drop > previous_accuracy_drop:
                 current_model = previous_model
+                current_approximate_values_for_each_item = previous_approximate_values_for_each_item
                 report.removed_groups.pop()
                 ranked_groups.append(current_group)
                 is_step_back = True
@@ -298,7 +307,12 @@ class QuantizationAccuracyRestorer:
 
             nncf_logger.info("Re-calculating ranking scores for remaining groups")
             ranked_groups = ranker.rank_groups_of_quantizers(
-                ranked_groups, initial_model, current_model, quantized_model_graph
+                ranked_groups,
+                initial_model,
+                current_model,
+                quantized_model_graph,
+                reference_values_for_each_item,
+                current_approximate_values_for_each_item,
             )
 
         report.num_iterations = iteration
@@ -335,40 +349,6 @@ class QuantizationAccuracyRestorer:
                     node_with_weight.data[f"original_weight.{port_id}"] = weight
 
     @staticmethod
-    def _create_ranker(
-        initial_model: TModel,
-        validation_fn: Callable[[Any, Iterable[Any]], float],
-        validation_dataset: Dataset,
-        ranking_subset_size: int,
-        algo_backend: AccuracyControlAlgoBackend,
-    ) -> Ranker:
-        """
-        Creates an instance of the `Ranker` class.
-
-        :param initial_model: Initial model.
-        :param validation_fn: A validation function to validate the model.
-        :param validation_dataset: A dataset for the validation process.
-        :param ranking_subset_size: The number of data items that will be selected from
-            the dataset to rank groups of quantizers.
-        :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
-        :return: An instance of the `Ranker` class.
-        """
-        # Check whether it is possible to calculate the metric for one data item.
-        # pylint: disable=W0703
-        try:
-            _ = validation_fn(algo_backend.prepare_for_inference(initial_model), validation_dataset.get_data([0]))
-            ranker = MetricBasedRanker(
-                ranking_subset_size, operator.sub, validation_dataset, algo_backend, validation_fn
-            )
-        except Exception:
-            ranker = LogitsBasedRanker(ranking_subset_size, normalized_mse, validation_dataset, algo_backend)
-        nncf_logger.info(
-            f'The {"original" if isinstance(ranker, MetricBasedRanker) else "NMSE"} '
-            "metric will be used to rank quantizers"
-        )
-        return ranker
-
-    @staticmethod
     def _print_report(report: QuantizationAccuracyRestorerReport, max_num_iterations: int) -> None:
         """
         Shows report.
@@ -397,3 +377,13 @@ class QuantizationAccuracyRestorer:
         else:
             reason = f"achieved required accuracy drop {float(accuracy_drop)} ({drop_type})"
         nncf_logger.info(f"Algorithm completed: {reason}")
+
+    @staticmethod
+    def _collect_metric_and_values(
+        model: TModel, dataset: Dataset, evaluator: Evaluator, model_name: str
+    ) -> Tuple[float, Union[None, List[float], List[List[TTensor]]]]:
+        nncf_logger.info(f"Validation of {model_name} model was started")
+        with timer():
+            metric, values_for_each_item = evaluator.validate(model, dataset)
+        nncf_logger.info(f"Metric of {model_name} model: {metric}")
+        return metric, values_for_each_item

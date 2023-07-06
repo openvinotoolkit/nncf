@@ -46,7 +46,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
-        return node.layer_attributes and node.layer_attributes.const_attrs
+        return node.layer_attributes and node.layer_attributes.constant_attributes
 
     @staticmethod
     def get_input_ports_map(node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, int]:
@@ -65,7 +65,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
         channels = shape[node.metatype.output_channel_axis]
 
-        if node.layer_attributes.act_attrs["transpose"]:
+        if node.layer_attributes.input_attributes["transpose"]:
             channels = shape[1]
 
         reduction_shape = tuple(i for i, val in enumerate(shape) if val != channels)
@@ -85,7 +85,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def get_weight_statistics(node: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
         weights = deepcopy(get_weight_value(node, model, port_id))
         abs_value = np.abs(weights)
-        transpose = node.layer_attributes.const_attrs[port_id]["transpose"]
+        transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
         axis = 0 if transpose else -1
         return np.max(abs_value, axis=axis)
 
@@ -123,12 +123,12 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def calculate_activation_scale(scale_value: np.ndarray, nodes: List[NNCFNode]) -> np.ndarray:
         activation_scales = scale_value ** (-1)
 
-        activation_shapes = [n.layer_attributes.act_attrs["shape"] for n in nodes]
+        activation_shapes = [n.layer_attributes.input_attributes["shape"] for n in nodes]
         activation_shape = activation_shapes[0]
         if not all(shape == activation_shape for shape in activation_shapes):
             raise RuntimeError(f"Shapes for nodes {[n.node_name for n in nodes]} are not identical")
 
-        transpose_attrs = [n.layer_attributes.act_attrs["transpose"] for n in nodes]
+        transpose_attrs = [n.layer_attributes.input_attributes["transpose"] for n in nodes]
         if not all(attr == transpose_attrs[0] for attr in transpose_attrs):
             raise RuntimeError(f"Transpose attributes for nodes {[n.node_name for n in nodes]} are not identical")
 
@@ -146,7 +146,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         transpose_attrs = []
         for node in nodes:
             port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
-            transpose = node.layer_attributes.const_attrs[port_id]["transpose"]
+            transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
             transpose_attrs.append(transpose)
 
         if not all(attr == transpose_attrs[0] for attr in transpose_attrs):

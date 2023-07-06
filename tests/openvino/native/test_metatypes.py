@@ -87,7 +87,7 @@ def test_determining_weights_port():
     for node in nncf_graph.get_all_nodes():
         if node.metatype not in ovm.GENERAL_WEIGHT_LAYER_METATYPES:
             continue
-        if node.layer_attributes and node.layer_attributes.const_attrs:
+        if node.layer_attributes and node.layer_attributes.constant_attributes:
             counter += 1
             const_port_ids = node.layer_attributes.get_const_port_ids()
             assert len(const_port_ids) == 1

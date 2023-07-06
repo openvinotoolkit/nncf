@@ -43,7 +43,7 @@ def _sort_patterns_by_len(pattern: nx.DiGraph) -> int:
     non_pattern_nodes = [
         node_id
         for node_id, node_data in pattern.nodes(data=True)
-        if GraphPattern.NON_PATTERN_NODE_TYPE in node_data[GraphPattern.METATYPE_ATTR]
+        if GraphPattern.NON_PATTERN_NODE_TYPE in node_data.get(GraphPattern.METATYPE_ATTR, [])
     ]
     return len(pattern) - len(non_pattern_nodes)
 
@@ -84,7 +84,7 @@ def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgrap
             last_nodes.append(node)
 
     for node_from_graph, node_from_pattern in subgraph.items():
-        if GraphPattern.NON_PATTERN_NODE_TYPE in pattern.nodes[node_from_pattern].get(GraphPattern.METATYPE_ATTR):
+        if GraphPattern.NON_PATTERN_NODE_TYPE in pattern.nodes[node_from_pattern].get(GraphPattern.METATYPE_ATTR, []):
             continue
         predecessors_keys = graph.pred[node_from_graph].keys()
         successor_keys = graph.succ[node_from_graph].keys()
@@ -112,7 +112,7 @@ def _copy_subgraph_excluding_non_pattern_node(subgraph: Dict[str, str], pattern_
     output = {}
     for node_from_graph, node_from_pattern in subgraph.items():
         pattern_node = pattern_graph.graph.nodes[node_from_pattern]
-        pattern_node_types = pattern_node.get(GraphPattern.METATYPE_ATTR)
+        pattern_node_types = pattern_node.get(GraphPattern.METATYPE_ATTR, [])
         if GraphPattern.NON_PATTERN_NODE_TYPE not in pattern_node_types:
             output[node_from_graph] = node_from_pattern
     return output

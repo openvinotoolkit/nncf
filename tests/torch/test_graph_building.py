@@ -354,7 +354,7 @@ def test_permute_attributes_saved_during_graph_building(input_shape):
         "ModelWithPermute/transpose_1": TransposeLayerAttributes(1, 3),
         "ModelWithPermute/transpose_2": TransposeLayerAttributes(1, 3),
         "ModelWithPermute/permute_0": PermuteLayerAttributes((3, 2, 1, 0)),
-        "ModelWithPermute/permute_1": PermuteLayerAttributes((3, 2, 1, 0)),
+        "ModelWithPermute/permute_1": PermuteLayerAttributes([3, 2, 1, 0]),
     }
 
     for node in graph.get_all_nodes():

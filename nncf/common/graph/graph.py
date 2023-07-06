@@ -711,17 +711,20 @@ class NNCFGraph:
         for node_key, node in self._nx_graph.nodes.items():
             self._node_id_to_key_dict[node["id"]] = node_key
 
-    def find_matching_nodes(self, patterns: GraphPattern) -> List[NNCFNode]:
+    def find_matching_subgraphs(self, patterns: GraphPattern) -> List[List[NNCFNode]]:
         """
-        Returns nodes of matched pattern in patterns.
+        Returns subgraphs of matched pattern in patterns.
 
         :param patterns: Instance of GraphPattern containing all patterns.
-        :return: Nodes that are matched patterns.
+        :return: List of subgraphs that are matching by pattern matching.
+            Subgraph is a ordered list of nodes of matched subgraph
         The returned nodes order relies on DiGraphMatcher isomorphic subgraphs matching logic from networkX package.
         DiGraphMatcher does not guarantee a specific order for returning isomorphic subgraphs.
         """
         output = []
         for matched_subgraph in find_subgraphs_matching_pattern(self._nx_graph, patterns):
+            subgraph_list = []
             for node_key in matched_subgraph:
-                output.append(self.get_node_by_key(node_key))
+                subgraph_list.append(self.get_node_by_key(node_key))
+            output.append(subgraph_list)
         return output

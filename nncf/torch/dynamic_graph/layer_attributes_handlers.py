@@ -55,7 +55,11 @@ OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS = list(
 
 def get_layer_attributes_from_module(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
     if operator_name == "group_norm":
-        return GroupNormLayerAttributes(module.weight.requires_grad, module.num_channels, module.num_groups)
+        return GroupNormLayerAttributes(
+            weight_requires_grad=module.weight.requires_grad,
+            num_channels=module.num_channels,
+            num_groups=module.num_groups,
+        )
     # torch.nn.utils.weight_norm replaces weight with weight_g and weight_v
     is_weight_norm_applied = hasattr(module, "weight_g") and hasattr(module, "weight_v")
     weight_attr = "weight_g" if is_weight_norm_applied else "weight"
@@ -66,6 +70,7 @@ def get_layer_attributes_from_module(module: TorchModule, operator_name: str) ->
             out_channels=module.out_channels,
             kernel_size=module.kernel_size,
             stride=module.stride,
+            dilations=module.dilation,
             groups=module.groups,
             transpose=False,
             padding_values=module.padding,
@@ -77,6 +82,7 @@ def get_layer_attributes_from_module(module: TorchModule, operator_name: str) ->
             out_channels=module.out_channels,
             kernel_size=module.kernel_size,
             stride=module.stride,
+            dilations=module.dilation,
             groups=module.groups,
             transpose=True,
             padding_values=module.padding,

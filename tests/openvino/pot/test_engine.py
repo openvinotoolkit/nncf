@@ -44,12 +44,12 @@ def val_func(compiled_model: ov.CompiledModel, dataset: Iterable[Any]) -> float:
         predictions = compiled_model([inputs])[output]
         values.append(np.sum(predictions))
 
-    return np.mean(values).item()
+    return np.mean(values).item(), None
 
 
 def get_expected(model: ov.Model, dataset, use_output: bool = False):
     compiled_model = ov.Core().compile_model(model, device_name="CPU")
-    metric = val_func(compiled_model, dataset)
+    metric, _ = val_func(compiled_model, dataset)
 
     per_sample_metrics = []
     output = compiled_model.output(0)
@@ -57,7 +57,7 @@ def get_expected(model: ov.Model, dataset, use_output: bool = False):
         if use_output:
             value = compiled_model([data_item])[output]
         else:
-            value = val_func(compiled_model, [data_item])
+            value, _ = val_func(compiled_model, [data_item])
 
         per_sample_metrics.append({"sample_id": idx, "result": value})
     return per_sample_metrics, metric

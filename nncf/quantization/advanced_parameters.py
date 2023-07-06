@@ -126,6 +126,8 @@ class AdvancedQuantizationParameters:
     :param inplace_statistics: Defines whether to calculate quantizers statistics by
         backend graph operations or by default Python implementation, defaults to True.
     :type inplace_statistics: bool
+    :param disable_channel_alignment: Whether to disable the channel alignment.
+    :type disable_channel_alignment: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
     :param smooth_quant_alpha: SmoothQuant-related parameter. It regulates the calculation of the smooth scale.
@@ -150,8 +152,9 @@ class AdvancedQuantizationParameters:
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
     quantize_outputs: bool = False
     inplace_statistics: bool = True
+    disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
-    smooth_quant_alpha: float = 0.95
+    smooth_quant_alpha: float = -1.0
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)
