@@ -364,6 +364,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<th style="text-align: center;">Dataset</th>
 			<th style="text-align: center;">Accuracy (Drop) %</th>
 			<th style="text-align: center;">NNCF config file</th>
+            <th style="text-align: center;">Checkpoint</th>
 		</tr>
 	</thead>
 	<tbody align="center">
@@ -373,6 +374,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.16</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-50</td>
@@ -380,6 +382,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">75.23 (0.93)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_accuracy_aware.json">Config</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
@@ -387,6 +390,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.8</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/Config">Config</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
@@ -394,6 +398,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.2 (-0.6)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_accuracy_aware.json">Config</a></td>
+			<td style="text-align: center;">-</td>
 		</tr>
 	</tbody>
 </table>
