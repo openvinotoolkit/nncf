@@ -259,9 +259,9 @@ def wrap_validation_fn(validation_fn):
 
     def wrapper(*args, **kwargs):
         retval = validation_fn(*args, **kwargs)
-        if isinstance(retval, float):
-            return retval, None
-        return retval
+        if isinstance(retval, tuple):
+            return retval
+        return retval, None
 
     return wrapper
 

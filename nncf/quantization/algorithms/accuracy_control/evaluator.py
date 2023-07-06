@@ -75,7 +75,7 @@ class Evaluator:
 
         metric, values_for_each_item = self._validation_fn(model_for_inference, dataset.get_data(indices))
 
-        if self.is_metric_mode():
+        if self.is_metric_mode() and values_for_each_item is not None:
             # This casting is necessary to cover the following cases:
             # - np.array(1.0, dtype=np.float32)
             # - np.array([1.0], dtype=np.float32)
@@ -162,7 +162,7 @@ class Evaluator:
             # Collect metrics for each item
             model_for_inference = self._algo_backend.prepare_for_inference(model)
             values_for_each_item = [
-                self._validation_fn(model_for_inference, [data_item]) for data_item in dataset.get_data(indices)
+                self._validation_fn(model_for_inference, [data_item])[0] for data_item in dataset.get_data(indices)
             ]
         else:
             # Collect outputs for each item
