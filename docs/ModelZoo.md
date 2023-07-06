@@ -222,12 +222,6 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">-</td>
 		</tr>
 	</tbody>
-</table>
-
-
-
-#### Binarization
-<table>
     <thead>
 		<tr>
 			<th style="text-align: center;" colspan="6">Binarization</th>
@@ -269,10 +263,6 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth">Link</a></td>
 		</tr>
 	</tbody>
-</table>
-
-#### Filter pruning
-<table>
     <thead>
 		<tr>
 			<th style="text-align: center;" colspan="6">Filter pruning</th>
@@ -362,10 +352,6 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/googlenet_imagenet_pruning_geometric_median.pth">Link</a></td>
 		</tr>
 	</tbody>
-</table>
-
-#### Accuracy-aware compressed training
-<table>
     <thead>
 		<tr>
 			<th style="text-align: center;" colspan="6">Accuracy-aware compressed training</th>
@@ -500,11 +486,6 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth">Link</a></td>
 		</tr>
 	</tbody>
-</table>
-
-
-#### Filter pruning
-<table>
     <thead>
 		<tr>
 			<th style="text-align: center;" colspan="6">Filter pruning</th>
@@ -635,11 +616,6 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_magnitude_sparsity_int8.pth">Link</a></td>
 		</tr>
 	</tbody>
-</table>
-
-
-#### Filter pruning
-<table>
     <thead>
 		<tr>
 			<th style="text-align: center;" colspan="6">Filter pruning</th>
