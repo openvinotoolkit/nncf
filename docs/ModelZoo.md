@@ -21,9 +21,34 @@ to find instruction and links to exact configuration files and final checkpoints
 ### Classification
 
 <table>
+  <tr>
+    <th colspan="6" rowspan="3">Header</th>
+  </tr>
+  <tr>
+    <!-- Empty row to create the desired height -->
+  </tr>
+  <tr>
+    <!-- Empty row to create the desired height -->
+  </tr>
+  <tr>
+    <th>Column 1</th>
+    <th>Column 2</th>
+    <th>Column 3</th>
+    <th>Column 4</th>
+    <th>Column 5</th>
+    <th>Column 6</th>
+  </tr>
+  <!-- ... Rest of the table content ... -->
+</table>
+asd
+
+<table>
     <thead>
 		<tr>
-			<th style="text-align: center;" colspan="6" rowspan="3">Quantization</th>
+			<th style="text-align: center;" colspan="6" rowspan="1">Quantization</th>
+		</tr>
+		<tr>
+			<th style="text-align: center;" colspan="6"></th>
 		</tr>
 		<tr>
 			<th style="text-align: center;">Model</th>
