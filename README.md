@@ -80,12 +80,18 @@ The NNCF PTQ is the simplest way to apply 8-bit quantization. To run the algorit
 import nncf
 import openvino.runtime as ov
 import torch
-from torchvision import datasets
+from torchvision import datasets, transforms
 
 # Instantiate your uncompressed model
 model = ov.Core().read_model("/model_path")
+
+# Instantiate transformation metrics
+transform_metrics = transforms.Compose([
+    transforms.ToTensor()]
+)
+
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = datasets.ImageFolder("/path")
+val_dataset = datasets.ImageFolder("/path", transform=transform_metrics)
 dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 
 # Step 1: Initialize transformation function
