@@ -23,7 +23,7 @@ to find instruction and links to exact configuration files and final checkpoints
 <table>
     <thead>
 		<tr>
-			<th style="text-align: center;" colspan="6">Quantization</th>
+			<th style="text-align: center;" colspan="6" rowspan="3">Quantization</th>
 		</tr>
 	</thead>
 	<thead>
