@@ -407,8 +407,6 @@ to find instruction and links to exact configuration files and final checkpoints
 <a id="pytorch_object_detection"></a>
 ### Object detection
 
-#### Quantization
-
 <table>
     <thead>
 		<tr>
@@ -530,7 +528,6 @@ to find instruction and links to exact configuration files and final checkpoints
 <a id="pytorch_semantic_segmentation"></a>
 ### Semantic segmentation
 
-#### Quantization
 <table>
     <thead>
 		<tr>
