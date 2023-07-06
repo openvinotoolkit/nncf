@@ -170,7 +170,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         # Calculate reduction shape for weight statistic collector
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        assert node.layer_attributes.weight_attrs.keys()
+        assert node.layer_attributes.has_weight()
         weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
         reduction_shape = list(range(len(weight_shape)))
 
@@ -244,7 +244,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return [node for node in nncf_graph.get_all_nodes() if node.layer_attributes.weight_attrs.keys()]
+        return [node for node in nncf_graph.get_all_nodes() if node.layer_attributes.has_weight()]
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> str:
