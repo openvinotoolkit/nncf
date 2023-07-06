@@ -602,7 +602,7 @@ def get_metatype(onnx_graph: ONNXGraph, node: onnx.NodeProto) -> ONNXOpMetatype:
 
     :param model: ONNX model.
     :param node: Node from ONNX model.
-    :return: matched metatype.
+    :return: Matched metatype.
     """
     metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
     if metatype.get_subtypes():
@@ -642,7 +642,7 @@ def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int
     Returns input port id, where a bias tensor should output.
 
     :param node: Node, for which input port id is returned,
-    :return: input port id, where a weight bias should output or None if node can not have bias.
+    :return: Input port id, where a weight bias should output or None if node can not have bias.
     """
     assert metatype in OPERATIONS_WITH_BIAS_METATYPES
     return metatype.bias_port_id
