@@ -16,7 +16,6 @@ import onnx
 from onnx import numpy_helper
 
 
-# pylint: disable=too-many-public-methods
 class ONNXGraph:
     """
     The class provides the interface to get the necessary information from ONNX model.
