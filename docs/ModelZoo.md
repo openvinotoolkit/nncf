@@ -20,9 +20,12 @@ to find instruction and links to exact configuration files and final checkpoints
 <a id="pytorch_classification"></a>
 ### Classification
 
-#### Quantization
-
 <table>
+    <thead>
+		<tr>
+			<th style="text-align: center;" colspan="6">Quantization</th>
+		</tr>
+	</thead>
 	<thead>
 		<tr>
 			<th style="text-align: center;">Model</th>
@@ -225,6 +228,11 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Binarization
 <table>
+    <thead>
+		<tr>
+			<th style="text-align: center;" colspan="6">Binarization</th>
+		</tr>
+	</thead>
 	<thead>
 		<tr>
 			<th style="text-align: center;">Model</th>
@@ -265,6 +273,11 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Filter pruning
 <table>
+    <thead>
+		<tr>
+			<th style="text-align: center;" colspan="6">Filter pruning</th>
+		</tr>
+	</thead>
 	<thead>
 		<tr>
 			<th style="text-align: center;">Model</th>
@@ -353,6 +366,11 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Accuracy-aware compressed training
 <table>
+    <thead>
+		<tr>
+			<th style="text-align: center;" colspan="6">Accuracy-aware compressed training</th>
+		</tr>
+	</thead>
 	<thead>
 		<tr>
 			<th style="text-align: center;">Model</th>
@@ -401,6 +419,11 @@ to find instruction and links to exact configuration files and final checkpoints
 #### Quantization
 
 <table>
+    <thead>
+		<tr>
+			<th style="text-align: center;" colspan="6">Quantization</th>
+		</tr>
+	</thead>
 	<thead>
 		<tr>
 			<th style="text-align: center;">Model</th>
@@ -482,6 +505,11 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Filter pruning
 <table>
+    <thead>
+		<tr>
+			<th style="text-align: center;" colspan="6">Filter pruning</th>
+		</tr>
+	</thead>
 	<thead>
 		<tr>
 			<th style="text-align: center;">Model</th>
@@ -518,6 +546,11 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Quantization
 <table>
+    <thead>
+		<tr>
+			<th style="text-align: center;" colspan="6">Quantization</th>
+		</tr>
+	</thead>
 	<thead>
 		<tr>
 			<th style="text-align: center;">Model</th>
@@ -607,6 +640,11 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Filter pruning
 <table>
+    <thead>
+		<tr>
+			<th style="text-align: center;" colspan="6">Filter pruning</th>
+		</tr>
+	</thead>
 	<thead>
 		<tr>
 			<th style="text-align: center;">Model</th>
