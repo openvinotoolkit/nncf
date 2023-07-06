@@ -22,7 +22,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 <table>
   <tr>
-    <th colspan="6" rowspan="3">Header</th>
+    <th colspan="6" rowspan="3"><br>Header<br></th>
   </tr>
   <tr>
     <!-- Empty row to create the desired height -->
