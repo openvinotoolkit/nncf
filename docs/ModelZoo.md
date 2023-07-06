@@ -224,97 +224,482 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Binarization
 
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|ResNet-18|None|ImageNet|69.76|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|-|
-|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|61.67 (8.09)|[resnet18_imagenet_binarization_xnor.json](configs/binarization/resnet18_imagenet_binarization_xnor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_xnor.pth)|
-|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|61.63 (8.13)|[resnet18_imagenet_binarization_dorefa.json](configs/binarization/resnet18_imagenet_binarization_dorefa.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">ResNet-18</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.76</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">resnet18_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-18</td>
+			<td style="text-align: center;">XNOR (weights), scale/threshold (activations)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">61.67 (8.09)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json">resnet18_imagenet_binarization_xnor.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_xnor.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-18</td>
+			<td style="text-align: center;">DoReFa (weights), scale/threshold (activations)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">61.63 (8.13)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json">resnet18_imagenet_binarization_dorefa.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth">Link</a></td>
+		</tr>
+	</tbody>
+</table>
 
 #### Filter pruning
-
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|None|ImageNet|76.15|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|-|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|75.57 (0.58)|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_pruning_geometric_median.pth)|
-|ResNet-18|None|ImageNet|69.76|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|-|
-|ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.27 (0.49)|[resnet18_imagenet_pruning_magnitude.json](configs/pruning/resnet18_imagenet_pruning_magnitude.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_magnitude.pth)|
-|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.31 (0.45)|[resnet18_imagenet_pruning_geometric_median.json](configs/pruning/resnet18_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_geometric_median.pth)|
-|ResNet-34|None|ImageNet|73.30|[resnet34_imagenet.json](configs/pruning/resnet34_imagenet.json)|-|
-|ResNet-34|Filter pruning, 50%, geometric median criterion + KD|ImageNet|73.11 (0.19)|[resnet34_imagenet_pruning_geometric_median_kd.json](configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet34_imagenet_pruning_geometric_median_kd.pth)|
-|GoogLeNet|None|ImageNet|69.77|[googlenet_imagenet.json](configs/pruning/googlenet_imagenet.json)|-|
-|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.47 (0.30)|[googlenet_imagenet_pruning_geometric_median.json](configs/pruning/googlenet_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/googlenet_imagenet_pruning_geometric_median.pth)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">76.15</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet.json">resnet50_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.57 (0.58)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_geometric_median.json">resnet50_imagenet_pruning_geometric_median.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_pruning_geometric_median.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-18</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.76</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">resnet18_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-18</td>
+			<td style="text-align: center;">Filter pruning, 40%, magnitude criterion</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.27 (0.49)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_magnitude.json">resnet18_imagenet_pruning_magnitude.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_magnitude.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-18</td>
+			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.31 (0.45)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_geometric_median.json">resnet18_imagenet_pruning_geometric_median.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_geometric_median.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-34</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">73.30</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet.json">resnet34_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-34</td>
+			<td style="text-align: center;">Filter pruning, 50%, geometric median criterion + KD</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">73.11 (0.19)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json">resnet34_imagenet_pruning_geometric_median_kd.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet34_imagenet_pruning_geometric_median_kd.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">GoogLeNet</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.77</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet.json">googlenet_imagenet.json</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">GoogLeNet</td>
+			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.47 (0.30)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet_pruning_geometric_median.json">googlenet_imagenet_pruning_geometric_median.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/googlenet_imagenet_pruning_geometric_median.pth">Link</a></td>
+		</tr>
+	</tbody>
+</table>
 
 #### Accuracy-aware compressed training
-|Model|Compression algorithm|Dataset|Accuracy (Drop) %|NNCF config file|
-| :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|None|ImageNet|76.16|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|
-|ResNet-50|Filter pruning, 52.5%, geometric median criterion|ImageNet|75.23 (0.93)|[resnet50_imagenet_accuracy_aware.json](configs/pruning/resnet50_imagenet_pruning_accuracy_aware.json)|
-|ResNet-18|None|ImageNet|69.8|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|
-|ResNet-18|Filter pruning, 60%, geometric median criterion|ImageNet|69.2 (-0.6)|[resnet18_imagenet_accuracy_aware.json](configs/pruning/resnet18_imagenet_pruning_accuracy_aware.json)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">Accuracy (Drop) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">76.16</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet.json">resnet50_imagenet.json</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">Filter pruning, 52.5%, geometric median criterion</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.23 (0.93)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_accuracy_aware.json">resnet50_imagenet_accuracy_aware.json</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-18</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.8</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">resnet18_imagenet.json</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-18</td>
+			<td style="text-align: center;">Filter pruning, 60%, geometric median criterion</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">69.2 (-0.6)</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_accuracy_aware.json">resnet18_imagenet_accuracy_aware.json</a></td>
+		</tr>
+	</tbody>
+</table>
 
 
 <a id="pytorch_object_detection"></a>
 ### Object detection
 
 #### Quantization
-
-|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|SSD300-MobileNet|None|VOC12+07 train, VOC07 eval|62.23|[ssd300_mobilenet_voc.json](configs/ssd300_mobilenet_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc.pth)|
-|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|62.95 (-0.72)|[ssd300_mobilenet_voc_magnitude_int8.json](configs/ssd300_mobilenet_voc_magnitude_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth)|
-|SSD300-VGG-BN|None|VOC12+07 train, VOC07 eval|78.28|[ssd300_vgg_voc.json](configs/ssd300_vgg_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth)|
-|SSD300-VGG-BN|INT8|VOC12+07 train, VOC07 eval|77.81 (0.47)|[ssd300_vgg_voc_int8.json](configs/ssd300_vgg_voc_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_int8.pth)|
-|SSD300-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|77.66 (0.62)|[ssd300_vgg_voc_magnitude_sparsity_int8.json](configs/ssd300_vgg_voc_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_magnitude_sparsity_int8.pth)|
-|SSD512-VGG-BN|None|VOC12+07 train, VOC07 eval|80.26|[ssd512_vgg_voc.json](configs/ssd512_vgg_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc.pth)|
-|SSD512-VGG-BN|INT8|VOC12+07 train, VOC07 eval|80.04 (0.22)|[ssd512_vgg_voc_int8.json](configs/ssd512_vgg_voc_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_int8.pth)|
-|SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|79.68 (0.58)|[ssd512_vgg_voc_magnitude_sparsity_int8.json](configs/ssd512_vgg_voc_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">mAP (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">SSD300-MobileNet</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">62.23</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc.json">ssd300_mobilenet_voc.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">SSD300-MobileNet</td>
+			<td style="text-align: center;">INT8 + Sparsity 70% (Magnitude)</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">62.95 (-0.72)</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc_magnitude_int8.json">ssd300_mobilenet_voc_magnitude_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">SSD300-VGG-BN</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">78.28</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc.json">ssd300_vgg_voc.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">SSD300-VGG-BN</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">77.81 (0.47)</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_int8.json">ssd300_vgg_voc_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_int8.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">SSD300-VGG-BN</td>
+			<td style="text-align: center;">INT8 + Sparsity 70% (Magnitude)</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">77.66 (0.62)</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_magnitude_sparsity_int8.json">ssd300_vgg_voc_magnitude_sparsity_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_magnitude_sparsity_int8.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">SSD512-VGG-BN</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">80.26</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc.json">ssd512_vgg_voc.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">SSD512-VGG-BN</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">80.04 (0.22)</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc_int8.json">ssd512_vgg_voc_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_int8.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">SSD512-VGG-BN</td>
+			<td style="text-align: center;">INT8 + Sparsity 70% (Magnitude)</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">79.68 (0.58)</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json">ssd512_vgg_voc_magnitude_sparsity_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth">Link</a></td>
+		</tr>
+	</tbody>
+</table>
 
 
 #### Filter pruning
-|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|SSD300-VGG-BN|None|VOC12+07 train, VOC07 eval|78.28|[ssd300_vgg_voc.json](configs/ssd300_vgg_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth)|
-|SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC07 eval|78.35 (-0.07)|[ssd300_vgg_voc_pruning_geometric_median.json](configs/ssd300_vgg_voc_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_pruning_geometric_median.pth)|
-
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">mAP (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">SSD300-VGG-BN</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">78.28</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc.json">ssd300_vgg_voc.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">SSD300-VGG-BN</td>
+			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
+			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
+			<td style="text-align: center;">78.35 (-0.07)</td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_pruning_geometric_median.json">ssd300_vgg_voc_pruning_geometric_median.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_pruning_geometric_median.pth">Link</a></td>
+		</tr>
+	</tbody>
+</table>
 
 <a id="pytorch_semantic_segmentation"></a>
 ### Semantic segmentation
 
 #### Quantization
-
-|Model|Compression algorithm|Dataset|mIoU (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|UNet|None|CamVid|71.95|[unet_camvid.json](configs/unet_camvid.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid.pth)|
-|UNet|INT8|CamVid|71.89 (0.06)|[unet_camvid_int8.json](configs/unet_camvid_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_int8.pth)|
-|UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|72.46 (-0.51)|[unet_camvid_magnitude_sparsity_int8.json](configs/unet_camvid_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_magnitude_sparsity_int8.pth)|
-|ICNet|None|CamVid|67.89|[icnet_camvid.json](configs/icnet_camvid.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid.pth)|
-|ICNet|INT8|CamVid|67.89 (0.00)|[icnet_camvid_int8.json](configs/icnet_camvid_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_int8.pth)|
-|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.16 (0.73)|[icnet_camvid_magnitude_sparsity_int8.json](configs/icnet_camvid_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_magnitude_sparsity_int8.pth)|
-|UNet|None|Mapillary|56.24|[unet_mapillary.json](configs/unet_mapillary.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth)|
-|UNet|INT8|Mapillary|56.09 (0.15)|[unet_mapillary_int8.json](configs/unet_mapillary_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_int8.pth)|
-|UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|55.69 (0.55)|[unet_mapillary_magnitude_sparsity_int8.json](configs/unet_mapillary_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_magnitude_sparsity_int8.pth)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">mIoU (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">UNet</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">CamVid</td>
+			<td style="text-align: center;">71.95</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_camvid.json">unet_camvid.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">UNet</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">CamVid</td>
+			<td style="text-align: center;">71.89 (0.06)</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_camvid_int8.json">unet_camvid_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_int8.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">UNet</td>
+			<td style="text-align: center;">INT8 + Sparsity 60% (Magnitude)</td>
+			<td style="text-align: center;">CamVid</td>
+			<td style="text-align: center;">72.46 (-0.51)</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_camvid_magnitude_sparsity_int8.json">unet_camvid_magnitude_sparsity_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_magnitude_sparsity_int8.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ICNet</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">CamVid</td>
+			<td style="text-align: center;">67.89</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid.json">icnet_camvid.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ICNet</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">CamVid</td>
+			<td style="text-align: center;">67.89 (0.00)</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid_int8.json">icnet_camvid_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_int8.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ICNet</td>
+			<td style="text-align: center;">INT8 + Sparsity 60% (Magnitude)</td>
+			<td style="text-align: center;">CamVid</td>
+			<td style="text-align: center;">67.16 (0.73)</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json">icnet_camvid_magnitude_sparsity_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_magnitude_sparsity_int8.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">UNet</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">Mapillary</td>
+			<td style="text-align: center;">56.24</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary.json">unet_mapillary.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">UNet</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">Mapillary</td>
+			<td style="text-align: center;">56.09 (0.15)</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_int8.json">unet_mapillary_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_int8.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">UNet</td>
+			<td style="text-align: center;">INT8 + Sparsity 60% (Magnitude)</td>
+			<td style="text-align: center;">Mapillary</td>
+			<td style="text-align: center;">55.69 (0.55)</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json">unet_mapillary_magnitude_sparsity_int8.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_magnitude_sparsity_int8.pth">Link</a></td>
+		</tr>
+	</tbody>
+</table>
 
 
 #### Filter pruning
-|Model|Compression algorithm|Dataset|mIoU (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|UNet|None|Mapillary|56.24|[unet_mapillary.json](configs/unet_mapillary.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth)|
-|UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.64 (0.60)|[unet_mapillary_pruning_geometric_median.json](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_pruning_geometric_median.pth)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">mIoU (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">UNet</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">Mapillary</td>
+			<td style="text-align: center;">56.24</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary.json">unet_mapillary.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Link</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">UNet</td>
+			<td style="text-align: center;">Filter pruning, 25%, geometric median criterion</td>
+			<td style="text-align: center;">Mapillary</td>
+			<td style="text-align: center;">55.64 (0.60)</td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json">unet_mapillary_pruning_geometric_median.json</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_pruning_geometric_median.pth">Link</a></td>
+		</tr>
+	</tbody>
+</table>
 
 
 <a id="pytorch_nlp"></a>
 ### NLP (HuggingFace Transformers-powered models)
 
-|PyTorch Model|<img width="20" height="1">Compression algorithm<img width="20" height="1">|Dataset|Accuracy (Drop) %|
-| :---: | :---: | :---: | :---: |
-|BERT-base-chinese|INT8|XNLI|77.22 (0.46)|
-|BERT-base-cased|INT8|CoNLL2003|99.18 (-0.01)|
-|BERT-base-cased|INT8|MRPC|84.8 (-0.24)|
-|BERT-large (Whole Word Masking)|INT8|SQuAD v1.1|F1: 92.68 (0.53)|
-|RoBERTa-large|INT8|MNLI|matched: 89.25 (1.35)|
-|DistilBERT-base|INT8|SST-2|90.3 (0.8)|
-|MobileBERT|INT8|SQuAD v1.1|F1: 89.4 (0.58)|
-|GPT-2|INT8|WikiText-2 (raw)|perplexity: 20.9 (-1.17)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">PyTorch Model</th>
+			<th style="text-align: center;"><img width="20" height="1">Compression algorithm<img width="20" height="1"></th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">Accuracy (Drop) %</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">BERT-base-chinese</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">XNLI</td>
+			<td style="text-align: center;">77.22 (0.46)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">BERT-base-cased</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">CoNLL2003</td>
+			<td style="text-align: center;">99.18 (-0.01)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">BERT-base-cased</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">MRPC</td>
+			<td style="text-align: center;">84.8 (-0.24)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">BERT-large (Whole Word Masking)</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">SQuAD v1.1</td>
+			<td style="text-align: center;">F1: 92.68 (0.53)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">RoBERTa-large</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">MNLI</td>
+			<td style="text-align: center;">matched: 89.25 (1.35)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">DistilBERT-base</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">SST-2</td>
+			<td style="text-align: center;">90.3 (0.8)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileBERT</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">SQuAD v1.1</td>
+			<td style="text-align: center;">F1: 89.4 (0.58)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">GPT-2</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">WikiText-2 (raw)</td>
+			<td style="text-align: center;">perplexity: 20.9 (-1.17)</td>
+		</tr>
+	</tbody>
+</table>
+
 
 
 <a id="tensorflow_models"></a>
