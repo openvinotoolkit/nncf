@@ -11,9 +11,6 @@
 
 import pytest
 
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
@@ -32,50 +29,13 @@ from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
-from tests.common.quantization.mock_graphs import NodeWithType
-from tests.common.quantization.test_filter_constant_nodes import create_mock_graph
-from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
 from tests.onnx.models import LinearModel
 from tests.onnx.models import OneDepthwiseConvolutionalModel
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestMatMul
 from tests.post_training.test_templates.test_ptq_params import TemplateTestPTQParams
 
 # pylint: disable=protected-access
-
-
-class NNCFGraphToTest:
-    def __init__(self, conv_metatype, conv_layer_attrs=None, nncf_graph_cls=NNCFGraph):
-        #       Original graph
-        #          Input_1
-        #             |
-        #           Conv_1
-        #             |
-        #           Output_1
-        nodes = [
-            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=ONNXLayerAttributes()),
-            NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
-            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=ONNXLayerAttributes()),
-        ]
-        node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Output_1")]
-        original_mock_graph = create_mock_graph(nodes, node_edges)
-        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
-
-
-class NNCFGraphToTestMatMul:
-    def __init__(self, matmul_metatype, matmul_layer_attrs=None, nncf_graph_cls=NNCFGraph):
-        #       Original graphs
-        #          Input_1
-        #             |
-        #           MatMul_1
-        #             |
-        #           Output_1
-        nodes = [
-            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=ONNXLayerAttributes()),
-            NodeWithType("MatMul_1", matmul_metatype, layer_attributes=matmul_layer_attrs),
-            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=ONNXLayerAttributes()),
-        ]
-        node_edges = [("Input_1", "MatMul_1"), ("MatMul_1", "Output_1")]
-        original_mock_graph = create_mock_graph(nodes, node_edges)
-        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
 
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
@@ -132,28 +92,44 @@ class TestPTQParams(TemplateTestPTQParams):
             },
             "test_quantize_outputs": {
                 "nncf_graph": NNCFGraphToTest(
-                    ONNXConvolutionMetatype, ONNXLayerAttributes(weight_attrs={1: {"name": "aaa"}})
+                    conv_metatype=ONNXConvolutionMetatype,
+                    conv_layer_attrs=ONNXLayerAttributes(
+                        weight_attrs={1: {"name": "aaa"}},
+                    ),
+                    input_layer_attrs=ONNXLayerAttributes(),
+                    output_layer_attrs=ONNXLayerAttributes(),
                 ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_ignored_scopes": {
                 "nncf_graph": NNCFGraphToTest(
-                    ONNXConvolutionMetatype, ONNXLayerAttributes(weight_attrs={1: {"name": "aaa"}})
+                    conv_metatype=ONNXConvolutionMetatype,
+                    conv_layer_attrs=ONNXLayerAttributes(
+                        weight_attrs={1: {"name": "aaa"}},
+                    ),
+                    input_layer_attrs=ONNXLayerAttributes(),
+                    output_layer_attrs=ONNXLayerAttributes(),
                 ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_model_type_pass": {
                 "nncf_graph": NNCFGraphToTestMatMul(
-                    ONNXGemmMetatype, ONNXLayerAttributes(weight_attrs={1: {"name": "aaa"}})
+                    ONNXGemmMetatype,
+                    ONNXLayerAttributes(weight_attrs={1: {"name": "aaa"}}),
+                    input_layer_attrs=ONNXLayerAttributes(),
+                    output_layer_attrs=ONNXLayerAttributes(),
                 ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_validate_scope": {
                 "nncf_graph": NNCFGraphToTestMatMul(
-                    ONNXGemmMetatype, ONNXLayerAttributes(weight_attrs={1: {"name": "aaa"}})
+                    ONNXGemmMetatype,
+                    ONNXLayerAttributes(weight_attrs={1: {"name": "aaa"}}),
+                    input_layer_attrs=ONNXLayerAttributes(),
+                    output_layer_attrs=ONNXLayerAttributes(),
                 ).nncf_graph,
                 "ignored_patterns": get_ignored_patterns(),
             },
