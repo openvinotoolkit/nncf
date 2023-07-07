@@ -118,7 +118,9 @@ def _copy_subgraph_excluding_non_pattern_node(subgraph: Dict[str, str], pattern_
     return output
 
 
-def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPattern) -> List[List[str]]:
+def find_subgraphs_matching_pattern(
+    graph: nx.DiGraph, pattern_graph: GraphPattern, strict: bool = True
+) -> List[List[str]]:
     """
     Finds a list of nodes which define a subgraph matched a pattern in pattern_graph.
     Nodes in each subgraph is stored in lexicographical_topological_sort.
@@ -134,8 +136,7 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
     for pattern in patterns:
         matcher = ism.DiGraphMatcher(graph, pattern, node_match=_are_nodes_matched)
         for subgraph in matcher.subgraph_isomorphisms_iter():
-            is_matching_strict = _is_subgraph_matching_strict(graph, pattern, subgraph)
-            if not is_matching_strict:
+            if strict and not _is_subgraph_matching_strict(graph, pattern, subgraph):
                 continue
 
             subgraph = _copy_subgraph_excluding_non_pattern_node(subgraph, pattern_graph)
