@@ -14,6 +14,7 @@ import numpy as np
 import onnx
 import pytest
 
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
@@ -80,6 +81,11 @@ MODELS = [
 
 
 @pytest.mark.parametrize(
+    "preset",
+    [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
+    ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
+)
+@pytest.mark.parametrize(
     "model",
     MODELS,
     ids=[
@@ -92,12 +98,12 @@ MODELS = [
         "OneDepthwiseConvolutionalModel",
     ],
 )
-def test_scales(model):
+def test_scales(model, preset):
     model = model()
-    quantized_model = min_max_quantize_model(model.onnx_model)
+    quantized_model = min_max_quantize_model(model.onnx_model, quantization_params={"preset": preset})
     q_nodes_params = get_q_nodes_params(quantized_model)
 
-    ref_stats_name = model.path_ref_graph.split(".")[0] + ".json"
+    ref_stats_name = model.path_ref_graph.split(".")[0] + f"_{preset.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
     # Unkomment lines below to generate reference for new models.

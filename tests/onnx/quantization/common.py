@@ -63,7 +63,7 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool, len
             input_np_dtype = onnx.helper.tensor_dtype_to_np_dtype(input_dtype)
             shape = ONNXGraph.get_edge_shape(edge)
             rng = get_random_generator()
-            tensor = rng.uniform(0, 1, shape).astype(input_np_dtype)
+            tensor = rng.uniform(-1, 1, shape).astype(input_np_dtype)
             if has_batch_dim:
                 tensor = np.squeeze(tensor, axis=0)
             output[key] = tensor
