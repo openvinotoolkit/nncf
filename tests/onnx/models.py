@@ -492,18 +492,19 @@ class WeightSharingModel(ONNXReferenceModel):
     #            |
     #            Y
     def __init__(self):
-        input_shape = output_shape = [1, 1, 5, 5]
-
+        input_shape = [1, 1, 5, 5]
+        output_shape = [1, 5, 5, 5]
+        W_shape = [5, 1, 3, 3]
         model_input_name = "X"
         X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
         model_output_name = "Y"
         Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, output_shape)
 
-        W = np.array(
-            [[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]  # (1, 1, 3, 3) tensor for convolution weights
-        ).astype(np.float32)
+        rng = get_random_generator()
 
-        w_tensor = create_initializer_tensor(name="W", tensor_array=W, data_type=onnx.TensorProto.FLOAT)
+        w_tensor = create_initializer_tensor(
+            name="W", tensor_array=rng.uniform(0, 1, W_shape), data_type=onnx.TensorProto.FLOAT
+        )
 
         relu_x_node = onnx.helper.make_node(
             name="Relu",
