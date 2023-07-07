@@ -27,6 +27,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
@@ -154,7 +155,17 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if not target_point.is_weight_target_point():
             return 1
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        return node.metatype.weight_channel_axis
+
+        weight_channel_axis = node.metatype.weight_channel_axis
+        if node.layer_attributes.has_node_attrs():
+            if node.metatype == ONNXGemmMetatype:
+                weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
+                if target_point.port_id == 0 and node.layer_attributes.node_attrs["transA"] == 1:
+                    weight_channel_axis = 1 - weight_channel_axis
+                elif target_point.port_id == 1 and node.layer_attributes.node_attrs["transB"] == 1:
+                    weight_channel_axis = 1 - weight_channel_axis
+                weight_channel_axis %= len(weight_shape)
+        return weight_channel_axis
 
     @staticmethod
     def _get_reduction_shape_and_use_abs_max(
