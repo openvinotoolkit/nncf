@@ -134,6 +134,15 @@ def zeros_like(target: TensorType) -> TensorType:
     raise NotImplemented
 
 
+def ones_like(target: TensorType) -> TensorType:
+    if torch is not None and isinstance(target, torch.Tensor):
+        return torch.ones_like(target)
+    elif isinstance(target, np.ndarray):
+        return np.ones_like(target)
+
+    raise NotImplemented
+
+
 def count_nonzero(target, axis: Optional[TensorType] = None) -> TensorType:
     if torch is not None and isinstance(target, torch.Tensor):
         return torch.count_nonzero(target, dim=axis)
@@ -143,7 +152,7 @@ def count_nonzero(target, axis: Optional[TensorType] = None) -> TensorType:
     raise NotImplemented
 
 
-def maximum(target: TensorType, axis: Optional[TensorType] = None) -> TensorType:
+def max(target: TensorType, axis: Optional[TensorType] = None) -> TensorType:
     if torch is not None and isinstance(target, torch.Tensor):
         if axis is None:
             return torch.max(target)
@@ -154,7 +163,7 @@ def maximum(target: TensorType, axis: Optional[TensorType] = None) -> TensorType
     raise NotImplemented
 
 
-def minimum(target: TensorType, axis: Optional[TensorType] = None) -> TensorType:
+def min(target: TensorType, axis: Optional[TensorType] = None) -> TensorType:
     if torch is not None and isinstance(target, torch.Tensor):
         if axis is None:
             return torch.min(target)
@@ -172,3 +181,65 @@ def absolute(target: TensorType) -> TensorType:
         return np.abs(target)
 
     raise NotImplemented
+
+
+def maximum(target: TensorType, other: TensorType) -> TensorType:
+    if torch is not None and isinstance(target, torch.Tensor):
+        if not isinstance(other, torch.Tensor):
+            other = torch.tensor(other, device=target.data.device)
+        return torch.maximum(target, other)
+
+    return np.maximum(target, other)
+
+
+def minimum(target: TensorType, other: TensorType) -> TensorType:
+    if torch is not None and isinstance(target, torch.Tensor):
+        if not isinstance(other, torch.Tensor):
+            other = torch.tensor(other, device=target.data.device)
+        return torch.minimum(target, other)
+
+    return np.minimum(target, other)
+
+
+def all(target: TensorType) -> TensorType:
+    if torch is not None and isinstance(target, torch.Tensor):
+        return torch.all(target)
+    elif isinstance(target, (np.ndarray, list)):
+        return np.all(target)
+
+    raise NotImplemented
+
+
+def any(target: TensorType) -> TensorType:
+    if torch is not None and isinstance(target, torch.Tensor):
+        return torch.any(target)
+    elif isinstance(target, (np.ndarray, list)):
+        return np.any(target, target)
+
+    raise NotImplemented
+
+
+def where(condition: TensorType, x: TensorType, y: TensorType) -> TensorType:
+    if torch is not None and isinstance(condition, torch.Tensor):
+        return torch.where(condition, x, y)
+    elif isinstance(condition, np.ndarray):
+        return np.where(condition, x, y)
+
+    raise NotImplemented
+
+
+def is_empty(target: TensorType) -> TensorType:
+    if torch is not None and isinstance(target, torch.Tensor):
+        return target.element() == 0
+    elif isinstance(target, np.ndarray):
+        return target.size == 0
+    elif isinstance(target, list):
+        return len(target) == 0
+
+    raise NotImplemented
+
+
+# def allclose
+
+
+# def flatten

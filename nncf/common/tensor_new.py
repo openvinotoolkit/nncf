@@ -41,10 +41,7 @@ class Tensor:
             raise RuntimeError("Attempt to get shape of empty NNCFTensor")
         return self.data.shape
 
-    def is_empty(self) -> bool:
-        return False
-
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return bool(self.data)
 
     def __iter__(self) -> Iterator:
@@ -53,7 +50,7 @@ class Tensor:
     def __getitem__(self, index: int) -> "Tensor":
         return Tensor(self.data[index])
 
-    # Math operations
+    # built-in operations
 
     def __add__(self, other: TensorType) -> "Tensor":
         return Tensor(tensor_ops.add(self.data, self.safe_get_tensor_data(other)))
@@ -117,17 +114,17 @@ class Tensor:
     def squeeze(self, axis: Optional[Union[int, Tuple[int]]] = None) -> "Tensor":
         return Tensor(tensor_ops.squeeze(self.data, axis=axis))
 
-    def zeros_like(self) -> "Tensor":
-        return Tensor(tensor_ops.zeros_like(self.data))
-
     def count_nonzero(self, axis: Optional[TensorType] = None) -> "Tensor":
         return Tensor(tensor_ops.count_nonzero(self.data, axis=axis))
 
     def max(self, axis: Optional[TensorType] = None) -> "Tensor":
-        return Tensor(tensor_ops.maximum(self.data, axis=axis))
+        return Tensor(tensor_ops.max(self.data, axis=axis))
 
     def min(self, axis: Optional[TensorType] = None) -> "Tensor":
-        return Tensor(tensor_ops.minimum(self.data, axis=axis))
+        return Tensor(tensor_ops.min(self.data, axis=axis))
 
     def abs(self) -> "Tensor":
         return Tensor(tensor_ops.absolute(self.data))
+
+    def is_empty(self) -> "Tensor":
+        return Tensor(tensor_ops.is_empty(self.data))

@@ -14,12 +14,14 @@ from typing import Tuple
 
 import numpy as np
 
+import nncf.common.tensor_math as tensor_math
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_new import Tensor
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 
 
@@ -50,9 +52,9 @@ def fix_zero_filters_symmetric(max_values: np.ndarray, eps: float = 0.01) -> np.
     :param eps: Correction coefficient.
     :return: Fixed the high quant number.
     """
-    max_range = np.max(max_values)
-    lower_threshold = np.maximum(8e-5, eps * max_range)
-    return np.maximum(lower_threshold, max_values)
+    max_range = max_values.max()
+    lower_threshold = tensor_math.maximum(max_range * eps, 8e-5)
+    return tensor_math.maximum(lower_threshold, max_values)
 
 
 def fix_zero_filters_asymmetric(
@@ -148,11 +150,13 @@ def symmetric_range(
     else:
         signed = quantizer_config.signedness_to_force is True
         level_low = (
-            np.zeros_like(level_high) if np.all(min_values >= 0) and not signed else -level_high * levels / (levels - 2)
+            tensor_math.zeros_like(level_high)
+            if tensor_math.all(min_values >= 0) and not signed
+            else -level_high * levels / (levels - 2)
         )
 
-    level_low = level_low.astype(np.float32)
-    level_high = level_high.astype(np.float32)
+    # level_low = level_low.astype(np.float32)
+    # level_high = level_high.astype(np.float32)
     return level_low, level_high
 
 
@@ -221,8 +225,8 @@ def calculate_quantizer_parameters(
         False - the full range is used.
     :return: Parameters of the FakeQuantize layer.
     """
-    min_values = np.array(statistics.min_values).astype(np.float32)
-    max_values = np.array(statistics.max_values).astype(np.float32)
+    min_values = Tensor(statistics.min_values)
+    max_values = Tensor(statistics.max_values)
 
     if half_range:
         input_low, input_high, levels = _calculate_scaled_parameters(
@@ -240,10 +244,10 @@ def calculate_quantizer_parameters(
             input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     if not quantizer_config.per_channel:
-        input_low = np.squeeze(input_low)
-        input_high = np.squeeze(input_high)
+        input_low = input_low.squeeze()
+        input_high = input_high.squeeze()
 
-    input_low, input_high = np.array(input_low), np.array(input_high)
+    # input_low, input_high = np.array(input_low), np.array(input_high)
     output_low, output_high = input_low, input_high
     return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)
 
