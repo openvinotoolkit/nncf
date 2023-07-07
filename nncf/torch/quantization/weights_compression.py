@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Dict, Optional
 
 import torch
 from torch import nn
 
+from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.layers import NNCFEmbedding
 from nncf.torch.layers import NNCFLinear
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
@@ -25,14 +26,16 @@ class WeightsCompressor(nn.Module):
         if input.weight.dtype is torch.uint8:
             w = input.weight.type(dtype=self.scale.dtype)
             input.weight = (w - self.zero_point) * self.scale
-        else:
+        elif not self.zero_point.dtype is torch.uint8:
             axis = 0 if input.weight.shape[0] == self.scale.shape[0] else 1
             input.weight = torch.fake_quantize_per_channel_affine(
                 input.weight, self.scale, self.zero_point, axis, 0, 255
             )
 
 
-def insert_pre_compression_operations(module: nn.Module, compress_weights=False) -> Optional[nn.Module]:
+def _insert_pre_compression_operations(
+    module: nn.Module, allowed_types: Dict, compress_weights=False
+) -> Optional[nn.Module]:
     """
     Insets weights compression with dequantization or quantization pre operation for Linear and Embedding layers.
 
@@ -40,15 +43,14 @@ def insert_pre_compression_operations(module: nn.Module, compress_weights=False)
     :param compress_weights: Enables real compression of weights in Linear and Embedding layers.
         If False inserts pytorch torch.fake_quantize_per_channel_affine(),
         else compress weights to int8 and inserts custom dequantization.
+    :param allowed_types: dist with pairs (allowed type for weights compression, dimention for scale and zero point)
     :return: The module with inserted operations. The module is not trainable if compress_weights is True.
     """
-    q_dims = {NNCFEmbedding: 0, NNCFLinear: 1}
-    allowed_types = [NNCFEmbedding, NNCFLinear]
     for _, layer in module.named_children():
         if not type(layer) in allowed_types:
-            insert_pre_compression_operations(layer, compress_weights)
+            _insert_pre_compression_operations(layer, allowed_types, compress_weights)
             continue
-        q_dim = q_dims[type(layer)]
+        q_dim = allowed_types[type(layer)]
         input_low = torch.min(layer.weight, dim=q_dim)[0].detach()
         input_high = torch.max(layer.weight, dim=q_dim)[0].detach()
         scale, zero_point = get_scale_zp_from_input_low_input_high(0, 255, input_low, input_high)
@@ -66,3 +68,23 @@ def insert_pre_compression_operations(module: nn.Module, compress_weights=False)
         else:
             zero_point = zero_point.type(dtype=torch.int32)
             layer.register_pre_forward_operation(WeightsCompressor(zero_point, scale))
+
+
+def insert_pre_compression_operations(module: nn.Module, compress_weights=False) -> Optional[nn.Module]:
+    """
+    Insets weights compression with dequantization or quantization pre operation for Linear and Embedding layers.
+
+    :param module: The module to insert the weights compression.
+    :param compress_weights: Enables real compression of weights in Linear and Embedding layers.
+        If False inserts pytorch torch.fake_quantize_per_channel_affine(),
+        else compress weights to int8 and inserts custom dequantization.
+    :return: The module with inserted operations. The module is not trainable if compress_weights is True.
+    """
+    user_types = list(NNCF_WRAPPED_USER_MODULES_DICT.values())
+    allowed_types = {NNCFEmbedding: 0, NNCFLinear: 1}
+
+    for user_type in user_types:
+        if torch.nn.Embedding in user_type.__mro__:
+            allowed_types[user_type] = 0
+
+    _insert_pre_compression_operations(module, allowed_types, compress_weights)
