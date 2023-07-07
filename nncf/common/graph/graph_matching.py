@@ -127,7 +127,7 @@ def find_subgraphs_matching_pattern(
 
     :param graph: The model graph.
     :param pattern_graph: A graph consists of patterns to match.
-    :param strict: If True returns only strict matched subgraphs, otherwise - False.
+    :param strict: If True returns only strict matched subgraphs, if False- all matched subgraphs.
     :return: A list of subgraphs are mathced to the patterns. Each subgraph is defined as a list of node keys.
     """
     subgraphs = []

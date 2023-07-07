@@ -716,7 +716,7 @@ class NNCFGraph:
         Returns subgraphs of matched pattern in patterns.
 
         :param patterns: Instance of GraphPattern containing all patterns.
-        :param strict: If True returns only strict matched subgraphs, otherwise - False.
+        :param strict: If True returns only strict matched subgraphs, if False- all matched subgraphs.
         :return: List of subgraphs that are matching by pattern matching.
             Subgraph is a ordered list of nodes of matched subgraph
         The returned nodes order relies on DiGraphMatcher isomorphic subgraphs matching logic from networkX package.
