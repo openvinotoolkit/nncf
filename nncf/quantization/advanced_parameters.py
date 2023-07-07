@@ -224,9 +224,10 @@ def convert_to_dict_recursively(params: Any) -> Dict[str, Any]:
         value = getattr(params, f.name)
         if is_dataclass(value):
             result[f.name] = convert_to_dict_recursively(value)
-        if isinstance(value, Enum):
+        elif isinstance(value, Enum):
             result[f.name] = value.value
-        result[f.name] = value
+        else:
+            result[f.name] = value
 
     return result
 
