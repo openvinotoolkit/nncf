@@ -199,19 +199,6 @@ class ONNXGraph:
             raise RuntimeError(f"The nodes {from_node.name} and {to_node.name} do not have edges between.")
         return output
 
-    def get_nodes_by_type(self, node_type: str) -> List[onnx.NodeProto]:
-        """
-        Returns all nodes in the model that have type equal to 'node_type'.
-
-        :param node_type: Type of the nodes.
-        :return: All nodes with the corresponding type.
-        """
-        output = []
-        for node in self.get_all_nodes():
-            if str(node.op_type) == node_type:
-                output.append(node)
-        return output
-
     def get_node_index(self, node_name: str) -> int:
         """
         Returns the node index in the model.
