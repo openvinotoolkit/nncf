@@ -28,6 +28,10 @@ NNCF OpenVINO:
   - 'nncf/openvino/**/*'
   - 'tests/openvino/**/*'
 
+NNCF PTQ:
+  - 'nncf/quantization/**/*'
+  - 'tests/post_training/**/*'
+
 documentation:
   - '**/README.md'
   - 'docs/**/*'
