@@ -10,13 +10,7 @@ NNCF PT:
     - 'examples/post_training_quantization/torch/**/*'
     - 'nncf/torch/**/*'
     - 'tests/torch/**/*'
-  all:
-    - '!**/*.md'
-
-
-NNCF PT:
-- any:
-    - 'examples/torch/**/*'
+    - 'nncf/quantization/**/torch_backend.py'
   all:
     - '!**/*.md'
 
@@ -26,6 +20,7 @@ NNCF TF:
     - 'examples/post_training_quantization/tensorflow/**/*'
     - 'nncf/tensorflow/**/*'
     - 'tests/tensorflow/**/*'
+    - 'nncf/quantization/**/tf_backend.py'
   all:
     - '!**/*.md'
 
@@ -35,9 +30,9 @@ NNCF ONNX:
     - 'examples/post_training_quantization/onnx/**/*'
     - 'nncf/onnx/**/*'
     - 'tests/onnx/**/*'
+    - 'nncf/quantization/**/onnx_backend.py'
   all:
     - '!**/*.md'
-
 
 NNCF OpenVINO:
 - any:
@@ -45,6 +40,7 @@ NNCF OpenVINO:
     - 'examples/post_training_quantization/openvino/**/*'
     - 'nncf/openvino/**/*'
     - 'tests/openvino/**/*'
+    - 'nncf/quantization/**/openvino_backend.py'
   all:
     - '!**/*.md'
 
