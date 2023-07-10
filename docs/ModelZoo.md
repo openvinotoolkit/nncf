@@ -1,6 +1,8 @@
 # NNCF Compressed Model Zoo
 
-Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files. See [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration)
+Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files.
+
+See [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration)
 to find instruction and links to exact configuration files and final checkpoints.
 - [PyTorch](#pytorch_models)
   * [Classification](#pytorch_classification)
