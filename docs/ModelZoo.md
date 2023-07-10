@@ -40,7 +40,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.15</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -48,7 +48,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.46 (-0.31)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -56,7 +56,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 (per-tensor only)</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.39 (-0.24)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet_int8_per_tensor.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8_per_tensor.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -64,7 +64,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Mixed, 43.12% INT8 / 56.88% INT4</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.05 (0.10)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int4_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -72,7 +72,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 61% (RB)</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">75.42 (0.73)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -80,7 +80,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 50% (RB)</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">75.50 (0.65)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity50_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity50_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -88,7 +88,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">77.33</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/inception_v3_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -96,7 +96,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">77.45 (-0.12)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -104,7 +104,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 61% (RB)</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.36 (0.97)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_rb_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -112,7 +112,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">71.87</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -120,7 +120,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">71.07 (0.80)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -128,7 +128,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 (per-tensor only)</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">71.24 (0.63)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8_per_tensor.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -136,7 +136,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Mixed, 58.88% INT8 / 41.12% INT4</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">70.95 (0.92)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int4_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -144,7 +144,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 52% (RB)</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">71.09 (0.78)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_rb_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -152,7 +152,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">67.66</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -160,7 +160,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">66.98 (0.68)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v3_small_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -168,7 +168,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">58.19</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -176,7 +176,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">58.22 (-0.03)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -184,7 +184,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 (per-tensor only)</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">58.11 (0.08)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8_per_tensor.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -192,7 +192,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Mixed, 52.83% INT8 / 47.17% INT4</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">57.57 (0.62)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int4_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -200,7 +200,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.76</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -208,7 +208,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">73.30</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -216,7 +216,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.77</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 	</tbody>
@@ -239,7 +239,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.76</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -247,7 +247,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">XNOR (weights), scale/threshold (activations)</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">61.67 (8.09)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_xnor.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -255,7 +255,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">DoReFa (weights), scale/threshold (activations)</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">61.63 (8.13)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth">Download</a></td>
 		</tr>
 	</tbody>
@@ -278,7 +278,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.15</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -286,7 +286,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">75.57 (0.58)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_geometric_median.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -294,7 +294,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.76</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -302,7 +302,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Filter pruning, 40%, magnitude criterion</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.27 (0.49)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_magnitude.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_magnitude.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -310,7 +310,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.31 (0.45)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_geometric_median.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -318,7 +318,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">73.30</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -326,7 +326,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Filter pruning, 50%, geometric median criterion + KD</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">73.11 (0.19)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet34_imagenet_pruning_geometric_median_kd.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -334,7 +334,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.77</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet.json">Config</a></td>
 			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
@@ -342,7 +342,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.47 (0.30)</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet_pruning_geometric_median.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/googlenet_imagenet_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 	</tbody>
@@ -365,8 +365,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">76.16</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/Config">Config</a></td>
-			<td style="text-align: center;">-</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet.json">Config</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-50</td>
@@ -381,8 +380,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">69.8</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/Config">Config</a></td>
-			<td style="text-align: center;">-</td>
+			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
@@ -419,7 +417,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">62.23</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -427,7 +425,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 70% (Magnitude)</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">62.95 (-0.72)</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc_magnitude_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -435,7 +433,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">78.28</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -443,7 +441,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">77.81 (0.47)</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -451,7 +449,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 70% (Magnitude)</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">77.66 (0.62)</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_magnitude_sparsity_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -459,7 +457,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">80.26</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -467,7 +465,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">80.04 (0.22)</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -475,7 +473,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 70% (Magnitude)</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">79.68 (0.58)</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 	</tbody>
@@ -498,7 +496,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">78.28</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -506,7 +504,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
 			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
 			<td style="text-align: center;">78.35 (-0.07)</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_pruning_geometric_median.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 	</tbody>
@@ -536,7 +534,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">71.95</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_camvid.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -544,7 +542,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">71.89 (0.06)</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_camvid_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -552,7 +550,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 60% (Magnitude)</td>
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">72.46 (-0.51)</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_camvid_magnitude_sparsity_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -560,7 +558,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">67.89</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -568,7 +566,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">67.89 (0.00)</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -576,7 +574,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 60% (Magnitude)</td>
 			<td style="text-align: center;">CamVid</td>
 			<td style="text-align: center;">67.16 (0.73)</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -584,7 +582,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">56.24</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -592,7 +590,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8</td>
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">56.09 (0.15)</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_int8.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -600,7 +598,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">INT8 + Sparsity 60% (Magnitude)</td>
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">55.69 (0.55)</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_magnitude_sparsity_int8.pth">Download</a></td>
 		</tr>
 	</tbody>
@@ -623,7 +621,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">None</td>
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">56.24</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Download</a></td>
 		</tr>
 		<tr>
@@ -631,7 +629,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">Filter pruning, 25%, geometric median criterion</td>
 			<td style="text-align: center;">Mapillary</td>
 			<td style="text-align: center;">55.64 (0.60)</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/Config">Config</a></td>
+			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_pruning_geometric_median.pth">Download</a></td>
 		</tr>
 	</tbody>
