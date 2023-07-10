@@ -85,4 +85,4 @@ python main.py -m export --config=configs/quantization/mobilenet_v2_imagenet_int
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
 ### Results
-Please see compression results for PyTorch classification at our [Model Zoo page](../../../docs/ModelZoo.md).
+Please see compression results for PyTorch classification at our [Model Zoo page](../../../docs/ModelZoo.md#pytorch_classification).
