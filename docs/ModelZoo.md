@@ -224,24 +224,8 @@ to find instruction and links to exact configuration files and final checkpoints
 		<tr>
 			<th style="text-align: center;" colspan="6"><br>Binarization<br>&nbsp</th>
 		</tr>
-		<tr>
-			<th style="text-align: center;">Model</th>
-			<th style="text-align: center;">Compression algorithm</th>
-			<th style="text-align: center;">Dataset</th>
-			<th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
-			<th style="text-align: center;">NNCF config file</th>
-			<th style="text-align: center;">Checkpoint</th>
-		</tr>
 	</thead>
 	<tbody align="center">
-		<tr>
-			<td style="text-align: center;">ResNet-18</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">ImageNet</td>
-			<td style="text-align: center;">69.76</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
-			<td style="text-align: center;">-</td>
-		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
 			<td style="text-align: center;">XNOR (weights), scale/threshold (activations)</td>
@@ -262,14 +246,6 @@ to find instruction and links to exact configuration files and final checkpoints
     <thead>
 		<tr>
 			<th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
-		</tr>
-		<tr>
-			<th style="text-align: center;">Model</th>
-			<th style="text-align: center;">Compression algorithm</th>
-			<th style="text-align: center;">Dataset</th>
-			<th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
-			<th style="text-align: center;">NNCF config file</th>
-			<th style="text-align: center;">Checkpoint</th>
 		</tr>
 	</thead>
 	<tbody align="center">
@@ -317,14 +293,6 @@ to find instruction and links to exact configuration files and final checkpoints
     <thead>
 		<tr>
 			<th style="text-align: center;" colspan="6"><br>Accuracy-aware compressed training<br>&nbsp</th>
-		</tr>
-		<tr>
-			<th style="text-align: center;">Model</th>
-			<th style="text-align: center;">Compression algorithm</th>
-			<th style="text-align: center;">Dataset</th>
-			<th style="text-align: center;">Accuracy (Drop) %</th>
-			<th style="text-align: center;">NNCF config file</th>
-            <th style="text-align: center;">Checkpoint</th>
 		</tr>
 	</thead>
 	<tbody align="center">
@@ -802,14 +770,6 @@ to find instruction and links to exact configuration files and final checkpoints
 		<tr>
 			<th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
 		</tr>
-		<tr>
-			<th style="text-align: center;">Model</th>
-			<th style="text-align: center;">Compression algorithm</th>
-			<th style="text-align: center;">Dataset</th>
-			<th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
-			<th style="text-align: center;">NNCF config file</th>
-			<th style="text-align: center;">Checkpoint</th>
-		</tr>
 	</thead>
 	<tbody align="center">
 		<tr>
@@ -919,14 +879,6 @@ to find instruction and links to exact configuration files and final checkpoints
 	<thead>
 		<tr>
 			<th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
-		</tr>
-		<tr>
-			<th style="text-align: center;">Model</th>
-			<th style="text-align: center;">Compression algorithm</th>
-			<th style="text-align: center;">Dataset</th>
-			<th style="text-align: center;">mAP (<em>drop</em>) %</th>
-			<th style="text-align: center;">NNCF config file</th>
-			<th style="text-align: center;">Checkpoint</th>
 		</tr>
 	</thead>
 	<tbody align="center">
