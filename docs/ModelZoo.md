@@ -275,27 +275,11 @@ to find instruction and links to exact configuration files and final checkpoints
 	<tbody align="center">
 		<tr>
 			<td style="text-align: center;">ResNet-50</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">ImageNet</td>
-			<td style="text-align: center;">76.15</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet.json">Config</a></td>
-			<td style="text-align: center;">-</td>
-		</tr>
-		<tr>
-			<td style="text-align: center;">ResNet-50</td>
 			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">75.57 (0.58)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_geometric_median.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_pruning_geometric_median.pth">Download</a></td>
-		</tr>
-		<tr>
-			<td style="text-align: center;">ResNet-18</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">ImageNet</td>
-			<td style="text-align: center;">69.76</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
-			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
@@ -315,27 +299,11 @@ to find instruction and links to exact configuration files and final checkpoints
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-34</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">ImageNet</td>
-			<td style="text-align: center;">73.30</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet.json">Config</a></td>
-			<td style="text-align: center;">-</td>
-		</tr>
-		<tr>
-			<td style="text-align: center;">ResNet-34</td>
 			<td style="text-align: center;">Filter pruning, 50%, geometric median criterion + KD</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">73.11 (0.19)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json">Config</a></td>
 			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet34_imagenet_pruning_geometric_median_kd.pth">Download</a></td>
-		</tr>
-		<tr>
-			<td style="text-align: center;">GoogLeNet</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">ImageNet</td>
-			<td style="text-align: center;">69.77</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet.json">Config</a></td>
-			<td style="text-align: center;">-</td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">GoogLeNet</td>
@@ -362,25 +330,11 @@ to find instruction and links to exact configuration files and final checkpoints
 	<tbody align="center">
 		<tr>
 			<td style="text-align: center;">ResNet-50</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">ImageNet</td>
-			<td style="text-align: center;">76.16</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet.json">Config</a></td>
-		</tr>
-		<tr>
-			<td style="text-align: center;">ResNet-50</td>
 			<td style="text-align: center;">Filter pruning, 52.5%, geometric median criterion</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">75.23 (0.93)</td>
 			<td style="text-align: center;"><a href="../examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_accuracy_aware.json">Config</a></td>
 			<td style="text-align: center;">-</td>
-		</tr>
-		<tr>
-			<td style="text-align: center;">ResNet-18</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">ImageNet</td>
-			<td style="text-align: center;">69.8</td>
-			<td style="text-align: center;"><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
 		</tr>
 		<tr>
 			<td style="text-align: center;">ResNet-18</td>
@@ -481,24 +435,8 @@ to find instruction and links to exact configuration files and final checkpoints
 		<tr>
 			<th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
 		</tr>
-		<tr>
-			<th style="text-align: center;">Model</th>
-			<th style="text-align: center;">Compression algorithm</th>
-			<th style="text-align: center;">Dataset</th>
-			<th style="text-align: center;">mAP (<em>drop</em>) %</th>
-			<th style="text-align: center;">NNCF config file</th>
-			<th style="text-align: center;">Checkpoint</th>
-		</tr>
 	</thead>
 	<tbody align="center">
-		<tr>
-			<td style="text-align: center;">SSD300-VGG-BN</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">VOC12+07 train, VOC07 eval</td>
-			<td style="text-align: center;">78.28</td>
-			<td style="text-align: center;"><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc.json">Config</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Download</a></td>
-		</tr>
 		<tr>
 			<td style="text-align: center;">SSD300-VGG-BN</td>
 			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
@@ -606,24 +544,8 @@ to find instruction and links to exact configuration files and final checkpoints
 		<tr>
 			<th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
 		</tr>
-		<tr>
-			<th style="text-align: center;">Model</th>
-			<th style="text-align: center;">Compression algorithm</th>
-			<th style="text-align: center;">Dataset</th>
-			<th style="text-align: center;">mIoU (<em>drop</em>) %</th>
-			<th style="text-align: center;">NNCF config file</th>
-			<th style="text-align: center;">Checkpoint</th>
-		</tr>
 	</thead>
 	<tbody align="center">
-		<tr>
-			<td style="text-align: center;">UNet</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">Mapillary</td>
-			<td style="text-align: center;">56.24</td>
-			<td style="text-align: center;"><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary.json">Config</a></td>
-			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Download</a></td>
-		</tr>
 		<tr>
 			<td style="text-align: center;">UNet</td>
 			<td style="text-align: center;">Filter pruning, 25%, geometric median criterion</td>
@@ -892,14 +814,6 @@ to find instruction and links to exact configuration files and final checkpoints
 	<tbody align="center">
 		<tr>
 			<td style="text-align: center;">ResNet-50</td>
-			<td style="text-align: center;">None</td>
-			<td style="text-align: center;">ImageNet</td>
-			<td style="text-align: center;">75.05</td>
-			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/resnet50_imagenet.json">Config</a></td>
-			<td style="text-align: center;">-</td>
-		</tr>
-		<tr>
-			<td style="text-align: center;">ResNet-50</td>
 			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">74.96 (0.09)</td>
@@ -919,13 +833,6 @@ to find instruction and links to exact configuration files and final checkpoints
 		<tr>
 			<th style="text-align: center;" colspan="6"><br>Accuracy-aware compressed training<br>&nbsp</th>
 		</tr>
-		<tr>
-			<th style="text-align: center;"><strong>Model</strong></th>
-			<th style="text-align: center;"><strong>Compression algorithm</strong></th>
-			<th style="text-align: center;"><strong>Dataset</strong></th>
-			<th style="text-align: center;"><strong>Accuracy (Drop) %</strong></th>
-			<th style="text-align: center;"><strong>NNCF config file</strong></th>
-		</tr>
 	</thead>
 	<tbody align="center">
 		<tr>
@@ -934,6 +841,7 @@ to find instruction and links to exact configuration files and final checkpoints
 			<td style="text-align: center;">ImageNet</td>
 			<td style="text-align: center;">74.37 (0.67)</td>
 			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity/resnet50_imagenet_magnitude_sparsity_accuracy_aware.json">Config</a></td>
+            <td style="text-align: center;">-</td>
 		</tr>
 	</tbody>
 </table>
