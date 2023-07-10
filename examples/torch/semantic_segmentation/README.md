@@ -74,4 +74,4 @@ To export trained model to ONNX format use the following command:
 To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment Toolkit please refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
 ### Results
-Please see compression results for PyTorch semantic segmentation at our [Model Zoo page](../../../docs/ModelZoo.md#pytorch_semantic_segmentation).
+Please see compression results for PyTorch semantic segmentation at our [Model Zoo page](../../../docs/ModelZoo.md#pytorch-semantic-segmentation).
