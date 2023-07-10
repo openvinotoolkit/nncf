@@ -2,21 +2,19 @@
 
 Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files.
 
-- [PyTorch](#pytorch_models)
-  * [Classification](#pytorch_classification)
-  * [Object Detection](#pytorch_object_detection)
-  * [Semantic Segmentation](#pytorch_semantic_segmentation)
-  * [Natural Language Processing (3rd-party training pipelines)](#pytorch_nlp)
-- [TensorFlow](#tensorflow_models)
-  * [Classification](#tensorflow_classification)
-  * [Object Detection](#tensorflow_object_detection)
-  * [Instance Segmentation](#tensorflow_instance_segmentation)
-- [ONNX](#onnx_models)
+- [PyTorch](#pytorch)
+  * [Classification](#pytorch-classification)
+  * [Object Detection](#pytorch-object-detection)
+  * [Semantic Segmentation](#pytorch-semantic-segmentation)
+  * [Natural Language Processing (3rd-party training pipelines)](#pytorch-nlp-huggingface-transformers-powered-models)
+- [TensorFlow](#tensorflow)
+  * [Classification](#tensorflow-classification)
+  * [Object Detection](#tensorflow-object-detection)
+  * [Instance Segmentation](#tensorflow-instance-segmentation)
+- [ONNX](#onnx)
 
-<a id="pytorch_models"></a>
 ## PyTorch
 
-<a id="pytorch_classification"></a>
 ### PyTorch Classification
 
 <table>
@@ -314,8 +312,6 @@ Here we present the results achieved using our sample scripts, example patches t
 	</tbody>
 </table>
 
-
-<a id="pytorch_object_detection"></a>
 ### PyTorch Object Detection
 
 <table>
@@ -415,8 +411,6 @@ Here we present the results achieved using our sample scripts, example patches t
 	</tbody>
 </table>
 
-
-<a id="pytorch_semantic_segmentation"></a>
 ### PyTorch Semantic Segmentation
 
 <table>
@@ -524,7 +518,6 @@ Here we present the results achieved using our sample scripts, example patches t
 	</tbody>
 </table>
 
-<a id="pytorch_nlp"></a>
 ### PyTorch NLP (HuggingFace Transformers-powered models)
 
 <table>
@@ -588,11 +581,8 @@ Here we present the results achieved using our sample scripts, example patches t
 	</tbody>
 </table>
 
-
-<a id="tensorflow_models"></a>
 ## TensorFlow
 
-<a id="tensorflow_classification"></a>
 ### TensorFlow Classification
 
 <table>
@@ -803,8 +793,6 @@ Here we present the results achieved using our sample scripts, example patches t
 	</tbody>
 </table>
 
-
-<a id="tensorflow_object_detection"></a>
 ### TensorFlow Object Detection
 
 <table>
@@ -904,7 +892,6 @@ Here we present the results achieved using our sample scripts, example patches t
 	</tbody>
 </table>
 
-<a id="tensorflow_instance_segmentation"></a>
 ### TensorFlow Instance Segmentation
 
 <table>
@@ -949,11 +936,8 @@ Here we present the results achieved using our sample scripts, example patches t
 	</tbody>
 </table>
 
-
-<a id="onnx_models"></a>
 ## ONNX
 
-<a id="onnx_classification"></a>
 ### ONNX Classification
 
 <table>
@@ -1011,9 +995,6 @@ Here we present the results achieved using our sample scripts, example patches t
 	</tbody>
 </table>
 
-
-
-<a id="onnx_object_detection"></a>
 ### ONNX Object Detection
 
 <table>

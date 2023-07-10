@@ -23,4 +23,4 @@ pip install -r examples/torch/requirements.txt
 ```
 
 ### Results
-Please see compression results for PyTorch models at our [Model Zoo page](../../../docs/ModelZoo.md#pytorch_models).
+Please see compression results for PyTorch models at our [Model Zoo page](../../../docs/ModelZoo.md#pytorch).

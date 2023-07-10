@@ -160,4 +160,4 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 ## Results
 <a name="results"></a>
 
-Please see compression results for Tensorflow object detection at our [Model Zoo page](../../../docs/ModelZoo.md#tensorflow_object_detection).
+Please see compression results for Tensorflow object detection at our [Model Zoo page](../../../docs/ModelZoo.md#tensorflow-object-detection).
