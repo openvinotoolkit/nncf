@@ -1,7 +1,6 @@
 # NNCF Compressed Model Zoo
 
-Results achieved using sample scripts, example patches to third-party repositories and NNCF configuration files provided
-with this repository. See README.md files for [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration)
+Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files. See [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration)
 to find instruction and links to exact configuration files and final checkpoints.
 - [PyTorch](#pytorch_models)
   * [Classification](#pytorch_classification)
@@ -596,8 +595,6 @@ to find instruction and links to exact configuration files and final checkpoints
 <a id="tensorflow_classification"></a>
 ### TensorFlow Classification
 
-#### Quantization
-
 <table>
 	<thead>
 		<tr>
@@ -809,8 +806,6 @@ to find instruction and links to exact configuration files and final checkpoints
 
 <a id="tensorflow_object_detection"></a>
 ### TensorFlow Object Detection
-
-#### Quantization
 
 <table>
 	<thead>
