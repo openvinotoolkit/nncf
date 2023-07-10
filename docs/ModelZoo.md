@@ -708,42 +708,235 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Quantization
 
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|Inception V3|None|ImageNet|77.91|[inception_v3_imagenet.json](configs/inception_v3_imagenet.json)|-|
-|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|78.39 (-0.48)|[inception_v3_imagenet_int8.json](configs/quantization/inception_v3_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_int8.tar.gz)|
-|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)|ImageNet|77.52 (0.39)|[inception_v3_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_rb_sparsity_int8.tar.gz)|
-|Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.86 (0.05)|[inception_v3_imagenet_magnitude_sparsity.json](configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_magnitude_sparsity.tar.gz)|
-|MobileNet V2|None|ImageNet|71.85|[mobilenet_v2_imagenet.json](configs/mobilenet_v2_imagenet.json)|-|
-|MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|71.63 (0.22)|[mobilenet_v2_imagenet_int8.json](configs/quantization/mobilenet_v2_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_int8.tar.gz)|
-|MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 52% (RB)|ImageNet|70.94 (0.91)|[mobilenet_v2_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity_int8.tar.gz)|
-|MobileNet V2| Sparsity 50% (RB)|ImageNet|71.34 (0.51)|[mobilenet_v2_imagenet_rb_sparsity.json](configs/sparsity/mobilenet_v2_imagenet_rb_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity.tar.gz)|
-|MobileNet V2 (TensorFlow Hub MobileNet V2)|Sparsity 35% (Magnitude)|ImageNet|71.87 (-0.02)|[mobilenet_v2_hub_imagenet_magnitude_sparsity.json](configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_hub_imagenet_magnitude_sparsity.tar.gz)|
-|MobileNet V3 (Small)|None|ImageNet|68.38|[mobilenet_v3_small_imagenet.json](configs/mobilenet_v3_small_imagenet.json)|-|
-|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|67.79 (0.59)|[mobilenet_v3_small_imagenet_int8.json](configs/quantization/mobilenet_v3_small_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_int8.tar.gz)|
-|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)|ImageNet|67.44 (0.94)|[mobilenet_v3_small_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_rb_sparsity_int8.tar.gz)|
-|MobileNet V3 (Large)|None|ImageNet|75.80|[mobilenet_v3_large_imagenet.json](configs/mobilenet_v3_large_imagenet.json)|-|
-|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|75.04 (0.76)|[mobilenet_v3_large_imagenet_int8.json](configs/quantization/mobilenet_v3_large_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_int8.tar.gz)|
-|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (RB)|ImageNet|75.24 (0.56)|[mobilenet_v3_large_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_rb_sparsity_int8.tar.gz)|
-|ResNet-50|None|ImageNet|75.05|[resnet50_imagenet.json](configs/resnet50_imagenet.json)|-|
-|ResNet-50|INT8|ImageNet|74.99 (0.06)|[resnet50_imagenet_int8.json](configs/quantization/resnet50_imagenet_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_int8.tar.gz)|
-|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 65% (RB)|ImageNet|74.36 (0.69)|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity_int8.tar.gz)|
-|ResNet-50|Sparsity 80% (RB)|ImageNet|74.38 (0.67)|[resnet50_imagenet_rb_sparsity.json](configs/sparsity/resnet50_imagenet_rb_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity.tar.gz)|
-
-#### Filter pruning
-
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|None|ImageNet|75.05|[resnet50_imagenet.json](configs/resnet50_imagenet.json)|-|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|74.96 (0.09)|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median.tar.gz)|
-|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion|ImageNet|75.09 (-0.04)|[resnet50_imagenet_pruning_geometric_median_int8.json](configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median_int8.tar.gz)|
-
-#### Accuracy-aware compressed training
-
-|**Model**|**Compression algorithm**|**Dataset**|**Accuracy (Drop) %**|**NNCF config file**|
-| :---: | :---: | :---: | :---: | :---: |
-|ResNet50|Sparsity 65% (magnitude)|ImageNet|74.37 (0.67)|[resnet50_imagenet_magnitude_sparsity_accuracy_aware.json](configs/sparsity/resnet50_imagenet_magnitude_sparsity_accuracy_aware.json)|
-
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;" colspan="6"><br>Quantization<br>&nbsp</th>
+		</tr>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">Inception V3</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">77.91</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/inception_v3_imagenet.json">Config</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">Inception V3</td>
+			<td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">78.39 (-0.48)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/quantization/inception_v3_imagenet_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">Inception V3</td>
+			<td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">77.52 (0.39)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">Inception V3</td>
+			<td style="text-align: center;">Sparsity 54% (Magnitude)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">77.86 (0.05)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_magnitude_sparsity.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">71.85</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/mobilenet_v2_imagenet.json">Config</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">71.63 (0.22)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/quantization/mobilenet_v2_imagenet_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 52% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">70.94 (0.91)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">Sparsity 50% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">71.34 (0.51)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity/mobilenet_v2_imagenet_rb_sparsity.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V2 (TensorFlow Hub MobileNet V2)</td>
+			<td style="text-align: center;">Sparsity 35% (Magnitude)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">71.87 (-0.02)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_hub_imagenet_magnitude_sparsity.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V3 (Small)</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">68.38</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/mobilenet_v3_small_imagenet.json">Config</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V3 (Small)</td>
+			<td style="text-align: center;">INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">67.79 (0.59)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V3 (Small)</td>
+			<td style="text-align: center;">INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">67.44 (0.94)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V3 (Large)</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.80</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/mobilenet_v3_large_imagenet.json">Config</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V3 (Large)</td>
+			<td style="text-align: center;">INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.04 (0.76)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/quantization/mobilenet_v3_large_imagenet_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V3 (Large)</td>
+			<td style="text-align: center;">INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.24 (0.56)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.05</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/resnet50_imagenet.json">Config</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">INT8</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">74.99 (0.06)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/quantization/resnet50_imagenet_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 65% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">74.36 (0.69)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">Sparsity 80% (RB)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">74.38 (0.67)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity/resnet50_imagenet_rb_sparsity.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity.tar.gz">Download</a></td>
+		</tr>
+	</tbody>
+	<thead>
+		<tr>
+			<th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
+		</tr>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.05</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/resnet50_imagenet.json">Config</a></td>
+			<td style="text-align: center;">-</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">Filter pruning, 40%, geometric median criterion</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">74.96 (0.09)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/pruning/resnet50_imagenet_pruning_geometric_median.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">75.09 (-0.04)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median_int8.tar.gz">Download</a></td>
+		</tr>
+	</tbody>
+	<thead>
+		<tr>
+			<th style="text-align: center;" colspan="6"><br>Accuracy-aware compressed training<br>&nbsp</th>
+		</tr>
+		<tr>
+			<th style="text-align: center;"><strong>Model</strong></th>
+			<th style="text-align: center;"><strong>Compression algorithm</strong></th>
+			<th style="text-align: center;"><strong>Dataset</strong></th>
+			<th style="text-align: center;"><strong>Accuracy (Drop) %</strong></th>
+			<th style="text-align: center;"><strong>NNCF config file</strong></th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">ResNet50</td>
+			<td style="text-align: center;">Sparsity 65% (magnitude)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">74.37 (0.67)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/classification/configs/sparsity/resnet50_imagenet_magnitude_sparsity_accuracy_aware.json">Config</a></td>
+		</tr>
+	</tbody>
+</table>
 
 
 <a id="tensorflow_object_detection"></a>
@@ -751,32 +944,155 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Quantization
 
-|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|None|COCO 2017|33.43|[retinanet_coco.json](configs/retinanet_coco.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz)|
-|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|33.12 (0.31)|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_int8.tar.gz)|
-|RetinaNet|Magnitude sparsity (50%)|COCO 2017|33.10 (0.33)|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_magnitude_sparsity.tar.gz)|
-|YOLO v4|None|COCO 2017|47.07|[yolo_v4_coco.json](configs/yolo_v4_coco.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco.tar.gz)|
-|YOLO v4|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|46.20 (0.87)|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_int8.tar.gz)|
-|YOLO v4|Magnitude sparsity, 50%|COCO 2017|46.49 (0.58)|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_magnitude_sparsity.tar.gz)|
-
-#### Filter pruning
-
-|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|None|COCO 2017|33.43|[retinanet_coco.json](configs/retinanet_coco.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz)|
-|RetinaNet|Filter pruning, 40%|COCO 2017|32.72 (0.71)|[retinanet_coco_pruning_geometric_median.json](configs/pruning/retinanet_coco_pruning_geometric_median.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median.tar.gz)|
-|RetinaNet|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%|COCO 2017|32.67 (0.76)|[retinanet_coco_pruning_geometric_median_int8.json](configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median_int8.tar.gz)|
-
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;" colspan="6"><br>Quantization<br>&nbsp</th>
+		</tr>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">mAP (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">RetinaNet</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">33.43</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/object_detection/configs/retinanet_coco.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">RetinaNet</td>
+			<td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">33.12 (0.31)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/object_detection/configs/quantization/retinanet_coco_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">RetinaNet</td>
+			<td style="text-align: center;">Magnitude sparsity (50%)</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">33.10 (0.33)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/object_detection/configs/sparsity/retinanet_coco_magnitude_sparsity.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_magnitude_sparsity.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">YOLO v4</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">47.07</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/object_detection/configs/yolo_v4_coco.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">YOLO v4</td>
+			<td style="text-align: center;">INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">46.20 (0.87)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/object_detection/configs/quantization/yolo_v4_coco_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">YOLO v4</td>
+			<td style="text-align: center;">Magnitude sparsity, 50%</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">46.49 (0.58)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/object_detection/configs/sparsity/yolo_v4_coco_magnitude_sparsity.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_magnitude_sparsity.tar.gz">Download</a></td>
+		</tr>
+	</tbody>
+	<thead>
+		<tr>
+			<th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
+		</tr>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">mAP (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">RetinaNet</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">33.43</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/object_detection/configs/retinanet_coco.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">RetinaNet</td>
+			<td style="text-align: center;">Filter pruning, 40%</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">32.72 (0.71)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/object_detection/configs/pruning/retinanet_coco_pruning_geometric_median.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">RetinaNet</td>
+			<td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">32.67 (0.76)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/object_detection/configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median_int8.tar.gz">Download</a></td>
+		</tr>
+	</tbody>
+</table>
 
 <a id="tensorflow_instance_segmentation"></a>
 ### TensorFlow Instance Segmentation
 
-|Model|Compression algorithm|Dataset|            mAP (_drop_) %             |NNCF config file|Checkpoint|
-| :---: | :---: | :---: |:-------------------------------------:| :---: | :---: |
-|Mask-R-CNN|None|COCO 2017|        bbox: 37.33 segm: 33.56        |[mask_rcnn_coco.json](configs/mask_rcnn_coco.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz)|
-|Mask-R-CNN|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017| bbox: 37.19 (0.14) segm: 33.54 (0.02) |[mask_rcnn_coco_int8.json](configs/quantization/mask_rcnn_coco_int8.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz)|
-|Mask-R-CNN|Magnitude sparsity, 50%|COCO 2017| bbox: 36.94 (0.39) segm: 33.23 (0.33) |[mask_rcnn_coco_magnitude_sparsity.json](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Download](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;" colspan="6"><br>Quantization<br>&nbsp</th>
+		</tr>
+		<tr>
+			<th style="text-align: center;">Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">mAP (<em>drop</em>) %</th>
+			<th style="text-align: center;">NNCF config file</th>
+			<th style="text-align: center;">Checkpoint</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">Mask-R-CNN</td>
+			<td style="text-align: center;">None</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">bbox: 37.33 segm: 33.56</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/instance_segmentation/configs/mask_rcnn_coco.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">Mask-R-CNN</td>
+			<td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">bbox: 37.19 (0.14) segm: 33.54 (0.02)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/instance_segmentation/configs/quantization/mask_rcnn_coco_int8.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz">Download</a></td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">Mask-R-CNN</td>
+			<td style="text-align: center;">Magnitude sparsity, 50%</td>
+			<td style="text-align: center;">COCO 2017</td>
+			<td style="text-align: center;">bbox: 36.94 (0.39) segm: 33.23 (0.33)</td>
+			<td style="text-align: center;"><a href="../examples/tensorflow/instance_segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json">Config</a></td>
+			<td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz">Download</a></td>
+		</tr>
+	</tbody>
+</table>
 
 
 <a id="onnx_models"></a>
@@ -785,21 +1101,88 @@ to find instruction and links to exact configuration files and final checkpoints
 <a id="onnx_classification"></a>
 ### ONNX Classification
 
-|   ONNX Model    | Compression algorithm |Dataset|Accuracy (Drop) %|
-| :---: |:---------------------:| :---: | :---: |
-|ResNet-50| INT8 (Post-Training)  |ImageNet|74.63 (0.21)|
-|ShuffleNet| INT8 (Post-Training)  |ImageNet|47.25 (0.18)|
-|GoogleNet| INT8 (Post-Training)  |ImageNet|66.36 (0.3)|
-|SqueezeNet V1.0| INT8 (Post-Training)  |ImageNet|54.3 (0.54)|
-|MobileNet V2| INT8 (Post-Training)  |ImageNet|71.38 (0.49)|
-|DenseNet-121| INT8 (Post-Training)  |ImageNet|60.16 (0.8)|
-|VGG-16| INT8 (Post-Training)  |ImageNet|72.02 (0.0)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">ONNX Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">Accuracy (Drop) %</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">ResNet-50</td>
+			<td style="text-align: center;">INT8 (Post-Training)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">74.63 (0.21)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">ShuffleNet</td>
+			<td style="text-align: center;">INT8 (Post-Training)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">47.25 (0.18)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">GoogleNet</td>
+			<td style="text-align: center;">INT8 (Post-Training)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">66.36 (0.3)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">SqueezeNet V1.0</td>
+			<td style="text-align: center;">INT8 (Post-Training)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">54.3 (0.54)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">MobileNet V2</td>
+			<td style="text-align: center;">INT8 (Post-Training)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">71.38 (0.49)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">DenseNet-121</td>
+			<td style="text-align: center;">INT8 (Post-Training)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">60.16 (0.8)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">VGG-16</td>
+			<td style="text-align: center;">INT8 (Post-Training)</td>
+			<td style="text-align: center;">ImageNet</td>
+			<td style="text-align: center;">72.02 (0.0)</td>
+		</tr>
+	</tbody>
+</table>
+
 
 
 <a id="onnx_object_detection"></a>
 ### ONNX Object Detection
 
-|ONNX Model| Compression algorithm | Dataset |mAP (drop) %|
-| :---: |:---------------------:| :---: | :---: |
-|SSD1200| INT8 (Post-Training)  |COCO2017|20.17 (0.17)|
-|Tiny-YOLOv2| INT8 (Post-Training)  |VOC12|29.03 (0.23)|
+<table>
+	<thead>
+		<tr>
+			<th style="text-align: center;">ONNX Model</th>
+			<th style="text-align: center;">Compression algorithm</th>
+			<th style="text-align: center;">Dataset</th>
+			<th style="text-align: center;">mAP (drop) %</th>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td style="text-align: center;">SSD1200</td>
+			<td style="text-align: center;">INT8 (Post-Training)</td>
+			<td style="text-align: center;">COCO2017</td>
+			<td style="text-align: center;">20.17 (0.17)</td>
+		</tr>
+		<tr>
+			<td style="text-align: center;">Tiny-YOLOv2</td>
+			<td style="text-align: center;">INT8 (Post-Training)</td>
+			<td style="text-align: center;">VOC12</td>
+			<td style="text-align: center;">29.03 (0.23)</td>
+		</tr>
+	</tbody>
+</table>
+
