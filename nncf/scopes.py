@@ -133,7 +133,7 @@ def get_ignored_node_names_from_ignored_scope(
                 not_matched_patterns.append(str_pattern)
             matched_by_patterns.extend(matches)
         if strict and not_matched_patterns:
-            raise RuntimeError(f"No mathes for ignored patterns {not_matched_patterns} in the NNCFGraph. " + error_msg)
+            raise RuntimeError(f"No matches for ignored patterns {not_matched_patterns} in the NNCFGraph. " + error_msg)
         nncf_logger.info(f"{len(matched_by_patterns)} ignored nodes was found by patterns in the NNCFGraph")
 
     matched_by_types = []
