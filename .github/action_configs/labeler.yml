@@ -5,41 +5,70 @@ dependencies:
   - '**/setup.py'
 
 NNCF PT:
-  - 'examples/torch/**/*'
-  - 'examples/post_training_quantization/torch/**/*'
-  - 'nncf/torch/**/*'
-  - 'tests/torch/**/*'
+- any:
+    - 'examples/torch/**/*'
+    - 'examples/post_training_quantization/torch/**/*'
+    - 'nncf/torch/**/*'
+    - 'tests/torch/**/*'
+  all:
+    - '!**/*.md'
+
+
+NNCF PT:
+- any:
+    - 'examples/torch/**/*'
+  all:
+    - '!**/*.md'
 
 NNCF TF:
-  - 'examples/tensorflow/**/*'
-  - 'examples/post_training_quantization/tensorflow/**/*'
-  - 'nncf/tensorflow/**/*'
-  - 'tests/tensorflow/**/*'
+- any:
+    - 'examples/tensorflow/**/*'
+    - 'examples/post_training_quantization/tensorflow/**/*'
+    - 'nncf/tensorflow/**/*'
+    - 'tests/tensorflow/**/*'
+  all:
+    - '!**/*.md'
 
 NNCF ONNX:
-  - 'examples/onnx/**/*'
-  - 'examples/post_training_quantization/onnx/**/*'
-  - 'nncf/onnx/**/*'
-  - 'tests/onnx/**/*'
+- any:
+    - 'examples/onnx/**/*'
+    - 'examples/post_training_quantization/onnx/**/*'
+    - 'nncf/onnx/**/*'
+    - 'tests/onnx/**/*'
+  all:
+    - '!**/*.md'
+
 
 NNCF OpenVINO:
-  - 'examples/openvino/**/*'
-  - 'examples/post_training_quantization/openvino/**/*'
-  - 'nncf/openvino/**/*'
-  - 'tests/openvino/**/*'
+- any:
+    - 'examples/openvino/**/*'
+    - 'examples/post_training_quantization/openvino/**/*'
+    - 'nncf/openvino/**/*'
+    - 'tests/openvino/**/*'
+  all:
+    - '!**/*.md'
 
 NNCF PTQ:
-  - 'nncf/quantization/**/*'
-  - 'tests/post_training/**/*'
+- any:
+    - 'nncf/quantization/**/*'
+    - 'tests/post_training/**/*'
+  all:
+    - '!**/*.md'
 
 documentation:
-  - '**/README.md'
+  - '**/*.md'
   - 'docs/**/*'
 
 experimental:
-  - 'nncf/experimental/**/*'
+- any:
+    - 'nncf/experimental/**/*'
+  all:
+    - '!**/*.md'
 
 NNCF Common:
-  - 'examples/common/**/*'
-  - 'nncf/common/**/*'
-  - 'tests/common/**/*'
+- any:
+    - 'examples/common/**/*'
+    - 'nncf/common/**/*'
+    - 'tests/common/**/*'
+  all:
+    - '!**/*.md'
