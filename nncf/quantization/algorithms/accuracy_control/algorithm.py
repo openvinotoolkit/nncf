@@ -44,7 +44,7 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
         return OVAccuracyControlAlgoBackend()
 
     raise RuntimeError(
-        "Cannot create the backend for the accuracy control algorithm " f"because {backend} is not supported."
+        f"Cannot create the backend for the accuracy control algorithm because {backend} is not supported."
     )
 
 
@@ -169,7 +169,7 @@ class QuantizationAccuracyRestorer:
         :param quantized_model: Quantized model.
         :param validation_dataset: A dataset for the validation process.
         :param validation_fn: A validation function to validate the model. It should take
-            two argumets:
+            two arguments:
             - `model`: model to be validate.
             - `validation_dataset`: dataset that provides data items to
                 validate the provided model.

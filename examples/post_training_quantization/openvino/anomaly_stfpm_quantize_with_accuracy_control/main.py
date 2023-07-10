@@ -76,7 +76,7 @@ def validate(model: ov.CompiledModel, val_loader: Iterable[Any], val_params: Dic
         counter += 1
 
     metric_value = metric.compute()
-    print(f"Validate: dataset lenght = {counter}, " f"metric value = {metric_value:.3f}")
+    print(f"Validate: dataset length = {counter}, metric value = {metric_value:.3f}")
     return metric_value
 
 
