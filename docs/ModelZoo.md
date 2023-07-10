@@ -3,22 +3,22 @@
 Results achieved using sample scripts, example patches to third-party repositories and NNCF configuration files provided
 with this repository. See README.md files for [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration)
 to find instruction and links to exact configuration files and final checkpoints.
-- [PyTorch models](#pytorch_models)
+- [PyTorch](#pytorch_models)
   * [Classification](#pytorch_classification)
-  * [Object detection](#pytorch_object_detection)
-  * [Semantic segmentation](#pytorch_semantic_segmentation)
-  * [Natural language processing (3rd-party training pipelines)](#pytorch_nlp)
-- [TensorFlow models](#tensorflow_models)
+  * [Object Detection](#pytorch_object_detection)
+  * [Semantic Segmentation](#pytorch_semantic_segmentation)
+  * [Natural Language Processing (3rd-party training pipelines)](#pytorch_nlp)
+- [TensorFlow](#tensorflow_models)
   * [Classification](#tensorflow_classification)
-  * [Object detection](#tensorflow_object_detection)
-  * [Instance segmentation](#tensorflow_instance_segmentation)
-- [ONNX models](#onnx_models)
+  * [Object Detection](#tensorflow_object_detection)
+  * [Instance Segmentation](#tensorflow_instance_segmentation)
+- [ONNX](#onnx_models)
 
 <a id="pytorch_models"></a>
 ## PyTorch
 
 <a id="pytorch_classification"></a>
-### Classification
+### PyTorch Classification
 
 <table>
     <thead>
@@ -397,7 +397,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 
 <a id="pytorch_object_detection"></a>
-### Object detection
+### PyTorch Object Detection
 
 <table>
     <thead>
@@ -514,7 +514,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 
 <a id="pytorch_semantic_segmentation"></a>
-### Semantic segmentation
+### PyTorch Semantic Segmentation
 
 <table>
     <thead>
@@ -638,7 +638,7 @@ to find instruction and links to exact configuration files and final checkpoints
 </table>
 
 <a id="pytorch_nlp"></a>
-### NLP (HuggingFace Transformers-powered models)
+### PyTorch NLP (HuggingFace Transformers-powered models)
 
 <table>
 	<thead>
@@ -703,10 +703,10 @@ to find instruction and links to exact configuration files and final checkpoints
 
 
 <a id="tensorflow_models"></a>
-## TensorFlow models
+## TensorFlow
 
 <a id="tensorflow_classification"></a>
-### Classification
+### TensorFlow Classification
 
 #### Quantization
 
@@ -749,7 +749,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 
 <a id="tensorflow_object_detection"></a>
-### Object detection
+### TensorFlow Object Detection
 
 #### Quantization
 
@@ -772,7 +772,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 
 <a id="tensorflow_instance_segmentation"></a>
-### Instance segmentation
+### TensorFlow Instance Segmentation
 
 |Model|Compression algorithm|Dataset|            mAP (_drop_) %             |NNCF config file|Checkpoint|
 | :---: | :---: | :---: |:-------------------------------------:| :---: | :---: |
@@ -782,10 +782,10 @@ to find instruction and links to exact configuration files and final checkpoints
 
 
 <a id="onnx_models"></a>
-## ONNX models
+## ONNX
 
 <a id="onnx_classification"></a>
-### Classification
+### ONNX Classification
 
 |   ONNX Model    | Compression algorithm |Dataset|Accuracy (Drop) %|
 | :---: |:---------------------:| :---: | :---: |
@@ -799,7 +799,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 
 <a id="onnx_object_detection"></a>
-### Object detection
+### ONNX Object Detection
 
 |ONNX Model| Compression algorithm | Dataset |mAP (drop) %|
 | :---: |:---------------------:| :---: | :---: |
