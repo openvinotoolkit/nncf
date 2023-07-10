@@ -2,8 +2,7 @@
 
 Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files.
 
-See [sample scripts](../README.md#model-compression-tutorials-and-samples) and [example patches](../README.md#git-patches-for-third-party-repository)
-to find instruction and links to exact configuration files and final checkpoints.
+See [sample scripts](../examples) and [example patches](../third_party_integration) to find instruction and links to exact configuration files and final checkpoints.
 - [PyTorch](#pytorch_models)
   * [Classification](#pytorch_classification)
   * [Object Detection](#pytorch_object_detection)
