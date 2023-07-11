@@ -336,7 +336,7 @@ class MinMaxQuantization(Algorithm):
         :return: IgnoredScope with all node names matched ignored_patterns.
         """
         nncf_node_names = []
-        for subgraph in inference_nncf_graph.find_matching_subgraphs(ignored_patterns):
+        for subgraph in inference_nncf_graph.find_matching_subgraphs(ignored_patterns, strict=False):
             for nncf_node in subgraph:
                 nncf_node_names.append(nncf_node.node_name)
 
