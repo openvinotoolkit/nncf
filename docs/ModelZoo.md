@@ -20,15 +20,15 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><br>Quantization<br>&nbsp</th>
     </tr>
     <tr>
-      <th style="text-align: center;">Model</th>
-      <th style="text-align: center;">Compression algorithm</th>
-      <th style="text-align: center;">Dataset</th>
-      <th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
-      <th style="text-align: center;">NNCF config file</th>
-      <th style="text-align: center;">Checkpoint</th>
+      <th>Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>Accuracy (<em>drop</em>) %</th>
+      <th>NNCF config file</th>
+      <th>Checkpoint</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -219,7 +219,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Binarization<br>&nbsp</th>
+      <th colspan="6"><br>Binarization<br>&nbsp</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -242,7 +242,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -289,7 +289,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Accuracy-aware compressed training<br>&nbsp</th>
+      <th colspan="6"><br>Accuracy-aware compressed training<br>&nbsp</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -317,15 +317,15 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><br>Quantization<br>&nbsp</th>
     </tr>
     <tr>
-      <th style="text-align: center;">Model</th>
-      <th style="text-align: center;">Compression algorithm</th>
-      <th style="text-align: center;">Dataset</th>
-      <th style="text-align: center;">mAP (<em>drop</em>) %</th>
-      <th style="text-align: center;">NNCF config file</th>
-      <th style="text-align: center;">Checkpoint</th>
+      <th>Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>mAP (<em>drop</em>) %</th>
+      <th>NNCF config file</th>
+      <th>Checkpoint</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -396,7 +396,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -416,15 +416,15 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><br>Quantization<br>&nbsp</th>
     </tr>
     <tr>
-      <th style="text-align: center;">Model</th>
-      <th style="text-align: center;">Compression algorithm</th>
-      <th style="text-align: center;">Dataset</th>
-      <th style="text-align: center;">mIoU (<em>drop</em>) %</th>
-      <th style="text-align: center;">NNCF config file</th>
-      <th style="text-align: center;">Checkpoint</th>
+      <th>Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>mIoU (<em>drop</em>) %</th>
+      <th>NNCF config file</th>
+      <th>Checkpoint</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -503,7 +503,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -523,10 +523,10 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th style="text-align: center;">PyTorch Model</th>
-      <th style="text-align: center;"><img width="20" height="1">Compression algorithm<img width="20" height="1"></th>
-      <th style="text-align: center;">Dataset</th>
-      <th style="text-align: center;">Accuracy (Drop) %</th>
+      <th>PyTorch Model</th>
+      <th><img width="20" height="1">Compression algorithm<img width="20" height="1"></th>
+      <th>Dataset</th>
+      <th>Accuracy (Drop) %</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -588,15 +588,15 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><br>Quantization<br>&nbsp</th>
     </tr>
     <tr>
-      <th style="text-align: center;">Model</th>
-      <th style="text-align: center;">Compression algorithm</th>
-      <th style="text-align: center;">Dataset</th>
-      <th style="text-align: center;">Accuracy (<em>drop</em>) %</th>
-      <th style="text-align: center;">NNCF config file</th>
-      <th style="text-align: center;">Checkpoint</th>
+      <th>Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>Accuracy (<em>drop</em>) %</th>
+      <th>NNCF config file</th>
+      <th>Checkpoint</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -755,7 +755,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -778,7 +778,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Accuracy-aware compressed training<br>&nbsp</th>
+      <th colspan="6"><br>Accuracy-aware compressed training<br>&nbsp</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -798,15 +798,15 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><br>Quantization<br>&nbsp</th>
     </tr>
     <tr>
-      <th style="text-align: center;">Model</th>
-      <th style="text-align: center;">Compression algorithm</th>
-      <th style="text-align: center;">Dataset</th>
-      <th style="text-align: center;">mAP (<em>drop</em>) %</th>
-      <th style="text-align: center;">NNCF config file</th>
-      <th style="text-align: center;">Checkpoint</th>
+      <th>Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>mAP (<em>drop</em>) %</th>
+      <th>NNCF config file</th>
+      <th>Checkpoint</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -861,7 +861,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -897,15 +897,15 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th style="text-align: center;" colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><br>Quantization<br>&nbsp</th>
     </tr>
     <tr>
-      <th style="text-align: center;">Model</th>
-      <th style="text-align: center;">Compression algorithm</th>
-      <th style="text-align: center;">Dataset</th>
-      <th style="text-align: center;">mAP (<em>drop</em>) %</th>
-      <th style="text-align: center;">NNCF config file</th>
-      <th style="text-align: center;">Checkpoint</th>
+      <th>Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>mAP (<em>drop</em>) %</th>
+      <th>NNCF config file</th>
+      <th>Checkpoint</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -943,10 +943,10 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th style="text-align: center;">ONNX Model</th>
-      <th style="text-align: center;">Compression algorithm</th>
-      <th style="text-align: center;">Dataset</th>
-      <th style="text-align: center;">Accuracy (Drop) %</th>
+      <th>ONNX Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>Accuracy (Drop) %</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -1000,10 +1000,10 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th style="text-align: center;">ONNX Model</th>
-      <th style="text-align: center;">Compression algorithm</th>
-      <th style="text-align: center;">Dataset</th>
-      <th style="text-align: center;">mAP (drop) %</th>
+      <th>ONNX Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>mAP (drop) %</th>
     </tr>
   </thead>
   <tbody align="center">
