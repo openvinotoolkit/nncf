@@ -62,6 +62,7 @@ def test_overflow_fix_scales(overflow_fix):
 
     # Unkomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
+
     # dump_to_json(ref_stats_path, q_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
