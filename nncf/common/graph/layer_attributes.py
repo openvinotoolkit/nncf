@@ -52,15 +52,17 @@ class MultipleOutputLayerAttributes(BaseLayerAttributes):
 
 
 class WeightedLayerAttributes(BaseLayerAttributes):
-    def __init__(self, weight_requires_grad: bool, dtype: Dtype = Dtype.FLOAT):
+    def __init__(self, weight_requires_grad: bool, dtype: Dtype = Dtype.FLOAT, with_bias: bool = False):
         """
 
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
         False otherwise.
         :param dtype: is an object that represents the type of data.
+        :param with_bias: Operation include bias.
         """
         self.weight_requires_grad = weight_requires_grad
         self.dtype = dtype
+        self.with_bias = with_bias
 
     @abstractmethod
     def get_weight_shape(self) -> List[int]:
@@ -81,7 +83,13 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
     of the exact meaning of the weight indices.
     """
 
-    def __init__(self, weight_requires_grad: bool, weight_shape: List[int], filter_dimension_idx: int = 0):
+    def __init__(
+        self,
+        weight_requires_grad: bool,
+        weight_shape: List[int],
+        filter_dimension_idx: int = 0,
+        with_bias: bool = False,
+    ):
         """
 
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
@@ -89,7 +97,7 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
         :param weight_shape: shape of weight tensor.
         :param filter_dimension_idx: the axis along which the filters are stored.
         """
-        super().__init__(weight_requires_grad)
+        super().__init__(weight_requires_grad=weight_requires_grad, with_bias=with_bias)
         self.weight_shape = weight_shape
         self.filter_dimension_idx = filter_dimension_idx
 
@@ -101,25 +109,23 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
 
 
 class LinearLayerAttributes(WeightedLayerAttributes):
-    def __init__(self, weight_requires_grad: bool, in_features: int, out_features: int, bias: bool = True):
+    def __init__(self, weight_requires_grad: bool, in_features: int, out_features: int, with_bias: bool = False):
         """
 
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
         False otherwise.
         :param in_features: number of input channels in the layer's input.
         :param out_features: number of channels produced by the layer.
-        :param bias: If set to ``False``, the layer doesn't learn an additive bias.
         """
-        super().__init__(weight_requires_grad)
+        super().__init__(weight_requires_grad, with_bias=with_bias)
         self.in_features = in_features
         self.out_features = out_features
-        self.bias = bias
 
     def get_weight_shape(self) -> List[int]:
         return [self.out_features, self.in_features]
 
     def get_bias_shape(self) -> int:
-        return self.out_features if self.bias is True else 0
+        return self.out_features if self.with_bias is True else 0
 
     def get_target_dim_for_compression(self) -> int:
         return 0
@@ -137,6 +143,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         groups: int,
         transpose: bool,
         padding_values: Tuple[int, ...],
+        with_bias: bool = False,
     ):
         """
 
@@ -149,8 +156,9 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         :param groups: number of blocked connections from input channels to output channels.
         :param transpose: If set to `True`, the layer is an ordinary convolution, otherwise - transpose one.
         :param padding_values: defines the amount of padding applied to the layer's input.
+        :param with_bias: Operation include bias.
         """
-        super().__init__(weight_requires_grad)
+        super().__init__(weight_requires_grad=weight_requires_grad, with_bias=with_bias)
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size

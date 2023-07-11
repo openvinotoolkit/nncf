@@ -790,6 +790,7 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
     kernel_size = layer_.kernel_size
 
     transpose = layer_metatype in DECONV_LAYER_METATYPES
+    with_bias = layer.use_bias
 
     return ConvolutionLayerAttributes(
         weight_requires_grad=layer.trainable,
@@ -801,6 +802,7 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
         groups=groups,
         transpose=transpose,
         padding_values=([0, 0, 0, 0]),
+        with_bias=with_bias,
     )
 
 
@@ -808,9 +810,9 @@ def _get_linear_layer_attributes(layer: tf.keras.layers.Layer) -> LinearLayerAtt
     channel_axis = get_input_channel_axis(layer)
     in_features = layer.get_input_shape_at(0)[channel_axis]
     out_features = layer.get_output_shape_at(0)[channel_axis]
-    bias = layer.use_bias
+    with_bias = layer.use_bias
     return LinearLayerAttributes(
-        weight_requires_grad=layer.trainable, in_features=in_features, out_features=out_features, bias=bias
+        weight_requires_grad=layer.trainable, in_features=in_features, out_features=out_features, with_bias=with_bias
     )
 
 
