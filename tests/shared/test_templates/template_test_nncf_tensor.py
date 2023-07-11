@@ -13,7 +13,8 @@ from typing import TypeVar
 
 import pytest
 
-from nncf.common.tensor_new import Tensor
+import nncf.common.tensor_new.math as nncf_math
+from nncf.common.tensor_new.tensor import Tensor
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -182,13 +183,6 @@ class TemplateTestNNCFTensorOperators:
         else:
             assert nncf_tensor.squeeze(axis=axis).size() == ref_tensor
 
-    def test_zeros_like(self):
-        tensor = self.to_tensor([1, 2])
-        nncf_tensor = Tensor(tensor)
-
-        a = nncf_tensor[1]
-        assert all(nncf_tensor.zeros_like() == Tensor(tensor * 0))
-
     @pytest.mark.parametrize(
         "axis, ref",
         (
@@ -271,3 +265,84 @@ class TemplateTestNNCFTensorOperators:
         for x in nncf_tensor:
             assert x == arr[i]
             i += 1
+
+    # Math
+
+    def test_math_zeros_like(self):
+        tensor = self.to_tensor([1, 2])
+        nncf_tensor = Tensor(tensor)
+
+        res = nncf_math.zeros_like(nncf_tensor)
+        assert all(res == Tensor(tensor * 0))
+
+    def test_math_maximum(self):
+        tensor_a = self.to_tensor([1, 2])
+        tensor_b = self.to_tensor([2, 1])
+        tensor_ref = self.to_tensor([2, 2])
+
+        res = nncf_math.maximum(tensor_a, tensor_b)
+        assert all(res == tensor_ref)
+
+    def test_math_minimum(self):
+        tensor_a = self.to_tensor([1, 2])
+        tensor_b = self.to_tensor([2, 1])
+        tensor_ref = self.to_tensor([1, 1])
+
+        res = nncf_math.minimum(tensor_a, tensor_b)
+        assert all(res == tensor_ref)
+
+    def test_math_ones_like(self):
+        tensor_a = self.to_tensor([1, 2])
+        tensor_ref = self.to_tensor([1, 1])
+
+        res = nncf_math.ones_like(tensor_a)
+        assert all(res == tensor_ref)
+
+    @pytest.mark.parametrize(
+        "val, ref",
+        (
+            ([True, True], True),
+            ([True, False], False),
+            ([False, False], False),
+        ),
+    )
+    def test_math_all(self, val, ref):
+        tensor = self.to_tensor(val)
+        res = nncf_math.all(tensor)
+        assert res == ref
+
+    @pytest.mark.parametrize(
+        "val, ref",
+        (
+            ([True, True], True),
+            ([True, False], True),
+            ([False, False], False),
+        ),
+    )
+    def test_math_any(self, val, ref):
+        tensor = self.to_tensor(val)
+        res = nncf_math.any(tensor)
+        assert res == ref
+
+    def test_math_where(self):
+        tensor = self.to_tensor([1, -1])
+        tensor_ref = self.to_tensor([1, 0])
+        res = nncf_math.where(tensor > 0, 1, 0)
+        assert all(res == tensor_ref)
+
+    @pytest.mark.parametrize(
+        "val, ref",
+        (
+            ([], True),
+            ([1], False),
+            (1, False),
+        ),
+    )
+    def test_math_is_empty(self, val, ref):
+        tensor = self.to_tensor(val)
+        res = nncf_math.is_empty(tensor)
+        assert res == ref
+
+
+# def is_empty(target: Tensor) -> Tensor:
+#     return tensor_func_dispatcher("is_empty", target)
