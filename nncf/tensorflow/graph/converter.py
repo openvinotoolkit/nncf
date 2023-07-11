@@ -782,6 +782,7 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
     dilations = layer_.dilation_rate
     in_channels = layer.get_input_shape_at(0)[channel_axis]
     out_channels = layer.get_output_shape_at(0)[channel_axis]
+    with_bias = layer_.use_bias
 
     # TF does not deign to properly set the groups attribute on a depthwise layer, and for compatibility
     # with common code the groups attribute of the returned ConvolutionLayerAttribute must be set equal
@@ -790,7 +791,6 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
     kernel_size = layer_.kernel_size
 
     transpose = layer_metatype in DECONV_LAYER_METATYPES
-    with_bias = layer.use_bias
 
     return ConvolutionLayerAttributes(
         weight_requires_grad=layer.trainable,

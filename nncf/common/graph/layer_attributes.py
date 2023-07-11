@@ -109,7 +109,7 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
 
 
 class LinearLayerAttributes(WeightedLayerAttributes):
-    def __init__(self, weight_requires_grad: bool, in_features: int, out_features: int, with_bias: bool = False):
+    def __init__(self, weight_requires_grad: bool, in_features: int, out_features: int, with_bias: bool = True):
         """
 
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
