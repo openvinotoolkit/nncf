@@ -723,7 +723,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td>ResNet50</td>
-      <td>Sparsity 65% (magnitude)</td>
+      <td>Accuracy-aware compressed training, Sparsity 65% (magnitude)</td>
       <td>ImageNet</td>
       <td>74.37 (0.67)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity/resnet50_imagenet_magnitude_sparsity_accuracy_aware.json">Config</a></td>
