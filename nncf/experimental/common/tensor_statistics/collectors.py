@@ -35,7 +35,7 @@ class TensorReducerBase(ABC):
         """
         :param reduction_shape: Reduction shape for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
-        :param inplace: Whether should  be calculated inplace or out of place.
+        :param inplace: Whether should be calculated inplace or out of place.
 
         """
         self._reduction_shape = reduction_shape
