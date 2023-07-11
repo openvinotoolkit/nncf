@@ -142,7 +142,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_rb_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">MobileNet V3 small</td>
+      <td style="text-align: left;">MobileNet V3 (Small)</td>
       <td style="text-align: left;">None</td>
       <td>ImageNet</td>
       <td>67.66</td>
@@ -150,7 +150,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td>-</td>
     </tr>
     <tr>
-      <td style="text-align: left;">MobileNet V3 small</td>
+      <td style="text-align: left;">MobileNet V3 (Small)</td>
       <td style="text-align: left;">Quantization INT8</td>
       <td>ImageNet</td>
       <td>66.98 (0.68)</td>
@@ -158,7 +158,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v3_small_imagenet_int8.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SqueezeNet V1.1</td>
+      <td style="text-align: left;">SqueezeNet&nbsp;V1.1</td>
       <td style="text-align: left;">None</td>
       <td>ImageNet</td>
       <td>58.19</td>
@@ -166,7 +166,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td>-</td>
     </tr>
     <tr>
-      <td style="text-align: left;">SqueezeNet V1.1</td>
+      <td style="text-align: left;">SqueezeNet&nbsp;V1.1</td>
       <td style="text-align: left;">Quantization INT8</td>
       <td>ImageNet</td>
       <td>58.22 (-0.03)</td>
@@ -174,7 +174,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SqueezeNet V1.1</td>
+      <td style="text-align: left;">SqueezeNet&nbsp;V1.1</td>
       <td style="text-align: left;">Quantization INT8 (per-tensor only)</td>
       <td>ImageNet</td>
       <td>58.11 (0.08)</td>
@@ -182,7 +182,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8_per_tensor.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SqueezeNet V1.1</td>
+      <td style="text-align: left;">SqueezeNet&nbsp;V1.1</td>
       <td style="text-align: left;">Quantization Mixed, 52.83% INT8 / 47.17% INT4</td>
       <td>ImageNet</td>
       <td>57.57 (0.62)</td>
@@ -206,7 +206,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td>-</td>
     </tr>
     <tr>
-      <td>GoogLeNet</td>
+      <td style="text-align: left;">GoogLeNet</td>
       <td style="text-align: left;">None</td>
       <td>ImageNet</td>
       <td>69.77</td>
@@ -262,7 +262,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet34_imagenet_pruning_geometric_median_kd.pth">Download</a></td>
     </tr>
     <tr>
-      <td>GoogLeNet</td>
+      <td style="text-align: left;">GoogLeNet</td>
       <td style="text-align: left;">Filter pruning, 40%, geometric median criterion</td>
       <td>ImageNet</td>
       <td>69.47 (0.30)</td>
@@ -303,7 +303,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </thead>
   <tbody align="center">
     <tr>
-      <td style="text-align: left;">SSD300-MobileNet</td>
+      <td style="text-align: left;">SSD300&#8209;MobileNet</td>
       <td style="text-align: left;">None</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>62.23</td>
@@ -311,7 +311,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SSD300-MobileNet</td>
+      <td style="text-align: left;">SSD300&#8209;MobileNet</td>
       <td style="text-align: left;">Quantization INT8 + Sparsity 70% (Magnitude)</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>62.95 (-0.72)</td>
@@ -319,7 +319,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SSD300-VGG-BN</td>
+      <td style="text-align: left;">SSD300&#8209;VGG&#8209;BN</td>
       <td style="text-align: left;">None</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>78.28</td>
@@ -327,7 +327,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SSD300-VGG-BN</td>
+      <td style="text-align: left;">SSD300&#8209;VGG&#8209;BN</td>
       <td style="text-align: left;">Quantization INT8</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>77.81 (0.47)</td>
@@ -335,7 +335,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_int8.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SSD300-VGG-BN</td>
+      <td style="text-align: left;">SSD300&#8209;VGG&#8209;BN</td>
       <td style="text-align: left;">Quantization INT8 + Sparsity 70% (Magnitude)</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>77.66 (0.62)</td>
@@ -343,7 +343,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SSD512-VGG-BN</td>
+      <td style="text-align: left;">SSD512-VGG&#8209;BN</td>
       <td style="text-align: left;">None</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>80.26</td>
@@ -351,7 +351,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SSD512-VGG-BN</td>
+      <td style="text-align: left;">SSD512-VGG&#8209;BN</td>
       <td style="text-align: left;">Quantization INT8</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>80.04 (0.22)</td>
@@ -359,7 +359,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_int8.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SSD512-VGG-BN</td>
+      <td style="text-align: left;">SSD512-VGG&#8209;BN</td>
       <td style="text-align: left;">Quantization INT8 + Sparsity 70% (Magnitude)</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>79.68 (0.58)</td>
@@ -367,7 +367,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">SSD300-VGG-BN</td>
+      <td style="text-align: left;">SSD300&#8209;VGG&#8209;BN</td>
       <td style="text-align: left;">Filter pruning, 40%, geometric median criterion</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>78.35 (-0.07)</td>
@@ -505,7 +505,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td>84.8 (-0.24)</td>
     </tr>
     <tr>
-      <td style="text-align: left;">BERT-large (Whole Word Masking)</td>
+      <td style="text-align: left;">BERT-large<br>(Whole Word Masking)</td>
       <td style="text-align: left;">Quantization INT8</td>
       <td>SQuAD v1.1</td>
       <td>F1: 92.68 (0.53)</td>
@@ -836,7 +836,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </thead>
   <tbody align="center">
     <tr>
-      <td style="text-align: left;">Mask-R-CNN</td>
+      <td style="text-align: left;">Mask&#8209;R&#8209;CNN</td>
       <td style="text-align: left;">None</td>
       <td>COCO 2017</td>
       <td>bbox: 37.33 segm: 33.56</td>
@@ -844,7 +844,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">Mask-R-CNN</td>
+      <td style="text-align: left;">Mask&#8209;R&#8209;CNN</td>
       <td style="text-align: left;">Quantization INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)</td>
       <td>COCO 2017</td>
       <td>bbox: 37.19 (0.14) segm: 33.54 (0.02)</td>
@@ -852,7 +852,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
-      <td style="text-align: left;">Mask-R-CNN</td>
+      <td style="text-align: left;">Mask&#8209;R&#8209;CNN</td>
       <td style="text-align: left;">Magnitude sparsity, 50%</td>
       <td>COCO 2017</td>
       <td>bbox: 36.94 (0.39) segm: 33.23 (0.33)</td>
@@ -895,7 +895,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td>66.36 (0.3)</td>
     </tr>
     <tr>
-      <td style="text-align: left;">SqueezeNet V1.0</td>
+      <td style="text-align: left;">SqueezeNet&nbsp;V1.0</td>
       <td style="text-align: left;">Quantization INT8 (Post-Training)</td>
       <td>ImageNet</td>
       <td>54.3 (0.54)</td>
@@ -913,7 +913,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td>60.16 (0.8)</td>
     </tr>
     <tr>
-      <td style="text-align: left;">VGG-16</td>
+      <td style="text-align: left;">VGG&#8209;16</td>
       <td style="text-align: left;">Quantization INT8 (Post-Training)</td>
       <td>ImageNet</td>
       <td>72.02 (0.0)</td>
