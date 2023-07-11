@@ -914,7 +914,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td style="text-align: center;">None</td>
       <td style="text-align: center;">COCO 2017</td>
       <td style="text-align: center;">bbox: 37.33 segm: 33.56</td>
-      <td style="text-align: center;"><a href="../examples/tensorflow/instance_segmentation/configs/mask_rcnn_coco.json">Config</a></td>
+      <td style="text-align: center;"><a href="../examples/tensorflow/segmentation/configs/mask_rcnn_coco.json">Config</a></td>
       <td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz">Download</a></td>
     </tr>
     <tr>
@@ -922,7 +922,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td style="text-align: center;">INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)</td>
       <td style="text-align: center;">COCO 2017</td>
       <td style="text-align: center;">bbox: 37.19 (0.14) segm: 33.54 (0.02)</td>
-      <td style="text-align: center;"><a href="../examples/tensorflow/instance_segmentation/configs/quantization/mask_rcnn_coco_int8.json">Config</a></td>
+      <td style="text-align: center;"><a href="../examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json">Config</a></td>
       <td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
@@ -930,7 +930,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <td style="text-align: center;">Magnitude sparsity, 50%</td>
       <td style="text-align: center;">COCO 2017</td>
       <td style="text-align: center;">bbox: 36.94 (0.39) segm: 33.23 (0.33)</td>
-      <td style="text-align: center;"><a href="../examples/tensorflow/instance_segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json">Config</a></td>
+      <td style="text-align: center;"><a href="../examples/tensorflow/segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json">Config</a></td>
       <td style="text-align: center;"><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz">Download</a></td>
     </tr>
   </tbody>
