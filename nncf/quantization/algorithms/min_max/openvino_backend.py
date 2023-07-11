@@ -34,6 +34,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVDivideMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMaximumMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMVNMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVNonMaxSuppressionMetatype
@@ -245,6 +246,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 OVMVNMetatype,
                 OVDivideMetatype,
                 OVSqrtMetatype,
+                OVMaximumMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(OVMultiplyMetatype)
