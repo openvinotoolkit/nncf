@@ -213,7 +213,7 @@ class ChannelAlignment(Algorithm):
         Function which calculates new conv_in_value, conv_out_value and bias_in_value
         in ChannelAlignment pattern, so output activations of conv_out are the same,
         but activations of conv_in are scale times smaller. Negative scales are skipped,
-        too small (<1e-2) and too big (>1e2) scales are clapped.
+        too small (<1e-2) and too big (>1e2) scales are clamped.
 
         :param conv_in_value: Weights of the first convolution in the ChannelAlignment pattern.
         :param conv_out_value: Weights of the second convolution in the ChannelAlignment pattern.
