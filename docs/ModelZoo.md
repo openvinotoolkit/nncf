@@ -26,7 +26,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>Accuracy (<em>drop</em>) %</th>
+      <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
       <th>NNCF config file</th>
       <th>Checkpoint</th>
     </tr>
@@ -323,7 +323,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mAP (<em>drop</em>) %</th>
+      <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
       <th>NNCF config file</th>
       <th>Checkpoint</th>
     </tr>
@@ -422,7 +422,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mIoU (<em>drop</em>) %</th>
+      <th>mIoU&nbsp(<em>drop</em>)&nbsp%</th>
       <th>NNCF config file</th>
       <th>Checkpoint</th>
     </tr>
@@ -526,7 +526,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>PyTorch Model</th>
       <th><img width="20" height="1">Compression algorithm<img width="20" height="1"></th>
       <th>Dataset</th>
-      <th>Accuracy (Drop) %</th>
+      <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -594,7 +594,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>Accuracy (<em>drop</em>) %</th>
+      <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
       <th>NNCF config file</th>
       <th>Checkpoint</th>
     </tr>
@@ -804,7 +804,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mAP (<em>drop</em>) %</th>
+      <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
       <th>NNCF config file</th>
       <th>Checkpoint</th>
     </tr>
@@ -903,7 +903,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mAP (<em>drop</em>) %</th>
+      <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
       <th>NNCF config file</th>
       <th>Checkpoint</th>
     </tr>
@@ -946,7 +946,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>ONNX Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>Accuracy (Drop) %</th>
+      <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -1003,7 +1003,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>ONNX Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mAP (drop) %</th>
+      <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
     </tr>
   </thead>
   <tbody align="center">
