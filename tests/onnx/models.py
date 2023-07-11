@@ -1235,56 +1235,39 @@ class MatMulWeightModel(ONNXReferenceModel):
 
 
 @ALL_SYNTHETIC_MODELS.register()
-class MatMulWeightModel_2(ONNXReferenceModel):
-    #         X       W
+class MatMulActivationModel(ONNXReferenceModel):
+    #         X       Y
     #         |       |
-    #      Identity   |
     #          \     /
     #           MatMul
     #             |
     #          softmax
     def __init__(self):
-        model_input_name, model_output_name = "X", "Y"
-        model_input_channels, model_output_channels = 10, 5
-        input_shape = [1, model_input_channels]
+        model_input_name_1, model_input_name_2, model_output_name = "X", "Y", "Z"
+        channels = 10
+        x_input_shape = [channels, 1]
+        y_input_shape = [1, channels]
 
-        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
-        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_output_channels])
+        X = onnx.helper.make_tensor_value_info(model_input_name_1, onnx.TensorProto.FLOAT, x_input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_input_name_2, onnx.TensorProto.FLOAT, y_input_shape)
+        Z = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [channels, channels])
 
-        rng = np.random.default_rng(seed=0)
-        shape = [model_input_channels, model_output_channels]
-        w_tensor = create_initializer_tensor(
-            name="W", tensor_array=rng.uniform(0, 1, shape).astype(np.float32), data_type=onnx.TensorProto.FLOAT
-        )
-
-        identity_node = onnx.helper.make_node(
-            name="Identity", op_type="Identity", inputs=[model_input_name], outputs=["identity"]
-        )
-
-        matmul_node = onnx.helper.make_node(
-            name="MatMul", op_type="MatMul", inputs=["identity", "W"], outputs=["logit"]
-        )
+        matmul_node = onnx.helper.make_node(name="MatMul", op_type="MatMul", inputs=["X", "Y"], outputs=["logit"])
 
         softmax_node = onnx.helper.make_node(
             name="Softmax",
             op_type="Softmax",
             inputs=["logit"],
-            outputs=["Y"],
+            outputs=["Z"],
         )
 
-        graph_def = onnx.helper.make_graph(
-            nodes=[identity_node, matmul_node, softmax_node],
-            name="Net",
-            inputs=[X],
-            outputs=[Y],
-            initializer=[w_tensor],
-        )
+        graph_def = onnx.helper.make_graph(nodes=[matmul_node, softmax_node], name="Net", inputs=[X, Y], outputs=[Z])
 
         op = onnx.OperatorSetIdProto()
         op.version = OPSET_VERSION
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
-        super().__init__(model, [input_shape], "weight_matmul_model_2.dot")
+        super().__init__(model, [x_input_shape, y_input_shape], "activation_matmul_model.dot")
 
 
 @ALL_SYNTHETIC_MODELS.register()

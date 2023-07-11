@@ -21,8 +21,8 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import GEMMTransposeWeightModel
 from tests.onnx.models import LinearModel
+from tests.onnx.models import MatMulActivationModel
 from tests.onnx.models import MatMulWeightModel
-from tests.onnx.models import MatMulWeightModel_2
 from tests.onnx.models import OneDepthwiseConvolutionalModel
 from tests.onnx.models import ReshapeWeightModel
 from tests.onnx.models import WeightSharingModel
@@ -73,7 +73,7 @@ def test_overflow_fix_scales(overflow_fix):
 MODELS = [
     GEMMTransposeWeightModel,
     MatMulWeightModel,
-    MatMulWeightModel_2,
+    MatMulActivationModel,
     WeightSharingModel,
     ReshapeWeightModel,
     LinearModel,
@@ -92,7 +92,7 @@ MODELS = [
     ids=[
         "GEMMTransposeWeightModel",
         "MatMulWeightModel",
-        "MatMulWeightModel_2",
+        "MatMulActivationModel",
         "WeightSharingModel",
         "ReshapeWeightModel",
         "LinearModel",

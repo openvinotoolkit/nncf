@@ -1,0 +1,11 @@
+strict digraph  {
+"0 MatMul" [id=0, type=MatMul];
+"1 Softmax" [id=1, type=Softmax];
+"2 nncf_model_input_0" [id=2, type=nncf_model_input];
+"3 nncf_model_input_1" [id=3, type=nncf_model_input];
+"4 nncf_model_output_0" [id=4, type=nncf_model_output];
+"0 MatMul" -> "1 Softmax"  [label="[10, 10]", style=solid];
+"1 Softmax" -> "4 nncf_model_output_0"  [label="[10, 10]", style=solid];
+"2 nncf_model_input_0" -> "0 MatMul"  [label="[10, 1]", style=solid];
+"3 nncf_model_input_1" -> "0 MatMul"  [label="[1, 10]", style=solid];
+}
