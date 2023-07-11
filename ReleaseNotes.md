@@ -1,12 +1,13 @@
 # Release Notes
 
 ## New in Release 2.5.0
+
 Post-training Quantization:
 
 - Features:
   - Official release of OpenVINO framework support.
     - Ported NNCF OpenVINO backend to use the [nGraph](https://docs.openvino.ai/2021.3/openvino_docs_nGraph_DG_Introduction.html) representation of OpenVINO models.
-    - Changed dependecies of NNCF OpenVINO backend. It now depends on `openvino` package and not on the `openvino-dev` package.
+    - Changed dependencies of NNCF OpenVINO backend. It now depends on `openvino` package and not on the `openvino-dev` package.
     - Added GRU/LSTM quantization support.
     - Added quantizer scales unification.
     - Added support for models with 3D and 5D Depthwise convolution.
@@ -61,15 +62,18 @@ Compression-aware training:
   - Added Windows support for NNCF.
 
 ## New in Release 2.4.0
+
 Target version updates:
+
 - Bump target framework versions to PyTorch 1.13.1, TensorFlow 2.8.x, ONNX 1.12, ONNXRuntime 1.13.1
 - Increased target HuggingFace transformers version for the integration patch to 4.23.1
 
 Features:
+
 - Official release of the ONNX framework support.
 NNCF may now be used for post-training quantization (PTQ) on ONNX models.
 Added an [example script](examples/post_training_quantization/onnx/mobilenet_v2) demonstrating the ONNX post-training quantization on MobileNetV2.
-- Preview release of OpenVINO framework support. 
+- Preview release of OpenVINO framework support.
 NNCF may now be used for post-training quantization on OpenVINO models. Added an example script demonstrating the OpenVINO post-training quantization on MobileNetV2.
 `pip install nncf[openvino]` will install NNCF with the required OV framework dependencies.
 - Common post-training quantization API across the supported framework model formats (PyTorch, TensorFlow, ONNX, OpenVINO IR) via the `nncf.quantize(...)` function.
@@ -86,7 +90,7 @@ Bugfixes:
 - "chunk" and "split" ops are correctly handled during pruning.
 - Linear layers may now be pruned by input and output independently.
 - Matmul-like operations and subsequent arithmetic operations are now treated as a fused pattern.
-- (PyTorch) Fixed a rare condition with accumulator overflow in CUDA quantization kernels, which led to CUDA runtime errors and NaN values appearing in quantized tensors and 
+- (PyTorch) Fixed a rare condition with accumulator overflow in CUDA quantization kernels, which led to CUDA runtime errors and NaN values appearing in quantized tensors and
 - (PyTorch) `transformers` integration patch now allows to export to ONNX during training, and not only at the end of it.
 - (PyTorch) `torch.nn.utils.weight_norm` weights are now detected correctly.
 - (PyTorch) Exporting a model with sparsity or pruning no longer leads to weights in the original model object in-memory to be hard-set to 0.
@@ -217,7 +221,7 @@ NNCF with TensorFlow backend supports the following features:
     - Compression results are claimed for MaskRCNN
 
 - Accuracy-aware training available for filter pruning and sparsity in order to achieve best compression results within a given accuracy drop threshold in a fully automated fashion.
-- Framework-specific checkpoints produced with NNCF now have NNCF-specific compression state information included, so that the exact compressed model state can be restored/loaded without having to provide the same NNCF config file that was used during the creation of the NNCF-compressed checkpoint 
+- Framework-specific checkpoints produced with NNCF now have NNCF-specific compression state information included, so that the exact compressed model state can be restored/loaded without having to provide the same NNCF config file that was used during the creation of the NNCF-compressed checkpoint
 - Common interface for compression methods for both PyTorch and TensorFlow backends (https://github.com/openvinotoolkit/nncf/tree/develop/nncf/api).
 - (PyTorch) Added an option to specify an effective learning rate multiplier for the trainable parameters of the compression algorithms via NNCF config, for finer control over which should tune faster - the underlying FP32 model weights or the compression parameters.
 - (PyTorch) Unified scales for concat operations - the per-tensor quantizers that affect the concat operations will now have identical scales so that the resulting concatenated tensor can be represented without loss of accuracy w.r.t. the concatenated subcomponents.
@@ -255,7 +259,7 @@ Bugfixes:
 
 Notable bugfixes:
 - Fixed bias pruning in depthwise convolution
-- Made per-tensor quantization available for all operations that support per-channel quantization 
+- Made per-tensor quantization available for all operations that support per-channel quantization
 - Fixed progressive training performance degradation when an output tensor of an NNCF-compressed model is reused as its input.
 - `pip install .` path of installing NNCF from a checked-out repository is now supported.
 - Nested `with no_nncf_trace()` blocks now function as expected.
@@ -284,9 +288,9 @@ Removed features:
 
 ## New in Release 1.5:
 - Switched to using the propagation-based mode for quantizer setup by default. Compared to the previous default, pattern-based mode, the propagation-based mode better ensures that all the inputs to operations that can be quantized on a given type of hardware are quantized in accordance with what this hardware allows. Default target hardware is CPU - adjustable via `"target_device"` option in the NNCF config. More details can be found in [Quantization.md](./docs/compression_algorithms/Quantization.md#quantizer-setup-and-hardware-config-files).
-- HAWQ mixed-precision initialization now supports a compression ratio parameter setting - set to 1 for a fully INT8 model, > 1 to increasingly allow lower bitwidth. The level of compression for each layer is defined by a product of the layer FLOPS and the quantization bitwidth.    
-- HAWQ mixed-precision initialization allows specifying a more generic `criterion_fn` callable to calculate the related loss in case of complex output's post-processing or multiple losses.  
-- Improved algorithm of assigning bitwidth for activation quantizers in HAWQ mixed-precision initialization. If after taking into account the corresponding rules of hardware config there're 
+- HAWQ mixed-precision initialization now supports a compression ratio parameter setting - set to 1 for a fully INT8 model, > 1 to increasingly allow lower bitwidth. The level of compression for each layer is defined by a product of the layer FLOPS and the quantization bitwidth.
+- HAWQ mixed-precision initialization allows specifying a more generic `criterion_fn` callable to calculate the related loss in case of complex output's post-processing or multiple losses.
+- Improved algorithm of assigning bitwidth for activation quantizers in HAWQ mixed-precision initialization. If after taking into account the corresponding rules of hardware config there're
  multiple options for choosing bitwidth, it chooses a common bitwidth for all adjacent weight quantizers. Adjacent quantizers refer to all quantizers between inputs-quantizable layers.
 - Custom user modules can be registered to have their `weight` attribute considered for compression using the @nncf.register_module
 - Possible to perform quantizer linking in various points in graph - such quantizers will share the quantization parameters, trainable and non-trainable

@@ -9,7 +9,7 @@ NNCF [here](https://github.com/openvinotoolkit/nncf#user-content-installation).
 
 To work with the example you should install the corresponding Python package dependencies:
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
@@ -20,7 +20,7 @@ uses [OpenVINO™ Accuracy Checker](https://github.com/openvinotoolkit/open_mode
 tool to preprocess data for quantization parameters calibration and for final accuracy validation.
 The benchmarking supports the following models:
 
-* Classification
+- Classification
 
 1. [bvlcalexnet-12](https://github.com/onnx/models/blob/main/vision/classification/alexnet/model/bvlcalexnet-12.onnx)
 2. [caffenet-12](https://github.com/onnx/models/blob/main/vision/classification/caffenet/model/caffenet-12.onnx)
@@ -37,7 +37,7 @@ The benchmarking supports the following models:
 13. [vgg16-12](https://github.com/onnx/models/blob/main/vision/classification/vgg/model/vgg16-12.onnx)
 14. [zfnet512-12](https://github.com/onnx/models/blob/main/vision/classification/zfnet-512/model/zfnet512-12.onnx)
 
-* Object detection and segmentation models
+- Object detection and segmentation models
 
 1. [FasterRCNN-12](https://github.com/onnx/models/blob/main/vision/object_detection_segmentation/faster-rcnn/model/FasterRCNN-12.onnx)
 2. [MaskRCNN-12](https://github.com/onnx/models/blob/main/vision/object_detection_segmentation/mask-rcnn/model/MaskRCNN-12.onnx)
@@ -60,7 +60,7 @@ and [object_detection_segmentation](./object_detection_segmentation/onnx_models_
 
 ### 1. Prepare dataset
 
-* Classification models
+- Classification models
 
 Because we
 use [OpenVINO™ Accuracy Checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker)
@@ -68,7 +68,7 @@ tool, you should prepare ILSVRC2012 validation dataset by following
 the [dataset preparation guide](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/data/datasets.md#imagenet)
 . After preparation, your dataset directory will be:
 
-```
+```text
 DATASET_DIR/
 +-- ILSVRC2012_img_val/
 |   +-- ILSVRC2012_val_00000001.JPEG
@@ -78,7 +78,7 @@ DATASET_DIR/
 +-- val.txt
 ```
 
-* Object detection and segmentation models
+- Object detection and segmentation models
 
 We
 use [COCO](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/data/datasets.md#common-objects-in-context-coco)
@@ -86,7 +86,7 @@ use [COCO](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/data/
 and [CityScapes](https://github.com/openvinotoolkit/open_model_zoo/blob/cf9003a95ddb742aabea341aa1573c3fa25ebbe1/data/dataset_definitions.yml#L1300-L1307)
 datasets. Please follow the link to prepare datasets. After preparation, your dataset directory will be:
 
-```
+```text
 DATASET_DIR/
 +-- annotations/ (COCO annotatios)
 |   +-- instances_val2017.json
@@ -114,7 +114,7 @@ You can run the benchmarking for particular model with the following command:
 
 ### Results
 
-1. Classification models
+#### 1. Classification models
 
 | Model Name              | Dataset  | FP32 Accuracy (%) | INT8 accuracy (%) | Accuracy Drop (%) |
 |-------------------------|----------|-------------------|-------------------|-------------------|
@@ -133,7 +133,7 @@ You can run the benchmarking for particular model with the following command:
 | vgg16-12                | ImageNet | 72.02 | 72.02             | 0.0               |
 | zfnet512-12             | ImageNet | 58.57 | 58.53             | 0.04              |
 
-2. Object detection and segmentation models
+#### 2. Object detection and segmentation models
 
 | Model Name           | Dataset   | FP32 mAP (%) | INT8 mAP (%)  | mAP diff. (%) |
 |----------------------|-----------|--------------|---------------|---------------|

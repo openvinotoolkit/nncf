@@ -28,6 +28,7 @@ def transform_fn(data_item):
 ```
 
 2) Create an instance of `nncf.Dataset` class by passing two parameters:
+
 * `data_source` - Iterable python object that contains data items for model calibration.
 * `transform_fn` - Data transformation function from the Step 1.
 

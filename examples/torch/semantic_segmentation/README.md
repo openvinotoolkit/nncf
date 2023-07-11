@@ -88,9 +88,10 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 |UNet|INT8|Mapillary|56.09 (0.15)|[unet_mapillary_int8.json](configs/unet_mapillary_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_int8.pth)|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|55.69 (0.55)|[unet_mapillary_magnitude_sparsity_int8.json](configs/unet_mapillary_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_magnitude_sparsity_int8.pth)|
 
-
 <a name="filter_pruning"></a>
+
 #### Results for filter pruning
+
 |Model|Compression algorithm|Dataset|mIoU (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |UNet|None|Mapillary|56.24|[unet_mapillary.json](configs/unet_mapillary.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth)|

@@ -3,12 +3,12 @@
 # Neural Network Compression Framework (NNCF)
 
 [Key Features](#key-features) •
-[Installation](#Installation-guide) •
+[Installation](#installation-guide) •
 [Documentation](#documentation) •
 [Usage](#usage) •
-[Tutorials and Samples](#Model-compression-tutorials-and-samples) •
-[Third-party integration](#Third-party-repository-integration) •
-[Model Zoo](#NNCF-Compressed-Model-Zoo)
+[Tutorials and Samples](#model-compression-tutorials-and-samples) •
+[Third-party integration](#third-party-repository-integration) •
+[Model Zoo](#nncf-compressed-model-zoo)
 
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
 [![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Flatest%2Fopenvino_docs_model_optimization_guide.html)](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
@@ -21,7 +21,7 @@ Neural Network Compression Framework (NNCF) provides a suite of post-training an
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
-NNCF provides [samples](#Model-Compression-Samples) that demonstrate the usage of compression algorithms for different use cases and models.
+NNCF provides [samples](#nncf-compressed-model-zoo) that demonstrate the usage of compression algorithms for different use cases and models.
 [Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at
 the end of this document.
 
@@ -30,6 +30,7 @@ architecture is unified to make it easy to add different compression algorithms 
 learning frameworks.
 
 ## Key Features
+
 ### Post-Training Compression Algorithms
 
 | Compression algorithm                                                       |OpenVINO|PyTorch|   TensorFlow   |     ONNX       |
@@ -186,7 +187,6 @@ quantized_model = nncf.quantize(onnx_model, calibration_dataset)
 
 </details>
 
-
 [//]: # (NNCF provides full  [samples]&#40;#post-training-quantization-samples&#41;, which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.)
 
 ### Training-Time Compression
@@ -274,7 +274,8 @@ For a quicker start with NNCF-powered compression, try sample notebooks and scri
 ### Model Compression Tutorials
 
 A collection of ready-to-run Jupyter* notebooks are available to demonstrate how to use NNCF compression algorithms to optimize models for inference with the OpenVINO Toolkit:
-- [Accelerate Inference of NLP models with Post-Training Qunatization API of NNCF](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/105-language-quantize-bert)
+
+- [Accelerate Inference of NLP models with Post-Training Quantization API of NNCF](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/105-language-quantize-bert)
 - [Convert and Optimize YOLOv8 with OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/230-yolov8-optimization)
 - [Convert and Optimize YOLOv7 with OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/226-yolov7-optimization)
 - [NNCF Post-Training Optimization of Segment Anything Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/237-segment-anything)
@@ -289,7 +290,9 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [Accelerate Inference of Sparse Transformer Models with OpenVINO and 4th Gen Intel Xeon Scalable Processors](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/116-sparsity-optimization)
 
 ### Post-Training Quantization Samples
+
 Compact scripts demonstrating quantization and corresponding inference speed boost:
+
 - [Post-Training Quantization of MobileNet v2 OpenVINO Model](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 - [Post-Training Quantization of YOLOv8 OpenVINO Model](examples/post_training_quantization/openvino/yolov8/README.md)
 - [Post-Training Quantization of Anomaly Classification OpenVINO model with control of accuracy metric](examples/post_training_quantization/openvino/quantize_with_accuracy_control/README.md)
@@ -300,7 +303,9 @@ Compact scripts demonstrating quantization and corresponding inference speed boo
 - [Post-Training Quantization of MobileNet v2 TensorFlow Model](examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)
 
 ### Training-Time Compression Samples
+
 These examples provide full pipelines including compression, training and inference for classification, object detection and segmentation tasks.
+
 - PyTorch samples:
   - [Image Classification sample](examples/torch/classification/README.md)
   - [Object Detection sample](examples/torch/object_detection/README.md)
@@ -311,43 +316,53 @@ These examples provide full pipelines including compression, training and infere
   - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
 
 ## Third-party repository integration
+
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
 
 ### Used by
 
 - [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
 
-  NNCF is integrated into OpenVINO Training Extensions as model optimization backend. So you can train, optimize and export new models based on the available model templates as well as run exported models with OpenVINO.
+  NNCF is integrated into OpenVINO Training Extensions as model optimization backend. So you can train, optimize anCompressed d export new models based on the available model templates as well as run exported models with OpenVINO.
 
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
 
 ### Git patches for third-party repository
+
 See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into the following repositories:
-  - [huggingface-transformers](third_party_integration/huggingface_transformers/README.md)
+
+- [huggingface-transformers](third_party_integration/huggingface_transformers/README.md)
 
 ## Installation Guide
+
 For detailed installation instructions please refer to the [Installation](./docs/Installation.md) page.
 
 NNCF can be installed as a regular PyPI package via pip:
-```
+
+```sh
 pip install nncf
 ```
+
 If you want to install both NNCF and the supported PyTorch version in one line, you can do this by simply running:
-```
+
+```sh
 pip install nncf[torch]
 ```
+
 Other viable options besides `[torch]` are `[tf]`, `[onnx]` and `[openvino]`.
 
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
-```
+
+```sh
 conda install -c conda-forge nncf
 ```
 
-You may also use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
+You may also use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#nncf-compressed-model-zoo).
 
 ### System requirements
+
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.7 or later
 - Supported frameworks:
@@ -361,21 +376,23 @@ This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolk
 ## NNCF Compressed Model Zoo
 
 Results achieved using sample scripts, example patches to third-party repositories and NNCF configuration files provided
-with this repository. See README.md files for [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration)
+with this repository. See README.md files for [sample scripts](#nncf-compressed-model-zoo) and [example patches](#third-party-repository-integration)
 to find instruction and links to exact configuration files and final checkpoints.
+
 - [PyTorch models](#pytorch-models)
-  * [Classification](#pytorch_classification)
-  * [Object detection](#pytorch_object_detection)
-  * [Semantic segmentation](#pytorch_semantic_segmentation)
-  * [Natural language processing (3rd-party training pipelines)](#pytorch_nlp)
+  - [Classification](#pytorch_classification)
+  - [Object detection](#pytorch_object_detection)
+  - [Semantic segmentation](#pytorch_semantic_segmentation)
+  - [Natural language processing (3rd-party training pipelines)](#pytorch_nlp)
 - [TensorFlow models](#tensorflow-models)
-  * [Classification](#tensorflow_classification)
-  * [Object detection](#tensorflow_object_detection)
-  * [Instance segmentation](#tensorflow_instance_segmentation)
+  - [Classification](#tensorflow_classification)
+  - [Object detection](#tensorflow_object_detection)
+  - [Instance segmentation](#tensorflow_instance_segmentation)
 
 ### PyTorch models
 
 <a name="pytorch_classification"></a>
+
 #### Classification
 
 |Model|Compression algorithm|Dataset|Accuracy (_drop_) %|
@@ -404,6 +421,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.47 (0.30)|
 
 <a name="pytorch_object_detection"></a>
+
 #### Object detection
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|
@@ -416,6 +434,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|79.68 (0.58)|
 
 <a name="pytorch_semantic_segmentation"></a>
+
 #### Semantic segmentation
 
 |Model|Compression algorithm|Dataset|mIoU (_drop_) %|
@@ -429,6 +448,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.64 (0.60)|
 
 <a name="pytorch_nlp"></a>
+
 #### NLP (HuggingFace Transformers-powered models)
 
 |PyTorch Model|<img width="20" height="1">Compression algorithm<img width="20" height="1">|Dataset|Accuracy (Drop) %|
@@ -445,6 +465,7 @@ to find instruction and links to exact configuration files and final checkpoints
 ### TensorFlow models
 
 <a name="tensorflow_classification"></a>
+
 #### Classification
 
 |Model|Compression algorithm|Dataset|Accuracy (_drop_) %|
@@ -467,6 +488,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion|ImageNet|75.09 (-0.04)|
 
 <a name="tensorflow_object_detection"></a>
+
 #### Object detection
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|
@@ -479,6 +501,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |YOLO v4|Magnitude sparsity, 50%|COCO 2017|46.49 (0.58)|
 
 <a name="tensorflow_instance_segmentation"></a>
+
 #### Instance segmentation
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|
@@ -489,6 +512,7 @@ to find instruction and links to exact configuration files and final checkpoints
 ### ONNX models
 
 <a name="onnx_classification"></a>
+
 #### Classification
 
 |   ONNX Model    | Compression algorithm |Dataset|Accuracy (Drop) %|
@@ -502,6 +526,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |VGG-16| INT8 (Post-Training)  |ImageNet|72.02 (0.0)|
 
 <a name="onnx_object_detection"></a>
+
 #### Object Detection
 
 |ONNX Model| Compression algorithm | Dataset |mAP (drop) %|
@@ -511,7 +536,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 ## Citing
 
-```
+```bibtex
 @article{kozlov2020neural,
     title =   {Neural network compression framework for fast model inference},
     author =  {Kozlov, Alexander and Lazarevich, Ivan and Shamporov, Vasily and Lyalyushkin, Nikolay and Gorbachev, Yury},
@@ -521,13 +546,15 @@ to find instruction and links to exact configuration files and final checkpoints
 ```
 
 ## Contributing Guide
+
 Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
 
 ## Useful links
+
 - [Documentation](./docs)
 - Example scripts (model objects available through links in respective README.md files):
-    - [PyTorch](./examples/torch)
-    - [TensorFlow](./examples/tensorflow)
+  - [PyTorch](./examples/torch)
+  - [TensorFlow](./examples/tensorflow)
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)

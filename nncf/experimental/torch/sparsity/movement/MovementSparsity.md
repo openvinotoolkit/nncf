@@ -6,7 +6,7 @@ NNCF implements both unstructured and structured movement sparsification. The im
 
 For usage explanation of the algorithm, let's start with an example configuration below which is targeted for BERT models.
 
-**Example configuration of Movement Sparsity for BERT models**
+#### Example configuration of Movement Sparsity for BERT models
 
 ```json
 {
@@ -39,7 +39,7 @@ This diagram is the sparsity level of BERT-base model over the optimization life
 
 2. **Structured masking and fine-tuning**: At the end of first stage, i.e. `warmup_end_epoch`, the sparsified model cannot be accelerated without tailored HW/SW but some sparse structures can be totally discarded from the model to save compute and memory footprint. NNCF provides mechanism to achieve structured masking by `"enable_structured_masking": true`, where it automatically resolves the structured masking between dependent layers and rewinds the sparsified parameters that does not participate in acceleration for task modeling. In the example above, the sparsity level has dropped after `warmup_end_epoch` due to structured masking and the model will continue to fine-tune thereafter. Currently, the automatic structured masking feature was tested on **_BERT, DistilBERT, RoBERTa, MobileBERT, Wav2Vec2, Swin, ViT, CLIPVisual_** architectures defined by [Hugging Face&#39;s transformers](https://huggingface.co/docs/transformers/index). Support for other architectures is not guaranteed. Users can disable this feature by setting `"enable_structured_masking": false`, where the sparse structures at the end of first stage will be frozen and training/fine-tuning will continue on unmasked parameters. Please refer next section to realize model inference acceleration with [OpenVINO](https://docs.openvino.ai/latest/index.html) toolchain.
 
-#### Inference Acceleration via [OpenVINO](https://docs.openvino.ai/latest/index.html) 
+#### Inference Acceleration via [OpenVINO](https://docs.openvino.ai/latest/index.html)
 
 Optimized models are compatible with OpenVINO toolchain. Use `compression_controller.export_model("movement_sparsified_model.onnx")` to export model in onnx format. Sparsified parameters in the onnx are in value of zero. Structured sparse structures can be discarded during ONNX translation to OpenVINO IR using [Model Optimizer](https://docs.openvino.ai/latest/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) with additional option `--transform=Pruning`. Corresponding IR is compressed and deployable with [OpenVINO Runtime](https://docs.openvino.ai/latest/openvino_docs_OV_UG_OV_Runtime_User_Guide.html). To quantify inference performance improvement, both ONNX and IR can be profiled using [Benchmark Tool](https://docs.openvino.ai/latest/openvino_inference_engine_tools_benchmark_tool_README.html).
 

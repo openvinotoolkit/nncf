@@ -15,7 +15,7 @@ At this point it is assumed that you have already installed nncf. You can find i
 
 To work with the sample you should install the corresponding Python package dependencies:
 
-```
+```bash
 pip install -r examples/tensorflow/requirements.txt
 ```
 
@@ -34,6 +34,7 @@ Please read the following [guide](https://www.tensorflow.org/datasets/overview) 
 
 For the [ImageNet](http://www.image-net.org/challenges/LSVRC/2012/) dataset, TFDS requires a manual download. Please refer to the [TFDS ImageNet Readme](https://www.tensorflow.org/datasets/catalog/imagenet2012) for download instructions.
 The TFDS ImageNet dataset should be specified in the configuration file as follows:
+
 ```json
     "dataset": "imagenet2012",
     "dataset_type": "tfds"
@@ -43,6 +44,7 @@ The TFDS ImageNet dataset should be specified in the configuration file as follo
 
 To download the [ImageNet](http://www.image-net.org/challenges/LSVRC/2012/) dataset and convert it to [TFRecord](https://www.tensorflow.org/tutorials/load_data/tfrecord) format, refer to the following [tutorial](https://github.com/tensorflow/models/tree/master/research/slim#Data).
 The ImageNet dataset in TFRecords format should be specified in the configuration file as follows:
+
 ```json
     "dataset": "imagenet2012",
     "dataset_type": "tfrecords"
@@ -58,24 +60,27 @@ The ImageNet dataset in TFRecords format should be specified in the configuratio
 Before compressing a model, it is highly recommended checking the accuracy of the pretrained model. All models which are supported in the sample has pretrained weights for ImageNet.
 
 To load pretrained weights into a model and then evaluate the accuracy of that model, make sure that the pretrained=True option is set in the configuration file and use the following command:
+
 ```bash
 python main.py \
---mode=test \
---config=configs/quantization/mobilenet_v2_imagenet_int8.json \
---data=<path_to_imagenet_dataset> \
---disable-compression
+  --mode=test \
+  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+  --data=<path_to_imagenet_dataset> \
+  --disable-compression
 ```
 
 #### Compress Pretrained Model
 
 Run the following command to start compression with fine-tuning on all available GPUs on the machine:
-  ```bash
-  python main.py \
+
+```bash
+python main.py \
   --mode=train \
   --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
   --data=<path_to_imagenet_dataset> \
   --log-dir=../../results/quantization/mobilenet_v2_int8
-  ```
+```
+
 It may take a few epochs to get the baseline accuracy results.
 
 Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
@@ -83,49 +88,54 @@ Use the `--resume` flag with the path to the checkpoint to resume training from 
 ### Validate Your Model Checkpoint
 
 To estimate the test scores of your trained model checkpoint, use the following command:
+
 ```bash
 python main.py \
---mode=test \
---config=configs/quantization/mobilenet_v2_imagenet_int8.json \
---data=<path_to_imagenet_dataset> \
---resume=<path_to_trained_model_checkpoint>
+  --mode=test \
+  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+  --data=<path_to_imagenet_dataset> \
+  --resume=<path_to_trained_model_checkpoint>
 ```
 
 ### Export Compressed Model
 
 To export trained model to the **Frozen Graph**, use the following command:
+
 ```bash
 python main.py \
---mode=export \
---config=configs/quantization/mobilenet_v2_imagenet_int8.json \
---resume=<path_to_trained_model_checkpoint> \
---to-frozen-graph=../../results/mobilenet_v2_int8.pb
+  --mode=export \
+  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+  --resume=<path_to_trained_model_checkpoint> \
+  --to-frozen-graph=../../results/mobilenet_v2_int8.pb
 ```
 
 To export trained model to the **SavedModel**, use the following command:
+
 ```bash
 python main.py \
---mode=export \
---config=configs/quantization/mobilenet_v2_imagenet_int8.json \
---resume=<path_to_trained_model_checkpoint> \
---to-saved-model=../../results/saved_model
+  --mode=export \
+  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+  --resume=<path_to_trained_model_checkpoint> \
+  --to-saved-model=../../results/saved_model
 ```
 
 To export trained model to the **Keras H5**, use the following command:
+
 ```bash
 python main.py \
---mode=export \
---config=configs/quantization/mobilenet_v2_imagenet_int8.json \
---resume=<path_to_trained_model_checkpoint> \
---to-h5=../../results/mobilenet_v2_int8.h5
+  --mode=export \
+  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+  --resume=<path_to_trained_model_checkpoint> \
+  --to-h5=../../results/mobilenet_v2_int8.h5
 ```
 
 ### Export to OpenVINO™ Intermediate Representation (IR)
 
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
-### Results
 <a name="results"></a>
+
+### Results
 
 |Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -149,8 +159,9 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 65% (RB)|ImageNet|74.36 (0.69)|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity_int8.tar.gz)|
 |ResNet-50|Sparsity 80% (RB)|ImageNet|74.38 (0.67)|[resnet50_imagenet_rb_sparsity.json](configs/sparsity/resnet50_imagenet_rb_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity.tar.gz)|
 
-#### Results for filter pruning
 <a name="filter_pruning"></a>
+
+### Results for filter pruning
 
 |Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -158,8 +169,9 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|74.96 (0.09)|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median.tar.gz)|
 |ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion|ImageNet|75.09 (-0.04)|[resnet50_imagenet_pruning_geometric_median_int8.json](configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median_int8.tar.gz)|
 
-#### Results for accuracy-aware compressed training
 <a name="accuracy_aware"></a>
+
+### Results for accuracy-aware compressed training
 
 |**Model**|**Compression algorithm**|**Dataset**|**Accuracy (Drop) %**|**NNCF config file**|
 | :---: | :---: | :---: | :---: | :---: |
