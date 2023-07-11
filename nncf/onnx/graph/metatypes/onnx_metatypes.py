@@ -478,6 +478,19 @@ class ONNXReduceMaxMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXReduceSumMetatype(ONNXOpMetatype):
+    name = "ReduceSumOp"
+    op_names = ["ReduceSum"]
+    hw_config_names = [HWConfigOpName.REDUCESUM]
+
+
+class ONNXReduceL2Metatype(ONNXOpMetatype):
+    name = "ReduceL2Op"
+    op_names = ["ReduceL2"]
+    hw_config_names = [HWConfigOpName.REDUCEL2]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXDepthToSpaceMetatype(ONNXOpMetatype):
     name = "DepthToSpaceOp"
     op_names = ["DepthToSpace"]
