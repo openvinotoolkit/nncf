@@ -20,7 +20,7 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><h4>Quantization</h4></th>
     </tr>
     <tr>
       <th>Model</th>
@@ -219,7 +219,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th colspan="6"><br>Binarization<br>&nbsp</th>
+      <th colspan="6"><h4>Binarization</h4></th>
     </tr>
   </thead>
   <tbody align="center">
@@ -242,7 +242,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><h4>Filter pruning</h4></th>
     </tr>
   </thead>
   <tbody align="center">
@@ -289,7 +289,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th colspan="6"><br>Accuracy-aware compressed training<br>&nbsp</th>
+      <th colspan="6"><h4>Accuracy-aware compressed training</h4></th>
     </tr>
   </thead>
   <tbody align="center">
@@ -317,7 +317,7 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><h4>Quantization</h4></th>
     </tr>
     <tr>
       <th>Model</th>
@@ -396,7 +396,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><h4>Filter pruning</h4></th>
     </tr>
   </thead>
   <tbody align="center">
@@ -416,7 +416,7 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><h4>Quantization</h4></th>
     </tr>
     <tr>
       <th>Model</th>
@@ -503,7 +503,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><h4>Filter pruning</h4></th>
     </tr>
   </thead>
   <tbody align="center">
@@ -588,7 +588,7 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><h4>Quantization</h4></th>
     </tr>
     <tr>
       <th>Model</th>
@@ -755,7 +755,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><h4>Filter pruning</h4></th>
     </tr>
   </thead>
   <tbody align="center">
@@ -778,7 +778,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th colspan="6"><br>Accuracy-aware compressed training<br>&nbsp</th>
+      <th colspan="6"><h4>Accuracy-aware compressed training</h4></th>
     </tr>
   </thead>
   <tbody align="center">
@@ -798,7 +798,7 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><h4>Quantization</h4></th>
     </tr>
     <tr>
       <th>Model</th>
@@ -861,7 +861,7 @@ Here we present the results achieved using our sample scripts, example patches t
   </tbody>
   <thead>
     <tr>
-      <th colspan="6"><br>Filter pruning<br>&nbsp</th>
+      <th colspan="6"><h4>Filter pruning</h4></th>
     </tr>
   </thead>
   <tbody align="center">
@@ -897,7 +897,7 @@ Here we present the results achieved using our sample scripts, example patches t
 <table>
   <thead>
     <tr>
-      <th colspan="6"><br>Quantization<br>&nbsp</th>
+      <th colspan="6"><h4>Quantization</h4></th>
     </tr>
     <tr>
       <th>Model</th>
