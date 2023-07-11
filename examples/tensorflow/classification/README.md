@@ -52,6 +52,7 @@ The ImageNet dataset in TFRecords format should be specified in the configuratio
 
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/classification` folder.
+- Download the pre-trained weights in H5 format and provide the path to them using --weights flag. The link to the archive with pre-trained weights can be found in the Checkpoint column of the [Model Zoo table](../../../docs/ModelZoo.md#tensorflow-classification). Select the checkpoint corresponding to the None compression algorithm, which includes the pre-trained weights for the FP32 model, without applying any compression algorithms.
 
 #### Test Pretrained Model
 
