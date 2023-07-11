@@ -16,9 +16,7 @@ import onnx
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_bias_tensor_port_id
