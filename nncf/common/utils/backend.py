@@ -67,7 +67,7 @@ def get_backend(model) -> BackendType:
     if onnx is not None and isinstance(model, onnx.ModelProto):
         return BackendType.ONNX
 
-    if ov is not None and isinstance(model, ov.Model):
+    if ov is not None and isinstance(model, (ov.Model, ov.ie_api.Model)):
         return BackendType.OPENVINO
 
     raise RuntimeError(
