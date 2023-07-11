@@ -65,6 +65,7 @@ class SmoothQuant(Algorithm):
         self._inplace_statistics = inplace_statistics
         self._backend_entity = None
         self._alpha = alpha
+        self._target_point_to_tensor_collector_key = {}
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -173,17 +174,10 @@ class SmoothQuant(Algorithm):
         :param act_port: Activation port id.
         :return: List of the TTensor instances.
         """
-
-        def filter_func(point: StatisticPoint) -> bool:
-            return (
-                SmoothQuant in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.PRE_LAYER_OPERATION
-                and point.target_point.port_id == act_port
-            )
-
-        statistics_for_node = []
-        for tensor_collector in statistic_points.get_algo_statistics_for_node(node_name, filter_func, SmoothQuant):
-            statistics_for_node.append(tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY])
+        target_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION, node_name, act_port)
+        tensor_collector_key = self._target_point_to_tensor_collector_key[target_point]
+        tensor_collector = statistic_points.get_statistic_point(target_point).get_tensor_collector(tensor_collector_key)
+        statistics_for_node = [tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY]]
         return statistics_for_node
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
@@ -213,13 +207,11 @@ class SmoothQuant(Algorithm):
             stat_collector = self._backend_entity.get_abs_max_channel_collector(
                 self._subset_size, input_reduction_shape, self._inplace_statistics, STATISTIC_BRANCH_KEY
             )
-            statistic_container.add_statistic_point(
-                StatisticPoint(
-                    target_point=target_point,
-                    tensor_collector=stat_collector,
-                    algorithm=SmoothQuant,
-                )
-            )
+
+            tensor_collector_key = f"SQ_{hash(self)}"
+            self._target_point_to_tensor_collector_key[target_point] = tensor_collector_key
+
+            statistic_container.add_statistic_point(StatisticPoint(target_point, stat_collector, tensor_collector_key))
         return statistic_container
 
     def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph) -> List[Dict]:

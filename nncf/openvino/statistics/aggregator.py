@@ -36,7 +36,8 @@ class OVStatisticsAggregator(StatisticsAggregator):
     def _register_statistics(
         self, outputs: Dict[str, OVNNCFTensor], statistic_points: StatisticPointsContainer
     ) -> None:
-        for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
+        elements = ((sp, tc) for sp in statistic_points for tc in sp.tensor_collectors.values())
+        for statistic_point, tensor_collector in elements:
             target_point = statistic_point.target_point
             node_name = target_point.target_node_name
             port_id = target_point.port_id
@@ -59,7 +60,8 @@ class OVStatisticsAggregator(StatisticsAggregator):
     ) -> TransformationLayout:
         transformation_layout = TransformationLayout()
         transformation_commands = []
-        for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
+        elements = ((sp, tc) for sp in statistic_points for tc in sp.tensor_collectors.values())
+        for statistic_point, tensor_collector in elements:
             for op_fn, fn_out_port_id in tensor_collector.get_inplace_fn_info():
                 transformation_commands.append(
                     OVInplaceFnInsertionCommand(statistic_point.target_point, op_fn, fn_out_port_id)
@@ -80,26 +82,26 @@ class OVStatisticsAggregator(StatisticsAggregator):
         nncf_graph = GraphConverter.create_nncf_graph(model)
         merged_statistic_points = StatisticPointsContainer()
         target_type_to_tensor_collector_map = defaultdict(lambda: defaultdict(list))
-        for target_node_name, _statistic_points in statistic_points.data.items():
-            for statistic_point in _statistic_points:
-                target_point = statistic_point.target_point
-                if target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
-                    node = nncf_graph.get_node_by_name(target_node_name)
-                    target_input_edge = nncf_graph.get_input_edges(node)[target_point.port_id]
 
-                    target_type = TargetType.POST_LAYER_OPERATION
-                    _target_node_name = target_input_edge.from_node.node_name
-                    port_id = target_input_edge.output_port_id
-                else:
-                    target_type = statistic_point.target_point.type
-                    _target_node_name = target_point.target_node_name
-                    port_id = target_point.port_id
+        for statistic_point in statistic_points:
+            target_point = statistic_point.target_point
+            if target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
+                node = nncf_graph.get_node_by_name(target_point.target_node_name)
+                target_input_edge = nncf_graph.get_input_edges(node)[target_point.port_id]
 
-                # TODO: Use common target point class instead of tuple
-                key = (_target_node_name, target_type, port_id)
-                for tensor_collectors in statistic_point.algorithm_to_tensor_collectors.values():
-                    target_type_to_tensor_collector_map[key]["collectors"].extend(tensor_collectors)
-                target_type_to_tensor_collector_map[key]["target_point"].append(target_point)
+                target_type = TargetType.POST_LAYER_OPERATION
+                _target_node_name = target_input_edge.from_node.node_name
+                port_id = target_input_edge.output_port_id
+            else:
+                target_type = statistic_point.target_point.type
+                _target_node_name = target_point.target_node_name
+                port_id = target_point.port_id
+
+            # TODO: Use common target point class instead of tuple
+            key = (_target_node_name, target_type, port_id)
+            for tensor_collector in statistic_point.tensor_collectors.values():
+                target_type_to_tensor_collector_map[key]["collectors"].append(tensor_collector)
+            target_type_to_tensor_collector_map[key]["target_point"].append(target_point)
 
         for merged_collectors_info in target_type_to_tensor_collector_map.values():
             target_point = merged_collectors_info["target_point"][0]

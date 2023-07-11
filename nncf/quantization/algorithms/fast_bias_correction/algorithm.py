@@ -84,6 +84,7 @@ class FastBiasCorrection(Algorithm):
         self.backend_params = backend_params
         self.nncf_graph = None
         self._backend_entity = None
+        self._target_point_to_tensor_collector_key = {}
 
         if self.apply_for_all_nodes:
             raise RuntimeError("FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet")
@@ -146,9 +147,10 @@ class FastBiasCorrection(Algorithm):
                 nncf_logger.debug(f"Skipping node {node_name} because weights were not quantized")
                 continue
 
+            input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
             in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, model)
-            input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
-            output_fp = self._get_fp_outputs(statistic_points, out_node_name)
+            input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name, input_port_id)
+            output_fp = self._get_fp_outputs(statistic_points, out_node_name, output_port_id)
 
             extracted_model = self._extract_submodel(model_transformer, node_name)
 
@@ -203,7 +205,9 @@ class FastBiasCorrection(Algorithm):
             bias_shift = self._backend_entity.reshape_tensor(bias_shift, new_shape)
         return bias_shift
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
+    def _get_fp_inputs(
+        self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int
+    ) -> Tuple[List, List]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 
@@ -211,24 +215,20 @@ class FastBiasCorrection(Algorithm):
         :param node_name: Name of the current layer.
         :return: Collected mean tensor data and shape for the further bias calculation.
         """
-
-        def input_filter_func(point):
-            return FastBiasCorrection in point.algorithm_to_tensor_collectors and point.target_point.type in [
-                TargetType.PRE_LAYER_OPERATION,
-                TargetType.OPERATOR_PRE_HOOK,
-            ]
+        target_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION, node_name, port_id)
+        tensor_collector_key = self._target_point_to_tensor_collector_key[target_point]
+        tensor_collector = statistic_points.get_statistic_point(target_point).get_tensor_collector(tensor_collector_key)
 
         input_fp = []
         input_shape = []
-        for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            node_name, input_filter_func, FastBiasCorrection
-        ):
-            statistics = tensor_collector.get_statistics()
-            input_fp.extend(statistics.mean_values)
-            input_shape.extend(statistics.shape)
+        statistics = tensor_collector.get_statistics()
+        input_fp.extend(statistics.mean_values)
+        input_shape.extend(statistics.shape)
         return input_fp, input_shape
 
-    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[TTensor]:
+    def _get_fp_outputs(
+        self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int
+    ) -> List[TTensor]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 
@@ -236,18 +236,12 @@ class FastBiasCorrection(Algorithm):
         :param node_name: Name of the current layer.
         :return: Collected mean tensor data for the further bias calculation.
         """
-
-        def output_filter_func(point):
-            return FastBiasCorrection in point.algorithm_to_tensor_collectors and point.target_point.type in [
-                TargetType.POST_LAYER_OPERATION,
-                TargetType.OPERATOR_POST_HOOK,
-            ]
+        target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION, node_name, port_id)
+        tensor_collector_key = self._target_point_to_tensor_collector_key[target_point]
+        tensor_collector = statistic_points.get_statistic_point(target_point).get_tensor_collector(tensor_collector_key)
 
         output_fp = []
-        for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            node_name, output_filter_func, FastBiasCorrection
-        ):
-            output_fp.extend(tensor_collector.get_statistics().mean_values)
+        output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
     def _extract_submodel(self, model_transformer: ModelTransformer, node_name: str) -> TModel:
@@ -275,9 +269,9 @@ class FastBiasCorrection(Algorithm):
         stat_collector = self._backend_entity.mean_statistic_collector(
             reduction_shape=axis, num_samples=self.subset_size, inplace=self.inplace_statistics
         )
-        container.add_statistic_point(
-            StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=FastBiasCorrection)
-        )
+        tensor_collector_key = f"FBC_{hash(self)}"
+        self._target_point_to_tensor_collector_key[point] = tensor_collector_key
+        container.add_statistic_point(StatisticPoint(point, stat_collector, tensor_collector_key))
 
     def _get_bias_shift(
         self,

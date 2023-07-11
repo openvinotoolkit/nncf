@@ -77,6 +77,7 @@ class ChannelAlignment(Algorithm):
         self._original_nncf_graph = None
         self._backend_entity = None
         self._quantile = 1e-4
+        self._target_point_to_tensor_collector_key = {}
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -105,16 +106,14 @@ class ChannelAlignment(Algorithm):
         model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
 
-        def filter_func(point: StatisticPoint) -> bool:
-            return ChannelAlignment in point.algorithm_to_tensor_collectors and point.target_point == target_point
-
         for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel alignment"):
-            target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
-            tensor_collectors = list(
-                statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, ChannelAlignment)
+            target_point, _ = self._get_target_point_and_node_in(conv_in, add_in)
+
+            tensor_collector_key = self._target_point_to_tensor_collector_key[target_point]
+            tensor_collector = statistic_points.get_statistic_point(target_point).get_tensor_collector(
+                tensor_collector_key
             )
-            assert len(tensor_collectors) == 1
-            stat = tensor_collectors[0].get_statistics()
+            stat = tensor_collector.get_statistics()
             conv_in_cont = ConvParamsContainer(conv_in, model, nncf_graph, self._backend_entity)
             conv_out_cont = ConvParamsContainer(conv_out, model, nncf_graph, self._backend_entity)
 
@@ -384,12 +383,12 @@ class ChannelAlignment(Algorithm):
             statistic_collector = self._backend_entity.get_statistic_collector(
                 tuple(reduction_shape), self._quantile, self.subset_size, self.inplace_statistics
             )
+
+            tensor_collector_key = f"CA_{hash(self)}"
+            self._target_point_to_tensor_collector_key[target_point] = tensor_collector_key
+
             statistic_container.add_statistic_point(
-                StatisticPoint(
-                    target_point=target_point,
-                    tensor_collector=statistic_collector,
-                    algorithm=ChannelAlignment,
-                )
+                StatisticPoint(target_point, statistic_collector, tensor_collector_key)
             )
 
         return statistic_container

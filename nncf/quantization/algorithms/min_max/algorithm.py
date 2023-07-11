@@ -170,6 +170,8 @@ class MinMaxQuantization(Algorithm):
         )  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._unified_scale_groups = []
 
+        self._target_point_to_tensor_collector_key = {}
+
     @property
     def available_backends(self) -> Dict[str, BackendType]:
         return ALGO_BACKENDS.registry_dict
@@ -603,22 +605,15 @@ class MinMaxQuantization(Algorithm):
             self._overflow_fix, quantization_target_points, nncf_graph
         )
         weight_layer_names = set()
-
-        def filter_func(point: StatisticPoint) -> bool:
-            return (
-                MinMaxQuantization in point.algorithm_to_tensor_collectors
-                and point.target_point == quantization_target_point
-            )
-
         unified_ops_list = set()
         for unified_scale_group in unified_scale_groups:
             group_statistics = []
             for quantization_target_point in unified_scale_group:
-                target_node_name = quantization_target_point.target_node_name
-                for tensor_collector in statistic_points.get_algo_statistics_for_node(
-                    target_node_name, filter_func, MinMaxQuantization
-                ):
-                    group_statistics.append(tensor_collector.get_statistics())
+                tensor_collector_key = self._target_point_to_tensor_collector_key[quantization_target_point]
+                tensor_collector = statistic_points.get_statistic_point(quantization_target_point).get_tensor_collector(
+                    tensor_collector_key
+                )
+                group_statistics.append(tensor_collector.get_statistics())
 
             unified_values = self._backend_entity.unify_statistics(group_statistics)
             for quantization_target_point in unified_scale_group:
@@ -635,33 +630,35 @@ class MinMaxQuantization(Algorithm):
         for quantization_target_point, qconfig in quantization_target_points.items():
             if quantization_target_point in unified_ops_list:
                 continue
-            target_node_name = quantization_target_point.target_node_name
-            for tensor_collector in statistic_points.get_algo_statistics_for_node(
-                target_node_name, filter_func, MinMaxQuantization
-            ):
-                if quantization_target_point.is_weight_target_point():
-                    weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
-                    if not self._backend_entity.should_quantize_weight(weights_name, weight_layer_names):
-                        continue
-                    weight_layer_names.add(weights_name)
-                    quant_group = QuantizerGroup.WEIGHTS
-                else:
-                    quant_group = QuantizerGroup.ACTIVATIONS
 
-                half_range = quantization_target_point in quantization_points_overflow_fix
-                narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
-                statistics = tensor_collector.get_statistics()
-                parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
-                if quantization_target_point.is_weight_target_point():
-                    command = self._backend_entity.create_weight_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point, qconfig, parameters
-                    )
-                else:
-                    command = self._backend_entity.create_activation_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point, qconfig, parameters
-                    )
+            tensor_collector_key = self._target_point_to_tensor_collector_key[quantization_target_point]
+            tensor_collector = statistic_points.get_statistic_point(quantization_target_point).get_tensor_collector(
+                tensor_collector_key
+            )
 
-                transformation_layout.register(command)
+            if quantization_target_point.is_weight_target_point():
+                weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
+                if not self._backend_entity.should_quantize_weight(weights_name, weight_layer_names):
+                    continue
+                weight_layer_names.add(weights_name)
+                quant_group = QuantizerGroup.WEIGHTS
+            else:
+                quant_group = QuantizerGroup.ACTIVATIONS
+
+            half_range = quantization_target_point in quantization_points_overflow_fix
+            narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
+            statistics = tensor_collector.get_statistics()
+            parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
+            if quantization_target_point.is_weight_target_point():
+                command = self._backend_entity.create_weight_quantizer_insertion_command(
+                    nncf_graph, quantization_target_point, qconfig, parameters
+                )
+            else:
+                command = self._backend_entity.create_activation_quantizer_insertion_command(
+                    nncf_graph, quantization_target_point, qconfig, parameters
+                )
+
+            transformation_layout.register(command)
 
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
@@ -678,13 +675,12 @@ class MinMaxQuantization(Algorithm):
                 f" with type {quantization_target_point.type} for statistics collection"
             )
             stat_collector = self._get_stat_collector(nncf_graph, quantization_target_point, qconfig)
-            output.add_statistic_point(
-                StatisticPoint(
-                    target_point=quantization_target_point,
-                    tensor_collector=stat_collector,
-                    algorithm=MinMaxQuantization,
-                )
-            )
+
+            tensor_collector_key = f"MMQ_{hash(self)}"
+            self._target_point_to_tensor_collector_key[quantization_target_point] = tensor_collector_key
+
+            output.add_statistic_point(StatisticPoint(quantization_target_point, stat_collector, tensor_collector_key))
+
         return output
 
     def _apply_model_type_pass(

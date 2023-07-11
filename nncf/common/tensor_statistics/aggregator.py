@@ -69,18 +69,15 @@ class StatisticsAggregator(ABC):
 
         :param statistic_points: StatisticPointsContainer instance with the statistic points
         """
-        for _, _statistic_points in statistic_points.items():
-            for _statistic_point in _statistic_points:
-                self.statistic_points.add_statistic_point(_statistic_point)
+        for statistic_point in statistic_points:
+            self.statistic_points.add_statistic_point(statistic_point)
 
-        for _, _statistic_points in self.statistic_points.items():
-            for _statistic_point in _statistic_points:
-                for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
-                    for tensor_collector in tensor_collectors:
-                        if self.stat_subset_size is None:
-                            self.stat_subset_size = tensor_collector.num_samples
-                        elif tensor_collector.num_samples is not None:
-                            self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
+        for statistic_point in statistic_points:
+            for tensor_collector in statistic_point.tensor_collectors.values():
+                if self.stat_subset_size is None:
+                    self.stat_subset_size = tensor_collector.num_samples
+                elif tensor_collector.num_samples is not None:
+                    self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
 
     @abstractmethod
     def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:

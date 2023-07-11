@@ -9,8 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import UserDict
-from typing import Callable, Generator, Optional, Tuple
+from typing import Dict, Iterator
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor import TensorType
@@ -26,102 +25,83 @@ class StatisticPoint:
     """
 
     def __init__(
-        self, target_point: TargetPoint, tensor_collector: TensorStatisticCollectorBase, algorithm: "Algorithm"
+        self, target_point: TargetPoint, tensor_collector: TensorStatisticCollectorBase, tensor_collector_key: str
     ):
-        self.target_point = target_point
-        self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
+        """
+        :param target_point: Specifies where statistic should be collected.
+        :param tensor_collector: Tensor collector.
+        :param tensor_collector_key: Key of tensor collector. Should be unique
+            for each tensor collector inside statistic point.
+        """
+        self._target_point = target_point
+        self._tensor_collectors = {tensor_collector_key: tensor_collector}
 
-    def __eq__(self, other):
-        return (
-            self.target_point == other.target_point
-            and self.algorithm_to_tensor_collectors == other.self.algorithm_to_tensor_collectors
-        )
+    @property
+    def target_point(self) -> TargetPoint:
+        return self._target_point
+
+    @property
+    def tensor_collectors(self) -> Dict[str, TensorStatisticCollectorBase]:
+        return self._tensor_collectors
+
+    def get_tensor_collector(self, tensor_collector_key: str) -> TensorStatisticCollectorBase:
+        """
+        Returns tensor collector associated with provided key.
+
+        :param tensor_collector_key: Key of tensor collector.
+        :return: A tensor collector associated with provided key.
+        """
+        return self._tensor_collectors[tensor_collector_key]
 
     def register_tensor(self, x: TensorType):
-        for tensor_collectors in self.algorithm_to_tensor_collectors.values():
-            for tensor_collector in tensor_collectors:
-                tensor_collector.register_input(x)
+        for tensor_collector in self.tensor_collectors.values():
+            tensor_collector.register_input(x)
+
+    def unite(self, statistic_point: "StatisticPoint") -> None:
+        """
+        Unites `self` and `statistic_point` statistic points into `self`.
+
+        :param statistic_point: Statistic point to unite with `self`.
+        """
+        if self.target_point != statistic_point.target_point:
+            raise ValueError("Unable to unite statistic points with different target points.")
+
+        intersection_of_keys = self._tensor_collectors.keys() & statistic_point.tensor_collectors.keys()
+        if len(intersection_of_keys) != 0:
+            raise ValueError(f"Unable to unite statistic points with common keys: {list(intersection_of_keys)}")
+
+        self._tensor_collectors.update(statistic_point.tensor_collectors)
 
 
-class StatisticPointsContainer(UserDict):
+class StatisticPointsContainer:
     """
     Container with iteration interface for handling a composition of StatisticPoint.
     """
 
+    def __init__(self):
+        self._target_point_to_statistic_point = {}
+
     def add_statistic_point(self, statistic_point: StatisticPoint) -> None:
         """
-        Method to add statistic point to statistic point container.
+        Adds statistic point to container.
 
         :param statistic_point: Statistic point to add.
         """
-        target_node_name = statistic_point.target_point.target_node_name
-        if target_node_name not in self.data:
-            self.data[target_node_name] = [statistic_point]
+        target_point = statistic_point.target_point
+
+        if target_point in self._target_point_to_statistic_point:
+            self._target_point_to_statistic_point[target_point].unite(statistic_point)
         else:
-            for _statistic_point in self.data[target_node_name]:
-                if _statistic_point.target_point == statistic_point.target_point:
-                    for algorithm in statistic_point.algorithm_to_tensor_collectors.keys():
-                        if algorithm in _statistic_point.algorithm_to_tensor_collectors:
-                            _statistic_point.algorithm_to_tensor_collectors[algorithm].extend(
-                                statistic_point.algorithm_to_tensor_collectors[algorithm]
-                            )
-                            return
-                        _statistic_point.algorithm_to_tensor_collectors[
-                            algorithm
-                        ] = statistic_point.algorithm_to_tensor_collectors[algorithm]
-                        return
-            self.data[target_node_name].append(statistic_point)
+            self._target_point_to_statistic_point[target_point] = statistic_point
 
-    def iter_through_statistic_points_in_target_node(
-        self, target_node_name: str, filter_fn: Callable[[StatisticPoint], bool]
-    ) -> StatisticPoint:
+    def get_statistic_point(self, target_point: TargetPoint) -> StatisticPoint:
         """
-        Returns iterable through all statistic points in node with target_node_name.
+        Returns statistic point associated with provided target point.
 
-        :param filter_fn: Callable to filter statistic containers according to its statistic point.
-        :return: Iterable through all statistic points in node with target_node_name.
+        :param target_point: Target point
+        :return: Statistic point associated with provided target point.
         """
-        _statistic_points = self.data[target_node_name]
-        for _statistic_point in _statistic_points:
-            if filter_fn(_statistic_point):
-                yield _statistic_point
+        return self._target_point_to_statistic_point[target_point]
 
-    def get_tensor_collectors(
-        self, filter_fn: Optional[Callable[[StatisticPoint], bool]] = None
-    ) -> Generator[Tuple["Algorithm", StatisticPoint, TensorStatisticCollectorBase], None, None]:
-        """
-        Returns iterable through all tensor collectors.
-
-        :param filter_fn: Callable to filter statistic containers according to
-            its statistic point. filter nothing by default.
-        :return: Iterable through all tensor collectors in form of tuple of algorithm description,
-            correspondent statistic point and tensor collector.
-        """
-        if filter_fn is None:
-
-            def default_filter_fn(stat_point: StatisticPoint):
-                return True
-
-            filter_fn = default_filter_fn
-
-        for target_node_name in self.data:
-            for statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name, filter_fn):
-                for algorithm, tensor_collectors in statistic_point.algorithm_to_tensor_collectors.items():
-                    for tensor_collector in tensor_collectors:
-                        yield algorithm, statistic_point, tensor_collector
-
-    def get_algo_statistics_for_node(
-        self,
-        target_node_name: str,
-        filter_fn: Callable[[StatisticPoint], bool],
-        algorithm: "Algorithm",
-    ) -> Generator[TensorStatisticCollectorBase, None, None]:
-        """
-        Returns iterable through all statistic collectors in node with target_node_name.
-
-        :param filter_fn: Callable to filter statistic containers according to its statistic point.
-        :return: Iterable through all statistic collectors in node with target_node_name.
-        """
-        for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name, filter_fn):
-            for _tensor_collector in _statistic_point.algorithm_to_tensor_collectors[algorithm]:
-                yield _tensor_collector
+    def __iter__(self) -> Iterator[StatisticPoint]:
+        return iter(self._target_point_to_statistic_point.values())

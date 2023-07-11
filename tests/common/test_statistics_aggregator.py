@@ -406,14 +406,7 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator.register_statistic_points(statistics_points)
         statistics_aggregator.collect_statistics(model)
 
-        def filter_func(point):
-            return (
-                algorithm_name in point.algorithm_to_tensor_collectors and point.target_point.type == target_point.type
-            )
-
-        tensor_collectors = list(
-            statistics_points.get_algo_statistics_for_node(target_point.target_node_name, filter_func, algorithm_name)
-        )
+        tensor_collectors = [statistics_points.get_statistic_point(target_point).get_tensor_collector(algorithm_name)]
 
         assert len(tensor_collectors) == 1
         for tensor_collector in tensor_collectors:
@@ -585,22 +578,14 @@ class TemplateTestStatisticsAggregator:
         statistics_points = StatisticPointsContainer()
         algorithm_name = "TestAlgo"
         statistics_points.add_statistic_point(
-            StatisticPoint(target_point=target_point, tensor_collector=tensor_collector, algorithm=algorithm_name)
+            StatisticPoint(target_point, tensor_collector, algorithm_name)
         )
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         model = self.get_backend_model(dataset_samples)
         statistics_aggregator.collect_statistics(model)
-
-        def filter_func(point):
-            return (
-                algorithm_name in point.algorithm_to_tensor_collectors and point.target_point.type == target_point.type
-            )
-
-        tensor_collectors = list(
-            statistics_points.get_algo_statistics_for_node(target_point.target_node_name, filter_func, algorithm_name)
-        )
+        tensor_collectors = [statistics_points.get_statistic_point(target_point).get_tensor_collector(algorithm_name)]
         assert len(tensor_collectors) == 1
 
         for tensor_collector in tensor_collectors:
@@ -633,7 +618,7 @@ class TemplateTestStatisticsAggregator:
             num_samples=subset_size,
             inplace=inplace_statistics,
         )
-        return StatisticPoint(target_point=target_point, tensor_collector=tensor_collector, algorithm=algorithm_name)
+        return StatisticPoint(target_point, tensor_collector, algorithm_name)
 
     @pytest.mark.parametrize(
         "statistic_point_params",
@@ -667,7 +652,11 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator.register_statistic_points(statistics_points)
         statistics_aggregator.collect_statistics(model)
 
-        tensor_collectors = list(statistics_points.get_tensor_collectors())
+        tensor_collectors = []
+        for sp in statistics_points:
+            for tensor_collector in sp.tensor_collectors.values():
+                tensor_collectors.append(tensor_collector)
+
         assert len(tensor_collectors) == 3
         for algorithm, _, tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
@@ -830,12 +819,12 @@ class TemplateTestStatisticsAggregator:
         statistics_points = StatisticPointsContainer()
         target_point_cls = self.get_target_point_cls()
         target_point_args = (TargetType.POST_LAYER_OPERATION, "split", 0)
-        for params_ in product_dict(**params):
+        for idx, params_ in enumerate(product_dict(**params)):
             reducer = self.reducers_map()[statistics_type](**params_)
             aggregator = NoopAggregator(1)
             tensor_collector.register_statistic_branch(str(params_), reducer, aggregator)
             target_point = target_point_cls(*target_point_args)
-            stat_point = StatisticPoint(target_point, tensor_collector, "TEST")
+            stat_point = StatisticPoint(target_point, tensor_collector, f"TEST_{idx}")
             statistics_points.add_statistic_point(stat_point)
 
         dataset = self.get_dataset(dataset_samples)
