@@ -51,10 +51,7 @@ The [COCO2017](https://cocodataset.org/) dataset should be specified in the conf
 We can run the sample after data preparation. For this follow these steps:
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/segmentation` folder.
-- Download the pre-trained weights in checkpoint format and provide the path to them using `--weights` flag. The link to the
-archive with pre-trained weights can be found in the `TensorFlow checkpoint` column of the [results](#results) table.
-Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the
-FP32 model, without applying any compression algorithms.
+- Download the pre-trained Mask-R-CNN [weights](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz) in checkpoint format and provide the path to them using `--weights` flag. 
 - Specify the GPUs to be used for training by setting the environment variable [`CUDA_VISIBLE_DEVICES`](https://developer.nvidia.com/blog/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/). This is necessary because training and validation during training must be performed on different GPU devices. Please note that usually only one GPU is required for validation during training.
 - (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command:
   ```bash
