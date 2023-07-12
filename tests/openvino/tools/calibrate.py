@@ -86,7 +86,7 @@ class CustomJSONEncoder(json.JSONEncoder):
             return o.value
         if isinstance(o, (IgnoredScope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
             return asdict(o)
-        raise TypeError(f"Object of type {o.__class__.__name__} " f"is not JSON serializable")
+        raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
 
 class ACValidationFunction:
@@ -599,7 +599,7 @@ def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters):
         return map_quantization_parameters(pot_parameters)
     if pot_algo_name == "AccuracyAwareQuantization" and nncf_algo_name == "quantize_with_accuracy_control":
         return map_quantize_with_accuracy_control_parameters(pot_parameters)
-    raise ValueError(f"Mapping POT {pot_algo_name} parameters to NNCF " f"{nncf_algo_name} parameters is not supported")
+    raise ValueError(f"Mapping POT {pot_algo_name} parameters to NNCF {nncf_algo_name} parameters is not supported")
 
 
 def get_model_paths(model_config):

@@ -260,7 +260,7 @@ class ElasticOutputWidthOp(ElasticWidthOp):
             fixed_width_list.sort(reverse=True)
             if fixed_width_list[0] > max_width:
                 raise RuntimeError(
-                    f"Width list for {node_name} " f"contains invalid values: {fixed_width_list}, {max_width}"
+                    f"Width list for {node_name} contains invalid values: {fixed_width_list}, {max_width}"
                 )
             if fixed_width_list[0] != max_width:
                 raise RuntimeError(f"Max width for {node_name} is not aligned with pre-trained model")

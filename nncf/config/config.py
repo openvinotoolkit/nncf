@@ -130,7 +130,7 @@ class NNCFConfig(dict):
             nncf_logger.error("Invalid NNCF config supplied!")
             absolute_path_parts = [str(x) for x in e.absolute_path]
             if not NNCFConfig._is_path_to_algorithm_name(absolute_path_parts):
-                e.message += f"\nRefer to the NNCF config schema documentation at " f"{SCHEMA_VISUALIZATION_URL}"
+                e.message += f"\nRefer to the NNCF config schema documentation at {SCHEMA_VISUALIZATION_URL}"
                 e.schema = "*schema too long for stdout display*"
                 raise e
 

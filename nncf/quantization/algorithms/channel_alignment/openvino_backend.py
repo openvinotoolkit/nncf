@@ -110,7 +110,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
             )
         if node.metatype in [OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype]:
             # Using groups dim as output channels dim for ChannelAlignment algorithm
-            # TODO(dlyakhov) support group convolutions with groups nubmer not in [1, out_channels]
+            # TODO(dlyakhov) support group convolutions with groups number not in [1, out_channels]
             return LayoutDescriptor(
                 conv_weight_out_channels_dim=0,
                 conv_weight_in_channels_dim=2,

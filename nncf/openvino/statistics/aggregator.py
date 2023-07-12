@@ -48,7 +48,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
                 stat_node_name = output.get_node().get_friendly_name()
                 port_id = output.get_index()
             else:
-                RuntimeError(f"Unsupported target point type for statistic aggregator:" f" {target_point.type}")
+                RuntimeError(f"Unsupported target point type for statistic aggregator: {target_point.type}")
 
             input_info = tensor_collector.get_output_info(stat_node_name, port_id)
             target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, input_info)

@@ -300,7 +300,7 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     ):
         return {}
     else:
-        raise RuntimeError("The following range estimator parameters are not supported: " f"{str(params)}")
+        raise RuntimeError(f"The following range estimator parameters are not supported: {str(params)}")
 
     return result
 

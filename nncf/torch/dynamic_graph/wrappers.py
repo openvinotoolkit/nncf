@@ -204,7 +204,7 @@ def _collect_module_attrs_and_ignored_algorithms(
         curr_module = ctx.get_current_module()
         if curr_module is None:
             raise RuntimeError(
-                f"Operation {op_name} requires module attributes, " f"but it was executed outside any module"
+                f"Operation {op_name} requires module attributes, but it was executed outside any module"
             )
         layer_attrs = get_layer_attributes_from_module(curr_module, op_name)
         if isinstance(curr_module, _NNCFModuleMixin):

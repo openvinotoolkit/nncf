@@ -82,7 +82,7 @@ class FinalizedQuantizationProposal:
     """
     Describes a version of QuantizationProposal in which a single quantizer configuration has been chosen
     (using one or the other way of disambiguation) for each quantization point in the setup that was made available
-    in the original QuantizationProposel
+    in the original QuantizationProposal
     """
 
     def __init__(
@@ -118,7 +118,7 @@ class QuantizationProposal:
     ):
         """
         :param quantizer_setup: The MultiConfigQuantizerSetup object obtained from a quantizer propagation solver.
-        :param quant_prop_graph: The QuantizerPropagationStateGraph whose state correspoinds to the `quantizer_setup`,
+        :param quant_prop_graph: The QuantizerPropagationStateGraph whose state corresponds to the `quantizer_setup`,
           also obtained from the solver
         :param quantization_point_id_vs_prop_quantizer: A mapping of the quantization point IDs in `quantizer_setup` to
           propagating quantizers registered in `quant_prop_graph`.
@@ -289,7 +289,7 @@ class PostprocessingNodeLocator:
                             _extend_ignored_operations(path)
                         elif input_key in visited and not post_proc_encountered and input_key not in ignored_operations:
                             # We have already visited input node
-                            # but did not add it to ignored_operations (no post_proccessing node above)
+                            # but did not add it to ignored_operations (no post_processing node above)
                             # and did not encounter post_processing node in current path,
                             # then we can stop traversal
                             pass
@@ -306,7 +306,7 @@ class QuantizerPropagationSolver:
     Analyzes a fresh QuantizerPropagationStateGraph object according to HW
     configuration supplied in the initializer and produces the list of insertion
     commands that correspond to the final state of the quantizer propagation graph
-    when the model has the most contol flow graph edges quantized according to HW
+    when the model has the most control flow graph edges quantized according to HW
     capabilities.
     """
 
@@ -365,7 +365,7 @@ class QuantizerPropagationSolver:
           quantizable weights, along with the corresponding allowed quantizer configurations. Required to
           build a complete quantizer setup and impacts the activation quantizer propagation in certain
           cases.
-        :param scope_overrides: A dictionary of quantization configuration overides for inputs to matching
+        :param scope_overrides: A dictionary of quantization configuration overrides for inputs to matching
           operation nodes.
         :param global_constraints: Global quantizer configuration constraints that will be applied to
           what is specified in the HW config to limit the initial set of possible quantizer configurations
@@ -373,7 +373,7 @@ class QuantizerPropagationSolver:
         :param additional_unified_scale_op_scopes: A list of strings to match against NNCFGraph node names,
           inputs of which must be always quantized with a single scale, i.e. with a single set of
           trainable quantizer parameters.
-        :param run_consistency_checks: Whether to run internal consistency checks at each propagataion step.
+        :param run_consistency_checks: Whether to run internal consistency checks at each propagation step.
         :param quantize_outputs: Whether to insert additional quantizers right before each of the model outputs.
         :param post_processing_marker_metatypes: The framework specific NNCF metatypes, which are markers for
             the model post-processing part. They are used for automatic ignoring post-processing nodes.
@@ -1160,9 +1160,7 @@ class QuantizerPropagationSolver:
             if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
                 pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
             else:
-                nncf_logger.debug(
-                    f"Detected integer input {pred_ip_key} - won't set up " f"a propagating quantizer for it"
-                )
+                nncf_logger.debug(f"Detected integer input {pred_ip_key} - won't set up a propagating quantizer for it")
 
         if not pred_ip_key_vs_qconf_dict:
             # All inputs to the operator were integer

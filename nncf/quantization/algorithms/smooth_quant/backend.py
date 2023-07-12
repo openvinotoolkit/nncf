@@ -101,7 +101,7 @@ class SmoothQuantAlgoBackend(ABC):
         Returns processed weight statistics for node.
 
         :param node: NNCFNode to check.
-        :param model: Bcakend-specific model.
+        :param model: Backend-specific model.
         :param port_id: Weight port id.
         :return: Weight statistics for node.
         """
