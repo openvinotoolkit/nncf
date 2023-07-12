@@ -98,6 +98,7 @@ class BiasCorrection(Algorithm):
         self._backend_entity = None
         self._collected_stat_inputs_map = {}
         self._fp_inputs = defaultdict(list)
+        self._algorithm_key = f"BC_{hash(self)}"
 
         if self.apply_for_all_nodes:
             raise RuntimeError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
@@ -440,7 +441,7 @@ class BiasCorrection(Algorithm):
             # we also need to determine the output port id.
             # For the cases when the layer has more than one (0) output port.
             return (
-                BiasCorrection in point.algorithm_to_tensor_collectors
+                self._algorithm_key in point.algorithm_to_tensor_collectors
                 and point.target_point.type == TargetType.POST_LAYER_OPERATION
                 and point.target_point.port_id == port_id
             )
@@ -450,7 +451,7 @@ class BiasCorrection(Algorithm):
 
         input_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            node_name, input_filter_func, BiasCorrection
+            node_name, input_filter_func, self._algorithm_key
         ):
             input_fp.extend(tensor_collector.get_statistics().values)
         self._fp_inputs[node_name] = input_fp
@@ -467,13 +468,13 @@ class BiasCorrection(Algorithm):
 
         def output_filter_func(point):
             return (
-                BiasCorrection in point.algorithm_to_tensor_collectors
+                self._algorithm_key in point.algorithm_to_tensor_collectors
                 and point.target_point.type == TargetType.POST_LAYER_OPERATION
             )
 
         output_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            node_name, output_filter_func, BiasCorrection
+            node_name, output_filter_func, self._algorithm_key
         ):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return np.array(output_fp)
@@ -503,7 +504,9 @@ class BiasCorrection(Algorithm):
                 reduction_shape=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
             )
             statistic_container.add_statistic_point(
-                StatisticPoint(target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection)
+                StatisticPoint(
+                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                )
             )
 
         # We must collect the nodes with biases following the model inputs.
@@ -522,7 +525,9 @@ class BiasCorrection(Algorithm):
                 num_samples=self.subset_size, inplace=self.inplace_statistics
             )
             statistic_container.add_statistic_point(
-                StatisticPoint(target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection)
+                StatisticPoint(
+                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                )
             )
 
         # Then we need also to collect model input statistics to prevent cases when nodes with bias have no input data.
@@ -540,7 +545,9 @@ class BiasCorrection(Algorithm):
                 num_samples=self.subset_size, inplace=self.inplace_statistics
             )
             statistic_container.add_statistic_point(
-                StatisticPoint(target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection)
+                StatisticPoint(
+                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                )
             )
 
         return statistic_container

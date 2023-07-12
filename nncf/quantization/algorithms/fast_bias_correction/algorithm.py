@@ -84,6 +84,7 @@ class FastBiasCorrection(Algorithm):
         self.backend_params = backend_params
         self.nncf_graph = None
         self._backend_entity = None
+        self._algorithm_key = f"FBC_{hash(self)}"
 
         if self.apply_for_all_nodes:
             raise RuntimeError("FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet")
@@ -213,7 +214,7 @@ class FastBiasCorrection(Algorithm):
         """
 
         def input_filter_func(point):
-            return FastBiasCorrection in point.algorithm_to_tensor_collectors and point.target_point.type in [
+            return self._algorithm_key in point.algorithm_to_tensor_collectors and point.target_point.type in [
                 TargetType.PRE_LAYER_OPERATION,
                 TargetType.OPERATOR_PRE_HOOK,
             ]
@@ -221,7 +222,7 @@ class FastBiasCorrection(Algorithm):
         input_fp = []
         input_shape = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            node_name, input_filter_func, FastBiasCorrection
+            node_name, input_filter_func, self._algorithm_key
         ):
             statistics = tensor_collector.get_statistics()
             input_fp.extend(statistics.mean_values)
@@ -238,14 +239,14 @@ class FastBiasCorrection(Algorithm):
         """
 
         def output_filter_func(point):
-            return FastBiasCorrection in point.algorithm_to_tensor_collectors and point.target_point.type in [
+            return self._algorithm_key in point.algorithm_to_tensor_collectors and point.target_point.type in [
                 TargetType.POST_LAYER_OPERATION,
                 TargetType.OPERATOR_POST_HOOK,
             ]
 
         output_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            node_name, output_filter_func, FastBiasCorrection
+            node_name, output_filter_func, self._algorithm_key
         ):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
@@ -276,7 +277,7 @@ class FastBiasCorrection(Algorithm):
             reduction_shape=axis, num_samples=self.subset_size, inplace=self.inplace_statistics
         )
         container.add_statistic_point(
-            StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=FastBiasCorrection)
+            StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=self._algorithm_key)
         )
 
     def _get_bias_shift(
