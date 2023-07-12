@@ -343,7 +343,7 @@ class ONNXMaximumMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXMinimum(ONNXOpMetatype):
+class ONNXMinimumMetatype(ONNXOpMetatype):
     name = "MinOp"
     op_names = ["Min"]
     hw_config_names = [HWConfigOpName.MINIMUM]
