@@ -24,6 +24,10 @@ class ProxyModule:
     def __getattr__(self, name):
         return getattr(self._module, name)
 
+    @property
+    def __class__(self):
+        return type(self._module)
+
 
 class _NNCFModuleMixin:
     """
