@@ -20,8 +20,6 @@ from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
 from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
 from nncf.torch.utils import add_domain
 
-QUANTIZE_OPERATION_NAMES = ["symmetric_quantize", "asymmetric_quantize"]
-
 
 # pylint:disable=abstract-method
 class QuantizeSymmetric(torch.autograd.Function):
