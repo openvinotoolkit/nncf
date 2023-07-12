@@ -162,9 +162,12 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if node.layer_attributes.has_node_attrs():
             if node.metatype == ONNXGemmMetatype:
                 weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
-                if target_point.port_id == 0 and node.layer_attributes.node_attrs["transA"] == 1:
-                    weight_channel_axis = 1 - weight_channel_axis
-                elif target_point.port_id == 1 and node.layer_attributes.node_attrs["transB"] == 1:
+                if (
+                    target_point.port_id == 0
+                    and node.layer_attributes.node_attrs["transA"] == 1
+                    or target_point.port_id == 1
+                    and node.layer_attributes.node_attrs["transB"] == 1
+                ):
                     weight_channel_axis = 1 - weight_channel_axis
                 weight_channel_axis %= len(weight_shape)
         return weight_channel_axis

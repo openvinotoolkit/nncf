@@ -167,7 +167,7 @@ def _get_weight_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_id
     return weight_attrs
 
 
-def _get_gemm_attrs(node: onnx.NodeProto):
+def _get_gemm_attrs(node: onnx.NodeProto) -> Dict[str, int]:
     """
     Returns transpose attrbiutes of GEMM node.
 
@@ -180,6 +180,19 @@ def _get_gemm_attrs(node: onnx.NodeProto):
         if attr.name in attribute_names:
             gemm_attrs[attr.name] = onnx.helper.get_attribute_value(attr)
     return gemm_attrs
+
+
+def _get_node_attrs(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, Any]:
+    """
+    Returns node attributes.
+
+    :param node: Node.
+    :param onnx_graph: ONNXGraph.
+    :return : Node attributes.
+    """
+    metatype = get_metatype(onnx_graph, node)
+    if metatype == ONNXGemmMetatype:
+        return _get_gemm_attrs(node)
 
 
 def _get_bias_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, str]:
@@ -196,8 +209,7 @@ def _get_bias_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, str
         bias_tensor_port_id = get_bias_tensor_port_id(metatype)
         bias_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][bias_tensor_port_id]
         edge = onnx_graph.get_edge(bias_edge_name)
-        bias_shape = ONNXGraph.get_edge_shape(edge)
-        bias_attrs[bias_tensor_port_id] = {"shape": bias_shape}
+        bias_attrs["name"] = edge.name
     return bias_attrs
 
 
@@ -335,9 +347,8 @@ class GraphConverter:
             metatype = get_metatype(onnx_graph, node)
             port_ids = _get_weight_port_ids(node, onnx_graph)
             is_shared = None
-            weight_attrs, bias_attrs, node_attrs = {}, {}, {}
-            if metatype == ONNXGemmMetatype:
-                node_attrs = _get_gemm_attrs(node)
+            weight_attrs = {}
+            node_attrs = _get_node_attrs(node, onnx_graph)
             bias_attrs = _get_bias_attr(node, onnx_graph)
             if port_ids:  # If node has weight
                 weight_edge_names = []
