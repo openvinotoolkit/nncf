@@ -391,7 +391,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 )
                 if prev_compression_rate_step == self.runner.compression_rate_step:
                     nncf_logger.info(
-                        f"Compression rate step value is kept unchanged: " f"{self.runner.compression_rate_step:.3f}"
+                        f"Compression rate step value is kept unchanged: {self.runner.compression_rate_step:.3f}"
                     )
                 else:
                     nncf_logger.info(
@@ -404,7 +404,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 if self.runner.compression_rate_target > self.runner.maximal_compression_rate:
                     self.runner.compression_rate_target = self.runner.maximal_compression_rate
                     nncf_logger.info(
-                        f"Reached maximal possible compression rate: " f"{self.runner.maximal_compression_rate}"
+                        f"Reached maximal possible compression rate: {self.runner.maximal_compression_rate}"
                     )
                     break
 
@@ -473,7 +473,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     def _update_target_compression_rate(self, runner, force_update=False):
         best_accuracy_budget = runner.best_val_metric_value - runner.minimal_tolerable_accuracy
         nncf_logger.info(
-            f"Training epoch count: {runner.training_epoch_count}, " f"patience epochs: {runner.patience_epochs}"
+            f"Training epoch count: {runner.training_epoch_count}, patience epochs: {runner.patience_epochs}"
         )
         if runner.training_epoch_count >= runner.patience_epochs or best_accuracy_budget >= 0.0 or force_update:
             runner.compression_rate_target += self._determine_compression_rate_step_value(runner)

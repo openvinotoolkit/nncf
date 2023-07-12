@@ -54,7 +54,7 @@ class SmoothQuant(Algorithm):
         """
         :param subset_size: Size of a subset for the statistics collection,
             default is 300.
-        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+        :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
         :param alpha: The parameter that regulates the calculation of the scale.

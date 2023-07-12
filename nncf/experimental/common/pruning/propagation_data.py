@@ -161,7 +161,7 @@ class PropagationGroup:
     def __str__(self) -> str:
         producers = ",".join(map(str, sorted(self._producers)))
         consumers = ",".join(map(str, sorted(self._consumers)))
-        return f"Block: {self.block}\n" f"Producers: {producers}\n" f"Consumers: {consumers}"
+        return f"Block: {self.block}\nProducers: {producers}\nConsumers: {consumers}"
 
     def __repr__(self) -> str:
         producers = ",".join(map(str, self.get_producers()))

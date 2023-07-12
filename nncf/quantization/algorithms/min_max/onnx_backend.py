@@ -31,7 +31,9 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMaximumMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceL2Metatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceSumMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
@@ -231,6 +233,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ONNXSqueezeMetatype,
                 ONNXSubMetatype,
                 ONNXReduceMeanMetatype,
+                ONNXReduceL2Metatype,
+                ONNXReduceSumMetatype,
                 ONNXDivLayerMetatype,
                 ONNXMaximumMetatype,
             ]

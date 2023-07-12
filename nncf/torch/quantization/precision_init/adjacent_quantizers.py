@@ -92,7 +92,7 @@ class GroupsOfAdjacentQuantizers:
             for weight_quantized_module_node_name, w_qp_id in module_scope_per_weight_qp_id.items():
                 if weight_quantized_module_node_name not in quantized_node_per_activation_qp_id:
                     nncf_logger.debug(
-                        f"Module {weight_quantized_module_node_name} has quantized weights" f" and no quantized inputs!"
+                        f"Module {weight_quantized_module_node_name} has quantized weights and no quantized inputs!"
                     )
                     continue
                 a_qp_id = quantized_node_per_activation_qp_id[weight_quantized_module_node_name]
