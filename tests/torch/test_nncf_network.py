@@ -706,7 +706,7 @@ def test_safety_change_scope_in_get_nncf_modules():
 
 
 class EmbeddingWithSharedWeights(torch.nn.Embedding):
-    def forward(self, x, run_as_matmul=False):
+    def forward(self, x, run_as_matmul=False):  # pylint: disable=arguments-renamed
         if run_as_matmul:
             return F.linear(x, self.weight)
         return super().forward(x)
