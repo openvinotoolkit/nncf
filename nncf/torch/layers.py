@@ -349,6 +349,7 @@ class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
 
 class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
     op_func_name = "embedding"
+    target_weight_dim_for_compression = 1
 
     # Note that this does not require activation quantization because it's basically a lookup.
     @staticmethod
