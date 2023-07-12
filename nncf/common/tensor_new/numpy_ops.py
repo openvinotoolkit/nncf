@@ -13,11 +13,25 @@ from typing import Any, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 
+from nncf.common.tensor_new.enums import TensorDataType
+
 TensorType = TypeVar("TensorType")
 
+DTYPE_MAP = {
+    TensorDataType.float16: np.float16,
+    TensorDataType.float32: np.float32,
+    TensorDataType.float64: np.float64,
+    TensorDataType.int8: np.int8,
+    TensorDataType.uint8: np.uint8,
+}
 
-def is_tensor(target: Any):
-    return isinstance(target, np.ndarray)
+
+def as_type(target: np.ndarray, dtype: TensorDataType):
+    return target.astype(DTYPE_MAP[dtype])
+
+
+def check_tensor_backend(target: Any):
+    return isinstance(target, (np.ndarray, float, int, list))  # TODO: change type hints
 
 
 def add(target: TensorType, other: TensorType) -> TensorType:
@@ -94,5 +108,9 @@ def flatten(target: np.ndarray) -> np.ndarray:
     return target.flatten()
 
 
-def is_empty(target: np.ndarray) -> TensorType:
+def is_empty(target: np.ndarray) -> bool:
     return target.size == 0
+
+
+def isclose(a: np.ndarray, b: np.ndarray, atol: float = None, equal_nan: bool = False):
+    return np.isclose(a, b, atol=atol, equal_nan=equal_nan)

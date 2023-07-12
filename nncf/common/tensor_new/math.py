@@ -51,3 +51,7 @@ def where(condition: Tensor, x: Tensor, y: Tensor) -> Tensor:
 
 def is_empty(target: Tensor) -> Tensor:
     return tensor_func_dispatcher("is_empty", target)
+
+
+def isclose(a: Tensor, b: Tensor, atol: float = None, equal_nan: bool = False):
+    return tensor_func_dispatcher("isclose", a, b, atol=atol, equal_nan=equal_nan)

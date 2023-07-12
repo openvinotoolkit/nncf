@@ -10,11 +10,12 @@
 # limitations under the License.
 
 
-from enum import Enum
 from typing import Any, Iterator, List, Optional, Tuple, TypeVar, Union
 
 import nncf.common.tensor_new.numpy_ops as numpy_ops
 import nncf.torch.torch_ops as torch_ops
+from nncf.common.tensor_new.enums import TensorBackendType
+from nncf.common.tensor_new.enums import TensorDataType
 
 try:
     import nncf.torch.torch_ops as torch_ops
@@ -27,6 +28,13 @@ TensorType = TypeVar("TensorType")
 DeviceType = TypeVar("DeviceType")
 
 
+FUNC_MAP_DISPATCHER = {
+    TensorBackendType.NUMPY: numpy_ops,
+}
+if torch_ops:
+    FUNC_MAP_DISPATCHER[TensorBackendType.TORCH] = torch_ops
+
+
 class Tensor:
     """
     An interface of framework specific tensors for common NNCF algorithms.
@@ -34,10 +42,6 @@ class Tensor:
 
     def __init__(self, data: Optional[TensorType]):
         self._data = data
-
-    @staticmethod
-    def safe_get_tensor_data(obj: Any):
-        return obj.data if isinstance(obj, Tensor) else obj
 
     @property
     def data(self) -> TensorType:
@@ -131,17 +135,8 @@ class Tensor:
     def is_empty(self) -> "Tensor":
         return tensor_func_dispatcher("is_empty", self.data)
 
-
-class TensorBackendType(Enum):
-    NUMPY = "numpy"
-    TORCH = "torch"
-
-
-FUNC_MAP_DISPATCHER = {
-    TensorBackendType.NUMPY: numpy_ops,
-}
-if torch_ops:
-    FUNC_MAP_DISPATCHER[TensorBackendType.TORCH] = torch_ops
+    def as_type(self, dtype: TensorDataType):
+        return tensor_func_dispatcher("as_type", self.data, dtype)
 
 
 def unwrap_tensor_data(obj: Any):
@@ -151,10 +146,10 @@ def unwrap_tensor_data(obj: Any):
 def detect_tensor_backend(*args):
     if len(args) > 0:
         for backend, tensor_ops in FUNC_MAP_DISPATCHER.items():
-            if tensor_ops.is_tensor(args[0]):
+            if tensor_ops.check_tensor_backend(args[0]):
                 return backend
         return None
-    raise RuntimeError("tensor_func_dispatcher detect backend by args")
+    raise RuntimeError("tensor_func_dispatcher detect backend by args[0]")
 
 
 def tensor_func_dispatcher(func_name: str, *args, **kwargs) -> Any:

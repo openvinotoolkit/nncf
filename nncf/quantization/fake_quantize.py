@@ -14,14 +14,15 @@ from typing import Tuple
 
 import numpy as np
 
-import nncf.common.tensor_math as tensor_math
+import nncf.common.tensor_new.math as nncf_math
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.tensor_new import Tensor
+from nncf.common.tensor_new.enums import TensorDataType
+from nncf.common.tensor_new.tensor import Tensor
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 
 
@@ -44,7 +45,7 @@ class FakeQuantizeParameters:
     levels: int
 
 
-def fix_zero_filters_symmetric(max_values: np.ndarray, eps: float = 0.01) -> np.ndarray:
+def fix_zero_filters_symmetric(max_values: Tensor, eps: float = 0.01) -> np.ndarray:
     """
     Fixes zero filters for symmetric quantizer.
 
@@ -53,8 +54,8 @@ def fix_zero_filters_symmetric(max_values: np.ndarray, eps: float = 0.01) -> np.
     :return: Fixed the high quant number.
     """
     max_range = max_values.max()
-    lower_threshold = tensor_math.maximum(max_range * eps, 8e-5)
-    return tensor_math.maximum(lower_threshold, max_values)
+    lower_threshold = nncf_math.maximum(max_range * eps, 8e-5)
+    return nncf_math.maximum(lower_threshold, max_values)
 
 
 def fix_zero_filters_asymmetric(
@@ -127,12 +128,12 @@ def tune_range(
 
 
 def symmetric_range(
-    min_values: np.ndarray,
-    max_values: np.ndarray,
+    min_values: Tensor,
+    max_values: Tensor,
     levels: int,
     quantizer_config: QuantizerConfig,
     q_group: QuantizerGroup,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[Tensor, Tensor]:
     """
     Calculates the numbers of the low and high quant for the symmetric quantization scheme.
 
@@ -150,13 +151,10 @@ def symmetric_range(
     else:
         signed = quantizer_config.signedness_to_force is True
         level_low = (
-            tensor_math.zeros_like(level_high)
-            if tensor_math.all(min_values >= 0) and not signed
+            nncf_math.zeros_like(level_high)
+            if nncf_math.all(min_values >= 0) and not signed
             else -level_high * levels / (levels - 2)
         )
-
-    # level_low = level_low.astype(np.float32)
-    # level_high = level_high.astype(np.float32)
     return level_low, level_high
 
 
@@ -247,9 +245,14 @@ def calculate_quantizer_parameters(
         input_low = input_low.squeeze()
         input_high = input_high.squeeze()
 
-    # input_low, input_high = np.array(input_low), np.array(input_high)
     output_low, output_high = input_low, input_high
-    return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)
+    return FakeQuantizeParameters(
+        input_low=input_low.as_type(TensorDataType.float32).data,
+        input_high=input_high.as_type(TensorDataType.float32).data,
+        output_low=output_low.as_type(TensorDataType.float32).data,
+        output_high=output_high.as_type(TensorDataType.float32).data,
+        levels=levels,
+    )
 
 
 def _calculate_scaled_parameters(

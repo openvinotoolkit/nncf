@@ -8,3 +8,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from enum import Enum
+from enum import auto
+
+
+class TensorBackendType(Enum):
+    NUMPY = auto()
+    TORCH = auto()
+
+
+class TensorDataType(Enum):
+    float16 = auto()
+    float32 = auto()
+    float64 = auto()
+    int8 = auto()
+    uint8 = auto()
