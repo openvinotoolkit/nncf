@@ -52,7 +52,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.05),
+            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
         },
         "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
     },
@@ -72,7 +72,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.05),
+            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
         },
         "backends": ALL_NNCF_PTQ_BACKENDS,
     },
