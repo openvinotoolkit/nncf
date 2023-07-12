@@ -31,7 +31,7 @@ Here we present the results achieved using our sample scripts, example patches t
   <tbody align="center">
     <tr>
       <td align="left">ResNet-50</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>76.15</td>
       <td><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet.json">Config</a></td>
@@ -79,7 +79,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">Inception V3</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>77.33</td>
       <td><a href="../examples/torch/classification/configs/quantization/inception_v3_imagenet.json">Config</a></td>
@@ -103,7 +103,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>71.87</td>
       <td><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet.json">Config</a></td>
@@ -143,7 +143,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Small)</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>67.66</td>
       <td><a href="../examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet.json">Config</a></td>
@@ -159,7 +159,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">SqueezeNet&nbsp;V1.1</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>58.19</td>
       <td><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet.json">Config</a></td>
@@ -191,7 +191,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">ResNet-18</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>69.76</td>
       <td><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
@@ -199,7 +199,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">ResNet-34</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>73.30</td>
       <td><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet.json">Config</a></td>
@@ -207,7 +207,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">GoogLeNet</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>69.77</td>
       <td><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet.json">Config</a></td>
@@ -304,7 +304,7 @@ Here we present the results achieved using our sample scripts, example patches t
   <tbody align="center">
     <tr>
       <td align="left">SSD300&#8209;MobileNet</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>62.23</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc.json">Config</a></td>
@@ -320,7 +320,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">SSD300&#8209;VGG&#8209;BN</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>78.28</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc.json">Config</a></td>
@@ -344,7 +344,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">SSD512-VGG&#8209;BN</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>80.26</td>
       <td><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc.json">Config</a></td>
@@ -393,7 +393,7 @@ Here we present the results achieved using our sample scripts, example patches t
   <tbody align="center">
     <tr>
       <td align="left">UNet</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>CamVid</td>
       <td>71.95</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_camvid.json">Config</a></td>
@@ -417,7 +417,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">ICNet</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>CamVid</td>
       <td>67.89</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid.json">Config</a></td>
@@ -441,7 +441,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">UNet</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>Mapillary</td>
       <td>56.24</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary.json">Config</a></td>
@@ -555,7 +555,7 @@ Here we present the results achieved using our sample scripts, example patches t
   <tbody align="center">
     <tr>
       <td align="left">Inception V3</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>77.91</td>
       <td><a href="../examples/tensorflow/classification/configs/inception_v3_imagenet.json">Config</a></td>
@@ -587,7 +587,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>71.85</td>
       <td><a href="../examples/tensorflow/classification/configs/mobilenet_v2_imagenet.json">Config</a></td>
@@ -627,7 +627,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Small)</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>68.38</td>
       <td><a href="../examples/tensorflow/classification/configs/mobilenet_v3_small_imagenet.json">Config</a></td>
@@ -651,7 +651,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Large)</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>75.80</td>
       <td><a href="../examples/tensorflow/classification/configs/mobilenet_v3_large_imagenet.json">Config</a></td>
@@ -675,7 +675,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>ImageNet</td>
       <td>75.05</td>
       <td><a href="../examples/tensorflow/classification/configs/resnet50_imagenet.json">Config</a></td>
@@ -748,7 +748,7 @@ Here we present the results achieved using our sample scripts, example patches t
   <tbody align="center">
     <tr>
       <td align="left">RetinaNet</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>COCO 2017</td>
       <td>33.43</td>
       <td><a href="../examples/tensorflow/object_detection/configs/retinanet_coco.json">Config</a></td>
@@ -772,7 +772,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">YOLO v4</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>COCO 2017</td>
       <td>47.07</td>
       <td><a href="../examples/tensorflow/object_detection/configs/yolo_v4_coco.json">Config</a></td>
@@ -796,7 +796,7 @@ Here we present the results achieved using our sample scripts, example patches t
     </tr>
     <tr>
       <td align="left">RetinaNet</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>COCO 2017</td>
       <td>33.43</td>
       <td><a href="../examples/tensorflow/object_detection/configs/retinanet_coco.json">Config</a></td>
@@ -837,7 +837,7 @@ Here we present the results achieved using our sample scripts, example patches t
   <tbody align="center">
     <tr>
       <td align="left">Mask&#8209;R&#8209;CNN</td>
-      <td align="left">None</td>
+      <td align="left">-</td>
       <td>COCO 2017</td>
       <td>bbox: 37.33 segm: 33.56</td>
       <td><a href="../examples/tensorflow/segmentation/configs/mask_rcnn_coco.json">Config</a></td>
