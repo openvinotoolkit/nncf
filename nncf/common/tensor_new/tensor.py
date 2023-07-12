@@ -47,7 +47,7 @@ class Tensor:
     def shape(self) -> List[int]:
         if self.data is None:
             raise RuntimeError("Attempt to get shape of empty NNCFTensor")
-        return self.data.shape
+        return Tensor(list(self.data.shape))
 
     def __bool__(self) -> bool:
         return bool(self.data)
@@ -61,63 +61,60 @@ class Tensor:
     # built-in operations
 
     def __add__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("add", self.data, other)
+        return Tensor(self.data + unwrap_tensor_data(other))
 
     def __radd__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("radd", self.data, other)
+        return Tensor(unwrap_tensor_data(other) + self.data)
 
     def __sub__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("sub", self.data, other)
+        return Tensor(self.data - unwrap_tensor_data(other))
 
     def __rsub__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("rsub", self.data, other)
+        return Tensor(unwrap_tensor_data(other) - self.data)
 
     def __mul__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("mul", self.data, other)
+        return Tensor(self.data * unwrap_tensor_data(other))
 
     def __rmul__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("rmul", self.data, other)
+        return Tensor(unwrap_tensor_data(other) * self.data)
 
     def __pow__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("pow", self.data, other)
+        return Tensor(self.data ** unwrap_tensor_data(other))
 
     def __truediv__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("truediv", self.data, other)
+        return Tensor(self.data / unwrap_tensor_data(other))
 
     def __floordiv__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("floordiv", self.data, other)
+        return Tensor(self.data // unwrap_tensor_data(other))
 
     def __neg__(self) -> "Tensor":
-        return tensor_func_dispatcher("neg", self.data)
+        return Tensor(-self.data)
 
     # Comparison operators
 
     def __lt__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("lt", self.data, other)
+        return Tensor(self.data < unwrap_tensor_data(other))
 
     def __le__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("le", self.data, other)
+        return Tensor(self.data <= unwrap_tensor_data(other))
 
     def __eq__(self, other: "Tensor") -> "Tensor":
-        return tensor_func_dispatcher("eq", self.data, other)
+        return Tensor(self.data == unwrap_tensor_data(other))
 
     def __nq__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("nq", self.data, other)
+        return Tensor(self.data != unwrap_tensor_data(other))
 
     def __gt__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("gt", self.data, other)
+        return Tensor(self.data > unwrap_tensor_data(other))
 
     def __ge__(self, other: TensorType) -> "Tensor":
-        return tensor_func_dispatcher("ge", self.data, other)
+        return Tensor(self.data >= unwrap_tensor_data(other))
 
     # Tensor functions
 
     @property
     def device(self) -> Optional[DeviceType]:
         return tensor_func_dispatcher("device", self.data)
-
-    def size(self, axis: Optional[int] = None) -> "Tensor":
-        return tensor_func_dispatcher("size", self.data, axis=axis)
 
     def squeeze(self, axis: Optional[Union[int, Tuple[int]]] = None) -> "Tensor":
         return tensor_func_dispatcher("squeeze", self.data, axis=axis)
@@ -166,7 +163,7 @@ def tensor_func_dispatcher(func_name: str, *args, **kwargs) -> Any:
 
     tensor_backend = detect_tensor_backend(*args)
     if tensor_backend is None:
-        raise RuntimeError(f"{func_name} is not impelemnted for {type(args[0])}")
+        raise RuntimeError(f"{func_name} is not implemented for {type(args[0])}")
     module_ops = FUNC_MAP_DISPATCHER[tensor_backend]
     func = getattr(module_ops, func_name)
 

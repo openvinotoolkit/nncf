@@ -150,55 +150,22 @@ class TemplateTestNNCFTensorOperators:
     @pytest.mark.parametrize(
         "val, axis, ref",
         (
-            (1, None, []),
-            ([1], None, [1]),
-            ([[[1], [2]]], None, [1, 2, 1]),
-            ([[[1], [2]]], 1, 2),
-        ),
-    )
-    def test_size(self, val, axis, ref):
-        nncf_tensor = Tensor(self.to_tensor(val))
-        ref_tensor = Tensor(self.to_tensor(ref))
-        if isinstance(ref, list):
-            assert all(nncf_tensor.size(axis) == ref_tensor)
-        else:
-            assert nncf_tensor.size(axis) == ref_tensor
-
-    @pytest.mark.parametrize(
-        "val, axis, ref",
-        (
-            (1, None, []),
-            ([1], None, []),
-            ([[[[1], [2]], [[1], [2]]]], None, [2, 2]),
-            ([[[[1], [2]], [[1], [2]]]], 0, [2, 2, 1]),
-            ([[[[1], [2]], [[1], [2]]]], -1, [1, 2, 2]),
+            (1, None, 1),
+            ([1], None, 1),
+            ([[[[1], [2]], [[1], [2]]]], None, [[1, 2], [1, 2]]),
+            ([[[[1], [2]], [[1], [2]]]], 0, [[[1], [2]], [[1], [2]]]),
+            ([[[[1], [2]], [[1], [2]]]], -1, [[[1, 2], [1, 2]]]),
         ),
     )
     def test_squeeze(self, val, axis, ref):
         tensor = self.to_tensor(val)
         nncf_tensor = Tensor(tensor)
-        ref_tensor = Tensor(self.to_tensor(ref))
+        ref_tensor = self.to_tensor(ref)
+        res = nncf_tensor.squeeze(axis=axis)
         if isinstance(ref, list):
-            assert all(nncf_tensor.squeeze(axis=axis).size() == ref_tensor)
+            assert nncf_math.all(res == ref_tensor)
         else:
-            assert nncf_tensor.squeeze(axis=axis).size() == ref_tensor
-
-    @pytest.mark.parametrize(
-        "axis, ref",
-        (
-            (None, 3),
-            (0, [2, 1]),
-        ),
-    )
-    def test_count_nonzero(self, axis, ref):
-        tensor = self.to_tensor([[1, 2], [1, 0]])
-        nncf_tensor = Tensor(tensor)
-        nncf_ref_tensor = Tensor(self.to_tensor(ref))
-
-        if axis is None:
-            assert nncf_tensor.count_nonzero() == nncf_ref_tensor
-        else:
-            assert all(nncf_tensor.count_nonzero(axis=axis) == nncf_ref_tensor)
+            assert res == ref_tensor
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -267,6 +234,23 @@ class TemplateTestNNCFTensorOperators:
             i += 1
 
     # Math
+
+    @pytest.mark.parametrize(
+        "axis, ref",
+        (
+            (None, 3),
+            (0, [2, 1]),
+        ),
+    )
+    def test_math_count_nonzero(self, axis, ref):
+        tensor = self.to_tensor([[1, 2], [1, 0]])
+        nncf_tensor = Tensor(tensor)
+        nncf_ref_tensor = Tensor(self.to_tensor(ref))
+
+        if axis is None:
+            assert nncf_math.count_nonzero(nncf_tensor) == nncf_ref_tensor
+        else:
+            assert all(nncf_math.count_nonzero(nncf_tensor, axis=axis) == nncf_ref_tensor)
 
     def test_math_zeros_like(self):
         tensor = self.to_tensor([1, 2])
@@ -342,7 +326,3 @@ class TemplateTestNNCFTensorOperators:
         tensor = self.to_tensor(val)
         res = nncf_math.is_empty(tensor)
         assert res == ref
-
-
-# def is_empty(target: Tensor) -> Tensor:
-#     return tensor_func_dispatcher("is_empty", target)

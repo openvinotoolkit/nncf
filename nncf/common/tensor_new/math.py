@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 from nncf.common.tensor_new.tensor import Tensor
 from nncf.common.tensor_new.tensor import tensor_func_dispatcher
@@ -33,8 +33,8 @@ def ones_like(target: Tensor) -> Tensor:
     return tensor_func_dispatcher("ones_like", target)
 
 
-def count_nonzero(target: Tensor) -> Tensor:
-    return tensor_func_dispatcher("count_nonzero", target)
+def count_nonzero(target: Tensor, axis: Optional[TensorType] = None) -> Tensor:
+    return tensor_func_dispatcher("count_nonzero", target, axis=axis)
 
 
 def all(target: Tensor) -> Tensor:

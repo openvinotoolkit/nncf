@@ -20,84 +20,11 @@ def is_tensor(target: Any):
     return isinstance(target, torch.Tensor)
 
 
-def add(target: TensorType, other: TensorType) -> TensorType:
-    return target + other
-
-
-def radd(target: TensorType, other: TensorType) -> TensorType:
-    return other + target
-
-
-def sub(target: TensorType, other: TensorType) -> TensorType:
-    return target - other
-
-
-def rsub(target: TensorType, other: TensorType) -> TensorType:
-    return other - target
-
-
-def mul(target: TensorType, other: TensorType) -> TensorType:
-    return target * other
-
-
-def rmul(target: TensorType, other: TensorType) -> TensorType:
-    return other * target
-
-
-def pow(target: TensorType, other: TensorType) -> TensorType:
-    return target**other
-
-
-def truediv(target: TensorType, other: TensorType) -> TensorType:
-    return target / other
-
-
-def floordiv(target: TensorType, other: TensorType) -> TensorType:
-    return target // other
-
-
-def neg(target: TensorType) -> TensorType:
-    return -target
-
-
-# Comparison operators
-
-
-def lt(target: TensorType, other: TensorType) -> TensorType:
-    return target < other
-
-
-def le(target: TensorType, other: TensorType) -> TensorType:
-    return target < other
-
-
-def eq(target: TensorType, other: TensorType) -> TensorType:
-    return target == other
-
-
-def nq(target: TensorType, other: TensorType) -> TensorType:
-    return target != other
-
-
-def gt(target: TensorType, other: TensorType) -> TensorType:
-    return target > other
-
-
-def ge(target: TensorType, other: TensorType) -> TensorType:
-    return target >= other
-
-
 # Tensor functions
 
 
 def device(target: TensorType) -> torch.device:
     return target.device
-
-
-def size(target: TensorType, axis: Optional[int] = None) -> TensorType:
-    if axis is None:
-        return torch.tensor(target.size())
-    return torch.tensor(target.size(dim=axis))
 
 
 def squeeze(target: TensorType, axis: Optional[Union[int, Tuple[int]]] = None) -> TensorType:
