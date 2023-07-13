@@ -126,7 +126,7 @@ INSTALL_REQUIRES = [
 
 
 TF_EXTRAS = [
-    "tensorflow~=2.12.0",
+    "tensorflow~=2.13.0",
     "protobuf<4"
 ]
 
