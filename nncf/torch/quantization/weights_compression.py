@@ -23,7 +23,7 @@ from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_l
 class WeightsDecompressor(nn.Module):
     """Class decompression of compressed weights in forward pass
 
-    Atributes:
+    Attributes:
         zero_point: zero point in quantization scheme
         scale: scale in quantizatin scheme
     """
@@ -41,7 +41,7 @@ class WeightsDecompressor(nn.Module):
 class WeightsFQ(nn.Module):
     """Class provided fake quantize operation in forward pass
 
-    Atributes:
+    Attributes:
         zero_point: zero point in quantization scheme
         scale: scale in quantizatin scheme
         axis: channel for quantization
@@ -60,7 +60,7 @@ class WeightsFQ(nn.Module):
 
 
 def _insert_pre_compression_operations(
-    module: nn.Module, allowed_types: Dict, compress_weights=False, lewel_high=255
+    module: nn.Module, allowed_types: Dict, compress_weights=False, level_high=255
 ) -> Optional[nn.Module]:
     """
     Insets weights compression with dequantization or quantization pre operation for Linear and Embedding layers.
