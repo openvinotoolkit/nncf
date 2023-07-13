@@ -24,7 +24,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Compression algorithm</th>
       <th>Dataset</th>
       <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
-      <th>NNCF config file</th>
+      <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
   </thead>
@@ -297,7 +297,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Compression algorithm</th>
       <th>Dataset</th>
       <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
-      <th>NNCF config file</th>
+      <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
   </thead>
@@ -386,7 +386,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Compression algorithm</th>
       <th>Dataset</th>
       <th>mIoU&nbsp(<em>drop</em>)&nbsp%</th>
-      <th>NNCF config file</th>
+      <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
   </thead>
@@ -548,7 +548,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Compression algorithm</th>
       <th>Dataset</th>
       <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
-      <th>NNCF config file</th>
+      <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
   </thead>
@@ -741,7 +741,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Compression algorithm</th>
       <th>Dataset</th>
       <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
-      <th>NNCF config file</th>
+      <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
   </thead>
@@ -830,7 +830,7 @@ Here we present the results achieved using our sample scripts, example patches t
       <th>Compression algorithm</th>
       <th>Dataset</th>
       <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
-      <th>NNCF config file</th>
+      <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
   </thead>
