@@ -52,7 +52,7 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         ref_bias = torch.Tensor(ref_bias)
         nncf_graph = NNCFGraphFactory.create(model)
         for node in nncf_graph.get_all_nodes():
-            if not is_node_with_fused_bias(node, model):
+            if not is_node_with_fused_bias(node, nncf_graph):
                 continue
             bias_value = get_fused_bias_value(node, model)
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
