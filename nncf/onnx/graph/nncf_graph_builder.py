@@ -21,7 +21,6 @@ from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
@@ -192,6 +191,7 @@ def _get_node_attrs(node: onnx.NodeProto, model: onnx.ModelProto) -> Dict[str, A
     metatype = get_metatype(model, node)
     if metatype == ONNXGemmMetatype:
         return _get_gemm_attrs(node)
+    return {}
 
 
 def _get_bias_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, str]:
