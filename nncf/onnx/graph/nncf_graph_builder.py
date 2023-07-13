@@ -124,7 +124,7 @@ def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int
     :return: Port ids with weights.
     """
     port_ids = set()
-    metatype = get_metatype(onnx_graph, node)
+    metatype = get_metatype(onnx_graph.onnx_model, node)
     constant_port_ids = get_constant_weight_port_ids(metatype)
     port_ids.update(constant_port_ids)
     possible_port_ids = get_possible_weight_port_ids(metatype)
@@ -134,7 +134,7 @@ def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int
     return port_ids
 
 
-def _is_node_with_bias(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> bool:
+def _is_node_with_bias(node: onnx.NodeProto, model: onnx.ModelProto) -> bool:
     """
     Returns True if node has bias tensor, otherwise - False.
 
@@ -142,15 +142,14 @@ def _is_node_with_bias(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> bool:
     :param onnx_graph: ONNXGraph.
     :return: True if node has bias tensor, otherwise - False.
     """
-    metatype = get_metatype(onnx_graph, node)
-    if metatype in OPERATIONS_WITH_BIAS_METATYPES:
-        bias_tensor_port_id = get_bias_tensor_port_id(metatype)
-        if len(node.input) > bias_tensor_port_id:
-            return True
+    metatype = get_metatype(model, node)
+    bias_tensor_port_id = get_bias_tensor_port_id(metatype)
+    if bias_tensor_port_id is not None and len(node.input) > bias_tensor_port_id:
+        return True
     return False
 
 
-def _get_weight_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_id: int) -> Dict[str, str]:
+def _get_weight_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_id: int) -> Dict[int, Dict]:
     """
     Returns weight attributes.
 
@@ -182,7 +181,7 @@ def _get_gemm_attrs(node: onnx.NodeProto) -> Dict[str, int]:
     return gemm_attrs
 
 
-def _get_node_attrs(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, Any]:
+def _get_node_attrs(node: onnx.NodeProto, model: onnx.ModelProto) -> Dict[str, Any]:
     """
     Returns node attributes.
 
@@ -190,7 +189,7 @@ def _get_node_attrs(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, An
     :param onnx_graph: ONNXGraph.
     :return : Node attributes.
     """
-    metatype = get_metatype(onnx_graph, node)
+    metatype = get_metatype(model, node)
     if metatype == ONNXGemmMetatype:
         return _get_gemm_attrs(node)
 
@@ -204,8 +203,8 @@ def _get_bias_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, str
     :return: Bias tensor attributes.
     """
     bias_attrs = {}
-    metatype = get_metatype(onnx_graph, node)
-    if _is_node_with_bias(node, onnx_graph):
+    metatype = get_metatype(onnx_graph.onnx_model, node)
+    if _is_node_with_bias(node, onnx_graph.onnx_model):
         bias_tensor_port_id = get_bias_tensor_port_id(metatype)
         bias_edge_name = onnx_graph.get_node_edge_names(node.name)["input"][bias_tensor_port_id]
         edge = onnx_graph.get_edge(bias_edge_name)
@@ -344,18 +343,18 @@ class GraphConverter:
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
         for node in onnx_graph.get_all_nodes():
-            metatype = get_metatype(onnx_graph, node)
-            port_ids = _get_weight_port_ids(node, onnx_graph)
+            metatype = get_metatype(onnx_model, node)
+            weight_port_ids = _get_weight_port_ids(node, onnx_graph)
             is_shared = None
             weight_attrs = {}
-            node_attrs = _get_node_attrs(node, onnx_graph)
+            node_attrs = _get_node_attrs(node, onnx_model)
             bias_attrs = _get_bias_attr(node, onnx_graph)
-            if port_ids:  # If node has weight
+            if weight_port_ids:  # If node has weight
                 weight_edge_names = []
-                for port_id in port_ids:
-                    weight_edge_names.append(_get_weight_edge_name(onnx_graph, node, port_id))
-                    weight_attrs.update(_get_weight_attr(node, onnx_graph, port_id))
-                    if not is_shared and onnx_graph.is_node_has_shared_weight(node, port_id):
+                for weight_port_id in weight_port_ids:
+                    weight_edge_names.append(_get_weight_edge_name(onnx_graph, node, weight_port_id))
+                    weight_attrs.update(_get_weight_attr(node, onnx_graph, weight_port_id))
+                    if not is_shared and onnx_graph.is_node_has_shared_weight(node, weight_port_id):
                         is_shared = True
 
             layer_attributes = ONNXLayerAttributes(

@@ -100,11 +100,11 @@ def is_any_weight_quantized(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     :return: True if any weight port id of node is quantized,
     False - if all weights are not quantized or the node can not have weight.
     """
-    is_quanitzed_weight = False
+    is_quantized_weight = False
     if node.layer_attributes.has_weight():
         for port_id in node.layer_attributes.weight_attrs.keys():
-            is_quanitzed_weight = is_quanitzed_weight or is_port_quantized(node, nncf_graph, port_id)
-    return is_quanitzed_weight
+            is_quantized_weight = is_quantized_weight or is_port_quantized(node, nncf_graph, port_id)
+    return is_quantized_weight
 
 
 def is_port_quantized(node: NNCFNode, nncf_graph: NNCFGraph, port_id: int) -> bool:
