@@ -15,7 +15,6 @@ import torch
 
 from nncf import NNCFConfig
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
@@ -35,6 +34,7 @@ def get_single_conv_nncf_graph() -> NNCFGraphToTest:
         out_channels=4,
         kernel_size=(4, 4),
         stride=1,
+        dilations=1,
         groups=1,
         transpose=False,
         padding_values=[],
@@ -43,7 +43,17 @@ def get_single_conv_nncf_graph() -> NNCFGraphToTest:
 
 
 def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
-    conv_layer_attrs = GroupNormLayerAttributes(False, 3, 3)
+    conv_layer_attrs = ConvolutionLayerAttributes(
+        weight_requires_grad=False,
+        in_channels=3,
+        out_channels=3,
+        dilations=1,
+        kernel_size=(1, 1),
+        stride=(1, 1),
+        groups=3,
+        transpose=False,
+        padding_values=(1, 1),
+    )
     return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype, conv_layer_attrs)
 
 
@@ -58,6 +68,7 @@ def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
         out_channels=4,
         kernel_size=(4, 4),
         stride=1,
+        dilations=1,
         groups=1,
         transpose=False,
         padding_values=[],

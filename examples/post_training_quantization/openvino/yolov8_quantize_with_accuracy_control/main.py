@@ -169,7 +169,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
             stats_metrics = stats["metrics/mAP50-95(B)"]
         else:
             stats_metrics = stats["metrics/mAP50-95(M)"]
-        print(f"Validate: dataset lenght = {counter}, " f"metric value = {stats_metrics:.3f}")
+        print(f"Validate: dataset length = {counter}, metric value = {stats_metrics:.3f}")
         return stats_metrics
 
     quantization_dataset = nncf.Dataset(data_loader, transform_fn)

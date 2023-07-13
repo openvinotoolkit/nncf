@@ -80,12 +80,13 @@ The NNCF PTQ is the simplest way to apply 8-bit quantization. To run the algorit
 import nncf
 import openvino.runtime as ov
 import torch
-from torchvision import datasets
+from torchvision import datasets, transforms
 
 # Instantiate your uncompressed model
 model = ov.Core().read_model("/model_path")
+
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = datasets.ImageFolder("/path")
+val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 
 # Step 1: Initialize transformation function
@@ -110,8 +111,9 @@ from torchvision import datasets, models
 
 # Instantiate your uncompressed model
 model = models.mobilenet_v2()
+
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = datasets.ImageFolder("/path")
+val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 dataset_loader = torch.utils.data.DataLoader(val_dataset)
 
 # Step 1: Initialize the transformation function
@@ -137,6 +139,7 @@ import tensorflow_datasets as tfds
 
 # Instantiate your uncompressed model
 model = tf.keras.applications.MobileNetV2()
+
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
 val_dataset = tfds.load("/path", split="validation",
                         shuffle_files=False, as_supervised=True)
@@ -164,8 +167,9 @@ from torchvision import datasets
 
 # Instantiate your uncompressed model
 onnx_model = onnx.load_model("/model_path")
+
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = datasets.ImageFolder("/path")
+val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 
 # Step 1: Initialize transformation function
@@ -207,7 +211,7 @@ nncf_config = NNCFConfig.from_json("resnet50_int8.json")
 
 # Provide data loaders for compression algorithm initialization, if necessary
 import torchvision.datasets as datasets
-representative_dataset = datasets.ImageFolder("/path")
+representative_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 init_loader = torch.utils.data.DataLoader(representative_dataset)
 nncf_config = register_default_init_args(nncf_config, init_loader)
 

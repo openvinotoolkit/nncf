@@ -40,7 +40,7 @@ class NNCFGraphFactory:
 
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.TORCH:
-            return model.nncf.get_original_graph()
+            return model.nncf.get_graph()
         raise RuntimeError("Cannot create backend-specific graph because {} is not supported!".format(model_backend))
 
 

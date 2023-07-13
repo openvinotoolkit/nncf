@@ -10,15 +10,16 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Any, Dict, List, Optional, Type
+from typing import List, Type
 
 import openvino.runtime as ov
 
-from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
 from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
@@ -197,41 +198,11 @@ class GraphConverter:
 
                     if const_attrs or act_attrs:
                         nncf_node = nncf_graph.get_node_by_name(node_name)
-                        nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs, act_attrs)
+                        layer_attributes = get_weighted_layer_attributes(node, metatype, const_attrs)
+                        nncf_node.layer_attributes = OVLayerAttributes(const_attrs, layer_attributes, act_attrs)
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
-
-
-class OVConstantLayerAttributes(BaseLayerAttributes):
-    """
-    This class stores mapping weights port indices to constant name and shape.
-    For MatMul layers, it also stores transpose parameter and shape for activations.
-    """
-
-    def __init__(self, const_attrs: Dict[int, Dict], act_attrs: Optional[Dict[Any, Any]] = None):
-        """
-        :param const_attrs: Map of weights port ID to corresponding const attributes.
-        :param act_attrs: Activation attributes.
-        """
-        self._const_attrs = const_attrs
-        self._act_attrs = act_attrs
-
-    @property
-    def const_attrs(self):
-        return self._const_attrs if self._const_attrs != {} else None
-
-    @property
-    def act_attrs(self):
-        return self._act_attrs if self._act_attrs != {} else None
-
-    def get_const_port_ids(self) -> List[int]:
-        """
-        Returns indices of input ports corresponding to the constant nodes.
-
-        :returns: List of input port indices with constants.
-        """
-        return list(self.const_attrs.keys())
 
 
 def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
@@ -264,6 +235,6 @@ def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
         queue.append(curr_node.input_value(0).get_node())
 
     if constant_node is None:
-        raise RuntimeError("Constant node was expected but could not find it.")
+        raise RuntimeError("Constant node was expected but could not be found.")
 
     return constant_node

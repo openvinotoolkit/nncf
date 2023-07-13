@@ -100,7 +100,7 @@ def calc_per_sample_metrics(
 ) -> List[Dict[str, Any]]:
     per_sample_metrics = []
     for inputs in dataset.get_data(subset_indices):
-        value = val_func(compiled_model, [inputs])
+        value, _ = val_func(compiled_model, [inputs])
         per_sample_metrics.append(
             {"sample_id": len(per_sample_metrics), "metric_name": "original_metric", "result": value}
         )
@@ -146,7 +146,7 @@ class OVEngine(pot.IEEngine):
         is_full_dataset = subset_indices is None or len(subset_indices) == len(self.data_loader)
         if self._validation_fn and (is_full_dataset or self.use_original_metric) and not self.statistics_collection:
             compiled_model = self._ie.compile_model(model=self._model, device_name=self._device)
-            self._metric.avg_value = self._validation_fn(
+            self._metric.avg_value, per_sample_metrics = self._validation_fn(
                 compiled_model, self._validation_dataset.get_data(subset_indices)
             )
             if not metric_per_sample and stats_layout is None:
@@ -155,7 +155,13 @@ class OVEngine(pot.IEEngine):
                 return metrics, {}
 
         if self.use_original_metric and metric_per_sample:
-            self._per_sample_metrics = self.calculate_per_sample_metrics(subset_indices)
+            if per_sample_metrics is not None:
+                self._per_sample_metrics = [
+                    {"sample_id": i, "metric_name": "original_metric", "result": value}
+                    for i, value in enumerate(per_sample_metrics)
+                ]
+            else:
+                self._per_sample_metrics = self.calculate_per_sample_metrics(subset_indices)
             if stats_layout is None:
                 metrics = self._metric.avg_value
                 metrics = (sorted(self._per_sample_metrics, key=lambda i: i["sample_id"]), metrics)

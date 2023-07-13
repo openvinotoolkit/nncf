@@ -110,7 +110,7 @@ To resolve, make sure that your CUDA installation contains the development tools
 NNCF does not in general accelerate training or inference when the compressed model is run in PyTorch.
 It only prepares the model for further inference with OpenVINO's Inference Engine, where the runtime has capabilities of processing the NNCF-compressed models so that they run faster than their uncompressed counterparts.
 
-The process of compressing in PyTorch relies on hooking regular PyTorch functions and calling extra code for purposes of compression algorithm logic, so the NNCF-processed models will inevitably run slower in PyTorch. Export your model after processing with NNCF to an OpenVINO-ingestable format (e.g. ONNX) and run it with the OpenVINO Inference Engine, to enjoy speedups when compared to the uncompressed model inference with Inference Engine.
+The process of compressing in PyTorch relies on hooking regular PyTorch functions and calling extra code for purposes of compression algorithm logic, so the NNCF-processed models will inevitably run slower in PyTorch. Export your model after processing with NNCF to an OpenVINO-ingestible format (e.g. ONNX) and run it with the OpenVINO Inference Engine, to enjoy speedups when compared to the uncompressed model inference with Inference Engine.
 
 ### The .pth checkpoints for the compressed model have larger size and parameter count when compared to the uncompressed model
 See the answer to the above question. Additional parameters are part of the compression algorithm internal state being saved along with the regular model weights, and any model size footprint reduction is deferred until exporting and/or running the model with OpenVINO Inference Engine.

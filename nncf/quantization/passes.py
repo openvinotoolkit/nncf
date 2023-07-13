@@ -10,10 +10,12 @@
 # limitations under the License.
 
 import collections
-from typing import List, Optional
+from typing import List, Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 
 
 def transform_to_inference_graph(
@@ -116,3 +118,21 @@ def filter_constant_nodes(
     constant_nodes = [node for node in nncf_graph.get_all_nodes() if node not in visited_nodes]
     nncf_graph.remove_nodes_from(constant_nodes)
     return nncf_graph
+
+
+TModel = TypeVar("TModel")
+
+
+def insert_null_biases_pass(model: TModel) -> TModel:
+    """
+    This pass finds and inserts zero biases to the given model for the layers that should have it.
+
+    :param model: Model instance.
+    :return: Updated Model instance with zero biases
+    """
+    model_backend = get_backend(model)
+    if model_backend == BackendType.OPENVINO:
+        from nncf.openvino.graph.model_utils import insert_null_biases
+
+        return insert_null_biases(model)
+    return model

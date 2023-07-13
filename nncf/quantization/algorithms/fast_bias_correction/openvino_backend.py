@@ -88,7 +88,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         # At first, checks whether the node has weight tensor
         if node.layer_attributes is None:
             return False
@@ -102,7 +102,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node, nncf_graph)
 
     @staticmethod
@@ -121,5 +121,5 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return data.reshape(new_shape)
 
     @staticmethod
-    def get_node_names_for_input_output_statistics(node: NNCFNode, model: ov.Model) -> Tuple[str, str]:
+    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
         return node.node_name, node.node_name

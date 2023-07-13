@@ -922,3 +922,5 @@ OPERATORS_WITH_BIAS_METATYPES = [
 OPERATORS_FUSED_METATYPES = [
     PTModuleBatchNormMetatype,
 ]
+
+OP_NAMES_QUANTIZE_NODE = ["symmetric_quantize", "asymmetric_quantize"]

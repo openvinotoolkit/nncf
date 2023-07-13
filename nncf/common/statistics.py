@@ -124,7 +124,7 @@ class NNCFStatistics(Statistics):
         ]
         if algorithm_name not in available_algorithms:
             raise ValueError(
-                "Can not register statistics for the algorithm. " f"Unknown name of the algorithm: {algorithm_name}."
+                f"Can not register statistics for the algorithm. Unknown name of the algorithm: {algorithm_name}."
             )
 
         self._storage[algorithm_name] = stats

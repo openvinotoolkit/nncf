@@ -192,6 +192,7 @@ def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, 
         "weight_requires_grad": True,
         "kernel_size": (2, 2),
         "stride": (1, 1),
+        "dilations": (1, 1),
         "padding_values": [0, 0],
     }
     graph = NNCFGraph()
@@ -509,6 +510,7 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
         "weight_requires_grad": True,
         "kernel_size": (2, 2),
         "stride": (1, 1),
+        "dilations": (1, 1),
         "padding_values": [0, 0],
     }
     split_attributes = MultipleOutputLayerAttributes(chunks=2, axis=1)

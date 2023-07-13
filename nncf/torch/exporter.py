@@ -115,7 +115,7 @@ class PTExporter(Exporter):
 
         if export_fn is None:
             available_formats = list(format_to_export_fn.keys())
-            raise ValueError(f"Unsupported saving format: '{save_format}'. " f"Available formats: {available_formats}")
+            raise ValueError(f"Unsupported saving format: '{save_format}'. Available formats: {available_formats}")
 
         export_fn(**fn_args)
 

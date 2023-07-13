@@ -31,6 +31,8 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         onnx_metatypes.ONNXResizeMetatype,
         onnx_metatypes.ONNXPowMetatype,
         onnx_metatypes.ONNXReciprocalMetatype,
+        onnx_metatypes.ONNXMaximumMetatype,
+        onnx_metatypes.ONNXMinimumMetatype,
     ],
     QuantizationTrait.QUANTIZATION_AGNOSTIC: [
         onnx_metatypes.ONNXMaxPoolMetatype,
