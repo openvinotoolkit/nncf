@@ -46,7 +46,7 @@ class ChannelAlignmentAlgoBackend:
 
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
-        :param port_id: id of the port for the statistics disctribution.
+        :param port_id: id of the port for the statistics distribution.
         :return: Backend-specific TargetPoint.
         """
 
@@ -89,7 +89,7 @@ class ChannelAlignmentAlgoBackend:
     @abstractmethod
     def get_weights_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
         """
-        Returns Input Port ID and Output Port ID corresponding to node weights inputr port id and
+        Returns Input Port ID and Output Port ID corresponding to node weights input port id and
         constant output port id the node.
 
         :param node: Node of NNCFGraph.

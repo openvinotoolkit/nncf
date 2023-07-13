@@ -154,7 +154,7 @@ class AdvancedQuantizationParameters:
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
-    smooth_quant_alpha: float = -1.0
+    smooth_quant_alpha: float = 0.95
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)
@@ -300,7 +300,7 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     ):
         return {}
     else:
-        raise RuntimeError("The following range estimator parameters are not supported: " f"{str(params)}")
+        raise RuntimeError(f"The following range estimator parameters are not supported: {str(params)}")
 
     return result
 

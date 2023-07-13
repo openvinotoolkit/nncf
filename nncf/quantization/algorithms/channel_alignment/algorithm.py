@@ -77,6 +77,7 @@ class ChannelAlignment(Algorithm):
         self._original_nncf_graph = None
         self._backend_entity = None
         self._quantile = 1e-4
+        self._algorithm_key = f"CA_{hash(self)}"
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -106,12 +107,12 @@ class ChannelAlignment(Algorithm):
         transformation_layout = TransformationLayout()
 
         def filter_func(point: StatisticPoint) -> bool:
-            return ChannelAlignment in point.algorithm_to_tensor_collectors and point.target_point == target_point
+            return self._algorithm_key in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
         for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel alignment"):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
-                statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, ChannelAlignment)
+                statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, self._algorithm_key)
             )
             assert len(tensor_collectors) == 1
             stat = tensor_collectors[0].get_statistics()
@@ -213,7 +214,7 @@ class ChannelAlignment(Algorithm):
         Function which calculates new conv_in_value, conv_out_value and bias_in_value
         in ChannelAlignment pattern, so output activations of conv_out are the same,
         but activations of conv_in are scale times smaller. Negative scales are skipped,
-        too small (<1e-2) and too big (>1e2) scales are claped.
+        too small (<1e-2) and too big (>1e2) scales are clamped.
 
         :param conv_in_value: Weights of the first convolution in the ChannelAlignment pattern.
         :param conv_out_value: Weights of the second convolution in the ChannelAlignment pattern.
@@ -224,7 +225,7 @@ class ChannelAlignment(Algorithm):
         :param eps: Minimal significant value > 0 for convolution weights and biases precision.
         """
         conv_in_shape = conv_in_value.shape
-        # TODO(dlyakhov) support group convolutions with groups nubmer not in [1, out_channels]
+        # TODO(dlyakhov) support group convolutions with groups number not in [1, out_channels]
         if conv_in_shape[conv_in_descr.conv_weight_out_channels_dim] != ascale.shape[conv_in_descr.bias_channels_dim]:
             return conv_in_value, conv_out_value, bias_in_value
 
@@ -262,7 +263,7 @@ class ChannelAlignment(Algorithm):
         # Check node has valid stride
         if any(elem != 1 for elem in attrs.stride):
             return False
-        # Check Node has vaild dilation
+        # Check Node has valid dilation
         if any(elem != 1 for elem in attrs.dilations):
             return False
         return True
@@ -388,7 +389,7 @@ class ChannelAlignment(Algorithm):
                 StatisticPoint(
                     target_point=target_point,
                     tensor_collector=statistic_collector,
-                    algorithm=ChannelAlignment,
+                    algorithm=self._algorithm_key,
                 )
             )
 
@@ -436,7 +437,7 @@ class ConvParamsContainer:
         """
         :param conv_op: Backend-specific conv node.
         :param model: Backend-specific model instance.
-        :param nncf_grpah: NNCFGraph of given backend-specific model.
+        :param nncf_graph: NNCFGraph of given backend-specific model.
         :param backend_entity: Current backend entity to retrieve parameters from given conv node
         """
         _, self._weights_port_id = backend_entity.get_weights_port_ids_for_node(conv_op)

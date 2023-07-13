@@ -292,7 +292,8 @@
                     "batch_per_gpu": 15,
                     "mean_value": "[123.675,116.28,103.53]",
                     "scale_value": "[58.395,57.12,57.375]",
-                    "reverse_input_channels": true
+                    "reverse_input_channels": true,
+                    "diff_target_max": 0.15
                 },
                 "retinanet_coco_magnitude_sparsity": {
                     "config": "examples/tensorflow/object_detection/configs/sparsity/retinanet_coco_magnitude_sparsity.json",

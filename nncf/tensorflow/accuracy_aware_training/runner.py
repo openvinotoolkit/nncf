@@ -52,7 +52,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                 scheduler.values = [lr * self.base_lr_reduction_factor_during_search for lr in scheduler.values]
             else:
                 nncf_logger.warning(
-                    f"Learning rate scheduler {scheduler} is not supported yet. " f"Won't change the learning rate."
+                    f"Learning rate scheduler {scheduler} is not supported yet. Won't change the learning rate."
                 )
 
         self.training_epoch_count = 0

@@ -34,6 +34,7 @@ from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCFConv2d
+from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
@@ -702,3 +703,35 @@ def test_safety_change_scope_in_get_nncf_modules():
     orig_id = id(list(nncf_net.nncf._nncf_replaced_modules.values())[0][0])
     return_id = id(list(nncf_net.nncf.get_nncf_modules().values())[0])
     assert orig_id != return_id
+
+
+class EmbeddingWithSharedWeights(torch.nn.Embedding):
+    def forward(self, x, run_as_matmul=False):  # pylint: disable=arguments-renamed
+        if run_as_matmul:
+            return F.linear(x, self.weight)
+        return super().forward(x)
+
+
+class ShortTransformer(torch.nn.Module):
+    def __init__(self, in_features, num_embeddings):
+        super().__init__()
+        self.wte = EmbeddingWithSharedWeights(num_embeddings, in_features)
+        self.linear = torch.nn.Linear(in_features, in_features)
+
+    def forward(self, input_ids):
+        x = self.wte(input_ids)
+        x = self.linear(x)
+        res = self.wte(x, True)
+        return res
+
+
+def test_proxy_module_for_forward_with_super(mocker):
+    num_embeddings = 10
+    dim = 10
+    model = ShortTransformer(dim, num_embeddings)
+
+    register_module(ignored_algorithms=[])(type(model.wte))
+    wrapped_model, _ = replace_modules_by_nncf_modules(model)
+
+    input_ids = torch.randint(num_embeddings, (1, 4))
+    wrapped_model(input_ids)

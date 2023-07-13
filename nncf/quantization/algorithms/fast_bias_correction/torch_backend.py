@@ -102,12 +102,12 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return PTNNCFTensor(raw_data)
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> bool:
-        return is_quantized_weights(node, model)
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        return is_quantized_weights(node, nncf_graph)
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> bool:
-        return is_node_with_fused_bias(node, model)
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        return is_node_with_fused_bias(node, nncf_graph)
 
     @staticmethod
     def get_bias_shift_magnitude(current_bias_value: torch.Tensor, updated_bias_value: torch.Tensor) -> float:
@@ -125,8 +125,8 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return data.reshape(new_shape)
 
     @staticmethod
-    def get_node_names_for_input_output_statistics(node: NNCFNode, model: NNCFNetwork) -> Tuple[str, str]:
+    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
         input_node_name = node.node_name
-        next_norm_node = get_potential_fused_node(node.node_name, model)
+        next_norm_node = get_potential_fused_node(input_node_name, nncf_graph)
         output_node_name = next_norm_node.node_name if next_norm_node else input_node_name
         return input_node_name, output_node_name

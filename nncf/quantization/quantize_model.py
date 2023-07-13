@@ -161,8 +161,7 @@ def quantize_with_accuracy_control(
     :type calibration_dataset: nncf.Dataset
     :param validation_dataset: A dataset for the validation process.
     :type validation_dataset: nncf.Dataset
-    :param validation_fn: A validation function to validate the model. It should take
-        two argumets:
+    :param validation_fn: A validation function to validate the model. It should take two arguments:
         - `model`: model to be validate.
         - `validation_dataset`: dataset that provides data items to
               validate the provided model.

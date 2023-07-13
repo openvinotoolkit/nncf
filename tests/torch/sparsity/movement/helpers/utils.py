@@ -40,7 +40,9 @@ def mock_linear_nncf_node(
         node_name,
         "linear",
         Mock(),
-        LinearLayerAttributes(weight_requires_grad=True, in_features=in_features, out_features=out_features, bias=bias),
+        LinearLayerAttributes(
+            weight_requires_grad=True, in_features=in_features, out_features=out_features, with_bias=bias
+        ),
     )
     return linear
 

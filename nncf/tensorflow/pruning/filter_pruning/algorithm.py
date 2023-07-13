@@ -437,7 +437,7 @@ class FilterPruningController(BasePruningAlgoController):
                     if nncf_node.data["output_mask"] is not None:
                         self._set_operation_masks([layer], nncf_node.data["output_mask"].tensor)
                 return
-        raise RuntimeError(f"Unable to prune model to required flops pruning level:" f" {target_flops_pruning_level}")
+        raise RuntimeError(f"Unable to prune model to required flops pruning level: {target_flops_pruning_level}")
 
     def _set_operation_masks(self, layers: List[NNCFWrapper], filter_mask):
         for layer in layers:
@@ -466,7 +466,7 @@ class FilterPruningController(BasePruningAlgoController):
             self.current_params_num = params_num
             return right
         raise RuntimeError(
-            f"Unable to prune the model to get the required " f"pruning level in flops = {target_flops_pruning_level}"
+            f"Unable to prune the model to get the required pruning level in flops = {target_flops_pruning_level}"
         )
 
     def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_level):

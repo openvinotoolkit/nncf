@@ -146,7 +146,7 @@ class FilterPruningStatistics(Statistics):
         )
 
         pretty_string = (
-            f"{self.model_statistics.to_str()}\n" f"Statistics of the filter pruning algorithm:\n{algorithm_string}"
+            f"{self.model_statistics.to_str()}\nStatistics of the filter pruning algorithm:\n{algorithm_string}"
         )
         return pretty_string
 
@@ -190,15 +190,15 @@ class PrunedModelTheoreticalBorderline(Statistics):
             rows=[
                 [
                     "Pruned layers count / prunable layers count",
-                    f"{self.pruned_layers_num} /" f" {self.prunable_layers_num}",
+                    f"{self.pruned_layers_num} / {self.prunable_layers_num}",
                 ],
                 [
                     "GFLOPs minimum possible after pruning / total",
-                    f"{self.min_possible_flops / self._giga:.3f} /" f" {self.total_flops / self._giga:.3f}",
+                    f"{self.min_possible_flops / self._giga:.3f} / {self.total_flops / self._giga:.3f}",
                 ],
                 [
                     "MParams minimum possible after pruning / total",
-                    f"{self.min_possible_params / self._mega:.3f} /" f" {self.total_params / self._mega:.3f}",
+                    f"{self.min_possible_params / self._mega:.3f} / {self.total_params / self._mega:.3f}",
                 ],
             ],
         )

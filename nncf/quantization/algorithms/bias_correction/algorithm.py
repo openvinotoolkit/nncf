@@ -98,6 +98,7 @@ class BiasCorrection(Algorithm):
         self._backend_entity = None
         self._collected_stat_inputs_map = {}
         self._fp_inputs = defaultdict(list)
+        self._algorithm_key = f"BC_{hash(self)}"
 
         if self.apply_for_all_nodes:
             raise RuntimeError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
@@ -282,7 +283,7 @@ class BiasCorrection(Algorithm):
         This method prepares the subgraph from the model for the further inference.
 
         :param node: NNCFNode instance for the current layer.
-        :param model: Backend-specifig model instance.
+        :param model: Backend-specific model instance.
         :param nncf_graph: Instance of NNCFGraph.
         :param subgraph_data: A dictionary with the layers for the graph building.
         :return: Backend-specific subgraph extracted from the model.
@@ -294,7 +295,7 @@ class BiasCorrection(Algorithm):
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(extracted_model)
 
-        # For layes with weights, there is only one output port - 0.
+        # For layers with weights, there is only one output port - 0.
         statistic_point = self._backend_entity.target_point(
             TargetType.POST_LAYER_OPERATION, node.node_name, port_id=OUTPUT_PORT_OF_NODE
         )
@@ -306,7 +307,7 @@ class BiasCorrection(Algorithm):
         self, model: TModel, subgraph_data: Dict, statistic_points: StatisticPointsContainer
     ) -> List[Dict]:
         """
-        Creates the list of the dictionaries that contains the input data for the model exection.
+        Creates the list of the dictionaries that contains the input data for the model execution.
 
         :param model: TModel instance.
         :param subgraph_data: A dictionary with the necessary data for current node.
@@ -340,11 +341,11 @@ class BiasCorrection(Algorithm):
         self, node: NNCFNode, model: TModel, feed_dicts: List, statistic_points: StatisticPointsContainer
     ) -> np.ndarray:
         """
-        Computes bias shift that will be used for the futher bias correction.
+        Computes bias shift that will be used for the further bias correction.
 
         :param node: NNCFNode instance, current layer.
         :param model: Backend-specific model.
-        :param feed_dicts: List of dictionaries with the input data for model execition.
+        :param feed_dicts: List of dictionaries with the input data for model execution.
         :param statistic_points: StatisticPointsContainer instance.
         :return: Calculated bias shift value.
         """
@@ -377,7 +378,7 @@ class BiasCorrection(Algorithm):
 
     def _correct_bias(self, model: TModel, bias_correction_command: TransformationCommand) -> TModel:
         """
-        Returns the model (which can be represended as subgraph) with the updated bias value for the current layer.
+        Returns the model (which can be represented as subgraph) with the updated bias value for the current layer.
 
         :param model: Backend-specific model.
         :param bias_correction_command: TransformationCommand instance for the bias correction.
@@ -440,7 +441,7 @@ class BiasCorrection(Algorithm):
             # we also need to determine the output port id.
             # For the cases when the layer has more than one (0) output port.
             return (
-                BiasCorrection in point.algorithm_to_tensor_collectors
+                self._algorithm_key in point.algorithm_to_tensor_collectors
                 and point.target_point.type == TargetType.POST_LAYER_OPERATION
                 and point.target_point.port_id == port_id
             )
@@ -450,7 +451,7 @@ class BiasCorrection(Algorithm):
 
         input_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            node_name, input_filter_func, BiasCorrection
+            node_name, input_filter_func, self._algorithm_key
         ):
             input_fp.extend(tensor_collector.get_statistics().values)
         self._fp_inputs[node_name] = input_fp
@@ -467,13 +468,13 @@ class BiasCorrection(Algorithm):
 
         def output_filter_func(point):
             return (
-                BiasCorrection in point.algorithm_to_tensor_collectors
+                self._algorithm_key in point.algorithm_to_tensor_collectors
                 and point.target_point.type == TargetType.POST_LAYER_OPERATION
             )
 
         output_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            node_name, output_filter_func, BiasCorrection
+            node_name, output_filter_func, self._algorithm_key
         ):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return np.array(output_fp)
@@ -495,7 +496,7 @@ class BiasCorrection(Algorithm):
             node_name = node.node_name
             channel_axis = node.metatype.output_channel_axis
 
-            # For layes with weights, there is only one output port - 0.
+            # For layers with weights, there is only one output port - 0.
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, node_name, port_id=OUTPUT_PORT_OF_NODE
             )
@@ -503,7 +504,9 @@ class BiasCorrection(Algorithm):
                 reduction_shape=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
             )
             statistic_container.add_statistic_point(
-                StatisticPoint(target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection)
+                StatisticPoint(
+                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                )
             )
 
         # We must collect the nodes with biases following the model inputs.
@@ -522,7 +525,9 @@ class BiasCorrection(Algorithm):
                 num_samples=self.subset_size, inplace=self.inplace_statistics
             )
             statistic_container.add_statistic_point(
-                StatisticPoint(target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection)
+                StatisticPoint(
+                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                )
             )
 
         # Then we need also to collect model input statistics to prevent cases when nodes with bias have no input data.
@@ -540,7 +545,9 @@ class BiasCorrection(Algorithm):
                 num_samples=self.subset_size, inplace=self.inplace_statistics
             )
             statistic_container.add_statistic_point(
-                StatisticPoint(target_point=statistic_point, tensor_collector=stat_collector, algorithm=BiasCorrection)
+                StatisticPoint(
+                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                )
             )
 
         return statistic_container
