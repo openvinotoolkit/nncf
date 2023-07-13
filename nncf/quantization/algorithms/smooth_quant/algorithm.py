@@ -21,7 +21,9 @@
 
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Dict, List, Optional, TypeVar
+
+from tqdm import tqdm
 
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
@@ -103,7 +105,7 @@ class SmoothQuant(Algorithm):
 
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, nncf_graph)
 
-        for group_id, nodes in node_groups.items():
+        for group_id, nodes in tqdm(node_groups.items(), desc="Applying Smooth Quant"):
             best_ratio = 0.0
             for node_to_smooth in nodes:
                 source_node, port_id = group_id
