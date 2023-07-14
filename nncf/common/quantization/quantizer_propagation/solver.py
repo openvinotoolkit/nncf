@@ -464,6 +464,7 @@ class QuantizerPropagationSolver:
                 nncf_logger.debug(f"Ignored adding weight quantizer for: {node_name}")
         return weight_quantizable_node_names_vs_qconfigs
 
+    # pylint:disable=too-many-branches
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
         """
         The main function to be used on an InsertionPointGraph to produce

@@ -36,7 +36,6 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig

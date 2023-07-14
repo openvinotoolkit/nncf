@@ -28,7 +28,6 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
 ALGO_BACKENDS = Registry("algo_backends")
