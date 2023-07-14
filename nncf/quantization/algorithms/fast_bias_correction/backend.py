@@ -145,17 +145,15 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks whether the node is quantized or not.
 
         :param node: NNCFNode to check.
         :param nncf_graph: NNCFGraph instance.
-        :param model: Backend-specific model.
 
         :return: boolean indicating whether the node has a quantized weights or not
         """
-        # TODO(AlexanderDokuchaev): use only nncf_graph instead of model, after fix 111576
 
     @staticmethod
     @abstractmethod
@@ -170,16 +168,14 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks whether the node has a bias or not.
 
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph that contains node.
-        :param model: Backend-specific model.
         :return: Boolean indicating whether the node has a bias or not.
         """
-        # TODO(AlexanderDokuchaev): use only nncf_graph instead of model, after fix 111576
 
     @staticmethod
     @abstractmethod
@@ -214,15 +210,14 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_node_names_for_input_output_statistics(node: NNCFNode, model: TModel) -> Tuple[str, str]:
+    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
         """
         Return name of nodes to collect statistics.
 
         :param node: NNCFNode to check.
-        :param model: Backend-specific model.
+        :param nncf_graph: NNCFGraph instance.
 
         :return:
             Name of node to collect input statistics
             Name of node to collect output statistics
         """
-        # TODO(AlexanderDokuchaev): use nncf_graph instead of model, after fix 111576

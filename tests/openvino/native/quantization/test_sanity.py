@@ -18,6 +18,7 @@ import nncf
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.os import is_windows
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.openvino.conftest import AC_CONFIGS_DIR
 from tests.openvino.datasets_helpers import get_dataset_for_test
 from tests.openvino.datasets_helpers import get_nncf_dataset_from_ac_config
@@ -26,16 +27,28 @@ from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 
 OMZ_MODELS = [
-    ("resnet-18-pytorch", "imagenette2-320", {"accuracy@top1": 0.777, "accuracy@top5": 0.948}),
-    ("mobilenet-v3-small-1.0-224-tf", "imagenette2-320", {"accuracy@top1": 0.735, "accuracy@top5": 0.916}),
-    ("googlenet-v3-pytorch", "imagenette2-320", {"accuracy@top1": 0.911, "accuracy@top5": 0.994}),
-    ("mobilefacedet-v1-mxnet", "wider", {"map": 0.7763171885846742}),
-    ("retinaface-resnet50-pytorch", "wider", {"map": 0.917961898320335}),
+    (
+        "resnet-18-pytorch",
+        "imagenette2-320",
+        {"accuracy@top1": 0.777, "accuracy@top5": 0.948},
+        None,
+    ),
+    (
+        "mobilenet-v3-small-1.0-224-tf",
+        "imagenette2-320",
+        {"accuracy@top1": 0.744, "accuracy@top5": 0.916},
+        AdvancedQuantizationParameters(disable_channel_alignment=False),
+    ),
+    ("googlenet-v3-pytorch", "imagenette2-320", {"accuracy@top1": 0.911, "accuracy@top5": 0.994}, None),
+    ("mobilefacedet-v1-mxnet", "wider", {"map": 0.7763171885846742}, None),
+    ("retinaface-resnet50-pytorch", "wider", {"map": 0.917961898320335}, None),
 ]
 
 
-@pytest.mark.parametrize("model, dataset, ref_metrics", OMZ_MODELS, ids=[model[0] for model in OMZ_MODELS])
-def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
+@pytest.mark.parametrize(
+    "model, dataset, ref_metrics, advanced_params", OMZ_MODELS, ids=[model[0] for model in OMZ_MODELS]
+)
+def test_compression(data_dir, tmp_path, model, dataset, ref_metrics, advanced_params):
     if is_windows() and model == "mobilefacedet-v1-mxnet":
         pytest.xfail("OMZ for Windows has version 1.2.0 pinned that is incompatible with Python 3.8+")
     extracted_data_dir = os.path.dirname(get_dataset_for_test(dataset, data_dir))
@@ -51,6 +64,9 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
     calibration_dataset = get_nncf_dataset_from_ac_config(model_path, config_path, extracted_data_dir)
 
     ov_model = ov.Core().read_model(str(model_path))
+
+    if advanced_params is None:
+        advanced_params = AdvancedQuantizationParameters()
     quantized_model = nncf.quantize(
         ov_model,
         calibration_dataset,
@@ -58,6 +74,7 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
         TargetDevice.ANY,
         subset_size=300,
         fast_bias_correction=True,
+        advanced_parameters=advanced_params,
     )
     ov.serialize(quantized_model, int8_ir_path)
 

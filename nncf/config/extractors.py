@@ -70,9 +70,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
             f"algo {algo_name_to_match} in the NNCF config!"
         )
     if not matches:
-        raise RuntimeError(
-            f"Did not find an algorithm configuration for " f"algo {algo_name_to_match} in the NNCF config!"
-        )
+        raise RuntimeError(f"Did not find an algorithm configuration for algo {algo_name_to_match} in the NNCF config!")
     return next(iter(matches))
 
 

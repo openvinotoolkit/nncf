@@ -203,7 +203,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
             is_allowed, reason = self._are_frozen_layers_allowed()
             if is_allowed:
                 nncf_logger.warning(
-                    f"{reason}, compressing them without tuning weights.\n" f"Frozen layers:\n" f"{scopes_to_print}"
+                    f"{reason}, compressing them without tuning weights.\nFrozen layers:\n{scopes_to_print}"
                 )
             else:
                 raise RuntimeError(

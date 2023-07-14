@@ -9,20 +9,23 @@ The outcome of each quantization step is accuracy and performance with OpenVINO.
 ## Installation
 ```
 pip install -r requirements.txt
-python setup.py install
 ```
 
 ## Data preparation
+
+### Imagenet
+
+<data>/imagenet/val - name of path
 Since Torchvision `ImageFolder` class is used to work with data the ImageNet validation dataset should be structured accordingly. Below is an example of the `val` folder:
 ```
 n01440764
 n01695060
-n01843383 
+n01843383
 ...
 ```
 
 ## Usage
-Once the evnironment is installed use the following command to run the test:
+Once the environment is installed use the following command to run the test:
 ```
 NUM_VAL_THREADS=8 pytest --data=<path_to_imagenet_val_folder> --output=./tmp tests/post_training/test_quantize_conformance.py
 ```

@@ -40,7 +40,7 @@ def is_batched_linear(node: NNCFNode, graph: NNCFGraph) -> bool:
     Returns `True` if a feeded linear node output tensor has no more than two dimensions.
     A linear layer has more than two output dimensions means, that this
     linear layer multiplies several input matrices feeded by batch dimensions
-    from the left/right or both inputs. Batch input dimentions are elements of [:-2] slice.
+    from the left/right or both inputs. Batch input dimensions are elements of [:-2] slice.
 
     :param node: NNCFNode to check.
     :param graph: NNCFGraph which feeded node is belonged to.
@@ -133,7 +133,7 @@ def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple
     Always rounds number of remaining elements up.
 
     :param total: Total elements number.
-    :param sparsity_rate: Prorortion of zero elements in total.
+    :param sparsity_rate: Proportion of zero elements in total.
     :param multiple_of: Number of remaining elements must be a multiple of `multiple_of`.
     :return: Number of elements to be zeroed.
     """
@@ -255,7 +255,7 @@ class PruningAnalysisReason(Enum):
     DIMENSION_MISMATCH = "of dimension mismatch"
     CLOSING_CONV_MISSING = "closing convolution missing"
     IN_GROUP_OF_UNPRUNABLE = "is in the group with non prunable layers"
-    BATCHED_LINEAR = "linear node has bathced dimension(s)"
+    BATCHED_LINEAR = "linear node has batched dimension(s)"
     INCOMPATIBLE_DIMS_IN_CLUSTER = "channels in cluster nodes have different values"
 
     @classmethod

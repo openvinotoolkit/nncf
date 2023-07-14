@@ -35,7 +35,7 @@ class TensorReducerBase(ABC):
         """
         :param reduction_shape: Reduction shape for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
-        :param: Wheather should be calculated inplace or out of place.
+        :param inplace: Whether should be calculated inplace or out of place.
 
         """
         self._reduction_shape = reduction_shape
@@ -110,7 +110,7 @@ class TensorReducerBase(ABC):
 
 class TensorAggregatorBase:
     """
-    Tensor aggregator is designed to recieve (register) calculated statistics and
+    Tensor aggregator is designed to receive (register) calculated statistics and
     aggregate them in terms of NNCFCollectorTensorProcessor operations.
     """
 
@@ -150,7 +150,7 @@ class TensorAggregatorBase:
         """
         Aggregates collected tensors and returns aggregated result.
 
-        :retunr: Aggregated result.
+        :return: Aggregated result.
         """
 
     def reset(self):
@@ -170,7 +170,7 @@ class TensorCollector:
     Statistic branch consists of one reducer and one aggregator instance. TensorCollector
     applies a reducer on a correspondent inputs and then passes the one of the reduced tensors
     chosen by output port id to a correspondent aggregator for each registered statistic branch.
-    Receives tesnors by `register_input` method. Aggregated values as a TensorStatistic instance or
+    Receives tensors by `register_input` method. Aggregated values as a TensorStatistic instance or
     a dict could be collected by `get_statistics` call.
     """
 
@@ -224,15 +224,15 @@ class TensorCollector:
 
         :param container_key: Container key to pass aggregated statistic to.
         :param reducer: TensorReducer instance for the statistic collection branch.
-        :param aggregator: TensorAggergator instance for the statistic collection branch.
+        :param aggregator: TensorAggregator instance for the statistic collection branch.
         :reducer_output_port_id: Reducer target output port id.
         """
         if container_key in self._stat_container_kwargs_map:
             raise RuntimeError(
-                f"Two differend statistic branches for one" f" container key {container_key} are encountered"
+                f"Two different statistic branches for one container key {container_key} are encountered"
             )
         if any(aggr is aggregator for aggr in self._aggregators.values()):
-            raise RuntimeError(f"One aggregator instance {aggregator} " f" for different branches is encountered")
+            raise RuntimeError(f"One aggregator instance {aggregator} for different branches is encountered")
 
         self._reducers.add(reducer)
         key = (hash(reducer), reducer_output_port_id, hash(aggregator))
@@ -308,9 +308,9 @@ class TensorCollector:
 
     def get_inplace_fn_info(self) -> List[Tuple[Any, int]]:
         """
-        Returns necessery information to insert inplace operation into graph.
+        Returns necessary information to insert inplace operation into graph.
 
-        :returns: nesessery information to insert inplace operation into graph
+        :returns: necessary information to insert inplace operation into graph
             in format of pair of reducer builder and correspondent reducer output port id.
         """
         retval = []
@@ -330,7 +330,7 @@ class TensorCollector:
     def replace_aggregator(self, key: Tuple[int, int, int], aggregator: TensorAggregatorBase) -> None:
         """
         Friend method that replaces aggregator instance on equivalent one.
-        Key shoud be valid for for given aggregator and a statistic branch
+        Key should be valid for for given aggregator and a statistic branch
         with key should be present in TensorCollector.
 
         :param key: Statistic branch key.
@@ -442,11 +442,11 @@ class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
         reduction_shape: Optional[ReductionShape] = None,
-        quantile: Optional[Union[float, List[float]]] = None,
+        quantile: Optional[Union[float, Tuple[float]]] = None,
         inplace: bool = False,
     ):
         super().__init__(reduction_shape, False)
-        self._quantile = [0.01, 0.99] if quantile is None else quantile
+        self._quantile = (0.01, 0.99) if quantile is None else quantile
 
     def __eq__(self, __o: object) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile

@@ -136,5 +136,5 @@ class AccuracyControlAlgoBackend(ABC):
         Prepares model for inference.
 
         :param model: A model that should be prepared.
-        :retunr: Prepared model for inference.
+        :return: Prepared model for inference.
         """

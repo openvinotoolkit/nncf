@@ -43,7 +43,7 @@ def _sort_patterns_by_len(pattern: nx.DiGraph) -> int:
     non_pattern_nodes = [
         node_id
         for node_id, node_data in pattern.nodes(data=True)
-        if GraphPattern.NON_PATTERN_NODE_TYPE in node_data[GraphPattern.METATYPE_ATTR]
+        if GraphPattern.NON_PATTERN_NODE_TYPE in node_data.get(GraphPattern.METATYPE_ATTR, [])
     ]
     return len(pattern) - len(non_pattern_nodes)
 
@@ -84,7 +84,7 @@ def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgrap
             last_nodes.append(node)
 
     for node_from_graph, node_from_pattern in subgraph.items():
-        if GraphPattern.NON_PATTERN_NODE_TYPE in pattern.nodes[node_from_pattern].get(GraphPattern.METATYPE_ATTR):
+        if GraphPattern.NON_PATTERN_NODE_TYPE in pattern.nodes[node_from_pattern].get(GraphPattern.METATYPE_ATTR, []):
             continue
         predecessors_keys = graph.pred[node_from_graph].keys()
         successor_keys = graph.succ[node_from_graph].keys()
@@ -112,20 +112,23 @@ def _copy_subgraph_excluding_non_pattern_node(subgraph: Dict[str, str], pattern_
     output = {}
     for node_from_graph, node_from_pattern in subgraph.items():
         pattern_node = pattern_graph.graph.nodes[node_from_pattern]
-        pattern_node_types = pattern_node.get(GraphPattern.METATYPE_ATTR)
+        pattern_node_types = pattern_node.get(GraphPattern.METATYPE_ATTR, [])
         if GraphPattern.NON_PATTERN_NODE_TYPE not in pattern_node_types:
             output[node_from_graph] = node_from_pattern
     return output
 
 
-def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPattern) -> List[List[str]]:
+def find_subgraphs_matching_pattern(
+    graph: nx.DiGraph, pattern_graph: GraphPattern, strict: bool = True
+) -> List[List[str]]:
     """
     Finds a list of nodes which define a subgraph matched a pattern in pattern_graph.
     Nodes in each subgraph is stored in lexicographical_topological_sort.
 
     :param graph: The model graph.
     :param pattern_graph: A graph consists of patterns to match.
-    :return: A list of subgraphs are mathced to the patterns. Each subgraph is defined as a list of node keys.
+    :param strict: If True returns only strict matched subgraphs, if False - all matched subgraphs.
+    :return: A list of subgraphs are matched to the patterns. Each subgraph is defined as a list of node keys.
     """
     subgraphs = []
     matched_nodes = set()
@@ -134,8 +137,7 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
     for pattern in patterns:
         matcher = ism.DiGraphMatcher(graph, pattern, node_match=_are_nodes_matched)
         for subgraph in matcher.subgraph_isomorphisms_iter():
-            is_matching_strict = _is_subgraph_matching_strict(graph, pattern, subgraph)
-            if not is_matching_strict:
+            if strict and not _is_subgraph_matching_strict(graph, pattern, subgraph):
                 continue
 
             subgraph = _copy_subgraph_excluding_non_pattern_node(subgraph, pattern_graph)

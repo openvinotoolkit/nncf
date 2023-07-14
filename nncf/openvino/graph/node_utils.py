@@ -17,13 +17,13 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
@@ -86,7 +86,7 @@ def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) 
     :param port_id: The input port ID to get weight input.
     :return: The weight value.
     """
-    const_op_friendly_name = node_with_weight.layer_attributes.const_attrs[port_id]["name"]
+    const_op_friendly_name = node_with_weight.layer_attributes.constant_attributes[port_id]["name"]
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[const_op_friendly_name]
     weight_tensor = get_const_value(const_op)
@@ -323,15 +323,15 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
 
     channel_axes = node.metatype.const_channel_axis
     if node.metatype == OVMatMulMetatype:
-        assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
+        assert isinstance(node.layer_attributes, OVLayerAttributes)
         assert len(channel_axes) == 1
         assert channel_axes[0] in [-1, -2]
-        const_attrs = node.layer_attributes.const_attrs[weights_port_id]
+        const_attrs = node.layer_attributes.constant_attributes[weights_port_id]
         matmul_channel_axis = channel_axes[0]
         if const_attrs["transpose"]:
             transpose_swap = {-1: -2, -2: -1}
             matmul_channel_axis = transpose_swap[matmul_channel_axis]
-        shape = node.layer_attributes.const_attrs[weights_port_id]["shape"]
+        shape = node.layer_attributes.constant_attributes[weights_port_id]["shape"]
         matmul_channel_axis = len(shape) + matmul_channel_axis
         channel_axes = list(range(len(shape) - 2))
         channel_axes.append(matmul_channel_axis)

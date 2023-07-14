@@ -169,6 +169,7 @@ class MinMaxQuantization(Algorithm):
             collections.OrderedDict()
         )  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._unified_scale_groups = []
+        self._algorithm_key = f"MMQ_{hash(self)}"
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -335,9 +336,11 @@ class MinMaxQuantization(Algorithm):
         :param ignored_patterns: Ignored patterns.
         :return: IgnoredScope with all node names matched ignored_patterns.
         """
-        nncf_node_names = [
-            nncf_node.node_name for nncf_node in inference_nncf_graph.find_matching_nodes(ignored_patterns)
-        ]
+        nncf_node_names = []
+        for subgraph in inference_nncf_graph.find_matching_subgraphs(ignored_patterns, strict=False):
+            for nncf_node in subgraph:
+                nncf_node_names.append(nncf_node.node_name)
+
         return IgnoredScope(names=nncf_node_names)
 
     def _get_quantizer_setup(
@@ -604,7 +607,7 @@ class MinMaxQuantization(Algorithm):
 
         def filter_func(point: StatisticPoint) -> bool:
             return (
-                MinMaxQuantization in point.algorithm_to_tensor_collectors
+                self._algorithm_key in point.algorithm_to_tensor_collectors
                 and point.target_point == quantization_target_point
             )
 
@@ -614,7 +617,7 @@ class MinMaxQuantization(Algorithm):
             for quantization_target_point in unified_scale_group:
                 target_node_name = quantization_target_point.target_node_name
                 for tensor_collector in statistic_points.get_algo_statistics_for_node(
-                    target_node_name, filter_func, MinMaxQuantization
+                    target_node_name, filter_func, self._algorithm_key
                 ):
                     group_statistics.append(tensor_collector.get_statistics())
 
@@ -635,7 +638,7 @@ class MinMaxQuantization(Algorithm):
                 continue
             target_node_name = quantization_target_point.target_node_name
             for tensor_collector in statistic_points.get_algo_statistics_for_node(
-                target_node_name, filter_func, MinMaxQuantization
+                target_node_name, filter_func, self._algorithm_key
             ):
                 if quantization_target_point.is_weight_target_point():
                     weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
@@ -680,7 +683,7 @@ class MinMaxQuantization(Algorithm):
                 StatisticPoint(
                     target_point=quantization_target_point,
                     tensor_collector=stat_collector,
-                    algorithm=MinMaxQuantization,
+                    algorithm=self._algorithm_key,
                 )
             )
         return output

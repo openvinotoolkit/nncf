@@ -281,7 +281,7 @@ def _is_scopes_allow_replacement(
     for scope in scope_set_for_module:
         if matches_any(str(scope), ignored_scopes):
             nncf_logger.info(
-                f"Not processing a module that matched to an ignored scope in config; " f"module scope = {str(scope)}"
+                f"Not processing a module that matched to an ignored scope in config; module scope = {str(scope)}"
             )
             return False
         if eval_op_scopes is not None:

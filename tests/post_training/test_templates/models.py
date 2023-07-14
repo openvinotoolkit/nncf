@@ -12,6 +12,7 @@
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from tests.common.quantization.metatypes import ConstantTestMetatype
 from tests.common.quantization.mock_graphs import NodeWithType
 from tests.common.quantization.test_filter_constant_nodes import create_mock_graph
 from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
@@ -93,5 +94,98 @@ class NNCFGraphToTestMatMul:
             NodeWithType("Output_1", OutputNoopMetatype),
         ]
         node_edges = [("Input_1", "MatMul_1"), ("MatMul_1", "Output_1")]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
+class NNCFGraphCA:
+    def __init__(
+        self,
+        conv_metatype,
+        conv_layer_attrs=None,
+        conv_2_layer_attrs=None,
+        use_one_layer_attrs=True,
+        nncf_graph_cls=NNCFGraph,
+    ):
+        #       Original graph
+        #          Input_1
+        #             |
+        #           Conv_1
+        #             |
+        #           Conv_2
+        #             |
+        #           Output_1
+        if use_one_layer_attrs and not conv_layer_attrs is None and conv_2_layer_attrs is None:
+            conv_2_layer_attrs = conv_layer_attrs
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv_1_W", ConstantTestMetatype),
+            NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Conv_2_W", ConstantTestMetatype),
+            NodeWithType("Conv_2", conv_metatype, layer_attributes=conv_2_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype),
+        ]
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Conv_1", "Conv_2"),
+            ("Conv_2", "Output_1"),
+            ("Conv_1_W", "Conv_1"),
+            ("Conv_2_W", "Conv_2"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
+class NNCFGraphCAWithBias:
+    def __init__(
+        self,
+        conv_metatype,
+        add_metatype,
+        conv_layer_attrs=None,
+        both_biases=True,
+        add_layer_attrs=None,
+        constant_metatype=ConstantTestMetatype,
+        nncf_graph_cls=NNCFGraph,
+    ):
+        #       Original graph
+        #          Input_1
+        #             |
+        #           Conv_1
+        #             |
+        #           Add_1
+        #             |
+        #           Conv_2
+        #             |
+        #           Add_2
+        #           Output_1
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv_1_W", constant_metatype),
+            NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Add_1_W", constant_metatype),
+            NodeWithType("Add_1", add_metatype, layer_attributes=add_layer_attrs),
+            NodeWithType("Conv_2_W", constant_metatype),
+            NodeWithType("Conv_2", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype),
+        ]
+        if both_biases:
+            nodes.extend(
+                [
+                    NodeWithType("Add_2_W", constant_metatype),
+                    NodeWithType("Add_2", add_metatype, layer_attributes=add_layer_attrs),
+                ]
+            )
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Conv_1", "Add_1"),
+            ("Add_1", "Conv_2"),
+            ("Conv_1_W", "Conv_1"),
+            ("Add_1_W", "Add_1"),
+            ("Conv_2_W", "Conv_2"),
+        ]
+        if both_biases:
+            node_edges.extend([("Conv_2", "Add_2"), ("Add_2", "Output_1"), ("Add_2_W", "Add_2")])
+        else:
+            node_edges.extend([("Conv_2", "Output_1")])
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)

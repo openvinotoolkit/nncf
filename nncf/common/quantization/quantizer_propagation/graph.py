@@ -216,7 +216,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     def mark_act_quantizer_as_dependent_on_weights(self, pq: PropagatingQuantizer, operator_node_key: str):
         """
         Marks a given propagating quantizer corresponding to input activation quantization
-        of some downstream op as depenedent on weights of an operation that gives its weights directly
+        of some downstream op as dependent on weights of an operation that gives its weights directly
         as outputs (such as Embedding). The quantizer marked in this manner will be later considered
         for removal if the weights of the weight-as-outputs operation are quantized in a compatible
         way (i.e. with the same quantizer configuration) as is required by the propagating activation
@@ -1406,7 +1406,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     [str(setup.quantization_points[qp_id]) for qp_id in all_qp_ids_in_unified_scale_group]
                 )
                 nncf_logger.debug(
-                    f"Unifying weight quantizer ranges of {wao_op_node_key} " f"with {unified_scale_qp_printable_str}"
+                    f"Unifying weight quantizer ranges of {wao_op_node_key} with {unified_scale_qp_printable_str}"
                 )
 
             # The activation quantizer is now unnecessary since we could find a matching weight quantization

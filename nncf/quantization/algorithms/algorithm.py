@@ -35,7 +35,7 @@ class Algorithm(ABC):
     @abstractmethod
     def available_backends(self) -> Dict[str, BackendType]:
         """
-        Returns dictionary of the avaliable backends for the algorithm
+        Returns dictionary of the available backends for the algorithm
 
         :return: Dict of backends supported by the algorithm
         """

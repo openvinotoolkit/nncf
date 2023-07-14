@@ -21,7 +21,9 @@
 
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Dict, List, Optional, TypeVar
+
+from tqdm import tqdm
 
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
@@ -54,7 +56,7 @@ class SmoothQuant(Algorithm):
         """
         :param subset_size: Size of a subset for the statistics collection,
             default is 300.
-        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+        :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
         :param alpha: The parameter that regulates the calculation of the scale.
@@ -65,6 +67,7 @@ class SmoothQuant(Algorithm):
         self._inplace_statistics = inplace_statistics
         self._backend_entity = None
         self._alpha = alpha
+        self._algorithm_key = f"SQ_{hash(self)}"
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -103,7 +106,7 @@ class SmoothQuant(Algorithm):
 
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, nncf_graph)
 
-        for group_id, nodes in node_groups.items():
+        for group_id, nodes in tqdm(node_groups.items(), desc="Applying Smooth Quant"):
             best_ratio = 0.0
             for node_to_smooth in nodes:
                 source_node, port_id = group_id
@@ -176,13 +179,15 @@ class SmoothQuant(Algorithm):
 
         def filter_func(point: StatisticPoint) -> bool:
             return (
-                SmoothQuant in point.algorithm_to_tensor_collectors
+                self._algorithm_key in point.algorithm_to_tensor_collectors
                 and point.target_point.type == TargetType.PRE_LAYER_OPERATION
                 and point.target_point.port_id == act_port
             )
 
         statistics_for_node = []
-        for tensor_collector in statistic_points.get_algo_statistics_for_node(node_name, filter_func, SmoothQuant):
+        for tensor_collector in statistic_points.get_algo_statistics_for_node(
+            node_name, filter_func, self._algorithm_key
+        ):
             statistics_for_node.append(tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY])
         return statistics_for_node
 
@@ -217,7 +222,7 @@ class SmoothQuant(Algorithm):
                 StatisticPoint(
                     target_point=target_point,
                     tensor_collector=stat_collector,
-                    algorithm=SmoothQuant,
+                    algorithm=self._algorithm_key,
                 )
             )
         return statistic_container
