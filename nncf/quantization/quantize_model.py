@@ -226,13 +226,11 @@ def weights_compression(model: TModel, use_fake_quantize: bool = False) -> TMode
     Applies per-channel weights compression with dequantization or fake quantize insertion.
 
     :param model: A model to be compressed.
-    :type  model: TModel
     :param use_fake_quantize: Disables real compression of weights in Linear and Embedding layers.
         If True inserts fake quantization operations,
         else compress weights to int8 and inserts custom dequantization.
     :return: The model with compressed weight and dequantization or model with original weights and fake quantization.
         Not trainable.
-    :rtype: TModel
     """
     backend = get_backend(model)
     if backend == BackendType.TORCH:
