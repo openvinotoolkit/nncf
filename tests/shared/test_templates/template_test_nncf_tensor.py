@@ -20,6 +20,7 @@ TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 
 
+# pylint: disable=too-many-public-methods
 class TemplateTestNNCFTensorOperators:
     @staticmethod
     @abstractmethod
