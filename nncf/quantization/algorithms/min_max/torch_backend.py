@@ -312,7 +312,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
         types = []
         if model_type == ModelType.TRANSFORMER:
-            metatypes_to_add = [
+            types = [
                 om.PTAddMetatype,
                 om.PTPowerMetatype,
                 om.PTSubMetatype,
@@ -321,13 +321,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTReduceL2,
                 om.PTDivMetatype,
                 om.PTMaxMetatype,
+                om.PTSqueezeMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(om.PTMulMetatype)
-            type_name_to_add = ["squeeze"]
-            for metatype in metatypes_to_add:
-                types.extend(metatype.get_all_aliases())
-            types.extend(type_name_to_add)
+                types.append(om.PTMulMetatype)
         return types
 
     @staticmethod

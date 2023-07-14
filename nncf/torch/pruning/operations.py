@@ -80,6 +80,7 @@ from nncf.torch.graph.operator_metatypes import PTSigmoidMetatype
 from nncf.torch.graph.operator_metatypes import PTSILUMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
+from nncf.torch.graph.operator_metatypes import PTSqueezeMetatype
 from nncf.torch.graph.operator_metatypes import PTSubMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from nncf.torch.graph.operator_metatypes import PTTanhMetatype
@@ -616,7 +617,7 @@ class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register("reshape")
 class PTReshape(ReshapePruningOp, PTPruner):
-    subtypes = [PTReshapeMetatype]
+    subtypes = [PTReshapeMetatype, PTSqueezeMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register("concat")
