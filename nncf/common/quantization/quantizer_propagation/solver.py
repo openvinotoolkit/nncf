@@ -494,10 +494,6 @@ class QuantizerPropagationSolver:
             post_processing_node_keys = post_processing_node_locator.get_post_processing_node_keys()
             for post_processing_node_key in post_processing_node_keys:
                 self._add_node_to_ignored(post_processing_node_key, quant_prop_graph)
-        if self._model_type_marker_metatypes is not None:
-            for metatype in self._model_type_marker_metatypes:
-                for node_key in quant_prop_graph.get_node_keys_by_metatype(metatype):
-                    self._add_node_to_ignored(node_key, quant_prop_graph)
         quant_prop_graph = self.set_allowed_quantization_types_for_operator_nodes(quant_prop_graph)
         quant_prop_graph = self.setup_initial_quantizers(quant_prop_graph)
 
