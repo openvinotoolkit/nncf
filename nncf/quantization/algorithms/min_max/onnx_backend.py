@@ -213,9 +213,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+        types = []
         if model_type == ModelType.TRANSFORMER:
-            types = []
             metatypes_to_add = [
                 om.ONNXAddLayerMetatype,
                 om.ONNXPowMetatype,
@@ -233,8 +233,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 metatypes_to_add.append(om.ONNXMulLayerMetatype)
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
-            return IgnoredScope(types=types)
-        return IgnoredScope()
+        return types
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:

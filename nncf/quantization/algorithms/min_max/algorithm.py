@@ -314,8 +314,6 @@ class MinMaxQuantization(Algorithm):
         :param ignored_patterns: Ignored patterns.
         :return: Node names are ignored for quantization.
         """
-        model_type = self._model_type
-        device = self._target_device
         ignored_names = set()
 
         ignored_names.update(
@@ -324,16 +322,10 @@ class MinMaxQuantization(Algorithm):
             )
         )
 
-        model_type_ignore_scope = self._backend_entity.get_ignored_scope(model_type, device)
-
-        ignored_names.update(
-            get_ignored_node_names_from_ignored_scope(model_type_ignore_scope, nncf_graph, strict=False)
-        )
-
         ignored_scope = self._get_ignored_scope(inference_nncf_graph, ignored_patterns)
 
         ignored_names.update(
-            get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph, strict=self._ignored_scope.validate)
+            get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph, strict=False)
         )
 
         return ignored_names
@@ -390,6 +382,7 @@ class MinMaxQuantization(Algorithm):
         ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(hw_patterns)
         post_processing_types = self._backend_entity.post_processing_metatypes
+        model_type_types = self._backend_entity.get_ignored_scope(self._model_type, self._target_device)
         solver = QuantizerPropagationSolver(
             activation_ignored_scopes=ignored_names,
             weight_ignored_scopes=ignored_names,
@@ -402,6 +395,7 @@ class MinMaxQuantization(Algorithm):
             quantize_outputs=self._quantize_outputs,
             global_constraints=self._global_quantizer_constraints,
             post_processing_marker_metatypes=post_processing_types,
+            model_type_marker_metatypes=model_type_types,
             scales_unification_map=self._backend_entity.scales_unification_map,
         )
 

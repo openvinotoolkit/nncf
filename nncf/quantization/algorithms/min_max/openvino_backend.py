@@ -205,9 +205,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+        types = []
         if model_type == ModelType.TRANSFORMER:
-            types = []
             metatypes_to_add = [
                 om.OVAddMetatype,
                 om.OVPowerMetatype,
@@ -226,8 +226,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 metatypes_to_add.append(om.OVMultiplyMetatype)
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
-            return IgnoredScope(types=types)
-        return IgnoredScope()
+        return types
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
