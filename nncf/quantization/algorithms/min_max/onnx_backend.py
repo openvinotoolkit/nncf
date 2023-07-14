@@ -215,7 +215,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
         types = []
         if model_type == ModelType.TRANSFORMER:
-            metatypes_to_add = [
+            types = [
                 om.ONNXAddLayerMetatype,
                 om.ONNXPowMetatype,
                 om.ONNXSqueezeMetatype,
@@ -229,9 +229,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXReciprocalMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(om.ONNXMulLayerMetatype)
-            for metatype in metatypes_to_add:
-                types.extend(metatype.get_all_aliases())
+                types.append(om.ONNXMulLayerMetatype)
         return types
 
     @staticmethod

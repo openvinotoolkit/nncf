@@ -207,7 +207,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
         types = []
         if model_type == ModelType.TRANSFORMER:
-            metatypes_to_add = [
+            types = [
                 om.OVAddMetatype,
                 om.OVPowerMetatype,
                 om.OVSqueezeMetatype,
@@ -222,9 +222,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVMaximumMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(om.OVMultiplyMetatype)
-            for metatype in metatypes_to_add:
-                types.extend(metatype.get_all_aliases())
+                types.append(om.OVMultiplyMetatype)
         return types
 
     @staticmethod
