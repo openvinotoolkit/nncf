@@ -34,12 +34,13 @@ TModel = TypeVar("TModel")
 ALGO_BACKENDS = Registry("algo_backends")
 
 
+# pylint:disable=too-many-public-methods
 class MinMaxAlgoBackend(ABC):
     @property
     @abstractmethod
-    def mat_mul_metatype(self) -> OperatorMetatype:
+    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         """
-        Property for the backend-specific MatMul metatype.
+        Property for the backend-specific MatMul metatypes.
         """
 
     @property
@@ -58,7 +59,7 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def conv_metatype(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Convolution metatypes.
         """
@@ -78,6 +79,21 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @property
+    @abstractmethod
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes that also can be interpreted as elementwise.
+        """
+
+    @property
+    @abstractmethod
+    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Grouped Convolution metatypes.
+        """
+
+    @property
+    @abstractmethod
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         """
         Property for the backend-specific metatypes that produces quantizers that might be unified.
@@ -226,4 +242,15 @@ class MinMaxAlgoBackend(ABC):
 
         :param nncf_graph: Instance of NNCFGraph.
         :return: All nodes with weights.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def is_quantizer(node: NNCFNode, model: TModel) -> bool:
+        """
+        Return True if node is quantizer.
+
+        :param node: NNCFNode instance.
+        :param model: TModel instance.
+        :return: A boolean value.
         """

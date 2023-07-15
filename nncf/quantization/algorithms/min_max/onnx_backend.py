@@ -12,6 +12,7 @@
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
+import onnx
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -21,22 +22,7 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.backend import BackendType
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceL2Metatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceSumMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
+from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
@@ -58,35 +44,44 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.scopes import IgnoredScope
 
 
+# pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
-    def mat_mul_metatype(self) -> OperatorMetatype:
-        return ONNXLinearMetatype
+    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
+        return [om.ONNXLinearMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
-        return [ONNXTopKMetatype, ONNXNonMaxSuppressionMetatype]
+        return [om.ONNXTopKMetatype, om.ONNXNonMaxSuppressionMetatype]
 
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        return [ONNXShapeMetatype]
+        return [om.ONNXShapeMetatype]
 
     @property
-    def conv_metatype(self) -> List[OperatorMetatype]:
-        return [ONNXConvolutionMetatype]
+    def conv_metatypes(self) -> List[OperatorMetatype]:
+        return [om.ONNXConvolutionMetatype]
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
-        return [ONNXConvolutionMetatype, ONNXConvolutionTransposeMetatype, ONNXLinearMetatype]
+        return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, om.ONNXLinearMetatype]
 
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
 
     @property
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        return [om.ONNXAddLayerMetatype]
+
+    @property
+    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+        return self.conv_metatypes
+
+    @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {ONNXConcatMetatype: self.overflow_fix_metatypes}
+        return {om.ONNXConcatMetatype: self.overflow_fix_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:
@@ -227,17 +222,17 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [
-                ONNXAddLayerMetatype,
-                ONNXPowMetatype,
-                ONNXSqueezeMetatype,
-                ONNXSubMetatype,
-                ONNXReduceMeanMetatype,
-                ONNXReduceL2Metatype,
-                ONNXReduceSumMetatype,
-                ONNXDivLayerMetatype,
+                om.ONNXAddLayerMetatype,
+                om.ONNXPowMetatype,
+                om.ONNXSqueezeMetatype,
+                om.ONNXSubMetatype,
+                om.ONNXReduceMeanMetatype,
+                om.ONNXReduceL2Metatype,
+                om.ONNXReduceSumMetatype,
+                om.ONNXDivLayerMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(ONNXMulLayerMetatype)
+                metatypes_to_add.append(om.ONNXMulLayerMetatype)
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
             return IgnoredScope(types=types)
@@ -259,3 +254,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
         # If the nodes share one weight tensor, we should have only one quantizer on that
         return weight_name not in quantized_weight_names
+
+    @staticmethod
+    def is_quantizer(node: NNCFNode, model: onnx.ModelProto) -> bool:
+        return node.metatype in [om.ONNXDequantizeLinearMetatype, om.ONNXQuantizeLinearMetatype]

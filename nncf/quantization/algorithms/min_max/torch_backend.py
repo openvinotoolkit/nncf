@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import torch
+from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -64,8 +65,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     }
 
     @property
-    def mat_mul_metatype(self) -> OperatorMetatype:
-        return om.PTModuleLinearMetatype
+    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
+        return [om.PTModuleLinearMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -76,7 +77,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def conv_metatype(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
 
     @property
@@ -94,6 +95,14 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
+
+    @property
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        return [om.PTAddMetatype]
+
+    @property
+    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+        return self.conv_metatypes
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
@@ -339,3 +348,11 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [
             node for node in nncf_graph.get_all_nodes() if isinstance(node.layer_attributes, WeightedLayerAttributes)
         ]
+
+    @staticmethod
+    def is_quantizer(node: NNCFNode, model: NNCFNetwork) -> bool:
+        node_module = model.nncf.get_containing_module(node.node_name)
+        for pre_op in node_module.pre_ops.values():
+            if isinstance(pre_op.op, (BaseQuantizer, FakeQuantize)):
+                return True
+        return False
