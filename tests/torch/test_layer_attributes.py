@@ -98,7 +98,7 @@ class LayerAttributesTestDesc:
 
 
 BATCH_NORM_REF_ATTR = GenericWeightedLayerAttributes(
-    weight_requires_grad=True, weight_shape=Size([1]), filter_dimension_idx=0
+    weight_requires_grad=True, weight_shape=Size([1]), filter_dimension_idx=0, with_bias=True
 )
 LIST_TEST_DESCS = [
     LayerAttributesTestDesc(
@@ -138,6 +138,7 @@ LIST_TEST_DESCS = [
             groups=1,
             transpose=False,
             padding_values=(0, 0),
+            with_bias=True,
         ),
         metatype_cls=PTConv2dMetatype,
     ),
@@ -154,6 +155,7 @@ LIST_TEST_DESCS = [
             groups=2,
             transpose=False,
             padding_values=(0, 0),
+            with_bias=True,
         ),
         metatype_cls=PTConv2dMetatype,
     ),
@@ -170,6 +172,7 @@ LIST_TEST_DESCS = [
             groups=1,
             transpose=False,
             padding_values=(0,),
+            with_bias=True,
         ),
         metatype_cls=PTConv1dMetatype,
     ),
@@ -186,6 +189,7 @@ LIST_TEST_DESCS = [
             groups=1,
             transpose=False,
             padding_values=(0, 0, 0),
+            with_bias=True,
         ),
         metatype_cls=PTConv3dMetatype,
     ),
@@ -202,6 +206,7 @@ LIST_TEST_DESCS = [
             groups=1,
             transpose=True,
             padding_values=(0,),
+            with_bias=True,
         ),
         metatype_cls=PTConvTranspose1dMetatype,
     ),
@@ -218,6 +223,7 @@ LIST_TEST_DESCS = [
             groups=1,
             transpose=True,
             padding_values=(0, 0),
+            with_bias=True,
         ),
         metatype_cls=PTConvTranspose2dMetatype,
     ),
@@ -234,6 +240,7 @@ LIST_TEST_DESCS = [
             groups=1,
             transpose=True,
             padding_values=(0, 0, 0),
+            with_bias=True,
         ),
         metatype_cls=PTConvTranspose3dMetatype,
     ),
@@ -246,7 +253,9 @@ LIST_TEST_DESCS = [
     LayerAttributesTestDesc(
         module=nn.Linear(1, 1, bias=False),
         model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
-        layer_attributes=LinearLayerAttributes(weight_requires_grad=True, in_features=1, out_features=1, bias=False),
+        layer_attributes=LinearLayerAttributes(
+            weight_requires_grad=True, in_features=1, out_features=1, with_bias=False
+        ),
         metatype_cls=PTLinearMetatype,
     ),
     LayerAttributesTestDesc(

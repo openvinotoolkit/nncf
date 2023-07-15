@@ -143,7 +143,7 @@ class TemplateTestPTQParams:
 
         for _, stat_point in stat_points.items():
             for stat_point_ in stat_point:
-                for tensor_collector in stat_point_.algorithm_to_tensor_collectors[MinMaxQuantization]:
+                for tensor_collector in stat_point_.algorithm_to_tensor_collectors[min_max_algo._algorithm_key]:
                     if stat_point_.target_point.is_weight_target_point():
                         # default tensor_collector for weights
                         self.check_is_min_max_statistic_collector(tensor_collector)

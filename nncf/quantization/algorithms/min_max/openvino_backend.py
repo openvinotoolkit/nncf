@@ -238,6 +238,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVMVNMetatype,
                 om.OVDivideMetatype,
                 om.OVSqrtMetatype,
+                om.OVMaximumMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(om.OVMultiplyMetatype)

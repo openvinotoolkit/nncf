@@ -230,6 +230,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXReduceL2Metatype,
                 om.ONNXReduceSumMetatype,
                 om.ONNXDivLayerMetatype,
+                om.ONNXMaximumMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(om.ONNXMulLayerMetatype)
