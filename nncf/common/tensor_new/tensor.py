@@ -17,7 +17,7 @@ from nncf.common.tensor_new.enums import TensorBackendType
 from nncf.common.tensor_new.enums import TensorDataType
 
 try:
-    from nncf.common.tensor_new import torch_ops
+    from nncf.torch import torch_ops
 
 except ImportError:
     torch_ops = None
