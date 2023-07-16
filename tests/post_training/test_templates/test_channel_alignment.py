@@ -323,11 +323,12 @@ class TemplateTestChannelAlignment:
 
             return f
 
+        algorithm = ChannelAlignment()
         tensor_collector = TensorCollector()
         tensor_collector.get_statistics = get_constant_lambda(
             TestTensorStats(np.array([-1], dtype=np.int32), np.array([2], dtype=np.int32))
         )
-        statistic_points.add_statistic_point(StatisticPoint(target_point, tensor_collector, ChannelAlignment))
+        statistic_points.add_statistic_point(StatisticPoint(target_point, tensor_collector, algorithm._algorithm_key))
 
         class MockBackend(backend_cls):
             pass
@@ -339,7 +340,6 @@ class TemplateTestChannelAlignment:
         ref_dims_descr = "ref_dims_descr"
         MockBackend.get_dims_descriptor = get_constant_lambda(ref_dims_descr, True)
 
-        algorithm = ChannelAlignment()
         algorithm._backend_entity = MockBackend
         algorithm._set_backend_entity = mocker.MagicMock()
         ref_bias_in_after_align = "ref_bias_in_after_align"
@@ -456,8 +456,8 @@ class TemplateTestChannelAlignment:
         assert len(stat_points) == 1
 
         assert len(stat_points[0].algorithm_to_tensor_collectors.keys()) == 1
-        assert ChannelAlignment in stat_points[0].algorithm_to_tensor_collectors
-        tensor_collectors = stat_points[0].algorithm_to_tensor_collectors[ChannelAlignment]
+        assert algorithm._algorithm_key in stat_points[0].algorithm_to_tensor_collectors
+        tensor_collectors = stat_points[0].algorithm_to_tensor_collectors[algorithm._algorithm_key]
         assert len(tensor_collectors) == 1
         assert tensor_collectors[0] == ref_stat_collector
         MockBackend.get_statistic_collector.assert_called_once_with((0, 2, 3), 1e-4, ref_subset_size, ref_inplace)

@@ -67,6 +67,7 @@ class SmoothQuant(Algorithm):
         self._inplace_statistics = inplace_statistics
         self._backend_entity = None
         self._alpha = alpha
+        self._algorithm_key = f"SQ_{hash(self)}"
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -178,13 +179,15 @@ class SmoothQuant(Algorithm):
 
         def filter_func(point: StatisticPoint) -> bool:
             return (
-                SmoothQuant in point.algorithm_to_tensor_collectors
+                self._algorithm_key in point.algorithm_to_tensor_collectors
                 and point.target_point.type == TargetType.PRE_LAYER_OPERATION
                 and point.target_point.port_id == act_port
             )
 
         statistics_for_node = []
-        for tensor_collector in statistic_points.get_algo_statistics_for_node(node_name, filter_func, SmoothQuant):
+        for tensor_collector in statistic_points.get_algo_statistics_for_node(
+            node_name, filter_func, self._algorithm_key
+        ):
             statistics_for_node.append(tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY])
         return statistics_for_node
 
@@ -219,7 +222,7 @@ class SmoothQuant(Algorithm):
                 StatisticPoint(
                     target_point=target_point,
                     tensor_collector=stat_collector,
-                    algorithm=SmoothQuant,
+                    algorithm=self._algorithm_key,
                 )
             )
         return statistic_container

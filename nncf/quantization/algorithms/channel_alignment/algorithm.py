@@ -77,6 +77,7 @@ class ChannelAlignment(Algorithm):
         self._original_nncf_graph = None
         self._backend_entity = None
         self._quantile = 1e-4
+        self._algorithm_key = f"CA_{hash(self)}"
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -106,12 +107,12 @@ class ChannelAlignment(Algorithm):
         transformation_layout = TransformationLayout()
 
         def filter_func(point: StatisticPoint) -> bool:
-            return ChannelAlignment in point.algorithm_to_tensor_collectors and point.target_point == target_point
+            return self._algorithm_key in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
         for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel alignment"):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
-                statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, ChannelAlignment)
+                statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, self._algorithm_key)
             )
             assert len(tensor_collectors) == 1
             stat = tensor_collectors[0].get_statistics()
@@ -388,7 +389,7 @@ class ChannelAlignment(Algorithm):
                 StatisticPoint(
                     target_point=target_point,
                     tensor_collector=statistic_collector,
-                    algorithm=ChannelAlignment,
+                    algorithm=self._algorithm_key,
                 )
             )
 
