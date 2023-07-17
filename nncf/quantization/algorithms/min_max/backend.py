@@ -206,9 +206,9 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
         """
-        Returns ignores scope based on a model type and device parameters.
+        Returns ignored metatypes based on a model type and device parameters.
 
         :param model_type: Model type parameter.
         :param device: Target device.

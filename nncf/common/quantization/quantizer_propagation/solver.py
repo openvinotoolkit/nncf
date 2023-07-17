@@ -333,7 +333,7 @@ class QuantizerPropagationSolver:
         run_consistency_checks: bool = False,
         quantize_outputs: bool = False,
         post_processing_marker_metatypes: List[OperatorMetatype] = None,
-        model_type_marker_metatypes: List[OperatorMetatype] = None,
+        metatypes_to_ignore: List[OperatorMetatype] = None,
         scales_unification_map: Dict[OperatorMetatype, OperatorMetatype] = None,
     ):
         """
@@ -383,8 +383,8 @@ class QuantizerPropagationSolver:
             If the path with the nodes has the post-processing marker node,
             all the nodes in this path will be added into ignored.
             If None automatic ignoring will be skipped.
-        :param model_type_marker_metatypes: The framework specific NNCF metatypes,
-            which should be automatically ignored according to model type.
+        :param metatypes_to_ignore: The framework specific NNCF metatypes,
+            which should be automatically ignored.
         :param scales_unification_map: The framework-specific map with NNCF metatypes, which generating a quantizer
             that can be unified if it so requires based on metatype.
         """
@@ -441,7 +441,7 @@ class QuantizerPropagationSolver:
         self._num_potential_quantized_activations = 0
         self._quantizable_layer_nodes = quantizable_layer_nodes
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
-        self._model_type_marker_metatypes = model_type_marker_metatypes
+        self._metatypes_to_ignore = metatypes_to_ignore
         self._scales_unification_map = scales_unification_map
 
     def _filter_by_weight_ignored_target_scopes(
@@ -482,8 +482,8 @@ class QuantizerPropagationSolver:
         """
         self._num_potential_quantized_activations = 0
         quant_prop_graph = QuantizerPropagationStateGraph(ip_graph, self._ignored_scopes, self._target_scopes)
-        if self._model_type_marker_metatypes is not None:
-            for metatype in self._model_type_marker_metatypes:
+        if self._metatypes_to_ignore is not None:
+            for metatype in self._metatypes_to_ignore:
                 for node_key in quant_prop_graph.get_node_keys_by_metatype(metatype):
                     self._add_node_to_ignored(node_key, quant_prop_graph)
         if self._post_processing_marker_metatypes is not None:

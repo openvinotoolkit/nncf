@@ -212,7 +212,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
         types = []
         if model_type == ModelType.TRANSFORMER:
             types = [
