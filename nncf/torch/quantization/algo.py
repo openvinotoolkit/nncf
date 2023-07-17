@@ -54,6 +54,7 @@ from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
@@ -361,8 +362,11 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         )
 
         scales_unification_map = {PTCatMetatype: UNIFICATION_PRODUCING_METATYPES}
+        ignored_scopes_for_solver = {
+            name: IgnoreReason.USER_REQUESTED for name in self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS]
+        }
         prop_graph_solver = QuantizerPropagationSolver(
-            activation_ignored_scopes=self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS],
+            activation_ignored_scopes=ignored_scopes_for_solver,
             weight_ignored_scopes=self._ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
             activation_target_scopes=self._target_scopes_per_group[QuantizerGroup.ACTIVATIONS],
             weight_target_scopes=self._target_scopes_per_group[QuantizerGroup.WEIGHTS],
