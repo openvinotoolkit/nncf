@@ -17,7 +17,6 @@ from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar
 import numpy as np
 
 from nncf import Dataset
-from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -483,6 +482,7 @@ class MinMaxQuantization(Algorithm):
         hw_patterns = PatternsManager.get_full_hw_pattern_graph(backend=backend, device=device, model_type=model_type)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, hw_patterns, ignored_patterns)
         self._apply_model_type_pass(self._model_type, quantizer_setup, nncf_graph)
+        self._apply_device_pass(self._target_device, quantizer_setup, nncf_graph)
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup)
         quantization_points = list(quantizer_setup.quantization_points.values())
         quantization_points = self._topological_sort_quantization_points(quantization_points, nncf_graph)
@@ -668,7 +668,6 @@ class MinMaxQuantization(Algorithm):
                 transformation_layout.register(command)
 
         quantized_model = model_transformer.transform(transformation_layout)
-        quantized_model = self._apply_device_pass(self._target_device, quantized_model)
         return quantized_model
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
@@ -720,30 +719,36 @@ class MinMaxQuantization(Algorithm):
                                 f" to the symmetric due to ModelType parameter."
                             )
 
-    def _apply_device_pass(self, target_device: TargetDevice, quantized_model: TModel) -> TModel:
+    def _apply_device_pass(
+        self, target_device: TargetDevice, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
+    ) -> None:
         """
-        This method applies model post-processing device passes.
+        This method applies model post-processing device passes to SingleConfigQuantizerSetup in-place.
 
         :param target_device: TargetDevice instance.
-        :param quantized_model: Quantized TModel instance.
-        :return: Modified TModel.
+        :param quantizer_setup: SingleConfigQuantizerSetup instance to update.
+        :param nncf_graph: NNCFGraph.
+        :return: None.
         """
 
         passes_map = {TargetDevice.CPU_SPR: self._apply_spr_pass}
 
         if target_device not in passes_map:
-            return quantized_model
+            return
 
-        return passes_map[target_device](quantized_model)
+        passes_map[target_device](quantizer_setup, nncf_graph)
 
-    def _apply_spr_pass(self, quantized_model: TModel) -> TModel:
+    def _apply_spr_pass(
+        self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
+    ) -> SingleConfigQuantizerSetup:
         """
         Applies CPU_SPR-related pass.
         The main action is to remove one of the quantizers before elementwise layer (e.g. Add).
         This action allows to get performance boost on SPR devices.
 
-        :param quantized_model: Quantized TModel instance.
-        :return: Modified TModel.
+        :param quantizer_setup: SingleConfigQuantizerSetup instance to update.
+        :param nncf_graph: NNCFGraph instance to update.
+        :return: Modified SingleConfigQuantizerSetup.
         """
 
         def _is_node_after_producers(node):
@@ -756,16 +761,10 @@ class MinMaxQuantization(Algorithm):
                 if input_node.metatype in producer_metatypes:
                     return True
 
-        nncf_graph = NNCFGraphFactory.create(quantized_model)
-
         # Need to use inference graph to avoid walking through constant branches.
         nncf_graph = transform_to_inference_graph(
             nncf_graph, self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
         )
-
-        transformation_layout = TransformationLayout()
-        command_creator = CommandCreatorFactory.create(quantized_model)
-        model_transformer = ModelTransformerFactory.create(quantized_model)
 
         producer_metatypes = (
             self._backend_entity.conv_metatypes
@@ -773,33 +772,42 @@ class MinMaxQuantization(Algorithm):
             + self._backend_entity.group_conv_metatypes
         )
 
-        # Walking through all elementwise layers.
+        quantizer_setup_map = {
+            p.insertion_point.target_node_name: q_key for q_key, p in quantizer_setup.quantization_points.items()
+        }
+
+        # Walking through all Add layers.
         for add_node in nncf_graph.get_nodes_by_metatypes(self._backend_entity.add_metatypes):
             add_inputs = nncf_graph.get_previous_nodes(add_node)
 
-            # Filtering elementwise based on it's input.
-            # Need to find elementwise layer only with two activations as input.
-            if len(add_inputs) == 2 and all(self._backend_entity.is_quantizer(n, quantized_model) for n in add_inputs):
+            # Filtering Add based on it's input.
+            # Need to find Add layer only with two activations as input.
+            if len(add_inputs) == 2 and all(n.node_name in quantizer_setup_map for n in add_inputs):
                 # Sorting of the inputs based on length of input's consumer in descending order.
                 add_inputs.sort(key=lambda n: len(nncf_graph.get_next_nodes(n)), reverse=True)
-                fq_1, fq_2 = add_inputs
+                fq_1_producer, fq_2_producer = add_inputs
+                fq_1_q_key = quantizer_setup_map[fq_1_producer.node_name]
+                fq_2_q_key = quantizer_setup_map[fq_2_producer.node_name]
 
                 # In the case of the two quantizers where one of them produces data into branching,
                 # it needs to remove the quantizer without branching after it.
-                if len(nncf_graph.get_next_nodes(fq_1)) > 1 and len(nncf_graph.get_next_nodes(fq_2)) == 1:
-                    transformation_layout.register(command_creator.create_command_to_remove_quantizer(fq_2))
+                if (
+                    len(nncf_graph.get_next_nodes(fq_1_producer)) > 1
+                    and len(nncf_graph.get_next_nodes(fq_2_producer)) == 1
+                ):
+                    quantizer_setup.discard(fq_2_q_key, True)
                     continue
 
                 # In the case of the two quantizers without the brancking after them,
                 # it needs to check that all quantizers follows after producer nodes.
-                if _is_node_after_producers(fq_1) and _is_node_after_producers(fq_2):
-                    fq_1_prod_shape = np.prod(nncf_graph.get_output_edges(fq_1)[0].tensor_shape)
-                    fq_2_prod_shape = np.prod(nncf_graph.get_output_edges(fq_2)[0].tensor_shape)
+                if _is_node_after_producers(fq_1_producer) and _is_node_after_producers(fq_2_producer):
+                    fq_1_prod_shape = np.prod(nncf_graph.get_output_edges(fq_1_producer)[0].tensor_shape)
+                    fq_2_prod_shape = np.prod(nncf_graph.get_output_edges(fq_2_producer)[0].tensor_shape)
 
                     # Then it needs to remove quantizer with the smallest shape.
                     if fq_1_prod_shape >= fq_2_prod_shape:
-                        transformation_layout.register(command_creator.create_command_to_remove_quantizer(fq_1))
+                        quantizer_setup.discard(fq_1_q_key, True)
                     else:
-                        transformation_layout.register(command_creator.create_command_to_remove_quantizer(fq_2))
+                        quantizer_setup.discard(fq_2_q_key, True)
 
-        return model_transformer.transform(transformation_layout)
+        return quantizer_setup

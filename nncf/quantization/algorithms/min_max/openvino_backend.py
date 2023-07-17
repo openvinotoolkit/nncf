@@ -12,7 +12,6 @@
 from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
-import openvino.runtime as ov
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -263,7 +262,3 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
         return True
-
-    @staticmethod
-    def is_quantizer(node: NNCFNode, model: ov.Model) -> bool:
-        return node.metatype == om.OVFakeQuantizeMetatype

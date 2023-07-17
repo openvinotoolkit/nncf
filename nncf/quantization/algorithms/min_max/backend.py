@@ -243,14 +243,3 @@ class MinMaxAlgoBackend(ABC):
         :param nncf_graph: Instance of NNCFGraph.
         :return: All nodes with weights.
         """
-
-    @staticmethod
-    @abstractmethod
-    def is_quantizer(node: NNCFNode, model: TModel) -> bool:
-        """
-        Return True if node is quantizer.
-
-        :param node: NNCFNode instance.
-        :param model: TModel instance.
-        :return: A boolean value.
-        """

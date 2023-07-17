@@ -12,7 +12,6 @@
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
-import onnx
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -255,7 +254,3 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
         # If the nodes share one weight tensor, we should have only one quantizer on that
         return weight_name not in quantized_weight_names
-
-    @staticmethod
-    def is_quantizer(node: NNCFNode, model: onnx.ModelProto) -> bool:
-        return node.metatype in [om.ONNXDequantizeLinearMetatype, om.ONNXQuantizeLinearMetatype]
