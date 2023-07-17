@@ -381,7 +381,7 @@ class MinMaxQuantization(Algorithm):
         ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(hw_patterns)
         post_processing_types = self._backend_entity.post_processing_metatypes
-        metatypes_to_ignore = self._backend_entity.get_ignored_metatypes(self._model_type, self._target_device)
+        model_type_types = self._backend_entity.get_ignored_scope(self._model_type, self._target_device)
         solver = QuantizerPropagationSolver(
             activation_ignored_scopes=ignored_names,
             weight_ignored_scopes=ignored_names,
@@ -394,7 +394,7 @@ class MinMaxQuantization(Algorithm):
             quantize_outputs=self._quantize_outputs,
             global_constraints=self._global_quantizer_constraints,
             post_processing_marker_metatypes=post_processing_types,
-            metatypes_to_ignore=metatypes_to_ignore,
+            model_type_marker_metatypes=model_type_types,
             scales_unification_map=self._backend_entity.scales_unification_map,
         )
 
