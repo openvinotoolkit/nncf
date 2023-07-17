@@ -80,7 +80,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVReadValueMetatype]
 
     @property
-    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+    def add_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVAddMetatype]
 
     @property

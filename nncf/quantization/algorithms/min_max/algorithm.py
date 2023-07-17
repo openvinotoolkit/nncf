@@ -774,7 +774,7 @@ class MinMaxQuantization(Algorithm):
         )
 
         # Walking through all elementwise layers.
-        for add_node in nncf_graph.get_nodes_by_metatypes(self._backend_entity.elementwise_metatypes):
+        for add_node in nncf_graph.get_nodes_by_metatypes(self._backend_entity.add_metatypes):
             add_inputs = nncf_graph.get_previous_nodes(add_node)
 
             # Filtering elementwise based on it's input.

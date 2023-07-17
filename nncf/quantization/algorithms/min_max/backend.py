@@ -80,9 +80,9 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+    def add_metatypes(self) -> List[OperatorMetatype]:
         """
-        Property for the backend-specific metatypes that also can be interpreted as elementwise.
+        Property for the backend-specific metatypes that also can be interpreted as Add layer.
         """
 
     @property
