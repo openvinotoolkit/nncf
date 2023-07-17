@@ -237,7 +237,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXReciprocalMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(ONNXMulLayerMetatype)
+                metatypes_to_add.append(om.ONNXMulLayerMetatype)
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
             return IgnoredScope(types=types)
