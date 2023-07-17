@@ -79,12 +79,14 @@ class ParamsGridSearchAlgorithm:
                 algorithm_key = (*best_combination, param_value)
                 algorithm = algorithms[algorithm_key]
 
+                nncf_logger.info(f"Current combination: {combinations[algorithm_key]._changes}")
+
                 curr_model = algorithm.apply(copy_model(model), statistic_points)
                 score, _ = self._validation_fn(
                     self._backend_entity.prepare_for_inference(curr_model), validation_dataset.get_data(subset_indices)
                 )
 
-                nncf_logger.info(f"{param_name}: {param_value} __ Score: {score}")
+                nncf_logger.info(f"Score: {score}")
 
                 if param_best_score is None or param_best_score < score:
                     param_best_score = score
@@ -96,6 +98,7 @@ class ParamsGridSearchAlgorithm:
                 best_combination = (*best_combination, param_best_value)
 
         # Apply best combination
+        nncf_logger.info(f"Best combination: {combinations[best_combination]._changes}")
         algorithm = algorithms[best_combination]
         retval = algorithm.apply(model, statistic_points)
 
