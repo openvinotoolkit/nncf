@@ -65,7 +65,7 @@ def _insert_pre_compression_operations(
     module: nn.Module, allowed_types: Dict, use_fake_quantize=False, level_high=255
 ) -> Optional[nn.Module]:
     """
-    Insets weights compression with dequantization or quantization pre operation for Linear and Embedding layers.
+    Inserts weights compression with dequantization or quantization pre operation for Linear and Embedding layers.
 
     :param module: The module to insert the weights compression.
     :param allowed_types: list of allowed types for weights compression.
