@@ -162,4 +162,4 @@ def dict_product(kwargs):
 
 
 def create_params(cls, **kwargs):
-    return [cls(*params) for params in dict_product(kwargs)]
+    return [cls(**params) for params in dict_product(kwargs)]
