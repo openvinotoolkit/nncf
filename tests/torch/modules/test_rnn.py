@@ -195,7 +195,7 @@ class TestLSTMCell:
             ref_result = ref_rnn(ref_data.x[i], (ref_data.h0[0], ref_data.c0[0]))
             test_result = test_rnn(test_data.x[i], (test_data.h0[0], test_data.c0[0]))
             for ref, test in list(zip(ref_result, test_result)):
-                torch.testing.assert_allclose(test, ref)
+                torch.testing.assert_close(test, ref)
 
     def test_backward_lstm_cell(self, sizes, _seed):
         p = sizes
@@ -218,7 +218,7 @@ class TestLSTMCell:
             test_grads = get_grads([ref_data.h0[0], ref_data.c0[0]])
             test_grads += get_grads([test_rnn.weight_ih, test_rnn.weight_hh, test_rnn.bias_ih, test_rnn.bias_hh])
             for ref, test in list(zip(test_grads, ref_grads)):
-                torch.testing.assert_allclose(test, ref)
+                torch.testing.assert_close(test, ref)
 
 
 def test_export_lstm_cell(tmp_path):
@@ -318,16 +318,16 @@ class TestLSTM:
         ref_output, (ref_hn, ref_cn) = ref_rnn(ref_data.x, ref_hidden)
         test_output, (test_hn, test_cn) = test_rnn(test_data.x, test_hidden)
 
-        torch.testing.assert_allclose(test_hn[0], ref_hn[0], rtol=1e-3, atol=1e-4)
-        torch.testing.assert_allclose(test_cn[0], ref_cn[0], rtol=1e-3, atol=1e-4)
+        torch.testing.assert_close(test_hn[0], ref_hn[0], rtol=1e-3, atol=1e-4)
+        torch.testing.assert_close(test_cn[0], ref_cn[0], rtol=1e-3, atol=1e-4)
         if variable_length:
-            torch.testing.assert_allclose(test_output.batch_sizes, ref_output.batch_sizes)
-            torch.testing.assert_allclose(test_output.data, ref_output.data, rtol=1e-2, atol=1e-3)
+            torch.testing.assert_close(test_output.batch_sizes, ref_output.batch_sizes)
+            torch.testing.assert_close(test_output.data, ref_output.data, rtol=1e-2, atol=1e-3)
             if not sorted_:
-                torch.testing.assert_allclose(test_output.sorted_indices, ref_output.sorted_indices)
-                torch.testing.assert_allclose(test_output.unsorted_indices, ref_output.unsorted_indices)
+                torch.testing.assert_close(test_output.sorted_indices, ref_output.sorted_indices)
+                torch.testing.assert_close(test_output.unsorted_indices, ref_output.unsorted_indices)
         else:
-            torch.testing.assert_allclose(test_output, ref_output, rtol=9e-2, atol=15e-4)
+            torch.testing.assert_close(test_output, ref_output, rtol=9e-2, atol=15e-4)
 
     def test_backward_lstm(
         self,
@@ -386,7 +386,7 @@ class TestLSTM:
             ref_grads += get_grads([ref_data.h0[0], ref_data.c0[0]])
             test_grads += get_grads([test_hidden[0][0], test_hidden[1][0]])
         for ref, test in list(zip(test_grads, ref_grads)):
-            torch.testing.assert_allclose(test, ref, rtol=1e-1, atol=1e-1)
+            torch.testing.assert_close(test, ref, rtol=1e-1, atol=1e-1)
 
     @classmethod
     def flatten_nested_lists(cls, nested_list):
