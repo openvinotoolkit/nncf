@@ -385,5 +385,9 @@ class IgnoredPatternNames(Enum):
     Describes the patterns, which nodes should be ignored during FakeQuantize placement.
     """
 
-    MULTIHEAD_ATTENTION_OUTPUT = PatternDesc("multihead_attention_output", model_types=[ModelType.TRANSFORMER])
+    MULTIHEAD_ATTENTION_OUTPUT = PatternDesc(
+        "multihead_attention_output",
+        model_types=[ModelType.TRANSFORMER],
+        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
+    )
     FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
