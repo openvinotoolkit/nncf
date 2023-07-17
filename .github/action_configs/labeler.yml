@@ -5,66 +5,45 @@ dependencies:
   - '**/setup.py'
 
 NNCF PT:
-- any:
-    - 'examples/torch/**/*'
-    - 'examples/post_training_quantization/torch/**/*'
-    - 'nncf/torch/**/*'
-    - 'tests/torch/**/*'
-    - 'nncf/quantization/**/torch_backend.py'
-  all:
-    - '!**/*.md'
+  - 'examples/torch/**/*!(.md)'
+  - 'examples/post_training_quantization/torch/**/*!(.md)'
+  - 'nncf/torch/**/*!(.md)'
+  - 'tests/torch/**/*!(.md)'
+  - 'nncf/quantization/**/torch_backend.py'
 
 NNCF TF:
-- any:
-    - 'examples/tensorflow/**/*'
-    - 'examples/post_training_quantization/tensorflow/**/*'
-    - 'nncf/tensorflow/**/*'
-    - 'tests/tensorflow/**/*'
-    - 'nncf/quantization/**/tf_backend.py'
-  all:
-    - '!**/*.md'
+  - 'examples/tensorflow/**/*!(.md)'
+  - 'examples/post_training_quantization/tensorflow/**/*!(.md)'
+  - 'nncf/tensorflow/**/*!(.md)'
+  - 'tests/tensorflow/**/*!(.md)'
+  - 'nncf/quantization/**/tf_backend.py'
 
 NNCF ONNX:
-- any:
-    - 'examples/onnx/**/*'
-    - 'examples/post_training_quantization/onnx/**/*'
-    - 'nncf/onnx/**/*'
-    - 'tests/onnx/**/*'
-    - 'nncf/quantization/**/onnx_backend.py'
-  all:
-    - '!**/*.md'
+  - 'examples/onnx/**/*!(.md)'
+  - 'examples/post_training_quantization/onnx/**/*!(.md)'
+  - 'nncf/onnx/**/*!(.md)'
+  - 'tests/onnx/**/*!(.md)'
+  - 'nncf/quantization/**/onnx_backend.py'
 
 NNCF OpenVINO:
-- any:
-    - 'examples/openvino/**/*'
-    - 'examples/post_training_quantization/openvino/**/*'
-    - 'nncf/openvino/**/*'
-    - 'tests/openvino/**/*'
-    - 'nncf/quantization/**/openvino_backend.py'
-  all:
-    - '!**/*.md'
+  - 'examples/openvino/**/*!(.md)'
+  - 'examples/post_training_quantization/openvino/**/*!(.md)'
+  - 'nncf/openvino/**/*!(.md)'
+  - 'tests/openvino/**/*!(.md)'
+  - 'nncf/quantization/**/openvino_backend.py'
 
 NNCF PTQ:
-- any:
-    - 'nncf/quantization/**/*'
-    - 'tests/post_training/**/*'
-  all:
-    - '!**/*.md'
+  - 'nncf/quantization/**/*!(.md)'
+  - 'tests/post_training/**/*!(.md)'
 
 documentation:
   - '**/*.md'
   - 'docs/**/*'
 
 experimental:
-- any:
-    - 'nncf/experimental/**/*'
-  all:
-    - '!**/*.md'
+  - 'nncf/experimental/**/*!(.md)'
 
 NNCF Common:
-- any:
-    - 'examples/common/**/*'
-    - 'nncf/common/**/*'
-    - 'tests/common/**/*'
-  all:
-    - '!**/*.md'
+  - 'examples/common/**/*!(.md)'
+  - 'nncf/common/**/*!(.md)'
+  - 'tests/common/**/*!(.md)'
