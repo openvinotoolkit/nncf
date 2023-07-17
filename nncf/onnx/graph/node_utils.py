@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import onnx
@@ -114,7 +114,7 @@ def is_port_quantized(node: NNCFNode, nncf_graph: NNCFGraph, port_id: int) -> bo
     return weight_node.metatype == ONNXDequantizeLinearMetatype
 
 
-def transpose_axis(shape, axis):
+def transpose_axis(shape: List[int], axis: int) -> int:
     """
     Returns transpose axis.
 
