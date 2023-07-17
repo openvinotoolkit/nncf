@@ -23,6 +23,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
+from nncf.onnx.graph.node_utils import transpose_axis
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
@@ -150,8 +151,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                     or target_point.port_id == 1
                     and node.layer_attributes.node_attrs["transB"] == 1
                 ):
-                    weight_channel_axis = range(len(weight_shape))[weight_channel_axis]
-                weight_channel_axis %= len(weight_shape)
+                    weight_channel_axis = transpose_axis(weight_shape, weight_channel_axis)
         return weight_channel_axis
 
     @staticmethod

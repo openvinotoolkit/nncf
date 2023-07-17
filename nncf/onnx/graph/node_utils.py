@@ -112,3 +112,15 @@ def is_port_quantized(node: NNCFNode, nncf_graph: NNCFGraph, port_id: int) -> bo
     input_nodes = [edge.from_node for edge in nncf_graph.get_input_edges(node)]
     weight_node = input_nodes[port_id]
     return weight_node.metatype == ONNXDequantizeLinearMetatype
+
+
+def transpose_axis(shape, axis):
+    """
+    Returns transpose axis.
+
+    :param shape: Tensor shape.
+    :param axis: Axis before transpose.
+    :return: Axis after transpose.
+    """
+    axis %= len(shape)  # Make axis positive
+    return range(len(shape) - 1, -1, -1)[axis]  # Iterate backward throug axis
