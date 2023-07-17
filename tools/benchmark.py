@@ -1,5 +1,17 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 import time
+from typing import Dict, List
 
 import torch
 import torch.distributed as dist
@@ -15,7 +27,7 @@ def warmup(layer, input_, runs, forward_only=False):
             new_i[0].sum().backward()
 
 
-def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float, output=None):
+def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float) -> Dict[str, float]:
     input_ = torch.randn(input_size_, device=torch.device(device), dtype=dtype)
 
     # Force CUDA initialization & warm up
@@ -35,17 +47,15 @@ def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float,
 
     if is_print:
         print("Forward&Backward: {0:.3f} {1}".format(fbtime, ctime))
-    if output is not None:
-        output.append({"forward + backward": fbtime})
+    return {"forward + backward": fbtime}
 
 
-def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torch.float, output=None):
+def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torch.float) -> Dict[str, float]:
     input_ = torch.randn(input_size_, device=torch.device(device), dtype=dtype)
 
     # Force CUDA initialization & warm up
     warmup(layer, input_, 100, forward_only)
 
-    start = time.time()
     forward_min = math.inf
     forward_time = 0
     backward_min = math.inf
@@ -82,18 +92,15 @@ def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torc
         )
     )
 
-    if output is not None:
-        output.append(
-            {
-                "forward_min": forward_min,
-                "forward_avg": forward_average,
-                "backward_min": backward_min,
-                "backward_avg": backward_average,
-            }
-        )
+    return {
+        "forward_min": forward_min,
+        "forward_avg": forward_average,
+        "backward_min": backward_min,
+        "backward_avg": backward_average,
+    }
 
 
-def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, output=None):
+def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, output: List[Dict[str, int]] = None):
     dist.init_process_group(backend="nccl", init_method="tcp://127.0.0.1:8899", world_size=world_size, rank=gpu)
 
     device = torch.device("cuda:%d" % gpu)
@@ -110,4 +117,6 @@ def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, out
     run_model = layer.to(device)
     run_model = nn.parallel.DistributedDataParallel(run_model, device_ids=[gpu])
 
-    run_wall(run_model, run_size, device, runs, (gpu == 0), dtype, output)
+    retval = run_wall(run_model, run_size, device, runs, (gpu == 0), dtype)
+    if output is not None:
+        output.append(retval)
