@@ -46,11 +46,6 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     assert node_with_bias.layer_attributes.has_bias()
     bias_name = node_with_bias.layer_attributes.bias_attrs["name"]
     return onnx_graph.get_tensor_value(bias_name)
-    node = onnx_graph.get_node_by_output(bias_name)
-    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-    if metatype == ONNXIdentityMetatype:
-        return onnx_graph.get_tensor_value(node.input[0])
-    raise RuntimeError("Could not find the bias value of the node")
 
 
 def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]:
