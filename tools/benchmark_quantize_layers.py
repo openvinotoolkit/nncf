@@ -9,22 +9,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import sys
+from dataclasses import asdict
+from dataclasses import dataclass
+from enum import Enum
 from itertools import product
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import torch
 import torch.multiprocessing as mp
-from torch import nn
 from tqdm import tqdm
 
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_per_channel_scale_shape
-from nncf.torch.utils import sum_like
+from nncf.torch.quantization.reference import ReferenceBackendType
+from nncf.torch.quantization.reference import ReferenceQuantize
 from tools.benchmark import run_profile
 from tools.benchmark import run_wall
 from tools.benchmark import run_worker
@@ -38,56 +42,115 @@ LOW_BATCH_INPUT_SIZE = [2, 96, 64, 64]
 HIGH_BATCH_INPUT_SIZE = [128, 96, 64, 64]
 
 
-TEST_PLACES = ["weights", "activations"]
-TEST_GRANULARITY = ["per_tensor", "per_channel"]
-TEST_SYMMETRIC = [True, False]
-TEST_DEVICES = [torch.device("cuda"), torch.device("cpu")]
-TEST_BATCHES = [
-    {
-        "mode": "low batch",
-        "input_size": LOW_BATCH_INPUT_SIZE,
-        "runs": {torch.device("cuda"): GPU_RUNS_LOW_BATCH, torch.device("cpu"): CPU_RUNS},
-    },
-    {
-        "mode": "high batch",
-        "input_size": HIGH_BATCH_INPUT_SIZE,
-        "runs": {torch.device("cuda"): GPU_RUNS_HIGH_BATCH, torch.device("cpu"): CPU_RUNS},
-    },
-]
-TEST_DTYPES = [torch.float, torch.half]
-TEST_DISTR_MODE = ["SYNK", "DATAPARALLEL", "DATADISTRIBUTED"]
-TEST_NARROW_RANGE = [False, True]
-TEST_TIMING_MODE = ["KERNEL", "WALL"]
-TEST_REFERENCE = [True, False]
+class BatchMode(Enum):
+    LOW = "low"
+    HIGH = "high"
 
-TEST_PARAMS_STRUCT = [
-    {
-        "dtype": dtype,
-        "device": device,
-        "batch": batch,
-        "place": place,
-        "granularity": granularity,
-        "symmetric": symmetric,
-        "narrow_range": narrow_range,
-        "mode": distr_mode,
-        "timing": timing,
-        "ref": ref,
-    }
-    for dtype, device, distr_mode, place, granularity, symmetric, narrow_range, timing, ref, batch in product(
+
+class ExecutionType(Enum):
+    REGULAR = "regular"
+    DATA_PARALLEL = "data_parallel"
+    DISTRIBUTED_DATA_PARALLEL = "distributed_data_parallel"
+
+
+class TimingMode(Enum):
+    KERNEL = "kernel"
+    WALL = "wall"
+
+
+@dataclass
+class BatchDescriptor:
+    mode: BatchMode
+    input_size: List[int]
+    num_runs: Dict[torch.device, int]
+
+
+class TensorType(Enum):
+    WEIGHTS = "weights"
+    ACTIVATIONS = "activations"
+
+
+class GranularityType(Enum):
+    PER_TENSOR = "per_tensor"
+    PER_CHANNEL = "per_channel"
+
+
+TEST_TENSOR_TYPES: List[TensorType] = [TensorType.WEIGHTS, TensorType.ACTIVATIONS]
+TEST_GRANULARITY: List[GranularityType] = [GranularityType.PER_TENSOR, GranularityType.PER_CHANNEL]
+TEST_SYMMETRIC: List[bool] = [True, False]
+TEST_DEVICES: List[torch.device] = [torch.device("cuda"), torch.device("cpu")]
+
+TEST_BATCHES: List[BatchDescriptor] = [
+    BatchDescriptor(
+        mode=BatchMode.LOW,
+        input_size=LOW_BATCH_INPUT_SIZE,
+        num_runs={torch.device("cuda"): GPU_RUNS_LOW_BATCH, torch.device("cpu"): CPU_RUNS},
+    ),
+    BatchDescriptor(
+        mode=BatchMode.HIGH,
+        input_size=HIGH_BATCH_INPUT_SIZE,
+        num_runs={torch.device("cuda"): GPU_RUNS_HIGH_BATCH, torch.device("cpu"): CPU_RUNS},
+    ),
+]
+TEST_DTYPES: List[torch.dtype] = [torch.float, torch.half]
+TEST_EXEC_TYPES: List[ExecutionType] = [
+    ExecutionType.REGULAR,
+    ExecutionType.DISTRIBUTED_DATA_PARALLEL,
+    ExecutionType.DATA_PARALLEL,
+]
+TEST_NARROW_RANGE: List[bool] = [False, True]
+TEST_TIMING_MODE: List[TimingMode] = [TimingMode.WALL, TimingMode.KERNEL]
+TEST_REFERENCE: List[bool] = [False, True]
+
+
+@dataclass
+class ParamStruct:
+    dtype: torch.dtype
+    device: torch.device
+    exec_type: ExecutionType
+    batch: BatchDescriptor
+    tensor_type: TensorType
+    granularity: GranularityType
+    symmetric: bool
+    narrow_range: bool
+    timing_mode: TimingMode
+    ref: bool
+
+    def to_dict(self) -> Dict:
+        dct = asdict(self)
+        dct.pop("batch")
+        dct["num_runs"] = self.batch.num_runs[self.device]
+        dct["input_size"] = self.batch.input_size
+        return dct
+
+
+TEST_PARAM_STRUCTS: List[ParamStruct] = [
+    ParamStruct(
+        dtype=dtype,
+        device=device,
+        exec_type=exec_type,
+        batch=batch,
+        tensor_type=tensor_type,
+        granularity=granularity,
+        symmetric=symmetric,
+        narrow_range=narrow_range,
+        timing_mode=timing,
+        ref=ref,
+    )
+    for ref, timing, narrow_range, dtype, exec_type, batch, device, tensor_type, granularity, symmetric, in product(
+        TEST_REFERENCE,
+        TEST_TIMING_MODE,
+        TEST_NARROW_RANGE,
         TEST_DTYPES,
+        TEST_EXEC_TYPES,
+        TEST_BATCHES,
         TEST_DEVICES,
-        TEST_DISTR_MODE,
-        TEST_PLACES,
+        TEST_TENSOR_TYPES,
         TEST_GRANULARITY,
         TEST_SYMMETRIC,
-        TEST_NARROW_RANGE,
-        TEST_TIMING_MODE,
-        TEST_REFERENCE,
-        TEST_BATCHES,
     )
     if not (device == torch.device("cpu") and dtype == torch.half)
-    and not (device == torch.device("cpu") and distr_mode != "SYNK")
-    and not (device == torch.device("cuda") and distr_mode != "SYNK" and batch["mode"] == "low_batch")
+    and not (device == torch.device("cpu") and exec_type == ExecutionType.DISTRIBUTED_DATA_PARALLEL)
 ]
 
 
@@ -105,125 +168,63 @@ class DefaultedPTQuantizerSpec(PTQuantizerSpec):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range, scale_shape, logarithm_scale)
 
 
-# reference impl
-class ReferenceQuantizeSymmetric(torch.autograd.Function):
-    # pylint:disable=abstract-method
-    @staticmethod
-    def forward(ctx, input_, scale, bits):
-        level_high = scale.new_tensor([2 ** (bits - 1) - 1])
-        level_low = scale.new_tensor([-(level_high + 1)])
-        s = level_high / scale
-
-        output = input_ * s
-        output = output.clamp(min=level_low[0], max=level_high[0])
-        output = output.round()
-        output = output / s
-
-        ctx.save_for_backward(input_, scale, output)
-        ctx.level_high = level_high
-        ctx.level_low = level_low
-
-        return output
-
-    @staticmethod
-    def backward(ctx: Any, *grad_outputs: Any) -> Any:
-        grad_output = grad_outputs[0]
-        input_, scale, output = ctx.saved_tensors
-        level_high = ctx.level_high
-        level_low = ctx.level_low
-
-        alpha = float(level_low) / float(level_high)
-        mask_hi = (input_ > scale).type(input_.dtype)
-        mask_lo = (input_ < scale * alpha).type(input_.dtype)
-        mask_in = 1 - mask_hi - mask_lo
-
-        val_grad_out = mask_hi + alpha * mask_lo
-        err = (output - input_) * scale.reciprocal()
-        grad_scale = grad_output * (err * mask_in + val_grad_out)
-        grad_scale = sum_like(grad_scale, scale)
-
-        # calc gradient for input
-        grad_input = grad_output * mask_in
-
-        return grad_input, grad_scale, None
+RQ = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
 
 
-class ReferenceQuantize(nn.Module):
-    def __init__(self, num_bits=8, input_shape=None, is_weights=True, per_channel=False):
-        super().__init__()
-        self.input_shape = input_shape
-        self.is_weights = is_weights
-        scale_shape = [1]
-        if per_channel:
-            scale_shape = get_per_channel_scale_shape(self.input_shape, self.is_weights)
+def get_module(params_struct: ParamStruct) -> BaseQuantizer:
+    input_shape = params_struct.batch.input_size
+    is_weights = params_struct.tensor_type == TensorType.WEIGHTS
 
-        self.scale = nn.Parameter(torch.ones(scale_shape))
-        self.num_bits = num_bits
-        self.level_high = 2 ** (self.num_bits - 1) - 1
-        self.level_low = -(self.level_high + 1)
-        self.quantize = ReferenceQuantizeSymmetric.apply
+    scale_shape = [
+        1,
+    ]
+    if params_struct.granularity == GranularityType.PER_CHANNEL:
+        scale_shape = get_per_channel_scale_shape(input_shape, is_weights=is_weights)
+    specs = DefaultedPTQuantizerSpec(scale_shape=scale_shape, narrow_range=params_struct.narrow_range, num_bits=NBITS)
 
-    def get_scale(self):
-        return self.scale
+    module_cls = SymmetricQuantizer if params_struct.symmetric else AsymmetricQuantizer
+    m = module_cls(specs)
+    m = m.to(params_struct.device)
+    if params_struct.dtype == torch.half:
+        m.half()
 
-    def forward(self, input_):
-        return self.quantize(input_, self.scale, self.num_bits)
-
-
-def get_module(params, per_tensor_scale_shape):
-    input_shape = params["batch"]["input_size"]
-    is_weights = params["place"] == "weights"
-
-    if params["ref"]:
-        module = ReferenceQuantize(NBITS, input_shape, is_weights, per_channel=params["granularity"] == "per_channel")
-    else:
-        scale_shape = per_tensor_scale_shape
-        if params["granularity"] == "per_channel":
-            scale_shape = get_per_channel_scale_shape(input_shape, is_weights=is_weights)
-        specs = DefaultedPTQuantizerSpec(scale_shape=scale_shape, narrow_range=params["narrow_range"], num_bits=NBITS)
-
-        module_cls = SymmetricQuantizer if params["symmetric"] else AsymmetricQuantizer
-        module = module_cls(specs)
-
-    module = module.to(params["device"])
-    if params["dtype"] == torch.half:
-        module.half()
-
-    if params["ref"] and params["mode"] == "DATAPARALLEL":
-        module = nn.parallel.DataParallel(module, range(torch.cuda.device_count()))
-    return module
+    return m
 
 
 if __name__ == "__main__":
-    file_name = "benchmark_quantize_layers_result.csv" if len(os.argv) == 1 else os.argv[1]
+    file_name = "benchmark_quantize_layers_result.csv" if len(sys.argv) == 1 else sys.argv[1]
     print(f"Benchmark results will be saved to file {file_name}")
 
-    benchmark_data = []
-    per_tensor_scale_shape = (1,)
+    benchmark_data = []  # type: List[Dict[str, Any]]
     device_ids = range(torch.cuda.device_count())
     ngpus_per_node = len(device_ids)
     world_size = ngpus_per_node
-    for params in tqdm(TEST_PARAMS_STRUCT):
-        print(params)
-        module = get_module(params, per_tensor_scale_shape)
-        call_fn = run_wall if params["timing"] == "WALL" else run_profile
-        runs = params["batch"]["runs"][params["device"]]
+    for param_struct in tqdm(TEST_PARAM_STRUCTS):
+        param_struct: ParamStruct
+        print(param_struct)
+        module = get_module(param_struct)
+        call_fn = run_wall if param_struct.timing_mode == TimingMode.WALL else run_profile
+        num_runs = param_struct.batch.num_runs[param_struct.device]
 
-        input_size = params["batch"]["input_size"]
-        if params["mode"] == "DATADISTRIBUTED":
-            mp.spawn(
-                run_worker,
-                nprocs=ngpus_per_node,
-                args=(world_size, module, input_size, runs, params["dtype"], benchmark_data),
-            )
+        input_size = param_struct.batch.input_size
+        if param_struct.exec_type == ExecutionType.DISTRIBUTED_DATA_PARALLEL:
+            output = []  # type: List[Dict[str, float]]
+            try:
+                mp.spawn(
+                    run_worker,
+                    nprocs=ngpus_per_node,
+                    args=(world_size, module, input_size, num_runs, param_struct.dtype, output),
+                )
+                run_data = output[0]
+            except:  # pylint:disable=bare-except
+                run_data = {"time": -1}
         else:
-            call_fn(module, input_size, params["device"], runs, dtype=params["dtype"], output=benchmark_data)
-        batch_data = params.pop("batch")
-        batch_data.update({"runs": batch_data["runs"][params["device"]]})
-        params.update(batch_data)
-        benchmark_data[-1] = {**params, **benchmark_data[-1]}
+            run_data = call_fn(module, input_size, param_struct.device, num_runs, dtype=param_struct.dtype)
 
-    df = pd.DataFrame(benchmark_data)
+        runtime = next(iter(run_data.values()))
+        benchmark_data.append({**param_struct.to_dict(), "time_ms": runtime})
 
-    df.to_csv(file_name, index=False)
+        df = pd.DataFrame(benchmark_data)
+
+        df.to_csv(file_name, index=False)
     print("Done!")

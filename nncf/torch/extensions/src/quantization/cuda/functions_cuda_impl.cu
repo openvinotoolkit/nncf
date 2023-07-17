@@ -323,7 +323,7 @@ at::Tensor q_cuda_forward(
 
     auto output = at::empty_like(input);
 
-    PROFILE(AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.scalar_type(), "q_cuda_forward", ([&] {
+    PROFILE(DISPATCH_TENSOR_DATA_TYPES(input.scalar_type(), "q_cuda_forward", ([&] {
           q_cuda_forward_kernel<scalar_t><<<GET_BLOCKS(quantized_elements_count), CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
               output.data_ptr<scalar_t>(),
               input.data_ptr<scalar_t>(),
@@ -361,7 +361,7 @@ std::vector<at::Tensor> q_single_scale_cuda_backward(at::Tensor grad_output,
     auto dev_last_block_counter_range = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
     auto dev_last_block_counter_low = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
-    PROFILE(AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.scalar_type(), "q_single_scale_cuda_backward", ([&] {
+    PROFILE(DISPATCH_TENSOR_DATA_TYPES(input.scalar_type(), "q_single_scale_cuda_backward", ([&] {
       using scalar_accum_t = ACCUM_TYPE_FOR(scalar_t);
       q_single_scale_cuda_backward_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
           grad_input.data_ptr<scalar_t>(),
@@ -409,7 +409,7 @@ std::vector<at::Tensor> q_scale_per_weight_channel_cuda_backward(at::Tensor grad
     auto dev_last_block_counter_range = at::zeros({grid_size.x, 1},  at::device(grad_output.options().device()).dtype(at::kInt));
     auto dev_last_block_counter_low = at::zeros({grid_size.x, 1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
-    PROFILE(AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.scalar_type(), "q_single_scale_cuda_backward", ([&] {
+    PROFILE(DISPATCH_TENSOR_DATA_TYPES(input.scalar_type(), "q_single_scale_cuda_backward", ([&] {
               using scalar_accum_t = ACCUM_TYPE_FOR(scalar_t);
               q_scale_per_weight_channel_cuda_backward_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
                   grad_input.data_ptr<scalar_t>(),
@@ -460,7 +460,7 @@ std::vector<at::Tensor> q_scale_per_activation_channel_cuda_backward(at::Tensor 
     auto dev_last_block_counter_low = at::zeros({grid_size.x, 1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
     PROFILE(
-        AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.scalar_type(), "q_scale_per_activation_channel_cuda_backward", ([&] {
+        DISPATCH_TENSOR_DATA_TYPES(input.scalar_type(), "q_scale_per_activation_channel_cuda_backward", ([&] {
           using scalar_accum_t = ACCUM_TYPE_FOR(scalar_t);
           q_scale_per_activation_channel_cuda_backward_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_input.data_ptr<scalar_t>(),

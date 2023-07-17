@@ -1,6 +1,6 @@
 fastdownload
-openvino-dev==2023.0.0
-torchmetrics
+openvino-dev==2023.0.1
+torchmetrics==1.0.1
 pycocotools
 torchvision~=0.15.1
 tqdm

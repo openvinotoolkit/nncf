@@ -350,6 +350,20 @@ class ONNXOrMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXMaximumMetatype(ONNXOpMetatype):
+    name = "MaxOp"
+    op_names = ["Max"]
+    hw_config_names = [HWConfigOpName.MAXIMUM]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXMinimumMetatype(ONNXOpMetatype):
+    name = "MinOp"
+    op_names = ["Min"]
+    hw_config_names = [HWConfigOpName.MINIMUM]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXFloorMetatype(ONNXOpMetatype):
     name = "FloorOp"
     op_names = ["Floor"]

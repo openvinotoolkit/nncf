@@ -21,25 +21,7 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.backend import BackendType
-from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReciprocalMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceL2Metatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceSumMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqrtMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
+from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -64,23 +46,23 @@ from nncf.scopes import IgnoredScope
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatype(self) -> OperatorMetatype:
-        return MATMUL_METATYPES
+        return om.MATMUL_METATYPES
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
-        return [ONNXTopKMetatype, ONNXNonMaxSuppressionMetatype]
+        return [om.ONNXTopKMetatype, om.ONNXNonMaxSuppressionMetatype]
 
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        return [ONNXShapeMetatype]
+        return [om.ONNXShapeMetatype]
 
     @property
     def conv_metatype(self) -> List[OperatorMetatype]:
-        return [ONNXConvolutionMetatype]
+        return [om.ONNXConvolutionMetatype]
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
-        return [ONNXConvolutionMetatype, ONNXConvolutionTransposeMetatype, *MATMUL_METATYPES]
+        return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, *om.MATMUL_METATYPES]
 
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
@@ -88,7 +70,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {ONNXConcatMetatype: self.overflow_fix_metatypes}
+        return {om.ONNXConcatMetatype: self.overflow_fix_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:
@@ -160,7 +142,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         weight_channel_axis = node.metatype.weight_channel_axis
         if node.layer_attributes.has_node_attrs():
-            if node.metatype == ONNXGemmMetatype:
+            if node.metatype == om.ONNXGemmMetatype:
                 weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
                 if (
                     target_point.port_id == 0
@@ -168,7 +150,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                     or target_point.port_id == 1
                     and node.layer_attributes.node_attrs["transB"] == 1
                 ):
-                    weight_channel_axis = 1 - weight_channel_axis
+                    weight_channel_axis = range(len(weight_shape))[weight_channel_axis]
                 weight_channel_axis %= len(weight_shape)
         return weight_channel_axis
 
@@ -242,16 +224,17 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [
-                ONNXAddLayerMetatype,
-                ONNXPowMetatype,
-                ONNXSqueezeMetatype,
-                ONNXSubMetatype,
-                ONNXReduceMeanMetatype,
-                ONNXReduceL2Metatype,
-                ONNXReduceSumMetatype,
-                ONNXDivLayerMetatype,
-                ONNXSqrtMetatype,
-                ONNXReciprocalMetatype,
+                om.ONNXAddLayerMetatype,
+                om.ONNXPowMetatype,
+                om.ONNXSqueezeMetatype,
+                om.ONNXSubMetatype,
+                om.ONNXReduceMeanMetatype,
+                om.ONNXReduceL2Metatype,
+                om.ONNXReduceSumMetatype,
+                om.ONNXDivLayerMetatype,
+                om.ONNXMaximumMetatype,
+                om.ONNXSqrtMetatype,
+                om.ONNXReciprocalMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(ONNXMulLayerMetatype)
