@@ -31,6 +31,7 @@ from nncf.quantization.algorithms.accuracy_control.rank_functions import create_
 from nncf.quantization.passes import remove_shapeof_subgraphs
 
 TModel = TypeVar("TModel")
+TPModel = TypeVar("TPModel")
 TTensor = TypeVar("TTensor")
 
 
@@ -83,6 +84,7 @@ class Ranker:
         dataset: Dataset,
         algo_backend: AccuracyControlAlgoBackend,
         evaluator: Evaluator,
+        num_processes: int = 1,
         ranking_fn: Optional[Callable[[Any, Any], float]] = None,
     ):
         """
@@ -105,6 +107,7 @@ class Ranker:
         # because they don't change. So use this attribute to store
         # them to improve execution time.
         self._reference_values_for_each_item = None
+        self._num_processes = num_processes
 
     def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
         """
@@ -195,21 +198,69 @@ class Ranker:
         nncf_logger.info("Calculating ranking score for groups of quantizers")
         with timer():
             # Calculate ranking score for groups of quantizers.
-            ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
-            for current_group in groups_to_rank:
-                modified_model = revert_operations_to_floating_point_precision(
-                    current_group.operations, current_group.quantizers, quantized_model, quantized_model_graph
+            if self._num_processes > 1:
+                ranking_scores = self._multiprocessing_calculation_ranking_score(
+                    quantized_model, quantized_model_graph, groups_to_rank, ranking_subset_indices
                 )
-                # Calculate the ranking score for the current group of quantizers.
-                ranking_score = self._calculate_ranking_score(modified_model, ranking_subset_indices)
-                ranking_scores.append(float(ranking_score))
+
+            else:
+                ranking_scores = self._sequential_calculation_ranking_score(
+                    quantized_model, quantized_model_graph, groups_to_rank, ranking_subset_indices
+                )
 
         # Rank groups.
         ranked_groups = [group for _, group in sorted(zip(ranking_scores, groups_to_rank), key=operator.itemgetter(0))]
 
         return ranked_groups
 
-    def _calculate_ranking_score(self, modified_model: TModel, ranking_subset_indices: List[int]) -> float:
+    def _sequential_calculation_ranking_score(
+        self,
+        quantized_model: TModel,
+        quantized_model_graph: NNCFGraph,
+        groups_to_rank: List[GroupToRank],
+        ranking_subset_indices: List[int],
+    ):
+        ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
+        for current_group in groups_to_rank:
+            modified_model = revert_operations_to_floating_point_precision(
+                current_group.operations, current_group.quantizers, quantized_model, quantized_model_graph
+            )
+
+            prepared_model = self._algo_backend.prepare_for_inference(modified_model)
+            ranking_score = self._calculate_ranking_score(prepared_model, ranking_subset_indices)
+            ranking_scores.append(float(ranking_score))
+
+        return ranking_scores
+
+    def _multiprocessing_calculation_ranking_score(
+        self,
+        quantized_model: TModel,
+        quantized_model_graph: NNCFGraph,
+        groups_to_rank: List[GroupToRank],
+        ranking_subset_indices: List[int],
+    ):
+        ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
+        prepared_model_queue = []
+        for idx, current_group in enumerate(groups_to_rank):
+            modified_model = revert_operations_to_floating_point_precision(
+                current_group.operations, current_group.quantizers, quantized_model, quantized_model_graph
+            )
+
+            prepared_model_queue.append(self._algo_backend.prepare_for_inference_async(modified_model))
+
+            if idx >= (self._num_processes - 1):
+                prepared_model = prepared_model_queue.pop(0).get()
+                ranking_score = self._calculate_ranking_score(prepared_model, ranking_subset_indices)
+                ranking_scores.append(float(ranking_score))
+
+        for _ in range(self._num_processes - 1):
+            prepared_model = prepared_model_queue.pop(0).get()
+            ranking_score = self._calculate_ranking_score(prepared_model, ranking_subset_indices)
+            ranking_scores.append(float(ranking_score))
+
+        return ranking_scores
+
+    def _calculate_ranking_score(self, prepared_model: TPModel, ranking_subset_indices: List[int]) -> float:
         """
         Calculates the ranking score for the current group of quantizers.
 
@@ -219,11 +270,13 @@ class Ranker:
         """
         if self._evaluator.is_metric_mode():
             # Calculate ranking score based on metric
-            ranking_score, _ = self._evaluator.validate(modified_model, self._dataset, ranking_subset_indices)
+            ranking_score, _ = self._evaluator.validate_model_for_inference(
+                prepared_model, self._dataset, ranking_subset_indices
+            )
         else:
             # Calculate ranking score based on differences in logits
-            approximate_outputs = self._evaluator.collect_values_for_each_item(
-                modified_model, self._dataset, ranking_subset_indices
+            approximate_outputs = self._evaluator.collect_values_for_each_item_using_model_for_inference(
+                prepared_model, self._dataset, ranking_subset_indices
             )
             reference_outputs = [self._reference_values_for_each_item[i] for i in ranking_subset_indices]
             errors = [self._ranking_fn(a, b) for a, b in zip(reference_outputs, approximate_outputs)]

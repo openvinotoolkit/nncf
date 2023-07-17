@@ -16,6 +16,7 @@ from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 
 TModel = TypeVar("TModel")
+TPModel = TypeVar("TPModel")
 TTensor = TypeVar("TTensor")
 
 
@@ -49,13 +50,22 @@ class Evaluator:
         """
         return self._metric_mode
 
-    def validate(
-        self, model: TModel, dataset: Dataset, indices: Optional[List[int]] = None
-    ) -> Tuple[float, Union[None, List[float], List[List[TTensor]]]]:
+    def prepare_model_for_inference(self, model: TModel) -> TPModel:
         """
-        Validates model.
+        Prepares model for inference.
 
-        :param model: Model to validate.
+        :param model: A model that should be prepared.
+        :return: Prepared model for inference.
+        """
+        return self._algo_backend.prepare_for_inference(model)
+
+    def validate_model_for_inference(
+        self, model_for_inference: TPModel, dataset: Dataset, indices: Optional[List[int]] = None
+    ):
+        """
+        Validates prepared model for inference.
+
+        :param model: Prepared model to validate.
         :param dataset: Dataset to validate the model.
         :param indices: Zero-based indices of data items that should be selected from
             the dataset.
@@ -66,7 +76,6 @@ class Evaluator:
                 Otherwise, if the condition is false, it represents list of logits for each
                 item.
         """
-        model_for_inference = self._algo_backend.prepare_for_inference(model)
         if self._metric_mode is None:
             self._determine_mode(model_for_inference, dataset)
 
@@ -87,7 +96,27 @@ class Evaluator:
 
         return float(metric), values_for_each_item
 
-    def _determine_mode(self, model_for_inference: TModel, dataset: Dataset) -> None:
+    def validate(
+        self, model: TModel, dataset: Dataset, indices: Optional[List[int]] = None
+    ) -> Tuple[float, Union[None, List[float], List[List[TTensor]]]]:
+        """
+        Validates model.
+
+        :param model: Model to validate.
+        :param dataset: Dataset to validate the model.
+        :param indices: Zero-based indices of data items that should be selected from
+            the dataset.
+        :return: A tuple (metric_value, values_for_each_item) where
+            - metric_values: This is a metric for the model.
+            - values_for_each_item: If the `Evaluator.is_metric_mode()` condition is true,
+                then `values_for_each_item` represents the list of metric value for each item.
+                Otherwise, if the condition is false, it represents list of logits for each
+                item.
+        """
+        model_for_inference = self.prepare_model_for_inference(model)
+        return self.validate_model_for_inference(model_for_inference, dataset, indices)
+
+    def _determine_mode(self, model_for_inference: TPModel, dataset: Dataset) -> None:
         """
         Determines mode based on the type of returned value from the
         validation function.
@@ -144,13 +173,13 @@ class Evaluator:
         elif values_for_each_item is not None and not isinstance(values_for_each_item[0], list):
             raise RuntimeError("Unexpected return value from provided validation function.")
 
-    def collect_values_for_each_item(
-        self, model: TModel, dataset: Dataset, indices: Optional[List[int]] = None
+    def collect_values_for_each_item_using_model_for_inference(
+        self, model_for_inference: TPModel, dataset: Dataset, indices: Optional[List[int]] = None
     ) -> Union[List[float], List[List[TTensor]]]:
         """
-        Collects value for each item from the dataset. If `is_metric_mode()`
-        returns `True` then i-th value is a metric for i-th data item. It
-        is an output of the model for i-th data item otherwise.
+        Collects value for each item from the dataset using prepared model for inference.
+        If `is_metric_mode()` returns `True` then i-th value is a metric for i-th data item.
+        It is an output of the model for i-th data item otherwise.
 
         :param model: Model to infer.
         :param dataset: Dataset to collect values.
@@ -160,13 +189,12 @@ class Evaluator:
         """
         if self._metric_mode:
             # Collect metrics for each item
-            model_for_inference = self._algo_backend.prepare_for_inference(model)
             values_for_each_item = [
                 self._validation_fn(model_for_inference, [data_item])[0] for data_item in dataset.get_data(indices)
             ]
         else:
             # Collect outputs for each item
-            engine = EngineFactory.create(model)
+            engine = EngineFactory.create(model_for_inference)
 
             values_for_each_item = []
             for data_item in dataset.get_inference_data(indices):
@@ -174,3 +202,20 @@ class Evaluator:
                 values_for_each_item.append(list(logits.values()))
 
         return values_for_each_item
+
+    def collect_values_for_each_item(
+        self, model: TModel, dataset: Dataset, indices: Optional[List[int]] = None
+    ) -> Union[List[float], List[List[TTensor]]]:
+        """
+        Collects value for each item from the dataset. If `is_metric_mode()`
+        returns `True` then i-th value is a metric for i-th data item. It
+        is an output of the model for i-th data item otherwise.
+
+        :param model: A target model.
+        :param dataset: Dataset to collect values.
+        :param indices: The zero-based indices of data items that should be selected from
+            the dataset.
+        :return: Collected values.
+        """
+        model_for_inference = self.prepare_model_for_inference(model)
+        return self.collect_values_for_each_item_using_model_for_inference(model_for_inference, dataset, indices)

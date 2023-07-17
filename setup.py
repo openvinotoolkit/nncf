@@ -122,6 +122,7 @@ INSTALL_REQUIRES = [
     "pandas>=1.1.5,<2.1",
     "scikit-learn>=0.24.0",
     "openvino-telemetry",
+    "psutil",
 ]
 
 

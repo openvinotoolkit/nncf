@@ -20,7 +20,10 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.common.utils.os import available_cpu_count
+from nncf.common.utils.os import available_memory_amount
 from nncf.common.utils.timer import timer
+from nncf.data.dataset import CountingDatasetWrapper
 from nncf.data.dataset import Dataset
 from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
@@ -29,6 +32,9 @@ from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
+PREPARATION_MODEL_THRESHOLD = 1
+OVERHEAD_COEFFICIENT = 2
+MEMORY_INCREASE_COEFFICIENT = 4
 
 
 def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
@@ -139,6 +145,7 @@ class QuantizationAccuracyRestorer:
         max_num_iterations: int = sys.maxsize,
         max_drop: float = 0.01,
         drop_type: DropType = DropType.ABSOLUTE,
+        num_ranking_processes: Optional[int] = None,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
@@ -148,11 +155,14 @@ class QuantizationAccuracyRestorer:
         :param drop_type: The accuracy drop type, which determines how the maximum
             accuracy drop between the original model and the compressed model is
             calculated.
+        :param num_ranking_processes: The number of parallel processes that are used to rank
+            quantization operations.
         """
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations
         self.max_drop = max_drop
         self.drop_type = drop_type
+        self.num_ranking_processes = num_ranking_processes
 
     def apply(
         self,
@@ -182,12 +192,17 @@ class QuantizationAccuracyRestorer:
 
         # Validate initial and quantized model
         evaluator = Evaluator(validation_fn, algo_backend)
-        initial_metric, reference_values_for_each_item = self._collect_metric_and_values(
+        initial_metric, reference_values_for_each_item, _, _ = self._collect_metric_and_values(
             initial_model, validation_dataset, evaluator, "initial"
         )
-        quantized_metric, approximate_values_for_each_item = self._collect_metric_and_values(
-            quantized_model, validation_dataset, evaluator, "quantized"
-        )
+        counting_validation_dataset = CountingDatasetWrapper(validation_dataset)
+        (
+            quantized_metric,
+            approximate_values_for_each_item,
+            preperation_time,
+            validation_time,
+        ) = self._collect_metric_and_values(quantized_model, counting_validation_dataset, evaluator, "quantized")
+        validation_dataset_size = counting_validation_dataset.num_iters
 
         should_terminate, accuracy_drop = calculate_accuracy_drop(
             initial_metric, quantized_metric, self.max_drop, self.drop_type
@@ -221,7 +236,17 @@ class QuantizationAccuracyRestorer:
         )
         nncf_logger.info(f"Total number of quantized operations in the model: {report.num_quantized_operations}")
 
-        ranker = Ranker(self.ranking_subset_size, validation_dataset, algo_backend, evaluator)
+        # Calculate number of parallel processes for Ranker
+        num_ranking_processes = self.num_ranking_processes
+        if num_ranking_processes is None:
+            model_size = algo_backend.get_model_size(quantized_model)
+            num_ranking_processes = self.compute_number_ranker_parallel_proc(
+                model_size, preperation_time, validation_time, validation_dataset_size, self.ranking_subset_size
+            )
+
+        nncf_logger.info(f"Number of parallel processes to rank quantized operations: {num_ranking_processes}")
+
+        ranker = Ranker(self.ranking_subset_size, validation_dataset, algo_backend, evaluator, num_ranking_processes)
         groups_to_rank = ranker.find_groups_of_quantizers_to_rank(quantized_model_graph)
         ranked_groups = ranker.rank_groups_of_quantizers(
             groups_to_rank,
@@ -383,7 +408,36 @@ class QuantizationAccuracyRestorer:
         model: TModel, dataset: Dataset, evaluator: Evaluator, model_name: str
     ) -> Tuple[float, Union[None, List[float], List[List[TTensor]]]]:
         nncf_logger.info(f"Validation of {model_name} model was started")
-        with timer():
-            metric, values_for_each_item = evaluator.validate(model, dataset)
+        with timer() as preperation_time:
+            model_for_inference = evaluator.prepare_model_for_inference(model)
+        with timer() as validation_time:
+            metric, values_for_each_item = evaluator.validate_model_for_inference(model_for_inference, dataset)
         nncf_logger.info(f"Metric of {model_name} model: {metric}")
-        return metric, values_for_each_item
+        return metric, values_for_each_item, preperation_time(), validation_time()
+
+    @staticmethod
+    def compute_number_ranker_parallel_proc(
+        model_size: int,
+        preperation_time: float,
+        validation_time: float,
+        validation_dataset_size: int,
+        ranking_subset_size: int,
+    ) -> int:
+        if preperation_time < PREPARATION_MODEL_THRESHOLD:
+            return 1
+
+        # Calculate the number of parallel processes needed to override model preparation and
+        # metric calculation on the ranking subset
+        ranking_time = validation_time * ranking_subset_size / validation_dataset_size
+        n_proc = max(round(preperation_time / ranking_time * OVERHEAD_COEFFICIENT), 2)
+
+        # Apply limitation by number of CPU cores
+        n_cores = available_cpu_count()
+        n_proc = max(min(n_proc, n_cores // 2), 1)
+
+        # Apply limitation by memmory
+        ram = available_memory_amount()
+        n_copies = ram // (model_size * MEMORY_INCREASE_COEFFICIENT)
+        n_proc = max(min(n_proc, n_copies - 1), 1)
+
+        return n_proc
