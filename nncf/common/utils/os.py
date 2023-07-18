@@ -48,7 +48,7 @@ def available_cpu_count() -> int:
     """
     try:
         return multiprocessing.cpu_count()
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         return 1
 
 
@@ -58,5 +58,5 @@ def available_memory_amount() -> int:
     """
     try:
         return psutil.virtual_memory()[1]
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         return 0

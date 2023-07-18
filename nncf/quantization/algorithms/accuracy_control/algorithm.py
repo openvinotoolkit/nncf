@@ -12,6 +12,8 @@
 import sys
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
+from attr import dataclass
+
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -134,6 +136,23 @@ class QuantizationAccuracyRestorerReport:
         return operations
 
 
+@dataclass
+class MetricResults:
+    """
+    Results of metrics collection.
+
+    :param metric_value: Aggregated metric value.
+    :param values_for_each_item: Metric values for each data item.
+    :param preperation_time: Time that it takes to prepare model for validation.
+    :param validation_time: Time that it takes to validate model.
+    """
+
+    metric_value: float
+    values_for_each_item: Union[None, List[float], List[List[TTensor]]]
+    preperation_time: float
+    validation_time: float
+
+
 class QuantizationAccuracyRestorer:
     """
     Implementation of the accuracy-aware loop.
@@ -192,20 +211,17 @@ class QuantizationAccuracyRestorer:
 
         # Validate initial and quantized model
         evaluator = Evaluator(validation_fn, algo_backend)
-        initial_metric, reference_values_for_each_item, _, _ = self._collect_metric_and_values(
+        initial_metric_results = self._collect_metric_and_values(
             initial_model, validation_dataset, evaluator, "initial"
         )
         counting_validation_dataset = CountingDatasetWrapper(validation_dataset)
-        (
-            quantized_metric,
-            approximate_values_for_each_item,
-            preperation_time,
-            validation_time,
-        ) = self._collect_metric_and_values(quantized_model, counting_validation_dataset, evaluator, "quantized")
+        quantized_metric_results = self._collect_metric_and_values(
+            quantized_model, counting_validation_dataset, evaluator, "quantized"
+        )
         validation_dataset_size = counting_validation_dataset.num_iters
 
         should_terminate, accuracy_drop = calculate_accuracy_drop(
-            initial_metric, quantized_metric, self.max_drop, self.drop_type
+            initial_metric_results.metric_value, quantized_metric_results.metric_value, self.max_drop, self.drop_type
         )
 
         if should_terminate:
@@ -217,6 +233,48 @@ class QuantizationAccuracyRestorer:
         if accuracy_drop <= self.max_drop:
             return quantized_model
 
+        return self._apply(
+            initial_model,
+            quantized_model,
+            initial_metric_results,
+            quantized_metric_results,
+            algo_backend,
+            evaluator,
+            validation_dataset,
+            validation_dataset_size,
+            accuracy_drop,
+        )
+
+    def _apply(
+        self,
+        initial_model: TModel,
+        quantized_model: TModel,
+        initial_metric_results: MetricResults,
+        quantized_metric_results: MetricResults,
+        algo_backend: AccuracyControlAlgoBackend,
+        evaluator: Evaluator,
+        validation_dataset: Dataset,
+        validation_dataset_size: int,
+        accuracy_drop: float,
+    ) -> TModel:
+        """
+        An internal function that implements an iterative approach to restoring the accuracy of
+        the quantized model by removing the groups of quantizers that contribute the most to
+        the drop in accuracy.
+
+        :param initial_model: Initial model (not quantized).
+        :param quantized_model: Quantized model.
+        :param initial_metric_results: Initial model metrics.
+        :param quantized_metric_results: Quantized model metrics.
+        :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
+        :param evaluator: The instance of `Evaluator` to validate model and collect values
+            for each item from dataset.
+        :param validation_dataset: A dataset for the validation process.
+        :param validation_dataset_size: Validation dataset size.
+        :param accuracy_drop: Accuracy drop between initial and quantized models.
+        :return: The quantized model whose metric `final_metric` is satisfied
+            the maximum accuracy drop condition.
+        """
         # Accuracy drop is greater than the maximum drop so we need to restore accuracy
         initial_model_graph = NNCFGraphFactory.create(initial_model)
         quantized_model_graph = NNCFGraphFactory.create(quantized_model)
@@ -240,8 +298,11 @@ class QuantizationAccuracyRestorer:
         num_ranking_processes = self.num_ranking_processes
         if num_ranking_processes is None:
             model_size = algo_backend.get_model_size(quantized_model)
-            num_ranking_processes = self.compute_number_ranker_parallel_proc(
-                model_size, preperation_time, validation_time, validation_dataset_size, self.ranking_subset_size
+            num_ranking_processes = self._calculate_number_ranker_parallel_proc(
+                model_size,
+                quantized_metric_results.preperation_time,
+                quantized_metric_results.validation_time,
+                validation_dataset_size,
             )
 
         nncf_logger.info(f"Number of parallel processes to rank quantized operations: {num_ranking_processes}")
@@ -253,12 +314,12 @@ class QuantizationAccuracyRestorer:
             initial_model,
             quantized_model,
             quantized_model_graph,
-            reference_values_for_each_item,
-            approximate_values_for_each_item,
+            initial_metric_results.values_for_each_item,
+            quantized_metric_results.values_for_each_item,
         )
 
         previous_model = quantized_model
-        previous_approximate_values_for_each_item = approximate_values_for_each_item
+        previous_approximate_values_for_each_item = quantized_metric_results.values_for_each_item
         previous_accuracy_drop = accuracy_drop
         current_model = None
         current_approximate_values_for_each_item = None
@@ -292,7 +353,7 @@ class QuantizationAccuracyRestorer:
             )
 
             should_terminate, current_accuracy_drop = calculate_accuracy_drop(
-                initial_metric, current_metric, self.max_drop, self.drop_type
+                initial_metric_results.metric_value, current_metric, self.max_drop, self.drop_type
             )
 
             if not ranked_groups:
@@ -336,7 +397,7 @@ class QuantizationAccuracyRestorer:
                 initial_model,
                 current_model,
                 quantized_model_graph,
-                reference_values_for_each_item,
+                initial_metric_results.values_for_each_item,
                 current_approximate_values_for_each_item,
             )
 
@@ -344,6 +405,41 @@ class QuantizationAccuracyRestorer:
         QuantizationAccuracyRestorer._print_report(report, self.max_num_iterations)
 
         return current_model
+
+    def _calculate_number_ranker_parallel_proc(
+        self,
+        model_size: int,
+        preperation_time: float,
+        validation_time: float,
+        validation_dataset_size: int,
+    ) -> int:
+        """
+        Calculate the number of parallel ranker processes
+
+        :param model_size: Target model size.
+        :param preperation_time: The time it takes to prepare the model.
+        :param validation_time: The time it takes to validate the model.
+        :param validation_dataset_size: Validation dataset size.
+        :return: The number of parallel ranker processes
+        """
+        if preperation_time < PREPARATION_MODEL_THRESHOLD:
+            return 1
+
+        # Calculate the number of parallel processes needed to override model preparation and
+        # metric calculation on the ranking subset
+        ranking_time = validation_time * self.ranking_subset_size / validation_dataset_size
+        n_proc = max(round(preperation_time / ranking_time * OVERHEAD_COEFFICIENT), 2)
+
+        # Apply limitation by number of CPU cores
+        n_cores = available_cpu_count()
+        n_proc = max(min(n_proc, n_cores // 2), 1)
+
+        # Apply limitation by memmory
+        ram = available_memory_amount()
+        n_copies = ram // (model_size * MEMORY_INCREASE_COEFFICIENT)
+        n_proc = max(min(n_proc, n_copies - 1), 1)
+
+        return n_proc
 
     @staticmethod
     def _collect_original_biases_and_weights(
@@ -406,38 +502,11 @@ class QuantizationAccuracyRestorer:
     @staticmethod
     def _collect_metric_and_values(
         model: TModel, dataset: Dataset, evaluator: Evaluator, model_name: str
-    ) -> Tuple[float, Union[None, List[float], List[List[TTensor]]]]:
+    ) -> MetricResults:
         nncf_logger.info(f"Validation of {model_name} model was started")
         with timer() as preperation_time:
             model_for_inference = evaluator.prepare_model_for_inference(model)
         with timer() as validation_time:
             metric, values_for_each_item = evaluator.validate_model_for_inference(model_for_inference, dataset)
         nncf_logger.info(f"Metric of {model_name} model: {metric}")
-        return metric, values_for_each_item, preperation_time(), validation_time()
-
-    @staticmethod
-    def compute_number_ranker_parallel_proc(
-        model_size: int,
-        preperation_time: float,
-        validation_time: float,
-        validation_dataset_size: int,
-        ranking_subset_size: int,
-    ) -> int:
-        if preperation_time < PREPARATION_MODEL_THRESHOLD:
-            return 1
-
-        # Calculate the number of parallel processes needed to override model preparation and
-        # metric calculation on the ranking subset
-        ranking_time = validation_time * ranking_subset_size / validation_dataset_size
-        n_proc = max(round(preperation_time / ranking_time * OVERHEAD_COEFFICIENT), 2)
-
-        # Apply limitation by number of CPU cores
-        n_cores = available_cpu_count()
-        n_proc = max(min(n_proc, n_cores // 2), 1)
-
-        # Apply limitation by memmory
-        ram = available_memory_amount()
-        n_copies = ram // (model_size * MEMORY_INCREASE_COEFFICIENT)
-        n_proc = max(min(n_proc, n_copies - 1), 1)
-
-        return n_proc
+        return MetricResults(metric, values_for_each_item, preperation_time(), validation_time())
