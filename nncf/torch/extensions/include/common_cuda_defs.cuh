@@ -23,7 +23,7 @@ inline uint32_t GET_BLOCKS(const uint32_t total_required_threads) {
 }
 
 inline c10::TensorOptions get_accum_options(const c10::TensorOptions options) {
-    if (options.dtype() == c10::ScalarType::Half) {
+    if (options.dtype() == c10::ScalarType::Half || options.dtype() == c10::ScalarType::BFloat16) {
         return options.dtype(c10::ScalarType::Float);
     }
     return options;
@@ -75,7 +75,8 @@ inline dim3 get_2d_grid_size_for_per_channel(const uint32_t scale_count)
 #endif
 
 #define ACCUM_TYPE_FOR(SOURCE_TYPE) \
-std::conditional_t<std::is_same<SOURCE_TYPE, at::Half>::value, float, SOURCE_TYPE>
+std::conditional_t<std::is_same<SOURCE_TYPE, at::Half>::value, float, \
+                   std::conditional_t<std::is_same<SOURCE_TYPE, at::BFloat16>::value, float, SOURCE_TYPE>>
 
 
 #endif // _COMMON_CUDA_DEFS_CUH_

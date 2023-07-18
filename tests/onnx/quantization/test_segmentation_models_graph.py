@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import onnx
 import pytest
 
 from tests.onnx.conftest import ONNX_MODEL_DIR
@@ -27,4 +28,5 @@ def test_min_max_quantization_graph(tmp_path, mocker, model_to_test):
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + ".onnx")
     original_model = load_model_topology_with_zeros_weights(onnx_model_path)
     quantized_model = min_max_quantize_model(original_model)
+    onnx.save_model(quantized_model, tmp_path / (model_to_test.model_name + "_int8.onnx"))
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)

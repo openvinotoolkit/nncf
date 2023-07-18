@@ -821,10 +821,13 @@ class TestHalfPrecisionModels:
         # Should complete successfully, including init.
         compressed_model(inputs)
 
-    def test_external_autocast(self, initializing_config: NNCFConfig):
+    @pytest.mark.parametrize("device", ["cpu", "cuda"])
+    def test_external_autocast(self, initializing_config: NNCFConfig, device: str):
         model = TestHalfPrecisionModels.RegularModel()
         inputs = torch.ones([1, 1, 1, 1])
-        if torch.cuda.is_available():
+        if device == "cuda":
+            if not torch.cuda.is_available():
+                pytest.skip("CUDA not available")
             inputs = inputs.cuda()
             model = model.cuda()
 
