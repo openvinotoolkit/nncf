@@ -350,7 +350,7 @@ You may also use one of the Dockerfiles in the [docker](./docker) directory to b
 - Python\* 3.7 or later
 - Supported frameworks:
   - PyTorch\* >=1.13.0, <2.1
-  - TensorFlow\* >=2.4.0, <=2.13.0
+  - TensorFlow\* >=2.4.0, <=2.12.0
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
 
