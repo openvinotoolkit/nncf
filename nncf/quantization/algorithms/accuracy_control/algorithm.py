@@ -231,7 +231,7 @@ class QuantizationAccuracyRestorer:
             initial_metric_results.metric_value, quantized_metric_results.metric_value, self.max_drop, self.drop_type
         )
 
-        if False:
+        if should_terminate:
             QuantizationAccuracyRestorer._print_completion_message(accuracy_drop, self.drop_type)
             return quantized_model
 
