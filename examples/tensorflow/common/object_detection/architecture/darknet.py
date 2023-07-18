@@ -10,13 +10,16 @@
 # limitations under the License.
 
 import tensorflow as tf
-import tensorflow_addons as tfa
+import tensorflow.keras.backend as K  # pylint: disable=no-name-in-module
 
 from examples.tensorflow.common.object_detection.architecture import nn_ops
 
 
 class CSPDarknet53:
     """Class to build CSPDarknet53"""
+
+    def mish(self, x):
+        return x * K.tanh(K.softplus(x))
 
     def DarknetConv2D_BN_Mish(self, *args, **kwargs):
         """Darknet Convolution2D followed by SyncBatchNormalization and Mish."""
@@ -25,8 +28,7 @@ class CSPDarknet53:
         return nn_ops.compose(
             nn_ops.DarknetConv2D(*args, **no_bias_kwargs),
             tf.keras.layers.experimental.SyncBatchNormalization(),
-            # TODO(nsavelyev) change to tf.keras.activations.mish after upgrade to TF 2.13
-            tf.keras.layers.Activation(tfa.activations.mish),
+            tf.keras.layers.Activation(self.mish),
         )
 
     def csp_resblock_body(self, x, num_filters, num_blocks, all_narrow=True):
