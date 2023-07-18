@@ -1,0 +1,11 @@
+strict digraph  {
+"0 Identity" [id=0, type=Identity];
+"1 Gemm" [id=1, type=Gemm];
+"2 Softmax" [id=2, type=Softmax];
+"3 nncf_model_input_0" [id=3, type=nncf_model_input];
+"4 nncf_model_output_0" [id=4, type=nncf_model_output];
+"0 Identity" -> "1 Gemm"  [label="[1, 10]", style=solid];
+"1 Gemm" -> "2 Softmax"  [label="[1, 5]", style=solid];
+"2 Softmax" -> "4 nncf_model_output_0"  [label="[1, 5]", style=solid];
+"3 nncf_model_input_0" -> "0 Identity"  [label="[1, 10]", style=solid];
+}

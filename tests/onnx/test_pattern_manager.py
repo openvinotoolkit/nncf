@@ -38,7 +38,6 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.INPUT_TRANSPOSE_PROCESSING: "Not relevant for ONNX.",
     HWFusedPatternNames.INPUT_TRANSPOSE_REVERSE_ADD: "Not relevant for ONNX.",
     HWFusedPatternNames.INPUT_TRANSPOSE_SCALE_SHIFT: "Not relevant for ONNX.",
-    HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS: "Not relevant for ONNX.",
     HWFusedPatternNames.HSWISH_ACTIVATION_CLAMP_MULTIPLY: "Not relevant for ONNX.",
     HWFusedPatternNames.LINEAR_BIASED_SCALE_SHIFT: "Not relevant for ONNX.",
     HWFusedPatternNames.LINEAR_ACTIVATION_SCALE_SHIFT: "Not relevant for ONNX.",

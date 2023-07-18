@@ -22,8 +22,8 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
-from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
+from nncf.onnx.graph.node_utils import transpose_axis
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
@@ -47,7 +47,7 @@ from nncf.scopes import IgnoredScope
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatype(self) -> OperatorMetatype:
-        return om.ONNXLinearMetatype
+        return om.MATMUL_METATYPES
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -63,7 +63,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
-        return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, om.ONNXLinearMetatype]
+        return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, *om.MATMUL_METATYPES]
 
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
@@ -140,7 +140,19 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if not target_point.is_weight_target_point():
             return 1
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        return node.metatype.weight_definitions.weight_channel_axis
+
+        weight_channel_axis = node.metatype.weight_channel_axis
+        if node.layer_attributes.has_node_attrs():
+            if node.metatype == om.ONNXGemmMetatype:
+                weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
+                if (
+                    target_point.port_id == 0
+                    and node.layer_attributes.node_attrs["transA"] == 1
+                    or target_point.port_id == 1
+                    and node.layer_attributes.node_attrs["transB"] == 1
+                ):
+                    weight_channel_axis = transpose_axis(weight_shape, weight_channel_axis)
+        return weight_channel_axis
 
     @staticmethod
     def _get_reduction_shape_and_use_abs_max(
@@ -156,8 +168,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         # Calculate reduction shape for weight statistic collector
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        assert isinstance(node.layer_attributes, ONNXExtendedLayerAttributes)
-        weight_shape = node.layer_attributes.weight_shape
+        assert node.layer_attributes.has_weight()
+        weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
         reduction_shape = list(range(len(weight_shape)))
 
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
@@ -205,7 +217,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
-        return [node.metatype.weight_definitions.weight_port_id]
+        return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod
     def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
@@ -221,6 +233,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXReduceSumMetatype,
                 om.ONNXDivLayerMetatype,
                 om.ONNXMaximumMetatype,
+                om.ONNXSqrtMetatype,
+                om.ONNXReciprocalMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 metatypes_to_add.append(om.ONNXMulLayerMetatype)
@@ -231,15 +245,12 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return [
-            node
-            for node in nncf_graph.get_all_nodes()
-            if isinstance(node.layer_attributes, ONNXExtendedLayerAttributes)
-        ]
+        return [node for node in nncf_graph.get_all_nodes() if node.layer_attributes.has_weight()]
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> str:
-        return nncf_graph.get_node_by_name(target_point.target_node_name).layer_name
+        node_name, port_id = target_point.target_node_name, target_point.port_id
+        return nncf_graph.get_node_by_name(node_name).layer_attributes.weight_attrs[port_id]["name"]
 
     @staticmethod
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:

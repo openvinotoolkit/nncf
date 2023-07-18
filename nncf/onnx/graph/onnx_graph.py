@@ -9,18 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterator, List, Optional, Union
 
 import numpy as np
 import onnx
 from onnx import numpy_helper
 
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
 
-
-# pylint: disable=too-many-public-methods
 class ONNXGraph:
     """
     The class provides the interface to get the necessary information from ONNX model.
@@ -114,14 +109,17 @@ class ONNXGraph:
         """
         return list(self.onnx_model.graph.output)
 
-    def get_nodes_by_output(self, output_name: str) -> List[onnx.NodeProto]:
+    def get_node_by_output(self, output_name: str) -> Optional[onnx.NodeProto]:
         """
-        Returns all nodes that have output edge with the name 'output_name'.
+        Returns node that have output edge with the name 'output_name'.
 
         :param output_name: The name of output edge.
-        :return: Nodes with corresponding output.
+        :return: Node with corresponding output.
         """
-        return self._get_nodes_by_lambda(output_name, lambda node: node.output)
+        for node in self.get_all_nodes():
+            if output_name in node.output:
+                return node
+        return None
 
     def get_nodes_by_input(self, input_name: str) -> List[onnx.NodeProto]:
         """
@@ -130,14 +128,9 @@ class ONNXGraph:
         :param input_name: The name of input edge.
         :return: Nodes with corresponding input.
         """
-        return self._get_nodes_by_lambda(input_name, lambda node: node.input)
-
-    def _get_nodes_by_lambda(
-        self, name: str, func: Callable[[onnx.NodeProto], List[onnx.NodeProto]]
-    ) -> List[onnx.NodeProto]:
         output = []
         for node in self.get_all_nodes():
-            if name in func(node):
+            if input_name in node.input:
                 output.append(node)
         return output
 
@@ -205,68 +198,6 @@ class ONNXGraph:
         if output["output_port_id"] is None or output["input_port_id"] is None:
             raise RuntimeError(f"The nodes {from_node.name} and {to_node.name} do not have edges between.")
         return output
-
-    def get_nodes_by_type(self, node_type: str) -> List[onnx.NodeProto]:
-        """
-        Returns all nodes in the model that have type equal to 'node_type'.
-
-        :param node_type: Type of the nodes.
-        :return: All nodes with the corresponding type.
-        """
-        output = []
-        for node in self.get_all_nodes():
-            if str(node.op_type) == node_type:
-                output.append(node)
-        return output
-
-    @staticmethod
-    def _get_weight_definitions(node: onnx.NodeProto) -> OpWeightDef:
-        """
-        Returns the weight_definitions of the node's metatype.
-
-        :param node: Node from which weight definition is obtained.
-        :return: weight definition of the node.
-        """
-        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-        if metatype in WEIGHT_LAYER_METATYPES:
-            return metatype.weight_definitions
-        raise RuntimeError(f"The metatype {metatype} does not belong to a list of metatypes with a weight tensor.")
-
-    def get_weight_port_id(self, node: onnx.NodeProto) -> int:
-        """
-        Returns input port id, where a weight tensor should output.
-
-        :param node: Node, for which input port id is returned,
-        :return: input port id, where a weight tensor should output.
-        """
-        weight_definitions = self._get_weight_definitions(node)
-        if weight_definitions.weight_port_id is not None:
-            return weight_definitions.weight_port_id
-        raise RuntimeError(f"The metatype {node} does not have weight_port_id attribute")
-
-    def get_weight_channel_axis(self, node: onnx.NodeProto) -> int:
-        """
-        Returns a channel axis for weight per-channel quantization.
-
-        :param node: Node, for which weight per-channel axis id is returned,
-        :return: Channel axis for per-channel quantization.
-        """
-        weight_definitions = self._get_weight_definitions(node)
-        if weight_definitions.weight_channel_axis is not None:
-            return weight_definitions.weight_channel_axis
-        raise RuntimeError(f"The node {node} does not have weight_channel_axis attribute")
-
-    def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> int:
-        """
-        Returns input port id, where a bias tensor should output.
-
-        :param node: Node, for which input port id is returned,
-        :return: input port id, where a weight bias should output.
-        """
-        weight_definitions = self._get_weight_definitions(node)
-        if weight_definitions.bias_port_id is not None:
-            return weight_definitions.bias_port_id
-        raise RuntimeError(f"The node {node} does not have bias_port_id attribute")
 
     def get_node_index(self, node_name: str) -> int:
         """
@@ -353,17 +284,14 @@ class ONNXGraph:
             return edge.type.tensor_type.elem_type
         return edge.data_type
 
-    def get_parents(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
+    def get_parent(self, node: onnx.NodeProto, port_id: int) -> List[onnx.NodeProto]:
         """
         Returns parents of the node.
 
         :param node: The child node.
         :return: All children nodes.
         """
-        output = []
-        for inp in node.input:
-            output.extend(self.get_nodes_by_output(inp))
-        return output
+        return self.get_node_by_output(node.input[port_id])
 
     def get_children(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
         """
@@ -378,24 +306,13 @@ class ONNXGraph:
             output.extend(self.get_nodes_by_input(node_edge))
         return output
 
-    def get_weight_tensor_edge(self, node: onnx.NodeProto) -> str:
-        """
-        Returns weight edge name.
-
-        :param node: Node with weight tensor.
-        :return: Weight edge name.
-        """
-        weight_port_id = self.get_weight_port_id(node)
-        weight_tensor_edge = self.get_node_edge_names(node.name)["input"][weight_port_id]
-        return weight_tensor_edge
-
-    def is_node_shared(self, node: onnx.NodeProto) -> bool:
+    def is_node_has_shared_weight(self, node: onnx.NodeProto, weight_port_id: int) -> bool:
         """
         Returns whether the node share a weight.
 
         :param node: Node.
         :return: True whether node shares a weight - otherwise False.
         """
-        weight_tensor_edge = self.get_weight_tensor_edge(node)
+        weight_tensor_edge = self.get_node_edge_names(node.name)["input"][weight_port_id]
         nodes = self.get_nodes_by_input(weight_tensor_edge)
         return len(nodes) > 1

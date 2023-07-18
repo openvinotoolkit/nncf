@@ -9,17 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import onnx
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
-from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 
@@ -32,11 +29,7 @@ def is_node_with_bias(node: NNCFNode) -> bool:
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
-    if node.metatype in OPERATIONS_WITH_BIAS_METATYPES and isinstance(
-        node.layer_attributes, ONNXExtendedLayerAttributes
-    ):
-        return len(node.layer_attributes.input_tensor_names) > 2
-    return False
+    return node.layer_attributes.has_bias()
 
 
 def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarray:
@@ -48,16 +41,9 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     onnx_graph = ONNXGraph(model)
-    onnx_node = onnx_graph.get_node_by_name(node_with_bias.node_name)
-    bias_port_id = onnx_graph.get_bias_tensor_port_id(onnx_node)
-    bias_input_name = onnx_node.input[bias_port_id]
-    if onnx_graph.has_tensor(bias_input_name):
-        return onnx_graph.get_tensor_value(bias_input_name)
-    node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
-    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-    if metatype == ONNXIdentityMetatype:
-        return onnx_graph.get_tensor_value(node.input[0])
-    raise RuntimeError("Could not find the bias value of the node")
+    assert node_with_bias.layer_attributes.has_bias()
+    bias_name = node_with_bias.layer_attributes.bias_attrs["name"]
+    return onnx_graph.get_tensor_value(bias_name)
 
 
 def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]:
@@ -93,3 +79,48 @@ def get_input_edge(input_node_name: str, input_edges_mapping: Dict[str, Tuple[st
         input_edges.add(onnx_graph.get_node_edge_names(name)["input"][port_id])
     assert len(input_edges) == 1
     return input_edges.pop()
+
+
+def is_any_weight_quantized(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    """
+    Returns True if any weight port id of node is quantized,
+    False - if all weights are not quantized or the node can not have weight.
+
+    :param node: NNCFNode.
+    :param nncf_graph: NNCGraph.
+    :return: True if any weight port id of node is quantized,
+    False - if all weights are not quantized or the node can not have weight.
+    """
+    is_quantized_weight = False
+    if node.layer_attributes.has_weight():
+        for port_id in node.layer_attributes.weight_attrs.keys():
+            is_quantized_weight = is_quantized_weight or is_port_quantized(node, nncf_graph, port_id)
+    return is_quantized_weight
+
+
+def is_port_quantized(node: NNCFNode, nncf_graph: NNCFGraph, port_id: int) -> bool:
+    """
+    Returns True if a port_id is quantized - have ONNXDequantizeLinearMetatype as a parent node.
+
+    :param node: NNCFNode.
+    :param nncf_graph: NNCFGraph.
+    :param port_id: Input port id of a node.
+    :return: True if a port_id is quantized - have ONNXDequantizeLinearMetatype as a parent node.
+    """
+    input_nodes = [edge.from_node for edge in nncf_graph.get_input_edges(node)]
+    if len(input_nodes) > port_id:
+        weight_node = input_nodes[port_id]
+        return weight_node.metatype == ONNXDequantizeLinearMetatype
+    return False
+
+
+def transpose_axis(shape: List[int], axis: int) -> int:
+    """
+    Returns transpose axis.
+
+    :param shape: Tensor shape.
+    :param axis: Axis before transpose.
+    :return: Axis after transpose.
+    """
+    axis %= len(shape)  # Make axis positive
+    return range(len(shape) - 1, -1, -1)[axis]  # Iterate backward throug axis
