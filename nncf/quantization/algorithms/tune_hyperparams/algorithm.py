@@ -12,11 +12,11 @@
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Type, TypeVar, Union
 
 from nncf.common.factory import StatisticsAggregatorFactory
+from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
-from nncf.common.logging import nncf_logger
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.tune_hyperparams.params_transformation import ParamsTransformation
@@ -116,9 +116,7 @@ class ParamsGridSearchAlgorithm:
 
             self._backend_entity = OVParamsGridSearchAlgoBackend()
         else:
-            raise RuntimeError(
-                f"Cannot set backend-specific entity because {model_backend} is not supported!"
-            )
+            raise RuntimeError(f"Cannot set backend-specific entity because {model_backend} is not supported!")
 
     @staticmethod
     def _create_algorithms(
