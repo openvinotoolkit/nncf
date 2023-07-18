@@ -325,15 +325,15 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
     if node.metatype == OVMatMulMetatype:
         assert isinstance(node.layer_attributes, OVLayerAttributes)
         assert len(channel_axes) == 1
-        assert channel_axes[0] in [-1, -2]
-        const_attrs = node.layer_attributes.constant_attributes[weights_port_id]
         matmul_channel_axis = channel_axes[0]
-        if const_attrs["transpose"]:
-            transpose_swap = {-1: -2, -2: -1}
-            matmul_channel_axis = transpose_swap[matmul_channel_axis]
-        shape = node.layer_attributes.constant_attributes[weights_port_id]["shape"]
-        matmul_channel_axis = len(shape) + matmul_channel_axis
-        channel_axes = list(range(len(shape) - 2))
-        channel_axes.append(matmul_channel_axis)
+        const_attrs = node.layer_attributes.constant_attributes[weights_port_id]
+        if (weights_port_id == 1) == const_attrs["transpose"]:
+            matmul_channel_axis -= 1
+        shape = const_attrs["shape"]
+        ndims = len(shape)
+        channel_axes = list(range(ndims - 2)) if ndims > 2 else []
+        matmul_channel_axis = max(ndims, 2) + matmul_channel_axis
+        if matmul_channel_axis < ndims:
+            channel_axes.append(matmul_channel_axis)
 
     return channel_axes
