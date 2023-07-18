@@ -228,6 +228,7 @@ def test_model_train(_config, tmp_path, _case_common_dirs):
         args["--mode"] = "train"
 
     main = get_sample_fn(_config["sample_type"], modes=["train"])
+    print(main, args, convert_to_argv(args))
     main(convert_to_argv(args))
 
     assert tf.io.gfile.isdir(checkpoint_save_dir)

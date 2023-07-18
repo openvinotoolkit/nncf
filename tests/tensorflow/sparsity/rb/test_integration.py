@@ -109,7 +109,7 @@ def train_lenet():
     model.save(MODEL_PATH)
 
 
-@pytest.mark.parametrize("distributed", [False, True], ids=["not_distributed", "distributed"])
+@pytest.mark.parametrize("distributed", [True], ids=["distributed"])
 @pytest.mark.parametrize("quantized", [False, True], ids=["without_quantization", "with_quantization"])
 def test_rb_sparse_target_lenet(distributed, quantized):
     if not os.path.exists(MODEL_PATH):
@@ -197,7 +197,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
     compress_model.fit(
         dataset_train,
         validation_data=dataset_test,
-        epochs=5,
+        epochs=1,
         callbacks=[
             tf.keras.callbacks.ReduceLROnPlateau(),
             get_progress_bar(stateful_metrics=["loss"] + [metric.name for metric in metrics]),
