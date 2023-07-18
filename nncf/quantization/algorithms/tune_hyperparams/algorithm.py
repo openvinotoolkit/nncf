@@ -28,7 +28,28 @@ TModel = TypeVar("TModel")
 
 
 class ParamsGridSearchAlgorithm:
-    """ """
+    """
+    Algorithm used to find a best combination of provided parameters.
+    Possible values of parameters are represented as the `SearchSpace`.
+    The `SearchSpace` has the following structure
+
+        {
+            "param_name": [v_0, v_1, ..., v_n]
+        }
+
+    where v_0, v_1, ..., v_n are possible values of "param_name" parameter.
+    In case when "param_name" is a dataclass object there is a way to specify
+    possible values for his fields
+
+        {
+            "param_name": {
+                "field_name_0": [x0, x1, ..., x_k],
+                "field_name_1": [y_0, y_1, ..., y_m]
+            }
+        }
+
+    This rule is applied recursively.
+    """
 
     def __init__(
         self,
@@ -39,11 +60,11 @@ class ParamsGridSearchAlgorithm:
         validation_fn: Callable[[Any, Iterable[Any]], float],
     ):
         """
-        :param algorithm_cls:
-        :param init_params:
-        :param search_space:
-        :param statistic_dataset:
-        :param validation_fn:
+        :param algorithm_cls: Class of algorithm.
+        :param init_params: Initial set of parameters used to create algorithm.
+        :param search_space: Describes possible values for parameters.
+        :param statistic_dataset: Dataset used to collect statistics for algorithm.
+        :param validation_fn: Validation function used to validated model.
         """
         self._algorithm_cls = algorithm_cls
         self._init_params = init_params
@@ -54,10 +75,13 @@ class ParamsGridSearchAlgorithm:
 
     def apply(self, model: TModel, validation_dataset: Dataset, subset_indices: List[int]) -> TModel:
         """
-        :param model:
-        :param validation_dataset:
-        :param subset_indices:
-        :return:
+        Applies algorithm to provided model.
+
+        :param model: Model to apply the algorithm.
+        :param validation_dataset: Dataset used to validate resulted model.
+        :param subset_indices: Zero-based indices of data items that should be selected
+            from the dataset and used to validate model.
+        :return: Resulted model.
         """
         self._set_backend_entity(model)
 
@@ -79,7 +103,7 @@ class ParamsGridSearchAlgorithm:
                 algorithm_key = (*best_combination, param_value)
                 algorithm = algorithms[algorithm_key]
 
-                nncf_logger.info(f"Current combination: {combinations[algorithm_key]._changes}")
+                nncf_logger.info(f"Current combination:\n{combinations[algorithm_key].as_str()}")
 
                 curr_model = algorithm.apply(copy_model(model), statistic_points)
                 score, _ = self._validation_fn(
@@ -93,12 +117,13 @@ class ParamsGridSearchAlgorithm:
                     param_best_value = param_value
 
             # Include `param_value` into best combination
-            if best_score is None or best_score < param_best_score:
+            if best_score is None or best_score <= param_best_score:
                 best_score = param_best_score
                 best_combination = (*best_combination, param_best_value)
 
         # Apply best combination
-        nncf_logger.info(f"Best combination: {combinations[best_combination]._changes}")
+        nncf_logger.info(f"Best combination:\n{combinations[best_combination].as_str()}")
+        nncf_logger.info(f"Best score: {best_score}")
         algorithm = algorithms[best_combination]
         retval = algorithm.apply(model, statistic_points)
 
@@ -125,10 +150,12 @@ class ParamsGridSearchAlgorithm:
         combinations: Dict[Tuple[int, ...], ParamsTransformation],
     ) -> Dict[Tuple[int, ...], Algorithm]:
         """
-        :param algorithm_cls:
-        :param init_params:
-        :param combinations:
-        :return:
+        Creates algorithm for each combination of parameters from `combinations` list.
+
+        :param algorithm_cls: Class of algorithm.
+        :param init_params: Initial set of parameters used to create algorithm.
+        :param combinations: Combinations of parameters.
+        :return: List of created algorithms.
         """
         algorithms = {}
         for combination_key, params_transformation in combinations.items():
@@ -142,10 +169,12 @@ class ParamsGridSearchAlgorithm:
         model: TModel, dataset: Dataset, algorithms: Dict[Tuple[int, ...], Algorithm]
     ) -> StatisticPointsContainer:
         """
-        :param model:
-        :param dataset:
-        :param algorithms:
-        :return:
+        Collects statistics using common statistics points for `algorithms`.
+
+        :param model: Model used to collect statistics.
+        :param dataset: Dataset used to collect statistics.
+        :param algorithms: List of algorithms for which statistics should be collected.
+        :return: Collected statistics.
         """
         stats_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         for algorithm in algorithms.values():

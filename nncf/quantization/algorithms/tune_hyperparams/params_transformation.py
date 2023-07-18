@@ -71,6 +71,12 @@ class ParamsTransformation:
 
         return params_copy
 
+    def as_str(self) -> str:
+        """
+        :return: String representation.
+        """
+        return ParamsTransformation._as_str(self._changes)
+
     @classmethod
     def concatenate(
         cls, transformation_a: "ParamsTransformation", transformation_b: "ParamsTransformation"
@@ -86,6 +92,22 @@ class ParamsTransformation:
         changes_b = deepcopy(transformation_b._changes)
         changes_a.update(changes_b)
         return cls(changes_a)
+
+    @staticmethod
+    def _as_str(data, indent: int = 0) -> str:
+        if is_dataclass_instance(data):
+            data = dataclasses.asdict(data)
+
+        s = ""
+        for param_name, param_value in data.items():
+            shift = " " * indent
+            s = f"{s}{shift}{param_name}: "
+            if isinstance(param_value, dict) or is_dataclass_instance(param_value):
+                values = ParamsTransformation._as_str(param_value, indent + 2)
+                s = f"{s}\n{values}"
+            else:
+                s = f"{s}{param_value}\n"
+        return s
 
     @staticmethod
     def _apply_to_dataclass_instance(instance: Any, changes: Dict[str, Any]) -> Any:
