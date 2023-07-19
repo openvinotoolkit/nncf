@@ -26,6 +26,25 @@ class TestModel(nn.Module):
         return self.fq(x)
 
 
+def check_fq_op(traced_graph: nn.Module, is_per_channel: bool):
+    aten_op = "aten::fake_quantize_per_channel_affine" if is_per_channel else "aten::fake_quantize_per_tensor_affine"
+    is_fq_node = False
+    for node in traced_graph.inlined_graph.nodes():
+        print(node.kind())
+        if node.kind() == "prim::PythonOp":
+            if "Subgraph" in node.attributeNames():
+                subgraph = getattr(node, node.kindOf("Subgraph"))("Subgraph")
+                for node in subgraph.nodes():
+                    print(node.kind())
+                    if node.kind() == aten_op:
+                        is_fq_node = True
+                        break
+        if is_fq_node:
+            break
+
+    assert is_fq_node, "FQ operation is not found in the traced graph"
+
+
 def test_trace_asymmetric_quantizer(is_per_channel):
     if is_per_channel:
         input_low = torch.tensor([-0.1, 0.1]).reshape(1, 2, 1, 1)
@@ -49,7 +68,8 @@ def test_trace_asymmetric_quantizer(is_per_channel):
     quantizer.input_range.data = input_range
 
     model = TestModel(quantizer)
-    torch.jit.trace(model, torch.ones(1, 2, 1, 1))
+    traced = torch.jit.trace(model, torch.ones(1, 2, 1, 1))
+    check_fq_op(traced, is_per_channel)
 
 
 def test_trace_symmetric_quantizer(is_per_channel, is_signed):
@@ -73,4 +93,5 @@ def test_trace_symmetric_quantizer(is_per_channel, is_signed):
     quantizer.signed = is_signed
 
     model = TestModel(quantizer)
-    torch.jit.trace(model, torch.ones(1, 2, 1, 1))
+    traced = torch.jit.trace(model, torch.ones(1, 2, 1, 1))
+    check_fq_op(traced, is_per_channel)
