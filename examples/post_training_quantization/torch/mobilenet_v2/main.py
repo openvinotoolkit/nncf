@@ -33,6 +33,7 @@ CHECKPOINT_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolv
 DATASET_URL = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz"
 DATASET_PATH = "~/.cache/nncf/datasets"
 DATASET_CLASSES = 10
+USE_EXPERIMENTAL_MO_CONVERTOR = False
 
 
 def download_dataset() -> Path:
@@ -150,27 +151,31 @@ torch_quantized_model = nncf.quantize(
 
 dummy_input = torch.randn(1, 3, 224, 224)
 
-fp32_onnx_path = f"{ROOT}/mobilenet_v2_fp32.onnx"
-torch.onnx.export(
-    torch_model.cpu(),
-    dummy_input,
-    fp32_onnx_path,
-    input_names=["input"],
-    output_names=["output"],
-    dynamic_axes={"input": {0: "-1"}},
-)
-ov_model = mo.convert_model(fp32_onnx_path)
+if USE_EXPERIMENTAL_MO_CONVERTOR:
+    ov_model = mo.convert_model(torch_model, example_input=dummy_input)
+    ov_quantized_model = mo.convert_model(torch_quantized_model, example_input=dummy_input)
+else:
+    fp32_onnx_path = f"{ROOT}/mobilenet_v2_fp32.onnx"
+    torch.onnx.export(
+        torch_model.cpu(),
+        dummy_input,
+        fp32_onnx_path,
+        input_names=["input"],
+        output_names=["output"],
+        dynamic_axes={"input": {0: "-1"}},
+    )
+    ov_model = mo.convert_model(fp32_onnx_path)
 
-int8_onnx_path = f"{ROOT}/mobilenet_v2_int8.onnx"
-torch.onnx.export(
-    torch_quantized_model.cpu(),
-    dummy_input,
-    int8_onnx_path,
-    input_names=["input"],
-    output_names=["output"],
-    dynamic_axes={"input": {0: "-1"}},
-)
-ov_quantized_model = mo.convert_model(int8_onnx_path)
+    int8_onnx_path = f"{ROOT}/mobilenet_v2_int8.onnx"
+    torch.onnx.export(
+        torch_quantized_model.cpu(),
+        dummy_input,
+        int8_onnx_path,
+        input_names=["input"],
+        output_names=["output"],
+        dynamic_axes={"input": {0: "-1"}},
+    )
+    ov_quantized_model = mo.convert_model(int8_onnx_path)
 
 fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
 ov.serialize(ov_model, fp32_ir_path)
