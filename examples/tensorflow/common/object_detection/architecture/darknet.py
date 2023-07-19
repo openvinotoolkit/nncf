@@ -27,7 +27,7 @@ class CSPDarknet53:
         no_bias_kwargs.update(kwargs)
         return nn_ops.compose(
             nn_ops.DarknetConv2D(*args, **no_bias_kwargs),
-            tf.keras.layers.experimental.SyncBatchNormalization(),
+            tf.keras.layers.BatchNormalization(synchronized=True),
             # TODO(nsavelyev) change to tf.keras.activations.mish after upgrade to TF 2.13
             tf.keras.layers.Activation(self.mish),
         )
