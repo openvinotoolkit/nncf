@@ -37,7 +37,7 @@ def convert_opset_version(model: onnx.ModelProto, opset_version: int = TARGET_OP
             f"The model was successfully converted to the opset version = {modified_model.opset_import[0].version}"
         )
         return modified_model
-    except (ConvertError, InferenceError):
+    except (RuntimeError, ConvertError, InferenceError):
         nncf_logger.error(
             f"Couldn't convert target model to the opset version {opset_version}. Using the copy of the original model"
         )
