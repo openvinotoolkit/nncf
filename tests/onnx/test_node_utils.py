@@ -14,6 +14,7 @@ import pytest
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.node_utils import get_bias_value
+from nncf.onnx.graph.node_utils import transpose_axis
 from tests.onnx.models import OneConvolutionalIdentityBiasModel
 from tests.onnx.models import OneConvolutionalModel
 
@@ -26,3 +27,21 @@ def test_get_bias_value(model):
     conv_node = nncf_graph.get_nodes_by_metatypes([ONNXConvolutionMetatype])[0]
     bias_value = get_bias_value(conv_node, onnx_model)
     assert np.allclose(bias_value, model.conv_bias)
+
+
+@pytest.mark.parametrize(
+    "shape, axis, expected_channel_axis",
+    [
+        ((1, 3, 5, 5), -1, 0),
+        ((1, 3, 5, 5), 1, 2),
+        ((1, 3, 5, 5), 0, 3),
+        ((1, 3, 5, 5), 2, 1),
+        ((1, 3, 5, 5), -2, 1),
+        ((1,), -1, 0),
+        ((1, 1), -1, 0),
+        ((1, 1), 1, 0),
+        ((1, 1), 0, 1),
+    ],
+)
+def test_transpose_axis(shape, axis, expected_channel_axis):
+    assert expected_channel_axis == transpose_axis(shape, axis)

@@ -341,6 +341,17 @@ def create_bn_scale_shift_activation() -> GraphPattern:
     return batch_norm
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS)
+def create_linear_arithmetic_activations() -> GraphPattern:
+    linear = linear_operations()
+    arithmetic = arithmetic_operations()
+    activations = atomic_activations_operations()
+
+    linear.join_patterns(arithmetic)
+    linear.join_patterns(activations)
+    return linear
+
+
 # DEVICE PATTERNS
 
 

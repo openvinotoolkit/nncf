@@ -5,41 +5,45 @@ dependencies:
   - '**/setup.py'
 
 NNCF PT:
-  - 'examples/torch/**/*'
-  - 'examples/post_training_quantization/torch/**/*'
-  - 'nncf/torch/**/*'
-  - 'tests/torch/**/*'
+  - 'examples/torch/**/*!(.md)'
+  - 'examples/post_training_quantization/torch/**/*!(.md)'
+  - 'nncf/torch/**/*!(.md)'
+  - 'tests/torch/**/*!(.md)'
+  - 'nncf/quantization/**/torch_backend.py'
 
 NNCF TF:
-  - 'examples/tensorflow/**/*'
-  - 'examples/post_training_quantization/tensorflow/**/*'
-  - 'nncf/tensorflow/**/*'
-  - 'tests/tensorflow/**/*'
+  - 'examples/tensorflow/**/*!(.md)'
+  - 'examples/post_training_quantization/tensorflow/**/*!(.md)'
+  - 'nncf/tensorflow/**/*!(.md)'
+  - 'tests/tensorflow/**/*!(.md)'
+  - 'nncf/quantization/**/tf_backend.py'
 
 NNCF ONNX:
-  - 'examples/onnx/**/*'
-  - 'examples/post_training_quantization/onnx/**/*'
-  - 'nncf/onnx/**/*'
-  - 'tests/onnx/**/*'
+  - 'examples/onnx/**/*!(.md)'
+  - 'examples/post_training_quantization/onnx/**/*!(.md)'
+  - 'nncf/onnx/**/*!(.md)'
+  - 'tests/onnx/**/*!(.md)'
+  - 'nncf/quantization/**/onnx_backend.py'
 
 NNCF OpenVINO:
-  - 'examples/openvino/**/*'
-  - 'examples/post_training_quantization/openvino/**/*'
-  - 'nncf/openvino/**/*'
-  - 'tests/openvino/**/*'
+  - 'examples/openvino/**/*!(.md)'
+  - 'examples/post_training_quantization/openvino/**/*!(.md)'
+  - 'nncf/openvino/**/*!(.md)'
+  - 'tests/openvino/**/*!(.md)'
+  - 'nncf/quantization/**/openvino_backend.py'
 
 NNCF PTQ:
-  - 'nncf/quantization/**/*'
-  - 'tests/post_training/**/*'
+  - 'nncf/quantization/**/*!(.md)'
+  - 'tests/post_training/**/*!(.md)'
 
 documentation:
-  - '**/README.md'
+  - '**/*.md'
   - 'docs/**/*'
 
 experimental:
-  - 'nncf/experimental/**/*'
+  - 'nncf/experimental/**/*!(.md)'
 
 NNCF Common:
-  - 'examples/common/**/*'
-  - 'nncf/common/**/*'
-  - 'tests/common/**/*'
+  - 'examples/common/**/*!(.md)'
+  - 'nncf/common/**/*!(.md)'
+  - 'tests/common/**/*!(.md)'

@@ -89,7 +89,7 @@ at::Tensor wb_forward(
     CHECK_INPUT(input);
 
     at::Tensor output;
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "wb_cpu_forward", ([&] {
+    DISPATCH_TENSOR_DATA_TYPES(input.type(), "wb_cpu_forward", ([&] {
       output = wb_cpu_forward<scalar_t>(input, per_channel);
     }));
 
@@ -105,7 +105,7 @@ at::Tensor ab_forward(
     CHECK_INPUT(thresholds);
 
     at::Tensor output;
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cpu_forward", ([&] {
+    DISPATCH_TENSOR_DATA_TYPES(input.type(), "ab_cpu_forward", ([&] {
       output = ab_cpu_forward<scalar_t>(input, scale, thresholds);
     }));
 
@@ -123,7 +123,7 @@ std::vector<at::Tensor> ab_backward(
     CHECK_INPUT(output);
 
     std::vector<at::Tensor> retval;
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cpu_forward", ([&] {
+    DISPATCH_TENSOR_DATA_TYPES(input.type(), "ab_cpu_forward", ([&] {
       retval = ab_cpu_backward<scalar_t>(grad_output, input, scale, output);
     }));
 

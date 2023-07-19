@@ -20,7 +20,14 @@ from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_
 
 # pylint: disable=protected-access
 class NNCFGraphToTest:
-    def __init__(self, conv_metatype, conv_layer_attrs=None, nncf_graph_cls=NNCFGraph):
+    def __init__(
+        self,
+        conv_metatype,
+        conv_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+        input_layer_attrs=None,
+        output_layer_attrs=None,
+    ):
         #       Original graph
         #          Input_1
         #             |
@@ -28,9 +35,9 @@ class NNCFGraphToTest:
         #             |
         #           Output_1
         nodes = [
-            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
             NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
-            NodeWithType("Output_1", OutputNoopMetatype),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
         ]
         node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Output_1")]
         original_mock_graph = create_mock_graph(nodes, node_edges)
@@ -38,7 +45,13 @@ class NNCFGraphToTest:
 
 
 class NNCFGraphToTestDepthwiseConv:
-    def __init__(self, depthwise_conv_metatype, conv_layer_attrs=None):
+    def __init__(
+        self,
+        depthwise_conv_metatype,
+        conv_layer_attrs=None,
+        input_layer_attrs=None,
+        output_layer_attrs=None,
+    ):
         #       Original graph
         #          Input_1
         #             |
@@ -46,9 +59,9 @@ class NNCFGraphToTestDepthwiseConv:
         #             |
         #           Output_1
         nodes = [
-            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
             NodeWithType("Conv_1", depthwise_conv_metatype, layer_attributes=conv_layer_attrs),
-            NodeWithType("Output_1", OutputNoopMetatype),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
         ]
         node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Output_1")]
         original_mock_graph = create_mock_graph(nodes, node_edges)
@@ -56,7 +69,16 @@ class NNCFGraphToTestDepthwiseConv:
 
 
 class NNCFGraphToTestSumAggregation:
-    def __init__(self, conv_metatype, sum_metatype, conv_layer_attrs=None, nncf_graph_cls=NNCFGraph):
+    def __init__(
+        self,
+        conv_metatype,
+        sum_metatype,
+        conv_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+        sum_layer_attrs=None,
+        input_layer_attrs=None,
+        output_layer_attrs=None,
+    ):
         #       Original graph
         #          Input_1
         #             |
@@ -66,10 +88,10 @@ class NNCFGraphToTestSumAggregation:
         #             |
         #           Output_1
         nodes = [
-            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
             NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
-            NodeWithType("Sum_1", sum_metatype),
-            NodeWithType("Output_1", OutputNoopMetatype),
+            NodeWithType("Sum_1", sum_metatype, layer_attributes=sum_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
         ]
         node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Sum_1"), ("Sum_1", "Output_1")]
         original_mock_graph = create_mock_graph(nodes, node_edges)
@@ -81,7 +103,14 @@ class NNCFGraphToTestSumAggregation:
 
 
 class NNCFGraphToTestMatMul:
-    def __init__(self, matmul_metatype, matmul_layer_attrs=None, nncf_graph_cls=NNCFGraph):
+    def __init__(
+        self,
+        matmul_metatype,
+        matmul_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+        input_layer_attrs=None,
+        output_layer_attrs=None,
+    ):
         #       Original graphs
         #          Input_1
         #             |
@@ -89,9 +118,9 @@ class NNCFGraphToTestMatMul:
         #             |
         #           Output_1
         nodes = [
-            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
             NodeWithType("MatMul_1", matmul_metatype, layer_attributes=matmul_layer_attrs),
-            NodeWithType("Output_1", OutputNoopMetatype),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
         ]
         node_edges = [("Input_1", "MatMul_1"), ("MatMul_1", "Output_1")]
         original_mock_graph = create_mock_graph(nodes, node_edges)
