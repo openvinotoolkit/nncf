@@ -575,6 +575,18 @@ def create_linear_arithmetic_activations() -> GraphPattern:
     return linear
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC)
+def create_linear_arithmetic_activations() -> GraphPattern:
+    linear = linear_operations()
+    arithmetic = arithmetic_operations()
+    activations = atomic_activations_operations()
+
+    linear.join_patterns(arithmetic)
+    linear.join_patterns(activations)
+    linear.join_patterns(arithmetic)
+    return linear
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SQUEEZE_ACTIVATIONS)
 def create_linear_squeeze_activation() -> GraphPattern:
     linear = linear_operations()
