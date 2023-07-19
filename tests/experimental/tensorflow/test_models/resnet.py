@@ -366,7 +366,7 @@ class ResidualBlock(tf.keras.layers.Layer):
                 momentum=self._norm_momentum,
                 epsilon=self._norm_epsilon,
                 trainable=self._bn_trainable,
-                synchronized=self.use_sync_bn,
+                synchronized=self._use_sync_bn,
             )
 
         conv1_padding = "same"
@@ -387,7 +387,7 @@ class ResidualBlock(tf.keras.layers.Layer):
         )
         self._norm1 = tf.keras.layers.BatchNormalization(
             axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self.use_sync_bn
+            synchronized=self._use_sync_bn
         )
 
         self._conv2 = tf.keras.layers.Conv2D(
@@ -402,7 +402,7 @@ class ResidualBlock(tf.keras.layers.Layer):
         )
         self._norm2 = tf.keras.layers.BatchNormalization(
             axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self.use_sync_bn
+            synchronized=self._use_sync_bn
         )
 
         if self._se_ratio and self._se_ratio > 0 and self._se_ratio <= 1:
@@ -573,7 +573,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
                 momentum=self._norm_momentum,
                 epsilon=self._norm_epsilon,
                 trainable=self._bn_trainable,
-                synchronized=self.use_sync_bn,
+                synchronized=self._use_sync_bn,
             )
 
         self._conv1 = tf.keras.layers.Conv2D(
@@ -587,7 +587,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
         )
         self._norm1 = tf.keras.layers.BatchNormalization(
             axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self.use_sync_bn
+            synchronized=self._use_sync_bn
         )
         self._activation1 = get_activation(self._activation, use_keras_layer=True)
 
@@ -604,7 +604,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
         )
         self._norm2 = tf.keras.layers.BatchNormalization(
             axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self.use_sync_bn
+            synchronized=self._use_sync_bn
         )
         self._activation2 = get_activation(self._activation, use_keras_layer=True)
 
@@ -619,7 +619,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
         )
         self._norm3 = tf.keras.layers.BatchNormalization(
             axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self.use_sync_bn
+            synchronized=self._use_sync_bn
         )
         self._activation3 = get_activation(self._activation, use_keras_layer=True)
 
