@@ -353,15 +353,12 @@ def create_linear_arithmetic_activations() -> GraphPattern:
 
 
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC)
-def create_linear_arithmetic_activations() -> GraphPattern:
-    linear = linear_operations()
+def create_linear_arithmetic_activations_arithmetic() -> GraphPattern:
+    linear_arithmetic_activations = create_linear_arithmetic_activations()
     arithmetic = arithmetic_operations()
-    activations = atomic_activations_operations()
 
-    linear.join_patterns(arithmetic)
-    linear.join_patterns(activations)
-    linear.join_patterns(arithmetic)
-    return linear
+    linear_arithmetic_activations.join_patterns(arithmetic)
+    return linear_arithmetic_activations
 
 
 # DEVICE PATTERNS
