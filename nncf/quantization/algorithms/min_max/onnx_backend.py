@@ -171,6 +171,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         assert node.layer_attributes.has_weight()
         weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
         reduction_shape = list(range(len(weight_shape)))
+        if len(reduction_shape) == 1:  # If only one channel
+            return tuple(reduction_shape), use_abs_max
 
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
         reduction_shape.pop(axis)
