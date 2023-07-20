@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import List
 
@@ -31,6 +32,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -82,8 +84,14 @@ class TemplateTestQuantizerConfig:
         algo = PostTrainingQuantization()
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
+        nncf_graph = single_conv_nncf_graph.nncf_graph
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph),
+            min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.read_variable_metatypes,
+        )
         q_setup = min_max_algo._get_quantizer_setup(
-            single_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+            nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
         )
 
         weight_default_config = QuantizerConfig(
@@ -133,8 +141,14 @@ class TemplateTestQuantizerConfig:
         )
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
+        nncf_graph = single_conv_nncf_graph.nncf_graph
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph),
+            min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.read_variable_metatypes,
+        )
         q_setup = min_max_algo._get_quantizer_setup(
-            single_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+            nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
         )
         q_g_to_quantization_mode = {}
         for q_g in QuantizerGroup:
@@ -160,8 +174,14 @@ class TemplateTestQuantizerConfig:
         algo = PostTrainingQuantization()
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
+        nncf_graph = depthwise_conv_nncf_graph.nncf_graph
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph),
+            min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.read_variable_metatypes,
+        )
         q_setup = min_max_algo._get_quantizer_setup(
-            depthwise_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+            nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
         )
 
         weight_default_config = QuantizerConfig(
