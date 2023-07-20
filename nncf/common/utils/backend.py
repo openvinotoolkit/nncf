@@ -27,7 +27,7 @@ def get_available_backends() -> List[BackendType]:
     """
     Returns a list of available backends.
 
-    :return: A list of avauilable backends.
+    :return: A list of available backends.
     """
     frameworks = [
         ("torch", BackendType.TORCH),
@@ -95,7 +95,7 @@ def is_openvino_model(model: TModel) -> bool:
     return isinstance(model, ov.Model)
 
 
-def is_openvino_compiled_model(model: TModel):
+def is_openvino_compiled_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of openvino.runtime.CompiledModel, otherwise False.
 
@@ -111,7 +111,7 @@ def get_backend(model: TModel) -> BackendType:
     """
     Returns the NNCF backend name string inferred from the type of the model object passed into this function.
 
-    :param model: The framework-specific object representing the trainable model.
+    :param model: The framework-specific model.
     :return: A BackendType representing the correct NNCF backend to be used when working with the framework.
     """
     available_backends = get_available_backends()

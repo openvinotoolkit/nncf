@@ -10,9 +10,8 @@
 # limitations under the License.
 
 import sys
+from dataclasses import dataclass
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
-
-from attr import dataclass
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
@@ -22,8 +21,8 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.utils.os import available_cpu_count
-from nncf.common.utils.os import available_memory_amount
+from nncf.common.utils.os import get_available_cpu_count
+from nncf.common.utils.os import get_available_memory_amount
 from nncf.common.utils.timer import timer
 from nncf.data.dataset import CountingDatasetWrapper
 from nncf.data.dataset import Dataset
@@ -428,14 +427,14 @@ class QuantizationAccuracyRestorer:
         # Calculate the number of parallel processes needed to override model preparation and
         # metric calculation on the ranking subset
         ranking_time = validation_time * self.ranking_subset_size / validation_dataset_size
-        n_proc = max(round(preperation_time / ranking_time * OVERHEAD_COEFFICIENT), 2)
+        n_proc = max(round((preperation_time / ranking_time + 1) * OVERHEAD_COEFFICIENT), 2)
 
         # Apply limitation by number of CPU cores
-        n_cores = available_cpu_count()
+        n_cores = get_available_cpu_count()
         n_proc = max(min(n_proc, n_cores // 2), 1)
 
         # Apply limitation by memmory
-        ram = available_memory_amount()
+        ram = get_available_memory_amount()
         n_copies = ram // (model_size * MEMORY_INCREASE_COEFFICIENT)
         n_proc = max(min(n_proc, n_copies - 1), 1)
 

@@ -42,7 +42,7 @@ def is_linux():
     return "linux" in sys.platform
 
 
-def available_cpu_count() -> int:
+def get_available_cpu_count() -> int:
     """
     :return: Logical CPU count
     """
@@ -52,7 +52,7 @@ def available_cpu_count() -> int:
         return 1
 
 
-def available_memory_amount() -> int:
+def get_available_memory_amount() -> int:
     """
     :return: Available memory amount (bytes)
     """
