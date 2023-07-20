@@ -346,7 +346,11 @@ class MinMaxQuantization(Algorithm):
         return IgnoredScope(names=nncf_node_names)
 
     def _get_quantizer_setup(
-        self, nncf_graph: NNCFGraph, hw_patterns: GraphPattern, ignored_patterns: GraphPattern
+        self,
+        nncf_graph: NNCFGraph,
+        inference_nncf_graph: NNCFGraph,
+        hw_patterns: GraphPattern,
+        ignored_patterns: GraphPattern,
     ) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
@@ -360,9 +364,6 @@ class MinMaxQuantization(Algorithm):
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
 
-        inference_nncf_graph = transform_to_inference_graph(
-            deepcopy(nncf_graph), self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
-        )
         ignored_names = self._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
         weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph)
 
@@ -480,9 +481,14 @@ class MinMaxQuantization(Algorithm):
             backend=backend, device=device, model_type=model_type
         )
         hw_patterns = PatternsManager.get_full_hw_pattern_graph(backend=backend, device=device, model_type=model_type)
-        quantizer_setup = self._get_quantizer_setup(nncf_graph, hw_patterns, ignored_patterns)
+
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph), self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
+        )
+
+        quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         self._apply_model_type_pass(self._model_type, quantizer_setup, nncf_graph)
-        self._apply_device_pass(self._target_device, quantizer_setup, nncf_graph)
+        self._apply_device_pass(self._target_device, quantizer_setup, inference_nncf_graph)
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup)
         quantization_points = list(quantizer_setup.quantization_points.values())
         quantization_points = self._topological_sort_quantization_points(quantization_points, nncf_graph)
