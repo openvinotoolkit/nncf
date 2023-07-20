@@ -21,9 +21,9 @@ from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization import QuantizationPreset
+from nncf.quantization import compress_weights
 from nncf.quantization import quantize
 from nncf.quantization import quantize_with_accuracy_control
-from nncf.quantization import weights_compression
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope
 from nncf.version import __version__

@@ -262,7 +262,7 @@ def quantize_impl(
 
 def compress_weights(model: torch.nn.Module, use_fake_quantize: bool = False) -> torch.nn.Module:
     """
-    Implementation of the `weights_compression()` method for the PyTorch backend.
+    Implementation of the `compress_weights()` method for the PyTorch backend.
     """
     compressed_model, _ = replace_modules_by_nncf_modules(model)
     insert_pre_compression_operations(model, use_fake_quantize)

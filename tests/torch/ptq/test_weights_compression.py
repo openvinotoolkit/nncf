@@ -11,7 +11,7 @@
 
 import torch
 
-from nncf.quantization import weights_compression
+from nncf.quantization import compress_weights
 
 
 class ShortTransformer(torch.nn.Module):
@@ -28,10 +28,10 @@ class ShortTransformer(torch.nn.Module):
         return res
 
 
-def test_weights_compression():
+def test_compress_weights():
     model = ShortTransformer(5, 10)
 
-    compressed_model = weights_compression(model, use_fake_quantize=False)
+    compressed_model = compress_weights(model, use_fake_quantize=False)
 
     n_compressed_weights = 0
     n_target_modules = 0
@@ -45,10 +45,10 @@ def test_weights_compression():
     assert n_compressed_weights == n_target_modules
 
 
-def test_weights_compression_with_fake_quantize(mocker):
+def test_compress_weights_with_fake_quantize(mocker):
     model = ShortTransformer(5, 10)
 
-    compressed_model = weights_compression(model, use_fake_quantize=True)
+    compressed_model = compress_weights(model, use_fake_quantize=True)
 
     n_target_modules = 0
 
