@@ -27,6 +27,8 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.openvino.graph.node_utils import get_activation_channel_axis
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -138,9 +140,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             else:
                 raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
+            channel_axis = get_activation_channel_axis(node)
             # TODO (l-bat): Disable quantizer propogation through layout changing operations
-            channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
-            axes = tuple(i for i in range(len(shape)) if i != channel_axis)
+            axes = get_channel_agnostic_reduction_shape([channel_axis], shape)
             return axes, use_abs_max
 
         assert isinstance(node.layer_attributes, OVLayerAttributes)
@@ -148,7 +150,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         if quantizer_config.per_channel:
             channel_axes = get_weight_channel_axes(node, target_point.port_id)
-            axes = tuple(i for i in range(len(const_shape)) if i not in channel_axes)
+            axes = get_channel_agnostic_reduction_shape(channel_axes, shape)
         else:
             axes = tuple(range(len(const_shape)))
 

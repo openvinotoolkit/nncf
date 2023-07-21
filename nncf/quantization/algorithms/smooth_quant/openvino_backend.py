@@ -23,6 +23,8 @@ from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.node_utils import get_activation_channel_axis
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
@@ -63,14 +65,8 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @staticmethod
     def calculate_input_reduction_shape(nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-        channels_position = node.metatype.output_channel_axis
-
-        if node.layer_attributes.input_attributes["transpose"]:
-            channels_position = 1
-
-        reduction_shape = list(range(len(shape)))
-        reduction_shape.pop(channels_position)
-        return tuple(reduction_shape)
+        channel_axis = get_activation_channel_axis(node)
+        return get_channel_agnostic_reduction_shape([channel_axis], shape)
 
     @staticmethod
     def get_abs_max_channel_collector(

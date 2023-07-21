@@ -16,8 +16,10 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -86,3 +88,24 @@ def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, e
 
     assert len(actual_channel_axes) == len(expected_channel_axes)
     assert all(a == b for a, b in zip(actual_channel_axes, expected_channel_axes))
+
+
+@pytest.mark.parametrize(
+    "metatype, inputs_attributes, expected_channel_axis",
+    [
+        (OVMatMulMetatype, {"transpose": False}, -1),
+        (OVMatMulMetatype, {"transpose": True}, 1),
+        (OVConvolutionMetatype, {}, 1),
+    ],
+)
+def test_get_activation_channel_axis(metatype, inputs_attributes, expected_channel_axis):
+    attributes = {
+        NNCFGraph.METATYPE_ATTR: metatype,
+        NNCFGraph.LAYER_ATTRIBUTES: OVLayerAttributes(
+            constant_attributes={0: {"transpose": False, "shape": (1)}}, inputs_attributes=inputs_attributes
+        ),
+    }
+    node = NNCFNode(0, "test", attributes)
+    actual_channel_axis = get_activation_channel_axis(node)
+
+    assert actual_channel_axis == expected_channel_axis

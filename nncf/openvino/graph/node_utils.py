@@ -337,3 +337,33 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
             channel_axes.append(matmul_channel_axis)
 
     return channel_axes
+
+
+def get_activation_channel_axis(node: NNCFNode) -> int:
+    """
+    Returns axis number of the activation tensor which correspond to it channel.
+
+    :param node: NNCFNode instance.
+    :return: Channel axis number.
+    """
+    channel_axis = node.metatype.output_channel_axis
+
+    if (
+        hasattr(node, "layer_attributes")
+        and "transpose" in node.layer_attributes.input_attributes
+        and node.layer_attributes.input_attributes["transpose"]
+    ):
+        channel_axis = 1
+
+    return channel_axis
+
+
+def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[int]) -> Tuple[int]:
+    """
+    Returns filtered reduction shape without axes that corresponds channels.
+
+    :param channel_axes: List of the channel axes.
+    :param shape: Shape that need to be filtered.
+    :return: Reduction shape in tuple format.
+    """
+    return tuple(i for i in range(len(shape)) if i not in channel_axes)
