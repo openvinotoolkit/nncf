@@ -346,10 +346,10 @@ def get_activation_channel_axis(node: NNCFNode) -> int:
     :param node: NNCFNode instance.
     :return: Channel axis number.
     """
-    channel_axis = node.metatype.output_channel_axis
+    channel_axis = node.metatype.output_channel_axis if node.metatype.output_channel_axis is not None else 1
 
     if (
-        hasattr(node, "layer_attributes")
+        hasattr(node.layer_attributes, "input_attributes")
         and "transpose" in node.layer_attributes.input_attributes
         and node.layer_attributes.input_attributes["transpose"]
     ):

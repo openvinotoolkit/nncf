@@ -150,7 +150,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         if quantizer_config.per_channel:
             channel_axes = get_weight_channel_axes(node, target_point.port_id)
-            axes = get_channel_agnostic_reduction_shape(channel_axes, shape)
+            axes = get_channel_agnostic_reduction_shape(channel_axes, const_shape)
         else:
             axes = tuple(range(len(const_shape)))
 
