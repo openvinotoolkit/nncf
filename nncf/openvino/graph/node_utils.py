@@ -349,7 +349,7 @@ def get_activation_channel_axis(node: NNCFNode) -> int:
     channel_axis = node.metatype.output_channel_axis if node.metatype.output_channel_axis is not None else 1
 
     if (
-        hasattr(node.layer_attributes, "input_attributes")
+        node.layer_attributes.input_attributes is not None
         and "transpose" in node.layer_attributes.input_attributes
         and node.layer_attributes.input_attributes["transpose"]
     ):
@@ -366,4 +366,7 @@ def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[in
     :param shape: Shape that need to be filtered.
     :return: Reduction shape in tuple format.
     """
-    return tuple(i for i in range(len(shape)) if i not in channel_axes)
+    reduction_shape = list(range(len(shape)))
+    for channel_axis in channel_axes:
+        reduction_shape.pop(channel_axis)
+    return tuple(reduction_shape)
