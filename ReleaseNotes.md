@@ -84,6 +84,7 @@ The parameter set of the function is the same for all frameworks - actual framew
 See [description](nncf/experimental/torch/sparsity/movement/MovementSparsity.md) of the movement pruning involved in the JPQD for details.
 
 Bugfixes:
+
 - Fixed a division by zero if every operation is added to ignored scope
 - Improved logging output, cutting down on the number of messages being output to the standard `logging.INFO` log level.
 - Fixed FLOPS calculation for linear filters - this impacts existing models that were pruned with a FLOPS target.
@@ -102,6 +103,7 @@ Bugfixes:
 - (ONNX) Improved the working time of PTQ by optimizing the calls to ONNX shape inferencing.
 
 Breaking changes:
+
 - Fused patterns will be excluded from quantization via `ignored_scopes` only if the top-most node in data flow order matches against `ignored_scopes`
 - NNCF config's `"ignored_scopes"` and `"target_scopes"` are now strictly checked to be matching against at least one node in the model graph instead of silently ignoring the unmatched entries.
 - Calling `setup.py` directly to install NNCF is deprecated and no longer guaranteed to work.
@@ -110,18 +112,21 @@ Breaking changes:
 - (ONNX) Removed CompressionBuilder. Excluded examples of NNCF for ONNX with CompressionBuilder API
 
 ## New in Release 2.3.0
+
 - (ONNX) PTQ API support for ONNX.
 - (ONNX) Added PTQ examples for ONNX in image classification, object detection, and semantic segmentation.
 - (PyTorch) Added `BootstrapNAS` to find high-performing sub-networks from the super-network optimization.
 
 Bugfixes:
+
 - (PyTorch) Returned the initial quantized model when the retraining failed to find out the best checkpoint.
 - (Experimental) Fixed weight initialization for `ONNXGraph` and `MinMaxQuantization`
 
 ## New in Release 2.2.0
+
 - (TensorFlow) Added TensorFlow 2.5.x support.
 - (TensorFlow) The `SubclassedConverter` class was added to create `NNCFGraph` for the `tf.Graph` Keras model.
-- (TensorFlow) Added `TFOpLambda ` layer support with `TFModelConverter`, `TFModelTransformer`, and `TFOpLambdaMetatype`.
+- (TensorFlow) Added `TFOpLambda` layer support with `TFModelConverter`, `TFModelTransformer`, and `TFOpLambdaMetatype`.
 - (TensorFlow) Patterns from `MatMul` and `Conv2D` to `BiasAdd` and `Metatypes` of TensorFlow operations with weights `TFOpWithWeightsMetatype` are added.
 - (PyTorch, TensorFlow) Added prunings for `Reshape` and `Linear` as `ReshapePruningOp` and `LinearPruningOp`.
 - (PyTorch) Added mixed precision quantization config with HAWQ for `Resnet50` and `Mobilenet_v2` for the latest VPU.
@@ -132,6 +137,7 @@ Bugfixes:
 - (Experimental) Added `ONNXPostTrainingQuantization` and `MinMaxQuantization` supports for ONNX.
 
 Bugfixes:
+
 - (PyTorch, TensorFlow) Added exception handling of BN adaptation for zero sample values.
 - (PyTorch, TensorFlow) Fixed learning rate after validation step for `EarlyExitCompressionTrainingLoop`.
 - (PyTorch) Fixed `FakeQuantizer` to make exact zeros.
@@ -140,6 +146,7 @@ Bugfixes:
 - (PyTorch) Fixed the statistics collection from the pruned model.
 
 ## New in Release 2.1.0
+
 - (PyTorch) All PyTorch operations are now NNCF-wrapped automatically.
 - (TensorFlow) Scales for concat-affecting quantizers are now unified
 - (PyTorch) The pruned filters are now set to 0 in the exported ONNX file instead of removing them from the ONNX definition.
@@ -157,21 +164,27 @@ Bugfixes:
 - (PyTorch - Experimental) Added an algorithm to search the model's architecture for basic building blocks.
 
 Bugfixes:
+
 - (TensorFlow) Fixed a bug where an operation with int32 inputs (following a Cast op) was attempted to be quantized.
 - (PyTorch, TensorFlow) LeakyReLU now properly handled during pruning
 - (PyTorch) Fixed errors with custom modules failing at the `determine_subtype` stage of metatype assignment.
 - (PyTorch) Fix handling modules with `torch.nn.utils.weight_norm.WeightNorm` applied
 
 ## New in Release 2.0.2
+
 Target version updates:
+
 - Relax TensorFlow version requirements to 2.4.x
 
 ## New in Release 2.0.1
+
 Target version updates:
+
 - Bump target framework versions to PyTorch 1.9.1 and TensorFlow 2.4.3
 - Increased target HuggingFace transformers version for the integration patch to 4.9.1
 
 Bugfixes:
+
 - (PyTorch, TensorFlow) Fixed statistic collection for the algo mixing scenario
 - (PyTorch, TensorFlow) Increased pruning algorithm robustness in cases of a disconnected NNCF graph
 - (PyTorch, TensorFlow) Fixed the fatality of NNCF graph PNG rendering failures
@@ -189,7 +202,8 @@ Bugfixes:
 - (PyTorch, TensorFlow) Fixed FLOPS calculation for grouped convolutions
 - (PyTorch) Fixed knowledge distillation failures for tensors of unsupported shapes - will now ignore output tensors with unsupported shapes instead of crashing.
 
-## New in Release 2.0:
+## New in Release 2.0
+
 - Added TensorFlow 2.4.2 support - NNCF can now be used to apply the compression algorithms to models originally trained in TensorFlow.
 NNCF with TensorFlow backend supports the following features:
   - Compression algorithms:
@@ -230,6 +244,7 @@ NNCF with TensorFlow backend supports the following features:
 - (Experimental, PyTorch) Knowledge distillation supported, ready to be used with any compression algorithm to produce an additional loss source of the compressed model against the uncompressed version
 
 Breaking changes:
+
 - `CompressionLevel` has been renamed to `CompressionStage`
 - `"ignored_scopes"` and "target_scopes" no longer allow prefix matching - use full-fledged regular expression approach via {re} if anything more than an exact match is desired.
 - (PyTorch) Removed version-agnostic name mapping for ReLU operations, i.e. the NNCF configs that referenced "RELU" (all caps) as an operation name will now have to reference an exact ReLU PyTorch function name such as "relu" or "relu_"
@@ -239,15 +254,19 @@ Breaking changes:
 - `"quantizable_subgraph_patterns"` option removed from the NNCF config
 
 Bugfixes:
+
 - (PyTorch) Fixed a hang with batchnorm adaptation being applied in DDP mode
 - (PyTorch) Fixed tracing of the operations that return NotImplemented
 
-## New in Release 1.7.1:
+## New in Release 1.7.1
+
 Bugfixes:
+
 - Fixed a bug with where compressed models that were supposed to return named tuples actually returned regular tuples
 - Fixed an issue with batch norm adaptation-enabled compression runs hanging in the DDP scenario
 
-## New in Release 1.7:
+## New in Release 1.7
+
 - Adjust Padding feature to support accurate execution of U4 on VPU - when setting "target_device" to "VPU", the training-time padding values for quantized convolutions will be adjusted to better reflect VPU inference process.
 - Weighted layers that are "frozen" (i.e. have requires_grad set to False at compressed model creation time) are no longer considered for compression, to better handle transfer learning cases.
 - Quantization algorithm now sets up quantizers without giving an option for requantization, which guarantees best performance, although at some cost to quantizer configuration flexibility.
@@ -258,6 +277,7 @@ Bugfixes:
 - Bumped target PyTorch version to 1.8.1 and relaxed package requirements constraints to allow installation into environments with PyTorch >=1.5.0
 
 Notable bugfixes:
+
 - Fixed bias pruning in depthwise convolution
 - Made per-tensor quantization available for all operations that support per-channel quantization
 - Fixed progressive training performance degradation when an output tensor of an NNCF-compressed model is reused as its input.
@@ -267,10 +287,11 @@ Notable bugfixes:
 - Now possible to load AutoQ and HAWQ-produced checkpoints to evaluate them or export to ONNX
 
 Removed features:
+
 - Pattern-based quantizer setup mode for quantization algorithm - due to its logic, it did not guarantee that all required operation inputs are ultimately quantized.
 
+## New in Release 1.6
 
-## New in Release 1.6:
 - Added AutoQ - an AutoML-based mixed-precision initialization mode for quantization, which utilizes the power of reinforcement learning to select the best quantizer configuration for any model in terms of quality metric for a given HW architecture type.
 - NNCF now supports inserting compression operations as pre-hooks to PyTorch operations, instead of abusing the post-hooking; the flexibility of quantization setups has been improved as a result of this change.
 - Improved the pruning algorithm to group together dependent filters from different layers in the network and prune these together
@@ -285,8 +306,8 @@ Removed features:
 - Added an option to optimize logarithms of quantizer scales instead of scales themselves directly, a technique which improves convergence in certain cases
 - Added reference checkpoints for filter-pruned models: UNet@Mapillary (25% of filters pruned), SSD300@VOC (40% of filters pruned)
 
+## New in Release 1.5
 
-## New in Release 1.5:
 - Switched to using the propagation-based mode for quantizer setup by default. Compared to the previous default, pattern-based mode, the propagation-based mode better ensures that all the inputs to operations that can be quantized on a given type of hardware are quantized in accordance with what this hardware allows. Default target hardware is CPU - adjustable via `"target_device"` option in the NNCF config. More details can be found in [Quantization.md](./docs/compression_algorithms/Quantization.md#quantizer-setup-and-hardware-config-files).
 - HAWQ mixed-precision initialization now supports a compression ratio parameter setting - set to 1 for a fully INT8 model, > 1 to increasingly allow lower bitwidth. The level of compression for each layer is defined by a product of the layer FLOPS and the quantization bitwidth.
 - HAWQ mixed-precision initialization allows specifying a more generic `criterion_fn` callable to calculate the related loss in case of complex output's post-processing or multiple losses.
@@ -304,7 +325,8 @@ Removed features:
 - GPT2 compression enabled, configuration file added to the `transformers` integration patch
 - Added GoogLeNet as a filter-pruned sample model (with final checkpoints)
 
-## New in Release 1.4:
+## New in Release 1.4
+
 - Models with filter pruning applied are now exportable to ONNX
 - BatchNorm adaptation now available as a common compression algorithm initialization step - currently disabled by default, see `"batchnorm_adaptation"` config parameters in compression algorithm documentation (e.g. [Quantizer.md](docs/compression_algorithms/Quantization.md)) for instructions on how to enable it in NNCF config
 - Major performance improvements for per-channel quantization training - now performs almost as fast as the per-tensor quantization training
@@ -317,11 +339,13 @@ Removed features:
 - Added an example config and model checkpoint for the ResNet50 INT8 + 50% sparsity (RB)
 
 ## New in Release 1.3.1
+
 - Now using PyTorch 1.5 and CUDA 10.2 by default
 - Support for exporting quantized models to ONNX checkpoints with standard ONNX v10 QuantizeLinear/DequantizeLinear pairs (8-bit quantization only)
 - Compression algorithm initialization moved to the compressed model creation stage
 
-## New in Release 1.3:
+## New in Release 1.3
+
 - Filter pruning algorithm added
 - Mixed-precision quantization with manual and automatic (HAWQ-powered) precision setup
 - Support for DistilBERT
@@ -333,7 +357,8 @@ Removed features:
 - Docker images supplied for easier setup in container-based environments
 - Usability improvements (NNCF config .JSON file validation by schema, less boilerplate code, separate logging and others)
 
-## New in Release 1.2:
+## New in Release 1.2
+
 - Support for transformer-based networks quantization (tested on BERT and RoBERTa)
 - Added instructions and Git patches for integrating NNCF into third-party repositories ([mmdetection](https://github.com/open-mmlab/mmdetection), [transformers](https://github.com/huggingface/transformers))
 - Support for GNMT quantization
@@ -354,9 +379,9 @@ Removed features:
 - Support of symmetric quantization and two sparsity algorithms with fine-tuning
 - Automatic model graph transformation. The model is wrapped by the custom class and additional layers are inserted in the graph. The transformations are configurable.
 - Three training samples which demonstrate usage of compression methods from the NNCF:
-    - Image Classification:  torchvision models for classification and custom models on ImageNet and CIFAR10/100 datasets.
-    - Object Detection: SSD300, SSD512, MobileNet SSD on Pascal VOC2007, Pascal VOC2012, and COCO datasets.
-    - Semantic Segmentation: UNet, ICNet on CamVid and Mapillary Vistas datasets.
+  - Image Classification:  torchvision models for classification and custom models on ImageNet and CIFAR10/100 datasets.
+  - Object Detection: SSD300, SSD512, MobileNet SSD on Pascal VOC2007, Pascal VOC2012, and COCO datasets.
+  - Semantic Segmentation: UNet, ICNet on CamVid and Mapillary Vistas datasets.
 - Unified interface for compression methods.
 - GPU-accelerated *Quantization* layer for fast model fine-tuning.
 - Distributed training support in all samples.

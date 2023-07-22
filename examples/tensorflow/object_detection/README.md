@@ -18,7 +18,7 @@ At this point it is assumed that you have already installed nncf. You can find i
 
 To work with the sample you should install the corresponding Python package dependencies:
 
-```
+```bash
 pip install -r examples/tensorflow/requirements.txt
 ```
 
@@ -71,72 +71,82 @@ archive with pre-trained weights can be found in the `TensorFlow checkpoint` col
 Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the
 FP32 model, without applying any compression algorithms.
 - (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command:
+
   ```bash
   python main.py \
-  --mode=test \
-  --config=configs/quantization/retinanet_coco_int8.json \
-  --weights=<path_to_H5_file_with_pretrained_weights>
-  --data=<path_to_dataset> \
-  --disable-compression
+    --mode=test \
+    --config=configs/quantization/retinanet_coco_int8.json \
+    --weights=<path_to_H5_file_with_pretrained_weights>
+    --data=<path_to_dataset> \
+    --disable-compression
   ```
+
 - Run the following command to start compression with fine-tuning on all available GPUs on the machine:
-    ```bash
-    python main.py \
+
+  ```bash
+  python main.py \
     --mode=train \
     --config=configs/quantization/retinanet_coco_int8.json \
     --weights=<path_to_H5_file_with_pretrained_weights>
     --data=<path_to_dataset> \
     --log-dir=../../results/quantization/retinanet_coco_int8
-    ```
+  ```
+
 - Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
 
 ### Validate Your Model Checkpoint
 
 To estimate the test scores of your trained model checkpoint, use the following command:
+
 ```bash
 python main.py \
---mode=test \
---config=configs/quantization/retinanet_coco_int8.json \
---data=<path_to_dataset> \
---resume=<path_to_trained_model_checkpoint>
+  --mode=test \
+  --config=configs/quantization/retinanet_coco_int8.json \
+  --data=<path_to_dataset> \
+  --resume=<path_to_trained_model_checkpoint>
 ```
 
 ### Export Compressed Model
 
 To export trained model to the **Frozen Graph**, use the following command:
+
 ```bash
 python main.py \
---mode=export \
---config=configs/quantization/retinanet_coco_int8.json \
---resume=<path_to_trained_model_checkpoint> \
---to-frozen-graph=../../results/retinanet_coco_int8.pb
+  --mode=export \
+  --config=configs/quantization/retinanet_coco_int8.json \
+  --resume=<path_to_trained_model_checkpoint> \
+  --to-frozen-graph=../../results/retinanet_coco_int8.pb
 ```
 
 To export trained model to the **SavedModel**, use the following command:
+
 ```bash
 python main.py \
---mode=export \
---config=configs/quantization/retinanet_coco_int8.json \
---resume=<path_to_trained_model_checkpoint> \
---to-saved-model=../../results/saved_model
+  --mode=export \
+  --config=configs/quantization/retinanet_coco_int8.json \
+  --resume=<path_to_trained_model_checkpoint> \
+  --to-saved-model=../../results/saved_model
 ```
 
 To export trained model to the **Keras H5**, use the following command:
+
 ```bash
 python main.py \
---mode=export \
---config=configs/quantization/retinanet_coco_int8.json \
---resume=<path_to_trained_model_checkpoint> \
---to-h5=../../results/retinanet_coco_int8.h5
+  --mode=export \
+  --config=configs/quantization/retinanet_coco_int8.json \
+  --resume=<path_to_trained_model_checkpoint> \
+  --to-h5=../../results/retinanet_coco_int8.h5
 ```
 
 ### Save Checkpoint without Optimizer
+
 To reduce memory footprint (if no further training is scheduled) it is useful to save the checkpoint without optimizer. Use the following command:
+
 ```bash
 python ../common/prepare_checkpoint.py \
---config=configs/quantization/retinanet_coco_int8.json \
---resume=<path_to_trained_model_checkpoint> \
---checkpoint-save-dir=<path_to_save_optimized_model_checkpoint>
+  --config=configs/quantization/retinanet_coco_int8.json \
+  --resume=<path_to_trained_model_checkpoint> \
+  --checkpoint-save-dir=<path_to_save_optimized_model_checkpoint>
 ```
 
 ### Export to OpenVINO™ Intermediate Representation (IR)
@@ -144,20 +154,25 @@ python ../common/prepare_checkpoint.py \
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
 ## Train RetinaNet from scratch
+
 - Download pre-trained ResNet-50 checkpoint from [here](https://storage.cloud.google.com/cloud-tpu-checkpoints/model-garden-vision/detection/resnet50-2018-02-07.tar.gz).
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/object_detection` folder.
 - Run the following command to start training RetinaNet from scratch on all available GPUs on the machine:
-    ```bash
-    python main.py \
+
+  ```bash
+  python main.py \
     --mode=train \
     --config=configs/retinanet_coco.json \
     --data=<path_to_dataset> \
     --log-dir=../../results/quantization/retinanet_coco_baseline \
     --backbone-checkpoint=<path_to_resnet50-2018-02-07_folder>
+  ```
+
 - Export trained model to the Keras H5 format.
 
 ## Results
+
 <a name="results"></a>
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
@@ -169,7 +184,8 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |YOLO v4|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017|46.20 (0.87)|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_int8.tar.gz)|
 |YOLO v4|Magnitude sparsity, 50%|COCO 2017|46.49 (0.58)|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_magnitude_sparsity.tar.gz)|
 
-#### Results for filter pruning
+### Results for filter pruning
+
 <a name="filter_pruning"></a>
 
 |Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|

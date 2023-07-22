@@ -1,9 +1,9 @@
-## Post-Training Quantization for ONNX
+# Post-Training Quantization for ONNX
 
 NNCF supports [ONNX](https://onnx.ai/) backend for the Post-Training Quantization algorithm.
 This guide contains some notes that you should consider before working with NNCF for ONNX.
 
-### Model Preparation
+## Model Preparation
 
 The majority of the ONNX models are exported from different frameworks, such as PyTorch or TensorFlow.
 
@@ -23,11 +23,11 @@ model = onnx.load_model('/path_to_model')
 converted_model = convert_version(model, target_version=13)
 ```
 
-# ONNX Results
+## ONNX Results
 
 Below are some results obtained using [benchmarking section](../../../tests/onnx/benchmarking/README.md) for the models from [ONNX Model Zoo](https://github.com/onnx/models).
 
-## Classification
+### Classification
 
 |     ONNX Model      |Compression algorithm|Dataset|Accuracy (Drop) %|
 |:-------------------:| :---: | :---: | :---: |
@@ -39,7 +39,7 @@ Below are some results obtained using [benchmarking section](../../../tests/onnx
 |  [DenseNet-121](https://github.com/onnx/models/tree/8e893eb39b131f6d3970be6ebd525327d3df34ea/vision/classification/densenet-121/model/densenet-12.onnx)   |INT8 (Post-Training)|ImageNet|60.16 (0.8)|
 |     [VGG-16](https://github.com/onnx/models/tree/8e893eb39b131f6d3970be6ebd525327d3df34ea/vision/classification/vgg/model/vgg16-12.onnx)      |INT8 (Post-Training)|ImageNet|72.02 (0.0)|
 
-## Object Detection
+### Object Detection
 
 |   ONNX Model    |Compression algorithm| Dataset |mAP (drop) %|
 |:---------------:| :---: | :---: | :---: |

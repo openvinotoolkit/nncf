@@ -17,7 +17,7 @@ We provide two types of tests.
     This is a test to validate ONNX PTQ API functionality for the models in ONNX Model ZOO. It compares the quantized model accuracy with the references. To run the E2E test, please execute the following command.
 
     ```bash
-    $ pytest tests/onnx -m e2e_ptq --model-dir (model_dir) --data-dir (data_dir) --output-dir (output_dir) --ckpt-dir (ckpt_dir) --anno-dir (anno_dir) --eval-size (eval_size) --ptq-size (ptq_size)
+    pytest tests/onnx -m e2e_ptq --model-dir (model_dir) --data-dir (data_dir) --output-dir (output_dir) --ckpt-dir (ckpt_dir) --anno-dir (anno_dir) --eval-size (eval_size) --ptq-size (ptq_size)
     ```
 
     You should give three arguments to run this test.
@@ -33,10 +33,10 @@ We provide two types of tests.
     9. (Optional) `--enable-ov-ep`: If the parameter is set then the accuracy validation of the quantized models
              will be enabled for OpenVINOExecutionProvider.
     10. (Optional) `--disable-cpu-ep`: If the parameter is set then the accuracy validation of the quantized models
-              will be disabled for CPUExecutionProvider. 
+              will be disabled for CPUExecutionProvider.
 
     If you want to test the reference (not quantized) model accuracy - try the following command.
 
     ```bash
-    $ pytest tests/onnx -m e2e_eval_reference_model --model-dir (model_dir) --data-dir (data_dir) --output-dir (output_dir) --ckpt-dir (ckpt_dir) --anno-dir (anno_dir) --eval-size (eval_size) --ptq-size (ptq_size)
+   pytest tests/onnx -m e2e_eval_reference_model --model-dir (model_dir) --data-dir (data_dir) --output-dir (output_dir) --ckpt-dir (ckpt_dir) --anno-dir (anno_dir) --eval-size (eval_size) --ptq-size (ptq_size)
     ```
