@@ -12,26 +12,23 @@
 
 from typing import Any, Iterator, List, Optional, Tuple, TypeVar, Union
 
-from nncf.common.tensor_new import numpy_ops
-from nncf.common.tensor_new.enums import TensorBackendType
-from nncf.common.tensor_new.enums import TensorDataType
-
-try:
-    from nncf.torch import torch_ops
-
-except ImportError:
-    torch_ops = None
-
+import nncf.experimental.common.tensor.functions as functions
+from nncf.experimental.common.tensor.enums import TensorDataType
+from nncf.experimental.common.tensor.enums import TensorDeviceType
 
 DataType = TypeVar("DataType")
-DeviceType = TypeVar("DeviceType")
 
 
-FUNC_MAP_DISPATCHER = {
-    TensorBackendType.NUMPY: numpy_ops,
-}
-if torch_ops:
-    FUNC_MAP_DISPATCHER[TensorBackendType.TORCH] = torch_ops
+def _initialize_backends():
+    from nncf.experimental.common.tensor import numpy_functions
+
+    try:
+        from nncf.experimental.common.tensor import torch_functions
+    except ImportError:
+        pass
+
+
+_initialize_backends()
 
 
 class Tensor:
@@ -48,13 +45,24 @@ class Tensor:
 
     @property
     def shape(self) -> List[int]:
-        return Tensor(list(self.data.shape))
+        return list(self.data.shape)
+
+    @property
+    def device(self) -> TensorDeviceType:
+        return functions.device(self)
+
+    @property
+    def dtype(self) -> TensorDeviceType:
+        return functions.dtype(self)
 
     def __bool__(self) -> bool:
         return bool(self.data)
 
-    def __iter__(self) -> Iterator:
-        return iter(self.data)
+    # def __iter__(self) -> Iterator:
+    #     return iter(self.data)
+
+    def __iter__(self):
+        return TensorIterator(self.data)
 
     def __getitem__(self, index: int) -> "Tensor":
         return Tensor(self.data[index])
@@ -102,7 +110,7 @@ class Tensor:
     def __eq__(self, other: DataType) -> "Tensor":
         return Tensor(self.data == unwrap_tensor_data(other))
 
-    def __nq__(self, other: DataType) -> "Tensor":
+    def __ne__(self, other: DataType) -> "Tensor":
         return Tensor(self.data != unwrap_tensor_data(other))
 
     def __gt__(self, other: DataType) -> "Tensor":
@@ -113,78 +121,51 @@ class Tensor:
 
     # Tensor functions
 
-    @property
-    def device(self) -> Optional[DeviceType]:
-        return tensor_func_dispatcher("device", self.data)
-
     def squeeze(self, axis: Optional[Union[int, Tuple[int]]] = None) -> "Tensor":
-        return tensor_func_dispatcher("squeeze", self.data, axis=axis)
+        return functions.squeeze(self, axis)
 
     def flatten(self) -> "Tensor":
-        return tensor_func_dispatcher("flatten", self.data)
+        return functions.flatten(self)
 
     def max(self, axis: Optional[DataType] = None) -> "Tensor":
-        return tensor_func_dispatcher("max", self.data, axis=axis)
+        return functions.max(self, axis)
 
     def min(self, axis: Optional[DataType] = None) -> "Tensor":
-        return tensor_func_dispatcher("min", self.data, axis=axis)
+        return functions.min(self, axis)
 
     def abs(self) -> "Tensor":
-        return tensor_func_dispatcher("absolute", self.data)
+        return functions.abs(self)
 
-    def is_empty(self) -> "Tensor":
-        return tensor_func_dispatcher("is_empty", self.data)
+    def isempty(self) -> "Tensor":
+        return functions.isempty(self)
 
-    def as_type(self, dtype: TensorDataType):
-        return tensor_func_dispatcher("as_type", self.data, dtype)
+    def astype(self, dtype: TensorDataType):
+        return functions.astype(self, dtype)
 
     def reshape(self, shape: DataType) -> "Tensor":
-        return tensor_func_dispatcher("reshape", self.data, shape)
+        return functions.reshape(self, shape)
+
+
+class TensorIterator:
+    """Iterator for Tensor class"""
+
+    def __init__(self, tensor):
+        self._tensor = tensor
+        self._index = 0
+
+    def __next__(self) -> Tensor:
+        if self._index < len(self._tensor):
+            result = self._tensor[self._index]
+            self._index += 1
+            return Tensor(result)
+
+        raise StopIteration
 
 
 def unwrap_tensor_data(obj: Any) -> DataType:
     """
     Return the data of a Tensor object, or the object itself if it is not a Tensor.
-
     :param obj: The object to unwrap.
     :return: The data of the Tensor object, or the object itself.
     """
     return obj.data if isinstance(obj, Tensor) else obj
-
-
-def detect_tensor_backend(*args):
-    """
-    Detect the backend of a Tensor object.
-
-    :param *args: The arguments to the Tensor object.
-    :return: The backend of the Tensor object, or None if the backend cannot be determined.
-    """
-    if not args:
-        raise RuntimeError("tensor_func_dispatcher detect backend by args[0]")
-
-    for backend, tensor_ops in FUNC_MAP_DISPATCHER.items():
-        if tensor_ops.check_tensor_backend(args[0]):
-            return backend
-    return None
-
-
-def tensor_func_dispatcher(func_name: str, *args, **kwargs) -> Any:
-    """
-    Dispatcher for tensor functions.
-
-    :param func_name: The name of the function to dispatch.
-    :param *args: The arguments to the function.
-    :param **kwargs: The keyword arguments to the function.
-    :return: The result of the function call.
-    """
-    args = tuple(map(unwrap_tensor_data, args))
-    kwargs = {k: unwrap_tensor_data(v) for k, v in kwargs.items()}
-
-    tensor_backend = detect_tensor_backend(*args)
-    if tensor_backend is None:
-        raise RuntimeError(f"{func_name} is not implemented for {type(args[0])}")
-
-    module_ops = FUNC_MAP_DISPATCHER[tensor_backend]
-    func = getattr(module_ops, func_name)
-
-    return Tensor(func(*args, **kwargs))

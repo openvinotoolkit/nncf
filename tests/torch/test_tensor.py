@@ -11,6 +11,8 @@
 
 import torch
 
+from nncf.experimental.common.tensor import Tensor
+from nncf.experimental.common.tensor.enums import TensorDeviceType
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
 
@@ -18,3 +20,13 @@ class TestPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
         return torch.tensor(x)
+
+
+class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
+    @staticmethod
+    def to_tensor(x):
+        return torch.tensor(x).cuda()
+
+    def test_device(self):
+        tensor = Tensor(self.to_tensor([1]))
+        assert tensor.device == TensorDeviceType.GPU

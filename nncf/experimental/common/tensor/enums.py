@@ -9,4 +9,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.common.tensor_new.tensor import Tensor
+from enum import Enum
+from enum import auto
+
+
+class TensorBackendType(Enum):
+    """
+    Enum representing the different tensor backends.
+    """
+
+    NUMPY = auto()
+    TORCH = auto()
+
+
+class TensorDataType(Enum):
+    """
+    Enum representing the different tensor data types.
+    """
+
+    float16 = auto()
+    float32 = auto()
+    float64 = auto()
+    int8 = auto()
+    uint8 = auto()
+
+
+class TensorDeviceType(Enum):
+    """
+    Enum representing the different tensor device types.
+    """
+
+    CPU = auto()
+    GPU = auto()
