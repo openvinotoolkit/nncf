@@ -443,7 +443,7 @@ while this `__init__` requires a description of external dependencies and potent
 ```python
 class ComplexKlass(BaseClass):
     # ...
-   def __init__(self, param1: ParamType, param2: AnotherParamType):
+    def __init__(self, param1: ParamType, param2: AnotherParamType):
         """
         *Add a brief explanation of what happens during this particular __init__, such as :*
         The construction of this object is dependent on the value of GLOBAL_VARIABLE...

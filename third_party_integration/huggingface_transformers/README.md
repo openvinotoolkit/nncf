@@ -16,7 +16,7 @@ Distributed multiprocessing is also supported, simply use the corresponding vers
 
 4. While running with the `--nncf_config` option, the training scripts will output NNCF-wrapped model checkpoints instead of the regular ones. You may evaluate these checkpoints using the same command lines for training above, but with the`--do_train` key omitted. In order to export these checkpoints into ONNX format, further add `--to_onnx <path_to_output_onnx_file>` to your evaluation command line parameters.
 See exact command lines for each case in the model notes below.
-Note that in all cases the training hyperparameters might have to be adjusted to accomodate the hardware you have available.
+Note that in all cases the training hyperparameters might have to be adjusted to accommodate the hardware you have available.
 
 ## Current best results
 

@@ -192,7 +192,7 @@ Bugfixes:
 - (PyTorch) Fixed a bug with quantizing shared weights multiple times
 - (PyTorch) Fixed knowledge distillation failures in CPU-only and DataParallel scenarios
 - (PyTorch) Fixed sparsity application for torch.nn.Embedding and EmbeddingBag modules
-- (PyTorch) Added GroupNorm + ReLU as a fusable pattern
+- (PyTorch) Added GroupNorm + ReLU as a fusible pattern
 - (TensorFlow) Fixed gamma fusion handling for pruning TF BatchNorm
 - (PyTorch) Fixed pruning for models where operations have multiple convolution predecessors
 - (PyTorch) Fixed NNCFNetwork wrapper so that `self` in the calls to the wrapped model refers to the wrapper NNCFNetwork object and not to the wrapped model
@@ -239,7 +239,7 @@ NNCF with TensorFlow backend supports the following features:
 - Common interface for compression methods for both PyTorch and TensorFlow backends (https://github.com/openvinotoolkit/nncf/tree/develop/nncf/api).
 - (PyTorch) Added an option to specify an effective learning rate multiplier for the trainable parameters of the compression algorithms via NNCF config, for finer control over which should tune faster - the underlying FP32 model weights or the compression parameters.
 - (PyTorch) Unified scales for concat operations - the per-tensor quantizers that affect the concat operations will now have identical scales so that the resulting concatenated tensor can be represented without loss of accuracy w.r.t. the concatenated subcomponents.
-- (TensorFlow) Algo-mixing: Added configuration files and reference checkpoints for filter-pruned + qunatized models: ResNet50@ImageNet2012(40% of filters pruned + INT8), RetinaNet@COCO2017(40% of filters pruned + INT8).
+- (TensorFlow) Algo-mixing: Added configuration files and reference checkpoints for filter-pruned + quantized models: ResNet50@ImageNet2012(40% of filters pruned + INT8), RetinaNet@COCO2017(40% of filters pruned + INT8).
 - (Experimental, PyTorch) [Learned Global Ranking]((https://arxiv.org/abs/1904.12368)) filter pruning mechanism for better pruning ratios with less accuracy drop for a broad range of models has been implemented.
 - (Experimental, PyTorch) Knowledge distillation supported, ready to be used with any compression algorithm to produce an additional loss source of the compressed model against the uncompressed version
 
@@ -296,7 +296,7 @@ Removed features:
 - NNCF now supports inserting compression operations as pre-hooks to PyTorch operations, instead of abusing the post-hooking; the flexibility of quantization setups has been improved as a result of this change.
 - Improved the pruning algorithm to group together dependent filters from different layers in the network and prune these together
 - Extended the ONNX compressed model exporting interface with an option to explicitly name input and output tensors
-- Changed the compression scheduler so that the correspondingepoch_step  and step methods should now be called in the beginning of the epoch and before the optimizer step (previously these were called in the end of the epoch and after the optimizer step respectively)
+- Changed the compression scheduler so that the corresponding epoch_step and step methods should now be called in the beginning of the epoch and before the optimizer step (previously these were called in the end of the epoch and after the optimizer step respectively)
 - Data-dependent compression algorithm initialization is now specified in terms of dataset samples instead of training batches, e.g. `"num_init_samples"` should be used in place of "num_init_steps" in NNCF config files.
 - Custom user modules to be registered for compression can now be specified to be ignored for certain compression algorithms
 - Batch norm adaptation now being applied by default for all compression algorithms

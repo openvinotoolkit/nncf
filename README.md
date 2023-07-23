@@ -323,7 +323,7 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
 
 - [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
 
-  NNCF is integrated into OpenVINO Training Extensions as model optimization backend. So you can train, optimize anCompressed d export new models based on the available model templates as well as run exported models with OpenVINO.
+  NNCF is integrated into OpenVINO Training Extensions as model optimization backend. So you can train, optimize and export new models based on the available model templates as well as run exported models with OpenVINO.
 
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 

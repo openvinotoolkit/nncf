@@ -46,9 +46,9 @@ You can launch appropriate tests against the framework by running the following 
 
 * (Experimental) ONNXRuntime-OpenVINO
 
-    ```bash
-    test-onnx
-    ```
+  ```bash
+  test-onnx
+  ```
 
 ## Code style
 
@@ -64,9 +64,9 @@ You can launch appropriate linting against the framework by running the followin
 
 * (Experimental) ONNXRuntime-OpenVINO
 
-    ```bash
-    pylint-onnx
-    ```
+  ```bash
+  pylint-onnx
+  ```
 
 ## Binary files
 
