@@ -76,7 +76,7 @@ FP32 model, without applying any compression algorithms.
   python main.py \
     --mode=test \
     --config=configs/quantization/retinanet_coco_int8.json \
-    --weights=<path_to_H5_file_with_pretrained_weights>
+    --weights=<path_to_H5_file_with_pretrained_weights> \
     --data=<path_to_dataset> \
     --disable-compression
   ```
@@ -87,7 +87,7 @@ FP32 model, without applying any compression algorithms.
   python main.py \
     --mode=train \
     --config=configs/quantization/retinanet_coco_int8.json \
-    --weights=<path_to_H5_file_with_pretrained_weights>
+    --weights=<path_to_H5_file_with_pretrained_weights> \
     --data=<path_to_dataset> \
     --log-dir=../../results/quantization/retinanet_coco_int8
   ```
