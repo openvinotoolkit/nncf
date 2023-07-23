@@ -380,9 +380,27 @@ class TemplateTestNNCFTensorOperators:
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
 
+    def test_fn_maximum_list(self):
+        tensor_a = Tensor(self.to_tensor([1, 2]))
+        tensor_b = [2, 1]
+        tensor_ref = self.to_tensor([2, 2])
+
+        res = functions.maximum(tensor_a, tensor_b)
+        assert all(res.data == tensor_ref)
+        assert isinstance(res, Tensor)
+
     def test_fn_minimum(self):
         tensor_a = Tensor(self.to_tensor([1, 2]))
         tensor_b = Tensor(self.to_tensor([2, 1]))
+        tensor_ref = self.to_tensor([1, 1])
+
+        res = functions.minimum(tensor_a, tensor_b)
+        assert all(res.data == tensor_ref)
+        assert isinstance(res, Tensor)
+
+    def test_fn_minimum_list(self):
+        tensor_a = Tensor(self.to_tensor([1, 2]))
+        tensor_b = [2, 1]
         tensor_ref = self.to_tensor([1, 1])
 
         res = functions.minimum(tensor_a, tensor_b)

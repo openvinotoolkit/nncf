@@ -122,11 +122,15 @@ def _(a: torch.Tensor, b: torch.Tensor, rtol: float = 1e-05, atol: float = 1e-08
 
 @functions.maximum.register
 def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+    if not isinstance(x2, torch.Tensor):
+        x2 = torch.tensor(x2, device=x1.data.device)
     return torch.maximum(x1, x2)
 
 
 @functions.minimum.register
 def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+    if not isinstance(x2, torch.Tensor):
+        x2 = torch.tensor(x2, device=x1.data.device)
     return torch.minimum(x1, x2)
 
 
