@@ -240,7 +240,7 @@ NNCF with TensorFlow backend supports the following features:
 - (PyTorch) Added an option to specify an effective learning rate multiplier for the trainable parameters of the compression algorithms via NNCF config, for finer control over which should tune faster - the underlying FP32 model weights or the compression parameters.
 - (PyTorch) Unified scales for concat operations - the per-tensor quantizers that affect the concat operations will now have identical scales so that the resulting concatenated tensor can be represented without loss of accuracy w.r.t. the concatenated subcomponents.
 - (TensorFlow) Algo-mixing: Added configuration files and reference checkpoints for filter-pruned + quantized models: ResNet50@ImageNet2012(40% of filters pruned + INT8), RetinaNet@COCO2017(40% of filters pruned + INT8).
-- (Experimental, PyTorch) [Learned Global Ranking]((https://arxiv.org/abs/1904.12368)) filter pruning mechanism for better pruning ratios with less accuracy drop for a broad range of models has been implemented.
+- (Experimental, PyTorch) [Learned Global Ranking](https://arxiv.org/abs/1904.12368) filter pruning mechanism for better pruning ratios with less accuracy drop for a broad range of models has been implemented.
 - (Experimental, PyTorch) Knowledge distillation supported, ready to be used with any compression algorithm to produce an additional loss source of the compressed model against the uncompressed version
 
 Breaking changes:

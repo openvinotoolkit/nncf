@@ -63,10 +63,10 @@ To load pretrained weights into a model and then evaluate the accuracy of that m
 
 ```bash
 python main.py \
-  --mode=test \
-  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
-  --data=<path_to_imagenet_dataset> \
-  --disable-compression
+--mode=test \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--data=<path_to_imagenet_dataset> \
+--disable-compression
 ```
 
 #### Compress Pretrained Model
@@ -75,10 +75,10 @@ Run the following command to start compression with fine-tuning on all available
 
 ```bash
 python main.py \
-  --mode=train \
-  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
-  --data=<path_to_imagenet_dataset> \
-  --log-dir=../../results/quantization/mobilenet_v2_int8
+--mode=train \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--data=<path_to_imagenet_dataset> \
+--log-dir=../../results/quantization/mobilenet_v2_int8
 ```
 
 It may take a few epochs to get the baseline accuracy results.
@@ -91,10 +91,10 @@ To estimate the test scores of your trained model checkpoint, use the following 
 
 ```bash
 python main.py \
-  --mode=test \
-  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
-  --data=<path_to_imagenet_dataset> \
-  --resume=<path_to_trained_model_checkpoint>
+--mode=test \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--data=<path_to_imagenet_dataset> \
+--resume=<path_to_trained_model_checkpoint>
 ```
 
 ### Export Compressed Model
@@ -103,76 +103,36 @@ To export trained model to the **Frozen Graph**, use the following command:
 
 ```bash
 python main.py \
-  --mode=export \
-  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
-  --resume=<path_to_trained_model_checkpoint> \
-  --to-frozen-graph=../../results/mobilenet_v2_int8.pb
+--mode=export \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--resume=<path_to_trained_model_checkpoint> \
+--to-frozen-graph=../../results/mobilenet_v2_int8.pb
 ```
 
 To export trained model to the **SavedModel**, use the following command:
 
 ```bash
 python main.py \
-  --mode=export \
-  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
-  --resume=<path_to_trained_model_checkpoint> \
-  --to-saved-model=../../results/saved_model
+--mode=export \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--resume=<path_to_trained_model_checkpoint> \
+--to-saved-model=../../results/saved_model
 ```
 
 To export trained model to the **Keras H5**, use the following command:
 
 ```bash
 python main.py \
-  --mode=export \
-  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
-  --resume=<path_to_trained_model_checkpoint> \
-  --to-h5=../../results/mobilenet_v2_int8.h5
+--mode=export \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--resume=<path_to_trained_model_checkpoint> \
+--to-h5=../../results/mobilenet_v2_int8.h5
 ```
 
 ### Export to OpenVINO™ Intermediate Representation (IR)
 
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
-<a name="results"></a>
+## Results
 
-### Results
-
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|Inception V3|None|ImageNet|77.91|[inception_v3_imagenet.json](configs/inception_v3_imagenet.json)|-|
-|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|78.39 (-0.48)|[inception_v3_imagenet_int8.json](configs/quantization/inception_v3_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_int8.tar.gz)|
-|Inception V3|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)|ImageNet|77.52 (0.39)|[inception_v3_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_rb_sparsity_int8.tar.gz)|
-|Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.86 (0.05)|[inception_v3_imagenet_magnitude_sparsity.json](configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_magnitude_sparsity.tar.gz)|
-|MobileNet V2|None|ImageNet|71.85|[mobilenet_v2_imagenet.json](configs/mobilenet_v2_imagenet.json)|-|
-|MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|71.63 (0.22)|[mobilenet_v2_imagenet_int8.json](configs/quantization/mobilenet_v2_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_int8.tar.gz)|
-|MobileNet V2|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 52% (RB)|ImageNet|70.94 (0.91)|[mobilenet_v2_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity_int8.tar.gz)|
-|MobileNet V2| Sparsity 50% (RB)|ImageNet|71.34 (0.51)|[mobilenet_v2_imagenet_rb_sparsity.json](configs/sparsity/mobilenet_v2_imagenet_rb_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity.tar.gz)|
-|MobileNet V2 (TensorFlow Hub MobileNet V2)|Sparsity 35% (Magnitude)|ImageNet|71.87 (-0.02)|[mobilenet_v2_hub_imagenet_magnitude_sparsity.json](configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_hub_imagenet_magnitude_sparsity.tar.gz)|
-|MobileNet V3 (Small)|None|ImageNet|68.38|[mobilenet_v3_small_imagenet.json](configs/mobilenet_v3_small_imagenet.json)|-|
-|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|67.79 (0.59)|[mobilenet_v3_small_imagenet_int8.json](configs/quantization/mobilenet_v3_small_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_int8.tar.gz)|
-|MobileNet V3 (Small)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)|ImageNet|67.44 (0.94)|[mobilenet_v3_small_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_rb_sparsity_int8.tar.gz)|
-|MobileNet V3 (Large)|None|ImageNet|75.80|[mobilenet_v3_large_imagenet.json](configs/mobilenet_v3_large_imagenet.json)|-|
-|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)|ImageNet|75.04 (0.76)|[mobilenet_v3_large_imagenet_int8.json](configs/quantization/mobilenet_v3_large_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_int8.tar.gz)|
-|MobileNet V3 (Large)|INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (RB)|ImageNet|75.24 (0.56)|[mobilenet_v3_large_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_rb_sparsity_int8.tar.gz)|
-|ResNet-50|None|ImageNet|75.05|[resnet50_imagenet.json](configs/resnet50_imagenet.json)|-|
-|ResNet-50|INT8|ImageNet|74.99 (0.06)|[resnet50_imagenet_int8.json](configs/quantization/resnet50_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_int8.tar.gz)|
-|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 65% (RB)|ImageNet|74.36 (0.69)|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity_int8.tar.gz)|
-|ResNet-50|Sparsity 80% (RB)|ImageNet|74.38 (0.67)|[resnet50_imagenet_rb_sparsity.json](configs/sparsity/resnet50_imagenet_rb_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity.tar.gz)|
-
-<a name="filter_pruning"></a>
-
-### Results for filter pruning
-
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|None|ImageNet|75.05|[resnet50_imagenet.json](configs/resnet50_imagenet.json)|-|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|74.96 (0.09)|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median.tar.gz)|
-|ResNet-50|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion|ImageNet|75.09 (-0.04)|[resnet50_imagenet_pruning_geometric_median_int8.json](configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median_int8.tar.gz)|
-
-<a name="accuracy_aware"></a>
-
-### Results for accuracy-aware compressed training
-
-|**Model**|**Compression algorithm**|**Dataset**|**Accuracy (Drop) %**|**NNCF config file**|
-| :---: | :---: | :---: | :---: | :---: |
-|ResNet50|Sparsity 65% (magnitude)|ImageNet|74.37 (0.67)|[resnet50_imagenet_magnitude_sparsity_accuracy_aware.json](configs/sparsity/resnet50_imagenet_magnitude_sparsity_accuracy_aware.json)|
+Please see compression results for Tensorflow classification at our [Model Zoo page](../../../docs/ModelZoo.md#tensorflow-classification).
