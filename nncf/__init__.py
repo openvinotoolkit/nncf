@@ -20,7 +20,7 @@ from nncf.data import Dataset
 from nncf.experimental.common.tensor.enums import TensorBackendType
 from nncf.experimental.common.tensor.enums import TensorDataType
 from nncf.experimental.common.tensor.enums import TensorDeviceType
-from nncf.experimental.common.tensor.functions import *
+from nncf.experimental.common.tensor.functions import *  # pylint: disable=redefined-builtin
 from nncf.experimental.common.tensor.tensor import Tensor
 from nncf.parameters import DropType
 from nncf.parameters import ModelType

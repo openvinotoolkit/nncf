@@ -28,7 +28,7 @@ DTYPE_MAP = {
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-@functions.device.register
+@functions.device.register(torch.Tensor)
 def _(a: torch.Tensor) -> TensorDeviceType:
     DEVICE_MAP = {
         "cpu": TensorDeviceType.CPU,
@@ -37,112 +37,112 @@ def _(a: torch.Tensor) -> TensorDeviceType:
     return DEVICE_MAP[a.device.type]
 
 
-@functions.squeeze.register
+@functions.squeeze.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
     if axis is None:
         return a.squeeze()
     return a.squeeze(axis)
 
 
-@functions.flatten.register
+@functions.flatten.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return a.flatten()
 
 
-@functions.max.register
+@functions.max.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
     if axis is None:
         return torch.max(a)
     return torch.tensor(torch.max(a, dim=axis).values)
 
 
-@functions.min.register
+@functions.min.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
     if axis is None:
         return torch.min(a)
     return torch.tensor(torch.min(a, dim=axis).values)
 
 
-@functions.abs.register
+@functions.abs.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.absolute(a)
 
 
-@functions.astype.register
+@functions.astype.register(torch.Tensor)
 def _(a: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
     return a.type(DTYPE_MAP[dtype])
 
 
-@functions.dtype.register
+@functions.dtype.register(torch.Tensor)
 def _(a: torch.Tensor) -> TensorDataType:
     return DTYPE_MAP_REV[a.dtype]
 
 
-@functions.reshape.register
+@functions.reshape.register(torch.Tensor)
 def _(a: torch.Tensor, shape: List[int]) -> torch.Tensor:
     return a.reshape(shape)
 
 
-@functions.all.register
+@functions.all.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Union[torch.Tensor, bool]:
     if axis is None:
         return torch.all(a)
     return torch.all(a, dim=axis)
 
 
-@functions.allclose.register
+@functions.allclose.register(torch.Tensor)
 def _(a: torch.Tensor, b: torch.Tensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> bool:
     return torch.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@functions.any.register
+@functions.any.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Union[torch.Tensor, bool]:
     if axis is None:
         return torch.any(a)
     return torch.any(a, dim=axis)
 
 
-@functions.count_nonzero.register
+@functions.count_nonzero.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
     return torch.count_nonzero(a, dim=axis)
 
 
-@functions.isempty.register
+@functions.isempty.register(torch.Tensor)
 def _(a: torch.Tensor) -> bool:
     return a.numel() == 0
 
 
-@functions.isclose.register
+@functions.isclose.register(torch.Tensor)
 def _(a: torch.Tensor, b: torch.Tensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False):
     return torch.isclose(a, b, atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
-@functions.maximum.register
+@functions.maximum.register(torch.Tensor)
 def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     if not isinstance(x2, torch.Tensor):
         x2 = torch.tensor(x2, device=x1.data.device)
     return torch.maximum(x1, x2)
 
 
-@functions.minimum.register
+@functions.minimum.register(torch.Tensor)
 def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     if not isinstance(x2, torch.Tensor):
         x2 = torch.tensor(x2, device=x1.data.device)
     return torch.minimum(x1, x2)
 
 
-@functions.ones_like.register
+@functions.ones_like.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.ones_like(a)
 
 
-@functions.where.register
+@functions.where.register(torch.Tensor)
 def _(
     condition: torch.Tensor, x: Union[torch.Tensor, float, bool], y: Union[torch.Tensor, float, bool]
 ) -> torch.Tensor:
     return torch.where(condition, x, y)
 
 
-@functions.zeros_like.register
+@functions.zeros_like.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.zeros_like(a)
