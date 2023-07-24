@@ -10,14 +10,13 @@
 # limitations under the License.
 
 import functools
-from typing import Optional, Tuple, TypeVar, Union
+from typing import List, Optional, Tuple, TypeVar, Union
 
 import nncf.experimental.common.tensor as tensor  # pylint: disable=consider-using-from-import
 from nncf.experimental.common.tensor.enums import TensorDataType
 from nncf.experimental.common.tensor.enums import TensorDeviceType
 
 TTensor = TypeVar("TTensor")
-T = TypeVar("T")  # TODO: Verify
 
 
 @functools.singledispatch
@@ -130,7 +129,7 @@ def dtype(a: TTensor) -> TensorDataType:
 
 
 @functools.singledispatch
-def reshape(a: TTensor, shape: T) -> TTensor:
+def reshape(a: TTensor, shape: List[int]) -> TTensor:
     """
     :param a:
     :param shape:
@@ -139,9 +138,6 @@ def reshape(a: TTensor, shape: T) -> TTensor:
     if isinstance(a, tensor.Tensor):
         return tensor.Tensor(reshape(a.data, shape))
     return NotImplemented(f"Function `dtype` is not implemented for {type(a)}")
-
-
-###############################################################################
 
 
 @functools.singledispatch
@@ -339,3 +335,27 @@ def zeros_like(a: TTensor) -> TTensor:
     if isinstance(a, tensor.Tensor):
         return tensor.Tensor(zeros_like(a.data))
     return NotImplemented(f"Function `zeros_like` is not implemented for {type(a)}")
+
+
+__all__ = [
+    "device",
+    "squeeze",
+    "flatten",
+    "max",
+    "min",
+    "abs",
+    "astype",
+    "reshape",
+    "all",
+    "allclose",
+    "any",
+    "count_nonzero",
+    "isempty",
+    "isclose",
+    "maximum",
+    "minimum",
+    "ones_like",
+    "minimum",
+    "where",
+    "zeros_like",
+]

@@ -64,6 +64,12 @@ class Tensor:
     def __getitem__(self, index: int) -> "Tensor":
         return Tensor(self.data[index])
 
+    def __str__(self) -> str:
+        return f"nncf.Tensor({str(self.data)})"
+
+    def __repr__(self) -> str:
+        return f"nncf.Tensor({repr(self.data)})"
+
     # built-in operations
 
     def __add__(self, other: DataType) -> "Tensor":

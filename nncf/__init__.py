@@ -17,6 +17,11 @@ from nncf.common.logging.logger import set_log_level
 from nncf.common.strip import strip
 from nncf.config import NNCFConfig
 from nncf.data import Dataset
+from nncf.experimental.common.tensor.enums import TensorBackendType
+from nncf.experimental.common.tensor.enums import TensorDataType
+from nncf.experimental.common.tensor.enums import TensorDeviceType
+from nncf.experimental.common.tensor.functions import *
+from nncf.experimental.common.tensor.tensor import Tensor
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -50,7 +55,7 @@ except ImportError:
     _LOADED_FRAMEWORKS["openvino"] = False
 
 
-if not any(_LOADED_FRAMEWORKS.values()):
+if not sum(_LOADED_FRAMEWORKS.values()):
     nncf_logger.error(
         "Neither PyTorch, TensorFlow, ONNX or OpenVINO Python packages have been found in your Python "
         "environment.\n"

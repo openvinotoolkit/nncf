@@ -27,109 +27,123 @@ DTYPE_MAP = {
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
+TType = Union[np.ndarray, np.number]
 
-@functions.device.register
-def _(a: np.ndarray) -> TensorDeviceType:
+@functions.device.register(np.ndarray)
+@functions.device.register(np.number)
+def _(a: TType) -> TensorDeviceType:
     return TensorDeviceType.CPU
 
 
-@functions.squeeze.register
-def _(a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
+@functions.squeeze.register(np.ndarray)
+@functions.squeeze.register(np.number)
+def _(a: TType, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
     return np.squeeze(a, axis=axis)
 
 
-@functions.flatten.register
-def _(a: np.ndarray) -> np.ndarray:
+@functions.flatten.register(np.ndarray)
+@functions.flatten.register(np.number)
+def _(a: TType) -> np.ndarray:
     return a.flatten()
 
 
-@functions.max.register
-def _(a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:  # pylint: disable=redefined-builtin
+@functions.max.register(np.ndarray)
+@functions.max.register(np.number)
+def _(a: TType, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
     return np.max(a, axis=axis)
 
 
-@functions.min.register
-def _(a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:  # pylint: disable=redefined-builtin
+@functions.min.register(np.ndarray)
+@functions.min.register(np.number)
+def _(a: TType, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
     return np.min(a, axis=axis)
 
 
-@functions.abs.register
-def _(a: np.ndarray) -> np.ndarray:
+@functions.abs.register(np.ndarray)
+@functions.abs.register(np.number)
+def _(a: TType) -> np.ndarray:
     return np.absolute(a)
 
 
-@functions.astype.register
-def _(a: np.ndarray, dtype: TensorDataType) -> np.ndarray:
+@functions.astype.register(np.ndarray)
+@functions.astype.register(np.number)
+def _(a: TType, dtype: TensorDataType) -> np.ndarray:
     return a.astype(DTYPE_MAP[dtype])
 
 
-@functions.dtype.register
-def _(a: np.ndarray) -> TensorDataType:
+@functions.dtype.register(np.ndarray)
+@functions.dtype.register(np.number)
+def _(a: TType) -> TensorDataType:
     return DTYPE_MAP_REV[np.dtype(a.dtype)]
 
 
-@functions.reshape.register
-def _(a: np.ndarray, shape: Union[int, Tuple[int]]) -> np.ndarray:
+@functions.reshape.register(np.ndarray)
+@functions.reshape.register(np.number)
+def _(a: TType, shape: Union[int, Tuple[int]]) -> np.ndarray:
     return a.reshape(shape)
 
 
-###############################################################################
-
-
-@functions.all.register
-def _(
-    a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None
-) -> Union[np.ndarray, bool]:  # pylint: disable=redefined-builtin
+@functions.all.register(np.ndarray)
+@functions.all.register(np.number)
+def _(a: TType, axis: Optional[Union[int, Tuple[int]]] = None) -> Union[np.ndarray, bool]:
     return np.all(a, axis=axis)
 
 
-@functions.allclose.register
-def _(a: np.ndarray, b: np.ndarray, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> bool:
+@functions.allclose.register(np.ndarray)
+@functions.allclose.register(np.number)
+def _(a: TType, b: TType, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> bool:
     return np.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@functions.any.register
-def _(
-    a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None
-) -> Union[np.ndarray, bool]:  # pylint: disable=redefined-builtin
+@functions.any.register(np.ndarray)
+@functions.any.register(np.number)
+def _(a: TType, axis: Optional[Union[int, Tuple[int]]] = None) -> Union[np.ndarray, bool]:
     return np.any(a, axis=axis)
 
 
-@functions.count_nonzero.register
-def _(a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
+@functions.count_nonzero.register(np.ndarray)
+@functions.count_nonzero.register(np.number)
+def _(a: TType, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
     return np.count_nonzero(a, axis=axis)
 
 
-@functions.isempty.register
-def _(a: np.ndarray) -> bool:
+@functions.isempty.register(np.ndarray)
+@functions.isempty.register(np.number)
+def _(a: TType) -> bool:
     return a.size == 0
 
 
-@functions.isclose.register
-def _(a: np.ndarray, b: np.ndarray, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False):
+@functions.isclose.register(np.ndarray)
+@functions.isclose.register(np.number)
+def _(a: TType, b: np.ndarray, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False):
     return np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@functions.maximum.register
-def _(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+@functions.maximum.register(np.ndarray)
+@functions.maximum.register(np.number)
+def _(x1: TType, x2: np.ndarray) -> np.ndarray:
     return np.maximum(x1, x2)
 
 
-@functions.minimum.register
-def _(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+@functions.minimum.register(np.ndarray)
+@functions.minimum.register(np.number)
+def _(x1: TType, x2: np.ndarray) -> np.ndarray:
     return np.minimum(x1, x2)
 
 
-@functions.ones_like.register
-def _(a: np.ndarray) -> np.ndarray:
+@functions.ones_like.register(np.ndarray)
+@functions.ones_like.register(np.number)
+def _(a: TType) -> np.ndarray:
     return np.ones_like(a)
 
 
-@functions.where.register
-def _(condition: np.ndarray, x: Union[np.ndarray, float, bool], y: Union[np.ndarray, float, bool]) -> np.ndarray:
+@functions.where.register(np.ndarray)
+@functions.where.register(np.number)
+def _(condition: TType, x: Union[np.ndarray, np.number, float, bool], y: Union[np.ndarray, float, bool]) -> np.ndarray:
     return np.where(condition, x, y)
 
 
-@functions.zeros_like.register
-def _(a: np.ndarray) -> np.ndarray:
+@functions.zeros_like.register(np.ndarray)
+@functions.zeros_like.register(np.number)
+def _(a: TType) -> np.ndarray:
     return np.zeros_like(a)
