@@ -151,14 +151,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             axes = tuple(i for i in range(len(const_shape)) if i not in channel_axes)
         else:
             axes = tuple(range(len(const_shape)))
-
         return axes, use_abs_max
-
-    @staticmethod
-    def _get_num_samples(num_samples, target_point: OVTargetPoint):
-        if target_point.is_weight_target_point():
-            return 1
-        return num_samples
 
     @staticmethod
     def get_statistic_collector(
@@ -172,7 +165,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         reduction_shape, use_abs_max = OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(
             nncf_graph, target_point, quantizer_config
         )
-        _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
 
         collector = TensorCollector(OVMinMaxTensorStatistic)
         for params, container_key in zip(
@@ -202,7 +194,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 
-            kwargs = {"num_samples": _num_samples, "tensor_processor": OVNNCFCollectorTensorProcessor}
+            kwargs = {"num_samples": num_samples, "tensor_processor": OVNNCFCollectorTensorProcessor}
             aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
