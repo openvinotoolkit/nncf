@@ -630,6 +630,12 @@ class OVSwishMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVHSwishMetatype(OVOpMetatype):
+    name = "HSwishhOp"
+    op_names = ["HSwish"]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVClampMetatype(OVOpMetatype):
     name = "ClampOp"
     op_names = ["Clamp"]

@@ -1,3 +1,5 @@
+### Installation
+
 Install the packages needed for samples by running the following in the current directory:
 
 ```bash
@@ -19,3 +21,6 @@ pip install torch==1.9.1+cu111 torchvision==0.10.1+cu111 -f https://download.pyt
 pip install .[torch]
 pip install -r examples/torch/requirements.txt
 ```
+
+### Results
+Please see compression results for PyTorch models at our [Model Zoo page](../../../docs/ModelZoo.md#pytorch).
