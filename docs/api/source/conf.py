@@ -16,10 +16,6 @@ import pkgutil
 import sys
 from typing import Any, Dict
 
-from sphinx.ext.autodoc import mock
-
-import nncf
-
 sys.path.insert(0, os.path.abspath("../../.."))
 
 project = "NNCF"
@@ -70,6 +66,7 @@ def collect_api_entities() -> APIInfo:
     retval = APIInfo()
     modules = {}
     skipped_modules = {}  # type: Dict[str, str]
+    import nncf
 
     for _, modname, _ in pkgutil.walk_packages(path=nncf.__path__, prefix=nncf.__name__ + ".", onerror=lambda x: None):
         try:
@@ -129,8 +126,7 @@ def collect_api_entities() -> APIInfo:
     return retval
 
 
-with mock(["torch", "torchvision", "onnx", "onnxruntime", "openvino", "tensorflow", "tensorflow_addons"]):
-    api_info = collect_api_entities()
+api_info = collect_api_entities()
 
 module_fqns = set()
 
