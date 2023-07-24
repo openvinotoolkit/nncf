@@ -24,7 +24,6 @@ from nncf.common.utils.backend import get_backend
 from nncf.common.utils.os import get_available_cpu_count
 from nncf.common.utils.os import get_available_memory_amount
 from nncf.common.utils.timer import timer
-from nncf.data.dataset import CountingDatasetWrapper
 from nncf.data.dataset import Dataset
 from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
@@ -213,11 +212,13 @@ class QuantizationAccuracyRestorer:
         initial_metric_results = self._collect_metric_and_values(
             initial_model, validation_dataset, evaluator, "initial"
         )
-        counting_validation_dataset = CountingDatasetWrapper(validation_dataset)
+
+        evaluator.enable_iteration_count()
         quantized_metric_results = self._collect_metric_and_values(
-            quantized_model, counting_validation_dataset, evaluator, "quantized"
+            quantized_model, validation_dataset, evaluator, "quantized"
         )
-        validation_dataset_size = counting_validation_dataset.num_iters
+        validation_dataset_size = evaluator.num_passed_iterations
+        evaluator.disable_iteration_count()
 
         should_terminate, accuracy_drop = calculate_accuracy_drop(
             initial_metric_results.metric_value, quantized_metric_results.metric_value, self.max_drop, self.drop_type

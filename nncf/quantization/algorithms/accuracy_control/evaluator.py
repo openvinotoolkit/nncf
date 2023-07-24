@@ -20,6 +20,26 @@ TPModel = TypeVar("TPModel")
 TTensor = TypeVar("TTensor")
 
 
+class IterationCounter:
+    """
+    A wrapper for counting the passed iterations of iterable objects.
+    """
+
+    def __init__(self, iterable):
+        self._iterable = iterable
+        self._num_iterations = 0
+
+    @property
+    def num_iterations(self) -> int:
+        return self._num_iterations
+
+    def __iter__(self):
+        self._num_iterations = 0
+        for x in self._iterable:
+            self._num_iterations += 1
+            yield x
+
+
 class Evaluator:
     """
     Evaluator encapsulates a logic to validate model and collect values for each item.
@@ -39,6 +59,30 @@ class Evaluator:
         self._validation_fn = validation_fn
         self._algo_backend = algo_backend
         self._metric_mode = None
+        self._num_passed_iterations = 0
+        self._enable_iteration_count = False
+
+    @property
+    def num_passed_iterations(self) -> int:
+        """
+        Number of passed iterations during last validation process if the iteration count is enabled.
+
+        :return: Number of passed iterations during last validation process.
+        """
+
+        return self._num_passed_iterations
+
+    def enable_iteration_count(self) -> None:
+        """
+        Enable the iteration count.
+        """
+        self._enable_iteration_count = True
+
+    def disable_iteration_count(self) -> None:
+        """
+        Disable the iteration count.
+        """
+        self._enable_iteration_count = False
 
     def is_metric_mode(self) -> bool:
         """
@@ -82,7 +126,13 @@ class Evaluator:
         if not self.is_metric_mode() and indices is not None:
             raise ValueError("The `indices` parameter can be used only if Evaluator.is_metric_mode() = True")
 
-        metric, values_for_each_item = self._validation_fn(model_for_inference, dataset.get_data(indices))
+        validation_dataset = dataset.get_data(indices)
+        if self._enable_iteration_count:
+            validation_dataset = IterationCounter(validation_dataset)
+
+        metric, values_for_each_item = self._validation_fn(model_for_inference, validation_dataset)
+
+        self._num_passed_iterations = validation_dataset.num_iterations if self._enable_iteration_count else 0
 
         if self.is_metric_mode() and values_for_each_item is not None:
             # This casting is necessary to cover the following cases:
@@ -200,6 +250,8 @@ class Evaluator:
             for data_item in dataset.get_inference_data(indices):
                 logits = engine.infer(data_item)
                 values_for_each_item.append(list(logits.values()))
+
+        self._num_passed_iterations = len(values_for_each_item) if self._enable_iteration_count else 0
 
         return values_for_each_item
 

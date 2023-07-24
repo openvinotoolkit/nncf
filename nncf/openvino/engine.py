@@ -82,19 +82,12 @@ class OVNativeEngine(Engine):
     """
 
     def __init__(self, model: ov.Model, target_device: TargetDevice = TargetDevice.CPU):
-        self.engine = None
-        self.model = model
-        self.target_device = target_device
         if target_device == TargetDevice.ANY:
-            self.target_device = TargetDevice.CPU
+            target_device = TargetDevice.CPU
 
-    def _get_compiled_model(self) -> ov.CompiledModel:
-        """
-        Returns OpenVINO compiled model
-
-        :return: A compiled model
-        """
-        return ov.Core().compile_model(self.model, self.target_device.value)
+        ie = ov.Core()
+        compiled_model = ie.compile_model(model, target_device.value)
+        self.engine = OVCompiledModelEngine(compiled_model)
 
     def infer(
         self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
@@ -106,7 +99,4 @@ class OVNativeEngine(Engine):
         :param input_data: Inputs for the model.
         :return output_data: Model's output.
         """
-        if self.engine is None:
-            compiled_model = self._get_compiled_model()
-            self.engine = OVCompiledModelEngine(compiled_model)
         return self.engine.infer(input_data)

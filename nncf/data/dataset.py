@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import abstractmethod
 from typing import Callable, Generic, Iterable, List, Optional, TypeVar
 
 from nncf.common.utils.api_marker import api
@@ -18,43 +17,21 @@ DataItem = TypeVar("DataItem")
 ModelInput = TypeVar("ModelInput")
 
 
-class IDataset(Generic[DataItem, ModelInput]):
+@api(canonical_alias="nncf.Dataset")
+class Dataset(Generic[DataItem, ModelInput]):
     """
+    Wrapper for passing custom user datasets into NNCF algorithms.
+
     This class defines the interface by which compression algorithms
     retrieve data items from the passed data source object. These data items are used
     for different purposes, for example, model inference and model validation, based
     on the choice of the exact compression algorithm.
-    """
 
-    @abstractmethod
-    def get_data(self, indices: Optional[List[int]] = None) -> Iterable[DataItem]:
-        """
-        Returns the iterable object that contains selected data items from the data source as-is.
-
-        :param indices: The zero-based indices of data items that should be selected from
-            the data source. The indices should be sorted in ascending order. If indices are
-            not passed all data items are selected from the data source.
-        :return: The iterable object that contains selected data items from the data source as-is.
-        """
-
-    @abstractmethod
-    def get_inference_data(self, indices: Optional[List[int]] = None) -> Iterable[ModelInput]:
-        """
-        Returns the iterable object that contains selected data items from the data source which
-        can be used as the model's input for model inference.
-
-        :param indices: The zero-based indices of data items that should be selected from
-            the data source. The indices should be sorted in ascending order. If indices are
-            not passed all data items are selected from the data source.
-        :return: The iterable object that contains selected data items from the data source which
-            can be used as the model's input for model inference.
-        """
-
-
-@api(canonical_alias="nncf.Dataset")
-class Dataset(IDataset):
-    """
-    Wrapper for passing custom user datasets into NNCF algorithms.
+    If the data item has been returned from the data source per iteration and it cannot be
+    used as input for model inference, the transformation function is used to extract the
+    model's input from this data item. For example, in supervised learning, the data item
+    usually contains both examples and labels. So transformation function should extract
+    the examples from the data item.
 
     :param data_source: The iterable object serving as the source of data items.
     :param transform_func: The function that is used to extract the model's input
@@ -94,63 +71,6 @@ class Dataset(IDataset):
             the transformation function was applied.
         """
         return DataProvider(self._data_source, self._transform_func, indices)
-
-
-class CountingDatasetWrapper(IDataset):
-    """
-    Dataset wrapper for calculation number of iterations.
-
-    :param dataset: The dataset.
-    """
-
-    def __init__(self, dataset: IDataset):
-        self._dataset = dataset
-        self._num_iters = 0
-
-        def tranform_func(x):
-            self._num_iters += 1
-            return x
-
-        self._transform_func = tranform_func
-
-    @property
-    def num_iters(self):
-        """
-        :return: The number of iterations performed in the last requested object.
-        """
-        return self._num_iters
-
-    def reset_num_iters(self):
-        """
-        Resets iterations counter.
-        """
-        self._num_iters = 0
-
-    def get_data(self, indices: Optional[List[int]] = None) -> Iterable[DataItem]:
-        """
-        Returns the iterable object that contains selected data items from the data source as-is.
-
-        :param indices: The zero-based indices of data items that should be selected from
-            the data source. The indices should be sorted in ascending order. If indices are
-            not passed all data items are selected from the data source.
-        :return: The iterable object that contains selected data items from the data source as-is.
-        """
-        self.reset_num_iters()
-        return DataProvider(self._dataset.get_data(indices), self._transform_func, None)
-
-    def get_inference_data(self, indices: Optional[List[int]] = None) -> Iterable[ModelInput]:
-        """
-        Returns the iterable object that contains selected data items from the data source which
-        can be used as the model's input for model inference.
-
-        :param indices: The zero-based indices of data items that should be selected from
-            the data source. The indices should be sorted in ascending order. If indices are
-            not passed all data items are selected from the data source.
-        :return: The iterable object that contains selected data items from the data source which
-            can be used as the model's input for model inference.
-        """
-        self.reset_num_iters()
-        return DataProvider(self._dataset.get_inference_data(indices), self._transform_func, None)
 
 
 class DataProvider(Generic[DataItem, ModelInput]):
