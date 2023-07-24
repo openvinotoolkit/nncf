@@ -349,7 +349,8 @@ def get_activation_channel_axis(node: NNCFNode) -> int:
     channel_axis = node.metatype.output_channel_axis if node.metatype.output_channel_axis is not None else 1
 
     if (
-        node.layer_attributes.input_attributes is not None
+        node.layer_attributes is not None
+        and node.layer_attributes.input_attributes is not None
         and "transpose" in node.layer_attributes.input_attributes
         and node.layer_attributes.input_attributes["transpose"]
     ):
