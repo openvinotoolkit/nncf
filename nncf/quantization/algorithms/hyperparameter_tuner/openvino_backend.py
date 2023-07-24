@@ -9,21 +9,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
 
-from abc import ABC
-from abc import abstractmethod
-from typing import Any, TypeVar
+import openvino.runtime as ov
 
-TModel = TypeVar("TModel")
+from nncf.quantization.algorithms.hyperparameter_tuner.backend import HyperparameterTunerAlgoBackend
 
 
-class ParamsGridSearchAlgoBackend(ABC):
+class OVHyperparameterTunerAlgoBackend(HyperparameterTunerAlgoBackend):
+    """
+    Implementation of the `HyperparameterTunerAlgoBackend` for OpenVINO backend.
+    """
+
     @staticmethod
-    @abstractmethod
-    def prepare_for_inference(model: TModel) -> Any:
-        """
-        Prepares model for inference.
-
-        :param model: A model that should be prepared.
-        :return: Prepared model for inference.
-        """
+    def prepare_for_inference(model: ov.Model) -> Any:
+        return ov.compile_model(model)

@@ -32,7 +32,7 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_subset_indices_pot_version
-from nncf.quantization.algorithms.tune_hyperparams.algorithm import ParamsGridSearchAlgorithm
+from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -167,7 +167,7 @@ class QuantizationAccuracyRestorer:
         max_drop: float = 0.01,
         drop_type: DropType = DropType.ABSOLUTE,
         num_ranking_processes: Optional[int] = None,
-        tune_hyperparams_algorithm: Optional[ParamsGridSearchAlgorithm] = None,
+        tune_hyperparams_algorithm: Optional[HyperparameterTuner] = None,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from

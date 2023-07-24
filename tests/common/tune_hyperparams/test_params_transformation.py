@@ -15,8 +15,8 @@ from typing import Any, Dict, List
 
 import pytest
 
-from nncf.quantization.algorithms.tune_hyperparams.params_transformation import ParamsTransformation
-from nncf.quantization.algorithms.tune_hyperparams.params_transformation import create_params_transformation
+from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import ParamsTransformation
+from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import create_params_transformation
 
 # =========================================================
 # TEST: Create params transformation

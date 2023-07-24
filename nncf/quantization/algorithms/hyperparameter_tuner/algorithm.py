@@ -19,15 +19,15 @@ from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.tune_hyperparams.params_transformation import ParamsTransformation
-from nncf.quantization.algorithms.tune_hyperparams.params_transformation import create_combinations
-from nncf.quantization.algorithms.tune_hyperparams.params_transformation import create_params_transformation
+from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import ParamsTransformation
+from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import create_combinations
+from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import create_params_transformation
 
 SearchSpace = Dict[str, Union[List[Any], "SearchSpace"]]
 TModel = TypeVar("TModel")
 
 
-class ParamsGridSearchAlgorithm:
+class HyperparameterTuner:
     """
     Algorithm used to find a best combination of provided parameters.
     Possible values of parameters are represented as the `SearchSpace`.
@@ -87,8 +87,8 @@ class ParamsGridSearchAlgorithm:
 
         params_transformations = create_params_transformation(self._search_space)
         combinations = create_combinations(params_transformations)
-        algorithms = ParamsGridSearchAlgorithm._create_algorithms(self._algorithm_cls, self._init_params, combinations)
-        statistic_points = ParamsGridSearchAlgorithm._collect_statistics(model, self._statistic_dataset, algorithms)
+        algorithms = HyperparameterTuner._create_algorithms(self._algorithm_cls, self._init_params, combinations)
+        statistic_points = HyperparameterTuner._collect_statistics(model, self._statistic_dataset, algorithms)
 
         best_score = None
         best_combination = ()
@@ -137,9 +137,11 @@ class ParamsGridSearchAlgorithm:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.tune_hyperparams.openvino_backend import OVParamsGridSearchAlgoBackend
+            from nncf.quantization.algorithms.hyperparameter_tuner.openvino_backend import (
+                OVHyperparameterTunerAlgoBackend,
+            )
 
-            self._backend_entity = OVParamsGridSearchAlgoBackend()
+            self._backend_entity = OVHyperparameterTunerAlgoBackend()
         else:
             raise RuntimeError(f"Cannot set backend-specific entity because {model_backend} is not supported!")
 

@@ -29,9 +29,9 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
+from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
+from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import create_params
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.tune_hyperparams.algorithm import ParamsGridSearchAlgorithm
-from nncf.quantization.algorithms.tune_hyperparams.params_transformation import create_params
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsCollectorParameters
@@ -255,7 +255,7 @@ def native_quantize_with_accuracy_control_impl(
             "ignored_scope": ignored_scope,
             "advanced_parameters": copied_parameters,
         }
-        tune_hyperparams_algorithm = ParamsGridSearchAlgorithm(
+        tune_hyperparams_algorithm = HyperparameterTuner(
             PostTrainingQuantization, init_params, PARAMS_SEARCH_SPACE, calibration_dataset, validation_fn
         )
 
