@@ -336,6 +336,12 @@ def quantize_impl(
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
 
+    if model_type == ModelType.TRANSFORMER and advanced_parameters.smooth_quant_alpha > 0:
+        nncf_logger.warning(
+            'IMPORTANT. The advanced parameter "smooth_quant_alpha > 0" IS NOT SUPPORTED for the POT backend!'
+            'Please, use "smooth_quant_alpha = -1".'
+        )
+
     algorithm_parameters = _create_quantization_config(
         preset, target_device, subset_size, fast_bias_correction, model_type, ignored_scope, advanced_parameters
     )
@@ -433,6 +439,12 @@ def quantize_with_accuracy_control_impl(
 
     if advanced_quantization_parameters is None:
         advanced_quantization_parameters = AdvancedQuantizationParameters()
+
+    if model_type == ModelType.TRANSFORMER and advanced_quantization_parameters.smooth_quant_alpha > 0:
+        nncf_logger.warning(
+            'IMPORTANT. The advanced parameter "smooth_quant_alpha > 0" IS NOT SUPPORTED for the POT backend!'
+            'Please, use "smooth_quant_alpha = -1".'
+        )
 
     if advanced_quantization_parameters.disable_bias_correction:
         raise ValueError(
