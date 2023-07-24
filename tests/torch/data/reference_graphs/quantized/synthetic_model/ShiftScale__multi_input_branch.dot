@@ -1,0 +1,23 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
+"2 ShiftScaleParametrized/__sub___0" [id=2, type=__sub__];
+"3 ShiftScaleParametrized/__truediv___0" [id=3, type=__truediv__];
+"4 ShiftScaleParametrized/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShiftScaleParametrized/__truediv___0|OUTPUT]/symmetric_quantize_0" [id=4, type=symmetric_quantize];
+"5 ShiftScaleParametrized/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=5, type=symmetric_quantize];
+"6 ShiftScaleParametrized/NNCFConv2d[conv]/conv2d_0" [id=6, type=conv2d];
+"7 ShiftScaleParametrized/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_1" [id=7, type=symmetric_quantize];
+"8 ShiftScaleParametrized/NNCFConv2d[conv]/conv2d_1" [id=8, type=conv2d];
+"9 /nncf_model_output_0" [id=9, type=nncf_model_output];
+"10 /nncf_model_output_1" [id=10, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "2 ShiftScaleParametrized/__sub___0";
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "8 ShiftScaleParametrized/NNCFConv2d[conv]/conv2d_1";
+"2 ShiftScaleParametrized/__sub___0" -> "3 ShiftScaleParametrized/__truediv___0";
+"3 ShiftScaleParametrized/__truediv___0" -> "4 ShiftScaleParametrized/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShiftScaleParametrized/__truediv___0|OUTPUT]/symmetric_quantize_0";
+"4 ShiftScaleParametrized/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShiftScaleParametrized/__truediv___0|OUTPUT]/symmetric_quantize_0" -> "6 ShiftScaleParametrized/NNCFConv2d[conv]/conv2d_0";
+"5 ShiftScaleParametrized/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "6 ShiftScaleParametrized/NNCFConv2d[conv]/conv2d_0";
+"6 ShiftScaleParametrized/NNCFConv2d[conv]/conv2d_0" -> "9 /nncf_model_output_0";
+"7 ShiftScaleParametrized/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_1" -> "8 ShiftScaleParametrized/NNCFConv2d[conv]/conv2d_1";
+"8 ShiftScaleParametrized/NNCFConv2d[conv]/conv2d_1" -> "10 /nncf_model_output_1";
+}

@@ -39,7 +39,6 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.INPUT_REVERSE_ADD: "Not relevant for Torch.",
     HWFusedPatternNames.INPUT_REVERSE_SCALE_SHIFT: "Not relevant for Torch.",
     HWFusedPatternNames.INPUT_SCALE_SHIFT: "Not relevant for Torch.",
-    HWFusedPatternNames.INPUT_SHIFT_SCALE: "Not relevant for Torch.",
     HWFusedPatternNames.INPUT_TRANSPOSE_PROCESSING: "Not relevant for Torch.",
     HWFusedPatternNames.INPUT_TRANSPOSE_REVERSE_ADD: "Not relevant for Torch.",
     HWFusedPatternNames.INPUT_TRANSPOSE_SCALE_SHIFT: "Not relevant for Torch.",

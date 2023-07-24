@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 import os
 from abc import ABC
 from abc import abstractmethod
@@ -68,6 +69,7 @@ from tests.torch.test_models.synthetic import ModelWithDummyParameter
 from tests.torch.test_models.synthetic import MultiOutputSameTensorModel
 from tests.torch.test_models.synthetic import PoolUnPool
 from tests.torch.test_models.synthetic import ReshapeModel
+from tests.torch.test_models.synthetic import ShiftScaleParametrized
 from tests.torch.test_models.synthetic import TransposeModel
 
 
@@ -575,6 +577,21 @@ class TensorUnaryMethodsDesc(BaseDesc):
         return TestModel(self.tensor_method, **self.model_kwargs)
 
 
+shift_scale_models = []
+params_combinations = list(itertools.product([True, False], repeat=2))
+
+
+for pair in params_combinations:
+    names = ["is_single_input", "use_normalize"]
+    kwargs = dict(zip(names, pair))
+    desc = GeneralModelDesc(
+        model_name=ShiftScaleParametrized.get_name(**kwargs),
+        model_builder=partial(ShiftScaleParametrized, **kwargs),
+        input_sample_sizes=(ShiftScaleParametrized.INPUT_SIZES),
+    )
+    shift_scale_models.append(desc)
+
+
 TWO_INT_INPUTS_INFO = [{"sample_size": [1], "type": "long"}, {"sample_size": [1], "type": "long"}]
 SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(layer=nn.Conv1d(1, 1, 1), input_sample_sizes=[1, 1, 1]),
@@ -732,6 +749,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
         wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
     ),
     GeneralModelDesc(model_builder=MHA_single_input, input_sample_sizes=(MHA_single_input.INPUT_SIZES,)),
+    *shift_scale_models,
 ]
 
 

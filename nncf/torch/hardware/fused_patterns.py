@@ -9,9 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.utils.registry import Registry
+from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
@@ -47,6 +49,24 @@ def create_l2_norm_operations() -> GraphPattern:
 
 
 # COMBINATIONS
+
+
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SHIFT_SCALE)
+def create_shift_scale() -> GraphPattern:
+    pattern = GraphPattern()
+    add_node = pattern.add_node(label="SUB", type=["__sub__"])
+    truediv_node = pattern.add_node(label="DIV", type=["__truediv__"])
+    pattern.add_edge(add_node, truediv_node)
+    return pattern
+
+
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
+def create_input_shift_scale() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: PTInputNoopMetatype})
+    shift_scale = create_shift_scale()
+    pattern.join_patterns(shift_scale)
+    return pattern
 
 
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC)
