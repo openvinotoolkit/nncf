@@ -1,4 +1,4 @@
-## Benchmark for ONNX Model Zoo
+# Benchmark for ONNX Model Zoo
 
 ## Installation
 
@@ -88,7 +88,7 @@ datasets. Please follow the link to prepare datasets. After preparation, your da
 
 ```text
 DATASET_DIR/
-+-- annotations/ (COCO annotatios)
++-- annotations/ (COCO annotations)
 |   +-- instances_val2017.json
 |   +-- ...
 +-- val2017/ (COCO images)
@@ -118,20 +118,20 @@ You can run the benchmarking for particular model with the following command:
 
 | Model Name              | Dataset  | FP32 Accuracy (%) | INT8 accuracy (%) | Accuracy Drop (%) |
 |-------------------------|----------|-------------------|-------------------|-------------------|
-| bvlcalexnet-12          | ImageNet | 52.02 | 51.96             | 0.06              |
-| caffenet-12             | ImageNet | 54.26 | 54.22             | 0.04              |
-| densenet-12             | ImageNet | 60.96 | 60.16             | 0.8               |
-| efficientnet-lite4-11   | ImageNet | 77.58 | 77.43             | 0.15              |
-| googlenet-12            | ImageNet | 66.67 | 66.36             | 0.31              |
-| inception-v1-12         | ImageNet | 65.21 | 64.87             | 0.34              |
-| mobilenetv2-12          | ImageNet | 71.87 | 71.38             | 0.49              |
-| resnet50-v1-12          | ImageNet | 74.11 | 73.92             | 0.19              |
-| resnet50-v2-7           | ImageNet | 74.84 | 74.63             | 0.21              |
-| shufflenet-9            | ImageNet | 47.43 | 47.25             | 0.18              |
-| shufflenet-v2-12        | ImageNet | 69.36 | 68.93             | 0.43              |
-| squeezenet1.0-12        | ImageNet | 54.84 | 54.3              | 0.54              |
-| vgg16-12                | ImageNet | 72.02 | 72.02             | 0.0               |
-| zfnet512-12             | ImageNet | 58.57 | 58.53             | 0.04              |
+| bvlcalexnet-12          | ImageNet | 52.02             | 51.96             | 0.06              |
+| caffenet-12             | ImageNet | 54.26             | 54.22             | 0.04              |
+| densenet-12             | ImageNet | 60.96             | 60.16             | 0.8               |
+| efficientnet-lite4-11   | ImageNet | 77.58             | 77.43             | 0.15              |
+| googlenet-12            | ImageNet | 66.67             | 66.36             | 0.31              |
+| inception-v1-12         | ImageNet | 65.21             | 64.87             | 0.34              |
+| mobilenetv2-12          | ImageNet | 71.87             | 71.38             | 0.49              |
+| resnet50-v1-12          | ImageNet | 74.11             | 73.92             | 0.19              |
+| resnet50-v2-7           | ImageNet | 74.84             | 74.63             | 0.21              |
+| shufflenet-9            | ImageNet | 47.43             | 47.25             | 0.18              |
+| shufflenet-v2-12        | ImageNet | 69.36             | 68.93             | 0.43              |
+| squeezenet1.0-12        | ImageNet | 54.84             | 54.3              | 0.54              |
+| vgg16-12                | ImageNet | 72.02             | 72.02             | 0.0               |
+| zfnet512-12             | ImageNet | 58.57             | 58.53             | 0.04              |
 
 #### 2. Object detection and segmentation models
 

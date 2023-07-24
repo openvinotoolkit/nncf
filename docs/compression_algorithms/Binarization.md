@@ -1,6 +1,6 @@
->_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
+# Binarization
 
-### Binarization
+>_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
 
 NNCF supports binarizing weights and activations for 2D convolutional PyTorch\* layers (Conv2D) _only_.
 
@@ -19,7 +19,7 @@ In the formula above:
 
 Training binarized networks requires special scheduling of the training process. For instance, binarizing a pretrained ResNet18 model on ImageNet is a four-stage process, with each stage taking a certain number of epochs. During the stage 1, the network is trained without any binarization. During the stage 2, the training continues with binarization enabled for activations only. During the stage 3, binarization is enabled both for activations and weights. Finally, during the stage 4 the optimizer learning rate, which was kept constant at previous stages, is decreased according to a polynomial law, while weight decay parameter of the optimizer is set to 0. The configuration files for the NNCF binarization algorithm allow to control certain parameters of this training schedule.
 
-### Example configuration files
+## Example configuration files
 
 >_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 

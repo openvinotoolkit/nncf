@@ -1,4 +1,4 @@
-### BootstrapNAS
+# BootstrapNAS
 
 Automated generation of weight-sharing super-networks (Cai, Gan, et al., 2020) for Neural Architecture Search (NAS) (Elsken et al., 2019). A weight-sharing super-network is a data structure from which smaller and more efficient sub-networks can be extracted.
 
@@ -142,7 +142,7 @@ For more information about BootstrapNAS and to cite this work, please refer to t
 }
 ```
 
-#### References
+## References
 
 - Cai, H., C. Gan, et al. (2020). “Once for All: Train One Network and Specialize it for Efficient
 Deployment”. In: International Conference on Learning Representations.

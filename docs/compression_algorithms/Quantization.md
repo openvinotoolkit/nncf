@@ -1,13 +1,11 @@
-# Quantization
+# Uniform Quantization with Fine-Tuning
 
 >_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
-
-## Uniform Quantization with Fine-Tuning
 
 A uniform "fake" quantization method supports an arbitrary number of bits (>=2) which is used to represent weights and activations.
 The method performs differentiable sampling of the continuous signal (for example, activations or weights) during forward pass, simulating inference with integer arithmetic.
 
-### Common Quantization Formula
+## Common Quantization Formula
 
 Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
 
@@ -21,7 +19,7 @@ $s = \frac{levels - 1}{input\\_high - input\\_low}$
 
 $input\\_low$ and $input\\_high$ represent the quantization range and $\left\lfloor \cdot \right\rceil$ denotes rounding to the nearest integer.
 
-### Symmetric Quantization
+## Symmetric Quantization
 
 During the training, we optimize the **scale** parameter that represents the range `[input_low, input_range]` of the original signal using gradient descent:
 
@@ -61,7 +59,7 @@ $output = \left\lfloor clamp(input * \frac{level\\_high}{scale}, level\\_low, le
 
 Use the `num_init_samples` parameter from the `initializer` group to initialize the values of `scale` and determine which activation should be signed or unsigned from the collected statistics using given number of samples.
 
-### Asymmetric Quantization
+## Asymmetric Quantization
 
 During the training we optimize the `input_low` and `input_range` parameters using gradient descent:
 
@@ -96,7 +94,7 @@ $$
 
 You can use the `num_init_samples` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics using given number of samples.
 
-### Quantizer setup and hardware config files
+## Quantizer setup and hardware config files
 
 NNCF allows to quantize models for best results on a given Intel hardware type when executed using OpenVINO runtime.
 To achieve this, the quantizer setup should be performed with following considerations in mind:
@@ -124,7 +122,7 @@ The quantization configuration in the `"target_device": "TRIAL"` case may be ove
 
 For all target HW types, parts of the model graph can be marked as non-quantizable by using the `"ignored_scopes"` field - inputs and weights of matching nodes in the NNCF internal graph representation will not be quantized, and the downstream quantizers will not propagate upwards through such nodes.
 
-### Quantization Implementation
+## Quantization Implementation
 
 In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the asymmetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
 
@@ -166,7 +164,7 @@ To control the application of overflow fix, `"overflow_fix"` config option is in
 
 <a name="mixed_precision_quantization"></a>
 
-### Mixed-Precision Quantization
+## Mixed-Precision Quantization
 
 Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks.
 Although NNCF supports quantization with an arbitrary number of bits to represent weights and activations values,

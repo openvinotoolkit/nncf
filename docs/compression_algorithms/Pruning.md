@@ -1,14 +1,12 @@
-# Pruning
+# Filter pruning
 
 >_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
-
-## Filter pruning
 
 Filter pruning algorithm zeros output filters in Convolutional layers based on some filter importance criterion  (filters with smaller importance are pruned).
 The framework contains three filter importance criteria: `L1`, `L2` norm, and `Geometric Median`. Also, different schemes of pruning application are presented by different schedulers.
 Not all Convolution layers in the model can be pruned. Such layers are determined by the model architecture automatically as well as cross-layer dependencies that impose constraints on pruning filters.
 
-### Filter importance criteria **L1, L2**
+## Filter importance criteria **L1, L2**
 
  `L1`, `L2` filter importance criteria are based on the following assumption:
 > Convolutional filters with small $l_p$ norms do not significantly contribute to output activation values, and thus have a small impact on the final predictions of CNN models.
@@ -29,7 +27,7 @@ Where $L_j$ is j-th convolutional layer in model. $\{F_1, \dots F_m\} \in L_j$ -
 
 Then during pruning filters with smaller $G(F_i)$ importance function will be pruned first.
 
-### Schedulers
+## Schedulers
 
 **Baseline Scheduler**
 
@@ -65,7 +63,7 @@ Where $a, k, b$ - parameters.
 
 > **NOTE**:  Baseline scheduler prunes filters only ONCE and after it just fine-tunes remaining parameters while exponential (and exponential with bias) schedulers choose and prune different filters subsets at each pruning epoch.
 
-### Batch-norm statistics adaptation
+## Batch-norm statistics adaptation
 
 After the compression-related changes in the model have been committed, the statistics of the batchnorm layers
 (per-channel rolling means and variances of activation tensors) can be updated by passing several batches of data
@@ -74,7 +72,7 @@ and reduce the corresponding accuracy drop even before model training. This opti
 sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_samples` in the
 `batchnorm_adaptation` section of the `initializer` configuration (see example below).
 
-### Interlayer ranking types
+## Interlayer ranking types
 
 Interlayer ranking type can be one of `unweighted_ranking` or `learned_ranking`.
 
@@ -85,7 +83,7 @@ This approach allows pruning the model taking into account layer-specific sensit
 
 > **NOTE:**  In all our pruning experiments we used SGD optimizer.
 
-### Filter pruning statistics
+## Filter pruning statistics
 
 A model compression can be measured by two main metrics: filter pruning level and FLOPs pruning level. While
 filter pruning level shows the ratio of removed filters to the total number of filters in the model, FLOPs pruning level
@@ -126,12 +124,12 @@ Statistics of the filter pruning algorithm:
 +---------------------------------------+-------+
 ```
 
-#### Layer statistics
+### Layer statistics
 
 `Statistics by pruned layers` section lists names of all layers that will be pruned, shapes of their weight tensors,
 shapes of pruning masks applied to respective weights and percentage of zeros in those masks.
 
-#### Model statistics
+### Model statistics
 
 The columns `Full` and `Current` represent the values of the corresponding statistics in the original model and compressed one in the current state, respectively.
 
