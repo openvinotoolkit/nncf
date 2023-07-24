@@ -56,20 +56,20 @@ class HyperparameterTuner:
         algorithm_cls: Type[Algorithm],
         init_params: Dict[str, Any],
         search_space: SearchSpace,
-        statistic_dataset: Dataset,
+        calibration_dataset: Dataset,
         validation_fn: Callable[[Any, Iterable[Any]], float],
     ):
         """
         :param algorithm_cls: Class of algorithm.
         :param init_params: Initial set of parameters used to create algorithm.
         :param search_space: Describes possible values for parameters.
-        :param statistic_dataset: Dataset used to collect statistics for algorithm.
+        :param calibration_dataset: Dataset used to collect statistics for algorithm.
         :param validation_fn: Validation function used to validated model.
         """
         self._algorithm_cls = algorithm_cls
         self._init_params = init_params
         self._search_space = search_space
-        self._statistic_dataset = statistic_dataset
+        self._calibration_dataset = calibration_dataset
         self._validation_fn = validation_fn
         self._backend_entity = None
 
@@ -88,7 +88,7 @@ class HyperparameterTuner:
         params_transformations = create_params_transformation(self._search_space)
         combinations = create_combinations(params_transformations)
         algorithms = HyperparameterTuner._create_algorithms(self._algorithm_cls, self._init_params, combinations)
-        statistic_points = HyperparameterTuner._collect_statistics(model, self._statistic_dataset, algorithms)
+        statistic_points = HyperparameterTuner._collect_statistics(model, self._calibration_dataset, algorithms)
 
         best_score = None
         best_combination = ()
