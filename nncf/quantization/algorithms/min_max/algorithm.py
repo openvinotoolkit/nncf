@@ -767,11 +767,6 @@ class MinMaxQuantization(Algorithm):
                 if input_node.metatype in producer_metatypes:
                     return True
 
-        # Need to use inference graph to avoid walking through constant branches.
-        nncf_graph = transform_to_inference_graph(
-            nncf_graph, self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
-        )
-
         producer_metatypes = (
             self._backend_entity.conv_metatypes
             + self._backend_entity.mat_mul_metatypes
