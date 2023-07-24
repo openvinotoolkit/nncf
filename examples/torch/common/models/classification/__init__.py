@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .efficientnet import *
+# from .efficientnet import *
 from .inceptionv3_cifar100 import *
 from .mobilenet_v2_cifar10 import *
 from .mobilenet_v2_tv_092 import *

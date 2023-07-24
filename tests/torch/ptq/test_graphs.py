@@ -50,7 +50,7 @@ TEST_MODELS_DESC = [
     (ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]), {}),
     (ModelDesc("lenet", test_models.LeNet, [1, 3, 32, 32]), {}),
     (ModelDesc("resnet18", test_models.ResNet18, [1, 3, 32, 32]), {}),
-    (ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]), {"target_device": TargetDevice.CPU_SPR}),
+    (ModelDesc("resnet50_cpu_spr", test_models.ResNet50, [1, 3, 32, 32]), {"target_device": TargetDevice.CPU_SPR}),
     (ModelDesc("vgg16", partial(test_models.VGG, "VGG16"), [1, 3, 32, 32]), {}),
     (ModelDesc("inception", test_models.GoogLeNet, [1, 3, 32, 32]), {}),
     (ModelDesc("densenet121", test_models.DenseNet121, [1, 3, 32, 32]), {}),
