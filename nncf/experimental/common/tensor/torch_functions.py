@@ -50,14 +50,18 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 
 @functions.max.register
-def _(a: torch.Tensor, axis: Optional[int] = None) -> torch.Tensor:  # pylint: disable=redefined-builtin
+def _(
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None
+) -> torch.Tensor:  # pylint: disable=redefined-builtin
     if axis is None:
         return torch.max(a)
     return torch.tensor(torch.max(a, dim=axis).values)
 
 
 @functions.min.register
-def _(a: torch.Tensor, axis: Optional[int] = None) -> torch.Tensor:  # pylint: disable=redefined-builtin
+def _(
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None
+) -> torch.Tensor:  # pylint: disable=redefined-builtin
     if axis is None:
         return torch.min(a)
     return torch.tensor(torch.min(a, dim=axis).values)
@@ -87,7 +91,9 @@ def _(a: torch.Tensor, shape: List[int]) -> torch.Tensor:
 
 
 @functions.all.register
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> bool:  # pylint: disable=redefined-builtin
+def _(
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None
+) -> Union[torch.Tensor, bool]:  # pylint: disable=redefined-builtin
     if axis is None:
         return torch.all(a)
     return torch.all(a, dim=axis)
@@ -99,14 +105,16 @@ def _(a: torch.Tensor, b: torch.Tensor, rtol: float = 1e-05, atol: float = 1e-08
 
 
 @functions.any.register
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> bool:  # pylint: disable=redefined-builtin
+def _(
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None
+) -> Union[torch.Tensor, bool]:  # pylint: disable=redefined-builtin
     if axis is None:
         return torch.any(a)
     return torch.any(a, dim=axis)
 
 
 @functions.count_nonzero.register
-def _(a: torch.Tensor, axis: Optional[int] = None) -> torch.Tensor:
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
     return torch.count_nonzero(a, dim=axis)
 
 

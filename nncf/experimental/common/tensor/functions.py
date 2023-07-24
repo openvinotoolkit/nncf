@@ -12,7 +12,7 @@
 import functools
 from typing import Optional, Tuple, TypeVar, Union
 
-import nncf.experimental.common.tensor as tensor
+import nncf.experimental.common.tensor as tensor  # pylint: disable=consider-using-from-import
 from nncf.experimental.common.tensor.enums import TensorDataType
 from nncf.experimental.common.tensor.enums import TensorDeviceType
 
@@ -38,7 +38,6 @@ def squeeze(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTenso
 
     :param a: The input tensor.
     :param axis: Selects a subset of the entries of length one in the shape.
-      If an axis is selected with shape entry greater than one, an error is raised.
     :return: The input array, but with all or a subset of the dimensions of length 1 removed.
       This is always a itself or a view into a. Note that if all axes are squeezed,
       the result is a 0d array and not a scalar.
@@ -62,7 +61,7 @@ def flatten(a: TTensor) -> TTensor:
 
 
 @functools.singledispatch
-def max(a: TTensor, axis: Optional[T] = None) -> TTensor:
+def max(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  # pylint: disable=redefined-builtin
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -76,7 +75,7 @@ def max(a: TTensor, axis: Optional[T] = None) -> TTensor:
 
 
 @functools.singledispatch
-def min(a: TTensor, axis: Optional[T] = None) -> TTensor:
+def min(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  # pylint: disable=redefined-builtin
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -90,7 +89,7 @@ def min(a: TTensor, axis: Optional[T] = None) -> TTensor:
 
 
 @functools.singledispatch
-def abs(a: TTensor) -> TTensor:
+def abs(a: TTensor) -> TTensor:  # pylint: disable=redefined-builtin
     """
     Calculate the absolute value element-wise.
 
@@ -103,7 +102,7 @@ def abs(a: TTensor) -> TTensor:
 
 
 @functools.singledispatch
-def astype(a: TTensor, dtype: TensorDataType) -> TTensor:
+def astype(a: TTensor, data_type: TensorDataType) -> TTensor:
     """
     Copy of the tensor, cast to a specified type.
 
@@ -113,7 +112,7 @@ def astype(a: TTensor, dtype: TensorDataType) -> TTensor:
     :return: Copy of the tensor in specified type.
     """
     if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(astype(a.data, dtype))
+        return tensor.Tensor(astype(a.data, data_type))
     return NotImplemented(f"Function `dtype` is not implemented for {type(a)}")
 
 
@@ -151,8 +150,7 @@ def all(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
     Test whether all tensor elements along a given axis evaluate to True.
 
     :param a: The input tensor.
-    :param axis: Axis or tuple of axes along which to count non-zeros. Default is None,
-      meaning that non-zeros will be counted along a flattened version of a.
+    :param axis: Axis or axes along which a logical AND reduction is performed.
     :return: A new boolean or tensor is returned unless out is specified,
       in which case a reference to out is returned.
     """
@@ -194,8 +192,7 @@ def any(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
     Test whether all tensor elements along a given axis evaluate to True.
 
     :param a: The input tensor.
-    :param axis: Axis or tuple of axes along which to count non-zeros. Default is None,
-      meaning that non-zeros will be counted along a flattened version of a.
+    :param axis: Axis or axes along which a logical OR reduction is performed.
     :return: A new boolean or tensor is returned unless out is specified,
       in which case a reference to out is returned.
     """
@@ -210,8 +207,7 @@ def count_nonzero(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> 
     Counts the number of non-zero values in the tensor input.
 
     :param a: The tensor for which to count non-zeros.
-    :param axis: Axis or tuple of axes along which to count non-zeros. Default is None,
-      meaning that non-zeros will be counted along a flattened version of a.
+    :param axis: Axis or tuple of axes along which to count non-zeros.
     :return: Number of non-zero values in the tensor along a given axis.
       Otherwise, the total number of non-zero values in the tensor is returned.
     """

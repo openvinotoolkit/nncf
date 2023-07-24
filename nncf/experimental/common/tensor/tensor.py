@@ -10,9 +10,9 @@
 # limitations under the License.
 
 
-from typing import Any, Iterator, List, Optional, Tuple, TypeVar, Union
+from typing import Any, List, Optional, Tuple, TypeVar, Union
 
-import nncf.experimental.common.tensor.functions as functions
+import nncf.experimental.common.tensor.functions as functions  # pylint: disable=consider-using-from-import
 from nncf.experimental.common.tensor.enums import TensorDataType
 from nncf.experimental.common.tensor.enums import TensorDeviceType
 
@@ -20,10 +20,10 @@ DataType = TypeVar("DataType")
 
 
 def _initialize_backends():
-    from nncf.experimental.common.tensor import numpy_functions
+    import nncf.experimental.common.tensor.numpy_functions  # pylint: disable=unused-import
 
     try:
-        from nncf.experimental.common.tensor import torch_functions
+        import nncf.experimental.common.tensor.torch_functions  # pylint: disable=unused-import
     except ImportError:
         pass
 
@@ -57,9 +57,6 @@ class Tensor:
 
     def __bool__(self) -> bool:
         return bool(self.data)
-
-    # def __iter__(self) -> Iterator:
-    #     return iter(self.data)
 
     def __iter__(self):
         return TensorIterator(self.data)

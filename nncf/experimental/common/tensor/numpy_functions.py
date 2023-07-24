@@ -9,16 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple, TypeVar, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 
 from nncf.experimental.common.tensor import functions
 from nncf.experimental.common.tensor.enums import TensorDataType
 from nncf.experimental.common.tensor.enums import TensorDeviceType
-
-TensorType = TypeVar("TensorType")  # TODO: Should be removed
-
 
 DTYPE_MAP = {
     TensorDataType.float16: np.dtype(np.float16),
@@ -47,12 +44,12 @@ def _(a: np.ndarray) -> np.ndarray:
 
 
 @functions.max.register
-def _(a: np.ndarray, axis: Optional[TensorType] = None) -> np.ndarray:  # pylint: disable=redefined-builtin
+def _(a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:  # pylint: disable=redefined-builtin
     return np.max(a, axis=axis)
 
 
 @functions.min.register
-def _(a: np.ndarray, axis: Optional[TensorType] = None) -> np.ndarray:  # pylint: disable=redefined-builtin
+def _(a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:  # pylint: disable=redefined-builtin
     return np.min(a, axis=axis)
 
 
@@ -80,7 +77,9 @@ def _(a: np.ndarray, shape: Union[int, Tuple[int]]) -> np.ndarray:
 
 
 @functions.all.register
-def _(a: np.ndarray, axis: Optional[TensorType] = None) -> TensorType:  # pylint: disable=redefined-builtin
+def _(
+    a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None
+) -> Union[np.ndarray, bool]:  # pylint: disable=redefined-builtin
     return np.all(a, axis=axis)
 
 
@@ -90,12 +89,14 @@ def _(a: np.ndarray, b: np.ndarray, rtol: float = 1e-05, atol: float = 1e-08, eq
 
 
 @functions.any.register
-def _(a: np.ndarray, axis: Optional[TensorType] = None) -> TensorType:  # pylint: disable=redefined-builtin
+def _(
+    a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None
+) -> Union[np.ndarray, bool]:  # pylint: disable=redefined-builtin
     return np.any(a, axis=axis)
 
 
 @functions.count_nonzero.register
-def _(a: np.ndarray, axis: Optional[TensorType] = None) -> np.ndarray:
+def _(a: np.ndarray, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
     return np.count_nonzero(a, axis=axis)
 
 
