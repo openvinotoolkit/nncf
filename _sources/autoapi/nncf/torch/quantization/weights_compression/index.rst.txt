@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.torch.quantization.weights_compression`
+=====================================================
+
+.. py:module:: nncf.torch.quantization.weights_compression
+
+

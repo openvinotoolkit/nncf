@@ -114,7 +114,7 @@ Functions
 .. py:function:: register_default_init_args(nncf_config, train_loader, criterion = None, criterion_fn = None, train_steps_fn = None, validate_fn = None, val_loader = None, autoq_eval_fn = None, model_eval_fn = None, distributed_callbacks = None, execution_parameters = None, legr_train_optimizer = None, device = None)
 
 
-.. py:function:: register_module(*quantizable_field_names, ignored_algorithms = None)
+.. py:function:: register_module(*quantizable_field_names, ignored_algorithms = None, target_weight_dim_for_compression = 0)
 
 
 .. py:function:: register_operator(name=None)
