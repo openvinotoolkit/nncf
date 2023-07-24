@@ -368,6 +368,6 @@ def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[in
     :return: Reduction shape in tuple format.
     """
     reduction_shape = list(range(len(shape)))
-    for channel_axis in channel_axes:
-        reduction_shape.pop(channel_axis)
+    for channel_axis in sorted(channel_axes, reverse=True):
+        del reduction_shape[channel_axis]
     return tuple(reduction_shape)
