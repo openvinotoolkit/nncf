@@ -1,4 +1,4 @@
-### Installation
+# Installation
 
 Install the packages needed for samples by running the following in the current directory:
 
@@ -22,5 +22,6 @@ pip install .[torch]
 pip install -r examples/torch/requirements.txt
 ```
 
-### Results
+## Results
+
 Please see compression results for PyTorch models at our [Model Zoo page](../../../docs/ModelZoo.md#pytorch).

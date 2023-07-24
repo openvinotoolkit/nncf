@@ -1,18 +1,18 @@
 # NNCF Compressed Model Zoo
 
-Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files. 
+Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files.
 
-The applied quantization compression algorithms are divided into two broad categories: Quantization-Aware Training ([QAT](../README.md#training-time-compression)) and Post-Training Quantization ([PTQ](../README.md#post-training-quantization)). Here we mainly report the QAT results and the PTQ results may be found on an OpenVino Performance Benchmarks [page](https://docs.openvino.ai/latest/openvino_docs_performance_benchmarks.html). 
+The applied quantization compression algorithms are divided into two broad categories: Quantization-Aware Training ([QAT](../README.md#training-time-compression)) and Post-Training Quantization ([PTQ](../README.md#post-training-quantization)). Here we mainly report the QAT results and the PTQ results may be found on an OpenVino Performance Benchmarks [page](https://docs.openvino.ai/latest/openvino_docs_performance_benchmarks.html).
 
 - [PyTorch](#pytorch)
-  * [Classification](#pytorch-classification)
-  * [Object Detection](#pytorch-object-detection)
-  * [Semantic Segmentation](#pytorch-semantic-segmentation)
-  * [Natural Language Processing (3rd-party training pipelines)](#pytorch-nlp-huggingface-transformers-powered-models)
+  - [Classification](#pytorch-classification)
+  - [Object Detection](#pytorch-object-detection)
+  - [Semantic Segmentation](#pytorch-semantic-segmentation)
+  - [Natural Language Processing (3rd-party training pipelines)](#pytorch-nlp-huggingface-transformers-powered-models)
 - [TensorFlow](#tensorflow)
-  * [Classification](#tensorflow-classification)
-  * [Object Detection](#tensorflow-object-detection)
-  * [Instance Segmentation](#tensorflow-instance-segmentation)
+  - [Classification](#tensorflow-classification)
+  - [Object Detection](#tensorflow-object-detection)
+  - [Instance Segmentation](#tensorflow-instance-segmentation)
 - [ONNX](#onnx)
 
 ## PyTorch
@@ -949,4 +949,3 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
   </tbody>
 </table>
-
