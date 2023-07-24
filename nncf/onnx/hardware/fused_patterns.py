@@ -54,7 +54,10 @@ def create_shift_scale() -> GraphPattern:
         }
     )
     mul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+        **{
+            GraphPattern.LABEL_ATTR: "MULTIPLY, DIV",
+            GraphPattern.METATYPE_ATTR: [om.ONNXMulLayerMetatype, om.ONNXDivLayerMetatype],
+        }
     )
 
     pattern.add_edge(add_node, mul_node)

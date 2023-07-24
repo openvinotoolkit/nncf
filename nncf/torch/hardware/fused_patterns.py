@@ -53,8 +53,8 @@ def create_l2_norm_operations() -> GraphPattern:
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SHIFT_SCALE)
 def create_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    add_node = pattern.add_node(label="SUB", type=["__sub__"])
-    truediv_node = pattern.add_node(label="DIV", type=["__truediv__"])
+    add_node = pattern.add_node(label="ADD, SUB", type=["__add__", "__sub__"])
+    truediv_node = pattern.add_node(label="MUL, DIV", type=["__mul__", "__truediv__"])
     pattern.add_edge(add_node, truediv_node)
     return pattern
 
