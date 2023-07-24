@@ -48,7 +48,7 @@ REFERENCE_DATA = read_reference_data()
 
 
 @pytest.mark.parametrize("test_case_name", TEST_CASES.keys())
-def test_ptq_hf(test_case_name, data, output, result):
+def test_ptq_quantization(test_case_name, data, output, result):
     pipeline = None
     err_msg = None
     test_model_param = None
