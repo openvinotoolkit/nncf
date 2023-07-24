@@ -16,6 +16,8 @@ import pkgutil
 import sys
 from typing import Any, Dict
 
+from sphinx.ext.autodoc import mock
+
 sys.path.insert(0, os.path.abspath("../../.."))
 
 project = "NNCF"
@@ -126,7 +128,8 @@ def collect_api_entities() -> APIInfo:
     return retval
 
 
-api_info = collect_api_entities()
+with mock(["torch", "torchvision", "onnx", "onnxruntime", "openvino", "tensorflow", "tensorflow_addons"]):
+    api_info = collect_api_entities()
 
 module_fqns = set()
 
