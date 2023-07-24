@@ -343,6 +343,10 @@ class ResidualBlock(tf.keras.layers.Layer):
         self._kernel_regularizer = kernel_regularizer
         self._bias_regularizer = bias_regularizer
 
+        if use_sync_bn:
+            self._norm = tf.keras.layers.experimental.SyncBatchNormalization
+        else:
+            self._norm = tf.keras.layers.BatchNormalization
         if tf.keras.backend.image_data_format() == "channels_last":
             self._bn_axis = -1
         else:
@@ -361,12 +365,11 @@ class ResidualBlock(tf.keras.layers.Layer):
                 kernel_regularizer=self._kernel_regularizer,
                 bias_regularizer=self._bias_regularizer,
             )
-            self._norm0 = tf.keras.layers.BatchNormalization(
+            self._norm0 = self._norm(
                 axis=self._bn_axis,
                 momentum=self._norm_momentum,
                 epsilon=self._norm_epsilon,
                 trainable=self._bn_trainable,
-                synchronized=self._use_sync_bn,
             )
 
         conv1_padding = "same"
@@ -385,9 +388,8 @@ class ResidualBlock(tf.keras.layers.Layer):
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
         )
-        self._norm1 = tf.keras.layers.BatchNormalization(
-            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self._use_sync_bn
+        self._norm1 = self._norm(
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
         )
 
         self._conv2 = tf.keras.layers.Conv2D(
@@ -400,9 +402,8 @@ class ResidualBlock(tf.keras.layers.Layer):
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
         )
-        self._norm2 = tf.keras.layers.BatchNormalization(
-            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self._use_sync_bn
+        self._norm2 = self._norm(
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
         )
 
         if self._se_ratio and self._se_ratio > 0 and self._se_ratio <= 1:
@@ -538,6 +539,10 @@ class BottleneckBlock(tf.keras.layers.Layer):
         self._norm_epsilon = norm_epsilon
         self._kernel_regularizer = kernel_regularizer
         self._bias_regularizer = bias_regularizer
+        if use_sync_bn:
+            self._norm = tf.keras.layers.experimental.SyncBatchNormalization
+        else:
+            self._norm = tf.keras.layers.BatchNormalization
         if tf.keras.backend.image_data_format() == "channels_last":
             self._bn_axis = -1
         else:
@@ -568,12 +573,11 @@ class BottleneckBlock(tf.keras.layers.Layer):
                     bias_regularizer=self._bias_regularizer,
                 )
 
-            self._norm0 = tf.keras.layers.BatchNormalization(
+            self._norm0 = self._norm(
                 axis=self._bn_axis,
                 momentum=self._norm_momentum,
                 epsilon=self._norm_epsilon,
                 trainable=self._bn_trainable,
-                synchronized=self._use_sync_bn,
             )
 
         self._conv1 = tf.keras.layers.Conv2D(
@@ -585,9 +589,8 @@ class BottleneckBlock(tf.keras.layers.Layer):
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
         )
-        self._norm1 = tf.keras.layers.BatchNormalization(
-            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self._use_sync_bn
+        self._norm1 = self._norm(
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
         )
         self._activation1 = get_activation(self._activation, use_keras_layer=True)
 
@@ -602,9 +605,8 @@ class BottleneckBlock(tf.keras.layers.Layer):
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
         )
-        self._norm2 = tf.keras.layers.BatchNormalization(
-            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self._use_sync_bn
+        self._norm2 = self._norm(
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
         )
         self._activation2 = get_activation(self._activation, use_keras_layer=True)
 
@@ -617,9 +619,8 @@ class BottleneckBlock(tf.keras.layers.Layer):
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
         )
-        self._norm3 = tf.keras.layers.BatchNormalization(
-            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable,
-            synchronized=self._use_sync_bn
+        self._norm3 = self._norm(
+            axis=self._bn_axis, momentum=self._norm_momentum, epsilon=self._norm_epsilon, trainable=self._bn_trainable
         )
         self._activation3 = get_activation(self._activation, use_keras_layer=True)
 
@@ -842,6 +843,10 @@ class ResNet(tf.keras.Model):
         self._activation = activation
         self._norm_momentum = norm_momentum
         self._norm_epsilon = norm_epsilon
+        if use_sync_bn:
+            self._norm = tf.keras.layers.experimental.SyncBatchNormalization
+        else:
+            self._norm = tf.keras.layers.BatchNormalization
         self._kernel_initializer = kernel_initializer
         self._kernel_regularizer = kernel_regularizer
         self._bias_regularizer = bias_regularizer
@@ -867,8 +872,7 @@ class ResNet(tf.keras.Model):
                 kernel_regularizer=self._kernel_regularizer,
                 bias_regularizer=self._bias_regularizer,
             )(inputs)
-            x = tf.keras.layers.BatchNormalization(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon,
-                                                   trainable=bn_trainable, synchronized=self._use_sync_bn)(x)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
         elif stem_type == "v1":
             x = tf.keras.layers.Conv2D(
@@ -881,8 +885,7 @@ class ResNet(tf.keras.Model):
                 kernel_regularizer=self._kernel_regularizer,
                 bias_regularizer=self._bias_regularizer,
             )(inputs)
-            x = tf.keras.layers.BatchNormalization(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon,
-                                                   trainable=bn_trainable, synchronized=self._use_sync_bn)(x)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
             x = tf.keras.layers.Conv2D(
                 filters=int(32 * stem_depth_multiplier),
@@ -894,8 +897,7 @@ class ResNet(tf.keras.Model):
                 kernel_regularizer=self._kernel_regularizer,
                 bias_regularizer=self._bias_regularizer,
             )(x)
-            x = tf.keras.layers.BatchNormalization(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon,
-                                                   trainable=bn_trainable, synchronized=self._use_sync_bn)(x)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
             x = tf.keras.layers.Conv2D(
                 filters=int(64 * stem_depth_multiplier),
@@ -907,8 +909,7 @@ class ResNet(tf.keras.Model):
                 kernel_regularizer=self._kernel_regularizer,
                 bias_regularizer=self._bias_regularizer,
             )(x)
-            x = tf.keras.layers.BatchNormalization(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon,
-                                                   trainable=bn_trainable, synchronized=self._use_sync_bn)(x)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
         else:
             raise ValueError("Stem type {} not supported.".format(stem_type))
@@ -924,8 +925,7 @@ class ResNet(tf.keras.Model):
                 kernel_regularizer=self._kernel_regularizer,
                 bias_regularizer=self._bias_regularizer,
             )(x)
-            x = tf.keras.layers.BatchNormalization(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon,
-                                                   trainable=bn_trainable, synchronized=self._use_sync_bn)(x)
+            x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
         else:
             x = tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding="same")(x)
@@ -1089,6 +1089,10 @@ class ClassificationModel(tf.keras.Model):
           skip_logits_layer: `bool`, whether to skip the prediction layer.
           **kwargs: keyword arguments to be passed.
         """
+        if use_sync_bn:
+            norm = tf.keras.layers.experimental.SyncBatchNormalization
+        else:
+            norm = tf.keras.layers.BatchNormalization
         axis = -1 if tf.keras.backend.image_data_format() == "channels_last" else 1
 
         inputs = tf.keras.Input(shape=input_specs.shape[1:], name=input_specs.name)
@@ -1096,8 +1100,7 @@ class ClassificationModel(tf.keras.Model):
         x = endpoints[max(endpoints.keys())]
 
         if add_head_batch_norm:
-            x = tf.keras.layers.BatchNormalization(axis=axis, momentum=norm_momentum, epsilon=norm_epsilon,
-                                                   synchronized=use_sync_bn)(x)
+            x = norm(axis=axis, momentum=norm_momentum, epsilon=norm_epsilon)(x)
         x = tf.keras.layers.GlobalAveragePooling2D()(x)
         if not skip_logits_layer:
             x = tf.keras.layers.Dropout(dropout_rate)(x)
