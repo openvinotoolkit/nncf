@@ -79,6 +79,7 @@ def _convert_compressed_model_to_openvino_model(model: pot.graph.nx_model.Compre
         xml_path = paths[0]["model"]
         bin_path = paths[0]["weights"]
         ie = ov.Core()
+        ie.set_property({"ENABLE_MMAP": "NO"})
         ov_model = ie.read_model(xml_path, bin_path)
     return ov_model
 
