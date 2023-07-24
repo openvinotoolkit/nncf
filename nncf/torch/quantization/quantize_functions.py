@@ -136,7 +136,9 @@ def _quantize_autograd_to_range(input_, input_low, input_high, levels):
 # pylint:disable=abstract-method
 class ExportQuantizeToFakeQuantize(torch.autograd.Function):
     @staticmethod
-    def symbolic(g, input_, levels, input_low, input_high, output_low, output_high):
+    def symbolic(
+        g, input_, levels, input_low, input_high, output_low, output_high, scale, zero_point, q_min, q_max, ch_axis
+    ):
         output = g.op(
             add_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels
         )
@@ -145,8 +147,12 @@ class ExportQuantizeToFakeQuantize(torch.autograd.Function):
         return output
 
     @staticmethod
-    def forward(ctx, input_, levels, input_low, input_high, output_low, output_high):
-        return torch.clone(input_)
+    def forward(
+        ctx, input_, levels, input_low, input_high, output_low, output_high, scale, zero_point, q_min, q_max, ch_axis
+    ):
+        if ch_axis is not None:
+            return torch.fake_quantize_per_channel_affine(input_, scale, zero_point, ch_axis, q_min, q_max)
+        return torch.fake_quantize_per_tensor_affine(input_, scale, zero_point, q_min, q_max)
 
     @staticmethod
     def backward(ctx: Any, *grad_outputs: Any) -> Any:
@@ -222,7 +228,7 @@ class TuneRange(torch.autograd.Function):
         input_low_copy[input_low_copy > 0] = 0
         input_high[input_high < 0] = 0
         n = levels - 1
-        # Need a cast here because fp16 division yileds fp32 results sometimes
+        # Need a cast here because fp16 division yields fp32 results sometimes
         scale = (levels / (input_high - input_low_copy)).to(dtype=input_high.dtype)
         zp = torch.round(-input_low_copy * scale)
 
