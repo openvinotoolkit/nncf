@@ -27,8 +27,8 @@ from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 TORCHVISION_TEST_DATA = [
     (ModelToTest("resnet18", [1, 3, 224, 224]), models.resnet18(pretrained=True), {}),
     (
-        ModelToTest("resnet50", [1, 3, 224, 224]),
-        models.resnet18(pretrained=True),
+        ModelToTest("resnet50_cpu_spr", [1, 3, 224, 224]),
+        models.resnet50(pretrained=True),
         {"target_device": TargetDevice.CPU_SPR},
     ),
     (ModelToTest("mobilenet_v2", [1, 3, 224, 224]), models.mobilenet_v2(pretrained=True), {}),
