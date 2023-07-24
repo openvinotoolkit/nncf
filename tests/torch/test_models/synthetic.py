@@ -362,5 +362,4 @@ class ShiftScaleParametrized(torch.nn.Module):
         output = self.conv(pre_proc)
         if self.is_single_input:
             return output
-        else:
-            return output, self.conv(x)
+        return output, self.conv(x)
