@@ -270,7 +270,8 @@ class MinMaxQuantization(Algorithm):
 
         :param nncf_graph: NNCFGraph instance.
         :param target_point: Target point indicates where statistics should be collected.
-        :param quantizer_config: Configuration of a quantizer layer defines the configuration of created statistic collector.
+        :param quantizer_config: Configuration of a quantizer layer,
+        defining the configuration of created statistic collector.
         :param num_samples: Number of samples to collect from the 'target_point'.
         :return: Statistic Collector.
         """
