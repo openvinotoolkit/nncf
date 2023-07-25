@@ -120,18 +120,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
     @staticmethod
-    def create_activation_quantizer_insertion_command(
-        nncf_graph: NNCFGraph,
-        target_point: PTTargetPoint,
-        quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
-    ) -> PTInsertionCommand:
-        return PTMinMaxAlgoBackend._create_quantizer_insertion_command(
-            nncf_graph, target_point, quantizer_config, parameters
-        )
-
-    @staticmethod
-    def create_weight_quantizer_insertion_command(
+    def create_quantizer_insertion_command(
         nncf_graph: NNCFGraph,
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
