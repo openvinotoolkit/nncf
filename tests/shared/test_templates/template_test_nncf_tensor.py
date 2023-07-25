@@ -13,11 +13,10 @@ from typing import TypeVar
 
 import pytest
 
-import nncf
-import nncf.experimental.tensor.functions as functions
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import TensorDeviceType
+from nncf.experimental.tensor import functions
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
