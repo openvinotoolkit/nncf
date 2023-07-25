@@ -169,7 +169,12 @@ class TemplateTestPTQParams:
         assert min_max_algo._quantize_outputs == quantize_outputs
         hw_patterns = test_params["test_model_type_pass"]["hw_patterns"]
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
-        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, hw_patterns, ignored_patterns)
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph),
+            min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.read_variable_metatypes,
+        )
+        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         act_num_q, weight_num_q = 0, 0
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
@@ -189,7 +194,12 @@ class TemplateTestPTQParams:
         nncf_graph = test_params["test_ignored_scopes"]["nncf_graph"]
         hw_patterns = test_params["test_model_type_pass"]["hw_patterns"]
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
-        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, hw_patterns, ignored_patterns)
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph),
+            min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.read_variable_metatypes,
+        )
+        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         act_num_q, weight_num_q = 0, 0
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
@@ -209,19 +219,30 @@ class TemplateTestPTQParams:
         nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
         hw_patterns = test_params["test_model_type_pass"]["hw_patterns"]
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
-        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, hw_patterns, ignored_patterns)
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph),
+            min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.read_variable_metatypes,
+        )
+        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
                 node_names = quantization_point.directly_quantized_operator_node_names
                 for node_name in node_names:
-                    if nncf_graph.get_node_by_name(node_name).metatype == min_max_algo._backend_entity.mat_mul_metatype:
+                    if (
+                        nncf_graph.get_node_by_name(node_name).metatype
+                        == min_max_algo._backend_entity.mat_mul_metatypes
+                    ):
                         assert quantization_point.qconfig.mode == QuantizationMode.ASYMMETRIC
         min_max_algo._apply_model_type_pass(model_type, q_setup, nncf_graph)
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
                 node_names = quantization_point.directly_quantized_operator_node_names
                 for node_name in node_names:
-                    if nncf_graph.get_node_by_name(node_name).metatype == min_max_algo._backend_entity.mat_mul_metatype:
+                    if (
+                        nncf_graph.get_node_by_name(node_name).metatype
+                        == min_max_algo._backend_entity.mat_mul_metatypes
+                    ):
                         assert quantization_point.qconfig.mode == QuantizationMode.SYMMETRIC
 
     @pytest.mark.parametrize(
