@@ -296,6 +296,7 @@ class HWFusedPatternNames(Enum):
     MVN_SCALE_SHIFT = PatternDesc("mvn_scale_shift")
     NORMALIZE_L2_MULTIPLY = PatternDesc("normalize_l2_multiply")
     SCALE_SHIFT = PatternDesc("scale_shift")
+    SHIFT_SCALE = PatternDesc("shift_scale")
     SE_BLOCK = PatternDesc("se_block")
     SOFTMAX_DIV = PatternDesc("softmax_div")
 
