@@ -137,8 +137,8 @@ mock_modules = [
     "tensorflow",
     "tensorflow_addons",
     # Need add backend implementation functions to avoid endless loops on registered functions by mock module,
-    "nncf.experimental.common.tensor.torch_functions",
-    "nncf.experimental.common.tensor.numpy_functions",
+    "nncf.experimental.tensor.torch_functions",
+    "nncf.experimental.tensor.numpy_functions",
 ]
 
 with mock(mock_modules):

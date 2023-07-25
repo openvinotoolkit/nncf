@@ -165,8 +165,8 @@ mock_modules = [
     "openvino",
     "tensorflow",
     "tensorflow_addons",
-    "nncf.experimental.common.tensor.torch_functions",
-    "nncf.experimental.common.tensor.numpy_functions",
-    "nncf.experimental.common.tensor.<NEW_BACKEND>_functions",
+    "nncf.experimental.tensor.torch_functions",
+    "nncf.experimental.tensor.numpy_functions",
+    "nncf.experimental.tensor.<NEW_BACKEND>_functions",
 ]
 ```

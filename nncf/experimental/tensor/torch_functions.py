@@ -13,9 +13,9 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 
-from nncf.experimental.common.tensor import functions
-from nncf.experimental.common.tensor.enums import TensorDataType
-from nncf.experimental.common.tensor.enums import TensorDeviceType
+from nncf.experimental.tensor import TensorDataType
+from nncf.experimental.tensor import TensorDeviceType
+from nncf.experimental.tensor import functions
 
 DTYPE_MAP = {
     TensorDataType.float16: torch.float16,
@@ -53,14 +53,14 @@ def _(a: torch.Tensor) -> torch.Tensor:
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
     if axis is None:
         return torch.max(a)
-    return torch.tensor(torch.max(a, dim=axis).values)
+    return torch.max(a, dim=axis).values
 
 
 @functions.min.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
     if axis is None:
         return torch.min(a)
-    return torch.tensor(torch.min(a, dim=axis).values)
+    return torch.min(a, dim=axis).values
 
 
 @functions.abs.register(torch.Tensor)

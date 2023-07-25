@@ -9,5 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.experimental.common.tensor.tensor import Tensor
-from nncf.experimental.common.tensor.tensor import unwrap_tensor_data
+from nncf.experimental.tensor.enums import TensorBackendType
+from nncf.experimental.tensor.enums import TensorDataType
+from nncf.experimental.tensor.enums import TensorDeviceType
+from nncf.experimental.tensor.tensor import Tensor
+from nncf.experimental.tensor.tensor import unwrap_tensor_data

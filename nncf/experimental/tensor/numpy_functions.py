@@ -13,9 +13,9 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 
-from nncf.experimental.common.tensor import functions
-from nncf.experimental.common.tensor.enums import TensorDataType
-from nncf.experimental.common.tensor.enums import TensorDeviceType
+from nncf.experimental.tensor import functions
+from nncf.experimental.tensor.enums import TensorDataType
+from nncf.experimental.tensor.enums import TensorDeviceType
 
 DTYPE_MAP = {
     TensorDataType.float16: np.dtype(np.float16),

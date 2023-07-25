@@ -11,8 +11,8 @@
 
 import torch
 
-from nncf.experimental.common.tensor import Tensor
-from nncf.experimental.common.tensor.enums import TensorDeviceType
+from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor.enums import TensorDeviceType
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
 

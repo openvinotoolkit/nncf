@@ -12,18 +12,18 @@
 
 from typing import Any, List, Optional, Tuple, TypeVar, Union
 
-import nncf.experimental.common.tensor.functions as functions  # pylint: disable=consider-using-from-import
-from nncf.experimental.common.tensor.enums import TensorDataType
-from nncf.experimental.common.tensor.enums import TensorDeviceType
+import nncf.experimental.tensor.functions as functions  # pylint: disable=consider-using-from-import
+from nncf.experimental.tensor.enums import TensorDataType
+from nncf.experimental.tensor.enums import TensorDeviceType
 
 DataType = TypeVar("DataType")
 
 
 def _initialize_backends():
-    import nncf.experimental.common.tensor.numpy_functions  # pylint: disable=unused-import
+    import nncf.experimental.tensor.numpy_functions  # pylint: disable=unused-import
 
     try:
-        import nncf.experimental.common.tensor.torch_functions  # pylint: disable=unused-import
+        import nncf.experimental.tensor.torch_functions  # pylint: disable=unused-import
     except ImportError:
         pass
 

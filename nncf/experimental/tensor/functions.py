@@ -12,9 +12,9 @@
 import functools
 from typing import List, Optional, Tuple, TypeVar, Union
 
-import nncf.experimental.common.tensor as tensor  # pylint: disable=consider-using-from-import
-from nncf.experimental.common.tensor.enums import TensorDataType
-from nncf.experimental.common.tensor.enums import TensorDeviceType
+import nncf.experimental.tensor as tensor  # pylint: disable=consider-using-from-import
+from nncf.experimental.tensor.enums import TensorDataType
+from nncf.experimental.tensor.enums import TensorDeviceType
 
 TTensor = TypeVar("TTensor")
 
