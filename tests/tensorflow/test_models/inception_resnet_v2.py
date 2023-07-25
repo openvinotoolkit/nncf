@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import tensorflow as tf
-
 from keras import layers as keras_layers
 
 from nncf.tensorflow.tf_internals import backend

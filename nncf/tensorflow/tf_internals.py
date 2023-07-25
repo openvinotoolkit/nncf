@@ -33,9 +33,9 @@ elif version.parse(tensorflow_version) < version.parse("2.13"):
     from keras.utils.control_flow_util import smart_cond
 else:
     from keras import backend
-    from keras.src import engine as keras_engine
     from keras import layers
+    from keras.layers import Rescaling
+    from keras.src import engine as keras_engine
     from keras.src.applications import imagenet_utils
     from keras.src.engine.keras_tensor import KerasTensor
-    from keras.layers import Rescaling
     from keras.src.utils.control_flow_util import smart_cond
