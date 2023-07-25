@@ -18,21 +18,17 @@ from nncf.common.engine import Engine
 from nncf.parameters import TargetDevice
 
 
-class OVNativeEngine(Engine):
+class OVCompiledModelEngine(Engine):
     """
-    Implementation of the engine for OpenVINO backend.
+    Implementation of the engine to infer OpenVINO compiled model.
 
-    OVNativeEngine uses
+    OVCompiledModelEngine uses
     [OpenVINO Runtime](https://docs.openvino.ai/latest/openvino_docs_OV_UG_OV_Runtime_User_Guide.html)
-    to infer the model.
+    to infer the compiled model.
     """
 
-    def __init__(self, model: ov.Model, target_device: TargetDevice = TargetDevice.CPU):
-        if target_device == TargetDevice.ANY:
-            target_device = TargetDevice.CPU
-
-        ie = ov.Core()
-        self.compiled_model = ie.compile_model(model, target_device.value)
+    def __init__(self, model: ov.CompiledModel):
+        self.compiled_model = model
         self.input_tensor_names = set()
         self.number_of_inputs = len(model.inputs)
         for model_input in model.inputs:
@@ -74,3 +70,33 @@ class OVNativeEngine(Engine):
             for tensor_name in tensor.get_names():
                 output_data[tensor_name] = value
         return output_data
+
+
+class OVNativeEngine(Engine):
+    """
+    Implementation of the engine for OpenVINO backend.
+
+    OVNativeEngine uses
+    [OpenVINO Runtime](https://docs.openvino.ai/latest/openvino_docs_OV_UG_OV_Runtime_User_Guide.html)
+    to infer the model.
+    """
+
+    def __init__(self, model: ov.Model, target_device: TargetDevice = TargetDevice.CPU):
+        if target_device == TargetDevice.ANY:
+            target_device = TargetDevice.CPU
+
+        ie = ov.Core()
+        compiled_model = ie.compile_model(model, target_device.value)
+        self.engine = OVCompiledModelEngine(compiled_model)
+
+    def infer(
+        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
+    ) -> Dict[str, np.ndarray]:
+        """
+        Runs model on the provided input via OpenVINO Runtime.
+        Returns the dictionary of model outputs by node names.
+
+        :param input_data: Inputs for the model.
+        :return output_data: Model's output.
+        """
+        return self.engine.infer(input_data)

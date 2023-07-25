@@ -8,9 +8,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import multiprocessing
 import sys
 from contextlib import contextmanager
 from pathlib import Path
+
+import psutil
 
 
 # pylint: disable=W1514
@@ -37,3 +40,23 @@ def is_windows():
 
 def is_linux():
     return "linux" in sys.platform
+
+
+def get_available_cpu_count() -> int:
+    """
+    :return: Logical CPU count
+    """
+    try:
+        return multiprocessing.cpu_count()
+    except Exception:  # pylint: disable=broad-except
+        return 1
+
+
+def get_available_memory_amount() -> int:
+    """
+    :return: Available memory amount (bytes)
+    """
+    try:
+        return psutil.virtual_memory()[1]
+    except Exception:  # pylint: disable=broad-except
+        return 0
