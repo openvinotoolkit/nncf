@@ -431,8 +431,8 @@ class QuantizationAccuracyRestorer:
         n_proc = max(round((preparation_time / ranking_time + 1) * OVERHEAD_COEFFICIENT), 2)
 
         # Apply limitation by number of CPU cores
-        n_cores = get_available_cpu_count(logical=False)
-        n_proc = max(min(n_proc, n_cores), 1)
+        n_cores = get_available_cpu_count(logical=True)
+        n_proc = max(min(n_proc, n_cores // 2), 1)
 
         # Apply limitation by memory
         ram = get_available_memory_amount()
