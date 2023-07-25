@@ -107,7 +107,7 @@ tensor_a[0:2]  # nncf.Tensor(array([[1],[2]]))
     ```python
     @functools.singledispatch
     def foo(a: TTensor, arg1: Type) -> TTensor:
-        """
+        """@
         __description__
 
         :param a: The input tensor.
@@ -139,3 +139,34 @@ tensor_a[0:2]  # nncf.Tensor(array([[1],[2]]))
         ```
 
 4. Add test of method to [test template](tests/shared/test_templates/template_test_nncf_tensor.py) for nncf.Tensor class
+
+
+### Add new backend
+
+1. Add backend specific implementation for all function from [function.py](function.py) in `<NEW_BACKEND>_functions.py` file.
+
+2. Add `test_tensor.py` in backend-specific t directory for tests that inherited from class `TemplateTestNNCFTensorOperators`
+
+```python
+class TestNPNNCFTensorOperators(TemplateTestNNCFTensorOperators):
+    @staticmethod
+    def to_tensor(x):
+        return np.array(x)  # Function to initialize tensor from list
+```
+
+2. Add new backend type to `mock_modules` list in [docs/api/source/conf.py](https://github.com/openvinotoolkit/nncf/blob/develop/docs/api/source/conf.py#L131)
+
+```python
+mock_modules = [
+    "torch",
+    "torchvision",
+    "onnx",
+    "onnxruntime",
+    "openvino",
+    "tensorflow",
+    "tensorflow_addons",
+    "nncf.experimental.common.tensor.torch_functions",
+    "nncf.experimental.common.tensor.numpy_functions",
+    "nncf.experimental.common.tensor.<NEW_BACKEND>_functions",
+]
+```

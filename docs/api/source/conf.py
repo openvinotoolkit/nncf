@@ -16,6 +16,8 @@ import pkgutil
 import sys
 from typing import Any, Dict
 
+from sphinx.ext.autodoc import mock
+
 sys.path.insert(0, os.path.abspath("../../.."))
 
 project = "NNCF"
@@ -126,7 +128,21 @@ def collect_api_entities() -> APIInfo:
     return retval
 
 
-api_info = collect_api_entities()
+mock_modules = [
+    "torch",
+    "torchvision",
+    "onnx",
+    "onnxruntime",
+    "openvino",
+    "tensorflow",
+    "tensorflow_addons",
+    # Need add backend implementation functions to avoid endless loops on registered functions by mock module,
+    "nncf.experimental.common.tensor.torch_functions",
+    "nncf.experimental.common.tensor.numpy_functions",
+]
+
+with mock(mock_modules):
+    api_info = collect_api_entities()
 
 module_fqns = set()
 
