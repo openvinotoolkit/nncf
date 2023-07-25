@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Union
 
 import numpy as np
 
@@ -142,11 +142,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if is_per_channel:
             if target_point.is_weight_target_point():
                 return ONNXMinMaxAlgoBackend._get_weight_channel_axis(node, target_point.port_id)
-            else:
-                # Channel axis for activation
-                return 1
-        else:
-            return None
+            # Channel axis for activation
+            return 1
+        return None
 
     @staticmethod
     def _get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
