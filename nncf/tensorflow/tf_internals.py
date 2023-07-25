@@ -35,7 +35,7 @@ else:
     from keras import backend
     from keras import layers
     from keras.layers import Rescaling
-    from keras.src import engine as keras_engine  # pylint: disable=no-name-in-module
-    from keras.src.applications import imagenet_utils  # pylint: disable=no-name-in-module
-    from keras.src.engine.keras_tensor import KerasTensor  # pylint: disable=no-name-in-module
-    from keras.src.utils.control_flow_util import smart_cond  # pylint: disable=no-name-in-module
+    from keras.src import engine as keras_engine  # pylint: disable=no-name-in-module,import-error
+    from keras.src.applications import imagenet_utils  # pylint: disable=no-name-in-module,import-error
+    from keras.src.engine.keras_tensor import KerasTensor  # pylint: disable=no-name-in-module,import-error
+    from keras.src.utils.control_flow_util import smart_cond  # pylint: disable=no-name-in-module,import-error
