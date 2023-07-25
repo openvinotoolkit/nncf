@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
@@ -157,7 +158,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _get_reduction_shape_and_use_abs_max(
         nncf_graph: NNCFGraph, target_point: ONNXTargetPoint, quantizer_config: QuantizerConfig
-    ) -> Tuple[Optional[Tuple[int, ...]], bool]:
+    ) -> Tuple[ReductionShape, bool]:
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
         if not quantizer_config.per_channel:
             return None, use_abs_max

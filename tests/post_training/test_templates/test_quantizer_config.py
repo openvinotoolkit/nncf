@@ -184,11 +184,13 @@ class TemplateTestQuantizerConfig:
     )
     @pytest.mark.parametrize("q_config_mode", [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC])
     @pytest.mark.parametrize("q_config_per_channel", [True, False])
+    @pytest.mark.parametrize("num_samples", [5, 12])
     def test_get_stat_collector(
         self,
         range_estimator_params,
         q_config_mode,
         q_config_per_channel,
+        num_samples,
         conv_sum_aggregation_nncf_graph,
         statistic_collector_parameters: TestGetStatisticsCollectorParameters,
     ):
@@ -214,7 +216,7 @@ class TemplateTestQuantizerConfig:
 
         target_point = list(min_max_algo._quantization_target_points_to_qconfig.keys())[0]
         tensor_collector = min_max_algo._get_stat_collector(
-            conv_sum_aggregation_nncf_graph.nncf_graph, target_point, q_config
+            conv_sum_aggregation_nncf_graph.nncf_graph, target_point, q_config, num_samples
         )
 
         is_weight_tp = target_point.is_weight_target_point()
@@ -251,3 +253,5 @@ class TemplateTestQuantizerConfig:
                 assert reducer._reduction_shape == params.ref_per_ch_reduction_shape
             else:
                 assert reducer._reduction_shape == params.ref_per_tensor_reduction_shape
+
+        assert tensor_collector.num_samples == num_samples
