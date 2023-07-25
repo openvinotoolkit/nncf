@@ -163,12 +163,13 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_output_name(model: TModel, node_name: str) -> str:
+    def get_output_name(model: TModel, node_name: str, output_id: int) -> str:
         """
         Returns output tensor name for the specific node.
 
         :param model: Backend-specific model.
         :param node_name: Name of the backend-specific node.
+        :param output_id: Port Id for output.
         :return: Output tensor name.
         """
 
