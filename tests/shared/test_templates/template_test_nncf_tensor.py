@@ -8,6 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# pylint: disable=too-many-function-args
+
 import operator
 from abc import abstractmethod
 from typing import TypeVar
@@ -539,3 +542,7 @@ class TemplateTestNNCFTensorOperators:
         tensor = Tensor(self.to_tensor([1, 1]))
         assert tensor.shape == [2]
         assert functions.reshape(tensor, [1, 2]).shape == [1, 2]
+
+    def test_not_implemented(self):
+        with pytest.raises(NotImplementedError, match="is not implemented for"):
+            functions.device({}, [1, 2])

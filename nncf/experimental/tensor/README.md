@@ -59,6 +59,14 @@ from nncf.experimental.tensor import functions
 functions.max(nncf_tensor)  # Tensor(2)
 ```
 
+**NOTE** A function requires at least one positional argument, which is used to dispatch the function
+to the appropriate implementation depending on the type of argument.
+
+```python
+functions.max(nncf_tensor)  # Correct
+functions.max(a=nncf_tensor)  # TypeError: wrapper requires at least 1 positional argument
+```
+
 ### Loop over Tensor
 
 For `Tensor` available `TensorIterator` that return `Tensor`
