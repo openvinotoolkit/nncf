@@ -1,4 +1,4 @@
-## Post-Training Quantization
+# Post-Training Quantization
 
 Post-Training Quantization is a quantization algorithm that doesn't demand retraining of a quantized model.
 It utilizes a small subset of the initial dataset to calibrate quantization constants.
@@ -9,7 +9,7 @@ NNCF provides an advanced Post-Training Quantization algorithm, which consists o
 2) FastBiasCorrection or BiasCorrection - Reduces the bias errors between quantized layers and the corresponding
    original layers.
 
-### Usage
+## Usage
 
 To start the algorithm, provide the following entities:
 
@@ -19,29 +19,30 @@ To start the algorithm, provide the following entities:
 
 The basic workflow steps:
 
-1) Create the [data transformation function](#data-transformation-function).
+1. Create the [data transformation function](#data-transformation-function).
 
-```python
-def transform_fn(data_item):
-    images, _ = data_item
-    return images
-```
+    ```python
+    def transform_fn(data_item):
+        images, _ = data_item
+        return images
+    ```
 
-2) Create an instance of `nncf.Dataset` class by passing two parameters:
-* `data_source` - Iterable python object that contains data items for model calibration.
-* `transform_fn` - Data transformation function from the Step 1.
+2. Create an instance of `nncf.Dataset` class by passing two parameters:
 
-```python
-calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
-```
+    * `data_source` - Iterable python object that contains data items for model calibration.
+    * `transform_fn` - Data transformation function from the Step 1.
 
-3) Run the quantization pipeline.
+    ```python
+    calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
+    ```
 
-```python
-quantized_model = nncf.quantize(model, calibration_dataset)
-```
+3. Run the quantization pipeline.
 
-### Data Transformation Function
+    ```python
+    quantized_model = nncf.quantize(model, calibration_dataset)
+    ```
+
+## Data Transformation Function
 
 Model input structure differs from one pipeline to another. Thus NNCF introduces the interface to adapt the user dataset format to the NNCF format. This interface is called the data transformation function.
 

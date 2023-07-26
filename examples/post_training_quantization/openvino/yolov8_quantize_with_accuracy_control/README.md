@@ -8,25 +8,29 @@ The example includes the following steps:
 - Quantize the model with "AccuracyAwareQuantization" algorithm instead of "DefaultQuantization".
 - Measure accuracy and performance of the floating-point and quantized models.
 
-# Install requirements
+## Install requirements
 
 To run the example you should install the corresponding Python dependencies:
-- Install NNCF from source:
-```
-git clone https://github.com/openvinotoolkit/nncf.git
-cd nncf
-pip install .
-```
-- Install 3rd party dependencies of this example:
-```
-pip install -r requirements.txt
-```
 
-# Run Example
+- Install NNCF from source:
+
+    ```bash
+    git clone https://github.com/openvinotoolkit/nncf.git
+    cd nncf
+    pip install .
+    ```
+
+- Install 3rd party dependencies of this example:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## Run Example
 
 The example is fully automated. Just run the following command in the prepared Python environment:
 
-```
+```bash
 python main.py
 ```
 

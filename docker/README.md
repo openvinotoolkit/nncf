@@ -1,3 +1,5 @@
+# Using docker
+
 ## Step 1. Install docker
 
 Review the instructions for installation docker [here](https://docs.docker.com/engine/install/ubuntu/) and configure Docker
@@ -12,15 +14,18 @@ Review the instructions for installation docker [here](https://github.com/NVIDIA
 ## Step 3. Build image
 
 In the project folder run in terminal:
-```
+
+```bash
 sudo docker image build --network=host <PATH_TO_DIR_WITH_DOCKERFILE>
 ```
 
 Use `--network` to duplicate the network settings of your localhost into context build.
 
 ## Step 4. Run container
+
 Run in terminal:
-```
+
+```bash
 sudo docker run \
 -it \
 --name=<CONTAINER_NAME> \
