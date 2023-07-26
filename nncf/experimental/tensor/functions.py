@@ -365,10 +365,11 @@ __all__ = [
 
 
 def _initialize_backends():
-    import nncf.experimental.tensor.numpy_functions  # pylint: disable=unused-import
+    # pylint: disable=unused-import
+    import nncf.experimental.tensor.numpy_functions
 
     try:
-        import nncf.experimental.tensor.torch_functions  # pylint: disable=unused-import
+        import nncf.experimental.tensor.torch_functions
     except ImportError:
         pass
 

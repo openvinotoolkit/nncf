@@ -83,8 +83,14 @@ class Tensor:
     def __truediv__(self, other: DataType) -> "Tensor":
         return Tensor(self.data / unwrap_tensor_data(other))
 
+    def __rtruediv__(self, other: DataType) -> "Tensor":
+        return Tensor(unwrap_tensor_data(other) / self.data)
+
     def __floordiv__(self, other: DataType) -> "Tensor":
         return Tensor(self.data // unwrap_tensor_data(other))
+
+    def __rfloordiv__(self, other: DataType) -> "Tensor":
+        return Tensor(unwrap_tensor_data(other) // self.data)
 
     def __neg__(self) -> "Tensor":
         return Tensor(-self.data)

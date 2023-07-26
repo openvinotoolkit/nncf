@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import operator
 from abc import abstractmethod
 from typing import TypeVar
 
@@ -22,6 +23,26 @@ TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 
 
+OPERATOR_MAP = {
+    "add": operator.add,
+    "sub": operator.sub,
+    "mul": operator.mul,
+    "pow": operator.pow,
+    "truediv": operator.truediv,
+    "floordiv": operator.floordiv,
+    "neg": lambda a, _: -a,
+}
+
+COMPARISON_OPERATOR_MAP = {
+    "lt": operator.lt,
+    "le": operator.le,
+    "eq": operator.eq,
+    "ne": operator.ne,
+    "gt": operator.gt,
+    "ge": operator.ge,
+}
+
+
 # pylint: disable=too-many-public-methods
 class TemplateTestNNCFTensorOperators:
     @staticmethod
@@ -29,127 +50,91 @@ class TemplateTestNNCFTensorOperators:
     def to_tensor(x: TTensor) -> TTensor:
         pass
 
-    @pytest.mark.parametrize("operator", ("add", "sub", "mul", "pow", "truediv", "floordiv"))
-    def test_builtin_operator_tensor(self, operator):
+    @pytest.mark.parametrize("operator", OPERATOR_MAP.keys())
+    def test_operators_tensor(self, operator):
         tensor_a = self.to_tensor([1, 2])
         tensor_b = self.to_tensor([22, 11])
 
         nncf_tensor_a = Tensor(tensor_a)
         nncf_tensor_b = Tensor(tensor_b)
 
-        if operator == "add":
-            res_tensor = tensor_a + tensor_b
-            res_nncf_tensor = nncf_tensor_a + nncf_tensor_b
-        elif operator == "sub":
-            res_tensor = tensor_a - tensor_b
-            res_nncf_tensor = nncf_tensor_a - nncf_tensor_b
-        elif operator == "mul":
-            res_tensor = tensor_a * tensor_b
-            res_nncf_tensor = nncf_tensor_a * nncf_tensor_b
-        elif operator == "pow":
-            res_tensor = tensor_a**tensor_b
-            res_nncf_tensor = nncf_tensor_a**nncf_tensor_b
-        elif operator == "truediv":
-            res_tensor = tensor_a / tensor_b
-            res_nncf_tensor = nncf_tensor_a / nncf_tensor_b
-        elif operator == "floordiv":
-            res_tensor = tensor_a // tensor_b
-            res_nncf_tensor = nncf_tensor_a // nncf_tensor_b
+        fn = OPERATOR_MAP[operator]
+        res = fn(tensor_a, tensor_b)
+        res_nncf = fn(nncf_tensor_a, nncf_tensor_b)
 
-        assert res_tensor.dtype == res_nncf_tensor.data.dtype
-        assert all(res_tensor == res_nncf_tensor.data)
-        assert isinstance(res_nncf_tensor, Tensor)
+        assert res.dtype == res_nncf.data.dtype
+        assert all(res == res_nncf.data)
+        assert isinstance(res_nncf, Tensor)
 
-    @pytest.mark.parametrize(
-        "operator", ("add", "radd", "sub", "rsub", "neg", "mul", "rmul", "pow", "truediv", "floordiv")
-    )
-    def test_builtin_operator_int(self, operator):
-        tensor = self.to_tensor([1, 2])
+    @pytest.mark.parametrize("operator", OPERATOR_MAP.keys())
+    def test_operators_int(self, operator):
+        tensor_a = self.to_tensor([1, 2])
+        value = 2
 
-        nncf_tensor = Tensor(tensor)
+        nncf_tensor_a = Tensor(tensor_a)
 
-        if operator == "add":
-            res_tensor = tensor + 2
-            res_nncf_tensor = nncf_tensor + 2
-        if operator == "radd":
-            res_tensor = 2 + tensor
-            res_nncf_tensor = 2 + nncf_tensor
-        elif operator == "sub":
-            res_tensor = tensor - 2
-            res_nncf_tensor = nncf_tensor - 2
-        elif operator == "rsub":
-            res_tensor = 2 - tensor
-            res_nncf_tensor = 2 - nncf_tensor
-        elif operator == "neg":
-            res_tensor = -tensor
-            res_nncf_tensor = -nncf_tensor
-        elif operator == "mul":
-            res_tensor = tensor * 2
-            res_nncf_tensor = nncf_tensor * 2
-        elif operator == "rmul":
-            res_tensor = 2 * tensor
-            res_nncf_tensor = 2 * nncf_tensor
-        elif operator == "pow":
-            res_tensor = tensor**2
-            res_nncf_tensor = nncf_tensor**2
-        elif operator == "truediv":
-            res_tensor = tensor / 2
-            res_nncf_tensor = nncf_tensor / 2
-        elif operator == "floordiv":
-            res_tensor = tensor // 2
-            res_nncf_tensor = nncf_tensor // 2
+        fn = OPERATOR_MAP[operator]
+        res = fn(tensor_a, value)
+        res_nncf = fn(nncf_tensor_a, value)
 
-        assert res_tensor.dtype == res_nncf_tensor.data.dtype
-        assert all(res_tensor == res_nncf_tensor.data)
-        assert isinstance(res_nncf_tensor, Tensor)
+        assert res.dtype == res_nncf.data.dtype
+        assert all(res == res_nncf.data)
+        assert isinstance(res_nncf, Tensor)
 
-    @pytest.mark.parametrize("operator", ("lt", "le", "eq", "ne", "gt", "ge"))
-    def test_comparison_operator_tensor(self, operator):
+    @pytest.mark.parametrize("operator", ("add", "sub", "mul", "truediv", "floordiv"))
+    def test_operators_int_rev(self, operator):
+        tensor_a = self.to_tensor([1, 2])
+        value = 2
+
+        nncf_tensor_a = Tensor(tensor_a)
+
+        fn = OPERATOR_MAP[operator]
+        res = fn(value, tensor_a)
+        res_nncf = fn(value, nncf_tensor_a)
+
+        assert res.dtype == res_nncf.data.dtype
+        assert all(res == res_nncf.data)
+        assert isinstance(res_nncf, Tensor)
+
+    @pytest.mark.parametrize("operator", COMPARISON_OPERATOR_MAP.keys())
+    def test_comparison_tensor(self, operator):
         tensor_a = self.to_tensor((1,))
         tensor_b = self.to_tensor((2,))
 
         nncf_tensor_a = Tensor(tensor_a)
         nncf_tensor_b = Tensor(tensor_b)
 
-        if operator == "lt":
-            res = tensor_a < tensor_b
-            res_nncf = nncf_tensor_a < nncf_tensor_b
-        if operator == "le":
-            res = tensor_a <= tensor_b
-            res_nncf = nncf_tensor_a <= nncf_tensor_b
-        if operator == "eq":
-            res = tensor_a == tensor_b
-            res_nncf = nncf_tensor_a == nncf_tensor_b
-        if operator == "ne":
-            res = tensor_a != tensor_b
-            res_nncf = nncf_tensor_a != nncf_tensor_b
-        if operator == "gt":
-            res = tensor_a > tensor_b
-            res_nncf = nncf_tensor_a > nncf_tensor_b
-        if operator == "ge":
-            res = tensor_a >= tensor_b
-            res_nncf = nncf_tensor_a >= nncf_tensor_b
+        fn = COMPARISON_OPERATOR_MAP[operator]
+        res = fn(tensor_a, tensor_b)
+        res_nncf = fn(nncf_tensor_a, nncf_tensor_b)
 
         assert res == res_nncf
         assert isinstance(res_nncf, Tensor)
 
-    @pytest.mark.parametrize("operator", ("lt", "le", "gt", "ge"))
-    def test_comparison_operator_int(self, operator):
-        tensor = self.to_tensor((1,))
-        nncf_tensor = Tensor(tensor)
+    @pytest.mark.parametrize("operator", COMPARISON_OPERATOR_MAP.keys())
+    def test_comparison_int(self, operator):
+        tensor_a = self.to_tensor((1,))
+        value = 2
 
-        if operator == "lt":
-            res = tensor < 2
-            res_nncf = nncf_tensor < 2
-        if operator == "le":
-            res = tensor <= 2
-            res_nncf = nncf_tensor <= 2
-        if operator == "gt":
-            res = tensor > 2
-            res_nncf = nncf_tensor > 2
-        if operator == "ge":
-            res = tensor >= 2
-            res_nncf = nncf_tensor >= 2
+        nncf_tensor_a = Tensor(tensor_a)
+
+        fn = COMPARISON_OPERATOR_MAP[operator]
+        res = fn(tensor_a, value)
+        res_nncf = fn(nncf_tensor_a, value)
+
+        assert res == res_nncf
+        assert isinstance(res_nncf, Tensor)
+
+    @pytest.mark.parametrize("operator", COMPARISON_OPERATOR_MAP.keys())
+    def test_comparison_int_rev(self, operator):
+        tensor_a = self.to_tensor((1,))
+        value = 2
+
+        nncf_tensor_a = Tensor(tensor_a)
+
+        fn = COMPARISON_OPERATOR_MAP[operator]
+        res = fn(value, tensor_a)
+        res_nncf = fn(value, nncf_tensor_a)
 
         assert res == res_nncf
         assert isinstance(res_nncf, Tensor)

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import pytest
 import torch
 
 from nncf.experimental.tensor import Tensor
@@ -25,6 +25,8 @@ class TestPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
 class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
+        if not torch.cuda.is_available():
+            pytest.skip("Skipping for CPU-only setups")
         return torch.tensor(x).cuda()
 
     def test_device(self):
