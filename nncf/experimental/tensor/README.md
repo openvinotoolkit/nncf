@@ -100,7 +100,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     ```python
     @functools.singledispatch
     def foo(a: TTensor, arg1: Type) -> TTensor:
-        """@
+        """
         __description__
 
         :param a: The input tensor.
