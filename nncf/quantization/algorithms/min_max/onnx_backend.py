@@ -169,7 +169,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return weight_channel_axis
 
     @staticmethod
-    def _get_reduction_shape_for_weight(node: NNCFNode, weight_port_id: int, is_per_channel: bool) -> ReductionShape:
+    def _get_reduction_shape_for_weight(
+        node: NNCFNode, weight_port_id: int, is_per_channel: bool
+    ) -> Optional[ReductionShape]:
         if not is_per_channel:  # Per-Tensor
             return None
         weight_shape = node.layer_attributes.weight_attrs[weight_port_id]["shape"]
@@ -178,6 +180,27 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             return tuple(reduction_shape)
         axis = ONNXMinMaxAlgoBackend._get_weight_channel_axis(node, weight_port_id)
         reduction_shape.pop(axis)
+        return tuple(reduction_shape)
+
+    @staticmethod
+    def _get_reduction_shape_for_activation(
+        nncf_graph: NNCFGraph, node: NNCFGraph, target_point, is_per_channel: bool
+    ) -> Optional[ReductionShape]:
+        if not is_per_channel:  # Per-Tensor
+            return None
+
+        if target_point.type == TargetType.PRE_LAYER_OPERATION:
+            shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
+        elif target_point.type == TargetType.POST_LAYER_OPERATION:
+            shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+        else:
+            raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
+
+        # TODO (l-bat): Disable quantizer propogation through layout changing operations
+        channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
+        print(f"shape = {shape}")
+        reduction_shape = list(range(len(shape)))
+        reduction_shape.pop(channel_axis)
         return tuple(reduction_shape)
 
     @staticmethod
@@ -190,14 +213,15 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         num_samples: int = None,
     ) -> Union[ONNXMinMaxStatisticCollector, ONNXMeanMinMaxStatisticCollector]:
         is_per_channel = quantizer_config.per_channel
+        node = nncf_graph.get_node_by_name(target_point.target_node_name)
         if target_point.is_weight_target_point():
-            node = nncf_graph.get_node_by_name(target_point.target_node_name)
             reduction_shape = ONNXMinMaxAlgoBackend._get_reduction_shape_for_weight(
                 node, target_point.port_id, is_per_channel
             )
         else:
-            # TODO: support reduction shapes for 3D-5D conv cases
-            reduction_shape = (0, 2, 3)
+            reduction_shape = ONNXMinMaxAlgoBackend._get_reduction_shape_for_activation(
+                nncf_graph, node, target_point, is_per_channel
+            )
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
 
         if (

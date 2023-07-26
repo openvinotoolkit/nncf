@@ -18,6 +18,8 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 
+# pylint: disable=protected-access
+
 
 @dataclass
 class TestCase:
