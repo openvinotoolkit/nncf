@@ -1,6 +1,6 @@
 # NNCF wrapper of the Tensors
 
-The `nncf.Tensor` class is a wrapper class that provides a common interface for different types of tensors,
+The `Tensor` class is a wrapper class that provides a common interface for different types of tensors,
 such as NumPy and PyTorch. This allows algorithms to be written that are abstracted from the underlying model type,
 making them more portable and reusable.
 
@@ -11,80 +11,73 @@ The main idea is common algorithms should use wrapped tensors and provide to bac
 ### Initialization Tensor
 
 ```python
-import nncf
+from nncf.experimental.tensor import Tensor
 
 import numpy as np
 numpy_array = np.array([1,2])
-nncf_tensor = nncf.Tensor(numpy_array)
+nncf_tensor = Tensor(numpy_array)
 
 import torch
 torch_tensor = np.array([1,2])
-nncf_tensor = nncf.Tensor(torch_tensor)
+nncf_tensor = Tensor(torch_tensor)
 ```
 
 ### Math operations
 
-All math operations are overrided to operated with wrapped object and return `nncf.Tensor`
+All math operations are overrided to operated with wrapped object and return `Tensor`
 
 ```python
-tensor_a = nncf.Tensor(np.array([1,2]))
-tenor_b = nncf.Tensor(np.array([1,2]))
-tensor_a + tenor_b  # nncf.Tensor(array([2, 4]))
-```
-
-### Math operations
-
-All math operations are overrided to operated with wrapped object and return `nncf.Tensor`
-
-```python
-tensor_a = nncf.Tensor(np.array([1,2]))
-tenor_b = nncf.Tensor(np.array([1,2]))
-tensor_a + tenor_b  # nncf.Tensor(array([2, 4]))
+tensor_a = Tensor(np.array([1,2]))
+tenor_b = Tensor(np.array([1,2]))
+tensor_a + tenor_b  # Tensor(array([2, 4]))
 ```
 
 ### Comparison operators
 
-All math operations are overrided to operated with wrapped object and return `nncf.Tensor`
+All math operations are overrided to operated with wrapped object and return `Tensor`
 
 ```python
-tensor_a = nncf.Tensor(np.array([1,2]))
-tenor_b = nncf.Tensor(np.array([1,2]))
-tensor_a < tenor_b  # nncf.Tensor(array([False, False]))
+tensor_a = Tensor(np.array([1,2]))
+tenor_b = Tensor(np.array([1,2]))
+tensor_a < tenor_b  # Tensor(array([False, False]))
 ```
 
 ### Method of the Tensor class
 
-Some methods of the tensors available from wrapped nncf.Tensor class like `max`, `flatten` and other common methods.
+Some methods of the tensors available from wrapped Tensor class like `max`, `flatten` and other common methods.
 
 ```python
-nncf_tensor.max()  # nncf.Tensor(2)
+nncf_tensor.max()  # Tensor(2)
 ```
 
 ### Functions over Tensor
 
+All available functions you can found in [functions.py](functions.py).
+
 ```python
-nncf.max(nncf_tensor)  # nncf.Tensor(2)
+from nncf.experimental.tensor import functions
+functions.max(nncf_tensor)  # Tensor(2)
 ```
 
 ### Loop over Tensor
 
-For `nncf.Tensor` available `TensorIterator` that return `nncf.Tensor`
+For `Tensor` available `TensorIterator` that return `Tensor`
 
 ```python
-tensor_a = nncf.Tensor(np.array([1,2]))
+tensor_a = Tensor(np.array([1,2]))
 for x in tensor_a:
     print(x)
 
-# nncf.Tensor(1)
-# nncf.Tensor(2)
+# Tensor(1)
+# Tensor(2)
 ```
 
 ### Get element by index Tensor
 
 ```python
-tensor_a = nncf.Tensor(np.array([[1],[2]]))
-tensor_a[0]    # nncf.Tensor(array([1]))
-tensor_a[0:2]  # nncf.Tensor(array([[1],[2]]))
+tensor_a = Tensor(np.array([[1],[2]]))
+tensor_a[0]    # Tensor(array([1]))
+tensor_a[0:2]  # Tensor(array([[1],[2]]))
 ```
 
 ## Class feature enhancement
@@ -138,8 +131,7 @@ tensor_a[0:2]  # nncf.Tensor(array([[1],[2]]))
             return torch.foo(a, arg1)
         ```
 
-4. Add test of method to [test template](tests/shared/test_templates/template_test_nncf_tensor.py) for nncf.Tensor class
-
+4. Add test of method to [test template](tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
 
 ### Add new backend
 
