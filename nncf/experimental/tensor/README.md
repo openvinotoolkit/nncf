@@ -111,6 +111,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return tensor.Tensor(foo(a.data, axis))
         return NotImplemented(f"Function `foo` is not implemented for {type(a)}")
     ```
+
 3. Add function name to `__all__` in [function.py](function.py)
 
 4. Add backend specific implementation of method to:
@@ -147,7 +148,7 @@ class TestNPNNCFTensorOperators(TemplateTestNNCFTensorOperators):
         return np.array(x)  # Function to initialize tensor from list
 ```
 
-2. Add new backend type to `mock_modules` list in [docs/api/source/conf.py](https://github.com/openvinotoolkit/nncf/blob/develop/docs/api/source/conf.py#L131)
+3. Add new backend type to `mock_modules` list in [docs/api/source/conf.py](https://github.com/openvinotoolkit/nncf/blob/develop/docs/api/source/conf.py#L131)
 
 ```python
 mock_modules = [

@@ -50,15 +50,15 @@ class TemplateTestNNCFTensorOperators:
     def to_tensor(x: TTensor) -> TTensor:
         pass
 
-    @pytest.mark.parametrize("operator", OPERATOR_MAP.keys())
-    def test_operators_tensor(self, operator):
+    @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
+    def test_operators_tensor(self, op_name):
         tensor_a = self.to_tensor([1, 2])
         tensor_b = self.to_tensor([22, 11])
 
         nncf_tensor_a = Tensor(tensor_a)
         nncf_tensor_b = Tensor(tensor_b)
 
-        fn = OPERATOR_MAP[operator]
+        fn = OPERATOR_MAP[op_name]
         res = fn(tensor_a, tensor_b)
         res_nncf = fn(nncf_tensor_a, nncf_tensor_b)
 
@@ -66,14 +66,14 @@ class TemplateTestNNCFTensorOperators:
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
 
-    @pytest.mark.parametrize("operator", OPERATOR_MAP.keys())
-    def test_operators_int(self, operator):
+    @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
+    def test_operators_int(self, op_name):
         tensor_a = self.to_tensor([1, 2])
         value = 2
 
         nncf_tensor_a = Tensor(tensor_a)
 
-        fn = OPERATOR_MAP[operator]
+        fn = OPERATOR_MAP[op_name]
         res = fn(tensor_a, value)
         res_nncf = fn(nncf_tensor_a, value)
 
@@ -81,14 +81,14 @@ class TemplateTestNNCFTensorOperators:
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
 
-    @pytest.mark.parametrize("operator", ("add", "sub", "mul", "truediv", "floordiv"))
-    def test_operators_int_rev(self, operator):
+    @pytest.mark.parametrize("op_name", ("add", "sub", "mul", "truediv", "floordiv"))
+    def test_operators_int_rev(self, op_name):
         tensor_a = self.to_tensor([1, 2])
         value = 2
 
         nncf_tensor_a = Tensor(tensor_a)
 
-        fn = OPERATOR_MAP[operator]
+        fn = OPERATOR_MAP[op_name]
         res = fn(value, tensor_a)
         res_nncf = fn(value, nncf_tensor_a)
 
@@ -96,43 +96,43 @@ class TemplateTestNNCFTensorOperators:
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
 
-    @pytest.mark.parametrize("operator", COMPARISON_OPERATOR_MAP.keys())
-    def test_comparison_tensor(self, operator):
+    @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
+    def test_comparison_tensor(self, op_name):
         tensor_a = self.to_tensor((1,))
         tensor_b = self.to_tensor((2,))
 
         nncf_tensor_a = Tensor(tensor_a)
         nncf_tensor_b = Tensor(tensor_b)
 
-        fn = COMPARISON_OPERATOR_MAP[operator]
+        fn = COMPARISON_OPERATOR_MAP[op_name]
         res = fn(tensor_a, tensor_b)
         res_nncf = fn(nncf_tensor_a, nncf_tensor_b)
 
         assert res == res_nncf
         assert isinstance(res_nncf, Tensor)
 
-    @pytest.mark.parametrize("operator", COMPARISON_OPERATOR_MAP.keys())
-    def test_comparison_int(self, operator):
+    @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
+    def test_comparison_int(self, op_name):
         tensor_a = self.to_tensor((1,))
         value = 2
 
         nncf_tensor_a = Tensor(tensor_a)
 
-        fn = COMPARISON_OPERATOR_MAP[operator]
+        fn = COMPARISON_OPERATOR_MAP[op_name]
         res = fn(tensor_a, value)
         res_nncf = fn(nncf_tensor_a, value)
 
         assert res == res_nncf
         assert isinstance(res_nncf, Tensor)
 
-    @pytest.mark.parametrize("operator", COMPARISON_OPERATOR_MAP.keys())
-    def test_comparison_int_rev(self, operator):
+    @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
+    def test_comparison_int_rev(self, op_name):
         tensor_a = self.to_tensor((1,))
         value = 2
 
         nncf_tensor_a = Tensor(tensor_a)
 
-        fn = COMPARISON_OPERATOR_MAP[operator]
+        fn = COMPARISON_OPERATOR_MAP[op_name]
         res = fn(value, tensor_a)
         res_nncf = fn(value, nncf_tensor_a)
 
