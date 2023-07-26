@@ -18,6 +18,7 @@ from collections import OrderedDict
 from collections import defaultdict
 from dataclasses import asdict
 from dataclasses import dataclass
+from dataclasses import replace
 from enum import Enum
 from itertools import islice
 from typing import Any, Iterable, List, Optional, TypeVar
@@ -643,33 +644,30 @@ def get_nncf_algorithms_config(compression_config):
             raise ValueError(f"Algorithm {pot_algo_name} is not supported.")
 
         nncf_algo_name = MAP_POT_NNCF_ALGORITHMS[pot_algo_name]["method"]
-        nncf_advanced_algo_parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("advanced_parameters", {})
+        advanced_parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("advanced_parameters", {})
+        parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("parameters", {})
 
         if pot_algo_name in OVERRIDE_OPTIONS_ALGORITHMS:
             if nncf_algo_name not in override_options:
                 override_options[nncf_algo_name] = defaultdict(dict)
-            parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("parameters", {})
-            for p_name, p_value in nncf_advanced_algo_parameters.items():
-                override_options[nncf_algo_name]["advanced_parameters"][p_name] = p_value
-            for p_name, p_value in parameters.items():
-                override_options[nncf_algo_name]["parameters"][p_name] = p_value
+
+            override_options[nncf_algo_name]["advanced_parameters"].update(advanced_parameters)
+            override_options[nncf_algo_name]["parameters"].update(parameters)
             continue
 
         nncf_algo_parameters = map_paramaters(pot_algo_name, nncf_algo_name, pot_algo.params)
 
-        update_advanced_algo_parameters(nncf_algo_parameters, nncf_advanced_algo_parameters)
+        nncf_algo_parameters["advanced_parameters"] = replace(
+            nncf_algo_parameters["advanced_parameters"], **advanced_parameters
+        )
         nncf_algorithms[nncf_algo_name] = nncf_algo_parameters
 
     for override_algo_name, override_values in override_options.items():
-        update_advanced_algo_parameters(nncf_algorithms[override_algo_name], override_values["advanced_parameters"])
-        for p_name, p_value in override_values["parameters"].items():
-            nncf_algorithms[override_algo_name][p_name] = p_value
+        nncf_algorithms[override_algo_name]["advanced_parameters"] = replace(
+            nncf_algorithms[override_algo_name]["advanced_parameters"], **override_values["advanced_parameters"]
+        )
+        nncf_algorithms[override_algo_name].update(override_values["parameters"])
     return nncf_algorithms
-
-
-def update_advanced_algo_parameters(nncf_algo_parameters, advanced_parameters):
-    for p_name, p_value in advanced_parameters.items():
-        setattr(nncf_algo_parameters["advanced_parameters"], p_name, p_value)
 
 
 def get_allow_reshape_input(accuracy_checker_config) -> bool:
