@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import multiprocessing
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -42,12 +41,17 @@ def is_linux():
     return "linux" in sys.platform
 
 
-def get_available_cpu_count() -> int:
+def get_available_cpu_count(logical: bool = True) -> int:
     """
-    :return: Logical CPU count
+    Return the number of CPUs in the system.
+
+    :param logical: If False return the number of physical cores only (e.g. hyper thread CPUs are excluded),
+      otherwise number of logical cores. Defaults, True.
+    :return: Number of CPU.
     """
     try:
-        return multiprocessing.cpu_count()
+        num_cpu = psutil.cpu_count(logical=logical)
+        return num_cpu if num_cpu is not None else 1
     except Exception:  # pylint: disable=broad-except
         return 1
 

@@ -141,13 +141,13 @@ class MetricResults:
 
     :param metric_value: Aggregated metric value.
     :param values_for_each_item: Metric values for each data item.
-    :param preperation_time: Time that it takes to prepare model for validation.
+    :param preparation_time: Time that it takes to prepare model for validation.
     :param validation_time: Time that it takes to validate model.
     """
 
     metric_value: float
     values_for_each_item: Union[None, List[float], List[List[TTensor]]]
-    preperation_time: float
+    preparation_time: float
     validation_time: float
 
 
@@ -300,7 +300,7 @@ class QuantizationAccuracyRestorer:
             model_size = algo_backend.get_model_size(quantized_model)
             num_ranking_processes = self._calculate_number_ranker_parallel_proc(
                 model_size,
-                quantized_metric_results.preperation_time,
+                quantized_metric_results.preparation_time,
                 quantized_metric_results.validation_time,
                 validation_dataset_size,
             )
@@ -409,7 +409,7 @@ class QuantizationAccuracyRestorer:
     def _calculate_number_ranker_parallel_proc(
         self,
         model_size: int,
-        preperation_time: float,
+        preparation_time: float,
         validation_time: float,
         validation_dataset_size: int,
     ) -> int:
@@ -417,24 +417,24 @@ class QuantizationAccuracyRestorer:
         Calculate the number of parallel ranker processes
 
         :param model_size: Target model size.
-        :param preperation_time: The time it takes to prepare the model.
+        :param preparation_time: The time it takes to prepare the model.
         :param validation_time: The time it takes to validate the model.
         :param validation_dataset_size: Validation dataset size.
         :return: The number of parallel ranker processes
         """
-        if preperation_time < PREPARATION_MODEL_THRESHOLD:
+        if preparation_time < PREPARATION_MODEL_THRESHOLD:
             return 1
 
         # Calculate the number of parallel processes needed to override model preparation and
         # metric calculation on the ranking subset
         ranking_time = validation_time * self.ranking_subset_size / validation_dataset_size
-        n_proc = max(round((preperation_time / ranking_time + 1) * OVERHEAD_COEFFICIENT), 2)
+        n_proc = max(round((preparation_time / ranking_time + 1) * OVERHEAD_COEFFICIENT), 2)
 
         # Apply limitation by number of CPU cores
-        n_cores = get_available_cpu_count()
+        n_cores = get_available_cpu_count(logical=True)
         n_proc = max(min(n_proc, n_cores // 2), 1)
 
-        # Apply limitation by memmory
+        # Apply limitation by memory
         ram = get_available_memory_amount()
         n_copies = ram // (model_size * MEMORY_INCREASE_COEFFICIENT)
         n_proc = max(min(n_proc, n_copies - 1), 1)
@@ -504,9 +504,9 @@ class QuantizationAccuracyRestorer:
         model: TModel, dataset: Dataset, evaluator: Evaluator, model_name: str
     ) -> MetricResults:
         nncf_logger.info(f"Validation of {model_name} model was started")
-        with timer() as preperation_time:
+        with timer() as preparation_time:
             model_for_inference = evaluator.prepare_model_for_inference(model)
         with timer() as validation_time:
             metric, values_for_each_item = evaluator.validate_model_for_inference(model_for_inference, dataset)
         nncf_logger.info(f"Metric of {model_name} model: {metric}")
-        return MetricResults(metric, values_for_each_item, preperation_time(), validation_time())
+        return MetricResults(metric, values_for_each_item, preparation_time(), validation_time())
