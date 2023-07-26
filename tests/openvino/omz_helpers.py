@@ -12,8 +12,6 @@
 import csv
 from typing import List
 
-import numpy as np
-
 from tests.openvino.conftest import OPENVINO_DATASET_DEFINITIONS_PATH
 from tests.shared.command import Command
 
