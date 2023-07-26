@@ -255,6 +255,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         algo_config = self._get_algo_specific_config_section()
         if self._target_device == "VPU" and "preset" in algo_config:
             raise RuntimeError("The VPU target device does not support presets.")
+        if self._target_device == "CPU_SPR":
+            raise RuntimeError("The CPU_SPR target device does not supported.")
 
         self.global_quantizer_constraints = {}
         self.ignored_scopes_per_group = {}

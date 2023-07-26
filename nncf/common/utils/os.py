@@ -12,6 +12,8 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 
+import psutil
+
 
 # pylint: disable=W1514
 @contextmanager
@@ -37,3 +39,28 @@ def is_windows():
 
 def is_linux():
     return "linux" in sys.platform
+
+
+def get_available_cpu_count(logical: bool = True) -> int:
+    """
+    Return the number of CPUs in the system.
+
+    :param logical: If False return the number of physical cores only (e.g. hyper thread CPUs are excluded),
+      otherwise number of logical cores. Defaults, True.
+    :return: Number of CPU.
+    """
+    try:
+        num_cpu = psutil.cpu_count(logical=logical)
+        return num_cpu if num_cpu is not None else 1
+    except Exception:  # pylint: disable=broad-except
+        return 1
+
+
+def get_available_memory_amount() -> int:
+    """
+    :return: Available memory amount (bytes)
+    """
+    try:
+        return psutil.virtual_memory()[1]
+    except Exception:  # pylint: disable=broad-except
+        return 0
