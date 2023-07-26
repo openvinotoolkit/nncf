@@ -12,23 +12,10 @@
 
 from typing import Any, List, Optional, Tuple, TypeVar, Union
 
-import nncf.experimental.tensor.functions as functions  # pylint: disable=consider-using-from-import
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
 
 DataType = TypeVar("DataType")
-
-
-def _initialize_backends():
-    import nncf.experimental.tensor.numpy_functions  # pylint: disable=unused-import
-
-    try:
-        import nncf.experimental.tensor.torch_functions  # pylint: disable=unused-import
-    except ImportError:
-        pass
-
-
-_initialize_backends()
 
 
 class Tensor:
@@ -49,11 +36,11 @@ class Tensor:
 
     @property
     def device(self) -> TensorDeviceType:
-        return functions.device(self)
+        return _call_function("device", self)
 
     @property
     def dtype(self) -> TensorDeviceType:
-        return functions.dtype(self)
+        return _call_function("dtype", self)
 
     def __bool__(self) -> bool:
         return bool(self.data)
@@ -125,28 +112,41 @@ class Tensor:
     # Tensor functions
 
     def squeeze(self, axis: Optional[Union[int, Tuple[int]]] = None) -> "Tensor":
-        return functions.squeeze(self, axis)
+        return _call_function("squeeze", self, axis)
 
     def flatten(self) -> "Tensor":
-        return functions.flatten(self)
+        return _call_function("flatten", self)
 
     def max(self, axis: Optional[DataType] = None) -> "Tensor":
-        return functions.max(self, axis)
+        return _call_function("max", self, axis)
 
     def min(self, axis: Optional[DataType] = None) -> "Tensor":
-        return functions.min(self, axis)
+        return _call_function("min", self, axis)
 
     def abs(self) -> "Tensor":
-        return functions.abs(self)
+        return _call_function("abs", self)
 
     def isempty(self) -> "Tensor":
-        return functions.isempty(self)
+        return _call_function("isempty", self)
 
     def astype(self, dtype: TensorDataType):
-        return functions.astype(self, dtype)
+        return _call_function("astype", self, dtype)
 
     def reshape(self, shape: DataType) -> "Tensor":
-        return functions.reshape(self, shape)
+        return _call_function("reshape", self, shape)
+
+
+def _call_function(func_name: str, *args):
+    """
+    Call function from functions.py to avoid circular imports.
+
+    :param func_name: Name of function.
+    :return: Result of function call.
+    """
+    from nncf.experimental.tensor import functions
+
+    fn = getattr(functions, func_name)
+    return fn(*args)
 
 
 class TensorIterator:

@@ -111,8 +111,9 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return tensor.Tensor(foo(a.data, axis))
         return NotImplemented(f"Function `foo` is not implemented for {type(a)}")
     ```
+3. Add function name to `__all__` in [function.py](function.py)
 
-3. Add backend specific implementation of method to:
+4. Add backend specific implementation of method to:
 
     - [numpy_function.py](numpy_function.py)
 
@@ -131,7 +132,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return torch.foo(a, arg1)
         ```
 
-4. Add test of method to [test template](tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
+5. Add test of method to [test template](tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
 
 ### Add new backend
 

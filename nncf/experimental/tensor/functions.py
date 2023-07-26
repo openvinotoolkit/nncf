@@ -12,7 +12,7 @@
 import functools
 from typing import List, Optional, Tuple, TypeVar, Union
 
-import nncf.experimental.tensor as tensor  # pylint: disable=consider-using-from-import
+from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
 
@@ -41,8 +41,8 @@ def squeeze(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTenso
       This is always a itself or a view into a. Note that if all axes are squeezed,
       the result is a 0d array and not a scalar.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(squeeze(a.data, axis=axis))
+    if isinstance(a, Tensor):
+        return Tensor(squeeze(a.data, axis=axis))
     return NotImplemented(f"Function `squeeze` is not implemented for {type(a)}")
 
 
@@ -54,8 +54,8 @@ def flatten(a: TTensor) -> TTensor:
     :param a: The input tensor.
     :return: A copy of the input tensor, flattened to one dimension.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(flatten(a.data))
+    if isinstance(a, Tensor):
+        return Tensor(flatten(a.data))
     return NotImplemented(f"Function `flatten` is not implemented for {type(a)}")
 
 
@@ -68,8 +68,8 @@ def max(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
     :param axis: Axis or axes along which to operate. By default, flattened input is used.
     :return: Maximum of a.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(max(a.data, axis))
+    if isinstance(a, Tensor):
+        return Tensor(max(a.data, axis))
     return NotImplemented(f"Function `max` is not implemented for {type(a)}")
 
 
@@ -82,8 +82,8 @@ def min(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
     :param axis: Axis or axes along which to operate. By default, flattened input is used.
     :return: Minimum of a.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(min(a.data, axis))
+    if isinstance(a, Tensor):
+        return Tensor(min(a.data, axis))
     return NotImplemented(f"Function `min` is not implemented for {type(a)}")
 
 
@@ -95,8 +95,8 @@ def abs(a: TTensor) -> TTensor:  # pylint: disable=redefined-builtin
     :param a: The input tensor.
     :return: A tensor containing the absolute value of each element in x.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(abs(a.data))
+    if isinstance(a, Tensor):
+        return Tensor(abs(a.data))
     return NotImplemented(f"Function `abs` is not implemented for {type(a)}")
 
 
@@ -110,8 +110,8 @@ def astype(a: TTensor, data_type: TensorDataType) -> TTensor:
 
     :return: Copy of the tensor in specified type.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(astype(a.data, data_type))
+    if isinstance(a, Tensor):
+        return Tensor(astype(a.data, data_type))
     return NotImplemented(f"Function `dtype` is not implemented for {type(a)}")
 
 
@@ -123,7 +123,7 @@ def dtype(a: TTensor) -> TensorDataType:
     :param a: The input tensor.
     :return: The data type fo the tensor.
     """
-    if isinstance(a, tensor.Tensor):
+    if isinstance(a, Tensor):
         return dtype(a.data)
     return NotImplemented(f"Function `dtype` is not implemented for {type(a)}")
 
@@ -135,8 +135,8 @@ def reshape(a: TTensor, shape: List[int]) -> TTensor:
     :param shape:
     :return:
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(reshape(a.data, shape))
+    if isinstance(a, Tensor):
+        return Tensor(reshape(a.data, shape))
     return NotImplemented(f"Function `dtype` is not implemented for {type(a)}")
 
 
@@ -150,8 +150,8 @@ def all(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
     :return: A new boolean or tensor is returned unless out is specified,
       in which case a reference to out is returned.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(all(a.data, axis=axis))
+    if isinstance(a, Tensor):
+        return Tensor(all(a.data, axis=axis))
     return NotImplemented(f"Function `any` is not implemented for {type(a)}")
 
 
@@ -169,8 +169,8 @@ def allclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, e
       Defaults to False.
     :return: True if the two arrays are equal within the given tolerance, otherwise False.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(
+    if isinstance(a, Tensor):
+        return Tensor(
             allclose(
                 a.data,
                 tensor.unwrap_tensor_data(b),
@@ -192,8 +192,8 @@ def any(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
     :return: A new boolean or tensor is returned unless out is specified,
       in which case a reference to out is returned.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(any(a.data, axis))
+    if isinstance(a, Tensor):
+        return Tensor(any(a.data, axis))
     return NotImplemented(f"Function `any` is not implemented for {type(a)}")
 
 
@@ -207,8 +207,8 @@ def count_nonzero(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> 
     :return: Number of non-zero values in the tensor along a given axis.
       Otherwise, the total number of non-zero values in the tensor is returned.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(count_nonzero(a.data, axis))
+    if isinstance(a, Tensor):
+        return Tensor(count_nonzero(a.data, axis))
     return NotImplemented(f"Function `count_nonzero` is not implemented for {type(a)}")
 
 
@@ -220,8 +220,8 @@ def isempty(a: TTensor) -> bool:
     :param a: The input tensor.
     :return: True is tensor is empty, otherwise False.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(isempty(a.data))
+    if isinstance(a, Tensor):
+        return Tensor(isempty(a.data))
     return NotImplemented(f"Function `isempty` is not implemented for {type(a)}")
 
 
@@ -239,8 +239,8 @@ def isclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, eq
       Defaults to False.
     :return: Returns a boolean tensor of where a and b are equal within the given tolerance.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(
+    if isinstance(a, Tensor):
+        return Tensor(
             isclose(
                 a.data,
                 tensor.unwrap_tensor_data(b),
@@ -261,8 +261,8 @@ def maximum(x1: TTensor, x2: TTensor) -> TTensor:
     :param x2: The second input tensor.
     :return: Output tensor.
     """
-    if isinstance(x1, tensor.Tensor):
-        return tensor.Tensor(
+    if isinstance(x1, Tensor):
+        return Tensor(
             maximum(
                 x1.data,
                 tensor.unwrap_tensor_data(x2),
@@ -280,8 +280,8 @@ def minimum(x1: TTensor, x2: TTensor) -> TTensor:
     :param x2: The second input tensor.
     :return: Output tensor.
     """
-    if isinstance(x1, tensor.Tensor):
-        return tensor.Tensor(
+    if isinstance(x1, Tensor):
+        return Tensor(
             minimum(
                 x1.data,
                 tensor.unwrap_tensor_data(x2),
@@ -298,8 +298,8 @@ def ones_like(a: TTensor) -> TTensor:
     :param a: The shape and data-type of a define these same attributes of the returned tensor.
     :return: Tensor of ones with the same shape and type as a.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(ones_like(a.data))
+    if isinstance(a, Tensor):
+        return Tensor(ones_like(a.data))
     return NotImplemented(f"Function `ones_like` is not implemented for {type(a)}")
 
 
@@ -313,8 +313,8 @@ def where(condition: TTensor, x: TTensor, y: TTensor) -> TTensor:
     :param y: Value at indices where condition is False.
     :return: An tensor with elements from x where condition is True, and elements from y elsewhere.
     """
-    if isinstance(condition, tensor.Tensor):
-        return tensor.Tensor(
+    if isinstance(condition, Tensor):
+        return Tensor(
             where(
                 condition.data,
                 tensor.unwrap_tensor_data(x),
@@ -332,8 +332,8 @@ def zeros_like(a: TTensor) -> TTensor:
     :param input: The shape and data-type of a define these same attributes of the returned tensor.
     :return: tensor of zeros with the same shape and type as a.
     """
-    if isinstance(a, tensor.Tensor):
-        return tensor.Tensor(zeros_like(a.data))
+    if isinstance(a, Tensor):
+        return Tensor(zeros_like(a.data))
     return NotImplemented(f"Function `zeros_like` is not implemented for {type(a)}")
 
 
@@ -359,3 +359,15 @@ __all__ = [
     "where",
     "zeros_like",
 ]
+
+
+def _initialize_backends():
+    import nncf.experimental.tensor.numpy_functions  # pylint: disable=unused-import
+
+    try:
+        import nncf.experimental.tensor.torch_functions  # pylint: disable=unused-import
+    except ImportError:
+        pass
+
+
+_initialize_backends()
