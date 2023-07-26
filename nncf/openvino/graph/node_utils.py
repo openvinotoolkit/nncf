@@ -346,7 +346,7 @@ def get_activation_channel_axis(node: NNCFNode) -> int:
     :param node: NNCFNode instance.
     :return: Channel axis number.
     """
-    channel_axis = node.metatype.output_channel_axis if node.metatype.output_channel_axis is not None else 1
+    channel_axis = node.metatype.input_channel_axis if node.metatype.input_channel_axis is not None else 1
 
     if (
         node.layer_attributes is not None
