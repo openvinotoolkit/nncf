@@ -198,13 +198,16 @@ class HAWQDebugger:
             perturb.append(perturbations_for_all_observed_qconfig_sequence_in_current_layer[max_bitwidth_qconfig])
             max_bitwidths.append(max_bitwidth_qconfig.num_bits)
         ax.plot(
-            [p / m / n for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)],
+            [
+                (p / m / n).cpu().numpy()
+                for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)
+            ],
             label="normalized n-bit noise",
         )
-        ax.plot(perturb, label="n-bit noise")
+        ax.plot([x.cpu().numpy() for x in perturb], label="n-bit noise")
         ax.plot(max_bitwidths, label="n")
         ax.plot(self._traces_per_layer.cpu().numpy(), label="trace")
-        ax.plot([n * p for n, p in zip(self._traces_per_layer, perturb)], label="trace * noise")
+        ax.plot([(n * p).cpu().numpy() for n, p in zip(self._traces_per_layer, perturb)], label="trace * noise")
         ax.legend()
         plt.savefig(os.path.join(self._dump_dir, "Quantization_noise_vs_Average_Trace"))
 

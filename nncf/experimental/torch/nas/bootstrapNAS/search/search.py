@@ -239,7 +239,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
 
         self._problem = None
         self.checkpoint_save_dir = None
-        self.type_var = np.int
+        self.type_var = int
 
     @property
     def evaluator_handlers(self) -> List[BaseEvaluatorHandler]:
