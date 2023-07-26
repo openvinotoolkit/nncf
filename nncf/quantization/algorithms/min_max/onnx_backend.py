@@ -18,6 +18,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
+from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
@@ -184,7 +185,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def _get_reduction_shape_for_activation(
-        nncf_graph: NNCFGraph, node: NNCFGraph, target_point, is_per_channel: bool
+        nncf_graph: NNCFGraph, node: NNCFNode, target_point, is_per_channel: bool
     ) -> Optional[ReductionShape]:
         if not is_per_channel:  # Per-Tensor
             return None
@@ -195,10 +196,21 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
         else:
             raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
+        if not shape:  # ONNX model can not have a shape of a edge, even after shape inference.
+            if target_point.type == TargetType.PRE_LAYER_OPERATION:
+                nncf_logger.info(
+                    f"The shape of input edge of a node {node.node_name} is unkown. Therefore per-tensor quantizaiton is applied."
+                )
+            elif target_point.type == TargetType.POST_LAYER_OPERATION:
+                nncf_logger.info(
+                    f"The shape of output edge of a node {node.node_name} is unkown. Therefore per-tensor quantizaiton is applied."
+                )
+            nncf_logger.info(f"Please consider to run pre-processing before quantization.")
+            # TODO: add preprocessing tool for ONNX model.
+            return None
 
         # TODO (l-bat): Disable quantizer propogation through layout changing operations
-        channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
-        print(f"shape = {shape}")
+        channel_axis = 1  # Activations have channel first layout: [N, C, Z, Y, X]
         reduction_shape = list(range(len(shape)))
         reduction_shape.pop(channel_axis)
         return tuple(reduction_shape)
