@@ -335,6 +335,16 @@ class MHA_single_input(torch.nn.Module):
         return self.mha(x, x, x)
 
 
+class OrdinaryModelWithRecurrentInName(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1)
+
+    def forward(self, x):
+        quantize_agnostic = x[:2]
+        return self.conv(quantize_agnostic)
+
+
 class ShiftScaleParametrized(torch.nn.Module):
     NUM_CHANNELS = 3
     INPUT_SIZES = [1, NUM_CHANNELS, 2, 2]

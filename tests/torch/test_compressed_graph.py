@@ -67,6 +67,7 @@ from tests.torch.test_models.synthetic import MHA_single_input
 from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import ModelWithDummyParameter
 from tests.torch.test_models.synthetic import MultiOutputSameTensorModel
+from tests.torch.test_models.synthetic import OrdinaryModelWithRecurrentInName
 from tests.torch.test_models.synthetic import PoolUnPool
 from tests.torch.test_models.synthetic import ReshapeModel
 from tests.torch.test_models.synthetic import ShiftScaleParametrized
@@ -749,6 +750,11 @@ SYNTHETIC_MODEL_DESC_LIST = [
         wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
     ),
     GeneralModelDesc(model_builder=MHA_single_input, input_sample_sizes=(MHA_single_input.INPUT_SIZES,)),
+    GeneralModelDesc(
+        model_name="OrdinaryModelWithRecurrentInName",
+        model_builder=OrdinaryModelWithRecurrentInName,
+        input_sample_sizes=([1, 1, 2, 2]),
+    ),
     *shift_scale_models,
 ]
 
