@@ -13,6 +13,7 @@ import functools
 from typing import List, Optional, Tuple, TypeVar, Union
 
 from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor import unwrap_tensor_data
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
 
@@ -131,13 +132,15 @@ def dtype(a: TTensor) -> TensorDataType:
 @functools.singledispatch
 def reshape(a: TTensor, shape: List[int]) -> TTensor:
     """
-    :param a:
-    :param shape:
-    :return:
+    Gives a new shape to an tensor without changing its data.
+
+    :param a: Tensor to be reshaped.
+    :param shape: The new shape should be compatible with the original shape.
+    :return: Reshaped tensor.
     """
     if isinstance(a, Tensor):
         return Tensor(reshape(a.data, shape))
-    return NotImplemented(f"Function `dtype` is not implemented for {type(a)}")
+    return NotImplemented(f"Function `reshape` is not implemented for {type(a)}")
 
 
 @functools.singledispatch
@@ -152,7 +155,7 @@ def all(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
     """
     if isinstance(a, Tensor):
         return Tensor(all(a.data, axis=axis))
-    return NotImplemented(f"Function `any` is not implemented for {type(a)}")
+    return NotImplemented(f"Function `all` is not implemented for {type(a)}")
 
 
 @functools.singledispatch
@@ -173,7 +176,7 @@ def allclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, e
         return Tensor(
             allclose(
                 a.data,
-                tensor.unwrap_tensor_data(b),
+                unwrap_tensor_data(b),
                 rtol=rtol,
                 atol=atol,
                 equal_nan=equal_nan,
@@ -185,7 +188,7 @@ def allclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, e
 @functools.singledispatch
 def any(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  # pylint: disable=redefined-builtin
     """
-    Test whether all tensor elements along a given axis evaluate to True.
+    Test whether any tensor elements along a given axis evaluate to True.
 
     :param a: The input tensor.
     :param axis: Axis or axes along which a logical OR reduction is performed.
@@ -243,7 +246,7 @@ def isclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, eq
         return Tensor(
             isclose(
                 a.data,
-                tensor.unwrap_tensor_data(b),
+                unwrap_tensor_data(b),
                 rtol=rtol,
                 atol=atol,
                 equal_nan=equal_nan,
@@ -265,7 +268,7 @@ def maximum(x1: TTensor, x2: TTensor) -> TTensor:
         return Tensor(
             maximum(
                 x1.data,
-                tensor.unwrap_tensor_data(x2),
+                unwrap_tensor_data(x2),
             )
         )
     return NotImplemented(f"Function `maximum` is not implemented for {type(x1)}")
@@ -284,7 +287,7 @@ def minimum(x1: TTensor, x2: TTensor) -> TTensor:
         return Tensor(
             minimum(
                 x1.data,
-                tensor.unwrap_tensor_data(x2),
+                unwrap_tensor_data(x2),
             )
         )
     return NotImplemented(f"Function `minimum` is not implemented for {type(x1)}")
@@ -317,8 +320,8 @@ def where(condition: TTensor, x: TTensor, y: TTensor) -> TTensor:
         return Tensor(
             where(
                 condition.data,
-                tensor.unwrap_tensor_data(x),
-                tensor.unwrap_tensor_data(y),
+                unwrap_tensor_data(x),
+                unwrap_tensor_data(y),
             )
         )
     return NotImplemented(f"Function `where` is not implemented for {type(condition)}")
