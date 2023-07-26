@@ -254,7 +254,7 @@ class RandomSampleCrop:
             boxes = np.asarray([x["bbox"] for x in target])
             labels = np.asarray([x["label_idx"] for x in target])
             # randomly choose a mode
-            mode = random.choice(self.sample_options)
+            mode = self.sample_options[random.randint(len(self.sample_options))]
             if mode is None:
                 return image, target
 

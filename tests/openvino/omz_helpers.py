@@ -72,5 +72,5 @@ def get_metrics(ac_report):
         for row in reader:
             metric_name = row["metric_name"]
             metric_value = row["metric_value"]
-            metrics[metric_name] = np.float(metric_value)
+            metrics[metric_name] = float(metric_value)
     return metrics
