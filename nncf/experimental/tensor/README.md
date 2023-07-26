@@ -1,4 +1,4 @@
-# NNCF wrapper of the Tensors
+# Tensors wrapper
 
 The `Tensor` class is a wrapper class that provides a common interface for different types of tensors,
 such as NumPy and PyTorch. This allows algorithms to be written that are abstracted from the underlying model type,
