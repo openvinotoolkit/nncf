@@ -602,7 +602,7 @@ class YOLOv4:
         no_bias_kwargs.update(kwargs)
         return nn_ops.compose(
             nn_ops.DarknetConv2D(*args, **no_bias_kwargs),
-            tf.keras.layers.BatchNormalization(synchronized=True),
+            tf.keras.layers.experimental.SyncBatchNormalization(),
             tf.keras.layers.LeakyReLU(alpha=0.1),
         )
 
