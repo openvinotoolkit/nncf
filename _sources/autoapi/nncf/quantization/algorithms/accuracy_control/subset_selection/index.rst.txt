@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.accuracy_control.subset_selection`
+========================================================================
+
+.. py:module:: nncf.quantization.algorithms.accuracy_control.subset_selection
+
+
