@@ -20,6 +20,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetaty
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_activation_channel_axis
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -94,7 +95,7 @@ def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, e
     "metatype, inputs_attributes, expected_channel_axis",
     [
         (OVMatMulMetatype, {"transpose": False}, -1),
-        (OVMatMulMetatype, {"transpose": True}, 1),
+        (OVMatMulMetatype, {"transpose": True}, -2),
         (OVConvolutionMetatype, {}, 1),
     ],
 )
@@ -109,3 +110,19 @@ def test_get_activation_channel_axis(metatype, inputs_attributes, expected_chann
     actual_channel_axis = get_activation_channel_axis(node)
 
     assert actual_channel_axis == expected_channel_axis
+
+
+@pytest.mark.parametrize(
+    "shape, channel_axes, ref_reduction_shape",
+    [
+        ((1, 128), [-1], (0,)),
+        ((1, 256, 1), [-2], (0, 2)),
+        ((1, 128, 512), [-1], (0, 1)),
+        ((1, 3, 224, 224), [1], (0, 2, 3)),
+        ((1, 1, 12, 12), [1], (0, 2, 3)),
+    ],
+)
+def test_get_channel_agnostic_reduction_shape(shape, channel_axes, ref_reduction_shape):
+    reduction_shape = get_channel_agnostic_reduction_shape(channel_axes=channel_axes, shape=shape)
+
+    assert reduction_shape == ref_reduction_shape

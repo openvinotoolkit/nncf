@@ -74,7 +74,6 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     weight_port_ids = [1]
     bias_port_id = 2
     output_channel_axis = 1
-    input_channel_axis = 1
 
     @classmethod
     def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
@@ -90,7 +89,6 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     weight_port_ids = [1]
     bias_port_id = 2
     output_channel_axis = 1
-    input_channel_axis = 1
     subtypes = [ONNXDepthwiseConvolutionMetatype]
 
 
@@ -103,7 +101,6 @@ class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
     weight_port_ids = [1]
     bias_port_id = 2
     output_channel_axis = 1
-    input_channel_axis = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -116,7 +113,6 @@ class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
     bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
-    input_channel_axis = -1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -129,7 +125,6 @@ class ONNXMatMulMetatype(ONNXOpMetatype):
     bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
-    input_channel_axis = -1
 
 
 @ONNX_OPERATION_METATYPES.register()

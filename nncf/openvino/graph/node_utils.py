@@ -354,9 +354,19 @@ def get_activation_channel_axis(node: NNCFNode) -> int:
         and "transpose" in node.layer_attributes.input_attributes
         and node.layer_attributes.input_attributes["transpose"]
     ):
-        channel_axis = 1
+        channel_axis -= 1
 
     return channel_axis
+
+
+def get_output_channel_axis(node: NNCFNode) -> int:
+    """
+    Returns axis number of the output tensor which correspond to it channel.
+
+    :param node: NNCFNode instance.
+    :return: Channel axis number.
+    """
+    return node.metatype.output_channel_axis if node.metatype.output_channel_axis is not None else 1
 
 
 def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[int]) -> Tuple[int]:
