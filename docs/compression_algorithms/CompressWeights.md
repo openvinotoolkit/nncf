@@ -2,7 +2,7 @@
 
 #### The algorithm description
 
-The Weights Compression algorithm compresses weights in LLM to int8 and adds extra decompression layers to the input network or keep original weights precision and insert FakeQuantize operations. The goal is to compress weights of big LLMs before conversion to IR without usage of dataset. The algorithm compresses weights only for Linear and Embedding layers.
+The Weights Compression algorithm compresses weights in LLM to int8 and adds extra decompression layers to the input network or keeps original weights precision and inserts FakeQuantize operations. The goal is to compress weights of big LLMs before conversion to IR without usage of dataset. The algorithm compresses weights only for Linear and Embedding layers.
 
 #### User guide
 
