@@ -19,6 +19,7 @@ from openvino._offline_transformations import compress_quantize_weights_transfor
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.parameters import DropType
@@ -111,7 +112,8 @@ def native_quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
+    graph = GraphConverter.create_nncf_graph(model)
+    quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)

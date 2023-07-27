@@ -16,6 +16,7 @@ import openvino.runtime as ov
 import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -128,13 +129,14 @@ def test_omz_models_sq_placement(model_name_params, tmp_path):
 # pylint: disable=protected-access
 def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
     dataset = get_dataset_for_test(ov_model)
+    graph = GraphConverter.create_nncf_graph(ov_model)
 
     smooth_quant_algo = SmoothQuant(subset_size=1)
     statistics_aggregator = OVStatisticsAggregator(dataset)
-    statistic_points = smooth_quant_algo.get_statistic_points(ov_model)
+    statistic_points = smooth_quant_algo.get_statistic_points(ov_model, graph)
     statistics_aggregator.register_statistic_points(statistic_points)
-    statistics_aggregator.collect_statistics(ov_model)
-    modified_model = smooth_quant_algo._apply(ov_model, statistics_aggregator.statistic_points)
+    statistics_aggregator.collect_statistics(ov_model, graph)
+    modified_model = smooth_quant_algo.apply(ov_model, graph, statistics_aggregator.statistic_points)
 
     if quantize:
         modified_model = quantize_model(modified_model, q_params)

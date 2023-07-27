@@ -17,7 +17,6 @@ from tqdm import tqdm
 from nncf import Dataset
 from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.patterns import GraphPattern
@@ -74,7 +73,6 @@ class ChannelAlignment(Algorithm):
         self.subset_size = subset_size
         self.inplace_statistics = inplace_statistics
         self.backend_params = backend_params
-        self._original_nncf_graph = None
         self._backend_entity = None
         self._quantile = 1e-4
         self._algorithm_key = f"CA_{hash(self)}"
@@ -95,29 +93,29 @@ class ChannelAlignment(Algorithm):
 
             self._backend_entity = OVChannelAlignmentAlgoBackend()
 
-    def _apply(
+    def apply(
         self,
         model: TModel,
+        graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        nncf_graph = NNCFGraphFactory.create(model) if self._original_nncf_graph is None else self._original_nncf_graph
         model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
 
         def filter_func(point: StatisticPoint) -> bool:
             return self._algorithm_key in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
-        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(nncf_graph), desc="Channel alignment"):
+        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(graph), desc="Channel alignment"):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, self._algorithm_key)
             )
             assert len(tensor_collectors) == 1
             stat = tensor_collectors[0].get_statistics()
-            conv_in_cont = ConvParamsContainer(conv_in, model, nncf_graph, self._backend_entity)
-            conv_out_cont = ConvParamsContainer(conv_out, model, nncf_graph, self._backend_entity)
+            conv_in_cont = ConvParamsContainer(conv_in, model, graph, self._backend_entity)
+            conv_out_cont = ConvParamsContainer(conv_out, model, graph, self._backend_entity)
 
             if conv_in_cont.has_bias() and conv_out_cont.has_bias():
                 amean = (stat.max_values + stat.min_values) * 0.5
@@ -153,7 +151,7 @@ class ChannelAlignment(Algorithm):
 
                 if container.stated_bias.is_modified():
                     transformation_layout.register(
-                        command_creator.create_command_to_update_bias(container.op, container.bias, nncf_graph),
+                        command_creator.create_command_to_update_bias(container.op, container.bias, graph),
                     )
 
         transformed_model = model_transformer.transform(transformation_layout)
@@ -371,15 +369,14 @@ class ChannelAlignment(Algorithm):
             node_in,
         )
 
-    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        self._original_nncf_graph = NNCFGraphFactory.create(model)
 
         statistic_container = StatisticPointsContainer()
-        for conv_in, add_in, _ in self._get_node_pairs(self._original_nncf_graph):
+        for conv_in, add_in, _ in self._get_node_pairs(graph):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             channel_axis = conv_in.metatype.output_channel_axis
-            reduction_shape = list(range(len(self._original_nncf_graph.get_output_edges(node_in)[0].tensor_shape)))
+            reduction_shape = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
             reduction_shape.remove(channel_axis)
 
             statistic_collector = self._backend_entity.get_statistic_collector(
