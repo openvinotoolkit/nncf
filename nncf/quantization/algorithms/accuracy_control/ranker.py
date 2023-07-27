@@ -14,8 +14,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional, TypeVar, Union
 
-import numpy as np
-
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.logging import nncf_logger
@@ -28,35 +26,12 @@ from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
+from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
 from nncf.quantization.passes import remove_shapeof_subgraphs
 
 TModel = TypeVar("TModel")
 TPModel = TypeVar("TPModel")
 TTensor = TypeVar("TTensor")
-
-
-def get_ranking_subset_indices(errors: List[float], ranking_subset_size: int) -> List[int]:
-    """
-    Returns `ranking_subset_size` indices of elements in the `errors` list
-    that have the biggest error value. Returned indices are sorted in
-    ascending order.
-
-    :param errors: A list of errors.
-    :param ranking_subset_size: A number of returned indices.
-    :return: Indices of elements in the `errors` list which have the biggest error value.
-    """
-    ordered_indices = [idx for idx, _ in sorted(enumerate(errors), key=operator.itemgetter(1), reverse=True)]
-    end_index = min(ranking_subset_size, len(ordered_indices))
-    return sorted(ordered_indices[:end_index])
-
-
-def get_ranking_subset_indices_pot_version(errors: List[float], ranking_subset_size: int) -> List[int]:
-    """
-    POT implementation of the `get_ranking_subset_indices()` method.
-    """
-    ordered_indices = np.flip(np.argsort(errors)).tolist()
-    end_index = min(ranking_subset_size, len(ordered_indices))
-    return sorted(ordered_indices[:end_index])
 
 
 @dataclass
@@ -80,6 +55,7 @@ class Ranker:
 
     def __init__(
         self,
+        ranking_subset_size: int,
         dataset: Dataset,
         algo_backend: AccuracyControlAlgoBackend,
         evaluator: Evaluator,
@@ -87,12 +63,17 @@ class Ranker:
         ranking_fn: Optional[Callable[[Any, Any], float]] = None,
     ):
         """
+        :param ranking_subset_size: The number of data items that will be selected from
+            the dataset to rank groups of quantizers. The `len(dataset)` data items will
+            be selected if `ranking_subset_size` parameter is greater than the number of
+            elements in the dataset.
         :param dataset: Dataset for the ranking process.
         :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         :param evaluator: Evaluator to validate model.
         :param  ranking_fn: a function that compares values returned by
             `Evaluator.collect_values_for_each_item()` method for initial and quantized model.
         """
+        self._ranking_subset_size = ranking_subset_size
         self._dataset = dataset
         self._algo_backend = algo_backend
         self._evaluator = evaluator
@@ -139,10 +120,10 @@ class Ranker:
     def rank_groups_of_quantizers(
         self,
         groups_to_rank: List[GroupToRank],
-        ranking_subset_indices: List[int],
         quantized_model: TModel,
         quantized_model_graph: NNCFGraph,
         reference_values_for_each_item: Union[List[float], List[List[TTensor]]],
+        approximate_values_for_each_item: Union[List[float], List[List[TTensor]]],
     ) -> List[GroupToRank]:
         """
         Ranks groups of quantizers by their contribution to accuracy drop. Returns a list of
@@ -150,14 +131,21 @@ class Ranker:
         score i.e. its contribution to accuracy drop is the greatest.
 
         :param groups_to_rank: Groups of quantizers that should be ranked.
-        :param ranking_subset_indices: Indices of data items used to calculate ranking score for group of quantizers.
         :param quantized_model: Quantized model.
         :param quantized_model_graph: NNCF graph for quantized model.
         :param reference_values_for_each_item: List of reference values.
+        :param approximate_values_for_each_item: List of approximate values.
         :return: List of ranked groups of quantizers.
         """
         if self._ranking_fn is None:
             self._ranking_fn = self._create_ranking_fn(get_backend(quantized_model))
+
+        ranking_subset_indices = select_subset(
+            self._ranking_subset_size,
+            reference_values_for_each_item,
+            approximate_values_for_each_item,
+            self._ranking_fn,
+        )
 
         nncf_logger.info("Calculating ranking score for groups of quantizers")
         with timer():

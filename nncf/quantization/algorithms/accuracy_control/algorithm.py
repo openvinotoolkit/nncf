@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import operator
 import sys
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
@@ -29,9 +28,7 @@ from nncf.data.dataset import Dataset
 from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
-from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
-from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_subset_indices_pot_version
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -95,35 +92,6 @@ def calculate_accuracy_drop(
         should_terminate = accuracy_drop <= max_drop
 
     return should_terminate, accuracy_drop
-
-
-def select_worst_subset(
-    subset_size: int,
-    reference_values_for_each_item: Union[List[float], List[List[TTensor]]],
-    approximate_values_for_each_item: Union[List[float], List[List[TTensor]]],
-    error_fn: Callable[[Union[float, List[TTensor]], Union[float, List[TTensor]]], float],
-) -> List[int]:
-    """
-    Selects first `subset_size` indices of data items for which `error_fn` function gives maximal value.
-    Assumes that `reference_values_for_each_item` and `approximate_values_for_each_item` lists have same
-    number of items.
-
-    :param subset_size: Number of indices that will be selected. The `len(reference_values_for_each_item)`
-        indices will be selected if `subset_size` parameter is greater than the number of elements in
-        the `reference_values_for_each_item`.
-    :param reference_values_for_each_item: List of reference values.
-    :param approximate_values_for_each_item: List of approximate values.
-    :param error_fn: A function used to calculate difference between `reference_values_for_each_item[i]`
-        and `approximate_values_for_each_item[i]` list.
-    :return: First `subset_size` indices of data items for which `error_fn` function gives maximal value.
-    """
-    errors = [
-        error_fn(ref_val, approx_val)
-        for ref_val, approx_val in zip(reference_values_for_each_item, approximate_values_for_each_item)
-    ]
-    subset_indices = get_ranking_subset_indices_pot_version(errors, subset_size)
-
-    return subset_indices
 
 
 class QuantizationAccuracyRestorerReport:
@@ -265,16 +233,6 @@ class QuantizationAccuracyRestorer:
         if accuracy_drop <= self.max_drop:
             return quantized_model
 
-        self._error_fn = (
-            operator.sub if evaluator.is_metric_mode() else create_normalized_mse_func(get_backend(initial_model))
-        )
-        worst_subset_indices = select_worst_subset(
-            self.ranking_subset_size,
-            initial_metric_results.values_for_each_item,
-            quantized_metric_results.values_for_each_item,
-            self._error_fn,
-        )
-
         # Accuracy drop is greater than the maximum drop so we need to restore accuracy
         return self._apply(
             initial_model,
@@ -286,7 +244,6 @@ class QuantizationAccuracyRestorer:
             validation_dataset,
             validation_dataset_size,
             accuracy_drop,
-            worst_subset_indices,
         )
 
     def _apply(
@@ -300,7 +257,6 @@ class QuantizationAccuracyRestorer:
         validation_dataset: Dataset,
         validation_dataset_size: int,
         accuracy_drop: float,
-        ranking_subset_indices: List[int],
     ) -> TModel:
         """
         An internal function that implements an iterative approach to restoring the accuracy of
@@ -317,7 +273,6 @@ class QuantizationAccuracyRestorer:
         :param validation_dataset: A dataset for the validation process.
         :param validation_dataset_size: Validation dataset size.
         :param accuracy_drop: Accuracy drop between initial and quantized models.
-        :param ranking_subset_indices: Subset of data items that will be used to rank groups of quantizers.
         :return: The quantized model whose metric `final_metric` is satisfied
             the maximum accuracy drop condition.
         """
@@ -352,14 +307,14 @@ class QuantizationAccuracyRestorer:
 
         nncf_logger.info(f"Number of parallel processes to rank quantized operations: {num_ranking_processes}")
 
-        ranker = Ranker(validation_dataset, algo_backend, evaluator, num_ranking_processes)
+        ranker = Ranker(self.ranking_subset_size, validation_dataset, algo_backend, evaluator, num_ranking_processes)
         groups_to_rank = ranker.find_groups_of_quantizers_to_rank(quantized_model_graph)
         ranked_groups = ranker.rank_groups_of_quantizers(
             groups_to_rank,
-            ranking_subset_indices,
             quantized_model,
             quantized_model_graph,
             initial_metric_results.values_for_each_item,
+            quantized_metric_results.values_for_each_item,
         )
 
         previous_model = quantized_model
@@ -441,19 +396,12 @@ class QuantizationAccuracyRestorer:
                     current_model, validation_dataset
                 )
 
-            ranking_subset_indices = select_worst_subset(
-                self.ranking_subset_size,
-                initial_metric_results.values_for_each_item,
-                current_approximate_values_for_each_item,
-                self._error_fn,
-            )
-
             ranked_groups = ranker.rank_groups_of_quantizers(
                 ranked_groups,
-                ranking_subset_indices,
                 current_model,
                 quantized_model_graph,
                 initial_metric_results.values_for_each_item,
+                current_approximate_values_for_each_item,
             )
 
         report.num_iterations = iteration

@@ -17,7 +17,7 @@ import pytest
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
-from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_subset_indices
+from nncf.quantization.algorithms.accuracy_control.subset_selection import get_subset_indices
 
 
 def create_fp32_tensor_1d(items):
@@ -76,8 +76,8 @@ def test_normalized_mse(x_ref: np.ndarray, x_approx: np.ndarray, expected_nmse: 
         "subset_size_greater_than_num_errors",
     ],
 )
-def test_get_ranking_subset_indices(errors: List[float], subset_size: int, expected_indices: List[int]):
-    actual_indices = get_ranking_subset_indices(errors, subset_size)
+def test_get_subset_indices(errors: List[float], subset_size: int, expected_indices: List[int]):
+    actual_indices = get_subset_indices(errors, subset_size)
     assert expected_indices == actual_indices
 
 
