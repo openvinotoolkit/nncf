@@ -29,13 +29,7 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
-from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
-from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import create_params
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.range_estimator import AggregatorType
-from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.quantization.range_estimator import StatisticsCollectorParameters
-from nncf.quantization.range_estimator import StatisticsType
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry.decorator import tracked_function
@@ -139,61 +133,6 @@ def native_quantize_impl(
     return quantized_model
 
 
-PARAMS_SEARCH_SPACE = {
-    "preset": [
-        QuantizationPreset.PERFORMANCE,
-        QuantizationPreset.MIXED,
-    ],
-    "fast_bias_correction": [
-        True,
-        False,
-    ],
-    "advanced_parameters": {
-        "weights_range_estimator_params": [
-            RangeEstimatorParameters(
-                min=StatisticsCollectorParameters(statistics_type=StatisticsType.MIN),
-                max=StatisticsCollectorParameters(statistics_type=StatisticsType.MAX),
-            )
-        ],
-        "activations_range_estimator_params": create_params(
-            RangeEstimatorParameters,
-            min=[
-                StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.MIN,
-                    aggregator_type=AggregatorType.MIN,
-                ),
-                StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.QUANTILE,
-                    aggregator_type=AggregatorType.MEAN,
-                    quantile_outlier_prob=10e-4,
-                ),
-                StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.QUANTILE,
-                    aggregator_type=AggregatorType.MEAN,
-                    quantile_outlier_prob=10e-5,
-                ),
-            ],
-            max=[
-                StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.MAX,
-                    aggregator_type=AggregatorType.MAX,
-                ),
-                StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.QUANTILE,
-                    aggregator_type=AggregatorType.MEAN,
-                    quantile_outlier_prob=10e-4,
-                ),
-                StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.QUANTILE,
-                    aggregator_type=AggregatorType.MEAN,
-                    quantile_outlier_prob=10e-5,
-                ),
-            ],
-        ),
-    },
-}
-
-
 @tracked_function(
     NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop", "drop_type"]
 )
@@ -244,7 +183,7 @@ def native_quantize_with_accuracy_control_impl(
     if advanced_accuracy_restorer_parameters.ranking_subset_size is not None:
         ranking_subset_size = advanced_accuracy_restorer_parameters.ranking_subset_size
 
-    tune_hyperparams_algorithm = None
+    init_params = None
     if advanced_accuracy_restorer_parameters.tune_hyperparams:
         init_params = {
             "preset": preset,
@@ -255,9 +194,6 @@ def native_quantize_with_accuracy_control_impl(
             "ignored_scope": ignored_scope,
             "advanced_parameters": copied_parameters,
         }
-        tune_hyperparams_algorithm = HyperparameterTuner(
-            PostTrainingQuantization, init_params, PARAMS_SEARCH_SPACE, calibration_dataset, validation_fn
-        )
 
     accuracy_aware_loop = QuantizationAccuracyRestorer(
         ranking_subset_size=ranking_subset_size,
@@ -265,7 +201,8 @@ def native_quantize_with_accuracy_control_impl(
         max_drop=max_drop,
         drop_type=drop_type,
         num_ranking_processes=advanced_accuracy_restorer_parameters.num_ranking_processes,
-        tune_hyperparams_algorithm=tune_hyperparams_algorithm,
+        tune_hyperparams=advanced_accuracy_restorer_parameters.tune_hyperparams,
+        init_params=init_params,
     )
     quantized_model = accuracy_aware_loop.apply(model, quantized_model, validation_dataset, validation_fn)
     if compress_weights:
