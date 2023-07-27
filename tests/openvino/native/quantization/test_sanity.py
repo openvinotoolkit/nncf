@@ -16,7 +16,6 @@ import pytest
 
 import nncf
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.os import is_windows
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.openvino.conftest import AC_CONFIGS_DIR

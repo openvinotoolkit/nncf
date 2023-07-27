@@ -15,7 +15,6 @@ import openvino.runtime as ov
 import pytest
 
 import nncf
-from nncf.common.utils.os import is_windows
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.openvino.conftest import AC_CONFIGS_DIR
 from tests.openvino.datasets_helpers import get_dataset_for_test
