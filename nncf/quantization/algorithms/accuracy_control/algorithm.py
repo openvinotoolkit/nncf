@@ -146,7 +146,7 @@ class MetricResults:
     """
 
     metric_value: float
-    values_for_each_item: Union[None, List[float], List[List[TTensor]]]
+    values_for_each_item: Union[List[float], List[List[TTensor]]]
     preparation_time: float
     validation_time: float
 
@@ -233,6 +233,7 @@ class QuantizationAccuracyRestorer:
         if accuracy_drop <= self.max_drop:
             return quantized_model
 
+        # Accuracy drop is greater than the maximum drop so we need to restore accuracy
         return self._apply(
             initial_model,
             quantized_model,
@@ -275,7 +276,6 @@ class QuantizationAccuracyRestorer:
         :return: The quantized model whose metric `final_metric` is satisfied
             the maximum accuracy drop condition.
         """
-        # Accuracy drop is greater than the maximum drop so we need to restore accuracy
         initial_model_graph = NNCFGraphFactory.create(initial_model)
         quantized_model_graph = NNCFGraphFactory.create(quantized_model)
 
@@ -311,7 +311,6 @@ class QuantizationAccuracyRestorer:
         groups_to_rank = ranker.find_groups_of_quantizers_to_rank(quantized_model_graph)
         ranked_groups = ranker.rank_groups_of_quantizers(
             groups_to_rank,
-            initial_model,
             quantized_model,
             quantized_model_graph,
             initial_metric_results.values_for_each_item,
@@ -392,9 +391,13 @@ class QuantizationAccuracyRestorer:
             previous_accuracy_drop = current_accuracy_drop
 
             nncf_logger.info("Re-calculating ranking scores for remaining groups")
+            if current_approximate_values_for_each_item is None:
+                current_approximate_values_for_each_item = evaluator.collect_values_for_each_item(
+                    current_model, validation_dataset
+                )
+
             ranked_groups = ranker.rank_groups_of_quantizers(
                 ranked_groups,
-                initial_model,
                 current_model,
                 quantized_model_graph,
                 initial_metric_results.values_for_each_item,
@@ -504,9 +507,20 @@ class QuantizationAccuracyRestorer:
         model: TModel, dataset: Dataset, evaluator: Evaluator, model_name: str
     ) -> MetricResults:
         nncf_logger.info(f"Validation of {model_name} model was started")
+
         with timer() as preparation_time:
             model_for_inference = evaluator.prepare_model_for_inference(model)
+
         with timer() as validation_time:
             metric, values_for_each_item = evaluator.validate_model_for_inference(model_for_inference, dataset)
+
         nncf_logger.info(f"Metric of {model_name} model: {metric}")
+
+        if values_for_each_item is None:
+            nncf_logger.info(f"Collecting values for each data item using the {model_name} model")
+            with timer():
+                values_for_each_item = evaluator.collect_values_for_each_item_using_model_for_inference(
+                    model_for_inference, dataset
+                )
+
         return MetricResults(metric, values_for_each_item, preparation_time(), validation_time())
