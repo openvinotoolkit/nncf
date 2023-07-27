@@ -15,6 +15,7 @@ from nncf.common.engine import Engine
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.command_creation import CommandCreator
+from nncf.common.tensor_statistics import aggregator
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_available_backends
 from nncf.common.utils.backend import get_backend
@@ -126,7 +127,7 @@ class CommandCreatorFactory:
 
 class StatisticsAggregatorFactory:
     @staticmethod
-    def create(model: TModel, dataset: Dataset):
+    def create(model: TModel, dataset: Dataset) -> aggregator.StatisticsAggregator:
         """
         Factory method to create backend-specific `StatisticsAggregator` instance based on the input model.
 

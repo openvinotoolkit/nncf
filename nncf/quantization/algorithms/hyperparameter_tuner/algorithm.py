@@ -23,32 +23,44 @@ from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation imp
 from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import create_combinations
 from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import create_params_transformation
 
-SearchSpace = Dict[str, Union[List[Any], "SearchSpace"]]
 TModel = TypeVar("TModel")
 
 
 class HyperparameterTuner:
     """
-    Algorithm used to find a best combination of provided parameters.
-    Possible values of parameters are represented as the `SearchSpace`.
-    The `SearchSpace` has the following structure
+    This algorithm is used to find a best combination of parameters from `param_settings`.
 
-        {
-            "param_name": [v_0, v_1, ..., v_n]
+    The `param_settings` in simple case is a dictionary with parameters names
+    as keys and list of parameter settings to try as values.
+
+        param_settings = {
+            "param_name": [0.1, 0.2],
         }
 
-    where v_0, v_1, ..., v_n are possible values of "param_name" parameter.
-    In case when "param_name" is a dataclass object there is a way to specify
-    possible values for his fields
+    The parameters names should be same as in `algorithm_cls.__init__()` method.
+    In case when "param_name" parameter is a dataclass object there is a way to specify settings
+    to try for his fields using marker ":"
 
-        {
-            "param_name": {
-                "field_name_0": [x0, x1, ..., x_k],
-                "field_name_1": [y_0, y_1, ..., y_m]
-            }
+        param_settings = {
+            "param_name:field_a": [10, 20],
+            "param_name:field_b:x": [0.1, 0.2],
         }
 
+    In the example above the `param_name` and "param_name:field_b" parameters are dataclasses.
     This rule is applied recursively.
+
+    The algorithm works as follow: let we have the following `param_settings`
+
+        param_settings = {
+            "param_name_0" : [0.2, 0.4, 0.6],
+            "param_name_1:x": [-1, -2, -3],
+            "param_name_2": [True, False],
+        }
+
+    First of all, algorithm finds the best value for parameter "param_name_0". 
+    Further, taking into account the found value, the best value for the "param_name_1:x" parameter
+    is sought. After that, taking into account the found values for "param_name_0" and "param_name_1:x"
+    parameters, the best value for the "param_name_2" is sought.
     """
 
     def __init__(
@@ -62,7 +74,8 @@ class HyperparameterTuner:
         """
         :param algorithm_cls: Class of algorithm.
         :param init_params: Initial set of parameters used to create algorithm.
-        :param param_settings:
+        :param param_settings: Dictionary with parameters names as keys and list of
+            parameter settings to try as values.
         :param calibration_dataset: Dataset used to collect statistics for algorithm.
         :param validation_fn: Validation function used to validated model.
         """

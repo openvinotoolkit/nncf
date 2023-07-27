@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 import operator
 import sys
 from dataclasses import dataclass
@@ -34,7 +35,6 @@ from nncf.quantization.algorithms.accuracy_control.rank_functions import create_
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
-from nncf.quantization.algorithms.hyperparameter_tuner.params_transformation import create_params
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -576,52 +576,58 @@ class QuantizationAccuracyRestorer:
         """
         Returns param settings for post-training quantization algorithm.
         """
+        min_param_settings = [
+            StatisticsCollectorParameters(
+                statistics_type=StatisticsType.MIN,
+                aggregator_type=AggregatorType.MIN,
+            ),
+            StatisticsCollectorParameters(
+                statistics_type=StatisticsType.QUANTILE,
+                aggregator_type=AggregatorType.MEAN,
+                quantile_outlier_prob=10e-4,
+            ),
+            StatisticsCollectorParameters(
+                statistics_type=StatisticsType.QUANTILE,
+                aggregator_type=AggregatorType.MEAN,
+                quantile_outlier_prob=10e-5,
+            ),
+        ]
+        max_param_settings = [
+            StatisticsCollectorParameters(
+                statistics_type=StatisticsType.MAX,
+                aggregator_type=AggregatorType.MAX,
+            ),
+            StatisticsCollectorParameters(
+                statistics_type=StatisticsType.QUANTILE,
+                aggregator_type=AggregatorType.MEAN,
+                quantile_outlier_prob=10e-4,
+            ),
+            StatisticsCollectorParameters(
+                statistics_type=StatisticsType.QUANTILE,
+                aggregator_type=AggregatorType.MEAN,
+                quantile_outlier_prob=10e-5,
+            ),
+        ]
+
         param_settings = {
-            "preset": [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
-            "fast_bias_correction": [True, False],
-            "advanced_parameters": {
-                "weights_range_estimator_params": [
-                    RangeEstimatorParameters(
-                        min=StatisticsCollectorParameters(statistics_type=StatisticsType.MIN),
-                        max=StatisticsCollectorParameters(statistics_type=StatisticsType.MAX),
-                    )
-                ],
-                "activations_range_estimator_params": create_params(
-                    RangeEstimatorParameters,
-                    min=[
-                        StatisticsCollectorParameters(
-                            statistics_type=StatisticsType.MIN,
-                            aggregator_type=AggregatorType.MIN,
-                        ),
-                        StatisticsCollectorParameters(
-                            statistics_type=StatisticsType.QUANTILE,
-                            aggregator_type=AggregatorType.MEAN,
-                            quantile_outlier_prob=10e-4,
-                        ),
-                        StatisticsCollectorParameters(
-                            statistics_type=StatisticsType.QUANTILE,
-                            aggregator_type=AggregatorType.MEAN,
-                            quantile_outlier_prob=10e-5,
-                        ),
-                    ],
-                    max=[
-                        StatisticsCollectorParameters(
-                            statistics_type=StatisticsType.MAX,
-                            aggregator_type=AggregatorType.MAX,
-                        ),
-                        StatisticsCollectorParameters(
-                            statistics_type=StatisticsType.QUANTILE,
-                            aggregator_type=AggregatorType.MEAN,
-                            quantile_outlier_prob=10e-4,
-                        ),
-                        StatisticsCollectorParameters(
-                            statistics_type=StatisticsType.QUANTILE,
-                            aggregator_type=AggregatorType.MEAN,
-                            quantile_outlier_prob=10e-5,
-                        ),
-                    ],
-                ),
-            },
+            "preset": [
+                QuantizationPreset.PERFORMANCE,
+                QuantizationPreset.MIXED
+            ],
+            "fast_bias_correction": [
+                True,
+                False
+            ],
+            "advanced_parameters:weights_range_estimator_params": [
+                RangeEstimatorParameters(
+                    min=StatisticsCollectorParameters(statistics_type=StatisticsType.MIN),
+                    max=StatisticsCollectorParameters(statistics_type=StatisticsType.MAX),
+                )
+            ],
+            "advanced_parameters:activations_range_estimator_params": [
+                RangeEstimatorParameters(min=min_v, max=max_v)
+                for min_v, max_v in itertools.product(min_param_settings, max_param_settings)
+            ],
         }
 
         return param_settings

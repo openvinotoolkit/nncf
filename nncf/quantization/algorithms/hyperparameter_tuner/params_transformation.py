@@ -162,26 +162,3 @@ def _prepare_transformations_recursively(param_name: str, values: Union[List[Any
     else:
         ValueError(f"Unexpected type for {param_name} parameter: {type(values)} is given but dict or list are expected")
     return transformations
-
-
-def dict_product(kwargs):
-    """
-    Returns the cartesian product of input keyword arguments.
-    Each argument should be a list.
-
-    Creates dict from pairs `zip(kwargs.keys(), elements)` for
-    each `elements` from cartesian product
-
-        kwargs[k1] x kwargs[k2] x .. x kwargs[kn],
-
-    where k1, k2, ..., kn from `kwargs.keys()`.
-
-    :return: A cartesian product of input keyword arguments.
-    """
-    names = kwargs.keys()
-    cartesian_product = [dict(zip(names, values)) for values in itertools.product(*kwargs.values())]
-    return cartesian_product
-
-
-def create_params(cls, **kwargs):
-    return [cls(**params) for params in dict_product(kwargs)]
