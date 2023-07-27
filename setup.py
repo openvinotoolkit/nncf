@@ -125,7 +125,11 @@ INSTALL_REQUIRES = [
 ]
 
 
-TF_EXTRAS = ["tensorflow~=2.12.0", "protobuf<4"]
+TF_EXTRAS = [
+    "tensorflow~=2.11.1",
+    # This is required for support of TF 2.8.4 which needs protobuf<=3.19.6
+    "tensorflow-metadata<=1.13.0",
+]
 
 TORCH_EXTRAS = [
     "torch>=1.13.0,<2.1;python_version < '3.11'",
