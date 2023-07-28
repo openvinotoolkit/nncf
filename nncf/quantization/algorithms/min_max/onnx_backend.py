@@ -92,15 +92,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
     ):
+        tensor_type = np.int8 if np.any(parameters.input_low < 0) else np.uint8
         if target_point.is_weight_target_point():
             tensor_type = np.int8  # The weight is restricted to have only signed range
-            if quantizer_config.signedness_to_force is False:
-                raise ValueError(
-                    "The HW expects to have signed quantization of weights, "
-                    "while the quantizer configuration for weights contains signedness_to_force=False."
-                )
-        else:
-            tensor_type = np.int8 if np.any(parameters.input_low < 0) else np.uint8
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
