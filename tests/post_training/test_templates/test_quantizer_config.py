@@ -106,10 +106,9 @@ class TemplateTestQuantizerConfig:
     @pytest.mark.parametrize("preset", [QuantizationPreset.MIXED, QuantizationPreset.PERFORMANCE])
     @pytest.mark.parametrize("weight_bits", [8])
     @pytest.mark.parametrize("activation_bits", [8])
-    @pytest.mark.parametrize("signed_weights", [None])
-    @pytest.mark.parametrize("signed_activations", [None])
-    # TODO(kshpv): add signed_activations and signed_weights which should be independent from HW config.
-    def test_quantizer_config_from_ptq_params(
+    @pytest.mark.parametrize("signed_weights", [None, True, False])
+    @pytest.mark.parametrize("signed_activations", [None, True, False])
+    def test_quantizer_config_from_ptq_params_for_CPU(
         self,
         weight_per_channel,
         activation_per_channel,
@@ -120,41 +119,45 @@ class TemplateTestQuantizerConfig:
         signed_activations,
         single_conv_nncf_graph,
     ):
-        algo = PostTrainingQuantization(
-            preset=preset,
-            advanced_parameters=AdvancedQuantizationParameters(
-                activations_quantization_params=QuantizationParameters(
-                    num_bits=activation_bits, per_channel=activation_per_channel, signedness_to_force=signed_activations
-                ),
-                weights_quantization_params=QuantizationParameters(
-                    num_bits=weight_bits, per_channel=weight_per_channel, signedness_to_force=signed_weights
-                ),
-            ),
-        )
-        min_max_algo = algo.algorithms[0]
-        min_max_algo._backend_entity = self.get_algo_backend()
-        q_setup = min_max_algo._get_quantizer_setup(
-            single_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
-        )
-        q_g_to_quantization_mode = {}
-        for q_g in QuantizerGroup:
-            q_g_to_quantization_mode[q_g] = preset.get_params_configured_by_preset(q_g)["mode"]
+        if signed_weights == False or signed_activations in [True, False]:  # Incompatible with HW config
+            with pytest.raises(RuntimeError):
+                algo = PostTrainingQuantization(
+                    preset=preset,
+                    advanced_parameters=AdvancedQuantizationParameters(
+                        activations_quantization_params=QuantizationParameters(
+                            num_bits=activation_bits,
+                            per_channel=activation_per_channel,
+                            signedness_to_force=signed_activations,
+                        ),
+                        weights_quantization_params=QuantizationParameters(
+                            num_bits=weight_bits, per_channel=weight_per_channel, signedness_to_force=signed_weights
+                        ),
+                    ),
+                )
+                min_max_algo = algo.algorithms[0]
+                min_max_algo._backend_entity = self.get_algo_backend()
+                q_setup = min_max_algo._get_quantizer_setup(
+                    single_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+                )
+                q_g_to_quantization_mode = {}
+                for q_g in QuantizerGroup:
+                    q_g_to_quantization_mode[q_g] = preset.get_params_configured_by_preset(q_g)["mode"]
 
-        assert len(q_setup.quantization_points) == 2
+                assert len(q_setup.quantization_points) == 2
 
-        for quantization_point in q_setup.quantization_points.values():
-            if quantization_point.is_weight_quantization_point():
-                assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.WEIGHTS]
-                assert quantization_point.qconfig.per_channel == weight_per_channel
-                assert quantization_point.qconfig.num_bits == weight_bits
-                if signed_weights is not None:
-                    assert quantization_point.qconfig.signedness_to_force == signed_weights
-            if quantization_point.is_activation_quantization_point():
-                assert quantization_point.qconfig.per_channel == activation_per_channel
-                assert quantization_point.qconfig.num_bits == activation_bits
-                assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.ACTIVATIONS]
-                if signed_activations is not None:
-                    assert quantization_point.qconfig.signedness_to_force == signed_activations
+                for quantization_point in q_setup.quantization_points.values():
+                    if quantization_point.is_weight_quantization_point():
+                        assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.WEIGHTS]
+                        assert quantization_point.qconfig.per_channel == weight_per_channel
+                        assert quantization_point.qconfig.num_bits == weight_bits
+                        if signed_weights is not None:
+                            assert quantization_point.qconfig.signedness_to_force == signed_weights
+                    if quantization_point.is_activation_quantization_point():
+                        assert quantization_point.qconfig.per_channel == activation_per_channel
+                        assert quantization_point.qconfig.num_bits == activation_bits
+                        assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.ACTIVATIONS]
+                        if signed_activations is not None:
+                            assert quantization_point.qconfig.signedness_to_force == signed_activations
 
     def test_depthwise_conv_default_quantizer_config(self, depthwise_conv_nncf_graph):
         algo = PostTrainingQuantization()

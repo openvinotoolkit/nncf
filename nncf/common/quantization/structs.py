@@ -208,11 +208,6 @@ class QuantizationConstraints:
                 qconf_attr_value = getattr(qconfig, attr_name)
                 if qconf_attr_value != constraint:
                     is_compatible = False
-        if qconfig.signedness_to_force is False:
-            raise ValueError(
-                "The HW expects to have signed quantization of weights, "
-                "while the quantizer configuration for weights contains signedness_to_force=False."
-            )
         return is_compatible
 
     def get_updated_constraints(self, overriding_constraints: "QuantizationConstraints") -> "QuantizationConstraints":
