@@ -21,11 +21,10 @@
 
 from collections import defaultdict
 from copy import deepcopy
-from typing import Dict, List, Optional, TypeVar
+from typing import Dict, List, TypeVar
 
 from tqdm import tqdm
 
-from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
@@ -51,7 +50,7 @@ class SmoothQuant(Algorithm):
     via the insertion of nodes with smoothing scales for weighted layers.
     """
 
-    def __init__(self, subset_size: int = 300, inplace_statistics: bool = True, alpha: Optional[int] = 0.95):
+    def __init__(self, subset_size: int = 300, inplace_statistics: bool = True, alpha: float = 0.95):
         """
         :param subset_size: Size of a subset for the statistics collection,
             default is 300.
@@ -88,13 +87,7 @@ class SmoothQuant(Algorithm):
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
             )
 
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    def apply(self, model: TModel, graph: NNCFGraph, statistic_points: StatisticPointsContainer) -> TModel:
         if self._alpha < 0:
             nncf_logger.info("Skipping SmoothQuant algorithm because alfa parameter is negative.")
             return model

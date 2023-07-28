@@ -9,11 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Dict, List, Tuple, TypeVar, Union
 
 from tqdm import tqdm
 
-from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -58,7 +57,6 @@ class FastBiasCorrection(Algorithm):
         threshold: float = FAST_BIAS_CORRECTION_THRESHOLD,
         apply_for_all_nodes: bool = False,
         inplace_statistics: bool = True,
-        backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -74,14 +72,12 @@ class FastBiasCorrection(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
-        :param backend_params: Backend specific parameters.
         """
         super().__init__()
         self.subset_size = subset_size
         self.threshold = threshold
         self.apply_for_all_nodes = apply_for_all_nodes
         self.inplace_statistics = inplace_statistics
-        self.backend_params = backend_params
         self._backend_entity = None
         self._algorithm_key = f"FBC_{hash(self)}"
 
@@ -118,13 +114,7 @@ class FastBiasCorrection(Algorithm):
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
             )
 
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    def apply(self, model: TModel, graph: NNCFGraph, statistic_points: StatisticPointsContainer) -> TModel:
         self._set_backend_entity(model)
 
         model_transformer = ModelTransformerFactory.create(model)
