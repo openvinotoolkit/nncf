@@ -127,25 +127,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_activation_quantizer_insertion_command(
-        nncf_graph: NNCFGraph,
-        target_point: TargetPoint,
-        quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
-    ) -> TransformationCommand:
-        """
-        Returns backend-specific quantizer insertion command.
-
-        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
-        :param target_point: Target location for the correction.
-        :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
-        :return: Backend-specific TransformationCommand for the quantizer insertion operation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def create_weight_quantizer_insertion_command(
+    def create_quantizer_insertion_command(
         nncf_graph: NNCFGraph,
         target_point: TargetPoint,
         quantizer_config: QuantizerConfig,

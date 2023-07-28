@@ -103,16 +103,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_activation_quantizer_insertion_command(
-        nncf_graph: NNCFGraph,
-        target_point: OVTargetPoint,
-        quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
-    ) -> OVQuantizerInsertionCommand:
-        return OVQuantizerInsertionCommand(target_point, parameters)
-
-    @staticmethod
-    def create_weight_quantizer_insertion_command(
+    def create_quantizer_insertion_command(
         nncf_graph: NNCFGraph,
         target_point: OVTargetPoint,
         quantizer_config: QuantizerConfig,

@@ -644,7 +644,7 @@ class MinMaxQuantization(Algorithm):
                 q_group = QuantizerGroup.ACTIVATIONS
                 narrow_range = get_quantizer_narrow_range(qconfig, q_group)
                 parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
-                command = self._backend_entity.create_activation_quantizer_insertion_command(
+                command = self._backend_entity.create_quantizer_insertion_command(
                     nncf_graph, quantization_target_point, qconfig, parameters
                 )
                 transformation_layout.register(command)
@@ -670,14 +670,9 @@ class MinMaxQuantization(Algorithm):
                 narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
                 statistics = tensor_collector.get_statistics()
                 parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
-                if quantization_target_point.is_weight_target_point():
-                    command = self._backend_entity.create_weight_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point, qconfig, parameters
-                    )
-                else:
-                    command = self._backend_entity.create_activation_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point, qconfig, parameters
-                    )
+                command = self._backend_entity.create_quantizer_insertion_command(
+                    nncf_graph, quantization_target_point, qconfig, parameters
+                )
 
                 transformation_layout.register(command)
 

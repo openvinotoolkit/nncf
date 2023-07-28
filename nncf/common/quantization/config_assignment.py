@@ -94,19 +94,15 @@ def assign_qconfig_lists_to_modules(
                 qconfig_list = [default_qconfig]
             elif HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconfig_list):
                 continue  # The module will not have its weights quantized
-            try:
-                local_constraints = global_weight_constraints
-                for overridden_scope, scoped_override_dict in scope_overrides_dict.items():
-                    if matches_any(node.node_name, overridden_scope):
-                        scope_constraints = QuantizationConstraints.from_config_dict(scoped_override_dict)
-                        local_constraints = local_constraints.get_updated_constraints(scope_constraints)
-                qconfig_list = local_constraints.constrain_qconfig_list(qconfig_list)
 
-            except RuntimeError as e:
-                err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
-                err_msg += "capabilities as specified in HW config type '{}'. ".format(hw_config.target_device)
-                err_msg += "First conflicting quantizer location: {}".format(str(node.node_name))
-                raise RuntimeError(err_msg) from e
+            local_constraints = global_weight_constraints
+            for overridden_scope, scoped_override_dict in scope_overrides_dict.items():
+                if matches_any(node.node_name, overridden_scope):
+                    scope_constraints = QuantizationConstraints.from_config_dict(scoped_override_dict)
+                    local_constraints = local_constraints.get_updated_constraints(scope_constraints)
+            qconfig_list = local_constraints.constrain_qconfig_list(
+                node.node_name, hw_config.target_device, qconfig_list
+            )
 
         retval[node] = qconfig_list
     return retval
