@@ -16,9 +16,12 @@ import onnx
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
+from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
+from tests.onnx.quantization.common import compare_nncf_graph
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
+from tests.shared.paths import TEST_ROOT
 
 
 def get_data_from_node(model: onnx.ModelProto, node_name: str):
@@ -38,7 +41,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         return ONNXBiasCorrectionAlgoBackend
 
     @staticmethod
-    def backend_specific_model(model, tmp_dir: str):
+    def backend_specific_model(model: torch.nn.Module, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         onnx_model = onnx.load(onnx_path)
@@ -55,6 +58,18 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
             return {"input.1": tensor}
 
         return transform_fn
+
+    @staticmethod
+    def remove_fq_from_inputs(model: onnx.Model):
+        return remove_fq_from_inputs(model)
+
+    @staticmethod
+    def get_ref_path(suffix: str) -> str:
+        return TEST_ROOT / "onnx" / "data" / "reference_graphs" / "quantization" / "subgraphs" / f"{suffix}.dot"
+
+    @staticmethod
+    def compare_nncf_graphs(model: onnx.Model, ref_path: str) -> None:
+        return compare_nncf_graph(model, ref_path)
 
     @staticmethod
     def check_bias(model: onnx.ModelProto, ref_biases: Dict):
