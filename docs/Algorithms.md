@@ -1,4 +1,4 @@
-## Implemented Compression Methods
+# Implemented Compression Methods
 
 Each compression method receives its own hyperparameters that are organized as a dictionary and basically stored in a JSON file that is deserialized when the training starts. Compression methods can be applied separately or together producing sparse, quantized, or both sparse and quantized models. For more information about the configuration, refer to the samples.
 

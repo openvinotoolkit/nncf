@@ -7,9 +7,9 @@ We provide two types of tests.
     This is a test that the CI server runs for every PR. It consists of unit tests of ONNX features of NNCF. To run the pre-commit test, please execute the following command.
 
     ```bash
-    $ pytest tests/onnx --junitxml nncf-tests.xml
+    pytest tests/onnx --junitxml nncf-tests.xml
     # (alias)
-    $ make test-onnx
+    make test-onnx
     ```
 
 2. E2E test (pytest markers: `e2e_ptq` and `e2e_eval_reference_model`)
@@ -17,7 +17,7 @@ We provide two types of tests.
     This is a test to validate ONNX PTQ API functionality for the models in ONNX Model ZOO. It compares the quantized model accuracy with the references. To run the E2E test, please execute the following command.
 
     ```bash
-    $ pytest tests/onnx -m e2e_ptq --model-dir (model_dir) --data-dir (data_dir) --output-dir (output_dir) --ckpt-dir (ckpt_dir) --anno-dir (anno_dir) --eval-size (eval_size) --ptq-size (ptq_size)
+    pytest tests/onnx -m e2e_ptq --model-dir (model_dir) --data-dir (data_dir) --output-dir (output_dir) --ckpt-dir (ckpt_dir) --anno-dir (anno_dir) --eval-size (eval_size) --ptq-size (ptq_size)
     ```
 
     You should give three arguments to run this test.
@@ -30,13 +30,11 @@ We provide two types of tests.
     6. (Optional) `--anno-dir`: Directory path for dataset annotations. Please refer to [OpenVINO accuracy checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker).
     7. (Optional) `--eval-size`: The number of samples for evaluation.
     8. (Optional) `--ptq-size`: The number of samples for calibrating quantization parameters.
-    9. (Optional) `--enable-ov-ep`: If the parameter is set then the accuracy validation of the quantized models
-             will be enabled for OpenVINOExecutionProvider.
-    10. (Optional) `--disable-cpu-ep`: If the parameter is set then the accuracy validation of the quantized models
-              will be disabled for CPUExecutionProvider. 
+    9. (Optional) `--enable-ov-ep`: If the parameter is set then the accuracy validation of the quantized models will be enabled for OpenVINOExecutionProvider.
+    10. (Optional) `--disable-cpu-ep`: If the parameter is set then the accuracy validation of the quantized models will be disabled for CPUExecutionProvider.
 
     If you want to test the reference (not quantized) model accuracy - try the following command.
 
     ```bash
-    $ pytest tests/onnx -m e2e_eval_reference_model --model-dir (model_dir) --data-dir (data_dir) --output-dir (output_dir) --ckpt-dir (ckpt_dir) --anno-dir (anno_dir) --eval-size (eval_size) --ptq-size (ptq_size)
+    pytest tests/onnx -m e2e_eval_reference_model \--model-dir (model_dir) --data-dir (data_dir) --output-dir (output_dir) --ckpt-dir (ckpt_dir) --anno-dir (anno_dir) --eval-size (eval_size) --ptq-size (ptq_size)
     ```

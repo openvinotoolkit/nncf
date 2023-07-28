@@ -45,10 +45,11 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.scopes import IgnoredScope
 
 
+# pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
-    def mat_mul_metatype(self) -> OperatorMetatype:
+    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         return om.MATMUL_METATYPES
 
     @property
@@ -60,7 +61,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.ONNXShapeMetatype]
 
     @property
-    def conv_metatype(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXConvolutionMetatype]
 
     @property
@@ -70,6 +71,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
+
+    @property
+    def add_metatypes(self) -> List[OperatorMetatype]:
+        return [om.ONNXAddLayerMetatype]
+
+    @property
+    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+        return self.conv_metatypes
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
@@ -88,32 +97,15 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_activation_quantizer_insertion_command(
+    def create_quantizer_insertion_command(
         nncf_graph: NNCFGraph,
         target_point: ONNXTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> ONNXQuantizerInsertionCommand:
-        nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
-        node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        axis = ONNXMinMaxAlgoBackend._get_quantized_channel_axis(quantizer_config.per_channel, target_point, node)
+    ):
         tensor_type = np.int8 if np.any(parameters.input_low < 0) else np.uint8
-        onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
-        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
-
-    @staticmethod
-    def create_weight_quantizer_insertion_command(
-        nncf_graph: NNCFGraph,
-        target_point: ONNXTargetPoint,
-        quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
-    ) -> ONNXQuantizerInsertionCommand:
-        if quantizer_config.signedness_to_force is False:
-            raise ValueError(
-                "The HW expects to have signed quantization of weights, "
-                "while the quantizer configuration for weights contains signedness_to_force=False."
-            )
-        tensor_type = np.int8  # The weight is restricted to have only signed range
+        if target_point.is_weight_target_point():
+            tensor_type = np.int8  # The weight is restricted to have only signed range
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         axis = ONNXMinMaxAlgoBackend._get_quantized_channel_axis(quantizer_config.per_channel, target_point, node)

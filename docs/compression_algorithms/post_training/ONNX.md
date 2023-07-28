@@ -1,9 +1,9 @@
-## Post-Training Quantization for ONNX
+# Post-Training Quantization for ONNX
 
 NNCF supports [ONNX](https://onnx.ai/) backend for the Post-Training Quantization algorithm.
 This guide contains some notes that you should consider before working with NNCF for ONNX.
 
-### Model Preparation
+## Model Preparation
 
 The majority of the ONNX models are exported from different frameworks, such as PyTorch or TensorFlow.
 
@@ -22,9 +22,10 @@ from onnx.version_converter import convert_version
 model = onnx.load_model('/path_to_model')
 converted_model = convert_version(model, target_version=13)
 ```
-# ONNX Results
 
-Below are some results obtained using [benchmarking section](../../../tests/onnx/benchmarking/README.md) for the models from [ONNX Model Zoo](https://github.com/onnx/models). 
+## ONNX Results
+
+Below are some results obtained using [benchmarking section](../../../tests/onnx/benchmarking/README.md) for the models from [ONNX Model Zoo](https://github.com/onnx/models).
 
 ### Classification
 

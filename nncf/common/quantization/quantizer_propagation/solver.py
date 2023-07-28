@@ -1069,14 +1069,9 @@ class QuantizerPropagationSolver:
                 local_constraints = local_constraints.get_updated_constraints(scope_constraints)
 
         if self._hw_config is not None:
-            try:
-                constrained_config_list = local_constraints.constrain_qconfig_list(qconf_list)
-            except RuntimeError as e:
-                err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
-                err_msg += "capabilities as specified in HW config type '{}'. ".format(self._hw_config.target_device)
-                err_msg += "First conflicting quantizer location: "
-                err_msg += nncf_node_name
-                raise RuntimeError(err_msg) from e
+            constrained_config_list = local_constraints.constrain_qconfig_list(
+                nncf_node_name, self._hw_config.target_device, qconf_list
+            )
         else:
             constrained_config_list = [local_constraints.apply_constraints_to(qconfig) for qconfig in qconf_list]
 

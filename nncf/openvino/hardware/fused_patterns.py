@@ -128,6 +128,25 @@ def create_scale_shift() -> GraphPattern:
     return pattern
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SHIFT_SCALE)
+def create_shift_scale() -> GraphPattern:
+    pattern = GraphPattern()
+    add_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
+            GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVSubtractMetatype],
+        }
+    )
+    mul_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "MULTIPLY, DIV",
+            GraphPattern.METATYPE_ATTR: [om.OVMultiplyMetatype, om.OVDivideMetatype],
+        }
+    )
+    pattern.add_edge(add_node, mul_node)
+    return pattern
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SE_BLOCK)
 def create_se_block() -> GraphPattern:
     pattern = GraphPattern()
@@ -308,27 +327,6 @@ def create_softmax() -> GraphPattern:
 # INPUT PROCESSING
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
-def create_input_shift_scale() -> GraphPattern:
-    pattern = GraphPattern()
-    model_input = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
-    )
-    add_node = pattern.add_node(
-        **{
-            GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
-            GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVSubtractMetatype],
-        }
-    )
-    multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
-    )
-
-    pattern.add_edge(model_input, add_node)
-    pattern.add_edge(add_node, multiply_node)
-    return pattern
-
-
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_CONVERT_TRANSPOSE_PROCESSING)
 def create_input_convert_transpose_processing() -> GraphPattern:
     input_convert_transpose = create_input_convert_transpose()
@@ -461,6 +459,16 @@ def create_input_scale_shift() -> GraphPattern:
     return pattern
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
+def create_input_shift_scale() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
+    shift_scale = create_shift_scale()
+
+    pattern.join_patterns(shift_scale)
+    return pattern
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_TRANSPOSE_PROCESSING)
 def create_input_transpose_processing() -> GraphPattern:
     pattern = GraphPattern()
@@ -573,6 +581,15 @@ def create_linear_arithmetic_activations() -> GraphPattern:
     linear.join_patterns(arithmetic)
     linear.join_patterns(activations)
     return linear
+
+
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC)
+def create_linear_arithmetic_activations_arithmetic() -> GraphPattern:
+    linear_arithmetic_activations = create_linear_arithmetic_activations()
+    arithmetic = arithmetic_operations()
+
+    linear_arithmetic_activations.join_patterns(arithmetic)
+    return linear_arithmetic_activations
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SQUEEZE_ACTIVATIONS)

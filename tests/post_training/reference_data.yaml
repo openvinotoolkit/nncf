@@ -27,7 +27,7 @@ timm/crossvit_9_240_backend_TORCH:
     metric_value: 0.68136
     metric_value_fp32: 0.69966
 timm/crossvit_9_240_backend_ONNX:
-    metric_value: 0.6479
+    metric_value: 0.68906
     metric_value_fp32: 0.69966
 timm/crossvit_9_240_backend_OV:
     metric_value: 0.68912
@@ -285,7 +285,7 @@ timm/swin_base_patch4_window7_224_backend_TORCH:
     metric_value: 0.78026
     metric_value_fp32: 0.81462
 timm/swin_base_patch4_window7_224_backend_ONNX:
-    metric_value: 0.81108
+    metric_value: 0.81294
     metric_value_fp32: 0.81462
 timm/swin_base_patch4_window7_224_backend_OV:
     metric_value: 0.79582

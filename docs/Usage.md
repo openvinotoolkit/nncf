@@ -6,35 +6,41 @@ The task is to prepare this model for accelerated inference by simulating the co
 The instructions below use certain "helper" functions of the NNCF which abstract away most of the framework specifics and make the integration easier in most cases.
 As an alternative, you can always use the NNCF internal objects and methods as described in the [architectural overview](./NNCFArchitecture.md).
 
-
 ## Basic usage
 
-#### Step 1: Create an NNCF configuration file
+### Step 1: Create an NNCF configuration file
 
 A JSON configuration file is used for easier setup of the parameters of compression to be applied to your model.
 See [configuration file description](./ConfigFile.md) or the sample configuration files packaged with the [example scripts](../examples) for reference.
 
-#### Step 2: Modify the training pipeline
+### Step 2: Modify the training pipeline
+
 NNCF enables compression-aware training by being integrated into the regular training pipelines.
 The framework is designed so that the modifications to your original training code are minor.
 
  1. **Add** the imports required for NNCF:
+
     ```python
     import torch
     import nncf.torch  # Important - must be imported before any other external package that depends on torch
     from nncf import NNCFConfig, create_compressed_model, load_state
     ```
+
     **NOTE (PyTorch)**: Due to the way NNCF works within the PyTorch backend, `import nncf` must be done before any other import of `torch` in your package _or_ in third-party packages that your code utilizes, otherwise the compression may be applied incompletely.
  2. Load the NNCF JSON configuration file that you prepared during Step 1:
+
     ```python
     nncf_config = NNCFConfig.from_json("nncf_config.json")  # Specify a path to your own NNCF configuration file in place of "nncf_config.json"
     ```
+
  3. (Optional) For certain algorithms such as quantization it is highly recommended to **initialize the algorithm** by
  passing training data via `nncf_config` prior to starting the compression fine-tuning properly:
+
     ```python
     from nncf import register_default_init_args
     nncf_config = register_default_init_args(nncf_config, train_loader, criterion=criterion)
     ```
+
     Training data loaders should be attached to the NNCFConfig object as part of a library-defined structure. `register_default_init_args` is a helper
     method that registers the necessary structures for all available initializations (currently quantizer range and precision initialization) by taking
     data loader, criterion and criterion function (for sophisticated calculation of loss different from direct call of the
@@ -45,47 +51,57 @@ The framework is designed so that the modifications to your original training co
     `nncf.common.initialization.dataloader.NNCFDataLoader` interface to return a tuple of (_single model input_ , _the rest of the model inputs as a kwargs dict_).
 
  4. Right after you create an instance of the original model and load its weights, **wrap the model** by making the following call
+
     ```python
     compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
     ```
+
     The `create_compressed_model` function parses the loaded configuration file and returns two objects. `compression_ctrl` is a "controller" object that can be used during compressed model training to adjust certain parameters of the compression algorithm (according to a scheduler, for instance), or to gather statistics related to your compression algorithm (such as the current level of sparsity in your model).
 
  5. (Optional) Wrap your model with `DataParallel` or `DistributedDataParallel` classes for multi-GPU training.
 If you use `DistributedDataParallel`, add the following call afterwards:
-   ```python
-   compression_ctrl.distributed()
-   ```
 
-   in case the compression algorithms that you use need special adjustments to function in the distributed mode.
+    ```python
+    compression_ctrl.distributed()
+    ```
 
+    in case the compression algorithms that you use need special adjustments to function in the distributed mode.
 
-6. In the **training loop**, make the following changes:
+ 6. In the **training loop**, make the following changes:
+
      - After inferring the model, take a compression loss and add it (using the `+` operator) to the common loss, for example cross-entropy loss:
+
         ```python
         compression_loss = compression_ctrl.loss()
         loss = cross_entropy_loss + compression_loss
         ```
+
      - Call the scheduler `step()` before each training iteration:
+
         ```python
         compression_ctrl.scheduler.step()
         ```
+
      - Call the scheduler `epoch_step()` before each training epoch:
+
         ```python
         compression_ctrl.scheduler.epoch_step()
         ```
 
 > **NOTE**: For a real-world example of how these changes should be introduced, take a look at the [examples](../examples) published in the NNCF repository.
 
-#### Step 3: Run the training pipeline
+### Step 3: Run the training pipeline
+
 At this point, the NNCF is fully integrated into your training pipeline.
 You can run it as usual and monitor your original model's metrics and/or compression algorithm metrics and balance model metrics quality vs. level of compression.
 
-
 Important points you should consider when training your networks with compression algorithms:
-  - Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization or sparsity
-  - It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
 
-#### Step 4: Export the compressed model
+- Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization or sparsity
+- It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
+
+### Step 4: Export the compressed model
+
 After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it. There are two ways to export a model:
 
 1. Call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX.
@@ -93,6 +109,7 @@ After the compressed model has been fine-tuned to acceptable accuracy and compre
     ```python
     compression_ctrl.export_model("./compressed_model.onnx")
     ```
+
     The exported ONNX file may contain special, non-ONNX-standard operations and layers to leverage full compressed/low-precision potential of the OpenVINO toolkit.
     In some cases it is possible to export a compressed model with ONNX standard operations only (so that it can be run using `onnxruntime`, for example) - this is the case for the 8-bit symmetric quantization and sparsity/filter pruning algorithms.
     Refer to [compression algorithm documentation](./compression_algorithms) for details.
@@ -114,6 +131,7 @@ After the compressed model has been fine-tuned to acceptable accuracy and compre
     ```
 
 ## Saving and loading compressed models
+
 The complete information about compression is defined by a compressed model and a compression state.
 The model characterizes the weights and topology of the network. The compression state - how to restore the setting of
 compression layers in the model and how to restore the compression schedule and the compression loss.
@@ -136,6 +154,7 @@ sparsity algorithm has learnt masking of 30% weights out of 51% of target rate. 
 algorithm, for example when rb-sparsity method sets final target sparsity rate for the loss.
 
 ### Saving and loading compressed models in TensorFlow
+
 ```python
 # save part
 compression_ctrl, compress_model = create_compressed_model(model, nncf_config)
@@ -172,6 +191,7 @@ string within `tf.train.Checkpoint`. There are 2 helper classes: `TFCompressionS
 ### Saving and loading compressed models in PyTorch
 
 Deprecated API
+
 ```python
 # save part
 compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
@@ -191,6 +211,7 @@ compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler_state'])
 ```
 
 New API
+
 ```python
 # save part
 compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
@@ -237,8 +258,8 @@ have the same structure with regard to PyTorch module and parameters as it was w
 In practice this means that you should use the same compression algorithms (i.e. the same NNCF configuration file) when
 loading a compressed model checkpoint.
 
-
 ## Exploring the compressed model
+
 After a `create_compressed_model` call, the NNCF log directory will contain visualizations of internal representations for the original, uncompressed model (`original_graph.dot`) and for the model with the compression algorithms applied (`compressed_graph.dot`).
 These graphs form the basis for NNCF analyses of your model.
 Below is the example of a LeNet network's `original_graph.dot` visualization:
@@ -259,10 +280,10 @@ For instance, below is the same LeNet INT8 model as above, but with `"ignored_sc
 
 Notice that all RELU operation outputs and the second convolution's weights are no longer quantized.
 
-
 ## Advanced usage
 
 ### Compression of custom modules
+
 With no target model code modifications, NNCF only supports native PyTorch modules with respect to trainable parameter (weight) compressed, such as `torch.nn.Conv2d`
 If your model contains a custom, non-PyTorch standard module with trainable weights that should be compressed, you can register it using the `@nncf.register_module` decorator:
 
@@ -281,9 +302,11 @@ If registered module should be ignored by specific algorithms use `ignored_algor
 In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize, sparsify or prune the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation.
 
 ### Accuracy-Aware model training
+
 NNCF has the capability to apply the model compression algorithms while satisfying the user-defined accuracy constraints. This is done by executing an internal custom accuracy-aware training loop, which also helps to automate away some of the manual hyperparameter search related to model training such as setting the total number of epochs, the target compression rate for the model, etc. There are two supported training loops. The first one is called [Early Exit Training](./accuracy_aware_model_training/EarlyExitTraining.md), which aims to finish fine-tuning when the accuracy drop criterion is reached. The second one is more sophisticated. It is targeted for the automated discovery of the compression rate for the model given that it satisfies the user-specified maximal tolerable accuracy drop due to compression. Its name is [Adaptive Compression Level Training](./accuracy_aware_model_training/AdaptiveCompressionTraining.md). Both training loops could be run with either PyTorch or TensorFlow backend with the same user interface(except for the TF case where the Keras API is used for training).
 
 The following function is required to create the accuracy-aware training loop. One has to pass the `NNCFConfig` object and the compression controller (that is returned upon compressed model creation, see above).
+
 ```python
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl, uncompressed_model_accuracy)
@@ -344,14 +367,17 @@ def dump_checkpoint_fn(model, compression_controller, accuracy_aware_runner, sav
 ```
 
 Once the above functions are defined, you could pass them to the `run` method of the earlier created training loop :
+
 ```python
 
-model = training_loop.run(model,
-                          train_epoch_fn=train_epoch_fn,
-                          validate_fn=validate_fn,
-                          configure_optimizers_fn=configure_optimizers_fn,
-                          dump_checkpoint_fn=dump_checkpoint_fn)
+model = training_loop.run(
+    model,
+    train_epoch_fn=train_epoch_fn,
+    validate_fn=validate_fn,
+    configure_optimizers_fn=configure_optimizers_fn,
+    dump_checkpoint_fn=dump_checkpoint_fn)
 ```
+
 The above call executes the accuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md).
 
 See a PyTorch [example](../../examples/torch/classification/main.py) for **Quantization** + **Filter Pruning** Adaptive Compression scenario on CIFAR10 and ResNet18 [config](../../examples/torch/classification/configs/pruning/resnet18_cifar10_accuracy_aware.json).

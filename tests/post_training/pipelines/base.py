@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import time
 from abc import ABC
 from abc import abstractmethod
@@ -212,6 +213,12 @@ class BaseTestPipeline(ABC):
         Run quantization of the model and collect time and memory usage information.
         """
         print("Quantization...")
+
+        if self.backend in [BackendType.TORCH, BackendType.OLD_TORCH]:
+            cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
+            if cpu_threads_num is not None:
+                torch.set_num_threads(int(cpu_threads_num))
+
         start_time = time.perf_counter()
         self.run_info.quant_memory_usage = memory_usage(self._quantize, max_usage=True)
         self.run_info.time_quantization = time.perf_counter() - start_time
