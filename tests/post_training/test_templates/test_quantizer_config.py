@@ -146,7 +146,7 @@ class TemplateTestQuantizerConfig:
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,
         )
-        if signed_weights == False or signed_activations in [True, False]:  # Incompatible with HW CPU config
+        if signed_weights is False or signed_activations in [True, False]:  # Incompatible with HW CPU config
             with pytest.raises(RuntimeError):
                 q_setup = min_max_algo._get_quantizer_setup(
                     nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
