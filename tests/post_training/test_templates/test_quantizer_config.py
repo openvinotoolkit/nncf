@@ -149,8 +149,7 @@ class TemplateTestQuantizerConfig:
         if signed_weights is False or signed_activations in [True, False]:  # Incompatible with HW CPU config
             with pytest.raises(
                 ValueError,
-                match=".*?Quantization parameter constraints specified in NNCF config \
-                are incompatible with HW capabilities as specified in HW config type.*?",
+                match=".*?Quantization parameter constraints specified in NNCF config are incompatible.*?",
             ):
                 q_setup = min_max_algo._get_quantizer_setup(
                     nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
