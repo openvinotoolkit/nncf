@@ -4,4 +4,4 @@ tensorflow_datasets==4.2.0
 tensorflow_hub
 tensorflow_addons~=0.19.0
 opencv-python
-pycocotools==2.0.4
+pycocotools==2.0.6

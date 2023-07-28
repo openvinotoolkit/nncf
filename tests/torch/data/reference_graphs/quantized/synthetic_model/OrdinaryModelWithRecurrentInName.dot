@@ -1,0 +1,13 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
+"2 OrdinaryModelWithRecurrentInName/__getitem___0" [id=2, type=__getitem__];
+"3 OrdinaryModelWithRecurrentInName/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=3, type=symmetric_quantize];
+"4 OrdinaryModelWithRecurrentInName/NNCFConv2d[conv]/conv2d_0" [id=4, type=conv2d];
+"5 /nncf_model_output_0" [id=5, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "2 OrdinaryModelWithRecurrentInName/__getitem___0";
+"2 OrdinaryModelWithRecurrentInName/__getitem___0" -> "4 OrdinaryModelWithRecurrentInName/NNCFConv2d[conv]/conv2d_0";
+"3 OrdinaryModelWithRecurrentInName/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "4 OrdinaryModelWithRecurrentInName/NNCFConv2d[conv]/conv2d_0";
+"4 OrdinaryModelWithRecurrentInName/NNCFConv2d[conv]/conv2d_0" -> "5 /nncf_model_output_0";
+}

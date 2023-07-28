@@ -64,8 +64,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     }
 
     @property
-    def mat_mul_metatype(self) -> OperatorMetatype:
-        return om.PTModuleLinearMetatype
+    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
+        return [om.PTModuleLinearMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -76,7 +76,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def conv_metatype(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
 
     @property
@@ -94,6 +94,14 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
+
+    @property
+    def add_metatypes(self) -> List[OperatorMetatype]:
+        return [om.PTAddMetatype]
+
+    @property
+    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+        return self.conv_metatypes
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:

@@ -16,7 +16,9 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.command_creation import CommandCreator
 from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_available_backends
 from nncf.common.utils.backend import get_backend
+from nncf.common.utils.backend import is_openvino_compiled_model
 
 TModel = TypeVar("TModel")
 
@@ -77,9 +79,15 @@ class EngineFactory:
         """
         Factory method to create backend-specific Engine instance based on the input model.
 
-        :param model: backend-specific model instance
-        :return: backend-specific Engine instance
+        :param model: backend-specific model instance.
+        :return: backend-specific Engine instance.
         """
+        available_backends = get_available_backends()
+        if BackendType.OPENVINO in available_backends and is_openvino_compiled_model(model):
+            from nncf.openvino.engine import OVCompiledModelEngine
+
+            return OVCompiledModelEngine(model)
+
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.onnx.engine import ONNXEngine

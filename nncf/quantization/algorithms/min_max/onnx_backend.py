@@ -43,10 +43,11 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.scopes import IgnoredScope
 
 
+# pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
-    def mat_mul_metatype(self) -> OperatorMetatype:
+    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         return om.MATMUL_METATYPES
 
     @property
@@ -58,7 +59,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.ONNXShapeMetatype]
 
     @property
-    def conv_metatype(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXConvolutionMetatype]
 
     @property
@@ -68,6 +69,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
+
+    @property
+    def add_metatypes(self) -> List[OperatorMetatype]:
+        return [om.ONNXAddLayerMetatype]
+
+    @property
+    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+        return self.conv_metatypes
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:

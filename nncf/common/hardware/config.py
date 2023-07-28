@@ -39,6 +39,7 @@ HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
     "CPU": HWConfigType.CPU.value,
     "VPU": HWConfigType.VPU.value,
     "GPU": HWConfigType.GPU.value,
+    "CPU_SPR": HWConfigType.CPU.value,
 }
 
 
@@ -55,8 +56,6 @@ def get_hw_config_type(target_device: str) -> Optional[HWConfigType]:
     """
     if target_device == "TRIAL":
         return None
-    if target_device == "CPU_SPR":
-        raise ValueError(f"{target_device} target device is not supported yet")
     return HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
 
