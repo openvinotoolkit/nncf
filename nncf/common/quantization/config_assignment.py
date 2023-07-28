@@ -106,7 +106,7 @@ def assign_qconfig_lists_to_modules(
                 err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
                 err_msg += "capabilities as specified in HW config type '{}'. ".format(hw_config.target_device)
                 err_msg += "First conflicting quantizer location: {}".format(str(node.node_name))
-                raise RuntimeError(err_msg) from e
+                raise ValueError(err_msg) from e
 
         retval[node] = qconfig_list
     return retval

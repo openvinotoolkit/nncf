@@ -1076,7 +1076,7 @@ class QuantizerPropagationSolver:
                 err_msg += "capabilities as specified in HW config type '{}'. ".format(self._hw_config.target_device)
                 err_msg += "First conflicting quantizer location: "
                 err_msg += nncf_node_name
-                raise RuntimeError(err_msg) from e
+                raise ValueError(err_msg) from e
         else:
             constrained_config_list = [local_constraints.apply_constraints_to(qconfig) for qconfig in qconf_list]
 
