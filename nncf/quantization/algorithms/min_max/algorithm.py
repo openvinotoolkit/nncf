@@ -261,13 +261,21 @@ class MinMaxQuantization(Algorithm):
         return RangeEstimatorParameters(min_statistic_collector, max_statistic_collector)
 
     def _get_stat_collector(
-        self, nncf_graph: NNCFGraph, target_point: TargetPoint, quantizer_config: QuantizerConfig
+        self,
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        num_samples: int,
     ) -> TensorStatisticCollectorBase:
         """
-        Creates and returns statistic collector instance based on the quantizer's configuration.
+        Creates and returns a statistic collector based on the quantizer's configuration.
 
-        :param quantizer_config: QuantizerConfig instance for the current layer.
-        :return: One of the TensorStatisticCollectorBase instances
+        :param nncf_graph: NNCFGraph instance.
+        :param target_point: Target point indicates where statistics should be collected.
+        :param quantizer_config: Configuration of a quantizer layer,
+        defining the configuration of created statistic collector.
+        :param num_samples: Number of samples to collect from the 'target_point'.
+        :return: Statistic Collector.
         """
         range_estimator_params = self._get_range_estimator_parameters(target_point, quantizer_config)
 
@@ -277,7 +285,7 @@ class MinMaxQuantization(Algorithm):
             target_point,
             quantizer_config,
             inplace=self._inplace_statistics,
-            num_samples=self._subset_size,
+            num_samples=num_samples,
         )
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
@@ -687,7 +695,11 @@ class MinMaxQuantization(Algorithm):
                 f"Adding target point {quantization_target_point.target_node_name}"
                 f" with type {quantization_target_point.type} for statistics collection"
             )
-            stat_collector = self._get_stat_collector(nncf_graph, quantization_target_point, qconfig)
+            num_samples = self._subset_size
+            if quantization_target_point.is_weight_target_point():
+                # Weight statistics is constant, so only one collection is enough.
+                num_samples = 1
+            stat_collector = self._get_stat_collector(nncf_graph, quantization_target_point, qconfig, num_samples)
             output.add_statistic_point(
                 StatisticPoint(
                     target_point=quantization_target_point,
