@@ -318,7 +318,9 @@ def test_quantizer_parameters_export(tmp_path: Path):
     statistic_points = min_max_algo.get_statistic_points(nncf_network, nncf_network.nncf.get_graph())
     statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(model, nncf_network.nncf.get_graph())
-    torch_quantized_model = min_max_algo.apply(model, statistics_aggregator.statistic_points)
+    torch_quantized_model = min_max_algo.apply(
+        nncf_network, nncf_network.nncf.get_graph(), statistics_aggregator.statistic_points
+    )
 
     path = str(tmp_path / "torch_ptq_model.onnx")
     torch.onnx.export(

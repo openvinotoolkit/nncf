@@ -141,7 +141,7 @@ class TestPTQParams(TemplateTestPTQParams):
             },
             "test_range_estimator_per_channel": {
                 "model": depthwise_model,
-                "nncf_graph": depthwise_model.nncf.graph,
+                "nncf_graph": depthwise_model.nncf.get_graph(),
                 "stat_points_num": 2,
             },
             "test_quantize_outputs": {
