@@ -19,6 +19,7 @@ from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.algorithm import Algorithm
 
@@ -247,7 +248,10 @@ class HyperparameterTuner:
         self._set_backend_entity(model)
 
         combinations = create_combinations(self._param_settings)
-        self._initialize_algorithms(model, combinations)
+
+        nncf_logger.info("Start initialization of algorithms")
+        with timer():
+            self._initialize_algorithms(model, combinations)
 
         combination_score_fn = functools.partial(
             self._calculate_combination_score,
@@ -255,7 +259,10 @@ class HyperparameterTuner:
             dataset=validation_dataset,
             subset_indices=subset_indices,
         )
-        best_combination_key = find_best_combination(combinations, combination_score_fn, self._param_settings)
+
+        nncf_logger.info("Start search best combination of parameters")
+        with timer():
+            best_combination_key = find_best_combination(combinations, combination_score_fn, self._param_settings)
 
         algorithm = self._algorithms[trim_zeros(best_combination_key)]
         result_model = algorithm.apply(model, self._statistic_points)
@@ -301,7 +308,7 @@ class HyperparameterTuner:
         self._statistic_points = stats_aggregator.statistic_points
 
     def _calculate_combination_score(
-        self, initial_model: TModel, dataset: Dataset, subset_indices: List[int], combination_key: CombinationKey
+        self, combination_key: CombinationKey, initial_model: TModel, dataset: Dataset, subset_indices: List[int]
     ) -> float:
         """
         :param initial_model:
@@ -320,7 +327,7 @@ class HyperparameterTuner:
         model = algorithm.apply(initial_model, self._statistic_points)
         model_for_inference = self._backend_entity.prepare_for_inference(model)
         validation_subset = dataset.get_data(subset_indices)
-        (score,) = self._validation_fn(model_for_inference, validation_subset)
+        score, _ = self._validation_fn(model_for_inference, validation_subset)
         self._calculated_scores[trimed_combination_key] = score
 
         return score

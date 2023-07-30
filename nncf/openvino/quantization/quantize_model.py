@@ -204,7 +204,9 @@ def native_quantize_with_accuracy_control_impl(
         tune_hyperparams=advanced_accuracy_restorer_parameters.tune_hyperparams,
         init_params=init_params,
     )
-    quantized_model = accuracy_aware_loop.apply(model, quantized_model, validation_dataset, validation_fn)
+    quantized_model = accuracy_aware_loop.apply(
+        model, quantized_model, validation_dataset, calibration_dataset, validation_fn
+    )
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 

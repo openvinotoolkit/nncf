@@ -610,14 +610,8 @@ class QuantizationAccuracyRestorer:
         ]
 
         param_settings = {
-            "preset": [
-                QuantizationPreset.PERFORMANCE,
-                QuantizationPreset.MIXED
-            ],
-            "fast_bias_correction": [
-                True,
-                False
-            ],
+            "preset": [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
+            "fast_bias_correction": [True, False],
             "advanced_parameters:weights_range_estimator_params": [
                 RangeEstimatorParameters(
                     min=StatisticsCollectorParameters(statistics_type=StatisticsType.MIN),
