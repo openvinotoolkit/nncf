@@ -32,12 +32,22 @@ Combination = Dict[str, Any]
 
 def create_combinations(param_settings: Dict[str, List[Any]]) -> Dict[CombinationKey, Combination]:
     """
-    :param param_settings:
-    :return:
+    Creates combination of parameters.
+
+    To create key of combination (CombinationKey) used the following approach
+
+    -- All keys in `param_settings` are numbered used zero-based indices i.e.
+    0 - for first key, 1 - for second and so on.
+    -- If `combination_key[i]` is `0` it means that value of parameter i was not changed.
+    In other words, `0` means that initial value (from `init_params`) of parameter is used.
+    -- Let index i corresponds `param_name` key from `param_settings`. If `combination_key[i]`
+    is not `0`, then `combination_key[i]` is a position of value in `param_settings[param_name]`
+    that was included to combination.
+
+    :param param_settings: Dictionary with parameters names as keys and list of
+        parameter settings to try as values.
+    :return: Created combinations.
     """
-
-    # TODO:Describe how build combination key
-
     simple_changes = [[{}, *[{param_name: v} for v in values]] for param_name, values in param_settings.items()]
 
     combinations = {}
@@ -53,15 +63,24 @@ def create_combinations(param_settings: Dict[str, List[Any]]) -> Dict[Combinatio
     return combinations
 
 
-def is_dataclass_instance(obj: Any):
+def is_dataclass_instance(obj: Any) -> bool:
+    """
+    Returns `True` if object is a dataclass instance, `False` otherwise.
+
+    :param obj: Object to check.
+    :return: `True` if object is a dataclass instance, `False` otherwise.
+    """
     return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
 
 
 def apply_combination(init_params: Dict[str, Any], combination: Combination) -> Dict[str, Any]:
     """
-    :param init_params:
-    :param combination:
-    :return:
+    Applies combination of parameters to initial parameters.
+
+    :param init_params: Initial set of parameters.
+    :param combination: Combination of parameters.
+    :return: Returns `init_params` where some values of parameters were changed according to
+        provided combination.
     """
     DELIMITER = ":"
     params = copy.deepcopy(init_params)
@@ -95,8 +114,10 @@ def trim_zeros(t: Tuple[int, ...]) -> Tuple[int, ...]:
 
 def filter_combinations(combinations: Dict[CombinationKey, Combination]) -> Dict[TrimedCombinationKey, Combination]:
     """
-    :param combinations:
-    :return:
+    Returns only combinations that produces unique algorithm.
+
+    :param combinations: Combinations.
+    :return: Filtered combinations.
     """
     filtered = {}
     for combination_key, combination in combinations.items():
@@ -109,9 +130,11 @@ def filter_combinations(combinations: Dict[CombinationKey, Combination]) -> Dict
 
 def print_combination_and_score(title: str, combination: Combination, combination_score: float) -> None:
     """
-    :param title:
-    :param combination:
-    :param combination_score:
+    Prints combination and score.
+
+    :param title: Title.
+    :param combination: Combination to print.
+    :param combination_score: Score of combination.
     """
     if not combination:
         message = "Parameters were not changed"
@@ -129,10 +152,13 @@ def find_best_combination(
     param_settings: Dict[str, List[Any]],
 ) -> CombinationKey:
     """
-    :param combinations:
-    :param combination_score_func:
-    :param param_settings:
-    :return:
+    Finds best combination.
+
+    :param combinations: Combinations.
+    :param combination_score_func: Combination score function.
+    :param param_settings: Dictionary with parameters names as keys and list of
+        parameter settings to try as values.
+    :return: Best combination key.
     """
     best_combination_key = ()
     best_combination_score = None
@@ -251,7 +277,7 @@ class HyperparameterTuner:
 
         nncf_logger.info("Start initialization of algorithms")
         with timer():
-            self._initialize_algorithms(model, combinations)
+            self._prepare_algorithms(model, combinations)
 
         combination_score_fn = functools.partial(
             self._calculate_combination_score,
@@ -285,10 +311,13 @@ class HyperparameterTuner:
         else:
             raise RuntimeError(f"Cannot set backend-specific entity because {model_backend} is not supported!")
 
-    def _initialize_algorithms(self, initial_model: TModel, combinations: Dict[CombinationKey, Combination]) -> None:
+    def _prepare_algorithms(self, initial_model: TModel, combinations: Dict[CombinationKey, Combination]) -> None:
         """
-        :param initial_model:
-        :param combinations:
+        Creates algorithm for each combination of parameters. Collects statistics for
+        created algorithms.
+
+        :param initial_model: Input model used to collect statistics for algorithms.
+        :param combinations: Combinations of parameters.
         """
         # Some combinations in `combinations` produce the same algorithm.
         # More formally, two combination produce the same algorithm if their
@@ -311,11 +340,14 @@ class HyperparameterTuner:
         self, combination_key: CombinationKey, initial_model: TModel, dataset: Dataset, subset_indices: List[int]
     ) -> float:
         """
-        :param initial_model:
-        :param dataset:
-        :param subset_indices:
-        :param combination_key:
-        :return:
+        Calculates score for provided combination.
+
+        :param combination_key: Combination key.
+        :param initial_model: Input model.
+        :param dataset: Dataset used to select data items for validation.
+        :param subset_indices: Zero-based indices of data items that should be selected
+            from the dataset and used to validate model.
+        :return: Calculated score.
         """
         trimed_combination_key = trim_zeros(combination_key)
 
