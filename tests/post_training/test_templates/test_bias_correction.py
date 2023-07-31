@@ -53,7 +53,7 @@ class TemplateTestBCAlgorithm:
         """
 
     @staticmethod
-    def fn_to_type(tensor):
+    def fn_to_type(tensor) -> TTensor:
         return tensor
 
     @staticmethod
