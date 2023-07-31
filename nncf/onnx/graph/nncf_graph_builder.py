@@ -71,7 +71,9 @@ class ONNXLayerAttributes(BaseLayerAttributes):
 
 def _get_tensor_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> Optional[str]:
     """
-    Returns an edge name associated with a weight of a node laying on  an input port_id.
+    Returns an edge name on which a weight tensor is consumed by the node onto the input port_id.
+
+    Checks whether there is a parent node onto port id. If there is no parent node, it should have a
 
     Checks whether a node has a tensor on input port_id.
     If does then it is a weight and returns corresponding edge name.
@@ -91,23 +93,21 @@ def _get_tensor_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: 
     :param port_id: Port id on which a weight edge is seeking.
     :return: Edge name associated with a weight.
     """
-    WEIGHT_CONSUMING_TYPES = (
-        ONNXConstantMetatype.get_all_aliases()
-        + ONNXIdentityMetatype.get_all_aliases()
-        + ONNXReshapeMetatype.get_all_aliases()
+    INPUT_WEIGHT_CONSUMING_TYPES = (
+        ONNXIdentityMetatype.get_all_aliases()
         + ONNXTransposeMetatype.get_all_aliases()
         + ONNXQuantizeLinearMetatype.get_all_aliases()
-    )
-    PROPAGATING_ONLY_TYPES = ONNXDequantizeLinearMetatype.get_all_aliases()
-
-    if node.op_type not in PROPAGATING_ONLY_TYPES and onnx_graph.has_tensor(node.input[port_id]):
-        if node.op_type in ONNXReshapeMetatype.get_all_aliases():
-            # Only Reshape nodes returns output edge.
-            return node.output[0]
-        return node.input[port_id]
+    )  # Have weight tensor as input on 0 index port.
+    OUTPUT_WEIGHT_TYPES = ONNXConstantMetatype.get_all_aliases() + ONNXReshapeMetatype.get_all_aliases()
+    PROPAGATING_ONLY_TYPES = ONNXDequantizeLinearMetatype.get_all_aliases()  # Can not have weight tensor
 
     parent = onnx_graph.get_parent(node, port_id)
-    if parent and parent.op_type in (WEIGHT_CONSUMING_TYPES + PROPAGATING_ONLY_TYPES):
+    if not parent:
+        if node.op_type in OUTPUT_WEIGHT_TYPES:
+            return node.output[0]
+        if onnx_graph.has_tensor(node.input[port_id]):
+            return node.input[port_id]
+    elif parent.op_type in (INPUT_WEIGHT_CONSUMING_TYPES + OUTPUT_WEIGHT_TYPES + PROPAGATING_ONLY_TYPES):
         return _get_tensor_edge_name(onnx_graph, parent, 0)
     return None
 

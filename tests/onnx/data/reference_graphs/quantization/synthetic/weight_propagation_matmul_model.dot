@@ -1,0 +1,23 @@
+strict digraph  {
+"0 QuantizeLinear_1" [id=0, type=QuantizeLinear];
+"1 DequantizeLinear_1" [id=1, type=DequantizeLinear];
+"2 Identity_1" [id=2, type=Identity];
+"3 Identity_2" [id=3, type=Identity];
+"4 QuantizeLinear_X_1" [id=4, type=QuantizeLinear];
+"5 DequantizeLinear_X_1" [id=5, type=DequantizeLinear];
+"6 QuantizeLinear_i_2_1" [id=6, type=QuantizeLinear];
+"7 DequantizeLinear_i_2_1" [id=7, type=DequantizeLinear];
+"8 MatMul" [id=8, type=MatMul];
+"9 nncf_model_input_0" [id=9, type=nncf_model_input];
+"10 nncf_model_output_0" [id=10, type=nncf_model_output];
+"0 QuantizeLinear_1" -> "1 DequantizeLinear_1"  [label="[10, 5]", style=dashed];
+"1 DequantizeLinear_1" -> "2 Identity_1"  [label="[10, 5]", style=solid];
+"2 Identity_1" -> "3 Identity_2"  [label="[10, 5]", style=solid];
+"3 Identity_2" -> "6 QuantizeLinear_i_2_1"  [label="[10, 5]", style=solid];
+"4 QuantizeLinear_X_1" -> "5 DequantizeLinear_X_1"  [label="[1, 10]", style=dashed];
+"5 DequantizeLinear_X_1" -> "8 MatMul"  [label="[1, 10]", style=solid];
+"6 QuantizeLinear_i_2_1" -> "7 DequantizeLinear_i_2_1"  [label="[10, 5]", style=dashed];
+"7 DequantizeLinear_i_2_1" -> "8 MatMul"  [label="[10, 5]", style=solid];
+"8 MatMul" -> "10 nncf_model_output_0"  [label="[1, 5]", style=solid];
+"9 nncf_model_input_0" -> "4 QuantizeLinear_X_1"  [label="[1, 10]", style=solid];
+}
