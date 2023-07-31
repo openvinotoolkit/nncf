@@ -15,7 +15,7 @@ from typing import Any, List, Optional, Tuple, TypeVar, Union
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
 
-DataType = TypeVar("DataType")
+TTensor = TypeVar("TTensor")
 
 
 class Tensor:
@@ -23,11 +23,11 @@ class Tensor:
     An interface to framework specific tensors for common NNCF algorithms.
     """
 
-    def __init__(self, data: Optional[DataType]):
+    def __init__(self, data: Optional[TTensor]):
         self._data = data.data if isinstance(data, Tensor) else data
 
     @property
-    def data(self) -> DataType:
+    def data(self) -> TTensor:
         return self._data
 
     @property
@@ -59,37 +59,37 @@ class Tensor:
 
     # built-in operations
 
-    def __add__(self, other: DataType) -> "Tensor":
+    def __add__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data + unwrap_tensor_data(other))
 
-    def __radd__(self, other: DataType) -> "Tensor":
+    def __radd__(self, other: TTensor) -> "Tensor":
         return Tensor(unwrap_tensor_data(other) + self.data)
 
-    def __sub__(self, other: DataType) -> "Tensor":
+    def __sub__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data - unwrap_tensor_data(other))
 
-    def __rsub__(self, other: DataType) -> "Tensor":
+    def __rsub__(self, other: TTensor) -> "Tensor":
         return Tensor(unwrap_tensor_data(other) - self.data)
 
-    def __mul__(self, other: DataType) -> "Tensor":
+    def __mul__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data * unwrap_tensor_data(other))
 
-    def __rmul__(self, other: DataType) -> "Tensor":
+    def __rmul__(self, other: TTensor) -> "Tensor":
         return Tensor(unwrap_tensor_data(other) * self.data)
 
-    def __pow__(self, other: DataType) -> "Tensor":
+    def __pow__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data ** unwrap_tensor_data(other))
 
-    def __truediv__(self, other: DataType) -> "Tensor":
+    def __truediv__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data / unwrap_tensor_data(other))
 
-    def __rtruediv__(self, other: DataType) -> "Tensor":
+    def __rtruediv__(self, other: TTensor) -> "Tensor":
         return Tensor(unwrap_tensor_data(other) / self.data)
 
-    def __floordiv__(self, other: DataType) -> "Tensor":
+    def __floordiv__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data // unwrap_tensor_data(other))
 
-    def __rfloordiv__(self, other: DataType) -> "Tensor":
+    def __rfloordiv__(self, other: TTensor) -> "Tensor":
         return Tensor(unwrap_tensor_data(other) // self.data)
 
     def __neg__(self) -> "Tensor":
@@ -97,22 +97,22 @@ class Tensor:
 
     # Comparison operators
 
-    def __lt__(self, other: DataType) -> "Tensor":
+    def __lt__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data < unwrap_tensor_data(other))
 
-    def __le__(self, other: DataType) -> "Tensor":
+    def __le__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data <= unwrap_tensor_data(other))
 
-    def __eq__(self, other: DataType) -> "Tensor":
+    def __eq__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data == unwrap_tensor_data(other))
 
-    def __ne__(self, other: DataType) -> "Tensor":
+    def __ne__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data != unwrap_tensor_data(other))
 
-    def __gt__(self, other: DataType) -> "Tensor":
+    def __gt__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data > unwrap_tensor_data(other))
 
-    def __ge__(self, other: DataType) -> "Tensor":
+    def __ge__(self, other: TTensor) -> "Tensor":
         return Tensor(self.data >= unwrap_tensor_data(other))
 
     # Tensor functions
@@ -123,10 +123,10 @@ class Tensor:
     def flatten(self) -> "Tensor":
         return _call_function("flatten", self)
 
-    def max(self, axis: Optional[DataType] = None) -> "Tensor":
+    def max(self, axis: Optional[TTensor] = None) -> "Tensor":
         return _call_function("max", self, axis)
 
-    def min(self, axis: Optional[DataType] = None) -> "Tensor":
+    def min(self, axis: Optional[TTensor] = None) -> "Tensor":
         return _call_function("min", self, axis)
 
     def abs(self) -> "Tensor":
@@ -138,7 +138,7 @@ class Tensor:
     def astype(self, dtype: TensorDataType):
         return _call_function("astype", self, dtype)
 
-    def reshape(self, shape: DataType) -> "Tensor":
+    def reshape(self, shape: TTensor) -> "Tensor":
         return _call_function("reshape", self, shape)
 
 
@@ -171,9 +171,10 @@ class TensorIterator:
         raise StopIteration
 
 
-def unwrap_tensor_data(obj: Any) -> DataType:
+def unwrap_tensor_data(obj: Any) -> TTensor:
     """
     Return the data of a Tensor object, or the object itself if it is not a Tensor.
+
     :param obj: The object to unwrap.
     :return: The data of the Tensor object, or the object itself.
     """

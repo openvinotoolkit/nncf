@@ -25,6 +25,7 @@ def _tensor_guard(func: callable):
     A decorator that ensures that the first argument to the decorated function is a Tensor.
     """
 
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         if isinstance(args[0], Tensor):
             return func(*args, **kwargs)
@@ -117,7 +118,7 @@ def astype(a: TTensor, data_type: TensorDataType) -> TTensor:
     Copy of the tensor, cast to a specified type.
 
     :param a: The input tensor.
-    :param dtype: Type code or data-type to which the tensor is cast.
+    :param dtype: Type code or data type to which the tensor is cast.
 
     :return: Copy of the tensor in specified type.
     """
@@ -128,10 +129,10 @@ def astype(a: TTensor, data_type: TensorDataType) -> TTensor:
 @_tensor_guard
 def dtype(a: TTensor) -> TensorDataType:
     """
-    Return data type fo the tensor.
+    Return data type of the tensor.
 
     :param a: The input tensor.
-    :return: The data type fo the tensor.
+    :return: The data type of the tensor.
     """
     return dtype(a.data)
 
@@ -140,7 +141,7 @@ def dtype(a: TTensor) -> TensorDataType:
 @_tensor_guard
 def reshape(a: TTensor, shape: List[int]) -> TTensor:
     """
-    Gives a new shape to an tensor without changing its data.
+    Gives a new shape to a tensor without changing its data.
 
     :param a: Tensor to be reshaped.
     :param shape: The new shape should be compatible with the original shape.
@@ -157,8 +158,7 @@ def all(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
 
     :param a: The input tensor.
     :param axis: Axis or axes along which a logical AND reduction is performed.
-    :return: A new boolean or tensor is returned unless out is specified,
-      in which case a reference to out is returned.
+    :return: A new boolean or tensor.
     """
     return Tensor(all(a.data, axis=axis))
 
@@ -197,8 +197,7 @@ def any(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
 
     :param a: The input tensor.
     :param axis: Axis or axes along which a logical OR reduction is performed.
-    :return: A new boolean or tensor is returned unless out is specified,
-      in which case a reference to out is returned.
+    :return: A new boolean or tensor.
     """
     return Tensor(any(a.data, axis))
 
@@ -219,12 +218,12 @@ def count_nonzero(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> 
 
 @functools.singledispatch
 @_tensor_guard
-def isempty(a: TTensor) -> bool:
+def isempty(a: TTensor) -> TTensor:
     """
     Return True if input tensor is empty.
 
     :param a: The input tensor.
-    :return: True is tensor is empty, otherwise False.
+    :return: True if tensor is empty, otherwise False.
     """
     return Tensor(isempty(a.data))
 
@@ -285,7 +284,7 @@ def minimum(x1: TTensor, x2: TTensor) -> TTensor:
 @_tensor_guard
 def ones_like(a: TTensor) -> TTensor:
     """
-    Return an tensor of ones with the same shape and type as a given tensor.
+    Return a tensor of ones with the same shape and type as a given tensor.
 
     :param a: The shape and data-type of a define these same attributes of the returned tensor.
     :return: Tensor of ones with the same shape and type as a.
@@ -302,7 +301,7 @@ def where(condition: TTensor, x: TTensor, y: TTensor) -> TTensor:
     :param condition: Where True, yield x, otherwise yield y.
     :param x: Value at indices where condition is True.
     :param y: Value at indices where condition is False.
-    :return: An tensor with elements from x where condition is True, and elements from y elsewhere.
+    :return: A tensor with elements from x where condition is True, and elements from y elsewhere.
     """
     return Tensor(
         where(
