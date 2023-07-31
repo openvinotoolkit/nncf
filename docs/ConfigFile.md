@@ -1,13 +1,13 @@
 # NNCF Configuration File Description
 
-The Neural Network Compression Framework (NNCF) is designed to work with the configuration file where the parameters of compression that should be applied to the model are specified. 
-These parameters are organized as a dictionary and stored in a JSON file that is deserialized when the training starts. 
+The Neural Network Compression Framework (NNCF) is designed to work with the configuration file where the parameters of compression that should be applied to the model are specified.
+These parameters are organized as a dictionary and stored in a JSON file that is deserialized when the training starts.
 The JSON file allows using comments that are supported by the [jstyleson](https://github.com/linjackson78/jstyleson) Python package.
 The NNCF config .json file is validated against a JSON schema - you can review the latest version of the schema at https://openvinotoolkit.github.io/nncf/.
 
 Below is an example of the NNCF configuration file:
 
-```
+```json5
 {
     "input_info": [ // Required - describe the specifics of your model inputs here. This information is used to build the internal graph representation that is leveraged for proper compression functioning, and for exporting the compressed model to ONNX. Inputs in the array without a "keyword" attribute are described in the order of the model's "forward" function argument order.
                     {
@@ -63,7 +63,6 @@ Below is an example of the NNCF configuration file:
 }
 ```
 
-
 The "compression" section is the core of the configuration file.
 It defines the specific compression algorithms that are to be applied to the model.
 You can specify either a single compression algorithm to be applied to the model, or multiple compression algorithms to be applied at once.
@@ -73,8 +72,6 @@ See [Algorithms.md](./Algorithms.md) for a list of supported algorithms and thei
 To specify multiple compression algorithm at once, the "compression" section should hold an array (list) of dictionaries each corresponding to a single compression algorithm.
 
 **IMPORTANT:** The `"ignored_scopes"` and `"target_scopes"` sections use a special string format (see "Operation addressing and scope" in [NNCFArchitecture.md](./NNCFArchitecture.md)) to specify the parts of the model that the compression should be applied to. For all such section, regular expression matching can be enabled by prefixing the string with `{re}`, which helps to specify the same compression pattern concisely for networks with multiple same-structured blocks such as ResNet or BERT.
-
-
 
 The [example scripts](../examples) use the same configuration file structure to specify compression, but extend it at the root level to specify the training pipeline hyperparameters as well.
 These extensions are training pipeline-specific rather than NNCF-specific and their format differs across the example scripts.

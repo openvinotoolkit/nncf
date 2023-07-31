@@ -18,6 +18,7 @@ import pytest
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
@@ -62,6 +63,7 @@ OMZ_MODELS_QUANTIZE_PARAMS = {
     "mobilenet-v2-pytorch": {"preset": QuantizationPreset.PERFORMANCE},
     "mobilenet-v3-small-1.0-224-tf": {"preset": QuantizationPreset.PERFORMANCE},
     "resnet-18-pytorch": {"preset": QuantizationPreset.PERFORMANCE},
+    "resnet-50-pytorch": {"preset": QuantizationPreset.PERFORMANCE, "target_device": TargetDevice.CPU_SPR},
     "yolo-v4-tiny-tf": {"preset": QuantizationPreset.PERFORMANCE},
 }
 
@@ -69,6 +71,7 @@ OMZ_MODELS_QUANTIZE_PARAMS = {
 @pytest.mark.parametrize("model_name_params", OMZ_MODELS_QUANTIZE_PARAMS.items(), ids=list(OMZ_MODELS_QUANTIZE_PARAMS))
 def test_omz_models_fq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
+    params_str = "_".join([param.value for param in q_params.values()])
     q_params.update({"inplace_statistics": True})
     download_model(model_name, tmp_path)
     convert_model(model_name, tmp_path)
@@ -76,9 +79,10 @@ def test_omz_models_fq_placement(model_name_params, tmp_path):
     model = ov.Core().read_model(model_path)
     quantized_model = quantize_model(model, q_params)
 
-    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"{model_name}.dot"
-    xml_path = tmp_path / (model_name + ".xml")
-    bin_path = tmp_path / (model_name + ".bin")
+    result_name = f"{model_name}_{params_str}"
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"{result_name}.dot"
+    xml_path = tmp_path / (result_name + ".xml")
+    bin_path = tmp_path / (result_name + ".bin")
     dump_model(quantized_model, str(xml_path), str(bin_path))
     compare_nncf_graphs(quantized_model, path_ref_graph)
 

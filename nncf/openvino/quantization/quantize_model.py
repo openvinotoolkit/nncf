@@ -192,6 +192,7 @@ def native_quantize_with_accuracy_control_impl(
         max_num_iterations=advanced_accuracy_restorer_parameters.max_num_iterations,
         max_drop=max_drop,
         drop_type=drop_type,
+        num_ranking_processes=advanced_accuracy_restorer_parameters.num_ranking_processes,
     )
     quantized_model = accuracy_aware_loop.apply(model, quantized_model, validation_dataset, validation_fn)
     if compress_weights:

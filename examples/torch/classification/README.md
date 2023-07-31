@@ -17,7 +17,7 @@ At this point it is assumed that you have already installed nncf. You can find i
 
 To work with the sample you should install the corresponding Python package dependencies:
 
-```
+```bash
 pip install -r examples/torch/requirements.txt
 ```
 
@@ -25,16 +25,16 @@ pip install -r examples/torch/requirements.txt
 
 This scenario demonstrates quantization with fine-tuning of MobileNet v2 on the ImageNet dataset.
 
-#### Dataset Preparation
+### Dataset Preparation
 
 To prepare the ImageNet dataset, refer to the following [tutorial](https://github.com/pytorch/examples/tree/master/imagenet).
 
-#### Run Classification Sample
+### Run Classification Sample
 
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/torch/classification` folder.
 
-#### Test Pretrained Model
+### Test Pretrained Model
 
 Before compressing a model, it is highly recommended checking the accuracy of the pretrained model. All models which are supported in the sample has pretrained weights for ImageNet.
 
@@ -48,11 +48,15 @@ python main.py \
 --disable-compression
 ```
 
-#### Compress Pretrained Model
+### Compress Pretrained Model
 
 - Run the following command to start compression with fine-tuning on GPUs:
-  ```
-  python main.py -m train --config configs/quantization/mobilenet_v2_imagenet_int8.json --data /data/imagenet/ --log-dir=../../results/quantization/mobilenet_v2_int8/
+
+  ```bash
+  python main.py -m train \
+  --config configs/quantization/mobilenet_v2_imagenet_int8.json \
+  --data /data/imagenet/ \
+  --log-dir=../../results/quantization/mobilenet_v2_int8/
   ```
 
   It may take a few epochs to get the baseline accuracy results.
@@ -62,27 +66,33 @@ python main.py \
 - Use the `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training from scratch.
 - Use the `--no_strip_on_export` to export not stripped model.
 
-#### Validate Your Model Checkpoint
+### Validate Your Model Checkpoint
 
 To estimate the test scores of your trained model checkpoint, use the following command:
 
-```
-python main.py -m test --config=configs/quantization/mobilenet_v2_imagenet_int8.json --resume <path_to_trained_model_checkpoint>
+```bash
+python main.py -m test \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--resume <path_to_trained_model_checkpoint>
 ```
 
 **WARNING**: The samples use `torch.load` functionality for checkpoint loading which, in turn, uses pickle facilities by default which are known to be vulnerable to arbitrary code execution attacks. **Only load the data you trust**
 
-#### Export Compressed Model
+### Export Compressed Model
 
 To export trained model to the ONNX format, use the following command:
 
-```
-python main.py -m export --config=configs/quantization/mobilenet_v2_imagenet_int8.json --resume=../../results/quantization/mobilenet_v2_int8/6/checkpoints/epoch_1.pth --to-onnx=../../results/mobilenet_v2_int8.onnx
+```bash
+python main.py -m export \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--resume=../../results/quantization/mobilenet_v2_int8/6/checkpoints/epoch_1.pth \
+--to-onnx=../../results/mobilenet_v2_int8.onnx
 ```
 
-#### Export to OpenVINO™ Intermediate Representation (IR)
+### Export to OpenVINO™ Intermediate Representation (IR)
 
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
-### Results
+## Results
+
 Please see compression results for PyTorch classification at our [Model Zoo page](../../../docs/ModelZoo.md#pytorch-classification).

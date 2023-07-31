@@ -3,11 +3,11 @@
 # Neural Network Compression Framework (NNCF)
 
 [Key Features](#key-features) •
-[Installation](#Installation-guide) •
+[Installation](#installation-guide) •
 [Documentation](#documentation) •
 [Usage](#usage) •
-[Tutorials and Samples](#Model-compression-tutorials-and-samples) •
-[Third-party integration](#Third-party-repository-integration) •
+[Tutorials and Samples](#model-compression-tutorials-and-samples) •
+[Third-party integration](#third-party-repository-integration) •
 [Model Zoo](./docs/ModelZoo.md)
 
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
@@ -21,13 +21,14 @@ Neural Network Compression Framework (NNCF) provides a suite of post-training an
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
-NNCF provides [samples](#Model-compression-tutorials-and-samples) that demonstrate the usage of compression algorithms for different use cases and models. See compression results achievable with the NNCF-powered samples at [Model Zoo page](./docs/ModelZoo.md).
+NNCF provides [samples](#model-compression-tutorials-and-samples) that demonstrate the usage of compression algorithms for different use cases and models. See compression results achievable with the NNCF-powered samples at [Model Zoo page](./docs/ModelZoo.md).
 
 The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
 architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
 learning frameworks.
 
 ## Key Features
+
 ### Post-Training Compression Algorithms
 
 | Compression algorithm                                                       |OpenVINO|PyTorch|   TensorFlow   |     ONNX       |
@@ -184,7 +185,6 @@ quantized_model = nncf.quantize(onnx_model, calibration_dataset)
 
 </details>
 
-
 [//]: # (NNCF provides full  [samples]&#40;#post-training-quantization-samples&#41;, which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.)
 
 ### Training-Time Compression
@@ -272,7 +272,8 @@ For a quicker start with NNCF-powered compression, try sample notebooks and scri
 ### Model Compression Tutorials
 
 A collection of ready-to-run Jupyter* notebooks are available to demonstrate how to use NNCF compression algorithms to optimize models for inference with the OpenVINO Toolkit:
-- [Accelerate Inference of NLP models with Post-Training Qunatization API of NNCF](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/105-language-quantize-bert)
+
+- [Accelerate Inference of NLP models with Post-Training Quantization API of NNCF](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/105-language-quantize-bert)
 - [Convert and Optimize YOLOv8 with OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/230-yolov8-optimization)
 - [Convert and Optimize YOLOv7 with OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/226-yolov7-optimization)
 - [NNCF Post-Training Optimization of Segment Anything Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/237-segment-anything)
@@ -287,7 +288,9 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [Accelerate Inference of Sparse Transformer Models with OpenVINO and 4th Gen Intel Xeon Scalable Processors](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/116-sparsity-optimization)
 
 ### Post-Training Quantization Samples
+
 Compact scripts demonstrating quantization and corresponding inference speed boost:
+
 - [Post-Training Quantization of MobileNet v2 OpenVINO Model](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 - [Post-Training Quantization of YOLOv8 OpenVINO Model](examples/post_training_quantization/openvino/yolov8/README.md)
 - [Post-Training Quantization of Anomaly Classification OpenVINO model with control of accuracy metric](examples/post_training_quantization/openvino/quantize_with_accuracy_control/README.md)
@@ -298,7 +301,9 @@ Compact scripts demonstrating quantization and corresponding inference speed boo
 - [Post-Training Quantization of MobileNet v2 TensorFlow Model](examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)
 
 ### Training-Time Compression Samples
+
 These examples provide full pipelines including compression, training and inference for classification, object detection and segmentation tasks.
+
 - PyTorch samples:
   - [Image Classification sample](examples/torch/classification/README.md)
   - [Object Detection sample](examples/torch/object_detection/README.md)
@@ -309,6 +314,7 @@ These examples provide full pipelines including compression, training and infere
   - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
 
 ## Third-party repository integration
+
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
 
 ### Used by
@@ -322,30 +328,39 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
 
 ### Git patches for third-party repository
+
 See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into the following repositories:
-  - [huggingface-transformers](third_party_integration/huggingface_transformers/README.md)
+
+- [huggingface-transformers](third_party_integration/huggingface_transformers/README.md)
 
 ## Installation Guide
+
 For detailed installation instructions please refer to the [Installation](./docs/Installation.md) page.
 
 NNCF can be installed as a regular PyPI package via pip:
-```
+
+```bash
 pip install nncf
 ```
+
 If you want to install both NNCF and the supported PyTorch version in one line, you can do this by simply running:
-```
+
+```bash
 pip install nncf[torch]
 ```
+
 Other viable options besides `[torch]` are `[tf]`, `[onnx]` and `[openvino]`.
 
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
-```
+
+```bash
 conda install -c conda-forge nncf
 ```
 
-You may also use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#Model-compression-tutorials-and-samples).
+You may also use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-tutorials-and-samples).
 
 ### System requirements
+
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.7 or later
 - Supported frameworks:
@@ -362,7 +377,7 @@ List of models and compression results for them can be found at our [Model Zoo p
 
 ## Citing
 
-```
+```bi
 @article{kozlov2020neural,
     title =   {Neural network compression framework for fast model inference},
     author =  {Kozlov, Alexander and Lazarevich, Ivan and Shamporov, Vasily and Lyalyushkin, Nikolay and Gorbachev, Yury},
@@ -372,13 +387,15 @@ List of models and compression results for them can be found at our [Model Zoo p
 ```
 
 ## Contributing Guide
+
 Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
 
 ## Useful links
+
 - [Documentation](./docs)
 - Example scripts (model objects available through links in respective README.md files):
-    - [PyTorch](./examples/torch)
-    - [TensorFlow](./examples/tensorflow)
+  - [PyTorch](./examples/torch)
+  - [TensorFlow](./examples/tensorflow)
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)

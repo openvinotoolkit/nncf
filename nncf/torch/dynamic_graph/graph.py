@@ -523,11 +523,10 @@ class NodeManager:
     # TODO: optimize by matching exact module type
     @staticmethod
     def _within_iteration(scope: Scope):
-        scope_name = str(scope)
         from nncf.torch.layers import ITERATION_MODULES  # pylint: disable=cyclic-import
 
-        for iter_scope in ITERATION_MODULES.registry_dict:
-            if iter_scope in scope_name:
+        for scope_element in scope.scope_elements:
+            if scope_element.calling_module_class_name in ITERATION_MODULES.registry_dict:
                 return True
         return False
 

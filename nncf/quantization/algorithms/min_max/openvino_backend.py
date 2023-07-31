@@ -25,7 +25,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
+from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
@@ -45,41 +45,50 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.scopes import IgnoredScope
 
 
+# pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
-    def mat_mul_metatype(self) -> OperatorMetatype:
-        return ov_metatypes.OVMatMulMetatype
+    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVMatMulMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
-        return [ov_metatypes.OVTopKMetatype, ov_metatypes.OVNonMaxSuppressionMetatype]
+        return [om.OVTopKMetatype, om.OVNonMaxSuppressionMetatype]
 
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        return [ov_metatypes.OVShapeOfMetatype]
+        return [om.OVShapeOfMetatype]
 
     @property
-    def conv_metatype(self) -> List[OperatorMetatype]:
-        return [ov_metatypes.OVConvolutionMetatype]
+    def conv_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVConvolutionMetatype]
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         return [
-            ov_metatypes.OVConvolutionMetatype,
-            ov_metatypes.OVGroupConvolutionMetatype,
-            ov_metatypes.OVConvolutionBackpropDataMetatype,
-            ov_metatypes.OVGroupConvolutionBackpropDataMetatype,
-            ov_metatypes.OVMatMulMetatype,
+            om.OVConvolutionMetatype,
+            om.OVGroupConvolutionMetatype,
+            om.OVConvolutionBackpropDataMetatype,
+            om.OVGroupConvolutionBackpropDataMetatype,
+            om.OVMatMulMetatype,
         ]
 
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return [ov_metatypes.OVReadValueMetatype]
+        return [om.OVReadValueMetatype]
+
+    @property
+    def add_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVAddMetatype]
+
+    @property
+    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVGroupConvolutionMetatype]
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {ov_metatypes.OVConcatMetatype: self.overflow_fix_metatypes}
+        return {om.OVConcatMetatype: self.overflow_fix_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:
@@ -94,16 +103,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_activation_quantizer_insertion_command(
-        nncf_graph: NNCFGraph,
-        target_point: OVTargetPoint,
-        quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
-    ) -> OVQuantizerInsertionCommand:
-        return OVQuantizerInsertionCommand(target_point, parameters)
-
-    @staticmethod
-    def create_weight_quantizer_insertion_command(
+    def create_quantizer_insertion_command(
         nncf_graph: NNCFGraph,
         target_point: OVTargetPoint,
         quantizer_config: QuantizerConfig,
@@ -151,14 +151,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             axes = tuple(i for i in range(len(const_shape)) if i not in channel_axes)
         else:
             axes = tuple(range(len(const_shape)))
-
         return axes, use_abs_max
-
-    @staticmethod
-    def _get_num_samples(num_samples, target_point: OVTargetPoint):
-        if target_point.is_weight_target_point():
-            return 1
-        return num_samples
 
     @staticmethod
     def get_statistic_collector(
@@ -172,7 +165,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         reduction_shape, use_abs_max = OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(
             nncf_graph, target_point, quantizer_config
         )
-        _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
 
         collector = TensorCollector(OVMinMaxTensorStatistic)
         for params, container_key in zip(
@@ -202,7 +194,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 
-            kwargs = {"num_samples": _num_samples, "tensor_processor": OVNNCFCollectorTensorProcessor}
+            kwargs = {"num_samples": num_samples, "tensor_processor": OVNNCFCollectorTensorProcessor}
             aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
@@ -217,21 +209,21 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [
-                ov_metatypes.OVAddMetatype,
-                ov_metatypes.OVPowerMetatype,
-                ov_metatypes.OVSqueezeMetatype,
-                ov_metatypes.OVSubtractMetatype,
-                ov_metatypes.OVReduceMeanMetatype,
-                ov_metatypes.OVReduceL2Metatype,
-                ov_metatypes.OVSumMetatype,
-                ov_metatypes.OVSquaredDifferenceMetatype,
-                ov_metatypes.OVMVNMetatype,
-                ov_metatypes.OVDivideMetatype,
-                ov_metatypes.OVSqrtMetatype,
-                ov_metatypes.OVMaximumMetatype,
+                om.OVAddMetatype,
+                om.OVPowerMetatype,
+                om.OVSqueezeMetatype,
+                om.OVSubtractMetatype,
+                om.OVReduceMeanMetatype,
+                om.OVReduceL2Metatype,
+                om.OVSumMetatype,
+                om.OVSquaredDifferenceMetatype,
+                om.OVMVNMetatype,
+                om.OVDivideMetatype,
+                om.OVSqrtMetatype,
+                om.OVMaximumMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(ov_metatypes.OVMultiplyMetatype)
+                metatypes_to_add.append(om.OVMultiplyMetatype)
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
             return IgnoredScope(types=types)
