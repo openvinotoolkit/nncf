@@ -90,6 +90,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         node = NNCFNode(0, "test_node", attributes)
 
         try:
+            # pylint: disable=protected-access
             activation_channel_axis = backend._get_activation_channel_axis(node, port_id)
         except RuntimeError as e:
             if isinstance(e, reference_value):
