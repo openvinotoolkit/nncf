@@ -132,7 +132,7 @@ def fp32_accum_wrapper(func):
     def wrapper(tensor_to_sum, ret_tensor):
         half = tensor_to_sum.dtype == np.float16
         if half:
-            tensor_to_sum = tensor_to_sum.astype(np.float)
+            tensor_to_sum = tensor_to_sum.astype(np.float32)
         retval = func(tensor_to_sum, ret_tensor)
         if half:
             retval = retval.astype(np.float16)

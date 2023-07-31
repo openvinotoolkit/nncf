@@ -202,7 +202,7 @@ class DDPG:
             )
 
         target_q_batch = (
-            to_tensor(reward_batch) + self.discount * to_tensor(terminal_batch.astype(np.float)) * next_q_values
+            to_tensor(reward_batch) + self.discount * to_tensor(terminal_batch.astype(float)) * next_q_values
         )
 
         # Critic update
