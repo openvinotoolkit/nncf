@@ -23,7 +23,6 @@ from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
@@ -65,7 +64,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @staticmethod
     def calculate_input_reduction_shape(nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-        channel_axis = get_activation_channel_axis(node)
+        channel_axis = OVSmoothQuantAlgoBackend._get_activation_channel_axis(node, input_port)
         return get_channel_agnostic_reduction_shape([channel_axis], shape)
 
     @staticmethod
@@ -167,3 +166,29 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         source_node: NNCFNode, scale_value: np.ndarray, port_id: int, nodes: List[NNCFNode]
     ) -> OVMultiplyInsertionCommand:
         return OVCommandCreator.multiply_insertion_command(source_node, nodes, port_id, scale_value)
+
+    @staticmethod
+    def _get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+        """
+        Returns axis number of the activation tensor which correspond to it channel.
+
+        :param node: NNCFNode instance.
+        :param port_id: Specified input port id.
+        :return: Channel axis number.
+        """
+        channel_axis = 1
+
+        if node.metatype == OVMatMulMetatype:
+            if port_id > 1:
+                raise RuntimeError(f"{OVMatMulMetatype.name} can not take more than 2 input tensors.")
+
+            channel_axis = -1 - port_id
+            if (
+                node.layer_attributes is not None
+                and node.layer_attributes.input_attributes is not None
+                and "transpose" in node.layer_attributes.input_attributes
+                and node.layer_attributes.input_attributes["transpose"]
+            ):
+                channel_axis = -2 + port_id
+
+        return channel_axis

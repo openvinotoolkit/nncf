@@ -14,8 +14,14 @@ from typing import Callable, Dict
 
 import numpy as np
 import openvino.runtime as ov
+import pytest
 import torch
 
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 from tests.shared.command import Command
@@ -62,3 +68,31 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
             ref_value = np.array(ref_value)
             assert value.shape == ref_value.shape
             assert np.all(np.isclose(value, ref_value, atol=0.0001)), f"{value} != {ref_value}"
+
+    @pytest.mark.parametrize(
+        "node_metatype, inputs_attributes, port_id, reference_value",
+        (
+            (OVMatMulMetatype, {"transpose": False}, 0, -1),
+            (OVMatMulMetatype, {"transpose": True}, 0, -2),
+            (OVMatMulMetatype, {"transpose": False}, 1, -2),
+            (OVMatMulMetatype, {"transpose": True}, 1, -1),
+            (OVMatMulMetatype, {"transpose": False}, 2, RuntimeError),
+            (OVConvolutionMetatype, {}, 0, 1),
+        ),
+    )
+    def test__get_activation_channel_axis(self, node_metatype, inputs_attributes, port_id, reference_value):
+        backend = self.get_backend()
+
+        attributes = {
+            NNCFGraph.METATYPE_ATTR: node_metatype,
+            NNCFGraph.LAYER_ATTRIBUTES: OVLayerAttributes(constant_attributes={}, inputs_attributes=inputs_attributes),
+        }
+        node = NNCFNode(0, "test_node", attributes)
+
+        try:
+            activation_channel_axis = backend._get_activation_channel_axis(node, port_id)
+        except RuntimeError as e:
+            if isinstance(e, reference_value):
+                pytest.xfail("Expected exception")
+
+        assert activation_channel_axis == reference_value

@@ -58,7 +58,6 @@ class OVConvolutionMetatype(OVOpMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [0]  # const layout: [C_OUT, C_IN, Z, Y, X]
     output_channel_axis = 1
-    input_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -68,7 +67,6 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [1]  # const layout: [C_IN, C_OUT, Z, Y, X]
     output_channel_axis = 1
-    input_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -78,7 +76,6 @@ class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
     output_channel_axis = 1
-    input_channel_axis = 1
 
     @classmethod
     def matches(cls, node: ov.Node) -> bool:
@@ -93,7 +90,6 @@ class OVGroupConvolutionMetatype(OVOpMetatype):
     subtypes = [OVDepthwiseConvolutionMetatype]
     const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
     output_channel_axis = 1
-    input_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -103,7 +99,6 @@ class OVGroupConvolutionBackpropDataMetatype(OVOpMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [0, 2]  # const layout: [GROUPS, C_IN / GROUPS,  C_OUT / GROUPS, Z, Y, X]
     output_channel_axis = 1
-    input_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -115,7 +110,6 @@ class OVMatMulMetatype(OVOpMetatype):
         -1
     ]  # const layout: [B, ..., Y, X], where const is the second operand of matrix multiplication
     output_channel_axis = -1
-    input_channel_axis = -1
 
 
 @OV_OPERATOR_METATYPES.register()
