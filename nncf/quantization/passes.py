@@ -10,9 +10,11 @@
 # limitations under the License.
 
 import collections
+from copy import deepcopy
 from typing import List, Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.operator_metatypes import NoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -22,6 +24,7 @@ def transform_to_inference_graph(
     nncf_graph: NNCFGraph,
     shapeof_metatypes: List[OperatorMetatype],
     read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
+    metatypes_to_insert_noop: Optional[List[OperatorMetatype]] = None,
 ) -> NNCFGraph:
     """
     This method contains pipeline of the passes that uses to provide inference graph without constant flows.
@@ -32,8 +35,10 @@ def transform_to_inference_graph(
         that also can be interpreted as inputs (ReadValue).
     :return: NNCFGraph in the inference style.
     """
-    inference_nncf_graph = remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, read_variable_metatypes)
-    inference_nncf_graph = filter_constant_nodes(nncf_graph, read_variable_metatypes)
+    inference_nncf_graph = deepcopy(nncf_graph)
+    inference_nncf_graph = remove_shapeof_subgraphs(inference_nncf_graph, shapeof_metatypes, read_variable_metatypes)
+    inference_nncf_graph = filter_constant_nodes(inference_nncf_graph, read_variable_metatypes)
+    inference_nncf_graph = insert_noops_instead_constants(inference_nncf_graph, nncf_graph, metatypes_to_insert_noop)
     return inference_nncf_graph
 
 
@@ -136,3 +141,30 @@ def insert_null_biases_pass(model: TModel) -> TModel:
 
         return insert_null_biases(model)
     return model
+
+
+def insert_noops_instead_constants(
+    nncf_graph: NNCFGraph,
+    original_nncf_graph: NNCFGraph,
+    metatypes_to_insert_noop: Optional[List[OperatorMetatype]] = None,
+) -> NNCFGraph:
+    for original_node in original_nncf_graph.get_nodes_by_metatypes(metatypes_to_insert_noop):
+        node = nncf_graph.get_node_by_name(original_node.node_name)
+        active_ports = [edge.input_port_id for edge in nncf_graph.get_input_edges(node)]
+
+        for original_edge in original_nncf_graph.get_input_edges(original_node):
+            if original_edge.input_port_id not in active_ports:
+                new_node = nncf_graph.add_nncf_node(
+                    node_name=original_edge.from_node.node_name,
+                    node_type=original_edge.from_node.node_type,
+                    node_metatype=NoopMetatype,
+                )
+                nncf_graph.add_edge_between_nncf_nodes(
+                    from_node_id=new_node.node_id,
+                    to_node_id=node.node_id,
+                    tensor_shape=original_edge.tensor_shape,
+                    input_port_id=original_edge.input_port_id,
+                    output_port_id=original_edge.output_port_id,
+                    dtype=original_edge.dtype,
+                )
+    return nncf_graph

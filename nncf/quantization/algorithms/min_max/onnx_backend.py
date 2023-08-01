@@ -80,6 +80,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return self.conv_metatypes
 
     @property
+    def metatypes_to_insert_noop(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         return {om.ONNXConcatMetatype: self.overflow_fix_metatypes}
 

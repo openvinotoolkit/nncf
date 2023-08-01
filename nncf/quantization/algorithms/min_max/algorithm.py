@@ -491,7 +491,10 @@ class MinMaxQuantization(Algorithm):
         hw_patterns = PatternsManager.get_full_hw_pattern_graph(backend=backend, device=device, model_type=model_type)
 
         inference_nncf_graph = transform_to_inference_graph(
-            deepcopy(nncf_graph), self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
+            nncf_graph,
+            self._backend_entity.shapeof_metatypes,
+            self._backend_entity.read_variable_metatypes,
+            self._backend_entity.metatypes_to_insert_noop,
         )
 
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)

@@ -94,6 +94,13 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def metatypes_to_insert_noop(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes which allowed to have pre-hooks.
+        """
+
+    @property
+    @abstractmethod
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         """
         Property for the backend-specific metatypes that produces quantizers that might be unified.

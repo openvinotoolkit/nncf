@@ -87,6 +87,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVGroupConvolutionMetatype]
 
     @property
+    def metatypes_to_insert_noop(self) -> List[OperatorMetatype]:
+        return [om.OVGatherMetatype]
+
+    @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         return {om.OVConcatMetatype: self.overflow_fix_metatypes}
 
