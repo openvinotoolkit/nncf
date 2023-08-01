@@ -13,7 +13,7 @@ import os
 import sys
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable
+from typing import Callable, Optional
 from unittest.mock import MagicMock
 
 from nncf import __version__
@@ -40,7 +40,13 @@ class ITelemetry(ABC):
 
     @abstractmethod
     def send_event(
-        self, event_category: str, event_action: str, event_label: str, event_value: int = 1, force_send=False, **kwargs
+        self,
+        event_category: str,
+        event_action: str,
+        event_label: str,
+        event_value: Optional[int] = None,
+        force_send=False,
+        **kwargs,
     ):
         """
         Send single event.
@@ -74,20 +80,20 @@ def skip_if_raised(func: Callable[..., None]) -> Callable[..., None]:
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         try:
-            func()
+            func(*args, **kwargs)
         # pylint:disable=broad-except
         except Exception as e:
-            nncf_logger.debug(f"Skipped calling {func.__name__} - internally triggered exception {e}")
+            nncf_logger.debug(f"Skipped calling {func} - internally triggered exception {e}")
 
     return wrapped
 
 
 class NNCFTelemetry(ITelemetry):
-    MEASUREMENT_ID = "UA-17808594-29"
+    MEASUREMENT_ID = "G-W5E9RNLD4H"
 
     def __init__(self):
         try:
-            self._impl = Telemetry(app_name="nncf", app_version=__version__, tid=self.MEASUREMENT_ID)
+            self._impl = Telemetry(app_name="nncf", app_version=__version__, tid=self.MEASUREMENT_ID, backend="ga4")
         # pylint:disable=broad-except
         except Exception as e:
             nncf_logger.debug(f"Failed to instantiate telemetry object: exception {e}")
@@ -98,8 +104,16 @@ class NNCFTelemetry(ITelemetry):
 
     @skip_if_raised
     def send_event(
-        self, event_category: str, event_action: str, event_label: str, event_value: int = 1, force_send=False, **kwargs
+        self,
+        event_category: str,
+        event_action: str,
+        event_label: str,
+        event_value: Optional[int] = None,
+        force_send=False,
+        **kwargs,
     ):
+        if event_value is None:
+            event_value = 1
         self._impl.send_event(event_category, event_action, event_label, event_value, force_send, **kwargs)
 
     @skip_if_raised

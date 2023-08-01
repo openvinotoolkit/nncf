@@ -6,7 +6,7 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Features
 
-- Mask R-CNN from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/vision/detection) with minor modifications (custom implementation of upsamling is replaced with equivalent tf.keras.layers.UpSampling2D).
+- Mask R-CNN from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/vision/detection) with minor modifications (custom implementation of upsampling is replaced with equivalent tf.keras.layers.UpSampling2D).
 - Support TFRecords for COCO2017 dataset.
 - Configuration file examples for sparsity, quantization, and quantization with sparsity.
 - Export to Frozen Graph or TensorFlow SavedModel that is supported by the OpenVINO™ toolkit.
@@ -18,7 +18,7 @@ At this point it is assumed that you have already installed nncf. You can find i
 
 To work with the sample you should install the corresponding Python package dependencies:
 
-```
+```bash
 pip install -r examples/tensorflow/requirements.txt
 ```
 
@@ -49,14 +49,13 @@ The [COCO2017](https://cocodataset.org/) dataset should be specified in the conf
 ### Run Instance Segmentation Sample
 
 We can run the sample after data preparation. For this follow these steps:
+
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/segmentation` folder.
-- Download the pre-trained weights in checkpoint format and provide the path to them using `--weights` flag. The link to the
-archive with pre-trained weights can be found in the `TensorFlow checkpoint` column of the [results](#results) table.
-Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the
-FP32 model, without applying any compression algorithms.
+- Download the pre-trained Mask-R-CNN [weights](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz) in checkpoint format and provide the path to them using `--weights` flag.
 - Specify the GPUs to be used for training by setting the environment variable [`CUDA_VISIBLE_DEVICES`](https://developer.nvidia.com/blog/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/). This is necessary because training and validation during training must be performed on different GPU devices. Please note that usually only one GPU is required for validation during training.
 - (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command:
+
   ```bash
   python evaluation.py \
   --mode=test \
@@ -66,33 +65,39 @@ FP32 model, without applying any compression algorithms.
   --batch-size=1 \
   --disable-compression
   ```
+
 - Run the following command to start compression with fine-tuning on all available GPUs on the machine:
-    ```bash
-    python train.py \
-    --config=configs/quantization/mask_rcnn_coco_int8.json \
-    --weights=<path_to_ckpt_file_with_pretrained_weights> \
-    --data=<path_to_dataset> \
-    --log-dir=../../results/quantization/maskrcnn_coco_int8
-    ```
+
+  ```bash
+  python train.py \
+  --config=configs/quantization/mask_rcnn_coco_int8.json \
+  --weights=<path_to_ckpt_file_with_pretrained_weights> \
+  --data=<path_to_dataset> \
+  --log-dir=../../results/quantization/maskrcnn_coco_int8
+  ```
+
 - Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
 
 To start checkpoints validation during training follow these steps:
+
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/segmentation` folder.
 - Specify the GPUs to be used for validation during training by setting the environment variable [`CUDA_VISIBLE_DEVICES`](https://developer.nvidia.com/blog/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/).
 - Run the following command to start checkpoints validation during training:
-    ```bash
-    python evaluation.py \
-    --mode=train \
-    --config=configs/quantization/mask_rcnn_coco_int8.json \
-    --data=<path_to_dataset> \
-    --batch-size=1 \
-    --checkpoint-save-dir=<path_to_checkpoints>
-    ```
+
+  ```bash
+  python evaluation.py \
+  --mode=train \
+  --config=configs/quantization/mask_rcnn_coco_int8.json \
+  --data=<path_to_dataset> \
+  --batch-size=1 \
+  --checkpoint-save-dir=<path_to_checkpoints>
+  ```
 
 ### Validate Your Model Checkpoint
 
-To estimate the test scores of your trained model checkpoint, use the following command
+To estimate the test scores of your trained model checkpoint, use the following command:
+
 ```bash
 python evaluation.py \
 --mode=test \
@@ -105,6 +110,7 @@ python evaluation.py \
 ### Export Compressed Model
 
 To export trained model to the **Frozen Graph**, use the following command:
+
 ```bash
 python evaluation.py \
 --mode=export \
@@ -115,6 +121,7 @@ python evaluation.py \
 ```
 
 To export trained model to the **SavedModel**, use the following command:
+
 ```bash
 python evaluation.py \
 --mode=export \
@@ -129,23 +136,20 @@ python evaluation.py \
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
 ## Train MaskRCNN from scratch
+
 - Download pre-trained ResNet-50 checkpoint from [here](https://storage.cloud.google.com/cloud-tpu-checkpoints/model-garden-vision/detection/resnet50-2018-02-07.tar.gz).
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/segmentation` folder.
 - Run the following command to start training MaskRCNN from scratch on all available GPUs on the machine:
-    ```bash
-    python train.py \
-    --config=configs/mask_rcnn_coco.json \
-    --backbone-checkpoint=<path_to_resnet50-2018-02-07_folder> \
-    --data=<path_to_dataset> \
-    --log-dir=../../results/quantization/maskrcnn_coco_baseline
 
+  ```bash
+  python train.py \
+  --config=configs/mask_rcnn_coco.json \
+  --backbone-checkpoint=<path_to_resnet50-2018-02-07_folder> \
+  --data=<path_to_dataset> \
+  --log-dir=../../results/quantization/maskrcnn_coco_baseline
+  ```
 
 ## Results
-<a name="results"></a>
 
-|Model|Compression algorithm|Dataset|            mAP (_drop_) %             |NNCF config file|Checkpoint|
-| :---: | :---: | :---: |:-------------------------------------:| :---: | :---: |
-|Mask-R-CNN|None|COCO 2017|        bbox: 37.33 segm: 33.56        |[mask_rcnn_coco.json](configs/mask_rcnn_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz)|
-|Mask-R-CNN|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017| bbox: 37.19 (0.14) segm: 33.54 (0.02) |[mask_rcnn_coco_int8.json](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz)|
-|Mask-R-CNN|Magnitude sparsity, 50%|COCO 2017| bbox: 36.94 (0.39) segm: 33.23 (0.33) |[mask_rcnn_coco_magnitude_sparsity.json](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz)|
+Please see compression results for Tensorflow instance segmentation at our [Model Zoo page](../../../docs/ModelZoo.md#tensorflow-instance-segmentation).

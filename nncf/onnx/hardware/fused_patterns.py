@@ -44,6 +44,26 @@ def create_scale_shift() -> GraphPattern:
     return pattern
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SHIFT_SCALE)
+def create_shift_scale() -> GraphPattern:
+    pattern = GraphPattern()
+    add_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
+            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
+        }
+    )
+    mul_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "MULTIPLY, DIV",
+            GraphPattern.METATYPE_ATTR: [om.ONNXMulLayerMetatype, om.ONNXDivLayerMetatype],
+        }
+    )
+
+    pattern.add_edge(add_node, mul_node)
+    return pattern
+
+
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SWISH_WITH_SIGMOID)
 def create_swish_with_sigmoid() -> GraphPattern:
     pattern = GraphPattern()
@@ -113,24 +133,23 @@ def create_hswish() -> GraphPattern:
 # INPUT PROCESSING
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SCALE_SHIFT)
+def create_input_scale_shift() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
+    scale_shift = create_scale_shift()
+
+    pattern.join_patterns(scale_shift)
+    return pattern
+
+
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
 def create_input_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    input_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype}
-    )
-    add_node = pattern.add_node(
-        **{
-            GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
-            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
-        }
-    )
-    multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
-    )
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
+    shift_scale = create_shift_scale()
 
-    pattern.add_edge(input_node, add_node)
-    pattern.add_edge(add_node, multiply_node)
+    pattern.join_patterns(shift_scale)
     return pattern
 
 
@@ -148,16 +167,6 @@ def create_input_add() -> GraphPattern:
     )
 
     pattern.add_edge(input_node, add_node)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SCALE_SHIFT)
-def create_input_scale_shift() -> GraphPattern:
-    pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
-    scale_shift = create_scale_shift()
-
-    pattern.join_patterns(scale_shift)
     return pattern
 
 
@@ -350,6 +359,15 @@ def create_linear_arithmetic_activations() -> GraphPattern:
     linear.join_patterns(arithmetic)
     linear.join_patterns(activations)
     return linear
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC)
+def create_linear_arithmetic_activations_arithmetic() -> GraphPattern:
+    linear_arithmetic_activations = create_linear_arithmetic_activations()
+    arithmetic = arithmetic_operations()
+
+    linear_arithmetic_activations.join_patterns(arithmetic)
+    return linear_arithmetic_activations
 
 
 # DEVICE PATTERNS

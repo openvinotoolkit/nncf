@@ -1,4 +1,4 @@
-## Benchmark for ONNX Model Zoo
+# Benchmark for ONNX Model Zoo
 
 ## Installation
 
@@ -9,7 +9,7 @@ NNCF [here](https://github.com/openvinotoolkit/nncf#user-content-installation).
 
 To work with the example you should install the corresponding Python package dependencies:
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
@@ -20,7 +20,7 @@ uses [OpenVINO™ Accuracy Checker](https://github.com/openvinotoolkit/open_mode
 tool to preprocess data for quantization parameters calibration and for final accuracy validation.
 The benchmarking supports the following models:
 
-* Classification
+- Classification
 
 1. [bvlcalexnet-12](https://github.com/onnx/models/blob/main/vision/classification/alexnet/model/bvlcalexnet-12.onnx)
 2. [caffenet-12](https://github.com/onnx/models/blob/main/vision/classification/caffenet/model/caffenet-12.onnx)
@@ -37,7 +37,7 @@ The benchmarking supports the following models:
 13. [vgg16-12](https://github.com/onnx/models/blob/main/vision/classification/vgg/model/vgg16-12.onnx)
 14. [zfnet512-12](https://github.com/onnx/models/blob/main/vision/classification/zfnet-512/model/zfnet512-12.onnx)
 
-* Object detection and segmentation models
+- Object detection and segmentation models
 
 1. [FasterRCNN-12](https://github.com/onnx/models/blob/main/vision/object_detection_segmentation/faster-rcnn/model/FasterRCNN-12.onnx)
 2. [MaskRCNN-12](https://github.com/onnx/models/blob/main/vision/object_detection_segmentation/mask-rcnn/model/MaskRCNN-12.onnx)
@@ -60,7 +60,7 @@ and [object_detection_segmentation](./object_detection_segmentation/onnx_models_
 
 ### 1. Prepare dataset
 
-* Classification models
+- Classification models
 
 Because we
 use [OpenVINO™ Accuracy Checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker)
@@ -68,7 +68,7 @@ tool, you should prepare ILSVRC2012 validation dataset by following
 the [dataset preparation guide](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/data/datasets.md#imagenet)
 . After preparation, your dataset directory will be:
 
-```
+```text
 DATASET_DIR/
 +-- ILSVRC2012_img_val/
 |   +-- ILSVRC2012_val_00000001.JPEG
@@ -78,7 +78,7 @@ DATASET_DIR/
 +-- val.txt
 ```
 
-* Object detection and segmentation models
+- Object detection and segmentation models
 
 We
 use [COCO](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/data/datasets.md#common-objects-in-context-coco)
@@ -86,9 +86,9 @@ use [COCO](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/data/
 and [CityScapes](https://github.com/openvinotoolkit/open_model_zoo/blob/cf9003a95ddb742aabea341aa1573c3fa25ebbe1/data/dataset_definitions.yml#L1300-L1307)
 datasets. Please follow the link to prepare datasets. After preparation, your dataset directory will be:
 
-```
+```text
 DATASET_DIR/
-+-- annotations/ (COCO annotatios)
++-- annotations/ (COCO annotations)
 |   +-- instances_val2017.json
 |   +-- ...
 +-- val2017/ (COCO images)
@@ -114,26 +114,26 @@ You can run the benchmarking for particular model with the following command:
 
 ### Results
 
-1. Classification models
+#### 1. Classification models
 
 | Model Name              | Dataset  | FP32 Accuracy (%) | INT8 accuracy (%) | Accuracy Drop (%) |
 |-------------------------|----------|-------------------|-------------------|-------------------|
-| bvlcalexnet-12          | ImageNet | 52.02 | 51.96             | 0.06              |
-| caffenet-12             | ImageNet | 54.26 | 54.22             | 0.04              |
-| densenet-12             | ImageNet | 60.96 | 60.16             | 0.8               |
-| efficientnet-lite4-11   | ImageNet | 77.58 | 77.43             | 0.15              |
-| googlenet-12            | ImageNet | 66.67 | 66.36             | 0.31              |
-| inception-v1-12         | ImageNet | 65.21 | 64.87             | 0.34              |
-| mobilenetv2-12          | ImageNet | 71.87 | 71.38             | 0.49              |
-| resnet50-v1-12          | ImageNet | 74.11 | 73.92             | 0.19              |
-| resnet50-v2-7           | ImageNet | 74.84 | 74.63             | 0.21              |
-| shufflenet-9            | ImageNet | 47.43 | 47.25             | 0.18              |
-| shufflenet-v2-12        | ImageNet | 69.36 | 68.93             | 0.43              |
-| squeezenet1.0-12        | ImageNet | 54.84 | 54.3              | 0.54              |
-| vgg16-12                | ImageNet | 72.02 | 72.02             | 0.0               |
-| zfnet512-12             | ImageNet | 58.57 | 58.53             | 0.04              |
+| bvlcalexnet-12          | ImageNet | 52.02             | 51.96             | 0.06              |
+| caffenet-12             | ImageNet | 54.26             | 54.22             | 0.04              |
+| densenet-12             | ImageNet | 60.96             | 60.16             | 0.8               |
+| efficientnet-lite4-11   | ImageNet | 77.58             | 77.43             | 0.15              |
+| googlenet-12            | ImageNet | 66.67             | 66.36             | 0.31              |
+| inception-v1-12         | ImageNet | 65.21             | 64.87             | 0.34              |
+| mobilenetv2-12          | ImageNet | 71.87             | 71.38             | 0.49              |
+| resnet50-v1-12          | ImageNet | 74.11             | 73.92             | 0.19              |
+| resnet50-v2-7           | ImageNet | 74.84             | 74.63             | 0.21              |
+| shufflenet-9            | ImageNet | 47.43             | 47.25             | 0.18              |
+| shufflenet-v2-12        | ImageNet | 69.36             | 68.93             | 0.43              |
+| squeezenet1.0-12        | ImageNet | 54.84             | 54.3              | 0.54              |
+| vgg16-12                | ImageNet | 72.02             | 72.02             | 0.0               |
+| zfnet512-12             | ImageNet | 58.57             | 58.53             | 0.04              |
 
-2. Object detection and segmentation models
+#### 2. Object detection and segmentation models
 
 | Model Name           | Dataset   | FP32 mAP (%) | INT8 mAP (%)  | mAP diff. (%) |
 |----------------------|-----------|--------------|---------------|---------------|

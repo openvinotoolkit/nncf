@@ -91,23 +91,21 @@ def _get_tensor_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: 
     :param port_id: Port id on which a weight edge is seeking.
     :return: Edge name associated with a weight.
     """
-    WEIGHT_CONSUMING_TYPES = (
-        ONNXConstantMetatype.get_all_aliases()
-        + ONNXIdentityMetatype.get_all_aliases()
-        + ONNXReshapeMetatype.get_all_aliases()
+    PROPAGATING_NODES = (
+        ONNXIdentityMetatype.get_all_aliases()
         + ONNXTransposeMetatype.get_all_aliases()
         + ONNXQuantizeLinearMetatype.get_all_aliases()
+        + ONNXReshapeMetatype.get_all_aliases()
+        + ONNXDequantizeLinearMetatype.get_all_aliases()
     )
-    PROPAGATING_ONLY_TYPES = ONNXDequantizeLinearMetatype.get_all_aliases()
-
-    if node.op_type not in PROPAGATING_ONLY_TYPES and onnx_graph.has_tensor(node.input[port_id]):
-        if node.op_type in ONNXReshapeMetatype.get_all_aliases():
-            # Only Reshape nodes returns output edge.
-            return node.output[0]
-        return node.input[port_id]
-
+    END_NODES = ONNXConstantMetatype.get_all_aliases()
     parent = onnx_graph.get_parent(node, port_id)
-    if parent and parent.op_type in (WEIGHT_CONSUMING_TYPES + PROPAGATING_ONLY_TYPES):
+    if not parent:
+        if onnx_graph.has_tensor(node.input[port_id]):
+            return node.input[port_id]
+    elif parent.op_type in END_NODES:
+        return node.input[port_id]
+    elif parent.op_type in PROPAGATING_NODES:
         return _get_tensor_edge_name(onnx_graph, parent, 0)
     return None
 
@@ -158,7 +156,7 @@ def _get_weight_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_id
     :return: Weight attributes.
     """
     weight_attrs = {}
-    weight_edge_name = _get_tensor_edge_name(onnx_graph, node, weight_port_id)
+    weight_edge_name = node.input[weight_port_id]
     edge = onnx_graph.get_edge(weight_edge_name)
     weight_shape = ONNXGraph.get_edge_shape(edge)
     weight_attrs[weight_port_id] = {"name": weight_edge_name, "shape": weight_shape}
@@ -351,7 +349,7 @@ class GraphConverter:
             if weight_port_ids:  # If node has weight
                 weight_edge_names = []
                 for weight_port_id in weight_port_ids:
-                    weight_edge_names.append(_get_tensor_edge_name(onnx_graph, node, weight_port_id))
+                    weight_edge_names.append(node.input[weight_port_id])
                     weight_attrs.update(_get_weight_attr(node, onnx_graph, weight_port_id))
                     if not is_shared and onnx_graph.is_node_has_shared_weight(node, weight_port_id):
                         is_shared = True

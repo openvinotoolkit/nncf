@@ -3,40 +3,42 @@
 <details markdown="1">
   <summary>Table of Contents</summary>
 
--   [1 Introduction](#s1-introduction)
--   [2 Automating Code Formatting](#s2-auto-code-formatting)
--   [3 Python Language Rules](#s3-python-language-rules)
-    *   [3.1 PyLint](#s3.1-pylint)
-    *   [3.2 3rd party packages](#s3.2-3rd-party-packages)
-    *   [3.3 Global variables](#s3.3-global-variables)
-    *   [3.4 Nested/Local/Inner Classes and Functions](#s3.4-nested)
-    *   [3.5 Default Iterators and Operators](#s3.5-default-iterators-and-operators)
-    *   [3.6 Type Annotated Code](#s3.6-type-annotated-code)
-    *   [3.7 Files and Sockets](#s3.7-files-and-sockets)
-    *   [3.8 Abstract Classes](#s3.8-abstract-classes)
--   [4 Python Style Rules](#s4-python-style-rules)
-    *   [4.1 Line length](#s4.1-line-length)
-    *   [4.2 Comments and Docstrings](#s4.2-comments-and-docstrings)
-        +   [4.2.1 Modules](#s4.2.1-modules)
-        +   [4.2.2 Functions and Methods](#s4.2.2-functions-and-methods)
-        +   [4.2.3 Classes](#s4.2.3-classes)
-        +   [4.2.4 Block and Inline Comments](#s4.2.4-block-and-inline-comments)
-    *   [4.3 Strings](#s4.3-strings)
-    *   [4.4 Logging](#s4.4-logging)
-    *   [4.5 Error Messages](#s4.5-error-messages)
-    *   [4.6 TODO Comments](#s4.6-todo-comments)
-    *   [4.7 Naming](#s4.7-naming)
-        +   [4.7.1 Names to Avoid](#s4.7.1-names-to-avoid)
-        +   [4.7.2 Naming Conventions](#s4.7.2-naming-conventions)
-        +   [4.7.3 Framework specific class naming](#s4.7.3-framework-specific-class-naming)
-        +   [4.7.4 File Naming](#s4.7.4-file-naming)
-    *   [4.8 Main](#s4.8-main)
--   [5 API documentation rules](#s5-api-doc-rules)
+- [1 Introduction](#s1-introduction)
+- [2 Automating Code Formatting](#s2-auto-code-formatting)
+- [3 Python Language Rules](#s3-python-language-rules)
+  - [3.1 PyLint](#s3.1-pylint)
+    - [3.2 3rd party packages](#s3.2-3rd-party-packages)
+    - [3.3 Global variables](#s3.3-global-variables)
+    - [3.4 Nested/Local/Inner Classes and Functions](#s3.4-nested)
+    - [3.5 Default Iterators and Operators](#s3.5-default-iterators-and-operators)
+    - [3.6 Type Annotated Code](#s3.6-type-annotated-code)
+    - [3.7 Files and Sockets](#s3.7-files-and-sockets)
+    - [3.8 Abstract Classes](#s3.8-abstract-classes)
+- [4 Python Style Rules](#s4-python-style-rules)
+  - [4.1 Line length](#s4.1-line-length)
+    - [4.2 Comments and Docstrings](#s4.2-comments-and-docstrings)
+      - [4.2.1 Modules](#s4.2.1-modules)
+      - [4.2.2 Functions and Methods](#s4.2.2-functions-and-methods)
+      - [4.2.3 Classes](#s4.2.3-classes)
+      - [4.2.4 Block and Inline Comments](#s4.2.4-block-and-inline-comments)
+    - [4.3 Strings](#s4.3-strings)
+    - [4.4 Logging](#s4.4-logging)
+    - [4.5 Error Messages](#s4.5-error-messages)
+    - [4.6 TODO Comments](#s4.6-todo-comments)
+    - [4.7 Naming](#s4.7-naming)
+      - [4.7.1 Names to Avoid](#s4.7.1-names-to-avoid)
+      - [4.7.2 Naming Conventions](#s4.7.2-naming-conventions)
+      - [4.7.3 Framework specific class naming](#s4.7.3-framework-specific-class-naming)
+      - [4.7.4 File Naming](#s4.7.4-file-naming)
+    - [4.8 Main](#s4.8-main)
+- [5 API documentation rules](#s5-api-doc-rules)
+
 </details>
 
 <a id="s1-introduction"></a>
 <a id="1-introduction"></a>
 <a id="introduction"></a>
+
 ## 1 Introduction
 
 This document gives coding conventions for the Python code comprising [Neural Network Compression Framework (NNCF)](../../README.md).
@@ -48,6 +50,7 @@ the [PEP 8 -- Style Guide for Python Code](https://www.python.org/dev/peps/pep-0
 <a id="s2-auto-code-formatting"></a>
 <a id="2-auto-code-formatting"></a>
 <a id="auto-code-formatting"></a>
+
 ## 2 Automating Code Formatting
 
 To maintain consistency and readability throughout the codebase, we use the [black](https://github.com/psf/black)
@@ -62,10 +65,11 @@ make pre-commit
 Also recommend configuring your IDE to run Black and isort tools automatically when saving files.
 
 Automatic code formatting is mandatory for all Python files, but you can disable it for specific cases if required:
-  - if you need a specialized order of importing modules;
-  - for large data structures for which autoformatting unnecessarily breaks into lines,
-    e.g. reference data in tests, class lists or arguments for subprocess;
-  - for structures for which formatting helps understanding, such as matrix.
+
+- if you need a specialized order of importing modules;
+- for large data structures for which autoformatting unnecessarily breaks into lines,
+  e.g. reference data in tests, class lists or arguments for subprocess;
+- for structures for which formatting helps understanding, such as matrix.
 
 Example for 'isort':
 
@@ -95,11 +99,13 @@ arr2 = [
 <a id="s3-python-language-rules"></a>
 <a id="3-python-language-rules"></a>
 <a id="python-language-rules"></a>
+
 ## 3 Python Language Rules
 
 <a id="s3.1-pylint"></a>
 <a id="31-pylint"></a>
 <a id="pylint"></a>
+
 ### 3.1 PyLint
 
 Run [pylint](https://github.com/PyCQA/pylint) over your code using this [pylintrc](../../.pylintrc).
@@ -108,16 +114,18 @@ Run [pylint](https://github.com/PyCQA/pylint) over your code using this [pylintr
   - *Preferred solution*: Change the code to fix the warning.
   - *Exception*: Suppress the warning if they are inappropriate so that other issues are not hidden.
     To suppress warnings you can set a line-level comment
+
     ```python
     dict = "something awful"  # Bad Idea... pylint: disable=redefined-builtin
     ```
+
     or update [pylintrc](../../.pylintrc) if applicable for the whole project. If the reason for the suppression
     is not clear from the symbolic name, add an explanation.
-
 
 <a id="s3.2-3rd-party-packages"></a>
 <a id="32-3rd-party-packages"></a>
 <a id="3rd-party-packages"></a>
+
 ### 3.2 3rd party packages
 
 Do not add new third-party dependencies unless absolutely necessary. All things being equal, give preference to built-in packages.
@@ -125,6 +133,7 @@ Do not add new third-party dependencies unless absolutely necessary. All things 
 <a id="s3.3-global-variables"></a>
 <a id="33-global-variables"></a>
 <a id="global-variables"></a>
+
 ### 3.3 Global variables
 
 Avoid global variables.
@@ -137,6 +146,7 @@ Avoid global variables.
 <a id="s3.4-nested"></a>
 <a id="34-nested"></a>
 <a id="nested-classes-functions"></a>
+
 ### 3.4 Nested/Local/Inner Classes and Functions
 
 No need to overuse nested local functions or classes and inner classes.
@@ -144,6 +154,7 @@ No need to overuse nested local functions or classes and inner classes.
 - Nested local functions or classes are fine if it satisfy the following conditions:
   - The code becomes more readable and simpler.
   - Closing over a local variables.
+
   ```python
   # Correct:
   def make_scaling_fn(scale):
@@ -156,6 +167,7 @@ No need to overuse nested local functions or classes and inner classes.
 
 - Do not nest a function just to hide it from users of a module. Instead, prefix its name with an `_` at the module
   level so that it can still be accessed by tests.
+
   ```Python
   # Wrong:
   def avg(a, b, c):
@@ -167,6 +179,7 @@ No need to overuse nested local functions or classes and inner classes.
       m = sum(m,c)
       return m/3
   ```
+
   ```Python
   # Correct:
   def _sum(x, y):
@@ -181,6 +194,7 @@ No need to overuse nested local functions or classes and inner classes.
 <a id="s3.5-default-iterators-and-operators"></a>
 <a id="35-default-iterators-and-operators"></a>
 <a id="default-iterators-operators"></a>
+
 ### 3.5 Default Iterators and Operators
 
 Use default iterators and operators for types that support them, like lists,
@@ -196,6 +210,7 @@ if obj in alist: ...
 for line in afile: ...
 for k, v in adict.items(): ...
 ```
+
 ```python
  # Wrong:
 for key in adict.keys(): ...
@@ -207,6 +222,7 @@ for k, v in dict.iteritems(): ...
 <a id="s3.6-type-annotated-code"></a>
 <a id="36-type-annotated-code"></a>
 <a id="type-annotated-code"></a>
+
 ### 3.6 Type Annotated Code
 
 Code should be annotated with type hints according to
@@ -220,6 +236,7 @@ def func(a: int) -> List[int]:
 <a id="s3.7-files-and-sockets"></a>
 <a id="37-files-and-sockets"></a>
 <a id="files-and-sockets"></a>
+
 ### 3.7 Files and Sockets
 
 Explicitly close files and sockets when done with them.
@@ -230,10 +247,10 @@ with open("hello.txt") as hello_file:
         print(line)
 ```
 
-
 <a id="s3.8-abstract-classes"></a>
 <a id="38-abstract-classes"></a>
 <a id="abstract-classes"></a>
+
 ### 3.8 Abstract Classes
 
 When defining abstract classes, the following template should be used:
@@ -275,31 +292,32 @@ class C(ABC):
         pass
 ```
 
-
 <a id="s4-python-style-rules"></a>
 <a id="4-python-style-rules"></a>
 <a id="python-style-rules"></a>
+
 ## 4 Python Style Rules
 
 <a id="s4.1-line-length"></a>
 <a id="41-line-length"></a>
 <a id="line-length"></a>
+
 ### 4.1 Line length
 
 Maximum line length is *120 characters*.
 
 Explicit exceptions to the 120 character limit:
 
--   Long import statements.
--   URLs, pathnames, or long flags in comments.
--   Long string module level constants not containing whitespace that would be
-    inconvenient to split across lines such as URLs or pathnames.
-    -   Pylint disable comments. (e.g.: `# pylint: disable=invalid-name`)
-
+- Long import statements.
+- URLs, pathnames, or long flags in comments.
+- Long string module level constants not containing whitespace that would be
+  inconvenient to split across lines such as URLs or pathnames.
+  - Pylint disable comments. (e.g.: `# pylint: disable=invalid-name`)
 
 <a id="s4.2-comments-and-docstrings"></a>
 <a id="42-comments-and-docstrings"></a>
 <a id="comments-and-docstrings"></a>
+
 ### 4.2 Comments and Docstrings
 
 Be sure to use the right style for module, function, method docstrings and
@@ -308,6 +326,7 @@ inline comments.
 <a id="s4.2.1-modules"></a>
 <a id="421-modules"></a>
 <a id="modules"></a>
+
 #### 4.2.1 Modules
 
 Every file should contain a license boilerplate.
@@ -328,14 +347,16 @@ Every file should contain a license boilerplate.
 <a id="s4.2.2-functions-and-methods"></a>
 <a id="422-functions-and-methods"></a>
 <a id="functions-and-methods"></a>
+
 #### 4.2.2 Functions and Methods
 
 In this section, "function" means a method, function, or generator.
 
 A function must have a docstring, unless it meets all of the following criteria:
--   not externally visible
--   very short
--   obvious
+
+- not externally visible
+- very short
+- obvious
 
 ```python
 def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False) -> int:
@@ -364,6 +385,7 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 <a id="s4.2.3-classes"></a>
 <a id="423-classes"></a>
 <a id="classes"></a>
+
 #### 4.2.3 Classes
 
 Classes should have a docstring below the class definition describing the class. If your class
@@ -403,6 +425,7 @@ if there is nothing special about this exact implementation of the magic method
 hashing all fields as a tuple in `__hash__` or concatenating string-like objects in `__add__` etc.)
 
 For instance, this simple `__init__` method may omit the method description in the docstring (the parameter description is, however, still required):
+
 ```python
 class Klass:
     # ...
@@ -414,11 +437,13 @@ class Klass:
         self.param1 = param1
         self.param2 = param2
 ```
+
 while this `__init__` requires a description of external dependencies and potential side effects of creating objects of the class:
+
 ```python
 class ComplexKlass(BaseClass):
     # ...
-   def __init__(self, param1: ParamType, param2: AnotherParamType):
+    def __init__(self, param1: ParamType, param2: AnotherParamType):
         """
         *Add a brief explanation of what happens during this particular __init__, such as :*
         The construction of this object is dependent on the value of GLOBAL_VARIABLE...
@@ -448,6 +473,7 @@ class ComplexKlass(BaseClass):
 <a id="s4.2.4-block-and-inline-comments"></a>
 <a id="424-block-and-inline-comments"></a>
 <a id="block-and-inline-comments"></a>
+
 #### 4.2.4 Block and Inline Comments
 
 The final place to have comments is in tricky parts of the code. If you're going to have to explain it
@@ -478,8 +504,8 @@ knows Python (though not what you're trying to do) better than you do.
 <a id="s4.3-strings"></a>
 <a id="43-strings"></a>
 <a id="strings"></a>
-### 4.3 Strings
 
+### 4.3 Strings
 
 ```python
 # Correct:
@@ -506,7 +532,9 @@ long_string = textwrap.dedent(
 <a id="s4.4-logging"></a>
 <a id="44-logging"></a>
 <a id="logging"></a>
+
 ### 4.4 Logging
+
 Use the logger object built into NNCF for all purposes of logging within the NNCF package code.
 Do not use `print(...)` or other ways of output.
 
@@ -519,6 +547,7 @@ nncf_logger.info("This is an info-level log message")
 ```
 
 Wrong:
+
 ```python
 print("This is an info-level log message")
 ```
@@ -568,10 +597,12 @@ This ensures that the deprecation warning is seen to the user at all NNCF log le
 <a id="s4.5-error-messages"></a>
 <a id="45-error-messages"></a>
 <a id="error-messages"></a>
+
 ### 4.5 Error Messages
 
 Error messages (such as: message strings on exceptions like `ValueError`, or
 messages shown to the user) should follow guidelines:
+
 - The message needs to precisely match the actual error condition.
 - Interpolated pieces need to always be clearly identifiable as such.
 - The message should start with a capital letter.
@@ -579,6 +610,7 @@ messages shown to the user) should follow guidelines:
 <a id="s4.6-todo-comments"></a>
 <a id="46-todo-comments"></a>
 <a id="todo-comments"></a>
+
 ### 4.6 TODO Comments
 
 Use `TODO` comments for code that is temporary, a short-term solution, or
@@ -607,12 +639,12 @@ event ("Remove this code when all clients can handle XML responses.").
 <a id="s4.7-naming"></a>
 <a id="47-naming"></a>
 <a id="naming"></a>
+
 ### 4.7 Naming
 
 `module_name`, `package_name`, `ClassName`, `method_name`, `ExceptionName`,
 `function_name`, `GLOBAL_CONSTANT_NAME`, `global_var_name`, `instance_var_name`,
 `function_parameter_name`, `local_var_name`.
-
 
 Function names, variable names, and filenames should be descriptive; eschew
 abbreviation. In particular, do not use abbreviations that are ambiguous or
@@ -620,7 +652,6 @@ unfamiliar to readers outside your project, and do not abbreviate by deleting
 letters within a word.
 
 Always use a `.py` filename extension. Never use dashes.
-
 
 <table rules="all" border="1" summary="Guidelines from Guido's Recommendations"
        cellspacing="2" cellpadding="2">
@@ -702,44 +733,47 @@ Always use a `.py` filename extension. Never use dashes.
 <a id="s4.7.1-names-to-avoid"></a>
 <a id="471-names-to-avoid"></a>
 <a id="names-to-avoid"></a>
+
 #### 4.7.1 Names to Avoid
 
--   single character names, except for specifically allowed cases:
-    -   counters or iterators (e.g. `i`, `j`, `k`, `v`, et al.)
-    -   `e` as an exception identifier in `try/except` statements.
-    -   `f` as a file handle in `with` statements
-    Please be mindful not to abuse single-character naming. Generally speaking,
-    descriptiveness should be proportional to the name's scope of visibility.
-    For example, `i` might be a fine name for 5-line code block but within
-    multiple nested scopes, it is likely too vague.
--   dashes (`-`) in any package/module name
--   `__double_leading_and_trailing_underscore__` names (reserved by Python)
--   offensive terms
--   names that needlessly include the type of the variable (for example:
+- single character names, except for specifically allowed cases:
+  - counters or iterators (e.g. `i`, `j`, `k`, `v`, et al.)
+  - `e` as an exception identifier in `try/except` statements.
+  - `f` as a file handle in `with` statements
+  Please be mindful not to abuse single-character naming. Generally speaking,
+  descriptiveness should be proportional to the name's scope of visibility.
+  For example, `i` might be a fine name for 5-line code block but within
+  multiple nested scopes, it is likely too vague.
+- dashes (`-`) in any package/module name
+- `__double_leading_and_trailing_underscore__` names (reserved by Python)
+- offensive terms
+- names that needlessly include the type of the variable (for example:
     `id_to_name_dict`)
 
 <a id="s4.7.2-naming-conventions"></a>
 <a id="472-naming-convention"></a>
 <a id="naming-conventions"></a>
+
 #### 4.7.2 Naming Conventions
 
--   "Internal" means internal to a module, or protected or private within a
-    class.
--   Prepending a single underscore (`_`) has some support for protecting module
-    variables and functions (linters will flag protected member access). While
-    prepending a double underscore (`__` aka "dunder") to an instance variable
-    or method effectively makes the variable or method private to its class
-    (using name mangling); we discourage its use as it impacts readability and
-    testability, and isn't *really* private.
--   Place related classes and top-level functions together in a
-    module.
--   Use CapWords for class names, but lower\_with\_under.py for module names.
--   Use the word "layer" (instead of "module") in the `nncf.common` module to
-    refer to the building block of neural networks.
+- "Internal" means internal to a module, or protected or private within a
+   class.
+- Prepending a single underscore (`_`) has some support for protecting module
+  variables and functions (linters will flag protected member access). While
+  prepending a double underscore (`__` aka "dunder") to an instance variable
+  or method effectively makes the variable or method private to its class
+  (using name mangling); we discourage its use as it impacts readability and
+  testability, and isn't *really* private.
+- Place related classes and top-level functions together in a
+  module.
+- Use CapWords for class names, but lower\_with\_under.py for module names.
+- Use the word "layer" (instead of "module") in the `nncf.common` module to
+  refer to the building block of neural networks.
 
 <a id="s4.7.3-framework-specific-class-naming"></a>
 <a id="473-framework-specific-class-naming"></a>
 <a id="framework-specific-class-naming"></a>
+
 #### 4.7.3 Framework specific class naming
 
 - `PTClassName` for Torch
@@ -748,6 +782,7 @@ Always use a `.py` filename extension. Never use dashes.
 <a id="s4.7.4-file-naming"></a>
 <a id="474-file-naming"></a>
 <a id="file-naming"></a>
+
 #### 4.7.4 File Naming
 
 Python filenames must have a `.py` extension and must not contain dashes (`-`).
@@ -756,6 +791,7 @@ This allows them to be imported and unit tested.
 <a id="s4.8-main"></a>
 <a id="4.8-main"></a>
 <a id="main"></a>
+
 ### 4.8 Main
 
 ```python
@@ -766,16 +802,17 @@ if __name__ == "__main__":
     main()
 ```
 
-
 <a id="s5-api-doc-rules"></a>
 <a id="5-api-doc-rules"></a>
 <a id="api-doc-rules"></a>
+
 ## 5 API documentation rules
-All functions and classes that belong to NNCF API should be documented. 
+
+All functions and classes that belong to NNCF API should be documented.
 The documentation should utilize the reStructuredText (.rst) format for specifying parameters, return types and otherwise formatting the docstring, since the docstring is used as a source for generating the HTML API documentation with Sphinx.
 
 Argument descriptions for `__init__(...)` methods of API classes should be located in the docstring of the class itself, not the docstring of the `__init__(...)` method.
 This is required so that the autogenerated API documentation is rendered properly.
 
-If the autogenerated API documentation does not show type hints for certain arguments despite the fact that the type hints are present in the object's implementation code, 
+If the autogenerated API documentation does not show type hints for certain arguments despite the fact that the type hints are present in the object's implementation code,
 or if the type hints do not refer to the API symbol's canonical alias, then the type hint should be explicitly declared in the docstring using the `:type *param_name*:` directive (or `:rtype:` for return types).

@@ -18,6 +18,20 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 TModel = TypeVar("TModel")
+TPModel = TypeVar("TPModel")
+
+
+class AsyncPreparedModel(ABC):
+    @abstractmethod
+    def get(self, timeout) -> TPModel:
+        """
+        Returns the prepared model for inference when it arrives. If timeout is not None and
+        the result does not arrive within timeout seconds then TimeoutError is raised. If
+        the remote call raised an exception then that exception will be reraised by get().
+
+        :param timeout: timeout
+        :return: A prepared model for inference
+        """
 
 
 class AccuracyControlAlgoBackend(ABC):
@@ -127,14 +141,34 @@ class AccuracyControlAlgoBackend(ABC):
         :return: Weights input port indices.
         """
 
+    @staticmethod
+    @abstractmethod
+    def get_model_size(model: TModel) -> int:
+        """
+        Returns model size
+
+        :param model: A model
+        :return: Model size (in bytes)
+        """
+
     # Preparation of model
 
     @staticmethod
     @abstractmethod
-    def prepare_for_inference(model: TModel) -> Any:
+    def prepare_for_inference(model: TModel) -> TPModel:
         """
         Prepares model for inference.
 
         :param model: A model that should be prepared.
         :return: Prepared model for inference.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def prepare_for_inference_async(model: TModel) -> AsyncPreparedModel:
+        """
+        Prepares model for inference asynchronously.
+
+        :param model: A model that should be prepared.
+        :return: AsyncPreparedModel opbject.
         """

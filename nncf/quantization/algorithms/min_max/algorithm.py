@@ -14,6 +14,8 @@ import dataclasses
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar
 
+import numpy as np
+
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
@@ -259,13 +261,21 @@ class MinMaxQuantization(Algorithm):
         return RangeEstimatorParameters(min_statistic_collector, max_statistic_collector)
 
     def _get_stat_collector(
-        self, nncf_graph: NNCFGraph, target_point: TargetPoint, quantizer_config: QuantizerConfig
+        self,
+        nncf_graph: NNCFGraph,
+        target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
+        num_samples: int,
     ) -> TensorStatisticCollectorBase:
         """
-        Creates and returns statistic collector instance based on the quantizer's configuration.
+        Creates and returns a statistic collector based on the quantizer's configuration.
 
-        :param quantizer_config: QuantizerConfig instance for the current layer.
-        :return: One of the TensorStatisticCollectorBase instances
+        :param nncf_graph: NNCFGraph instance.
+        :param target_point: Target point indicates where statistics should be collected.
+        :param quantizer_config: Configuration of a quantizer layer,
+        defining the configuration of created statistic collector.
+        :param num_samples: Number of samples to collect from the 'target_point'.
+        :return: Statistic Collector.
         """
         range_estimator_params = self._get_range_estimator_parameters(target_point, quantizer_config)
 
@@ -275,7 +285,7 @@ class MinMaxQuantization(Algorithm):
             target_point,
             quantizer_config,
             inplace=self._inplace_statistics,
-            num_samples=self._subset_size,
+            num_samples=num_samples,
         )
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
@@ -344,7 +354,11 @@ class MinMaxQuantization(Algorithm):
         return IgnoredScope(names=nncf_node_names)
 
     def _get_quantizer_setup(
-        self, nncf_graph: NNCFGraph, hw_patterns: GraphPattern, ignored_patterns: GraphPattern
+        self,
+        nncf_graph: NNCFGraph,
+        inference_nncf_graph: NNCFGraph,
+        hw_patterns: GraphPattern,
+        ignored_patterns: GraphPattern,
     ) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
@@ -358,9 +372,6 @@ class MinMaxQuantization(Algorithm):
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
 
-        inference_nncf_graph = transform_to_inference_graph(
-            deepcopy(nncf_graph), self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
-        )
         ignored_names = self._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
         weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph)
 
@@ -478,8 +489,14 @@ class MinMaxQuantization(Algorithm):
             backend=backend, device=device, model_type=model_type
         )
         hw_patterns = PatternsManager.get_full_hw_pattern_graph(backend=backend, device=device, model_type=model_type)
-        quantizer_setup = self._get_quantizer_setup(nncf_graph, hw_patterns, ignored_patterns)
+
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph), self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
+        )
+
+        quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         self._apply_model_type_pass(self._model_type, quantizer_setup, nncf_graph)
+        self._apply_device_pass(self._target_device, quantizer_setup, inference_nncf_graph)
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup)
         quantization_points = list(quantizer_setup.quantization_points.values())
         quantization_points = self._topological_sort_quantization_points(quantization_points, nncf_graph)
@@ -583,7 +600,7 @@ class MinMaxQuantization(Algorithm):
             )
         if overflow_fix == OverflowFix.FIRST_LAYER:
             weight_quantization_points = _filter_target_points_by_metatypes(
-                weight_quantization_points, self._backend_entity.conv_metatype, nncf_graph
+                weight_quantization_points, self._backend_entity.conv_metatypes, nncf_graph
             )
             for input_node in nncf_graph.get_input_nodes():
                 nodes = self._get_first_quantized_convolutions(weight_quantization_points, input_node, nncf_graph)
@@ -627,7 +644,7 @@ class MinMaxQuantization(Algorithm):
                 q_group = QuantizerGroup.ACTIVATIONS
                 narrow_range = get_quantizer_narrow_range(qconfig, q_group)
                 parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
-                command = self._backend_entity.create_activation_quantizer_insertion_command(
+                command = self._backend_entity.create_quantizer_insertion_command(
                     nncf_graph, quantization_target_point, qconfig, parameters
                 )
                 transformation_layout.register(command)
@@ -653,14 +670,9 @@ class MinMaxQuantization(Algorithm):
                 narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
                 statistics = tensor_collector.get_statistics()
                 parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
-                if quantization_target_point.is_weight_target_point():
-                    command = self._backend_entity.create_weight_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point, qconfig, parameters
-                    )
-                else:
-                    command = self._backend_entity.create_activation_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point, qconfig, parameters
-                    )
+                command = self._backend_entity.create_quantizer_insertion_command(
+                    nncf_graph, quantization_target_point, qconfig, parameters
+                )
 
                 transformation_layout.register(command)
 
@@ -678,7 +690,11 @@ class MinMaxQuantization(Algorithm):
                 f"Adding target point {quantization_target_point.target_node_name}"
                 f" with type {quantization_target_point.type} for statistics collection"
             )
-            stat_collector = self._get_stat_collector(nncf_graph, quantization_target_point, qconfig)
+            num_samples = self._subset_size
+            if quantization_target_point.is_weight_target_point():
+                # Weight statistics is constant, so only one collection is enough.
+                num_samples = 1
+            stat_collector = self._get_stat_collector(nncf_graph, quantization_target_point, qconfig, num_samples)
             output.add_statistic_point(
                 StatisticPoint(
                     target_point=quantization_target_point,
@@ -704,8 +720,7 @@ class MinMaxQuantization(Algorithm):
                 if quantization_point.is_activation_quantization_point():
                     for node_name in quantization_point.directly_quantized_operator_node_names:
                         node = nncf_graph.get_node_by_name(node_name)
-                        mat_mul_metatype = self._backend_entity.mat_mul_metatype
-                        if node.metatype != mat_mul_metatype:
+                        if node.metatype not in self._backend_entity.mat_mul_metatypes:
                             continue
                         if (
                             quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC
@@ -716,3 +731,91 @@ class MinMaxQuantization(Algorithm):
                                 f"Update quantization mode for the node {node_name}"
                                 f" to the symmetric due to ModelType parameter."
                             )
+
+    def _apply_device_pass(
+        self, target_device: TargetDevice, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
+    ) -> None:
+        """
+        This method applies model post-processing device passes to SingleConfigQuantizerSetup in-place.
+
+        :param target_device: TargetDevice instance.
+        :param quantizer_setup: SingleConfigQuantizerSetup instance to update.
+        :param nncf_graph: NNCFGraph.
+        :return: None.
+        """
+
+        passes_map = {TargetDevice.CPU_SPR: self._apply_spr_pass}
+
+        if target_device not in passes_map:
+            return
+
+        passes_map[target_device](quantizer_setup, nncf_graph)
+
+    def _apply_spr_pass(
+        self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
+    ) -> SingleConfigQuantizerSetup:
+        """
+        Applies CPU_SPR-related pass.
+        The main action is to remove one of the quantizers before elementwise layer (e.g. Add).
+        This action allows to get performance boost on SPR devices.
+
+        :param quantizer_setup: SingleConfigQuantizerSetup instance to update.
+        :param nncf_graph: NNCFGraph instance to update.
+        :return: Modified SingleConfigQuantizerSetup.
+        """
+
+        def _is_node_after_producers(node):
+            input_node = node
+            while True:
+                input_node = nncf_graph.get_previous_nodes(input_node)
+                if len(input_node) > 1:
+                    return False
+                input_node = input_node[0]
+                if input_node.metatype in producer_metatypes:
+                    return True
+
+        producer_metatypes = (
+            self._backend_entity.conv_metatypes
+            + self._backend_entity.mat_mul_metatypes
+            + self._backend_entity.group_conv_metatypes
+        )
+
+        quantizer_setup_map = {
+            p.insertion_point.target_node_name: q_key for q_key, p in quantizer_setup.quantization_points.items()
+        }
+
+        # Walking through all Add layers.
+        for add_node in nncf_graph.get_nodes_by_metatypes(self._backend_entity.add_metatypes):
+            add_inputs = nncf_graph.get_previous_nodes(add_node)
+
+            # Filtering Add based on it's input.
+            # Need to find Add layer only with two activations as input.
+            if len(add_inputs) == 2 and all(n.node_name in quantizer_setup_map for n in add_inputs):
+                # Sorting of the inputs based on length of input's consumer in descending order.
+                add_inputs.sort(key=lambda n: len(nncf_graph.get_next_nodes(n)), reverse=True)
+                fq_1_producer, fq_2_producer = add_inputs
+                fq_1_q_key = quantizer_setup_map[fq_1_producer.node_name]
+                fq_2_q_key = quantizer_setup_map[fq_2_producer.node_name]
+
+                # In the case of the two quantizers where one of them produces data into branching,
+                # it needs to remove the quantizer without branching after it.
+                if (
+                    len(nncf_graph.get_next_nodes(fq_1_producer)) > 1
+                    and len(nncf_graph.get_next_nodes(fq_2_producer)) == 1
+                ):
+                    quantizer_setup.discard(fq_2_q_key, True)
+                    continue
+
+                # In the case of the two quantizers without the brancking after them,
+                # it needs to check that all quantizers follows after producer nodes.
+                if _is_node_after_producers(fq_1_producer) and _is_node_after_producers(fq_2_producer):
+                    fq_1_prod_shape = np.prod(nncf_graph.get_output_edges(fq_1_producer)[0].tensor_shape)
+                    fq_2_prod_shape = np.prod(nncf_graph.get_output_edges(fq_2_producer)[0].tensor_shape)
+
+                    # Then it needs to remove quantizer with the smallest shape.
+                    if fq_1_prod_shape >= fq_2_prod_shape:
+                        quantizer_setup.discard(fq_1_q_key, True)
+                    else:
+                        quantizer_setup.discard(fq_2_q_key, True)
+
+        return quantizer_setup

@@ -187,7 +187,7 @@ def extract_gt_bboxes(classname, dataset, gt, imagenames):
                 difficult.append(x["difficult"])
             else:
                 difficult.append(False)
-        difficult = np.array(difficult).astype(np.bool)
+        difficult = np.array(difficult).astype(bool)
         det = [False] * len(img_gt_objects_for_class)
         npos = npos + sum(~difficult)
         class_gt[imagename] = {"bbox": bbox, "difficult": difficult, "det": det}

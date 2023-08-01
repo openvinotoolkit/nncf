@@ -1321,3 +1321,222 @@ class GEMMTransposeWeightModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "gemm_weight_transpose_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class WeightPropagationMatMulModel(ONNXReferenceModel):
+    #               Identity
+    #                   |
+    #         X     Identity
+    #          \     /
+    #           MatMul
+    #             |     Constant
+    #             |     /
+    #           MatMul
+    #             |
+    #             Y
+    def __init__(self):
+        model_input_name, model_output_name = "X", "Y"
+        model_input_channels = 10
+        matmul_output_channels = 5
+        input_shape = [1, model_input_channels]
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_input_channels])
+
+        rng = np.random.default_rng(seed=0)
+        shape = [model_input_channels, matmul_output_channels]
+
+        # Create MatMul
+        w_tensor = create_initializer_tensor(
+            name="W_tensor", tensor_array=rng.uniform(0, 1, shape).astype(np.float32), data_type=onnx.TensorProto.FLOAT
+        )
+        identity_1 = onnx.helper.make_node(name="Identity_1", op_type="Identity", inputs=["W_tensor"], outputs=["i_1"])
+        identity_2 = onnx.helper.make_node(name="Identity_2", op_type="Identity", inputs=["i_1"], outputs=["i_2"])
+        matmul_1 = onnx.helper.make_node(
+            name="MatMul_1", op_type="MatMul", inputs=[model_input_name, "i_2"], outputs=["mm_1"]
+        )
+        matmul_2_shape = (matmul_output_channels, model_input_channels)
+        constant_data = rng.uniform(0, 1, matmul_2_shape).astype(np.float32)  # Randomly initialized weight tensor
+        constant_initializer = onnx.helper.make_tensor(
+            name="constant_data",
+            data_type=onnx.TensorProto.FLOAT,
+            dims=constant_data.shape,
+            vals=constant_data.flatten(),
+        )
+        constant = onnx.helper.make_node("Constant", [], ["const"], name="constant", value=constant_initializer)
+        matmul_2 = onnx.helper.make_node(
+            name="MatMul_2", op_type="MatMul", inputs=["mm_1", "const"], outputs=[model_output_name]
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[identity_1, identity_2, matmul_1, constant, matmul_2],
+            name="Net",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[w_tensor, constant_initializer],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "weight_propagation_matmul_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class WeightPropagationConvModel(ONNXReferenceModel):
+    #     X             Reshape
+    #     |               |
+    #     |           Transpose
+    #     |               |
+    #     \            Identiy
+    #       \            /
+    #         \       /
+    #            Conv
+    #             |
+    #             |         Constant
+    #             |           /
+    #             |       Reshape
+    #             |        /
+    #             |    Identity
+    #             |     /
+    #            Conv
+    #             |
+    #             |    Constant
+    #             |   /
+    #            Conv
+    #             |
+    #             |
+    #             |
+    def __init__(self):
+        input_shape = (1, 1, 28, 28)  # Example shape, change as required
+        Y = onnx.helper.make_tensor_value_info("output", onnx.TensorProto.FLOAT, [1, 1, 28, 28])
+        input_tensor = onnx.helper.make_tensor_value_info("input", onnx.TensorProto.FLOAT, input_shape)
+        rng = get_random_generator()
+
+        # Layer 1: Convolution 1
+        conv_output1 = "conv_output1"
+        conv1_shape = (1, 1, 3, 3)
+        conv1_weight = rng.uniform(0, 1, conv1_shape).astype(np.float32)  # Randomly initialized weight tensor
+
+        conv1_weight_initializer = onnx.helper.make_tensor(
+            name="conv1_weight",
+            data_type=onnx.TensorProto.FLOAT,
+            dims=conv1_weight.shape,
+            vals=conv1_weight.flatten(),
+        )
+
+        # Layer 1: Identity -> Transpose -> Reshape
+        identity_output1 = "identity_output1"
+        transpose_output = "transpose_output"
+        reshape_output = "reshape_output"
+        reshape_1_tensor_name = "w_r_1"
+        reshape_1_initializer_tensor = create_initializer_tensor(
+            name=reshape_1_tensor_name,
+            tensor_array=np.array(conv1_shape).astype(np.int64),
+            data_type=onnx.TensorProto.INT64,
+        )
+        reshape_node = onnx.helper.make_node(
+            "Reshape", ["conv1_weight", reshape_1_tensor_name], [reshape_output], name="reshape"
+        )
+        transpose_node = onnx.helper.make_node(
+            "Transpose", [reshape_output], [transpose_output], name="transpose", perm=[0, 1, 3, 2]
+        )
+        identity_node1 = onnx.helper.make_node("Identity", [transpose_output], [identity_output1], name="identity1")
+
+        conv1_node = onnx.helper.make_node(
+            "Conv", ["input", identity_output1], [conv_output1], name="conv1", kernel_shape=[3, 3], pads=[1, 1, 1, 1]
+        )
+
+        # Layer 3: Convolution 2
+        identity_output2 = "identity_output2"
+        reshape_output2 = "reshape_output2"
+        constant_output = "constant_output"
+        conv_output2 = "conv_output2"
+        conv2_shape = (1, 1, 3, 3)
+        conv2_node = onnx.helper.make_node(
+            "Conv",
+            [conv_output1, identity_output2],
+            [conv_output2],
+            name="conv2",
+            kernel_shape=[3, 3],
+            pads=[1, 1, 1, 1],
+        )
+
+        # Layer 4: Identity -> Reshape -> Constant
+        constant_data = rng.uniform(0, 1, conv2_shape).astype(np.float32)  # Randomly initialized weight tensor
+        reshape_2_tensor_name = "w_r_2"
+
+        reshape_2_initializer_tensor = create_initializer_tensor(
+            name=reshape_2_tensor_name,
+            tensor_array=np.array((1, 1, 3, 3)).astype(np.int64),
+            data_type=onnx.TensorProto.INT64,
+        )
+        constant_initializer = onnx.helper.make_tensor(
+            name="constant_data",
+            data_type=onnx.TensorProto.FLOAT,
+            dims=constant_data.shape,
+            vals=constant_data.flatten(),
+        )
+        constant_node = onnx.helper.make_node(
+            "Constant", [], [constant_output], name="constant", value=constant_initializer
+        )
+        reshape_node2 = onnx.helper.make_node(
+            "Reshape", [constant_output, reshape_2_tensor_name], [reshape_output2], name="reshape2"
+        )
+        identity_node2 = onnx.helper.make_node("Identity", [reshape_output2], [identity_output2], name="identity2")
+
+        # Layer 6: Convolution 3
+        constant_output2 = "constant_output2"
+        conv4_shape = (1, 1, 3, 3)
+        constant_data2 = rng.uniform(0, 1, conv4_shape).astype(np.float32)  # Randomly initialized weight tensor
+        constant_initializer2 = onnx.helper.make_tensor(
+            name="constant_data2",
+            data_type=onnx.TensorProto.FLOAT,
+            dims=constant_data2.shape,
+            vals=constant_data2.flatten(),
+        )
+        constant_2_node = onnx.helper.make_node(
+            "Constant", [], [constant_output2], name="constant2", value=constant_initializer2
+        )
+        conv4_node = onnx.helper.make_node(
+            "Conv",
+            [conv_output2, constant_output2],
+            ["output"],
+            name="conv4",
+            kernel_shape=[3, 3],
+            pads=[1, 1, 1, 1],
+        )
+
+        # Create the graph with all the nodes
+        graph_def = onnx.helper.make_graph(
+            [
+                reshape_node,
+                transpose_node,
+                identity_node1,
+                conv1_node,
+                constant_node,
+                reshape_node2,
+                identity_node2,
+                conv2_node,
+                constant_2_node,
+                conv4_node,
+            ],
+            "example_model",
+            [input_tensor],
+            [Y],
+            [
+                conv1_weight_initializer,
+                constant_initializer,
+                reshape_1_initializer_tensor,
+                reshape_2_initializer_tensor,
+                constant_initializer2,
+            ],
+        )
+
+        # Create the model with the graph
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "weight_propagation_conv_model.dot")

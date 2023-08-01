@@ -172,7 +172,7 @@ def get_points_near_of_mid_points(input_data: np.array, mid_points: np.array, at
     :return np.array: Array of flags to indicate points is in the middle between quant points.
     """
     num_elements = np.prod(input_data.shape)
-    is_near_mid_point = np.zeros(num_elements).astype(np.bool)
+    is_near_mid_point = np.zeros(num_elements).astype(bool)
 
     mid_point_ind = 0
     for ind in range(num_elements):
@@ -293,7 +293,7 @@ def generate_sweep_data(
         if is_weights:
             channel_count = input_size[0]
             inputs = np.empty(input_size)
-            is_near_mid_point = np.zeros(input_size).astype(np.bool)
+            is_near_mid_point = np.zeros(input_size).astype(bool)
             quant_lens = np.empty(input_size)
             for idx in range(0, channel_count):
                 ch_input, ch_is_near_mid_point, ch_quant_lens = generate_sweep_for_one_channel(
@@ -305,7 +305,7 @@ def generate_sweep_data(
         else:
             channel_count = input_size[1]
             inputs = np.empty(input_size)
-            is_near_mid_point = np.zeros(input_size).astype(np.bool)
+            is_near_mid_point = np.zeros(input_size).astype(bool)
             quant_lens = np.empty(input_size)
             for idx in range(0, channel_count):
                 ch_input, ch_is_near_mid_point, ch_quant_lens = generate_sweep_for_one_channel(

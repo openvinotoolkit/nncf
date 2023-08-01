@@ -16,6 +16,7 @@ from torch import nn
 from torch.nn import BatchNorm2d
 from torch.nn import Dropout
 from torch.nn import Parameter
+from torchvision.transforms.functional import normalize
 
 from nncf.torch import register_module
 from tests.torch.helpers import create_conv
@@ -332,3 +333,43 @@ class MHA_single_input(torch.nn.Module):
 
     def forward(self, x):
         return self.mha(x, x, x)
+
+
+class OrdinaryModelWithRecurrentInName(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1)
+
+    def forward(self, x):
+        quantize_agnostic = x[:2]
+        return self.conv(quantize_agnostic)
+
+
+class ShiftScaleParametrized(torch.nn.Module):
+    NUM_CHANNELS = 3
+    INPUT_SIZES = [1, NUM_CHANNELS, 2, 2]
+
+    def __init__(self, is_single_input: bool, use_normalize: bool):
+        super().__init__()
+        self.conv = create_conv(self.NUM_CHANNELS, 1, 1)
+        self.is_single_input = is_single_input
+        self.use_normalize = use_normalize
+
+    @classmethod
+    def get_name(cls, is_single_input: bool, use_normalize: bool):
+        suffix_1 = "single" if is_single_input else "multi"
+        suffix_2 = "__normalize" if use_normalize else ""
+        return f"ShiftScale{suffix_2}__{suffix_1}_input_branch"
+
+    def forward(self, x):
+        values = [1] * self.NUM_CHANNELS
+        if self.use_normalize:
+            pre_proc = normalize(x, values, values, inplace=False)
+        else:
+            vector = torch.Tensor(values).unsqueeze(dim=0).unsqueeze(dim=2).unsqueeze(dim=3)
+            pre_proc = (x - vector) / vector
+
+        output = self.conv(pre_proc)
+        if self.is_single_input:
+            return output
+        return output, self.conv(x)

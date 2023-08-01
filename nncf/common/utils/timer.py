@@ -20,8 +20,9 @@ def timer():
     """
     Context manager to measure execution time.
     """
-    start_time = time.perf_counter()
-    yield
-    elapsed_time = time.perf_counter() - start_time
+    start_time = end_time = time.perf_counter()
+    yield lambda: end_time - start_time
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
     time_string = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     nncf_logger.info(f"Elapsed Time: {time_string}")

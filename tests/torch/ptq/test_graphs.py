@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch.layers import NNCF_RNN
@@ -37,54 +38,65 @@ def fixture_graph_dir(request):
     return graph_dir_
 
 
-def get_model_name(desc):
+def get_model_name(description):
+    desc = description[0]
     if isinstance(desc, ModelDesc):
         return desc.model_name
-    return desc.values[0].model_name
+    return desc[0].model_name
 
 
 TEST_MODELS_DESC = [
-    ModelDesc("shared_model", SharedLayersModel, [1, 1, 5, 6]),
-    ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]),
-    ModelDesc("lenet", test_models.LeNet, [1, 3, 32, 32]),
-    ModelDesc("resnet18", test_models.ResNet18, [1, 3, 32, 32]),
-    ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
-    ModelDesc("vgg16", partial(test_models.VGG, "VGG16"), [1, 3, 32, 32]),
-    ModelDesc("inception", test_models.GoogLeNet, [1, 3, 32, 32]),
-    ModelDesc("densenet121", test_models.DenseNet121, [1, 3, 32, 32]),
-    ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True), [2, 3, 299, 299]),
-    ModelDesc("squeezenet1_1", test_models.squeezenet1_1, [1, 3, 32, 32]),
-    ModelDesc("shufflenetv2", partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]),
-    ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]),
-    ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]),
-    ModelDesc("mobilenet_v2", test_models.mobilenet_v2, [2, 3, 32, 32]),
-    ModelDesc("mobilenet_v3_small", test_models.mobilenet_v3_small, [2, 3, 32, 32]),
-    ModelDesc("unet", test_models.UNet, [1, 3, 360, 480]),
-    pytest.param(ModelDesc("lstm_cell", LSTMCellNNCF, [2, 1]), marks=SKIP_MARK),
+    (ModelDesc("shared_model", SharedLayersModel, [1, 1, 5, 6]), {}),
+    (ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]), {}),
+    (ModelDesc("lenet", test_models.LeNet, [1, 3, 32, 32]), {}),
+    (ModelDesc("resnet18", test_models.ResNet18, [1, 3, 32, 32]), {}),
+    (ModelDesc("resnet50_cpu_spr", test_models.ResNet50, [1, 3, 32, 32]), {"target_device": TargetDevice.CPU_SPR}),
+    (ModelDesc("vgg16", partial(test_models.VGG, "VGG16"), [1, 3, 32, 32]), {}),
+    (ModelDesc("inception", test_models.GoogLeNet, [1, 3, 32, 32]), {}),
+    (ModelDesc("densenet121", test_models.DenseNet121, [1, 3, 32, 32]), {}),
+    (
+        ModelDesc(
+            "inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True), [2, 3, 299, 299]
+        ),
+        {},
+    ),
+    (ModelDesc("squeezenet1_1", test_models.squeezenet1_1, [1, 3, 32, 32]), {}),
+    (ModelDesc("shufflenetv2", partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]), {}),
+    (ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]), {}),
+    (ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]), {}),
+    (ModelDesc("mobilenet_v2", test_models.mobilenet_v2, [2, 3, 32, 32]), {}),
+    (ModelDesc("mobilenet_v3_small", test_models.mobilenet_v3_small, [2, 3, 32, 32]), {}),
+    (ModelDesc("unet", test_models.UNet, [1, 3, 360, 480]), {}),
+    pytest.param(ModelDesc("lstm_cell", LSTMCellNNCF, [2, 1]), {}, marks=SKIP_MARK),
     pytest.param(
-        ModelDesc("lstm_uni_seq", partial(NNCF_RNN, num_layers=1, bidirectional=False), [3, 1, 1]), marks=SKIP_MARK
+        ModelDesc("lstm_uni_seq", partial(NNCF_RNN, num_layers=1, bidirectional=False), [3, 1, 1]), {}, marks=SKIP_MARK
     ),
     pytest.param(
-        ModelDesc("lstm_uni_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=False), [3, 1, 1]), marks=SKIP_MARK
+        ModelDesc("lstm_uni_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=False), [3, 1, 1]),
+        {},
+        marks=SKIP_MARK,
     ),
     pytest.param(
-        ModelDesc("lstm_bi_seq", partial(NNCF_RNN, num_layers=1, bidirectional=True), [3, 1, 1]), marks=SKIP_MARK
+        ModelDesc("lstm_bi_seq", partial(NNCF_RNN, num_layers=1, bidirectional=True), [3, 1, 1]), {}, marks=SKIP_MARK
     ),
     pytest.param(
-        ModelDesc("lstm_bi_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=True), [3, 1, 1]), marks=SKIP_MARK
+        ModelDesc("lstm_bi_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=True), [3, 1, 1]),
+        {},
+        marks=SKIP_MARK,
     ),
 ]
 
 
-@pytest.mark.parametrize("desc", TEST_MODELS_DESC, ids=[get_model_name(m) for m in TEST_MODELS_DESC])
-def test_min_max_classification_quantized_graphs(desc: ModelDesc, graph_dir, mocker):
+@pytest.mark.parametrize(
+    ("desc", "quantization_parameters"), TEST_MODELS_DESC, ids=[get_model_name(m) for m in TEST_MODELS_DESC]
+)
+def test_min_max_classification_quantized_graphs(desc: ModelDesc, quantization_parameters, graph_dir, mocker):
     mock_collect_statistics(mocker)
     model = desc.model_builder()
 
     nncf_network = get_nncf_network(model, desc.input_sample_sizes)
-    quantization_algorithm = PostTrainingQuantization(
-        advanced_parameters=AdvancedQuantizationParameters(disable_bias_correction=True)
-    )
+    quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=True)
+    quantization_algorithm = PostTrainingQuantization(**quantization_parameters)
 
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=None)
 

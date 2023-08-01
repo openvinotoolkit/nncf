@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import List
 
@@ -31,6 +32,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -82,8 +84,14 @@ class TemplateTestQuantizerConfig:
         algo = PostTrainingQuantization()
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
+        nncf_graph = single_conv_nncf_graph.nncf_graph
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph),
+            min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.read_variable_metatypes,
+        )
         q_setup = min_max_algo._get_quantizer_setup(
-            single_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+            nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
         )
 
         weight_default_config = QuantizerConfig(
@@ -106,10 +114,9 @@ class TemplateTestQuantizerConfig:
     @pytest.mark.parametrize("preset", [QuantizationPreset.MIXED, QuantizationPreset.PERFORMANCE])
     @pytest.mark.parametrize("weight_bits", [8])
     @pytest.mark.parametrize("activation_bits", [8])
-    @pytest.mark.parametrize("signed_weights", [None])
-    @pytest.mark.parametrize("signed_activations", [None])
-    # TODO(kshpv): add signed_activations and signed_weights which should be independent from HW config.
-    def test_quantizer_config_from_ptq_params(
+    @pytest.mark.parametrize("signed_weights", [None, True, False])
+    @pytest.mark.parametrize("signed_activations", [None, True, False])
+    def test_quantizer_config_from_ptq_params_for_CPU(
         self,
         weight_per_channel,
         activation_per_channel,
@@ -133,35 +140,56 @@ class TemplateTestQuantizerConfig:
         )
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
-        q_setup = min_max_algo._get_quantizer_setup(
-            single_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+        nncf_graph = single_conv_nncf_graph.nncf_graph
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph),
+            min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.read_variable_metatypes,
         )
-        q_g_to_quantization_mode = {}
-        for q_g in QuantizerGroup:
-            q_g_to_quantization_mode[q_g] = preset.get_params_configured_by_preset(q_g)["mode"]
+        if signed_weights is False or signed_activations in [True, False]:  # Incompatible with HW CPU config
+            with pytest.raises(
+                ValueError,
+                match=".*?Quantization parameter constraints specified in NNCF config are incompatible.*?",
+            ):
+                q_setup = min_max_algo._get_quantizer_setup(
+                    nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+                )
+        else:
+            q_setup = min_max_algo._get_quantizer_setup(
+                nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+            )
+            q_g_to_quantization_mode = {}
+            for q_g in QuantizerGroup:
+                q_g_to_quantization_mode[q_g] = preset.get_params_configured_by_preset(q_g)["mode"]
 
-        assert len(q_setup.quantization_points) == 2
+            assert len(q_setup.quantization_points) == 2
 
-        for quantization_point in q_setup.quantization_points.values():
-            if quantization_point.is_weight_quantization_point():
-                assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.WEIGHTS]
-                assert quantization_point.qconfig.per_channel == weight_per_channel
-                assert quantization_point.qconfig.num_bits == weight_bits
-                if signed_weights is not None:
-                    assert quantization_point.qconfig.signedness_to_force == signed_weights
-            if quantization_point.is_activation_quantization_point():
-                assert quantization_point.qconfig.per_channel == activation_per_channel
-                assert quantization_point.qconfig.num_bits == activation_bits
-                assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.ACTIVATIONS]
-                if signed_activations is not None:
-                    assert quantization_point.qconfig.signedness_to_force == signed_activations
+            for quantization_point in q_setup.quantization_points.values():
+                if quantization_point.is_weight_quantization_point():
+                    assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.WEIGHTS]
+                    assert quantization_point.qconfig.per_channel == weight_per_channel
+                    assert quantization_point.qconfig.num_bits == weight_bits
+                    if signed_weights is not None:
+                        assert quantization_point.qconfig.signedness_to_force == signed_weights
+                if quantization_point.is_activation_quantization_point():
+                    assert quantization_point.qconfig.per_channel == activation_per_channel
+                    assert quantization_point.qconfig.num_bits == activation_bits
+                    assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.ACTIVATIONS]
+                    if signed_activations is not None:
+                        assert quantization_point.qconfig.signedness_to_force == signed_activations
 
     def test_depthwise_conv_default_quantizer_config(self, depthwise_conv_nncf_graph):
         algo = PostTrainingQuantization()
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
+        nncf_graph = depthwise_conv_nncf_graph.nncf_graph
+        inference_nncf_graph = transform_to_inference_graph(
+            deepcopy(nncf_graph),
+            min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.read_variable_metatypes,
+        )
         q_setup = min_max_algo._get_quantizer_setup(
-            depthwise_conv_nncf_graph.nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+            nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
         )
 
         weight_default_config = QuantizerConfig(
@@ -184,11 +212,13 @@ class TemplateTestQuantizerConfig:
     )
     @pytest.mark.parametrize("q_config_mode", [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC])
     @pytest.mark.parametrize("q_config_per_channel", [True, False])
+    @pytest.mark.parametrize("num_samples", [5, 12])
     def test_get_stat_collector(
         self,
         range_estimator_params,
         q_config_mode,
         q_config_per_channel,
+        num_samples,
         conv_sum_aggregation_nncf_graph,
         statistic_collector_parameters: TestGetStatisticsCollectorParameters,
     ):
@@ -214,7 +244,7 @@ class TemplateTestQuantizerConfig:
 
         target_point = list(min_max_algo._quantization_target_points_to_qconfig.keys())[0]
         tensor_collector = min_max_algo._get_stat_collector(
-            conv_sum_aggregation_nncf_graph.nncf_graph, target_point, q_config
+            conv_sum_aggregation_nncf_graph.nncf_graph, target_point, q_config, num_samples
         )
 
         is_weight_tp = target_point.is_weight_target_point()
@@ -251,3 +281,5 @@ class TemplateTestQuantizerConfig:
                 assert reducer._reduction_shape == params.ref_per_ch_reduction_shape
             else:
                 assert reducer._reduction_shape == params.ref_per_tensor_reduction_shape
+
+        assert tensor_collector.num_samples == num_samples

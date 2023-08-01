@@ -128,7 +128,20 @@ def collect_api_entities() -> APIInfo:
     return retval
 
 
-with mock(["torch", "torchvision", "onnx", "onnxruntime", "openvino", "tensorflow", "tensorflow_addons"]):
+mock_modules = [
+    "torch",
+    "torchvision",
+    "onnx",
+    "onnxruntime",
+    "openvino",
+    "tensorflow",
+    "tensorflow_addons",
+    # Need add backend implementation functions to avoid endless loops on registered functions by mock module,
+    "nncf.experimental.tensor.torch_functions",
+    "nncf.experimental.tensor.numpy_functions",
+]
+
+with mock(mock_modules):
     api_info = collect_api_entities()
 
 module_fqns = set()
