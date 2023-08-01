@@ -13,7 +13,7 @@ import os
 import sys
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable
+from typing import Callable, Optional
 from unittest.mock import MagicMock
 
 from nncf import __version__
@@ -40,7 +40,13 @@ class ITelemetry(ABC):
 
     @abstractmethod
     def send_event(
-        self, event_category: str, event_action: str, event_label: str, event_value: int = 1, force_send=False, **kwargs
+        self,
+        event_category: str,
+        event_action: str,
+        event_label: str,
+        event_value: Optional[int] = None,
+        force_send=False,
+        **kwargs,
     ):
         """
         Send single event.
@@ -98,8 +104,16 @@ class NNCFTelemetry(ITelemetry):
 
     @skip_if_raised
     def send_event(
-        self, event_category: str, event_action: str, event_label: str, event_value: int = 1, force_send=False, **kwargs
+        self,
+        event_category: str,
+        event_action: str,
+        event_label: str,
+        event_value: Optional[int] = None,
+        force_send=False,
+        **kwargs,
     ):
+        if event_value is None:
+            event_value = 1
         self._impl.send_event(event_category, event_action, event_label, event_value, force_send, **kwargs)
 
     @skip_if_raised
