@@ -24,6 +24,7 @@ from nncf.telemetry import TelemetryExtractor
 from nncf.telemetry import tracked_function
 from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.wrapper import NNCFTelemetryStub
+from nncf.telemetry.wrapper import skip_if_raised
 
 
 @pytest.fixture(name="hide_pytest")
@@ -184,3 +185,23 @@ def test_nested_function_different_categories(mocker, spies):
 
     assert start_session_event_spy.call_args_list == expected_session_call_args_list
     assert end_session_event_spy.call_args_list == list(reversed(expected_session_call_args_list))
+
+
+class Raises:
+    def __init__(self):
+        self.call_count = 0
+
+    def __call__(self, arg1, arg2):
+        self.call_count += 1
+        raise Exception()
+
+
+def test_skip_if_raised():
+    raises = Raises()
+    wrapped = skip_if_raised(raises)
+    wrapped(1, 2)
+    assert raises.call_count == 1
+
+    # Incorrect args
+    wrapped(1, 2, 3)
+    assert raises.call_count == 1
