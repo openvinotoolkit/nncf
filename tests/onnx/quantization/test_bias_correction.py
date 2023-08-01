@@ -82,7 +82,115 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
             assert np.all(np.isclose(curr_value, ref_value, atol=0.01)), f"{curr_value} != {ref_value}"
 
-    @pytest.fixture()
-    def quantized_test_model(self, tmpdir) -> onnx.ModelProto:
-        pytest.xfail("Skipped until the issue with NNCFGraph builder (ONNX) not fixed.")
-        return super().quantized_test_model(tmpdir)
+    @pytest.mark.parametrize(
+        "layer_name, ref_data",
+        (
+            (
+                "/conv_1/Conv",
+                {
+                    "collected_inputs": {"/conv_1/Conv": ("input.1", 0)},
+                    "subgraph_data": {
+                        "subgraph_input_names": {"/conv_1/Conv"},
+                        "subgraph_output_names": {"/maxpool_1/MaxPool", "/Split"},
+                        "subgraph_output_ids": {("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
+                    },
+                },
+            ),
+            (
+                "/conv_2/Conv",
+                {
+                    "collected_inputs": {
+                        "/conv_1/Conv": ("input.1", 0),
+                        "/conv_2/Conv": ("/maxpool_1/MaxPool", 0),
+                        "/conv_4/Conv": ("/Split", 0),
+                        "/conv_6/Conv": ("/Split", 1),
+                    },
+                    "subgraph_data": {
+                        "subgraph_input_names": {"/conv_2/Conv"},
+                        "subgraph_output_names": {"/Relu_1"},
+                        "subgraph_output_ids": {("/Relu_1", 0)},
+                    },
+                },
+            ),
+            (
+                "/conv_3/Conv",
+                {
+                    "collected_inputs": {
+                        "/conv_1/Conv": ("input.1", 0),
+                        "/conv_2/Conv": ("/maxpool_1/MaxPool", 0),
+                        "/conv_3/Conv": ("/Relu_1", 0),
+                        "/conv_4/Conv": ("/Split", 0),
+                        "/conv_6/Conv": ("/Split", 1),
+                    },
+                    "subgraph_data": {
+                        "subgraph_input_names": {"/conv_1/Conv", "/conv_3/Conv"},
+                        "subgraph_output_names": {"/Split"},
+                        "subgraph_output_ids": {("/Split", 0), ("/Split", 1)},
+                    },
+                },
+            ),
+            (
+                "/conv_4/Conv",
+                {
+                    "collected_inputs": {
+                        "/conv_4/Conv": ("/Split", 0),
+                        "/conv_6/Conv": ("/Split", 1),
+                    },
+                    "subgraph_data": {
+                        "subgraph_input_names": {"/conv_4/Conv"},
+                        "subgraph_output_names": {"/Relu_2"},
+                        "subgraph_output_ids": {("/Relu_2", 0)},
+                    },
+                },
+            ),
+            (
+                "/conv_6/Conv",
+                {
+                    "collected_inputs": {
+                        "/conv_5/Conv": ("/Relu_2", 0),
+                        "/conv_6/Conv": ("/Split", 1),
+                    },
+                    "subgraph_data": {
+                        "subgraph_input_names": {"/conv_5/Conv", "/conv_6/Conv"},
+                        "subgraph_output_names": {"/Add_3", "/Concat"},
+                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat", 0)},
+                    },
+                },
+            ),
+            (
+                "/conv_10/Conv",
+                {
+                    "collected_inputs": {
+                        "/conv_8/Conv": ("/conv_7/Conv", 0),
+                        "/conv_9/Conv": ("/Add_3", 0),
+                        "/conv_10/Conv": ("/Concat", 0),
+                    },
+                    "subgraph_data": {
+                        "subgraph_input_names": {
+                            "/conv_8/Conv",
+                            "/conv_9/Conv",
+                            "/conv_10/Conv",
+                        },
+                        "subgraph_output_names": {"/Concat_1"},
+                        "subgraph_output_ids": {("/Concat_1", 0)},
+                    },
+                },
+            ),
+            # Disabled, because ONNX backend doesn't support bias correction for MatMul
+            # (
+            #     "/MatMul",
+            #     {
+            #         "collected_inputs": {
+            #             "/MatMul": ("/Reshape", 0),
+            #         },
+            #         "subgraph_data": {
+            #             "subgraph_input_names": {"/MatMul"},
+            #             "subgraph_output_names": {"/Reshape_1", "/Add_4"},
+            #             "subgraph_output_ids": {("/Reshape_1", 0), ("/Add_4", 0)},
+            #         },
+            #     },
+            # ),
+        ),
+    )
+    def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):
+        return super().test__get_subgraph_data_for_node(quantized_test_model, layer_name, ref_data)
