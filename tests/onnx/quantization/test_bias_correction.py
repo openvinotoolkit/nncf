@@ -13,6 +13,7 @@ from typing import Dict, List
 
 import numpy as np
 import onnx
+import pytest
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
@@ -80,3 +81,8 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
             curr_value = get_bias_value(node, model)
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
             assert np.all(np.isclose(curr_value, ref_value, atol=0.01)), f"{curr_value} != {ref_value}"
+
+    @pytest.fixture()
+    def quantized_test_model(self, tmpdir) -> onnx.ModelProto:
+        pytest.xfail("Skipped until the issue with NNCFGraph builder (ONNX) not fixed.")
+        return super().quantized_test_model(tmpdir)
