@@ -69,47 +69,31 @@ class ONNXLayerAttributes(BaseLayerAttributes):
         return bool(self.node_attrs)
 
 
-def _get_tensor_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> Optional[str]:
+def _is_constant_subgraph(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> bool:
     """
-    Returns an edge name on which a weight tensor is consumed by the node onto the input port_id.
-
-    Checks whether there is a parent node onto port id. If there is no parent node, it should have a
-
-    Checks whether a node has a tensor on input port_id.
-    If does then it is a weight and returns corresponding edge name.
-    If not - take a parent node into this port id and does the same check for it.
-
-    If an edge with a weight was not found then returns None.
-
-    METATYPES THAT COULD CONSUME A WEIGHT TENSOR:
-        ONNXConstantMetatype
-        ONNXIdentityMetatype
-        ONNXReshapeMetatype
-        ONNXTransposeMetatype
-        ONNXQuantizeLinearMetatype
+    Returns True whether the parent subraph of a node on input port_id is Constant.
+    Returns False if during the propagation a node is not in PROPAGATING_NODES.
 
     :param onnx_graph: ONNXGraph.
-    :param node: Node.
-    :param port_id: Port id on which a weight edge is seeking.
-    :return: Edge name associated with a weight.
+    :param node: Node through propagate.
+    :param port_id: Input port id in whihch the propagation should go.
+    :return: True if subgraph is Constant, False - otherwise.
     """
-    INPUT_WEIGHT_CONSUMING_TYPES = (
+    PROPAGATING_NODES = (
         ONNXIdentityMetatype.get_all_aliases()
         + ONNXTransposeMetatype.get_all_aliases()
         + ONNXQuantizeLinearMetatype.get_all_aliases()
-    )  # Have weight tensor as input on 0 index port.
-    OUTPUT_WEIGHT_TYPES = ONNXConstantMetatype.get_all_aliases() + ONNXReshapeMetatype.get_all_aliases()
-    PROPAGATING_ONLY_TYPES = ONNXDequantizeLinearMetatype.get_all_aliases()  # Can not have weight tensor
-
+        + ONNXReshapeMetatype.get_all_aliases()
+        + ONNXDequantizeLinearMetatype.get_all_aliases()
+    )
+    END_NODES = ONNXConstantMetatype.get_all_aliases()
     parent = onnx_graph.get_parent(node, port_id)
     if not parent:
-        if node.op_type in OUTPUT_WEIGHT_TYPES:
-            return node.output[0]
-        if onnx_graph.has_tensor(node.input[port_id]):
-            return node.input[port_id]
-    elif parent.op_type in (INPUT_WEIGHT_CONSUMING_TYPES + OUTPUT_WEIGHT_TYPES + PROPAGATING_ONLY_TYPES):
-        return _get_tensor_edge_name(onnx_graph, parent, 0)
-    return None
+        if node.op_type in END_NODES or onnx_graph.has_tensor(node.input[port_id]):
+            return True
+    elif parent.op_type in PROPAGATING_NODES:
+        return _is_constant_subgraph(onnx_graph, parent, 0)
+    return False
 
 
 def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int]:
@@ -128,7 +112,7 @@ def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int
     port_ids.update(constant_port_ids)
     possible_port_ids = get_possible_weight_port_ids(metatype)
     for port_id in possible_port_ids:
-        if _get_tensor_edge_name(onnx_graph, node, port_id):
+        if _is_constant_subgraph(onnx_graph, node, port_id):
             port_ids.add(port_id)
     return port_ids
 
@@ -158,7 +142,7 @@ def _get_weight_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph, weight_port_id
     :return: Weight attributes.
     """
     weight_attrs = {}
-    weight_edge_name = _get_tensor_edge_name(onnx_graph, node, weight_port_id)
+    weight_edge_name = node.input[weight_port_id]
     edge = onnx_graph.get_edge(weight_edge_name)
     weight_shape = ONNXGraph.get_edge_shape(edge)
     weight_attrs[weight_port_id] = {"name": weight_edge_name, "shape": weight_shape}
@@ -206,7 +190,7 @@ def _get_bias_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, str
     metatype = get_metatype(onnx_graph.onnx_model, node)
     if _is_node_with_bias(node, onnx_graph.onnx_model):
         bias_tensor_port_id = get_bias_tensor_port_id(metatype)
-        bias_edge_name = _get_tensor_edge_name(onnx_graph, node, bias_tensor_port_id)
+        bias_edge_name = node.input[bias_tensor_port_id]
         bias_attrs["name"] = bias_edge_name
     return bias_attrs
 
@@ -351,7 +335,7 @@ class GraphConverter:
             if weight_port_ids:  # If node has weight
                 weight_edge_names = []
                 for weight_port_id in weight_port_ids:
-                    weight_edge_names.append(_get_tensor_edge_name(onnx_graph, node, weight_port_id))
+                    weight_edge_names.append(node.input[weight_port_id])
                     weight_attrs.update(_get_weight_attr(node, onnx_graph, weight_port_id))
                     if not is_shared and onnx_graph.is_node_has_shared_weight(node, weight_port_id):
                         is_shared = True
