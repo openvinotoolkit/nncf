@@ -1325,16 +1325,14 @@ class GEMMTransposeWeightModel(ONNXReferenceModel):
 
 @ALL_SYNTHETIC_MODELS.register()
 class WeightPropagationMatMulModel(ONNXReferenceModel):
-    #             QuantizeLinear
-    #                   |
-    #             DequantizeLinear
-    #                   |
     #               Identity
     #                   |
     #         X     Identity
     #          \     /
     #           MatMul
-    #             |
+    #             |     Constant
+    #             |     /
+    #           MatMul
     #             |
     #             Y
     def __init__(self):
@@ -1343,7 +1341,7 @@ class WeightPropagationMatMulModel(ONNXReferenceModel):
         matmul_output_channels = 5
         input_shape = [1, model_input_channels]
         X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
-        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, matmul_output_channels])
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_input_channels])
 
         rng = np.random.default_rng(seed=0)
         shape = [model_input_channels, matmul_output_channels]
@@ -1352,37 +1350,30 @@ class WeightPropagationMatMulModel(ONNXReferenceModel):
         w_tensor = create_initializer_tensor(
             name="W_tensor", tensor_array=rng.uniform(0, 1, shape).astype(np.float32), data_type=onnx.TensorProto.FLOAT
         )
-        scale_tensor = create_initializer_tensor(
-            name="scale_tensor", tensor_array=np.ones(shape=(1)).astype(np.float32), data_type=onnx.TensorProto.FLOAT
-        )
-        quantizelinear_1 = onnx.helper.make_node(
-            name="QuantizeLinear_1", op_type="QuantizeLinear", inputs=["W_tensor", "scale_tensor"], outputs=["q_1"]
-        )
-
-        dequantizelinear_1 = onnx.helper.make_node(
-            name="DequantizeLinear_1", op_type="DequantizeLinear", inputs=["q_1", "scale_tensor"], outputs=["deq_1"]
-        )
-        identity_1 = onnx.helper.make_node(name="Identity_1", op_type="Identity", inputs=["deq_1"], outputs=["i_1"])
+        identity_1 = onnx.helper.make_node(name="Identity_1", op_type="Identity", inputs=["W_tensor"], outputs=["i_1"])
         identity_2 = onnx.helper.make_node(name="Identity_2", op_type="Identity", inputs=["i_1"], outputs=["i_2"])
-        matmul = onnx.helper.make_node(
-            name="MatMul", op_type="MatMul", inputs=[model_input_name, "i_2"], outputs=[model_output_name]
+        matmul_1 = onnx.helper.make_node(
+            name="MatMul_1", op_type="MatMul", inputs=[model_input_name, "i_2"], outputs=["mm_1"]
+        )
+        matmul_2_shape = (matmul_output_channels, model_input_channels)
+        constant_data = rng.uniform(0, 1, matmul_2_shape).astype(np.float32)  # Randomly initialized weight tensor
+        constant_initializer = onnx.helper.make_tensor(
+            name="constant_data",
+            data_type=onnx.TensorProto.FLOAT,
+            dims=constant_data.shape,
+            vals=constant_data.flatten(),
+        )
+        constant = onnx.helper.make_node("Constant", [], ["const"], name="constant", value=constant_initializer)
+        matmul_2 = onnx.helper.make_node(
+            name="MatMul_2", op_type="MatMul", inputs=["mm_1", "const"], outputs=[model_output_name]
         )
 
         graph_def = onnx.helper.make_graph(
-            nodes=[
-                quantizelinear_1,
-                dequantizelinear_1,
-                identity_1,
-                identity_2,
-                matmul,
-            ],
+            nodes=[identity_1, identity_2, matmul_1, constant, matmul_2],
             name="Net",
             inputs=[X],
             outputs=[Y],
-            initializer=[
-                w_tensor,
-                scale_tensor,
-            ],
+            initializer=[w_tensor, constant_initializer],
         )
 
         op = onnx.OperatorSetIdProto()
