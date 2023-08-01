@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import functools
 import inspect
 from abc import ABCMeta
 from abc import abstractmethod
@@ -735,3 +736,33 @@ def test_proxy_module_for_forward_with_super(mocker):
 
     input_ids = torch.randint(num_embeddings, (1, 4))
     wrapped_model(input_ids)
+
+
+def test_overriding_forward_model():
+    def decorator(func):
+        def wrap(*args):
+            return func(*args)
+
+        return wrap
+
+    model = BasicConvTestModel()
+    model.forward = decorator(model.forward)
+    nncf_net = NNCFNetwork(model, [ModelInputInfo(model.INPUT_SIZE)])
+    nncf_net.forward(torch.ones(model.INPUT_SIZE))
+    # Detect that forward was wrapped by NNCFNetwork, for overrided function type is 'function'
+    assert isinstance(nncf_net.forward, functools.partial)
+
+
+def test_overriding_forward_nncf_network():
+    def decorator(func):
+        def wrap(*args):
+            return func(*args)
+
+        return wrap
+
+    model = BasicConvTestModel()
+    nncf_net = NNCFNetwork(model, [ModelInputInfo(model.INPUT_SIZE)])
+    nncf_net.forward = decorator(nncf_net.nncf.get_original_forward())
+    nncf_net.forward(torch.ones(model.INPUT_SIZE))
+    # Detect that forward was wrapped by NNCFNetwork, for overrided function type is 'function'
+    assert isinstance(nncf_net.forward, functools.partial)
