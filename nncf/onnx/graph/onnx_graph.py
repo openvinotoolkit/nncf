@@ -286,10 +286,11 @@ class ONNXGraph:
 
     def get_parent(self, node: onnx.NodeProto, port_id: int) -> Optional[onnx.NodeProto]:
         """
-        Returns parents of the node.
+        Returns parents of the node. If there is no parent node, returns None.
 
         :param node: The child node.
-        :return: All children nodes.
+        :param port_id: Input port id on which the parent is seeked.
+        :return: Parent node.
         """
         if port_id < len(node.input):
             return self.get_node_by_output(node.input[port_id])
