@@ -69,15 +69,27 @@ class ONNXLayerAttributes(BaseLayerAttributes):
         return bool(self.node_attrs)
 
 
-def _is_constant_subgraph(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> bool:
+def _get_tensor_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> Optional[str]:
     """
-    Returns True whether the parent subraph of a node on input port_id is Constant.
-    Returns False if during the propagation a node is not in PROPAGATING_NODES.
+    Returns an edge name associated with a weight of a node laying on  an input port_id.
+
+    Checks whether a node has a tensor on input port_id.
+    If does then it is a weight and returns corresponding edge name.
+    If not - take a parent node into this port id and does the same check for it.
+
+    If an edge with a weight was not found then returns None.
+
+    METATYPES THAT COULD CONSUME A WEIGHT TENSOR:
+        ONNXConstantMetatype
+        ONNXIdentityMetatype
+        ONNXReshapeMetatype
+        ONNXTransposeMetatype
+        ONNXQuantizeLinearMetatype
 
     :param onnx_graph: ONNXGraph.
-    :param node: Node through propagate.
-    :param port_id: Input port id in whihch the propagation should go.
-    :return: True if subgraph is Constant, False - otherwise.
+    :param node: Node.
+    :param port_id: Port id on which a weight edge is seeking.
+    :return: Edge name associated with a weight.
     """
     PROPAGATING_NODES = (
         ONNXIdentityMetatype.get_all_aliases()
@@ -90,12 +102,12 @@ def _is_constant_subgraph(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: 
     parent = onnx_graph.get_parent(node, port_id)
     if not parent:
         if onnx_graph.has_tensor(node.input[port_id]):
-            return True
+            return node.input[port_id]
     elif parent.op_type in END_NODES:
-        return True
+        return node.input[port_id]
     elif parent.op_type in PROPAGATING_NODES:
-        return _is_constant_subgraph(onnx_graph, parent, 0)
-    return False
+        return _get_tensor_edge_name(onnx_graph, parent, 0)
+    return None
 
 
 def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int]:
@@ -114,7 +126,7 @@ def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int
     port_ids.update(constant_port_ids)
     possible_port_ids = get_possible_weight_port_ids(metatype)
     for port_id in possible_port_ids:
-        if _is_constant_subgraph(onnx_graph, node, port_id):
+        if _get_tensor_edge_name(onnx_graph, node, port_id):
             port_ids.add(port_id)
     return port_ids
 
@@ -192,7 +204,7 @@ def _get_bias_attr(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Dict[str, str
     metatype = get_metatype(onnx_graph.onnx_model, node)
     if _is_node_with_bias(node, onnx_graph.onnx_model):
         bias_tensor_port_id = get_bias_tensor_port_id(metatype)
-        bias_edge_name = node.input[bias_tensor_port_id]
+        bias_edge_name = _get_tensor_edge_name(onnx_graph, node, bias_tensor_port_id)
         bias_attrs["name"] = bias_edge_name
     return bias_attrs
 
