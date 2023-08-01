@@ -177,6 +177,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 },
             ),
             # Disabled, because ONNX backend doesn't support bias correction for MatMul
+            # Ticket - CVS-115696
             # (
             #     "/MatMul",
             #     {
