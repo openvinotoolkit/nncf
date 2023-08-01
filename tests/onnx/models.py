@@ -1433,7 +1433,7 @@ class WeightPropagationConvModel(ONNXReferenceModel):
         reshape_1_tensor_name = "w_r_1"
         reshape_1_initializer_tensor = create_initializer_tensor(
             name=reshape_1_tensor_name,
-            tensor_array=np.array(conv1_shape).astype(np.int),
+            tensor_array=np.array(conv1_shape).astype(np.int64),
             data_type=onnx.TensorProto.INT64,
         )
         reshape_node = onnx.helper.make_node(
@@ -1469,7 +1469,7 @@ class WeightPropagationConvModel(ONNXReferenceModel):
 
         reshape_2_initializer_tensor = create_initializer_tensor(
             name=reshape_2_tensor_name,
-            tensor_array=np.array((1, 1, 3, 3)).astype(np.int),
+            tensor_array=np.array((1, 1, 3, 3)).astype(np.int64),
             data_type=onnx.TensorProto.INT64,
         )
         constant_initializer = onnx.helper.make_tensor(
@@ -1487,7 +1487,6 @@ class WeightPropagationConvModel(ONNXReferenceModel):
         identity_node2 = onnx.helper.make_node("Identity", [reshape_output2], [identity_output2], name="identity2")
 
         # Layer 6: Convolution 3
-        conv_output4 = "conv_output3"
         constant_output2 = "constant_output2"
         conv4_shape = (1, 1, 3, 3)
         constant_data2 = rng.uniform(0, 1, conv4_shape).astype(np.float32)  # Randomly initialized weight tensor
