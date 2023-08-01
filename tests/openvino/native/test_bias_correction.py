@@ -16,8 +16,11 @@ import openvino.runtime as ov
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
+from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
+from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
+from tests.openvino.native.common import compare_nncf_graphs
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.shared.command import Command
 
@@ -32,7 +35,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return OVBiasCorrectionAlgoBackend
 
     @staticmethod
-    def backend_specific_model(model: bool, tmp_dir: str):
+    def backend_specific_model(model: torch.nn.Module, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         ov_path = f"{tmp_dir}/model.xml"
@@ -43,11 +46,11 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return ov_model
 
     @staticmethod
-    def fn_to_type(tensor):
+    def fn_to_type(tensor) -> np.ndarray:
         return np.array(tensor)
 
     @staticmethod
-    def get_transform_fn():
+    def get_transform_fn() -> callable:
         def transform_fn(data_item):
             tensor, _ = data_item
             return {"input.1": tensor}
@@ -60,7 +63,19 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return mapping
 
     @staticmethod
-    def check_bias(model: ov.Model, ref_biases: Dict):
+    def remove_fq_from_inputs(model: ov.Model) -> ov.Model:
+        return remove_fq_from_inputs(model)
+
+    @staticmethod
+    def get_ref_path(suffix: str) -> str:
+        return OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graphs" / "quantized" / "subgraphs" / f"{suffix}.dot"
+
+    @staticmethod
+    def compare_nncf_graphs(model: ov.Model, ref_path: str) -> None:
+        return compare_nncf_graphs(model, ref_path)
+
+    @staticmethod
+    def check_bias(model: ov.Model, ref_biases: Dict) -> None:
         nncf_graph = NNCFGraphFactory.create(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)
