@@ -89,8 +89,10 @@ def _is_constant_subgraph(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: 
     END_NODES = ONNXConstantMetatype.get_all_aliases()
     parent = onnx_graph.get_parent(node, port_id)
     if not parent:
-        if node.op_type in END_NODES or onnx_graph.has_tensor(node.input[port_id]):
+        if onnx_graph.has_tensor(node.input[port_id]):
             return True
+    elif parent.op_type in END_NODES:
+        return True
     elif parent.op_type in PROPAGATING_NODES:
         return _is_constant_subgraph(onnx_graph, parent, 0)
     return False
