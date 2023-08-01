@@ -121,7 +121,7 @@ INSTALL_REQUIRES = [
     "natsort>=7.1.0",
     "pandas>=1.1.5,<2.1",
     "scikit-learn>=0.24.0",
-    "openvino-telemetry",
+    "openvino-telemetry>=2023.1.0",
     "psutil",
 ]
 
