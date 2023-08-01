@@ -18,6 +18,7 @@ from collections import OrderedDict
 from collections import defaultdict
 from dataclasses import asdict
 from dataclasses import dataclass
+from dataclasses import replace
 from enum import Enum
 from itertools import islice
 from typing import Any, Iterable, List, Optional, TypeVar
@@ -51,9 +52,29 @@ from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
 
+OVERRIDE_OPTIONS_ALGORITHMS = ["ActivationChannelAlignment", "FastBiasCorrection", "BiasCorrection"]
+
 MAP_POT_NNCF_ALGORITHMS = {
-    "DefaultQuantization": "quantize",
-    "AccuracyAwareQuantization": "quantize_with_accuracy_control",
+    "ActivationChannelAlignment": {
+        "method": "quantize",
+        "advanced_parameters": {"disable_channel_alignment": False},
+    },
+    "FastBiasCorrection": {
+        "method": "quantize",
+        "advanced_parameters": {"disable_bias_correction": False},
+        "parameters": {"fast_bias_correction": True},
+    },
+    "BiasCorrection": {
+        "method": "quantize",
+        "advanced_parameters": {"disable_bias_correction": False},
+        "parameters": {"fast_bias_correction": False},
+    },
+    "MinMaxQuantization": {
+        "method": "quantize",
+        "advanced_parameters": {"disable_bias_correction": True, "disable_channel_alignment": True},
+    },
+    "DefaultQuantization": {"method": "quantize"},
+    "AccuracyAwareQuantization": {"method": "quantize_with_accuracy_control"},
 }
 
 _default_context = None
@@ -595,9 +616,9 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
 
 
 def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters):
-    if pot_algo_name == "DefaultQuantization" and nncf_algo_name == "quantize":
+    if nncf_algo_name == "quantize":
         return map_quantization_parameters(pot_parameters)
-    if pot_algo_name == "AccuracyAwareQuantization" and nncf_algo_name == "quantize_with_accuracy_control":
+    if nncf_algo_name == "quantize_with_accuracy_control":
         return map_quantize_with_accuracy_control_parameters(pot_parameters)
     raise ValueError(f"Mapping POT {pot_algo_name} parameters to NNCF {nncf_algo_name} parameters is not supported")
 
@@ -615,15 +636,37 @@ def get_accuracy_checker_config(engine_config):
 
 
 def get_nncf_algorithms_config(compression_config):
-    nncf_algorithms = []
+    nncf_algorithms = {}
+    override_options = {}
     for pot_algo in compression_config.algorithms:
-        if pot_algo.name not in MAP_POT_NNCF_ALGORITHMS:
-            raise ValueError(f"Algorithm {pot_algo.name} is not supported.")
+        pot_algo_name = pot_algo.name
+        if pot_algo_name not in MAP_POT_NNCF_ALGORITHMS:
+            raise ValueError(f"Algorithm {pot_algo_name} is not supported.")
 
-        nncf_algo_name = MAP_POT_NNCF_ALGORITHMS[pot_algo.name]
-        nncf_algorithms.append(
-            {"name": nncf_algo_name, "parameters": map_paramaters(pot_algo.name, nncf_algo_name, pot_algo.params)}
+        nncf_algo_name = MAP_POT_NNCF_ALGORITHMS[pot_algo_name]["method"]
+        advanced_parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("advanced_parameters", {})
+        parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("parameters", {})
+
+        if pot_algo_name in OVERRIDE_OPTIONS_ALGORITHMS:
+            if nncf_algo_name not in override_options:
+                override_options[nncf_algo_name] = defaultdict(dict)
+
+            override_options[nncf_algo_name]["advanced_parameters"].update(advanced_parameters)
+            override_options[nncf_algo_name]["parameters"].update(parameters)
+            continue
+
+        nncf_algo_parameters = map_paramaters(pot_algo_name, nncf_algo_name, pot_algo.params)
+
+        nncf_algo_parameters["advanced_parameters"] = replace(
+            nncf_algo_parameters["advanced_parameters"], **advanced_parameters
         )
+        nncf_algorithms[nncf_algo_name] = nncf_algo_parameters
+
+    for override_algo_name, override_values in override_options.items():
+        nncf_algorithms[override_algo_name]["advanced_parameters"] = replace(
+            nncf_algorithms[override_algo_name]["advanced_parameters"], **override_values["advanced_parameters"]
+        )
+        nncf_algorithms[override_algo_name].update(override_values["parameters"])
     return nncf_algorithms
 
 
@@ -909,8 +952,7 @@ def main():
         "quantize": quantize_model,
         "quantize_with_accuracy_control": quantize_model_with_accuracy_control,
     }
-    for algo_config in nncf_algorithms_config:
-        algo_name = algo_config["name"]
+    for algo_name, algo_config in nncf_algorithms_config.items():
         algo_fn = algo_name_to_method_map.get(algo_name, None)
         if algo_fn:
             quantize_model_arguments = {
@@ -918,7 +960,7 @@ def main():
                 "bin_path": bin_path,
                 "accuracy_checker_config": accuracy_checker_config,
                 "quantization_impl": args.impl,
-                "quantization_parameters": algo_config["parameters"],
+                "quantization_parameters": algo_config,
             }
 
             output_model = algo_fn(**quantize_model_arguments)
