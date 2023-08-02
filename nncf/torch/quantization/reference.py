@@ -89,7 +89,7 @@ class ReferenceQuantize:
         input_high[input_high < 0] = 0
         n = levels - 1
         scale = levels / (input_high - input_low)
-        scale = scale.astype(dtype=input_high.dtype)
+        scale = self._astype(scale, input_high.dtype)
         zp = self.backend.round(-input_low * scale)
 
         new_input_low = self.backend.where(zp < n, zp / (zp - n) * input_high, input_low)
@@ -98,7 +98,7 @@ class ReferenceQuantize:
         range_1 = input_high - new_input_low
         range_2 = new_input_high - input_low
 
-        mask = (range_1 > range_2).astype(input_high.dtype)
+        mask = self._astype((range_1 > range_2), input_high.dtype)
         inv_mask = abs(1 - mask)
 
         new_input_low = mask * new_input_low + inv_mask * input_low

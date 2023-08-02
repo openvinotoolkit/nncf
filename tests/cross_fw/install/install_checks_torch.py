@@ -79,4 +79,4 @@ elif execution_type == "gpu":
     )
     output_tensor = BinarizedFunctionsCUDA.get("WeightBinarize_forward")(output_tensor, True)
 else:
-    raise RuntimeError("Invalid execution type!")
+    raise RuntimeError(f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!")
