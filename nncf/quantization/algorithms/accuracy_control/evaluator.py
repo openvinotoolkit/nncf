@@ -147,7 +147,7 @@ class Evaluator:
                 item.
         """
         if self._metric_mode is None:
-            self._determine_mode(model_for_inference, dataset)
+            self._metric_mode = Evaluator.determine_mode(model_for_inference, dataset, self._validation_fn)
 
         if not self.is_metric_mode() and indices is not None:
             raise ValueError("The `indices` parameter can be used only if Evaluator.is_metric_mode() = True")
@@ -192,23 +192,34 @@ class Evaluator:
         model_for_inference = self.prepare_model_for_inference(model)
         return self.validate_model_for_inference(model_for_inference, dataset, indices)
 
-    def _determine_mode(self, model_for_inference: TPModel, dataset: Dataset) -> None:
+    @staticmethod
+    def determine_mode(
+        model_for_inference: TPModel,
+        dataset: Dataset,
+        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+    ) -> bool:
         """
         Determines mode based on the type of returned value from the
         validation function.
 
         :param model_for_inference: Model to validate.
         :param dataset: Dataset to validate the model.
+        :param validation_fn: Validation function to validate model.
+        :return: A boolean indicator where `True` means that the `Evaluator` collects
+            metric value for each item and `False` means that the `Evaluator` collects
+            logits for each item.
         """
+        metric_mode = None
+
         data_item = dataset.get_data([0])
         # pylint: disable=W0703
         try:
-            metric_value, values_for_each_item = self._validation_fn(model_for_inference, data_item)
+            metric_value, values_for_each_item = validation_fn(model_for_inference, data_item)
         except Exception:
-            self._metric_mode = False
+            metric_mode = False
 
-        if self._metric_mode is not None:
-            return
+        if metric_mode is not None:
+            return metric_mode
 
         try:
             metric_value = metric_value if metric_value is None else float(metric_value)
@@ -243,11 +254,13 @@ class Evaluator:
         # | None         | List[List[TTensor]]  | False       |
         # +--------------+----------------------+-------------+
 
-        self._metric_mode = False
+        metric_mode = False
         if isinstance(metric_value, float) and (values_for_each_item is None or convert_to_float_possible):
-            self._metric_mode = True
+            metric_mode = True
         elif values_for_each_item is not None and not isinstance(values_for_each_item[0], list):
             raise RuntimeError("Unexpected return value from provided validation function.")
+
+        return metric_mode
 
     def collect_values_for_each_item_using_model_for_inference(
         self, model_for_inference: TPModel, dataset: Dataset, indices: Optional[List[int]] = None

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import List, Tuple, Union
+from typing import List, Union
 
 import numpy as np
 import pytest
@@ -83,12 +83,18 @@ def test_determine_mode(ts: TestCase):
     def _validation_fn(dummy_model, dummy_dataset):
         return (ts.metric_value, ts.values_for_each_item)
 
-    evaluator = Evaluator(_validation_fn)
-
     # pylint: disable=W0212
     if ts.raise_exception:
         with pytest.raises(RuntimeError):
-            evaluator._determine_mode(None, Dataset([None]))
+            _ = Evaluator.determine_mode(None, Dataset([None]), _validation_fn)
     else:
-        evaluator._determine_mode(None, Dataset([None]))
-        assert evaluator.is_metric_mode() == ts.expected_is_metric_mode
+        is_metric_mode = Evaluator.determine_mode(None, Dataset([None]), _validation_fn)
+        assert is_metric_mode == ts.expected_is_metric_mode
+
+
+def test_determine_mode_2():
+    def _validation_fn_with_error(dummy_model, dummy_dataset):
+        raise RuntimeError
+
+    is_metric_mode = Evaluator.determine_mode(None, Dataset([None]), _validation_fn_with_error)
+    assert not is_metric_mode
