@@ -62,7 +62,9 @@ class ReferenceDOREFABinarize(ReferenceBase):
 
 
 class ReferenceActivationBinarize(ReferenceBase):
-    def forward(self, x: GeneralizedTensor, scale: GeneralizedTensor, threshold: GeneralizedTensor) -> GeneralizedTensor:
+    def forward(
+        self, x: GeneralizedTensor, scale: GeneralizedTensor, threshold: GeneralizedTensor
+    ) -> GeneralizedTensor:
         shape = [1 for s in x.shape]
         shape[1] = x.shape[1]
         t = threshold * scale

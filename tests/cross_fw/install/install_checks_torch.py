@@ -13,15 +13,15 @@ import sys
 
 import torch
 
-# Do not remove - these imports are for testing purposes.
-# pylint:disable=unused-import
-import nncf
-
 if len(sys.argv) != 3:
     raise RuntimeError("Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type")
 execution_type = sys.argv[1]
 package_type = sys.argv[2]
 
+# Do not remove - these imports are for testing purposes.
+# pylint:disable=unused-import
+# pylint:disable=wrong-import-position
+import nncf
 from nncf.torch import create_compressed_model
 
 input_low_tensor = torch.zeros([1])
@@ -34,6 +34,7 @@ levels = 256
 if execution_type == "cpu":
     from nncf.torch.binarization.extensions import BinarizedFunctionsCPU
     from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
+
     output_tensor = QuantizedFunctionsCPU.get("Quantize_forward")(
         input_tensor, input_low_tensor, input_high_tensor, levels
     )
@@ -49,6 +50,7 @@ elif execution_type == "gpu":
     threshold_tensor = threshold_tensor.cuda()
     from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
     from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
+
     output_tensor = QuantizedFunctionsCUDA.get("Quantize_forward")(
         input_tensor, input_low_tensor, input_high_tensor, levels
     )
