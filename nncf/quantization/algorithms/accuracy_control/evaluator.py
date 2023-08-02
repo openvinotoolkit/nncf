@@ -9,11 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.common.factory import EngineFactory
+from nncf.common.logging import nncf_logger
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
+from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
-from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 
 TModel = TypeVar("TModel")
 TPModel = TypeVar("TPModel")
@@ -40,6 +44,23 @@ class IterationCounter:
             yield x
 
 
+@dataclass
+class MetricResults:
+    """
+    Results of metrics collection.
+
+    :param metric_value: Aggregated metric value.
+    :param values_for_each_item: Metric values for each data item.
+    :param preparation_time: Time that it takes to prepare model for validation.
+    :param validation_time: Time that it takes to validate model.
+    """
+
+    metric_value: float
+    values_for_each_item: Union[List[float], List[List[TTensor]]]
+    preparation_time: float
+    validation_time: float
+
+
 class Evaluator:
     """
     Evaluator encapsulates a logic to validate model and collect values for each item.
@@ -48,16 +69,12 @@ class Evaluator:
     """
 
     def __init__(
-        self,
-        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
-        algo_backend: AccuracyControlAlgoBackend,
+        self, validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]]
     ):
         """
         :param validation_fn: Validation function to validate model.
-        :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         """
         self._validation_fn = validation_fn
-        self._algo_backend = algo_backend
         self._metric_mode = None
         self._num_passed_iterations = 0
         self._enable_iteration_count = False
@@ -101,7 +118,16 @@ class Evaluator:
         :param model: A model that should be prepared.
         :return: Prepared model for inference.
         """
-        return self._algo_backend.prepare_for_inference(model)
+        backend = get_backend(model)
+
+        if backend == BackendType.OPENVINO:
+            import openvino.runtime as ov
+
+            return ov.compile_model(model)
+
+        raise NotImplementedError(
+            f"The `prepare_model_for_inference()` method is not implemented for the {backend} backend."
+        )
 
     def validate_model_for_inference(
         self, model_for_inference: TPModel, dataset: Dataset, indices: Optional[List[int]] = None
@@ -271,3 +297,31 @@ class Evaluator:
         """
         model_for_inference = self.prepare_model_for_inference(model)
         return self.collect_values_for_each_item_using_model_for_inference(model_for_inference, dataset, indices)
+
+    def collect_metric_results(self, model: TModel, dataset: Dataset, model_name: str = "") -> MetricResults:
+        """
+        Collects metric results.
+
+        :param model: Input model.
+        :param dataset: Dataset used to collect metrics.
+        :param model_name: Model name.
+        :return: Collected metric results.
+        """
+        nncf_logger.info(f"Validation of {model_name} model was started")
+
+        with timer() as preparation_time:
+            model_for_inference = self.prepare_model_for_inference(model)
+
+        with timer() as validation_time:
+            metric, values_for_each_item = self.validate_model_for_inference(model_for_inference, dataset)
+
+        nncf_logger.info(f"Metric of {model_name} model: {metric}")
+
+        if values_for_each_item is None:
+            nncf_logger.info(f"Collecting values for each data item using the {model_name} model")
+            with timer():
+                values_for_each_item = self.collect_values_for_each_item_using_model_for_inference(
+                    model_for_inference, dataset
+                )
+
+        return MetricResults(metric, values_for_each_item, preparation_time(), validation_time())

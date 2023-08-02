@@ -9,11 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import itertools
-import operator
 import sys
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Iterable, List, Optional, Tuple, TypeVar
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
@@ -21,25 +18,16 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.utils import get_number_of_quantized_ops
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.os import get_available_cpu_count
 from nncf.common.utils.os import get_available_memory_amount
-from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
 from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
-from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
+from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
-from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
-from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.range_estimator import AggregatorType
-from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.quantization.range_estimator import StatisticsCollectorParameters
-from nncf.quantization.range_estimator import StatisticsType
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -145,23 +133,6 @@ class QuantizationAccuracyRestorerReport:
         return operations
 
 
-@dataclass
-class MetricResults:
-    """
-    Results of metrics collection.
-
-    :param metric_value: Aggregated metric value.
-    :param values_for_each_item: Metric values for each data item.
-    :param preparation_time: Time that it takes to prepare model for validation.
-    :param validation_time: Time that it takes to validate model.
-    """
-
-    metric_value: float
-    values_for_each_item: Union[List[float], List[List[TTensor]]]
-    preparation_time: float
-    validation_time: float
-
-
 class QuantizationAccuracyRestorer:
     """
     Implementation of the accuracy-aware loop.
@@ -174,8 +145,6 @@ class QuantizationAccuracyRestorer:
         max_drop: float = 0.01,
         drop_type: DropType = DropType.ABSOLUTE,
         num_ranking_processes: Optional[int] = None,
-        tune_hyperparams: bool = False,
-        init_params: Optional[Dict[str, Any]] = None,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
@@ -187,58 +156,39 @@ class QuantizationAccuracyRestorer:
             calculated.
         :param num_ranking_processes: The number of parallel processes that are used to rank
             quantization operations.
-        :param tune_hyperparams: Whether to tune of quantization parameters as a preliminary step
-            before reverting layers back to the floating-point precision or not.
-        :param init_params:
         """
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations
         self.max_drop = max_drop
         self.drop_type = drop_type
         self.num_ranking_processes = num_ranking_processes
-        self.tune_hyperparams = tune_hyperparams
-        self.init_params = init_params
 
     def apply(
         self,
         initial_model: TModel,
+        initial_metric_results: MetricResults,
         quantized_model: TModel,
+        quantized_metric_results: MetricResults,
         validation_dataset: Dataset,
-        calibration_dataset: Dataset,
-        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+        validation_dataset_size: int,
+        evaluator: Evaluator,
     ) -> TModel:
         """
         Restores the accuracy of the quantized model by removing the groups of quantizers
         that contribute the most to the drop in accuracy.
 
         :param initial_model: Initial model (not quantized).
+        :param initial_metric_results: Initial model metrics.
         :param quantized_model: Quantized model.
+        :param quantized_metric_results: Quantized model metrics.
         :param validation_dataset: A dataset for the validation process.
-        :param calibration_dataset:
-        :param validation_fn: A validation function to validate the model. It should take
-            two arguments:
-            - `model`: model to be validate.
-            - `validation_dataset`: dataset that provides data items to
-                validate the provided model.
-            The function should return the value of the metric with the following meaning:
-            A higher value corresponds to better performance of the model.
+        :param validation_dataset_size: Validation dataset size.
+        :param evaluator: The instance of `Evaluator` to validate model and collect values
+            for each item from dataset.
         :return: The quantized model whose metric `final_metric` is satisfied
             the maximum accuracy drop condition.
         """
         algo_backend = get_algo_backend(get_backend(initial_model))
-
-        # Validate initial and quantized model
-        evaluator = Evaluator(validation_fn, algo_backend)
-        initial_metric_results = self._collect_metric_and_values(
-            initial_model, validation_dataset, evaluator, "initial"
-        )
-
-        evaluator.enable_iteration_count()
-        quantized_metric_results = self._collect_metric_and_values(
-            quantized_model, validation_dataset, evaluator, "quantized"
-        )
-        validation_dataset_size = evaluator.num_passed_iterations
-        evaluator.disable_iteration_count()
 
         should_terminate, accuracy_drop = calculate_accuracy_drop(
             initial_metric_results.metric_value, quantized_metric_results.metric_value, self.max_drop, self.drop_type
@@ -250,59 +200,30 @@ class QuantizationAccuracyRestorer:
 
         nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({self.drop_type})")
 
-        if self.tune_hyperparams:
-            error_fn = (
-                operator.sub if evaluator.is_metric_mode() else create_normalized_mse_func(get_backend(initial_model))
-            )
-            subset_indices = select_subset(
-                self.ranking_subset_size,
-                initial_metric_results.values_for_each_item,
-                quantized_metric_results.values_for_each_item,
-                error_fn,
-            )
-            param_settings = QuantizationAccuracyRestorer._get_param_settings_for_ptq()
-            hyperparameter_tuner = HyperparameterTuner(
-                PostTrainingQuantization, self.init_params, param_settings, calibration_dataset, validation_fn
-            )
-            tuned_model = hyperparameter_tuner.apply(initial_model, validation_dataset, subset_indices)
-            tuned_metric_results = self._collect_metric_and_values(tuned_model, validation_dataset, evaluator, "tuned")
-            should_terminate, tuned_accuracy_drop = calculate_accuracy_drop(
-                initial_metric_results.metric_value, tuned_metric_results.metric_value, self.max_drop, self.drop_type
-            )
-
-            if should_terminate:
-                QuantizationAccuracyRestorer._print_completion_message(accuracy_drop, self.drop_type)
-                return quantized_model
-
-            if tuned_accuracy_drop < accuracy_drop:
-                quantized_model = tuned_model
-                quantized_metric_results = tuned_metric_results
-                accuracy_drop = tuned_accuracy_drop
-
         # Accuracy drop is greater than the maximum drop so we need to restore accuracy
         return self._apply(
             initial_model,
-            quantized_model,
             initial_metric_results,
+            quantized_model,
             quantized_metric_results,
-            algo_backend,
-            evaluator,
             validation_dataset,
             validation_dataset_size,
+            evaluator,
             accuracy_drop,
+            algo_backend,
         )
 
     def _apply(
         self,
         initial_model: TModel,
-        quantized_model: TModel,
         initial_metric_results: MetricResults,
+        quantized_model: TModel,
         quantized_metric_results: MetricResults,
-        algo_backend: AccuracyControlAlgoBackend,
-        evaluator: Evaluator,
         validation_dataset: Dataset,
         validation_dataset_size: int,
+        evaluator: Evaluator,
         accuracy_drop: float,
+        algo_backend: AccuracyControlAlgoBackend,
     ) -> TModel:
         """
         An internal function that implements an iterative approach to restoring the accuracy of
@@ -310,15 +231,15 @@ class QuantizationAccuracyRestorer:
         the drop in accuracy.
 
         :param initial_model: Initial model (not quantized).
-        :param quantized_model: Quantized model.
         :param initial_metric_results: Initial model metrics.
+        :param quantized_model: Quantized model.
         :param quantized_metric_results: Quantized model metrics.
-        :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
-        :param evaluator: The instance of `Evaluator` to validate model and collect values
-            for each item from dataset.
         :param validation_dataset: A dataset for the validation process.
         :param validation_dataset_size: Validation dataset size.
+        :param evaluator: The instance of `Evaluator` to validate model and collect values
+            for each item from dataset.
         :param accuracy_drop: Accuracy drop between initial and quantized models.
+        :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         :return: The quantized model whose metric `final_metric` is satisfied
             the maximum accuracy drop condition.
         """
@@ -547,81 +468,3 @@ class QuantizationAccuracyRestorer:
         else:
             reason = f"achieved required accuracy drop {float(accuracy_drop)} ({drop_type})"
         nncf_logger.info(f"Algorithm completed: {reason}")
-
-    @staticmethod
-    def _collect_metric_and_values(
-        model: TModel, dataset: Dataset, evaluator: Evaluator, model_name: str
-    ) -> MetricResults:
-        nncf_logger.info(f"Validation of {model_name} model was started")
-
-        with timer() as preparation_time:
-            model_for_inference = evaluator.prepare_model_for_inference(model)
-
-        with timer() as validation_time:
-            metric, values_for_each_item = evaluator.validate_model_for_inference(model_for_inference, dataset)
-
-        nncf_logger.info(f"Metric of {model_name} model: {metric}")
-
-        if values_for_each_item is None:
-            nncf_logger.info(f"Collecting values for each data item using the {model_name} model")
-            with timer():
-                values_for_each_item = evaluator.collect_values_for_each_item_using_model_for_inference(
-                    model_for_inference, dataset
-                )
-
-        return MetricResults(metric, values_for_each_item, preparation_time(), validation_time())
-
-    @staticmethod
-    def _get_param_settings_for_ptq() -> Dict[str, List[Any]]:
-        """
-        Returns param settings for post-training quantization algorithm.
-        """
-        min_param_settings = [
-            StatisticsCollectorParameters(
-                statistics_type=StatisticsType.MIN,
-                aggregator_type=AggregatorType.MIN,
-            ),
-            StatisticsCollectorParameters(
-                statistics_type=StatisticsType.QUANTILE,
-                aggregator_type=AggregatorType.MEAN,
-                quantile_outlier_prob=10e-4,
-            ),
-            StatisticsCollectorParameters(
-                statistics_type=StatisticsType.QUANTILE,
-                aggregator_type=AggregatorType.MEAN,
-                quantile_outlier_prob=10e-5,
-            ),
-        ]
-        max_param_settings = [
-            StatisticsCollectorParameters(
-                statistics_type=StatisticsType.MAX,
-                aggregator_type=AggregatorType.MAX,
-            ),
-            StatisticsCollectorParameters(
-                statistics_type=StatisticsType.QUANTILE,
-                aggregator_type=AggregatorType.MEAN,
-                quantile_outlier_prob=10e-4,
-            ),
-            StatisticsCollectorParameters(
-                statistics_type=StatisticsType.QUANTILE,
-                aggregator_type=AggregatorType.MEAN,
-                quantile_outlier_prob=10e-5,
-            ),
-        ]
-
-        param_settings = {
-            "preset": [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
-            "fast_bias_correction": [True, False],
-            "advanced_parameters:weights_range_estimator_params": [
-                RangeEstimatorParameters(
-                    min=StatisticsCollectorParameters(statistics_type=StatisticsType.MIN),
-                    max=StatisticsCollectorParameters(statistics_type=StatisticsType.MAX),
-                )
-            ],
-            "advanced_parameters:activations_range_estimator_params": [
-                RangeEstimatorParameters(min=min_v, max=max_v)
-                for min_v, max_v in itertools.product(min_param_settings, max_param_settings)
-            ],
-        }
-
-        return param_settings

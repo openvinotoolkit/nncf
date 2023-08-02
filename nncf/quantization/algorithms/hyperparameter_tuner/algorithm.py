@@ -13,6 +13,7 @@ import copy
 import dataclasses
 import functools
 import itertools
+import operator
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Type, TypeVar, Union
 
 from nncf.common.factory import StatisticsAggregatorFactory
@@ -21,9 +22,14 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
+from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
+from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
+from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
+from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
 from nncf.quantization.algorithms.algorithm import Algorithm
 
 TModel = TypeVar("TModel")
+TTensor = TypeVar("TTensor")
 CombinationKey = Tuple[int, ...]
 Combination = Dict[str, Any]
 
@@ -211,7 +217,10 @@ class HyperparameterTuner:
         init_params: Dict[str, Any],
         param_grid: Dict[str, List[Any]],
         calibration_dataset: Dataset,
-        validation_fn: Callable[[Any, Iterable[Any]], float],
+        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+        subset_size: int,
+        initial_metric_results: MetricResults,
+        quantized_metric_results: MetricResults,
     ):
         """
         :param algorithm_cls: Class of algorithm.
@@ -220,15 +229,24 @@ class HyperparameterTuner:
             parameter settings to try as values.
         :param calibration_dataset: Dataset used to collect statistics for algorithm.
         :param validation_fn: Validation function used to validated model.
+        :param subset_size: Number of data items that should be selected
+            from the dataset and used to validate model.
+        :param initial_metric_results: Metric results for initial model.
+        :param quantized_metric_results: Metric results for quantized with `init_params` model.
         """
         self._algorithm_cls = algorithm_cls
         self._init_params = init_params
         self._param_grid = param_grid
         self._calibration_dataset = calibration_dataset
-        self._validation_fn = validation_fn
+        self._evaluator = Evaluator(validation_fn)
+        self._subset_size = subset_size
+        self._initial_metric_results = initial_metric_results
+        self._quantized_metric_results = quantized_metric_results
 
-        # Will be initialized inside `_set_backend_entity()` method
-        self._backend_entity = None
+        self._is_metric_mode = isinstance(self._initial_metric_results.values_for_each_item[0], float)
+
+        # # Will be initialized inside `apply()` method
+        self._error_fn = None
 
         # Will be initialized inside `_initialize_algorithms()` method
         self._algorithms: Dict[CombinationKey, Algorithm] = {}
@@ -236,17 +254,25 @@ class HyperparameterTuner:
 
         self._calculated_scores: Dict[CombinationKey, float] = {}
 
-    def apply(self, model: TModel, validation_dataset: Dataset, subset_indices: List[int]) -> TModel:
+    def apply(self, model: TModel, validation_dataset: Dataset) -> TModel:
         """
         Applies algorithm to input model.
 
         :param model: Input model.
         :param validation_dataset: Dataset used to validate resulted model.
-        :param subset_indices: Zero-based indices of data items that should be selected
-            from the dataset and used to validate model.
         :return: Resulted model.
         """
-        self._set_backend_entity(model)
+        if self._is_metric_mode:
+            self._error_fn = operator.sub
+        else:
+            self._error_fn = create_normalized_mse_func(get_backend(model))
+
+        subset_indices = select_subset(
+            self._subset_size,
+            self._initial_metric_results.values_for_each_item,
+            self._quantized_metric_results.values_for_each_item,
+            self._error_fn,
+        )
 
         combinations = create_combinations(self._param_grid)
 
@@ -269,22 +295,6 @@ class HyperparameterTuner:
         result_model = algorithm.apply(model, self._statistic_points)
 
         return result_model
-
-    def _set_backend_entity(self, model: TModel) -> None:
-        """
-        Sets an entity with backend-specific logic of the algorithm.
-
-        :param model: Backend-specific model.
-        """
-        model_backend = get_backend(model)
-        if model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.hyperparameter_tuner.openvino_backend import (
-                OVHyperparameterTunerAlgoBackend,
-            )
-
-            self._backend_entity = OVHyperparameterTunerAlgoBackend()
-        else:
-            raise RuntimeError(f"Cannot set backend-specific entity because {model_backend} is not supported!")
 
     def _prepare_algorithms(self, initial_model: TModel, combinations: Dict[CombinationKey, Combination]) -> None:
         """
@@ -323,9 +333,27 @@ class HyperparameterTuner:
 
         algorithm = self._algorithms[combination_key]
         model = algorithm.apply(initial_model, self._statistic_points)
-        model_for_inference = self._backend_entity.prepare_for_inference(model)
-        validation_subset = dataset.get_data(subset_indices)
-        score, _ = self._validation_fn(model_for_inference, validation_subset)
+        score = self._validate_model(model, dataset, subset_indices)
         self._calculated_scores[combination_key] = score
 
         return score
+
+    def _validate_model(self, model: TModel, dataset: Dataset, subset_indices: List[int]) -> float:
+        """
+        Validates input model on subset.
+
+        :param model: Input model.
+        :param dataset: Dataset used to select data items for validation.
+        :param subset_indices: Zero-based indices of data items that should be selected
+            from the dataset and used to validate model.
+        :return: Calculated metric.
+        """
+        if self._is_metric_mode:
+            metric_value, _ = self._evaluator.validate(model, dataset, subset_indices)
+        else:
+            approximate_outputs = self._evaluator.collect_values_for_each_item(model, dataset, subset_indices)
+            reference_outputs = [self._initial_metric_results.values_for_each_item[i] for i in subset_indices]
+            errors = [self._error_fn(a, b) for a, b in zip(reference_outputs, approximate_outputs)]
+            metric_value = sum(errors) / len(errors)
+
+        return metric_value
