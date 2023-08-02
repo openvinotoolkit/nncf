@@ -22,13 +22,7 @@ if len(sys.argv) != 3:
 execution_type = sys.argv[1]
 package_type = sys.argv[2]
 
-if package_type == "pip_pypi":
-    try:
-        from nncf.torch import create_compressed_model
-    except ImportError:
-        from nncf import create_compressed_model
-else:
-    from nncf.torch import create_compressed_model
+from nncf.torch import create_compressed_model
 
 input_low_tensor = torch.zeros([1])
 input_tensor = torch.ones([1, 1, 1, 1])
@@ -38,16 +32,8 @@ threshold_tensor = torch.zeros([1, 1, 1, 1])
 levels = 256
 
 if execution_type == "cpu":
-    if package_type == "pip_pypi":
-        try:
-            from nncf.torch.binarization.extensions import BinarizedFunctionsCPU
-            from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
-        except ImportError:
-            from nncf.binarization.extensions import BinarizedFunctionsCPU
-            from nncf.quantization.extensions import QuantizedFunctionsCPU
-    else:
-        from nncf.torch.binarization.extensions import BinarizedFunctionsCPU
-        from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
+    from nncf.torch.binarization.extensions import BinarizedFunctionsCPU
+    from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
     output_tensor = QuantizedFunctionsCPU.get("Quantize_forward")(
         input_tensor, input_low_tensor, input_high_tensor, levels
     )
@@ -61,16 +47,8 @@ elif execution_type == "gpu":
     input_high_tensor = input_high_tensor.cuda()
     scale_tensor = scale_tensor.cuda()
     threshold_tensor = threshold_tensor.cuda()
-    if package_type == "pip_pypi":
-        try:
-            from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
-            from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
-        except ImportError:
-            from nncf.binarization.extensions import BinarizedFunctionsCUDA
-            from nncf.quantization.extensions import QuantizedFunctionsCUDA
-    else:
-        from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
-        from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
+    from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
+    from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
     output_tensor = QuantizedFunctionsCUDA.get("Quantize_forward")(
         input_tensor, input_low_tensor, input_high_tensor, levels
     )
