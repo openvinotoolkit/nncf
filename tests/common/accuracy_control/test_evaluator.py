@@ -19,12 +19,6 @@ from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 
 
-class DummyAccuracyControlAlgoBackend:
-    @staticmethod
-    def prepare_for_inference(model):
-        return model
-
-
 @dataclass
 class TestCase:
     metric_value: float
@@ -89,7 +83,7 @@ def test_determine_mode(ts: TestCase):
     def _validation_fn(dummy_model, dummy_dataset):
         return (ts.metric_value, ts.values_for_each_item)
 
-    evaluator = Evaluator(_validation_fn, DummyAccuracyControlAlgoBackend())
+    evaluator = Evaluator(_validation_fn)
 
     # pylint: disable=W0212
     if ts.raise_exception:

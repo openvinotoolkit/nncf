@@ -18,7 +18,6 @@ from typing import Any, Callable, Dict, Iterable, List, Tuple, Type, TypeVar, Un
 
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.logging import nncf_logger
-from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset

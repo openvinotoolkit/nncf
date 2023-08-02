@@ -91,23 +91,15 @@ def _validation_fn(model, val_dataset) -> float:
     return 0.1, [0.1]
 
 
-class DummyAccuracyControlAlgoBackend:
-    @staticmethod
-    def prepare_for_inference(model):
-        return model
-
-
 def test_create_logits_ranker():
-    algo_backend = DummyAccuracyControlAlgoBackend()
     dataset = Dataset([0, 1, 2])
-    evaluator = Evaluator(_validation_fn_with_error, algo_backend)
+    evaluator = Evaluator(_validation_fn_with_error)
     evaluator.validate(None, dataset)
     assert not evaluator.is_metric_mode()
 
 
 def test_create_metric_ranker():
-    algo_backend = DummyAccuracyControlAlgoBackend()
     dataset = Dataset([0, 1, 2])
-    evaluator = Evaluator(_validation_fn, algo_backend)
+    evaluator = Evaluator(_validation_fn)
     evaluator.validate(None, dataset)
     assert evaluator.is_metric_mode()
