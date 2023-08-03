@@ -10,24 +10,13 @@
 # limitations under the License.
 
 import itertools
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict
 
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.data.dataset import Dataset
-from nncf.parameters import ModelType
-from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
-from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
-from nncf.scopes import IgnoredScope
-
-TModel = TypeVar("TModel")
-TTensor = TypeVar("TTensor")
 
 
 def get_quantization_param_grid() -> Dict[str, Any]:
@@ -83,50 +72,3 @@ def get_quantization_param_grid() -> Dict[str, Any]:
     }
 
     return param_grid
-
-
-def quantize_with_tune_hyperparams(
-    model: TModel,
-    calibration_dataset: Dataset,
-    validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
-    initial_metric_results: MetricResults,
-    quantized_metric_results: MetricResults,
-    tuner_subset_size: int = 300,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-    target_device: TargetDevice = TargetDevice.ANY,
-    subset_size: int = 300,
-    fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
-) -> TModel:
-    """
-    Applies hyperparameters tuning for post-training quantization algorithm.
-    """
-    init_quantization_params = {
-        "preset": preset,
-        "target_device": target_device,
-        "subset_size": subset_size,
-        "fast_bias_correction": fast_bias_correction,
-        "model_type": model_type,
-        "ignored_scope": ignored_scope,
-        "advanced_parameters": advanced_quantization_parameters,
-    }
-
-    quantization_param_grid = get_quantization_param_grid()
-
-    hyperparameter_tuner = HyperparameterTuner(
-        PostTrainingQuantization,
-        init_quantization_params,
-        quantization_param_grid,
-        calibration_dataset,
-        validation_fn,
-        tuner_subset_size,
-        initial_metric_results,
-        quantized_metric_results,
-    )
-
-    quantized_model = hyperparameter_tuner.apply(model, validation_dataset)
-
-    return quantized_model
