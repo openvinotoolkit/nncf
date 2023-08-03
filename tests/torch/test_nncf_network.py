@@ -10,7 +10,6 @@
 # limitations under the License.
 import functools
 import inspect
-import types
 from abc import ABCMeta
 from abc import abstractmethod
 from copy import deepcopy
