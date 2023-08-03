@@ -42,6 +42,7 @@ from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTGatherMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
+from nncf.torch.graph.operator_metatypes import PTSqueezeMetatype
 from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -308,7 +309,7 @@ def test_reshape_attributes_saved_during_graph_building(input_shape):
     }
 
     for node in graph.get_all_nodes():
-        if node.metatype is PTReshapeMetatype:
+        if node.metatype in [PTReshapeMetatype, PTSqueezeMetatype]:
             assert node.node_name in reshape_nodes_with_attributes
             if isinstance(node.layer_attributes, ReshapeLayerAttributes):
                 ref_attrs = reshape_nodes_with_attributes[node.node_name]

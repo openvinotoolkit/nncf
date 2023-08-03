@@ -318,7 +318,7 @@ class QuantizerPropagationSolver:
 
     def __init__(
         self,
-        activation_ignored_scopes: List[str] = None,
+        activation_ignored_scopes: Dict[str, IgnoreReason] = None,
         weight_ignored_scopes: List[str] = None,
         activation_target_scopes: List[str] = None,
         weight_target_scopes: List[str] = None,
@@ -333,13 +333,15 @@ class QuantizerPropagationSolver:
         run_consistency_checks: bool = False,
         quantize_outputs: bool = False,
         post_processing_marker_metatypes: List[OperatorMetatype] = None,
+        metatypes_to_ignore: List[OperatorMetatype] = None,
         scales_unification_map: Dict[OperatorMetatype, OperatorMetatype] = None,
     ):
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
 
-        :param activation_ignored_scopes: A list of strings to match against NNCFGraph node names
-          and ignore matching nodes. Ignored nodes will not have quantizers applied to their activation inputs
+        :param activation_ignored_scopes: A dict with key as node name and value as ignore reason
+          to match against NNCFGraph node names and ignore matching nodes.
+          Ignored nodes will not have quantizers applied to their activation inputs
           (even if required by node's metatype and HW config), and the downstream quantizers will not propagate
           upwards through the corresponding node.
         :param weight_ignored_scopes: A list of strings to match against NNCFGraph node names
@@ -382,6 +384,8 @@ class QuantizerPropagationSolver:
             If the path with the nodes has the post-processing marker node,
             all the nodes in this path will be added into ignored.
             If None automatic ignoring will be skipped.
+        :param metatypes_to_ignore: The framework specific NNCF metatypes,
+            which should be automatically ignored.
         :param scales_unification_map: The framework-specific map with NNCF metatypes, which generating a quantizer
             that can be unified if it so requires based on metatype.
         """
@@ -438,6 +442,7 @@ class QuantizerPropagationSolver:
         self._num_potential_quantized_activations = 0
         self._quantizable_layer_nodes = quantizable_layer_nodes
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
+        self._metatypes_to_ignore = metatypes_to_ignore
         self._scales_unification_map = scales_unification_map
 
     def _filter_by_weight_ignored_target_scopes(
@@ -460,6 +465,7 @@ class QuantizerPropagationSolver:
                 nncf_logger.debug(f"Ignored adding weight quantizer for: {node_name}")
         return weight_quantizable_node_names_vs_qconfigs
 
+    # pylint:disable=too-many-branches
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
         """
         The main function to be used on an InsertionPointGraph to produce
@@ -477,6 +483,10 @@ class QuantizerPropagationSolver:
         """
         self._num_potential_quantized_activations = 0
         quant_prop_graph = QuantizerPropagationStateGraph(ip_graph, self._ignored_scopes, self._target_scopes)
+        if self._metatypes_to_ignore is not None:
+            for metatype in self._metatypes_to_ignore:
+                for node_key in quant_prop_graph.get_node_keys_by_metatype(metatype):
+                    self._add_node_to_ignored(node_key, quant_prop_graph)
         if self._post_processing_marker_metatypes is not None:
             post_processing_node_locator = PostprocessingNodeLocator(
                 quant_prop_graph, self._quantizable_layer_nodes, self._post_processing_marker_metatypes
