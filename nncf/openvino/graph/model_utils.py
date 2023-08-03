@@ -56,6 +56,7 @@ def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:
     It's needed for the further bias shift calculation that relates on quantized weights.
 
     :param model: ov.Model instance.
+    :param graph: NNCFGraph instance.
     :return: ov.Model instance without activation Fake Quantize nodes.
     """
     transformation_layout = TransformationLayout()

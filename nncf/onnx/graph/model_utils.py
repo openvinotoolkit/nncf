@@ -28,6 +28,7 @@ def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx
     It's needed for the further bias shift calculation that relates on quantized weights.
 
     :param model: onnx.ModelProto instance.
+    :param nncf_graph: NNCFGraph instance.
     :return: onnx.ModelProto instance without activation Quantizer nodes.
     """
     transformation_layout = TransformationLayout()
