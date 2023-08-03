@@ -49,12 +49,12 @@ from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import DuplicateFilter
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
+from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
