@@ -318,7 +318,7 @@ class QuantizerPropagationSolver:
 
     def __init__(
         self,
-        activation_ignored_scopes: List[str] = None,
+        activation_ignored_scopes: Dict[str, IgnoreReason] = None,
         weight_ignored_scopes: List[str] = None,
         activation_target_scopes: List[str] = None,
         weight_target_scopes: List[str] = None,
@@ -339,8 +339,9 @@ class QuantizerPropagationSolver:
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
 
-        :param activation_ignored_scopes: A list of strings to match against NNCFGraph node names
-          and ignore matching nodes. Ignored nodes will not have quantizers applied to their activation inputs
+        :param activation_ignored_scopes: A dict with key as node name and value as ignore reason
+          to match against NNCFGraph node names and ignore matching nodes.
+          Ignored nodes will not have quantizers applied to their activation inputs
           (even if required by node's metatype and HW config), and the downstream quantizers will not propagate
           upwards through the corresponding node.
         :param weight_ignored_scopes: A list of strings to match against NNCFGraph node names
