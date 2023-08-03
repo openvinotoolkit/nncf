@@ -81,9 +81,10 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def get_weight_statistics(node: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
         weights = deepcopy(get_weight_value(node, model, port_id))
         abs_value = np.abs(weights)
-        transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
-        axis = 0 if transpose else -1
-        return np.max(abs_value, axis=axis)
+        reduction_axis = 0
+        if len(abs_value.shape) > 1:
+            reduction_axis = OVSmoothQuantAlgoBackend._get_weight_reduction_axis(node, port_id)
+        return np.max(abs_value, axis=reduction_axis)
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -116,44 +117,37 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return scales, ratio
 
     @staticmethod
-    def calculate_activation_scale(scale_value: np.ndarray, nodes: List[NNCFNode]) -> np.ndarray:
-        activation_scales = scale_value ** (-1)
-
+    def calculate_activation_scale(scale_value: np.ndarray, nodes: List[NNCFNode], nncf_graph: NNCFGraph) -> np.ndarray:
         activation_shapes = [n.layer_attributes.input_attributes["shape"] for n in nodes]
         activation_shape = activation_shapes[0]
         if not all(shape == activation_shape for shape in activation_shapes):
             raise RuntimeError(f"Shapes for nodes {[n.node_name for n in nodes]} are not identical")
 
-        transpose_attrs = [n.layer_attributes.input_attributes["transpose"] for n in nodes]
-        if not all(attr == transpose_attrs[0] for attr in transpose_attrs):
-            raise RuntimeError(f"Transpose attributes for nodes {[n.node_name for n in nodes]} are not identical")
+        activation_ports_map = {
+            node: OVSmoothQuantAlgoBackend.get_input_ports_map(node, nncf_graph)["activation"] for node in nodes
+        }
+        channel_axes = [
+            OVSmoothQuantAlgoBackend._get_activation_channel_axis(node, port)
+            for node, port in activation_ports_map.items()
+        ]
+        channel_axis = channel_axes[0]
 
-        activation_scales = np.expand_dims(activation_scales, axis=0)
+        if not all(axis == channel_axis for axis in channel_axes):
+            raise RuntimeError(f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical")
 
-        if len(activation_shape) > 2:
-            if all(transpose_attrs):
-                activation_scales = np.expand_dims(activation_scales, axis=2)
-            else:
-                activation_scales = np.expand_dims(activation_scales, axis=1)
-        return activation_scales
+        reshape_shape = np.ones(len(activation_shape), dtype=np.int)
+        reshape_shape[channel_axis] = activation_shape[channel_axis]
+
+        return np.reshape(scale_value, reshape_shape)
 
     @staticmethod
-    def calculate_weight_scale(scale_value: np.ndarray, nodes: List[NNCFNode]) -> np.ndarray:
-        transpose_attrs = []
-        for node in nodes:
-            port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
-            transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
-            transpose_attrs.append(transpose)
-
-        if not all(attr == transpose_attrs[0] for attr in transpose_attrs):
-            raise RuntimeError(f"Transpose attributes for nodes {[n.node_name for n in nodes]} are not identical")
-
-        if all(transpose_attrs):
-            weight_scales = np.expand_dims(scale_value, axis=0)
-        else:
-            weight_scales = np.expand_dims(scale_value, axis=-1)
-
-        return weight_scales
+    def calculate_weight_scale(scale_value: np.ndarray, node: NNCFNode) -> np.ndarray:
+        port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
+        shape = node.layer_attributes.constant_attributes[port_id]["shape"]
+        if len(shape) > 1:
+            reduction_axis = OVSmoothQuantAlgoBackend._get_weight_reduction_axis(node, port_id)
+            return np.expand_dims(scale_value, axis=reduction_axis)
+        return scale_value
 
     @staticmethod
     def weight_update_command(
@@ -190,5 +184,31 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
                 and node.layer_attributes.input_attributes["transpose"]
             ):
                 channel_axis = -2 + port_id
+
+        return channel_axis
+
+    @staticmethod
+    def _get_weight_reduction_axis(node: NNCFNode, port_id: int) -> int:
+        """
+        Returns axis number of the weight tensor which correspond to it channel.
+
+        :param node: NNCFNode instance.
+        :param port_id: Specified input port id.
+        :return: Channel axis number.
+        """
+        channel_axis = 1 if node.metatype.const_channel_axis is None else node.metatype.const_channel_axis[0]
+
+        if node.metatype == OVMatMulMetatype:
+            if port_id > 1:
+                raise RuntimeError(f"{OVMatMulMetatype.name} can not take more than 2 input tensors.")
+
+            channel_axis = -2 + port_id
+            if (
+                node.layer_attributes is not None
+                and node.layer_attributes.constant_attributes is not None
+                and "transpose" in node.layer_attributes.constant_attributes[port_id]
+                and node.layer_attributes.constant_attributes[port_id]["transpose"]
+            ):
+                channel_axis = -1 - port_id
 
         return channel_axis

@@ -21,7 +21,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
-from tests.post_training.test_templates.helpers import LinearModel
+from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
@@ -75,7 +75,7 @@ class TemplateTestSQAlgorithm:
         "model_cls, reference_values",
         (
             (
-                LinearModel,
+                LinearMultiShapeModel,
                 {"/Reshape/smooth_quant_multiply": [[[1.0708091, 1.0854627, 1.2070981, 1.1213733]]]},
             ),
         ),

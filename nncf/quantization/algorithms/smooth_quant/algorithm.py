@@ -109,8 +109,10 @@ class SmoothQuant(Algorithm):
         for group_id, nodes in tqdm(node_groups.items(), desc="Applying Smooth Quant"):
             best_ratio = 0.0
             for node_to_smooth in nodes:
-                source_node, port_id = group_id
-                activations_value = self._get_statistics_for_node(statistic_points, node_to_smooth.node_name, port_id)
+                source_node, input_port_id, source_output_port_id, _ = group_id
+                activations_value = self._get_statistics_for_node(
+                    statistic_points, node_to_smooth.node_name, input_port_id
+                )
                 activations_value = self._backend_entity.clip_statistics(activations_value)
 
                 weights_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
@@ -125,21 +127,20 @@ class SmoothQuant(Algorithm):
                     best_ratio = ratio
                     best_scale = deepcopy(scales)
 
-            activation_scales = self._backend_entity.calculate_activation_scale(best_scale, nodes)
-            weight_scales = self._backend_entity.calculate_weight_scale(best_scale, nodes)
-
-            for node_to_smooth in nodes:
                 weights_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
                 weights_value = self._backend_entity.get_weight_value(node_to_smooth, model, weights_port)
+                weight_scale = self._backend_entity.calculate_weight_scale(best_scale, node_to_smooth)
 
-                scaled_weights = weights_value * weight_scales
+                scaled_weights = weights_value * weight_scale
                 weight_update_command = self._backend_entity.weight_update_command(
                     node_to_smooth, scaled_weights, weights_port
                 )
                 transformation_layout.register(weight_update_command)
 
+            activation_scale = self._backend_entity.calculate_activation_scale(best_scale, nodes, nncf_graph)
+
             scale_insertion_command = self._backend_entity.scale_insertion_command(
-                source_node, activation_scales, port_id, nodes
+                source_node, activation_scale, source_output_port_id, nodes
             )
             transformation_layout.register(scale_insertion_command)
 
@@ -160,7 +161,10 @@ class SmoothQuant(Algorithm):
             input_act_port = node_data["input_act_port"]
 
             source_node = nncf_graph.get_input_edges(node_to_smooth)[input_act_port].from_node
-            group_id = (source_node, input_act_port)
+            edge = nncf_graph.get_edge(source_node, node_to_smooth)
+            # Such group_id (with node, ports, and shape as a hash) allows us to be confident
+            # that all sensitive parameters are equal for successor nodes are equal.
+            group_id = (source_node, input_act_port, edge.output_port_id, hash(str(edge.tensor_shape)))
             groups[group_id].append(node_to_smooth)
 
         return groups

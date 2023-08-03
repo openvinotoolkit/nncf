@@ -133,21 +133,37 @@ class MultipleConvTestModel(nn.Module):
         return self.conv_5(F.relu(x_1_2))
 
 
-class LinearModel(nn.Module):
+class LinearMultiShapeModel(nn.Module):
     INPUT_SIZE = [1, 3, 4, 2]
     RESHAPE_SHAPE = (1, 3, 2, 4)
-    MATMUL_W_SHAPE = (4, 5)
 
     def __init__(self) -> None:
         super().__init__()
         with set_torch_seed():
-            self.matmul_data = torch.randn(self.MATMUL_W_SHAPE, dtype=torch.float32) - torch.tensor(0.5)
-            self.add_data = torch.randn(self.RESHAPE_SHAPE, dtype=torch.float32)
+            self.matmul_1_data = torch.randn((4, 5), dtype=torch.float32)
+            self.add_1_data = torch.randn(self.RESHAPE_SHAPE, dtype=torch.float32)
+            self.matmul_2_data = torch.randn((5, 4), dtype=torch.float32)
+            self.matmul_3_data = torch.randn((8, 2), dtype=torch.float32)
+            self.matmul_4_data = torch.randn((8, 3), dtype=torch.float32)
+            self.matmul_5_data = torch.randn((1), dtype=torch.float32)
+            self.matmul_6_data = torch.randn((64), dtype=torch.float32)
 
     def forward(self, x):
         x = torch.reshape(x, self.RESHAPE_SHAPE)
-        x_1 = torch.matmul(x, self.matmul_data)
-        x_2 = torch.add(x, self.add_data)
+
+        x_1 = torch.matmul(x, self.matmul_1_data)
+        x_1 = torch.matmul(x_1, self.matmul_2_data)
+        x_2 = torch.add(x, self.add_1_data)
+
+        x = torch.add(x_1, x_2)
+        x = torch.reshape(x, (1, 3, 8))
+
+        x_1 = torch.matmul(x, self.matmul_3_data)
+        x_1 = torch.reshape(x_1, (1, 6))
+        x_1 = torch.matmul(self.matmul_5_data, x_1)
+        x_2 = torch.matmul(self.matmul_4_data, x)
+        x_2 = torch.reshape(x_2, (1, 64))
+        x_2 = torch.matmul(x_2, self.matmul_6_data)
         return x_1, x_2
 
 
