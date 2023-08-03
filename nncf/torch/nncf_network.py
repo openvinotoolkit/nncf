@@ -832,8 +832,12 @@ class NNCFNetworkMeta(type):
         )
         # Make the signature of the forward on the resulting object same as for
         # the original forward.
-        model_forward_signature = inspect.signature(original_class.forward)
-        new_forward = _get_nncf_forward_function_with_signature(model_forward_signature)
+        fn = NNCFNetwork.forward
+        new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
+        new_forward.__dict__.update(fn.__dict__)
+        new_forward.__signature__ = inspect.signature(original_class.forward)
+        if is_debug():
+            new_forward = debuggable_forward(new_forward)
         new_class.forward = new_forward
 
         # In case of overriding forward by code like `model.forward = wrapper(model.forward)`
@@ -988,9 +992,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
                 "with model.nncf.temporary_bound_original_forward(fn): ...\n"
                 "if `fn` already had 0-th `self` argument bound or never had it in the first place."
             )
-            self.nncf._original_instance_forward = value
-            new_forward = _get_nncf_forward_function_with_signature(inspect.signature(value))
-            value = functools.partial(new_forward, self)
         super().__setattr__(key, value)
 
     def get_nncf_wrapped_model(self) -> "NNCFNetwork":
@@ -1002,22 +1003,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
             ".get_nncf_wrapped_model() may be simply omitted."
         )
         return self
-
-
-def _get_nncf_forward_function_with_signature(signature: inspect.Signature):
-    """
-    Create forward function with copy signature of forward function.
-
-    :param signature: Signature of function that will used for forward function.
-    :return: New copy of function NNCFNetwork.forward with specified signature.
-    """
-    fn = NNCFNetwork.forward
-    new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
-    new_forward.__dict__.update(fn.__dict__)
-    new_forward.__signature__ = signature
-    if is_debug():
-        new_forward = debuggable_forward(new_forward)
-    return new_forward
 
 
 class NNCFSkippingIter:

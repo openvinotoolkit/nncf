@@ -10,6 +10,7 @@
 # limitations under the License.
 import functools
 import inspect
+import types
 from abc import ABCMeta
 from abc import abstractmethod
 from copy import deepcopy
@@ -404,6 +405,28 @@ def test_replacing_forward_with_another_own_method(_nncf_caplog):
     assert "set_original_unbound_forward" in _nncf_caplog.text
 
 
+def test_replacing_forward_of_original_model(_nncf_caplog):
+    def decorator(func):
+        def wrap(*args):
+            return func(*args)
+
+        return wrap
+
+    model = BasicConvTestModel()
+    model.forward = decorator(model.forward)
+
+    fn_id = id(model.__dict__["forward"])
+    # type of current
+    assert isinstance(model.__dict__["forward"], type(decorator))
+
+    nncf_net = NNCFNetwork(model, [ModelInputInfo(model.INPUT_SIZE)])
+    nncf_net.forward(torch.ones(model.INPUT_SIZE))
+
+    # Check that forward was updated
+    assert fn_id != id(nncf_net.__dict__["forward"])
+    assert isinstance(nncf_net.forward, functools.partial)
+
+
 def test_temporary_clean_view():
     model = TwoConvTestModelWithUserModule()
     config = get_basic_sparsity_plus_quantization_config()
@@ -736,33 +759,3 @@ def test_proxy_module_for_forward_with_super(mocker):
 
     input_ids = torch.randint(num_embeddings, (1, 4))
     wrapped_model(input_ids)
-
-
-def test_overriding_forward_model():
-    def decorator(func):
-        def wrap(*args):
-            return func(*args)
-
-        return wrap
-
-    model = BasicConvTestModel()
-    model.forward = decorator(model.forward)
-    nncf_net = NNCFNetwork(model, [ModelInputInfo(model.INPUT_SIZE)])
-    nncf_net.forward(torch.ones(model.INPUT_SIZE))
-    # Detect that forward was wrapped by NNCFNetwork, for overrided function type is 'function'
-    assert isinstance(nncf_net.forward, functools.partial)
-
-
-def test_overriding_forward_nncf_network():
-    def decorator(func):
-        def wrap(*args):
-            return func(*args)
-
-        return wrap
-
-    model = BasicConvTestModel()
-    nncf_net = NNCFNetwork(model, [ModelInputInfo(model.INPUT_SIZE)])
-    nncf_net.forward = decorator(nncf_net.nncf.get_original_forward())
-    nncf_net.forward(torch.ones(model.INPUT_SIZE))
-    # Detect that forward was wrapped by NNCFNetwork, for overrided function type is 'function'
-    assert isinstance(nncf_net.forward, functools.partial)
