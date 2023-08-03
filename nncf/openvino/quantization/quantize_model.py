@@ -196,6 +196,9 @@ def native_quantize_with_accuracy_control_impl(
         initial_metric_results.metric_value, quantized_metric_results.metric_value, max_drop, drop_type
     )
 
+    nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({drop_type})")
+
+    # TODO(andrey-churkin): Collect statistics only once
     if advanced_accuracy_restorer_parameters.tune_hyperparams and not should_terminate:
         tuned_quantized_model = quantize_with_tune_hyperparams(
             model,
@@ -213,10 +216,15 @@ def native_quantize_with_accuracy_control_impl(
             ignored_scope,
             advanced_quantization_parameters,
         )
-        tuned_quantized_metric_results = evaluator.collect_metric_results(model, validation_dataset, model_name="tuned")
-        should_terminate, tuned_accuracy_drop = calculate_accuracy_drop(
-            initial_metric_results.metric_value, quantized_metric_results.metric_value, max_drop, drop_type
+        tuned_quantized_metric_results = evaluator.collect_metric_results(
+            tuned_quantized_model, validation_dataset, model_name="tuned"
         )
+        should_terminate, tuned_accuracy_drop = calculate_accuracy_drop(
+            initial_metric_results.metric_value, tuned_quantized_metric_results.metric_value, max_drop, drop_type
+        )
+
+        nncf_logger.info(f"Accuracy drop (tuned): {tuned_accuracy_drop} ({drop_type})")
+
         if should_terminate or tuned_accuracy_drop < accuracy_drop:
             quantized_model = tuned_quantized_model
             quantized_metric_results = tuned_quantized_metric_results
