@@ -26,6 +26,7 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -33,6 +34,7 @@ from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
 TModel = TypeVar("TModel")
 
@@ -95,7 +97,7 @@ class BiasCorrection(Algorithm):
         self.inplace_statistics = inplace_statistics
         self.backend_params = backend_params
         self.nncf_graph = None
-        self._backend_entity = None
+        self._backend_entity: BiasCorrectionAlgoBackend = None
         self._collected_stat_inputs_map = {}
         self._fp_inputs = defaultdict(list)
         self._algorithm_key = f"BC_{hash(self)}"
@@ -362,10 +364,18 @@ class BiasCorrection(Algorithm):
         for feed_dict in feed_dicts:
             q_output = engine.infer(feed_dict)
             q_output = self._backend_entity.process_model_output(q_output, output_tensor_name)
-            q_outputs.append(self._backend_entity.tensor_processor.mean_per_channel(q_output, channel_axis).tensor)
+            q_outputs.append(self._mean_per_channel(q_output, channel_axis))
         # Here we get the per-sample average, so the axis is 0.
         q_output = np.mean(q_outputs, axis=0)
         return output_fp - q_output
+
+    def _mean_per_channel(self, x: NNCFTensor, channel_axis: int):
+        backend = x.backend
+        if len(x.shape) < 3:
+            return x.mean(axis=0)
+        x = backend.moveaxis(x, channel_axis, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return backend.mean(t, axis=(0, 2))
 
     @staticmethod
     def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
