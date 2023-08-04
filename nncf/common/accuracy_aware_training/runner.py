@@ -20,6 +20,7 @@ from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
 from nncf.common.logging import nncf_logger
+from nncf.common.plotting import noninteractive_plotting
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.schemata.defaults import AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR
@@ -486,20 +487,17 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self._compressed_training_history.append((compression_rate, accuracy_budget))
 
         if IMG_PACKAGES_AVAILABLE:
-            backend = plt.get_backend()
-            plt.switch_backend("agg")
-            plt.ioff()
-            fig = plt.figure()
-            plt.plot(self.compressed_training_history.keys(), self.compressed_training_history.values())
-            buf = io.BytesIO()
-            plt.savefig(buf, format="jpeg")
-            buf.seek(0)
-            image = PIL.Image.open(buf)
-            self.add_tensorboard_image(
-                "compression/accuracy_aware/acc_budget_vs_comp_rate", image, len(self.compressed_training_history)
-            )
-            plt.close(fig)
-            plt.switch_backend(backend)
+            with noninteractive_plotting():
+                fig = plt.figure()
+                plt.plot(self.compressed_training_history.keys(), self.compressed_training_history.values())
+                buf = io.BytesIO()
+                plt.savefig(buf, format="jpeg")
+                buf.seek(0)
+                image = PIL.Image.open(buf)
+                self.add_tensorboard_image(
+                    "compression/accuracy_aware/acc_budget_vs_comp_rate", image, len(self.compressed_training_history)
+                )
+                plt.close(fig)
 
     @property
     def compressed_training_history(self):
