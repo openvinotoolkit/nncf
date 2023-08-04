@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from typing import Dict, List, Optional
+from typing import Type
 
 import numpy as np
 import openvino.runtime as ov
@@ -17,6 +18,7 @@ import openvino.runtime as ov
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor import NNCFTensorBackend
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -34,6 +36,7 @@ from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import get_mean_stat_collector
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 from nncf.openvino.tensor import OVNNCFTensor
+from nncf.openvino.tensor import OVNNCFTensorBackend
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
@@ -41,6 +44,10 @@ from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionA
 # pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
+    @property
+    def tensor_backend(self) -> Type[NNCFTensorBackend]:
+        return OVNNCFTensorBackend
+
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor

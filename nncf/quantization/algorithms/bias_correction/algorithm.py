@@ -366,10 +366,11 @@ class BiasCorrection(Algorithm):
             q_output = self._backend_entity.process_model_output(q_output, output_tensor_name)
             q_outputs.append(self._mean_per_channel(q_output, channel_axis))
         # Here we get the per-sample average, so the axis is 0.
-        q_output = np.mean(q_outputs, axis=0)
+        tensor_backend = self._backend_entity.tensor_backend()
+        q_output = tensor_backend.mean_of_list(q_outputs, axis=0).to_numpy()
         return output_fp - q_output
 
-    def _mean_per_channel(self, x: NNCFTensor, channel_axis: int):
+    def _mean_per_channel(self, x: NNCFTensor, channel_axis: int) -> NNCFTensor:
         backend = x.backend
         if len(x.shape) < 3:
             return x.mean(axis=0)

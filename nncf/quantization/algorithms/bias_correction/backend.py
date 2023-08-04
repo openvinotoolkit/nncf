@@ -12,6 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from typing import List, Optional, TypeVar
+from typing import Type
 
 import numpy as np
 
@@ -21,6 +22,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import NNCFTensorBackend
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
@@ -32,6 +34,11 @@ ALGO_BACKENDS = Registry("algo_backends")
 
 # pylint:disable=too-many-public-methods
 class BiasCorrectionAlgoBackend(ABC):
+    @property
+    @abstractmethod
+    def tensor_backend(self) -> Type[NNCFTensorBackend]:
+        pass
+
     @property
     @abstractmethod
     def tensor_processor(self):
