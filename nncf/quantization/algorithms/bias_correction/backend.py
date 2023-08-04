@@ -20,21 +20,14 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.experimental.tensor import Tensor
 
 TModel = TypeVar("TModel")
 OutputType = TypeVar("OutputType")
 
 
 class BiasCorrectionAlgoBackend(ABC):
-    @property
-    @abstractmethod
-    def tensor_processor(self):
-        """
-        Returns backend-specific instance of the NNCFCollectorTensorProcessor.
-        """
-
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
@@ -49,12 +42,15 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> TransformationCommand:
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+    ) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 
         :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
+        :param nncf_graph: NNCFGraph for the model in question
         :return: Backend-specific command to update bias value.
         """
 
@@ -83,7 +79,7 @@ class BiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def mean_statistic_collector(
-        channel_axis: int,
+        channel_axis: Optional[int],
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
@@ -112,17 +108,6 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: str) -> NNCFTensor:
-        """
-        Returns backend-specific processed output from the model.
-
-        :param raw_data: Backend-specific output from the model.
-        :param output_name: Name of the output layer or tensor name.
-        :return: Processed output as NNCFTensor.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
         """
         Returns input port id corresponding to activation input edge for
@@ -136,7 +121,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> Tensor:
         """
         Returns bias value in the NumPy format of provided node.
 

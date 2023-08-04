@@ -13,7 +13,7 @@ from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, List, Type, Union
+from typing import Any, List, Tuple, Type, Union
 
 import numpy as np
 import pytest
@@ -23,8 +23,12 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.tensor_statistics.reduction import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
@@ -85,16 +89,11 @@ class TemplateTestStatisticsAggregator:
 
     @abstractmethod
     @pytest.fixture(scope="session")
-    def test_params(self):
+    def params(self):
         """
         Please make the same topologies with the same names as it
         presented in Openvino tests.
         """
-
-    @abstractmethod
-    @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        pass
 
     @abstractmethod
     @pytest.fixture
@@ -105,6 +104,9 @@ class TemplateTestStatisticsAggregator:
     @pytest.fixture
     def inplace_statistics(self) -> bool:
         pass
+
+    def no_batch_dimension_in_dataset_samples(self) -> bool:
+        return False
 
     @abstractmethod
     @pytest.fixture
@@ -162,8 +164,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 0.55, 64.5)),
-                    np.array((-4.5, 0, -63.5)),
+                    np.array((1, 0.55, 64.5)).reshape([1, 3, 1, 1]),
+                    np.array((-4.5, 0, -63.5)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -172,8 +174,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((5.5, 1, 64.5)),
-                    np.array((-4.5, 0, -63.5)),
+                    np.array((5.5, 1, 64.5)).reshape([1, 3, 1, 1]),
+                    np.array((-4.5, 0, -63.5)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -202,8 +204,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 1, 128)),
-                    np.array((-10, -1, -128)),
+                    np.array((1, 1, 128)).reshape([1, 3, 1, 1]),
+                    np.array((-10, -1, -128)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -212,8 +214,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((10, 1, 128)),
-                    np.array((-10, -1, -128)),
+                    np.array((10, 1, 128)).reshape([1, 3, 1, 1]),
+                    np.array((-10, -1, -128)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -242,8 +244,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 0.55, 64.5)),
-                    np.array((-4.5, 0.0, -63.5)),
+                    np.array((1, 0.55, 64.5)).reshape([1, 3, 1, 1]),
+                    np.array((-4.5, 0.0, -63.5)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -252,8 +254,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((5.5, 1.0, 64.5)),
-                    np.array((-4.5, 0.0, -63.5)),
+                    np.array((5.5, 1.0, 64.5)).reshape([1, 3, 1, 1]),
+                    np.array((-4.5, 0.0, -63.5)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -282,8 +284,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 0, 0)),
-                    np.array((0, 0, 0)),
+                    np.array((1, 0, 0)).reshape([1, 3, 1, 1]),
+                    np.array((0, 0, 0)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -292,8 +294,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((0, 1, 0)),
-                    np.array((0, 0, 0)),
+                    np.array((0, 1, 0)).reshape([1, 3, 1, 1]),
+                    np.array((0, 0, 0)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -322,8 +324,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((0.96, 0.546, 59.38)),
-                    np.array((-4.100e00, 4.000e-02, -5.838e01)),
+                    np.array((0.96, 0.546, 59.38)).reshape([1, 3, 1, 1]),
+                    np.array((-4.100e00, 4.000e-02, -5.838e01)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -332,8 +334,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((0.96, 0.546, 59.38)),
-                    np.array((-4.100e00, 4.000e-02, -5.838e01)),
+                    np.array((0.96, 0.546, 59.38)).reshape([1, 3, 1, 1]),
+                    np.array((-4.100e00, 4.000e-02, -5.838e01)).reshape([1, 3, 1, 1]),
                 )
             ),
             # Weight collectors
@@ -365,8 +367,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.OPERATION_WITH_WEIGHTS,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((10, 1, 128)),
-                    np.array((-10, -1, -128)),
+                    np.array((10, 1, 128)).reshape([3, 1, 1, 1]),
+                    np.array((-10, -1, -128)).reshape([3, 1, 1, 1]),
                 )
             ),
             (
@@ -375,8 +377,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.OPERATION_WITH_WEIGHTS,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 0.1, 128)),
-                    np.array((-10, -1, -128)),
+                    np.array((1, 0.1, 128)).reshape([3, 1, 1, 1]),
+                    np.array((-10, -1, -128)).reshape([3, 1, 1, 1]),
                 )
             ),
         ),
@@ -385,7 +387,6 @@ class TemplateTestStatisticsAggregator:
         self,
         test_parameters: MinMaxTestParameters,
         dataset_samples,
-        is_stat_in_shape_of_scale,
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
@@ -433,24 +434,15 @@ class TemplateTestStatisticsAggregator:
         assert len(tensor_collectors) == 1
         for tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
-            # Torch and Openvino backends tensor collectors return values in shape of scale
-            # in comparison to ONNX backends.
+            assert isinstance(stat, MinMaxTensorStatistic)
             ref_min_val, ref_max_val = test_parameters.ref_min_val, test_parameters.ref_max_val
-            if isinstance(ref_min_val, np.ndarray) and is_stat_in_shape_of_scale:
-                shape = (1, 3, 1, 1)
-                if test_parameters.target_type == TargetType.OPERATION_WITH_WEIGHTS:
-                    shape = (3, 1, 1, 1)
-                ref_min_val, ref_max_val = map(lambda x: np.reshape(x, shape), (ref_min_val, ref_max_val))
 
-            assert np.allclose(stat.min_values, ref_min_val)
-            assert np.allclose(stat.max_values, ref_max_val)
             if isinstance(ref_min_val, np.ndarray):
-                assert stat.min_values.shape == ref_min_val.shape
-                assert stat.max_values.shape == ref_max_val.shape
-            else:
-                ref_shape = (1, 1, 1, 1) if is_stat_in_shape_of_scale else ()
-                assert stat.min_values.shape == ref_shape
-                assert stat.max_values.shape == ref_shape
+                assert tuple(stat.min_values.shape) == ref_min_val.shape
+                assert tuple(stat.max_values.shape) == ref_max_val.shape
+
+            assert np.allclose(stat.min_values.to_numpy(), ref_min_val)
+            assert np.allclose(stat.max_values.to_numpy(), ref_max_val)
 
     @dataclass
     class BCTestParameters:
@@ -458,7 +450,8 @@ class TemplateTestStatisticsAggregator:
         collector_type: BCStatsCollectors
         target_type: TargetType
         ref_values: Any = None
-        axis: int = 1
+        ref_observed_shape: Tuple[int, ...] = None
+        channel_axis: int = 1
 
     MEAN_ACT_AXIS_0_REF = np.array(
         [
@@ -481,50 +474,56 @@ class TemplateTestStatisticsAggregator:
     )
 
     @pytest.mark.parametrize(
-        "test_params",
+        "params",
         [
             # TargeType: activations
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (MEAN_ACT_AXIS_0_REF, (1, 3, 3, 3)),
-                axis=0,
+                ref_values=MEAN_ACT_AXIS_0_REF,
+                ref_observed_shape=(1, 3, 3, 3),
+                channel_axis=None,  # batch mean requested
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (MEAN_ACT_AXIS_0_REF, (1, 3, 3, 3)),
-                axis=0,
+                ref_values=MEAN_ACT_AXIS_0_REF,
+                ref_observed_shape=(1, 3, 3, 3),
+                channel_axis=None,  # batch mean requested
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (np.array((0.0, 0.45, 0.5)), (1, 3, 3, 3)),
-                axis=1,
+                ref_values=np.array((0.0, 0.45, 0.5)).reshape([1, 3, 1, 1]),
+                ref_observed_shape=(1, 3, 3, 3),
+                channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (np.array((0.0, 0.45, 0.5)), (1, 3, 3, 3)),
-                axis=1,
+                ref_values=np.array((0.0, 0.45, 0.5)).reshape([1, 3, 1, 1]),
+                ref_observed_shape=(1, 3, 3, 3),
+                channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (np.array([-0.04999995, 0.5, 0.5]), (1, 3, 3, 3)),
-                axis=2,
+                ref_values=np.array([-0.04999995, 0.5, 0.5]).reshape([1, 1, 3, 1]),
+                ref_observed_shape=(1, 3, 3, 3),
+                channel_axis=2,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (np.array([-0.04999995, 0.5, 0.5]), (1, 3, 3, 3)),
-                axis=2,
+                ref_values=np.array([-0.04999995, 0.5, 0.5]).reshape([1, 1, 3, 1]),
+                ref_observed_shape=(1, 3, 3, 3),
+                channel_axis=2,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION, BCStatsCollectors.RAW, TargetType.POST_LAYER_OPERATION
@@ -534,64 +533,68 @@ class TemplateTestStatisticsAggregator:
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (MEAN_WEIGHTS_AXIS_0_REF, (3, 3, 3, 3)),
-                axis=0,
+                ref_values=MEAN_WEIGHTS_AXIS_0_REF,
+                ref_observed_shape=(3, 3, 3, 3),
+                channel_axis=None,  # batch mean requested
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (MEAN_WEIGHTS_AXIS_0_REF, (3, 3, 3, 3)),
-                axis=0,
+                ref_values=MEAN_WEIGHTS_AXIS_0_REF,
+                ref_observed_shape=(3, 3, 3, 3),
+                channel_axis=None,  # batch mean requested
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-0.36666664, -0.36666664, -0.36666664]), (3, 3, 3, 3)),
-                axis=1,
+                ref_values=np.array([-0.36666664, -0.36666664, -0.36666664]).reshape([1, 3, 1, 1]),
+                ref_observed_shape=(3, 3, 3, 3),
+                channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-0.36666664, -0.36666664, -0.36666664]), (3, 3, 3, 3)),
-                axis=1,
+                ref_values=np.array([-0.36666664, -0.36666664, -0.36666664]).reshape([1, 3, 1, 1]),
+                ref_observed_shape=(3, 3, 3, 3),
+                channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-1.1, 0.0, 0.0]), (3, 3, 3, 3)),
-                axis=2,
+                ref_values=np.array([-1.1, 0.0, 0.0]).reshape([1, 1, 3, 1]),
+                ref_observed_shape=(3, 3, 3, 3),
+                channel_axis=2,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-1.1, 0.0, 0.0]), (3, 3, 3, 3)),
-                axis=2,
+                ref_values=np.array([-1.1, 0.0, 0.0]).reshape([1, 1, 3, 1]),
+                ref_observed_shape=(3, 3, 3, 3),
+                channel_axis=2,
             ),
         ],
     )
-    def test_statistics_aggregator_bias_correction(
-        self, dataset_samples, test_params: BCTestParameters, inplace_statistics, is_stat_in_shape_of_scale
-    ):
+    def test_statistics_aggregator_bias_correction(self, dataset_samples, params, inplace_statistics):
         name_to_algo_backend_map = {
             BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
             BiasCorrectionAlgos.FAST_BIAS_CORRECTION: self.get_fast_bias_correction_algo_backend_cls,
         }
-        algo_backend = name_to_algo_backend_map[test_params.algo]()
-        if test_params.collector_type == BCStatsCollectors.MEAN:
+        algo_backend = name_to_algo_backend_map[params.algo]()
+        if params.collector_type == BCStatsCollectors.MEAN:
             tensor_collector = algo_backend.mean_statistic_collector(
-                test_params.axis, inplace_statistics, len(dataset_samples)
+                params.channel_axis, inplace_statistics, len(dataset_samples)
             )
-        elif test_params.collector_type == BCStatsCollectors.RAW:
+        elif params.collector_type == BCStatsCollectors.RAW:
             tensor_collector = algo_backend.raw_statistic_collector(inplace_statistics, len(dataset_samples))
         else:
             raise RuntimeError()
 
-        target_point = self.get_target_point(test_params.target_type)
+        target_point = self.get_target_point(params.target_type)
 
         statistics_points = StatisticPointsContainer()
         algorithm_name = "TestAlgo"
@@ -617,22 +620,26 @@ class TemplateTestStatisticsAggregator:
 
         for tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
-            if test_params.collector_type == BCStatsCollectors.MEAN:
-                ret_val = [stat.mean_values, stat.shape]
-            elif test_params.collector_type == BCStatsCollectors.RAW:
-                ret_val = stat.values
-                test_params.ref_values = dataset_samples
-                if not is_stat_in_shape_of_scale:
-                    ret_val = [np.squeeze(x) for x in ret_val]
+            if params.collector_type == BCStatsCollectors.MEAN:
+                assert isinstance(stat, MeanTensorStatistic)
+                test_stat_value = stat.mean_values.to_numpy()
+                ref_stat_value = params.ref_values
+                assert test_stat_value.shape == ref_stat_value.shape
+                assert np.allclose(test_stat_value, ref_stat_value)
+                assert stat.observed_shape == params.ref_observed_shape
+            elif params.collector_type == BCStatsCollectors.RAW:
+                assert isinstance(stat, RawTensorStatistic)
+                if self.no_batch_dimension_in_dataset_samples():
+                    params.ref_values = [np.expand_dims(arr, 0) for arr in dataset_samples]
+                else:
+                    params.ref_values = dataset_samples
+                for test_val, ref_val in zip(stat.values, params.ref_values):
+                    test_stat_value = test_val.to_numpy()
+                    assert test_stat_value.shape == ref_val.shape
+                    assert np.allclose(test_stat_value, ref_val)
             else:
                 raise RuntimeError()
 
-            for val, ref in zip(ret_val, test_params.ref_values):
-                if isinstance(ref, np.ndarray):
-                    assert ref.shape == val.shape
-                assert np.allclose(val, ref)
-
-    @classmethod
     def create_statistics_point(
         cls, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator
     ):
@@ -685,9 +692,10 @@ class TemplateTestStatisticsAggregator:
         assert len(tensor_collectors) == 3
         for algorithm, _, tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
+            assert isinstance(stat, MinMaxTensorStatistic)
             ref_min_val, ref_max_val = ref_val[algorithm]
-            assert np.allclose(stat.min_values, ref_min_val)
-            assert np.allclose(stat.max_values, ref_max_val)
+            assert np.allclose(stat.min_values.to_numpy(), ref_min_val)
+            assert np.allclose(stat.max_values.to_numpy(), ref_max_val)
 
     @classmethod
     def _check_static_point_common(cls, stat_point, ref_type=TargetType.POST_LAYER_OPERATION):
@@ -747,8 +755,8 @@ class TemplateTestStatisticsAggregator:
     }
 
     @pytest.mark.parametrize("key", ["split_concat", "shared_conv"])
-    def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics):
-        params = test_params["test_statistic_merging"][key]
+    def test_statistic_merging(self, params, key, dataset_samples, inplace_statistics):
+        params = params["test_statistic_merging"][key]
         model = params["model"](dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
 
@@ -797,8 +805,9 @@ class TemplateTestStatisticsAggregator:
 
         for collector, ref in collectors_and_refs:
             stat = collector.get_statistics()
-            assert np.allclose(stat.min_values, ref[0])
-            assert np.allclose(stat.max_values, ref[1])
+            assert isinstance(stat, MinMaxTensorStatistic)
+            assert np.allclose(stat.min_values.to_numpy(), ref[0])
+            assert np.allclose(stat.max_values.to_numpy(), ref[1])
 
             if isinstance(ref[0], np.ndarray):
                 assert stat.min_values.shape == ref[0].shape
@@ -817,15 +826,15 @@ class TemplateTestStatisticsAggregator:
             "mean_per_ch",
         ],
     )
-    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
-        params = test_params["test_statistic_merging"]["split_concat"]
+    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, params, dataset_samples):
+        params = params["test_statistic_merging"]["split_concat"]
         model = params["model"](dataset_samples)
         params = {}
         if statistics_type in [StatisticsType.MIN, StatisticsType.MAX, StatisticsType.ABS_MAX, StatisticsType.MEAN]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [REDUCE_TO_SCALAR_REDUCTION_SHAPE, (0, 1, 3), (1, 2, 3)]
             params["inplace"] = [False, True]
         elif statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [REDUCE_TO_SCALAR_REDUCTION_SHAPE, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif statistics_type == "batch_mean":
             pytest.skip("Inplace statistic woun't work until openvino==2023.0.0 release")
@@ -923,4 +932,4 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator.register_statistic_points(statistics_points)
         with pytest.raises(RuntimeError) as e:
             statistics_aggregator.collect_statistics(model, graph)
-            assert "Calibration dataset must not be empty" in e.info
+            assert "Calibration dataset must not be empty" in e.value

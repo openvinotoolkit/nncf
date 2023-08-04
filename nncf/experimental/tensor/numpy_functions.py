@@ -8,10 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
+from numpy.ma import MaskedArray
+from numpy.ma.core import MaskedConstant
 
 from nncf.experimental.tensor import functions as fns
 from nncf.experimental.tensor.enums import TensorDataType
@@ -38,6 +39,7 @@ def _register_numpy_types(singledispatch_fn):
     def inner(func):
         singledispatch_fn.register(np.ndarray)(func)
         singledispatch_fn.register(np.generic)(func)
+        singledispatch_fn.register(float)(func)  # np.min and np.max with keepdims=False and no axes return `float`
         return func
 
     return inner
@@ -62,15 +64,23 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
 
 @_register_numpy_types(fns.max)
 def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
+    a: Union[np.ndarray, np.generic],
+    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    keepdims: Optional[bool] = None,
 ) -> np.ndarray:
+    if keepdims is None:
+        keepdims = np._NoValue
     return np.max(a, axis=axis, keepdims=keepdims)
 
 
 @_register_numpy_types(fns.min)
 def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
+    a: Union[np.ndarray, np.generic],
+    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    keepdims: Optional[bool] = None,
 ) -> Union[np.ndarray, np.generic]:
+    if keepdims is None:
+        keepdims = np._NoValue
     return np.min(a, axis=axis, keepdims=keepdims)
 
 
@@ -176,12 +186,16 @@ def _(x: Union[np.ndarray, np.generic], axis: int = 0) -> List[np.ndarray]:
 
 
 @_register_numpy_types(fns.moveaxis)
-def _(a: np.ndarray, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> np.ndarray:
+def _(a: np.ndarray, source: Union[int, List[int]], destination: Union[int, List[int]]) -> np.ndarray:
     return np.moveaxis(a, source, destination)
 
 
 @_register_numpy_types(fns.mean)
-def _(a: Union[np.ndarray, np.generic], axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> np.ndarray:
+def _(
+    a: Union[np.ndarray, np.generic], axis: Union[int, Tuple[int, ...]] = None, keepdims: Optional[bool] = None
+) -> np.ndarray:
+    if keepdims is None:
+        keepdims = np._NoValue
     return np.mean(a, axis=axis, keepdims=keepdims)
 
 
@@ -190,24 +204,157 @@ def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
 
 
-@_register_numpy_types(fns._binary_op_nowarn)
+@_register_numpy_types(fns.binary_operator)
 def _(
-    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
+    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic], operator_fn: Callable
 ) -> Union[np.ndarray, np.generic]:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
         return operator_fn(a, b)
 
 
-@_register_numpy_types(fns._binary_reverse_op_nowarn)
+@_register_numpy_types(fns.binary_reverse_operator)
 def _(
-    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
+    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic], operator_fn: Callable
 ) -> Union[np.ndarray, np.generic]:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
         return operator_fn(b, a)
 
 
-@_register_numpy_types(fns.finfo)
-def _(a: np.ndarray) -> np.finfo:
-    return np.finfo(a.dtype)
+@_register_numpy_types(fns.to_numpy)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return a
+
+
+@_register_numpy_types(fns.inf)
+def _(a: Union[np.ndarray, np.generic]) -> Any:
+    return np.inf
+
+
+@_register_numpy_types(fns.concatenate)
+def _(x: List[np.ndarray], axis: int = 0) -> np.ndarray:
+    return np.concatenate(x, axis=axis)
+
+
+@_register_numpy_types(fns.min_of_list)
+def _(x: List[np.ndarray], axis: int = 0) -> np.ndarray:
+    return np.min(x, axis=axis)
+
+
+@_register_numpy_types(fns.max_of_list)
+def _(x: List[np.ndarray], axis: int = 0) -> np.ndarray:
+    return np.max(x, axis=axis)
+
+
+@_register_numpy_types(fns.amax)
+def _(
+    a: Union[np.ndarray, np.generic], axis: Optional[List[int]] = None, keepdims: Optional[bool] = None
+) -> Union[np.ndarray, np.generic]:
+    if keepdims is None:
+        keepdims = np._NoValue
+    return np.amax(a, axis=axis, keepdims=keepdims)
+
+
+@_register_numpy_types(fns.amin)
+def _(
+    a: Union[np.ndarray, np.generic], axis: Optional[List[int]] = None, keepdims: Optional[bool] = None
+) -> Union[np.ndarray, np.generic]:
+    if keepdims is None:
+        keepdims = np._NoValue
+    return np.amin(a, axis=axis, keepdims=keepdims)
+
+
+@_register_numpy_types(fns.clip)
+def _(
+    a: Union[np.ndarray, np.generic], min_val: float, max_val: Optional[float] = None
+) -> Union[np.ndarray, np.generic]:
+    return np.clip(a, a_min=min_val, a_max=max_val)
+
+
+@_register_numpy_types(fns.sum)
+def _(a: Union[np.ndarray, np.generic], axes: List[int]) -> Union[np.ndarray, np.generic]:
+    return np.sum(a, axis=tuple(axes))
+
+
+@_register_numpy_types(fns.transpose)
+def _(a: Union[np.ndarray, np.generic], axes: List[int]) -> Union[np.ndarray, np.generic]:
+    return np.transpose(a, axes=axes)
+
+
+@_register_numpy_types(fns.eps)
+def _(a: Union[np.ndarray, np.generic], dtype: TensorDataType) -> float:
+    return np.finfo(DTYPE_MAP[dtype]).eps
+
+
+@_register_numpy_types(fns.median)
+def _(
+    a: Union[np.ndarray, np.generic], axis: Union[int, Tuple[int]] = None, keepdims: Optional[bool] = None
+) -> Union[np.ndarray, np.generic]:
+    if keepdims is None:
+        keepdims = np._NoValue
+    return np.median(a, axis=axis, keepdims=keepdims)
+
+
+@_register_numpy_types(fns.power)
+def _(a: Union[np.ndarray, np.generic], pwr: float) -> Union[np.ndarray, np.generic]:
+    return np.power(a, pwr)
+
+
+@_register_numpy_types(fns.quantile)
+def _(
+    a: Union[np.ndarray, np.generic],
+    q: Union[float, List[float]],
+    axis: Union[int, List[int]] = None,
+    keepdims: Optional[bool] = None,
+) -> Union[float, Union[np.ndarray, np.generic]]:
+    if keepdims is None:
+        keepdims = np._NoValue
+    return np.quantile(a, q=q, axis=axis, keepdims=keepdims)
+
+
+@_register_numpy_types(fns.matmul)
+def _(a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
+    return np.matmul(a, b)
+
+
+@_register_numpy_types(fns.logical_or)
+def _(tensor1: Union[np.ndarray, np.generic], tensor2: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
+    return np.logical_or(tensor1, tensor2)
+
+
+@_register_numpy_types(fns.masked_mean)
+def _(
+    a: Union[np.ndarray, np.generic],
+    mask: Union[np.ndarray, np.generic],
+    axis: int = None,
+    keepdims: Optional[bool] = None,
+) -> Union[np.ndarray, np.generic]:
+    if keepdims is None:
+        keepdims = np._NoValue
+    masked_x = np.ma.array(a, mask=mask)
+    result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+    if isinstance(result, (MaskedConstant, MaskedArray)):
+        result = result.data
+    return result
+
+
+@_register_numpy_types(fns.masked_median)
+def _(
+    a: Union[np.ndarray, np.generic],
+    mask: Union[np.ndarray, np.generic],
+    axis: int = None,
+    keepdims: Optional[bool] = None,
+) -> Union[np.ndarray, np.generic]:
+    if keepdims is None:
+        keepdims = np._NoValue
+    masked_x = np.ma.array(a, mask=mask)
+    result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+    if isinstance(result, (MaskedConstant, MaskedArray)):
+        result = result.data
+    return result
+
+
+@_register_numpy_types(fns.size)
+def _(a: Union[np.ndarray, np.generic]) -> int:
+    return a.size

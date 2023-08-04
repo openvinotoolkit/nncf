@@ -9,16 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
-from typing import List
 
 import pytest
 
 import nncf.onnx.graph.metatypes.onnx_metatypes as om
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.node_utils import get_quantization_axis
-from nncf.onnx.graph.node_utils import get_reduction_shape
+from nncf.onnx.graph.node_utils import get_reduction_axes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
 
@@ -27,7 +27,7 @@ class TestCase:
     nncf_node: NNCFNode
     target_point: ONNXTargetPoint
     per_channel: bool
-    ref_reduction_shape: List[int]
+    ref_reduction_axes: ReductionAxes
 
 
 test_cases = (
@@ -46,7 +46,7 @@ test_cases = (
             port_id=1,
         ),
         per_channel=False,
-        ref_reduction_shape=None,
+        ref_reduction_axes=None,
     ),
     TestCase(
         nncf_node=NNCFNode(
@@ -63,7 +63,7 @@ test_cases = (
             port_id=1,
         ),
         per_channel=True,
-        ref_reduction_shape=(1, 2),
+        ref_reduction_axes=(1, 2),
     ),
     TestCase(
         nncf_node=NNCFNode(
@@ -80,7 +80,7 @@ test_cases = (
             port_id=1,
         ),
         per_channel=False,
-        ref_reduction_shape=None,
+        ref_reduction_axes=None,
     ),
     TestCase(
         nncf_node=NNCFNode(
@@ -97,7 +97,7 @@ test_cases = (
             port_id=1,
         ),
         per_channel=True,
-        ref_reduction_shape=(0,),
+        ref_reduction_axes=(0,),
     ),
     TestCase(
         nncf_node=NNCFNode(
@@ -116,7 +116,7 @@ test_cases = (
             port_id=1,
         ),
         per_channel=True,
-        ref_reduction_shape=(0,),
+        ref_reduction_axes=(0,),
     ),
     TestCase(
         nncf_node=NNCFNode(
@@ -135,7 +135,7 @@ test_cases = (
             port_id=1,
         ),
         per_channel=True,
-        ref_reduction_shape=(0,),
+        ref_reduction_axes=(0,),
     ),
     TestCase(
         nncf_node=NNCFNode(
@@ -154,7 +154,7 @@ test_cases = (
             port_id=1,
         ),
         per_channel=True,
-        ref_reduction_shape=(1,),
+        ref_reduction_axes=(1,),
     ),
     TestCase(
         nncf_node=NNCFNode(
@@ -173,7 +173,7 @@ test_cases = (
             port_id=1,
         ),
         per_channel=True,
-        ref_reduction_shape=(0,),
+        ref_reduction_axes=(0,),
     ),
     TestCase(
         nncf_node=NNCFNode(
@@ -192,7 +192,7 @@ test_cases = (
             port_id=0,
         ),
         per_channel=True,
-        ref_reduction_shape=(0, 1),
+        ref_reduction_axes=(0, 1),
     ),
 )
 
@@ -202,7 +202,7 @@ test_cases = (
     (test_cases),
     ids=[test_case.nncf_node.node_name for test_case in test_cases],
 )
-def test_get_reduction_shape(test_case):
+def test_get_reduction_axes(test_case):
     """Checks the correct return reduction shape in ONNXMinMaxAlgo.
     Edge cases:
     1) per-tensor.
@@ -213,10 +213,10 @@ def test_get_reduction_shape(test_case):
         is_per_channel=test_case.per_channel, node=test_case.nncf_node, target_point=test_case.target_point
     )
     if quantization_axis is not None:  # Per-Channel
-        reduction_shape = get_reduction_shape(
+        reduction_axes = get_reduction_axes(
             test_case.nncf_node.layer_attributes.weight_attrs[test_case.target_point.port_id]["shape"],
             quantization_axis,
         )
-        assert reduction_shape == test_case.ref_reduction_shape
+        assert reduction_axes == test_case.ref_reduction_axes
     else:
         assert not test_case.per_channel

@@ -69,7 +69,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def mean_statistic_collector(
-        channel_axis: int,
+        channel_axis: Optional[int],
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
@@ -77,7 +77,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
         Returns backend-specific mean statistic collector.
 
-        :param channel_axis: Channel axes for the statistics aggregation.
+        :param channel_axis: Channel axis for the statistics aggregation.
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
@@ -97,7 +97,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def create_input_data(
-        shape: Tuple[int], data: List[TTensor], input_name: str, channel_axis: int
+        shape: Tuple[int], data: TTensor, input_name: str, channel_axis: int
     ) -> Union[Dict[str, TTensor], TTensor]:
         """
         Creates input data for the bias shift calculation.
@@ -147,17 +147,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: str) -> Tensor:
-        """
-        Returns backend-specific processed output from the model.
-
-        :param raw_data: Backend-specific output from the model.
-        :param output_name: Name of the output layer or tensor name.
-        :return: Processed output as NNCFTensor.
-        """
-
-    @staticmethod
-    @abstractmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks whether the node has a bias or not.
@@ -165,6 +154,16 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph that contains node.
         :return: Boolean indicating whether the node has a bias or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def post_process_output_data(data: List[TTensor]) -> TTensor:
+        """
+        Convert data to backend specific type.
+
+        :param data: List of data.
+        :return: Converted data.
         """
 
     @staticmethod

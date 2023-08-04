@@ -19,7 +19,9 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -88,7 +90,7 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
+    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> ReductionAxes:
         """
         Returns filtered reduction axes without axes that corresponds channels.
 
@@ -100,7 +102,7 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: ReductionAxes, inplace: bool, branch_key: str
     ) -> TensorCollector:
         """
         Returns TensorCollector with MaxAggregator and AbsMaxReducer.
@@ -124,7 +126,7 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: TModel, port_id: int) -> TTensor:
+    def get_weight_value(node_with_weight: NNCFNode, model: TModel, port_id: int) -> Tensor:
         """
         Returns the weight value for the node with weight.
 
@@ -157,8 +159,8 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def calculate_scale_and_ratio(
-        activations: TTensor, weights: TTensor, alpha: float, quantile: Optional[float]
-    ) -> Tuple[TTensor, TTensor]:
+        activations: TTensor, weights: TTensor, alpha: float, quantile: Optional[float] = None
+    ) -> Tuple[Tensor, float]:
         """
         Calculates base scale value and it's ratio.
 

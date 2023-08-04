@@ -26,12 +26,22 @@ from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.scopes import should_consider_scope
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.reduction import get_reduction_axes_from_scale_shape
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.config.schemata.algo.quantization import RANGE_INIT_TYPES_VS_DESCRIPTIONS
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
+from nncf.experimental.tensor import Tensor
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
@@ -40,13 +50,7 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.tensor_statistics.algo import TensorStatisticObservationPoint
-from nncf.torch.tensor_statistics.algo import create_register_input_hook
-from nncf.torch.tensor_statistics.collectors import get_mean_percentile_statistic_collector
-from nncf.torch.tensor_statistics.collectors import get_median_mad_statistic_collector
-from nncf.torch.tensor_statistics.collectors import get_min_max_statistic_collector
-from nncf.torch.tensor_statistics.collectors import get_mixed_min_max_statistic_collector
-from nncf.torch.tensor_statistics.collectors import get_percentile_tensor_collector
-from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
+from nncf.torch.tensor_statistics.algo import get_collection_hook
 
 
 class PTRangeInitParams(RangeInitParams):
@@ -152,22 +156,28 @@ class StatCollectorGenerator:
             tp = PTTargetPointTranslator.translate(qp.insertion_point)
             scale_shapes_vs_params = StatCollectorGenerator.get_all_scale_shapes_with_params(qp, target_model_graph)
 
-            obs_p = TensorStatisticObservationPoint(tp, reduction_shapes=set(scale_shapes_vs_params.keys()))
-
-            retval[obs_p] = {}
-            for scale_shape in obs_p.reduction_shapes:
-                collector_params = scale_shapes_vs_params[scale_shape]
+            reduction_axes_set = set()
+            reduction_axes_vs_collector = {}
+            for ss, params in scale_shapes_vs_params.items():
+                reduction_axes = get_reduction_axes_from_scale_shape(ss)
+                reduction_axes_set.add(reduction_axes)
                 collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
-                    init_config, scale_shape, collector_params, num_samples_to_collect_override=num_batches
+                    init_config, reduction_axes, params, num_samples_to_collect_override=num_batches
                 )
-                retval[obs_p][scale_shape] = collector
+                reduction_axes_vs_collector[reduction_axes] = collector
+            obs_p = TensorStatisticObservationPoint(tp, reduction_axes_set=reduction_axes_set)
+            retval[obs_p] = {}
+            for scale_shape in scale_shapes_vs_params:
+                reduction_axes = get_reduction_axes_from_scale_shape(scale_shape)
+                reduction_shape = scale_shape.shape
+                retval[obs_p][reduction_shape] = reduction_axes_vs_collector[reduction_axes]
 
         return retval
 
     @staticmethod
     def generate_stat_collector_for_range_init_config(
         init_config: RangeInitConfig,
-        scale_shape: ReductionAxes = None,
+        reduction_axes: ReductionAxes = None,
         collector_params: PTRangeInitCollectorParams = None,
         num_samples_to_collect_override: int = None,
     ) -> TensorStatisticCollectorBase:
@@ -179,64 +189,35 @@ class StatCollectorGenerator:
 
         use_per_sample_stats = collector_params.use_per_sample_stats(init_config.init_type == "mixed_min_max")
         reduction_axes = collector_params.get_reduction_axes(use_per_sample_stats)
-        aggregation_axes = collector_params.get_aggregation_axes(use_per_sample_stats)
 
         if init_config.init_type == "min_max":
-            return get_min_max_statistic_collector(
-                use_abs_max=collector_params.use_abs_max,
-                reduction_axes=reduction_axes,
-                aggregation_axes=aggregation_axes,
-                scale_shape=scale_shape,
-                num_samples=num_samples,
-            )
+            return MinMaxStatisticCollector(collector_params.use_abs_max, reduction_axes, num_samples)
         if init_config.init_type == "mixed_min_max":
-            return get_mixed_min_max_statistic_collector(
-                use_abs_max=collector_params.use_abs_max,
-                reduction_axes=reduction_axes,
-                aggregation_axes=aggregation_axes,
-                scale_shape=scale_shape,
-                use_means_of_mins=collector_params.use_means_of_mins,
-                use_means_of_maxs=collector_params.use_means_of_maxs,
-                num_samples=num_samples,
+            return MixedMinMaxStatisticCollector(
+                collector_params.use_per_sample_stats(per_sample_stats=True),
+                collector_params.use_abs_max,
+                collector_params.use_means_of_mins,
+                collector_params.use_means_of_maxs,
+                reduction_axes,
+                num_samples,
             )
         if init_config.init_type == "mean_min_max":
-            return get_mixed_min_max_statistic_collector(
-                use_abs_max=collector_params.use_abs_max,
-                reduction_axes=reduction_axes,
-                aggregation_axes=aggregation_axes,
-                scale_shape=scale_shape,
-                use_means_of_mins=True,
-                use_means_of_maxs=True,
-                num_samples=num_samples,
+            return MeanMinMaxStatisticCollector(
+                collector_params.use_per_sample_stats(per_sample_stats=False),
+                collector_params.use_abs_max,
+                reduction_axes,
+                num_samples,
             )
         if init_config.init_type == "threesigma":
-            return get_median_mad_statistic_collector(
-                reduction_axes=reduction_axes,
-                aggregation_axes=aggregation_axes,
-                scale_shape=scale_shape,
-                num_samples=num_samples,
-            )
+            return MedianMADStatisticCollector(reduction_axes, num_samples)
         if init_config.init_type == "percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return get_percentile_tensor_collector(
-                percentiles_to_collect=(min_percentile, max_percentile),
-                reduction_axes=reduction_axes,
-                aggregation_axes=aggregation_axes,
-                scale_shape=scale_shape,
-                num_samples=num_samples,
-            )
-
+            return PercentileStatisticCollector([min_percentile, max_percentile], reduction_axes, num_samples)
         if init_config.init_type == "mean_percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return get_mean_percentile_statistic_collector(
-                percentiles_to_collect=(min_percentile, max_percentile),
-                reduction_axes=reduction_axes,
-                aggregation_axes=aggregation_axes,
-                scale_shape=scale_shape,
-                num_samples=num_samples,
-            )
+            return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_axes, num_samples)
         raise ValueError("Range init type not handled!")
 
     @classmethod
@@ -257,10 +238,8 @@ class StatCollectorGenerator:
         retval = {}
         for qconfig in qconfigs:
             is_weights = qp.is_weight_quantization_point()
-            scale_shape = tuple(
-                get_scale_shape(
-                    input_shape, is_weights=is_weights, per_channel=qconfig.per_channel, channel_idx=channel_idx
-                )
+            scale_shape = get_scale_shape(
+                input_shape, is_weights=is_weights, per_channel=qconfig.per_channel, channel_idx=channel_idx
             )
 
             if scale_shape not in retval:
@@ -290,11 +269,11 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
 
     def _get_fwd_hook(
         self, collector: TensorStatisticCollectorBase
-    ) -> Callable[["torch.Module", torch.Tensor, torch.Tensor], torch.Tensor]:
-        hook = create_register_input_hook(collector=collector)
+    ) -> Callable[[torch.nn.Module, torch.Tensor, torch.Tensor], None]:
+        hook = get_collection_hook(collector=collector)
 
         def fwd_hook(module, input_, output):
-            hook(input_[0])
+            hook(Tensor(input_[0]))
 
         return fwd_hook
 
@@ -327,7 +306,10 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             )
 
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
-                init_config, tuple(quantizer_module.scale_shape), collector_params, num_samples_override
+                init_config,
+                get_reduction_axes_from_scale_shape(QuantizerScaleShape(quantizer_module.scale_shape)),
+                collector_params,
+                num_samples_override,
             )
 
             self.collectors_and_modules_to_init[name] = collector, quantizer_module
@@ -340,7 +322,9 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         for scope_str, collector_and_module in self.collectors_and_modules_to_init.items():
             collector, quantizer_module = collector_and_module
             target_stat = collector.get_statistics()
-            minmax_stats = pt_convert_stat_to_min_max_tensor_stat(target_stat)
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
             quantizer_module.apply_minmax_init(
-                minmax_stats.min_values, minmax_stats.max_values, log_module_name=scope_str
+                minmax_stats.min_values.data.reshape(quantizer_module.scale_shape),
+                minmax_stats.max_values.data.reshape(quantizer_module.scale_shape),
+                log_module_name=scope_str,
             )

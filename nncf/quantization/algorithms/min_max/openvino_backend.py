@@ -11,8 +11,6 @@
 
 from typing import Dict, List, Optional, Set, Tuple
 
-import numpy as np
-
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -20,7 +18,9 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.reduction import REDUCE_TO_SCALAR_REDUCTION_SHAPE
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
@@ -35,8 +35,6 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.hardware.config import OVHWConfig
 from nncf.openvino.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
@@ -130,22 +128,12 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVConvertInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:
-        max_values, min_values = [], []
-        for statistic in statistics:
-            max_values.append(np.array(statistic.max_values).flatten())
-            min_values.append(np.array(statistic.min_values).flatten())
-        max_values = np.max(max_values, axis=0)
-        min_values = np.min(min_values, axis=0)
-        return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
-
-    @staticmethod
     def _get_reduction_axes_and_use_abs_max(
         nncf_graph: NNCFGraph, target_point: OVTargetPoint, quantizer_config: QuantizerConfig
     ) -> Tuple[ReductionAxes, bool]:
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
         if not quantizer_config.per_channel:
-            return None, use_abs_max
+            return REDUCE_TO_SCALAR_REDUCTION_SHAPE, use_abs_max
 
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         if not target_point.is_weight_target_point():
@@ -184,10 +172,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             nncf_graph, target_point, quantizer_config
         )
 
-        collector = TensorCollector(OVMinMaxTensorStatistic)
+        collector = TensorCollector(MinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
-            [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT],
+            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
         ):
             if params.statistics_type not in OV_REDUCERS_MAP:
                 raise RuntimeError(
@@ -201,7 +189,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
             kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
             if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-                if container_key == OVMinMaxTensorStatistic.MIN_STAT:
+                if container_key == MinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
@@ -212,7 +200,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 
-            kwargs = {"num_samples": num_samples, "tensor_processor": OVNNCFCollectorTensorProcessor}
+            kwargs = {"num_samples": num_samples}
             aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
             collector.register_statistic_branch(container_key, reducer, aggregator)

@@ -37,6 +37,7 @@ from nncf.common.pruning.operations import TransposeConvolutionPruningOp
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.experimental.tensor import Tensor
 from nncf.torch.graph.operator_metatypes import PTAdaptiveMaxPool2dMetatype
 from nncf.torch.graph.operator_metatypes import PTAdaptiveMaxPool3dMetatype
 from nncf.torch.graph.operator_metatypes import PTAddMetatype
@@ -91,7 +92,6 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
-from nncf.torch.tensor import PTNNCFTensor
 
 PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -197,8 +197,8 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
         if input_mask is None:
             return
 
-        if isinstance(input_mask, PTNNCFTensor):
-            input_mask = input_mask.tensor
+        if isinstance(input_mask, Tensor):
+            input_mask = input_mask.data
 
         is_depthwise = is_prunable_depthwise_conv(node)
         node_module = model.nncf.get_containing_module(node.node_name)
@@ -233,8 +233,8 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
         if mask is None:
             return
 
-        if isinstance(mask, PTNNCFTensor):
-            mask = mask.tensor
+        if isinstance(mask, Tensor):
+            mask = mask.data
 
         node_module = model.nncf.get_containing_module(node.node_name)
         if prun_type == PrunType.CUT_WEIGHTS:
@@ -264,7 +264,7 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
         reorder_indexes = input_masks[0]
         if reorder_indexes is None:
             return
-        reorder_indexes = reorder_indexes.tensor
+        reorder_indexes = reorder_indexes.data
         conv = model.nncf.get_containing_module(node.node_name)
         conv.weight.data = torch.index_select(conv.weight.data, 1, reorder_indexes)
         nncf_logger.debug(
@@ -278,7 +278,7 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
         if reorder_indexes is None:
             return
         conv = model.nncf.get_containing_module(node.node_name)
-        reorder_indexes = reorder_indexes.tensor
+        reorder_indexes = reorder_indexes.data
         conv.weight.data = torch.index_select(conv.weight.data, 0, reorder_indexes)
         if conv.bias is not None:
             conv.bias.data = torch.index_select(conv.bias.data, 0, reorder_indexes)
@@ -298,8 +298,8 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
         if input_mask is None:
             return
 
-        if isinstance(input_mask, PTNNCFTensor):
-            input_mask = input_mask.tensor
+        if isinstance(input_mask, Tensor):
+            input_mask = input_mask.data
 
         node_module = model.nncf.get_containing_module(node.node_name)
         if prun_type == PrunType.CUT_WEIGHTS:
@@ -322,8 +322,8 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
         if output_mask is None:
             return
 
-        if isinstance(output_mask, PTNNCFTensor):
-            output_mask = output_mask.tensor
+        if isinstance(output_mask, Tensor):
+            output_mask = output_mask.data
 
         node_module = model.nncf.get_containing_module(node.node_name)
 
@@ -364,8 +364,8 @@ class PTLinearPruningOp(LinearPruningOp, PTPruner):
         if input_mask is None:
             return
 
-        if isinstance(input_mask, PTNNCFTensor):
-            input_mask = input_mask.tensor
+        if isinstance(input_mask, Tensor):
+            input_mask = input_mask.data
 
         node_module = model.nncf.get_containing_module(node.node_name)
 
@@ -393,7 +393,7 @@ class PTLinearPruningOp(LinearPruningOp, PTPruner):
         reorder_indexes = input_masks[0]
         if reorder_indexes is None:
             return
-        reorder_indexes = reorder_indexes.tensor
+        reorder_indexes = reorder_indexes.data
         fc = model.nncf.get_containing_module(node.node_name)
         fc.weight.data = torch.index_select(fc.weight.data, 1, reorder_indexes)
         nncf_logger.debug(
@@ -406,8 +406,8 @@ class PTLinearPruningOp(LinearPruningOp, PTPruner):
         if output_mask is None:
             return
 
-        if isinstance(output_mask, PTNNCFTensor):
-            output_mask = output_mask.tensor
+        if isinstance(output_mask, Tensor):
+            output_mask = output_mask.data
 
         node_module = model.nncf.get_containing_module(node.node_name)
 
@@ -434,7 +434,7 @@ class PTLinearPruningOp(LinearPruningOp, PTPruner):
         if reorder_indexes is None:
             return
         fc = model.nncf.get_containing_module(node.node_name)
-        reorder_indexes = reorder_indexes.tensor
+        reorder_indexes = reorder_indexes.data
         fc.weight.data = torch.index_select(fc.weight.data, 0, reorder_indexes)
         if fc.bias is not None:
             fc.bias.data = torch.index_select(fc.bias.data, 0, reorder_indexes)
@@ -453,8 +453,8 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
         if input_mask is None:
             return
 
-        if isinstance(input_mask, PTNNCFTensor):
-            input_mask = input_mask.tensor
+        if isinstance(input_mask, Tensor):
+            input_mask = input_mask.data
 
         node_module = model.nncf.get_containing_module(node.node_name)
 
@@ -491,7 +491,7 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
         if reorder_indexes is None:
             return
 
-        reorder_indexes = reorder_indexes.tensor
+        reorder_indexes = reorder_indexes.data
         reorder_indexes = reorder_indexes.int()
         bn = model.nncf.get_containing_module(node.node_name)
 
@@ -515,8 +515,8 @@ class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
         if input_mask is None:
             return
 
-        if isinstance(input_mask, PTNNCFTensor):
-            input_mask = input_mask.tensor
+        if isinstance(input_mask, Tensor):
+            input_mask = input_mask.data
 
         node_module = model.nncf.get_containing_module(node.node_name)
 
@@ -551,7 +551,7 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         if reorder_indexes is None:
             return
 
-        reorder_indexes = reorder_indexes.tensor
+        reorder_indexes = reorder_indexes.data
         ln = model.nncf.get_containing_module(node.node_name)
         ln.weight.data = torch.index_select(ln.weight.data, 0, reorder_indexes)
         ln.bias.data = torch.index_select(ln.bias.data, 0, reorder_indexes)
@@ -568,8 +568,8 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         if input_mask is None:
             return
 
-        if isinstance(input_mask, PTNNCFTensor):
-            input_mask = input_mask.tensor
+        if isinstance(input_mask, Tensor):
+            input_mask = input_mask.data
 
         node_module = model.nncf.get_containing_module(node.node_name)
 
@@ -590,8 +590,8 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
         if input_mask is None:
             return
 
-        if isinstance(input_mask, PTNNCFTensor):
-            input_mask = input_mask.tensor
+        if isinstance(input_mask, Tensor):
+            input_mask = input_mask.data
 
         node_module = model.nncf.get_containing_module(node.node_name)
 

@@ -12,21 +12,22 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.reduction import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
 from tests.post_training.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
-ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
+ParamsCls = TemplateTestQuantizerConfig.GetStatisticsCollectorParameters
 
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
@@ -34,10 +35,10 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
         return ONNXMinMaxAlgoBackend()
 
     def check_is_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
+        assert isinstance(tensor_collector, MinMaxStatisticCollector)
 
     def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
+        assert isinstance(tensor_collector, MeanMinMaxStatisticCollector)
 
     def get_reduction_axes(self, reducer: TensorStatisticCollectorBase) -> ReductionAxes:
         return reducer._reduction_shape
@@ -48,8 +49,8 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
                 (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (0, 2), (0, 1, 2)),
                 marks=pytest.mark.skip("Ticket 102414: remove hardcoded axes for activations"),
             ),
-            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), None),
-            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), None),
+            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
+            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
         ]
     )
     def statistic_collector_parameters(self, request) -> ParamsCls:

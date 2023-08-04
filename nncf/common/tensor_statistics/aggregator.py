@@ -11,15 +11,15 @@
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
-from typing import Any, Dict, TypeVar
+from typing import Dict, TypeVar
 
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.track_progress import track
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
+from nncf.experimental.tensor import Tensor
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
@@ -66,8 +66,7 @@ class StatisticsAggregator(ABC):
             description="Statistics collection",
         ):
             outputs = engine.infer(input_data)
-            processed_outputs = self._process_outputs(outputs)
-            self._register_statistics(processed_outputs, merged_statistics)
+            self._register_statistics(outputs, merged_statistics)
             empty_statistics = False
         if empty_statistics:
             raise RuntimeError(
@@ -95,7 +94,7 @@ class StatisticsAggregator(ABC):
                             self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
 
     @abstractmethod
-    def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         """
         Process prepared raw model outputs and statistic points for the further usage.
 
@@ -129,14 +128,4 @@ class StatisticsAggregator(ABC):
         :param model: Backend-specific target model.
         :param graph: Model graph.
         :return: Merged statistic points container bounded with given statistic point container.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def _process_outputs(outputs: Any) -> Dict[str, NNCFTensor]:
-        """
-        Post-process model outputs for the further statistics collection.
-
-        :param outputs: raw model outputs
-        :return: processed model outputs in Dict[str, NNCFTensor] format
         """

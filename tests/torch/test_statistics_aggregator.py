@@ -66,7 +66,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return True
 
     @pytest.fixture(scope="session")
-    def test_params(self):
+    def params(self):
         return
 
     def get_statistics_aggregator(self, dataset):
@@ -104,10 +104,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
         return torch.tensor(dataset_samples, dtype=torch.float32)
 
-    @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        return True
-
     @pytest.fixture(params=[False], ids=["out_of_palce"])
     def inplace_statistics(self, request) -> bool:
         return request.param
@@ -121,5 +117,5 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         pass
 
     @pytest.mark.skip("Merging is not implemented yet")
-    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
+    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, params, dataset_samples):
         pass

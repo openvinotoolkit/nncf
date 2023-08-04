@@ -32,6 +32,7 @@ class TensorDataType(Enum):
     float64 = auto()
     int8 = auto()
     uint8 = auto()
+    int64 = auto()
 
 
 class TensorDeviceType(Enum):

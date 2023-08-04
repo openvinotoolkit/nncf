@@ -12,7 +12,6 @@
 from collections import defaultdict
 from typing import Dict
 
-import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.graph.graph import NNCFGraph
@@ -23,9 +22,9 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
-from nncf.openvino.tensor import OVNNCFTensor
 
 
 class OVStatisticsAggregator(StatisticsAggregator):
@@ -33,9 +32,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
         self._name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         super().collect_statistics(model, graph)
 
-    def _register_statistics(
-        self, outputs: Dict[str, OVNNCFTensor], statistic_points: StatisticPointsContainer
-    ) -> None:
+    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
             target_point = statistic_point.target_point
             node_name = target_point.target_node_name
@@ -107,7 +104,3 @@ class OVStatisticsAggregator(StatisticsAggregator):
             stat_point = StatisticPoint(target_point, merged_collector, "Merged")
             merged_statistic_points.add_statistic_point(stat_point)
         return merged_statistic_points
-
-    @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, OVNNCFTensor]:
-        return {n: OVNNCFTensor(v) for n, v in outputs.items()}

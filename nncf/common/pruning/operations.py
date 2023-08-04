@@ -21,7 +21,7 @@ from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import identity_mask_propagation
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
-from nncf.common.tensor import NNCFTensor
+from nncf.experimental.tensor import Tensor
 
 
 class BasePruningOp:
@@ -210,7 +210,7 @@ class ConcatPruningOp(BasePruningOp):
     @classmethod
     def generate_output_mask(
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
-    ) -> Optional[NNCFTensor]:
+    ) -> Optional[Tensor]:
         """
         Generate output mask from input masks with all None replaced by identity masks.
         If all input masks is None return None.
@@ -227,7 +227,7 @@ class ConcatPruningOp(BasePruningOp):
             input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask for input_mask in input_masks
         ]
 
-        not_empty_masks: List[NNCFTensor] = [mask for mask in input_masks if mask is not None]
+        not_empty_masks: List[Tensor] = [mask for mask in input_masks if mask is not None]
         if not not_empty_masks:
             return None
 
@@ -285,7 +285,7 @@ class SplitPruningOp(BasePruningOp):
     @classmethod
     def generate_output_masks(
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
-    ) -> Optional[NNCFTensor]:
+    ) -> Optional[Tensor]:
         """
         Generate output mask from input masks for split/chunk operations.
         If input mask is None return None
@@ -296,13 +296,13 @@ class SplitPruningOp(BasePruningOp):
         :return: Filled input masks.
         """
         input_masks = get_input_masks(node, graph)
-        if not input_masks:
+        if input_masks is None:
             return None
 
         assert len(input_masks) == 1
         input_mask = input_masks[0]
 
-        if not input_mask:
+        if input_mask is None:
             return None
 
         chunk_axis = node.layer_attributes.axis

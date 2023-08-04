@@ -8,8 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from torch import Tensor
+import torch
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
@@ -17,7 +16,7 @@ from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 
-def create_bias_correction_command(node: NNCFNode, bias_value: Tensor) -> PTBiasCorrectionCommand:
+def create_bias_correction_command(node: NNCFNode, bias_value: torch.Tensor) -> PTBiasCorrectionCommand:
     """
      Creates bias correction command.
 

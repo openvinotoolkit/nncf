@@ -21,8 +21,8 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.registry import Registry
+from nncf.experimental.tensor import Tensor
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
@@ -358,7 +358,7 @@ def is_conv_with_downsampling(node: NNCFNode) -> bool:
     return False
 
 
-def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTensor]]:
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[Tensor]]:
     """
     Returns input masks for all inputs of given NNCFNode.
 

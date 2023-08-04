@@ -14,54 +14,39 @@ from typing import List, Optional, Union
 import numpy as np
 
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
-from nncf.common.tensor import NNCFTensor
+from nncf.experimental.tensor import Tensor
 
 
 class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
     @classmethod
-    def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
+    def concatenate(cls, tensors: List[Tensor], axis: int) -> Tensor:
         for tensor in tensors[1:]:
             assert tensors[0].device == tensor.device
 
-        ret_tensor = np.concatenate([t.tensor for t in tensors], axis=axis)
-        return NPNNCFTensor(ret_tensor, tensors[0].device)
+        ret_tensor = np.concatenate([t.data for t in tensors], axis=axis)
+        return Tensor(ret_tensor)
 
     @classmethod
-    def ones(cls, shape: Union[int, List[int]], device: Optional[str]) -> NNCFTensor:
-        return NPNNCFTensor(np.ones(shape), device)
+    def ones(cls, shape: Union[int, List[int]], device: Optional[str]) -> Tensor:
+        return Tensor(np.ones(shape))
 
     @classmethod
-    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: List[Tensor]) -> None:
         for input_mask in tensors[1:]:
-            np.testing.assert_allclose(tensors[0].tensor, input_mask.tensor)
+            np.testing.assert_allclose(tensors[0].to_numpy(), input_mask.to_numpy())
 
     @classmethod
-    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
-        ret_tensor = np.repeat(tensor.tensor, repeats)
-        return NPNNCFTensor(ret_tensor)
+    def repeat(cls, tensor: Tensor, repeats: int) -> Tensor:
+        ret_tensor = np.repeat(tensor.data, repeats)
+        return Tensor(ret_tensor)
 
     @classmethod
-    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+    def elementwise_mask_propagation(cls, input_masks: List[np.ndarray]) -> np.ndarray:
         cls.assert_allclose(input_masks)
         return input_masks[0]
 
     @classmethod
-    def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
+    def split(cls, tensor: Tensor, output_shapes: List[int]) -> List[Tensor]:
         chunks = len(output_shapes)
-        ret_tensors = np.split(tensor.tensor, chunks)
-        return [NPNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]
-
-
-class NPNNCFTensor(NNCFTensor):
-    def __init__(self, tensor: np.array, dummy_device: Optional[str] = None):
-        # In case somebody attempts to wrap
-        # tensor twice
-        if isinstance(tensor, self.__class__):
-            tensor = tensor.tensor
-
-        super().__init__(tensor)
-        self.dummy_device = dummy_device
-
-    @property
-    def device(self) -> Optional[str]:
-        return self.dummy_device
+        ret_tensors = np.split(tensor.data, chunks)
+        return [Tensor(ret_tensor) for ret_tensor in ret_tensors]

@@ -16,14 +16,14 @@ from nncf.experimental.tensor.enums import TensorDeviceType
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
 
-class TestPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
+class TestTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
         return torch.tensor(x)
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
-class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
+class TestCudaTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
         return torch.tensor(x).cuda()

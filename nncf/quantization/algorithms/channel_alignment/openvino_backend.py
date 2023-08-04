@@ -11,17 +11,18 @@
 
 from typing import Any, Tuple
 
-import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
@@ -38,9 +39,7 @@ from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVQuantileReducer
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
@@ -51,12 +50,12 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> np.ndarray:
-        return get_bias_value(node, nncf_graph, model)
+    def get_bias_value(node: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> Tensor:
+        return Tensor(get_bias_value(node, nncf_graph, model))
 
     @staticmethod
-    def get_weight_value(node: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
-        return get_weight_value(node, model, port_id)
+    def get_weight_value(node: NNCFNode, model: ov.Model, port_id: int) -> Tensor:
+        return Tensor(get_weight_value(node, model, port_id))
 
     @staticmethod
     def get_activation_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
@@ -80,13 +79,13 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
     @staticmethod
     def get_statistic_collector(
-        reduction_axes, q: float, num_samples: int, inplace: bool
+        reduction_axes: ReductionAxes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
-        tensor_collector = TensorCollector(OVMinMaxTensorStatistic)
-        quantile_reducer = OVQuantileReducer(reduction_axes, (q, 1 - q), inplace)
+        tensor_collector = TensorCollector(MinMaxTensorStatistic)
+        quantile_reducer = OVQuantileReducer(reduction_axes=reduction_axes, quantile=(q, 1 - q), inplace=inplace)
 
-        for port_id, container_key in enumerate([OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
-            aggregator = MedianAggregator(OVNNCFCollectorTensorProcessor, num_samples=num_samples)
+        for port_id, container_key in enumerate([MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT]):
+            aggregator = MedianAggregator(num_samples=num_samples)
             tensor_collector.register_statistic_branch(container_key, quantile_reducer, aggregator, port_id)
         return tensor_collector
 
@@ -133,7 +132,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return node.layer_attributes.layer_attributes
 
     @staticmethod
-    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> Tensor:
         return create_bias_tensor(node, nncf_graph, value)
 
     @staticmethod

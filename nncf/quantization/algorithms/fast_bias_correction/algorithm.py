@@ -9,12 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from math import inf
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -24,9 +24,9 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
@@ -131,7 +131,7 @@ class FastBiasCorrection(Algorithm):
 
         model_transformer = ModelTransformerFactory.create(model)
 
-        node_and_bias_value = [
+        node_and_bias_value: List[Tuple[NNCFNode, Tensor]] = [
             (node, self._backend_entity.get_bias_value(node, graph, model))
             for node in graph.get_all_nodes()
             if self._backend_entity.is_node_with_bias(node, graph)
@@ -150,7 +150,7 @@ class FastBiasCorrection(Algorithm):
 
             in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, graph)
 
-            input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
+            input_fp, input_shapes = self._get_fp_inputs(statistic_points, in_node_name)
             output_fp = self._get_fp_outputs(statistic_points, out_node_name)
 
             extracted_model = self._extract_submodel(model_transformer, node_name)
@@ -161,7 +161,9 @@ class FastBiasCorrection(Algorithm):
             if bias_value.ndim > 1:
                 # Make index positive
                 channel_axis = range(bias_value.ndim)[channel_axis]
-            input_blob = self._backend_entity.create_input_data(input_shape, input_fp, sub_input_name, channel_axis)
+            input_blob = self._backend_entity.create_input_data(
+                input_shapes[0], input_fp[0].data, sub_input_name, channel_axis
+            )
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,
@@ -170,8 +172,8 @@ class FastBiasCorrection(Algorithm):
                 output_name=sub_output_name,
             )
 
-            bias_shift = self._reshape_bias_shift(bias_shift, bias_value, channel_axis)
-            updated_bias = bias_value + bias_shift
+            bias_shift = bias_shift.reshape(bias_value.shape)
+            updated_bias: Tensor = bias_value + bias_shift
             magnitude = self._get_bias_shift_magnitude(bias_value, updated_bias)
 
             if magnitude < self.threshold:
@@ -197,29 +199,14 @@ class FastBiasCorrection(Algorithm):
         :param updated_bias_value: The updated bias value.
         :return: Magnitude between original and updated bias values.
         """
-        bias_shift_magnitude = inf
+        bias_shift_magnitude = fns.inf(current_bias_value)
         if fns.count_nonzero(current_bias_value == 0) == 0:
             bias_shift_magnitude = fns.max(fns.abs((updated_bias_value - current_bias_value) / current_bias_value))
         return bias_shift_magnitude
 
-    @staticmethod
-    def _reshape_bias_shift(bias_shift: Tensor, bias_value: Tensor, channel_axis: int) -> Tensor:
-        """
-        Reshape bias_shift tensor in case of dimensions of bias_value is more then 1.
-
-        :param bias_shift: Bias shift tensor.
-        :param bias_value: Bias value tensor.
-        :param channel_axis: Axis to update bias.
-
-        :return TTensor: Updated bias_shift.
-        """
-        if bias_value.ndim > 1:
-            new_shape = [1] * bias_value.ndim
-            new_shape[channel_axis] = bias_shift.shape[0]
-            bias_shift = bias_shift.reshape(new_shape)
-        return bias_shift
-
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
+    def _get_fp_inputs(
+        self, statistic_points: StatisticPointsContainer, node_name: str
+    ) -> Tuple[List[Tensor], List[Tuple[int, ...]]]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 
@@ -240,11 +227,12 @@ class FastBiasCorrection(Algorithm):
             node_name, input_filter_func, self._algorithm_key
         ):
             statistics = tensor_collector.get_statistics()
-            input_fp.extend(Tensor(statistics.mean_values))
-            input_shape.extend(statistics.shape)
+            assert isinstance(statistics, MeanTensorStatistic)
+            input_fp.append(Tensor(statistics.mean_values))
+            input_shape.append(tuple(statistics.observed_shape))
         return input_fp, input_shape
 
-    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[TTensor]:
+    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[Tensor]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 
@@ -263,7 +251,9 @@ class FastBiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(Tensor(tensor_collector.get_statistics().mean_values))
+            statistic = tensor_collector.get_statistics()
+            assert isinstance(statistic, MeanTensorStatistic)
+            output_fp.append(statistic.mean_values)
         return output_fp
 
     def _extract_submodel(self, model_transformer: ModelTransformer, node_name: str) -> TModel:
@@ -280,16 +270,16 @@ class FastBiasCorrection(Algorithm):
         extracted_model = model_transformer.transform(me_transformation_layout)
         return extracted_model
 
-    def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, axis: int) -> None:
+    def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, channel_axis: int) -> None:
         """
         Adds specific statistic point.
 
         :param container: StatisticPointsContainer instance.
         :param point: TargetPoint for statistic collection.
-        :param axis: Channel axis for the statistics calculation.
+        :param channel_axis: Channel axis for the statistics calculation.
         """
         stat_collector = self._backend_entity.mean_statistic_collector(
-            channel_axis=axis, num_samples=self.subset_size, inplace=self.inplace_statistics
+            channel_axis=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
         )
         container.add_statistic_point(
             StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=self._algorithm_key)
@@ -299,10 +289,10 @@ class FastBiasCorrection(Algorithm):
         self,
         model: TModel,
         input_blob: Union[TTensor, Dict[str, TTensor]],
-        channel_axis: Tuple[int],
-        output_fp: List[TTensor],
+        channel_axis: int,
+        output_fp: List[Tensor],
         output_name: str,
-    ) -> TTensor:
+    ) -> Tensor:
         """
         Calculates updated bias.
 
@@ -316,10 +306,19 @@ class FastBiasCorrection(Algorithm):
         """
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
-        q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
-        q_outputs = mean_per_channel(q_outputs, channel_axis)
-        bias_shift = fns.stack(output_fp) - q_outputs
+        q_outputs = raw_output[output_name]
+        q_outputs = self._mean_per_channel(q_outputs, channel_axis)
+        from nncf.experimental.tensor import functions as fns
+
+        bias_shift = fns.stack(output_fp).mean(axis=0) - q_outputs
         return bias_shift
+
+    @staticmethod
+    def _mean_per_channel(x: Tensor, channel_axis: int) -> Tensor:
+        from nncf.experimental.tensor import functions as fns
+
+        axis = tuple(i for i in range(x.ndim) if i != channel_axis)
+        return fns.mean(x, axis=axis, keepdims=True)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)

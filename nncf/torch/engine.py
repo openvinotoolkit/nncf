@@ -9,12 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Tuple, Union
+from typing import Dict, Tuple, Union
 
 import torch
 from torch import nn
 
+from nncf import nncf_logger
 from nncf.common.engine import Engine
+from nncf.experimental.tensor import Tensor
 
 
 class PTEngine(Engine):
@@ -32,15 +34,27 @@ class PTEngine(Engine):
         self._model = model
         self._model.eval()
 
-    def infer(
-        self, input_data: Union[torch.Tensor, Tuple[torch.Tensor], Dict[str, torch.Tensor]]
-    ) -> Union[torch.Tensor, Dict[str, Any]]:
+    def infer(self, input_data: Union[torch.Tensor, Tuple[torch.Tensor], Dict[str, torch.Tensor]]) -> Dict[str, Tensor]:
         """
         Runs Torch model on the provided input.
 
         :param input_data: Inputs for the model.
         :return: Model outputs.
         """
+        output = self._model(input_data)
+        if isinstance(output, torch.Tensor):
+            return {None: Tensor(output)}
+        if isinstance(output, dict):
+            output_dict = {}
+            for key, value in output.items():
+                if not isinstance(value, torch.Tensor):
+                    nncf_logger.debug(
+                        f"PTEngine: model output dict has non-tensor value {value} for key {key}, "
+                        f"will skip this value when considering tensor outputs"
+                    )
+                    continue
+                output_dict[key] = Tensor(value)
+            return output_dict
 
         if isinstance(input_data, dict):
             return self._model(**input_data)

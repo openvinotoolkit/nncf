@@ -54,10 +54,13 @@ from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
@@ -132,9 +135,6 @@ from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
-from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.torch.tensor_statistics.statistics import TensorStatistic
-from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_model_dtype
 from nncf.torch.utils import get_state_dict_names_with_modules
@@ -601,15 +601,15 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 else:
                     input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
                     channel_idx = 1  # channel dim for activations
-                scale_shape = tuple(
-                    get_scale_shape(input_shape, qp.is_weight_quantization_point(), qp.qconfig.per_channel, channel_idx)
+                scale_shape = get_scale_shape(
+                    input_shape, qp.is_weight_quantization_point(), qp.qconfig.per_channel, channel_idx
                 )
 
                 if scale_shape not in tensor_statistics[tp]:
                     nncf_logger.debug(f"Did not collect tensor statistics at {tp} for shape {scale_shape}")
                     retval[qp_id] = None
                 else:
-                    minmax_stat = pt_convert_stat_to_min_max_tensor_stat(tensor_statistics[tp][scale_shape])
+                    minmax_stat = MinMaxTensorStatistic.from_stat(tensor_statistics[tp][scale_shape])
                     retval[qp_id] = minmax_stat
         return retval
 
@@ -682,7 +682,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         retval = {}
         for ip, rs_vs_collector in stat_ctrl.ip_vs_collector_dict.items():
-            retval[ip] = {rs: collector.get_statistics() for rs, collector in rs_vs_collector.items()}
+            retval[ip] = {
+                QuantizerScaleShape(rs): collector.get_statistics() for rs, collector in rs_vs_collector.items()
+            }
         return retval
 
     def _get_statistics_for_final_range_init(
@@ -780,7 +782,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             qspec = PTQuantizerSpec.from_config(
                 qconfig,
                 narrow_range=narrow_range,
-                scale_shape=tuple(scale_shape),
+                scale_shape=scale_shape.shape,
                 logarithm_scale=use_logarithm_scale,
                 half_range=half_range,
                 is_quantized_on_export=qp.is_weight_quantization_point(),
@@ -806,7 +808,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             build_time_range_init_params=self._range_init_params,
         )
 
-    def __create_quantize_module(self, quantizer_spec: PTQuantizerSpec):
+    def __create_quantize_module(self, quantizer_spec: PTQuantizerSpec) -> BaseQuantizer:
         quantizer_cls = QUANTIZATION_MODULES.get(quantizer_spec.mode)
         return quantizer_cls(quantizer_spec)
 
@@ -935,7 +937,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if minmax_values_for_range_init:
                 minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
                 if minmax_stat is not None:
-                    range_init_minmax_values = (minmax_stat.min_values, minmax_stat.max_values)
+                    range_init_minmax_values = (minmax_stat.min_values.data, minmax_stat.max_values.data)
 
             quantizer_module_id, commands = self._quantize_at_points_by_single_module(
                 target_model,
@@ -1080,22 +1082,22 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if minmax_values_for_range_init:
             # Hopefully this will suffice.
             # TODO: gather unified statistic by linking stat collectors_and_modules_to_init instead
-            min_values = None
-            max_values = None
+            min_values: torch.Tensor = None
+            max_values: torch.Tensor = None
             for qp_id in sorted_qp_ids:
                 minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
                 if minmax_stat is None:
                     continue
 
                 if min_values is None:
-                    min_values = minmax_stat.min_values
+                    min_values = minmax_stat.min_values.data
                 else:
-                    min_values = torch.min(min_values, minmax_stat.min_values)
+                    min_values = torch.min(min_values, minmax_stat.min_values.data)
 
                 if max_values is None:
-                    max_values = minmax_stat.max_values
+                    max_values = minmax_stat.max_values.data
                 else:
-                    max_values = torch.max(max_values, minmax_stat.max_values)
+                    max_values = torch.max(max_values, minmax_stat.max_values.data)
             if min_values is not None and max_values is not None:
                 range_init_minmax_values = min_values, max_values
 
@@ -1149,8 +1151,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             # AMP autocast model (and therefore be FP16 since AMP autocast switches precision of activations
             # at forward pass time)
             own_type = get_model_dtype(target_model)
-            min_values = range_init_minmax_values[0].type(own_type)
-            max_values = range_init_minmax_values[1].type(own_type)
+            min_values = range_init_minmax_values[0].type(own_type).reshape(quantizer.scale_shape)
+            max_values = range_init_minmax_values[1].type(own_type).reshape(quantizer.scale_shape)
 
             quantizer.apply_minmax_init(min_values=min_values, max_values=max_values, log_module_name=str(primary_ip))
 

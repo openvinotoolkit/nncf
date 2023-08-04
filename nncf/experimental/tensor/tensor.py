@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import operator
-from typing import Any, Optional, Tuple, TypeVar, Union
+from typing import Any, Iterator, Optional, Tuple, TypeVar, Union
+
+import numpy as np
 
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
@@ -47,14 +49,21 @@ class Tensor:
     def dtype(self) -> TensorDeviceType:
         return _call_function("dtype", self)
 
+    @property
+    def size(self) -> TensorDeviceType:
+        return _call_function("size", self)
+
+    def __len__(self) -> int:
+        return len(self.data)
+
     def __bool__(self) -> bool:
         return bool(self.data)
 
     def __iter__(self):
-        return TensorIterator(self.data)
+        return TensorIterator(iter(self.data))
 
-    def __getitem__(self, index: int) -> Tensor:
-        return Tensor(self.data[index])
+    def __getitem__(self, index: Union[Tensor, int]) -> Tensor:
+        return Tensor(self.data[unwrap_tensor_data(index)])
 
     def __str__(self) -> str:
         return f"nncf.Tensor({str(self.data)})"
@@ -86,19 +95,22 @@ class Tensor:
         return Tensor(self.data ** unwrap_tensor_data(other))
 
     def __truediv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_op_nowarn", self, other, operator.truediv)
+        return _call_function("binary_operator", self, other, operator.truediv)
 
     def __rtruediv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_reverse_op_nowarn", self, other, operator.truediv)
+        return _call_function("binary_reverse_operator", self, other, operator.truediv)
 
     def __floordiv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_op_nowarn", self, other, operator.floordiv)
+        return _call_function("binary_operator", self, other, operator.floordiv)
 
     def __rfloordiv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_reverse_op_nowarn", self, other, operator.floordiv)
+        return _call_function("binary_reverse_operator", self, other, operator.floordiv)
 
     def __neg__(self) -> Tensor:
         return Tensor(-self.data)
+
+    def __invert__(self) -> "Tensor":
+        return Tensor(~self.data)
 
     # Comparison operators
 
@@ -128,16 +140,16 @@ class Tensor:
     def flatten(self) -> Tensor:
         return _call_function("flatten", self)
 
-    def max(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
+    def max(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = None) -> Tensor:
         return _call_function("max", self, axis, keepdims)
 
-    def min(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
+    def min(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = None) -> Tensor:
         return _call_function("min", self, axis, keepdims)
 
     def abs(self) -> Tensor:
         return _call_function("abs", self)
 
-    def isempty(self) -> bool:
+    def is_empty(self) -> bool:
         return _call_function("isempty", self)
 
     def astype(self, dtype: TensorDataType) -> Tensor:
@@ -145,6 +157,24 @@ class Tensor:
 
     def reshape(self, shape: Tuple[int, ...]) -> Tensor:
         return _call_function("reshape", self, shape)
+
+    def mean(self, axis: int, keepdims: Optional[bool] = None) -> "Tensor":
+        return _call_function("mean", self, axis, keepdims)
+
+    def matmul(self, other: "Tensor") -> "Tensor":
+        return _call_function("matmul", self, other)
+
+    def median(self, axis: int = None, keepdims: Optional[bool] = None) -> "Tensor":
+        return _call_function("median", self, axis, keepdims)
+
+    def to_numpy(self) -> np.ndarray:
+        return _call_function("to_numpy", self)
+
+    def any(self) -> bool:
+        return _call_function("any", self)
+
+    def all(self) -> bool:
+        return _call_function("all", self)
 
 
 def _call_function(func_name: str, *args):
@@ -161,19 +191,15 @@ def _call_function(func_name: str, *args):
 
 
 class TensorIterator:
-    """Iterator for Tensor class"""
+    def __init__(self, orig_iter: Iterator):
+        self._orig_iter = orig_iter
 
-    def __init__(self, tensor):
-        self._tensor = tensor
-        self._index = 0
+    def __iter__(self) -> "TensorIterator":
+        return self
 
-    def __next__(self) -> Tensor:
-        if self._index < len(self._tensor):
-            result = self._tensor[self._index]
-            self._index += 1
-            return Tensor(result)
-
-        raise StopIteration
+    def __next__(self) -> "Tensor":
+        retval = next(self._orig_iter)
+        return Tensor(retval)
 
 
 def unwrap_tensor_data(obj: Any) -> TTensor:

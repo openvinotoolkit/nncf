@@ -8,25 +8,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Callable
 
-from abc import ABC
-from abc import abstractmethod
-from typing import Any, Dict
+import tensorflow as tf
 
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.tensor import Tensor
 
 
-class Engine(ABC):
-    """
-    The basic class aims to provide the interface to infer the model.
-    """
+def get_collection_hook(collector: TensorStatisticCollectorBase) -> Callable[[tf.Tensor], tf.Tensor]:
+    # The hook closure function should be instantiated and returned in a separate function - inlining this in
+    # "for" loops iterating over `collector` leads to unexpected behaviour of closure binding to wrong collector
+    # instance
 
-    @abstractmethod
-    def infer(self, input_data: Any) -> Dict[str, Tensor]:
-        """
-        Runs model on the provided input data.
-        Returns the raw model outputs.
+    def hook(x: tf.Tensor) -> tf.Tensor:
+        collector.register_input(Tensor(x))
+        return x
 
-        :param input_data: inputs for the model
-        :return: raw model outputs
-        """
+    return hook

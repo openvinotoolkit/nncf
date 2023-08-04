@@ -33,11 +33,16 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor import TensorDataType
+from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -70,7 +75,7 @@ class SmoothQuant(Algorithm):
         super().__init__()
         self._subset_size = subset_size
         self._inplace_statistics = inplace_statistics
-        self._backend_entity = None
+        self._backend_entity: SmoothQuantAlgoBackend = None
         self._algorithm_key = f"SQ_{hash(self)}"
         self._cached_multiply_names = Counter()
         self._alpha_map = alpha_map
@@ -111,30 +116,28 @@ class SmoothQuant(Algorithm):
 
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
-        best_scale = None
+        best_scale: Tensor = None
         for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
             best_ratio = 0.0
             empty_statistic = False
+            source_node, input_port_id, source_output_port_id, _ = group_id
             for node_to_smooth in nodes:
-                source_node, input_port_id, source_output_port_id, _ = group_id
                 activations_value = self._get_statistics_for_node(
                     statistic_points, node_to_smooth.node_name, input_port_id
                 )
                 if any(val is None for val in activations_value):
                     empty_statistic = True
                     break
-                activations_value = self._backend_entity.clip_statistics(activations_value)
+                activations_value = self._clip_statistics(activations_value)
 
                 weight_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, weight_port)
                 weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value)
-                weight_statistics = self._backend_entity.clip_statistics(weight_statistics)
+                weight_statistics = self._clip_statistics([weight_statistics])
 
                 alpha = alpha_map[node_to_smooth.metatype]
 
-                scales, ratio = self._backend_entity.calculate_scale_and_ratio(
-                    activations_value, weight_statistics, alpha
-                )
+                scales, ratio = self.calculate_scale_and_ratio(activations_value, weight_statistics, alpha)
 
                 if ratio > best_ratio:
                     best_ratio = ratio
@@ -158,7 +161,7 @@ class SmoothQuant(Algorithm):
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, weight_port)
                 scaled_weight = weight_value * weights_scale
                 weight_update_command = self._backend_entity.weight_update_command(
-                    node_to_smooth, scaled_weight, weight_port
+                    node_to_smooth, scaled_weight.to_numpy(), weight_port
                 )
                 transformation_layout.register(weight_update_command)
 
@@ -167,12 +170,28 @@ class SmoothQuant(Algorithm):
 
             scale_node_name = self._create_scale_node_name(source_node.node_name, source_output_port_id)
             scale_insertion_command = self._backend_entity.scale_insertion_command(
-                source_node, activation_scale, source_output_port_id, nodes, scale_node_name
+                source_node, activation_scale.to_numpy(), source_output_port_id, nodes, scale_node_name
             )
             transformation_layout.register(scale_insertion_command)
 
         transformed_model = model_transformer.transform(transformation_layout)
         return transformed_model
+
+    @staticmethod
+    def calculate_scale_and_ratio(
+        activations: Tensor, weights: Tensor, alpha: float, quantile: Optional[float] = 0.1
+    ) -> Tuple[Tensor, float]:
+        from nncf.experimental.tensor import functions as fns
+
+        eps = fns.eps(activations, TensorDataType.float32)
+        scales = fns.power(activations, alpha) / (fns.power(weights, 1 - alpha) + eps)
+
+        a_min = fns.quantile(scales, quantile)
+        a_max = 1e2
+
+        scales = fns.clip(scales, min_val=a_min, max_val=a_max)
+        ratio = scales.min() / (scales.max() + eps)
+        return scales, ratio
 
     def _group_nodes_by_source(self, nodes_to_smooth: List[Dict], nncf_graph: NNCFGraph) -> Dict[tuple, List]:
         """
@@ -198,7 +217,7 @@ class SmoothQuant(Algorithm):
 
     def _get_statistics_for_node(
         self, statistic_points: StatisticPointsContainer, node_name: str, act_port: int
-    ) -> List[TTensor]:
+    ) -> List[Tensor]:
         """
         Collects statistics for node.
 
@@ -293,8 +312,8 @@ class SmoothQuant(Algorithm):
         return nodes_to_smooth_data
 
     def _calculate_activation_scale(
-        self, scale_value: TTensor, activations_shape: List[int], nodes: List[NNCFNode], nncf_graph: NNCFGraph
-    ) -> TTensor:
+        self, scale_value: Tensor, activations_shape: List[int], nodes: List[NNCFNode], nncf_graph: NNCFGraph
+    ) -> Tensor:
         """
         Calculates activation scales for Smooth node.
 
@@ -306,6 +325,7 @@ class SmoothQuant(Algorithm):
         activation_ports_map = {
             node: self._backend_entity.get_input_ports_map(node, nncf_graph)["activation"] for node in nodes
         }
+
         channel_axes = [
             self._backend_entity.get_activation_channel_axis(node, port) for node, port in activation_ports_map.items()
         ]
@@ -315,9 +335,24 @@ class SmoothQuant(Algorithm):
             raise RuntimeError(f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical")
 
         activations_size = len(activations_shape)
-        return self._backend_entity.calculate_activation_scale(scale_value, activations_size, channel_axis)
 
-    def _calculate_weight_scale(self, scale_value: TTensor, node: NNCFNode) -> TTensor:
+        activation_scale = scale_value ** (-1)
+        if activations_size > 1:
+            reshape_shape = [1 for _ in range(activations_size)]
+            reshape_shape[channel_axis] = activation_scale.size
+            activation_scale = activation_scale.reshape(reshape_shape)
+        return activation_scale
+
+    @staticmethod
+    def _clip_statistics(statistics: List[Tensor]) -> Tensor:
+        a_min = 1e-5
+        from nncf.experimental.tensor import functions as fns
+
+        statistics = fns.stack(statistics)
+        squeezed = fns.squeeze(statistics)
+        return fns.clip(squeezed, min_val=a_min, max_val=None)
+
+    def _calculate_weight_scale(self, scale_value: Tensor, node: NNCFNode) -> TTensor:
         """
         Calculates scale for weight tensor.
 
@@ -329,10 +364,15 @@ class SmoothQuant(Algorithm):
         weights_size = len(node.layer_attributes.constant_attributes[port_id]["shape"])
         if weights_size > 1:
             channel_axis = self._backend_entity.get_weight_channel_axis(node)
-            return self._backend_entity.calculate_weight_scale(scale_value, weights_size, channel_axis)
+            weight_scale = scale_value
+            if weights_size > 1:
+                reshape_shape = [1 for _ in range(weights_size)]
+                reshape_shape[channel_axis] = scale_value.size
+                weight_scale = scale_value.reshape(reshape_shape)
+            return weight_scale
         return scale_value
 
-    def _calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
+    def _calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> ReductionAxes:
         """
         Returns reduction axes for specified input.
 
@@ -348,7 +388,7 @@ class SmoothQuant(Algorithm):
             reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
         return reduction_axes
 
-    def _process_weight_statistics(self, node: NNCFNode, weights: TTensor) -> TTensor:
+    def _process_weight_statistics(self, node: NNCFNode, weights: Tensor, port_id: int) -> Tensor:
         """
         Returns processed weight statistics for node.
 
@@ -359,9 +399,10 @@ class SmoothQuant(Algorithm):
         channel_axis = 0
         if len(weights.shape) > 1:
             channel_axis = self._backend_entity.get_weight_channel_axis(node)
-        reduction_shape = [i for i, _ in enumerate(weights.shape)]
-        reduction_shape.pop(channel_axis)
-        return self._backend_entity.process_weight_statistics(weights, tuple(reduction_shape))
+            base_axes = list(range(weights.ndim - 2))
+            transpose_axes = base_axes + [-1, -2]
+            weights = fns.transpose(weights, axes=transpose_axes)
+        return fns.max(fns.abs(weights), axis=channel_axis)
 
     def _create_scale_node_name(self, source_name: str, source_port_id: int) -> str:
         """

@@ -15,10 +15,11 @@ import torch
 from nncf.api.compression import CompressionStage
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.reduction import ReductionShape
 from nncf.config import NNCFConfig
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -28,13 +29,12 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.tensor import PTNNCFTensor
 
 
 class TensorStatisticObservationPoint:
-    def __init__(self, target_point: PTTargetPoint, reduction_shapes: Set[ReductionAxes] = None):
+    def __init__(self, target_point: PTTargetPoint, reduction_axes_set: Set[ReductionAxes] = None):
         self.target_point = target_point
-        self.reduction_shapes = reduction_shapes
+        self.reduction_axes_set = reduction_axes_set
 
     def __hash__(self):
         return hash(self.target_point)
@@ -43,15 +43,15 @@ class TensorStatisticObservationPoint:
         return self.target_point == other.target_point
 
 
-def create_register_input_hook(collector: TensorCollector) -> Callable[[torch.Tensor], torch.Tensor]:
+def get_collection_hook(collector: TensorStatisticCollectorBase) -> Callable[[torch.Tensor], torch.Tensor]:
     """
-    Function to create regiter inputs hook function.
+    Function to create the hook function for collecting statistics.
 
     :param collector: Collector to use in resulting hook.
     :return: Register inputs hook function.
     """
 
-    def register_inputs_hook(x: torch.Tensor) -> torch.Tensor:
+    def hook(x: torch.Tensor) -> torch.Tensor:
         """
         Register inputs hook function.
 
@@ -59,17 +59,19 @@ def create_register_input_hook(collector: TensorCollector) -> Callable[[torch.Te
         :return: tensor to register in hook.
         """
         with no_nncf_trace():
-            collector.register_input_for_all_reducers(PTNNCFTensor(x))
+            collector.register_input(Tensor(x))
         return x
 
-    return register_inputs_hook
+    return hook
 
 
 class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def __init__(
         self,
         config: NNCFConfig,
-        observation_points_vs_collectors: Dict[TensorStatisticObservationPoint, TensorStatisticCollectorBase],
+        observation_points_vs_collectors: Dict[
+            TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]
+        ],
     ):
         super().__init__(config)
         self._observation_points_vs_collectors = observation_points_vs_collectors
@@ -83,7 +85,7 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
             for collector in rs_vs_collector.values():
                 command = PTInsertionCommand(
                     op.target_point,
-                    create_register_input_hook(collector=collector),
+                    get_collection_hook(collector=collector),
                     TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION,
                 )
                 layout.register(command)
@@ -106,7 +108,9 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
 
 class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(
-        self, target_model: NNCFNetwork, ip_vs_collector_dict: Dict[PTTargetPoint, TensorStatisticCollectorBase]
+        self,
+        target_model: NNCFNetwork,
+        ip_vs_collector_dict: Dict[TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]],
     ):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict

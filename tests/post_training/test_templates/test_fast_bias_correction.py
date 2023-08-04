@@ -17,7 +17,6 @@ import pytest
 from nncf.common.factory import NNCFGraphFactory
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from tests.post_training.test_templates.helpers import ConvBNTestModel
@@ -48,27 +47,6 @@ class TemplateTestFBCAlgorithm:
 
         :return FastBiasCorrectionAlgoBackend: Backend specific FastBiasCorrectionAlgoBackend
         """
-
-    @pytest.mark.parametrize(
-        "bias_value, bias_shift, channel_axis, ref_shape",
-        (
-            ([1, 1], [0.1, 0.1], 1, [2]),
-            ([[1, 1]], [0.1, 0.1], -1, [1, 2]),
-            ([[1, 1]], [0.1, 0.1], 1, [1, 2]),
-        ),
-    )
-    def test_reshape_bias_shift(self, bias_value: list, bias_shift: list, channel_axis: int, ref_shape: list):
-        """
-        Checks the result of the FastBiasCorrection.reshape_bias_shift method for backend specific datatype.
-        """
-        bias_value = self.list_to_backend_type(data=bias_value)
-        bias_shift = self.list_to_backend_type(data=bias_shift)
-
-        algo = FastBiasCorrection(subset_size=1, inplace_statistics=False)
-
-        algo._backend_entity = self.get_backend()
-        new_bias_shift = algo._reshape_bias_shift(bias_shift, bias_value, channel_axis)
-        assert list(new_bias_shift.shape) == ref_shape
 
     @staticmethod
     def fn_to_type(tensor):

@@ -66,7 +66,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return get_StatisticAgregatorTestModel(INPUT_SHAPE, conv_w)
 
     @pytest.fixture(scope="session")
-    def test_params(self):
+    def params(self):
         return {
             "test_statistic_merging": {
                 "split_concat": {"model": self._get_split_concat_backend_model},
@@ -103,10 +103,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             dataset_samples[0][0, i, 0, 0] = value["max"]
             dataset_samples[0][0, i, 0, 1] = value["min"]
         return dataset_samples
-
-    @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        return True
 
     @pytest.fixture
     def is_backend_support_custom_estimators(self) -> bool:

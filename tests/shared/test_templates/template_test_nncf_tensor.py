@@ -497,7 +497,7 @@ class TemplateTestNNCFTensorOperators:
     )
     def test_isempty(self, val, ref):
         tensor = Tensor(self.to_tensor(val))
-        res = tensor.isempty()
+        res = tensor.is_empty()
         assert res == ref
         assert isinstance(res, bool)
 

@@ -17,6 +17,7 @@ import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.experimental.tensor import Tensor
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_any_weight_quantized
@@ -26,7 +27,6 @@ from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 
 
@@ -55,12 +55,14 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        channel_axis: int,
+        channel_axis: Optional[int],
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
-    ) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(channel_axis, num_samples, window_size)
+    ) -> MeanStatisticCollector:
+        if channel_axis is None:
+            return MeanStatisticCollector(reduction_axes=(0,), num_samples=num_samples, window_size=window_size)
+        return MeanStatisticCollector(channel_axis=channel_axis, num_samples=num_samples, window_size=window_size)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: onnx.ModelProto) -> Tuple[str, str]:
@@ -68,12 +70,13 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_input_data(
-        shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int
+        shape: Tuple[int], data: np.ndarray, input_name: str, channel_axis: int
     ) -> Dict[str, np.array]:
-        blob = np.zeros(shape, dtype=data[0].data.dtype)
-        for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
-            index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
-            blob[index] = data[j].data
+        blob = np.zeros(shape)
+        for j in range(shape[channel_axis]):
+            index = tuple(slice(None) if i != channel_axis else j for i in range(blob.ndim))
+            blob[index] = data[index]
+        blob = blob.astype(data.dtype)
         input_data = {input_name: blob}
         return input_data
 
@@ -86,16 +89,16 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
-        return Tensor(raw_data[output_name])
-
-    @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_any_weight_quantized(node, nncf_graph)
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node)
+
+    @staticmethod
+    def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
+        return np.array(data)
 
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:

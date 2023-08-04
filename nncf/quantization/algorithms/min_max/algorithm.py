@@ -43,6 +43,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import ModelType
@@ -786,11 +787,12 @@ class MinMaxQuantization(Algorithm):
                     target_node_name, filter_func, self._algorithm_key
                 ):
                     statistics = tensor_collector.get_statistics()
+                    assert isinstance(statistics, MinMaxTensorStatistic)
                     if statistics.min_values is None or statistics.max_values is None:
                         raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
                     group_statistics.append(statistics)
 
-            unified_values = self._backend_entity.unify_statistics(group_statistics)
+            unified_values = self._unify_statistics(group_statistics)
             for quantization_target_point in unified_scale_group:
                 qconfig = quantization_target_points[quantization_target_point]
                 q_group = QuantizerGroup.ACTIVATIONS
@@ -830,6 +832,7 @@ class MinMaxQuantization(Algorithm):
                 half_range = quantization_target_point in quantization_points_overflow_fix
                 narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
                 statistics = tensor_collector.get_statistics()
+                assert isinstance(statistics, MinMaxTensorStatistic)
                 if statistics.min_values is None or statistics.max_values is None:
                     raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
                 if self._mode is not None:
@@ -852,6 +855,18 @@ class MinMaxQuantization(Algorithm):
             nncf_logger.info("The model has no operations to apply quantization.")
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
+
+    @staticmethod
+    def _unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        from nncf.experimental.tensor import functions as fns
+
+        max_values = fns.max_of_list(max_values, axis=0)
+        min_values = fns.min_of_list(min_values, axis=0)
+        return MinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)

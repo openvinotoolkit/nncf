@@ -13,14 +13,14 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any, Tuple, TypeVar
 
-import numpy as np
-
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.experimental.tensor import Tensor
 
 TModel = TypeVar("TModel")
 
@@ -50,7 +50,7 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> Tensor:
         """
         Returns bias value in the NumPy format of provided node.
 
@@ -62,14 +62,14 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def get_weight_value(node: NNCFNode, model: TModel, port_id: int) -> np.ndarray:
+    def get_weight_value(node: NNCFNode, model: TModel, port_id: int) -> Tensor:
         """
         Returns bias value in the NumPy format of provided node.
 
         :param node: Node of NNCFGraph with bias value.
         :param model: Backend-specific model for the initializer finding.
         :param nncf_graph: NNCFGraph instance with the node.
-        :return: Bias value in the NumPy format.
+        :return: Bias value as NNCFTensor.
         """
 
     @staticmethod
@@ -96,7 +96,7 @@ class ChannelAlignmentAlgoBackend:
     @staticmethod
     @abstractmethod
     def get_statistic_collector(
-        reduction_axes, q: float, num_samples: int, inplace: bool
+        reduction_axes: ReductionAxes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
         """
         Get backend-specific tensor collector that collects medians of minimal and maximal quantiles.
@@ -142,7 +142,7 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> Tensor:
         """
         Creates bias value constant array filled by given value.
 

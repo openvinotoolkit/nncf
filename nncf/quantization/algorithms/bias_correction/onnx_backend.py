@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import onnx
@@ -17,6 +17,9 @@ import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
+from nncf.common.tensor_statistics.collectors import RawStatisticCollector
+from nncf.experimental.tensor import Tensor
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_any_weight_quantized
@@ -28,18 +31,10 @@ from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
-from nncf.onnx.statistics.collectors import ONNXRawStatisticCollector
-from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
 
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-    @property
-    def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
-
     @property
     def types_to_insert_bias(self):
         return []
@@ -72,28 +67,26 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        channel_axis: int,
+        channel_axis: Optional[int],
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
-    ) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(channel_axis, num_samples, window_size)
+    ) -> MeanStatisticCollector:
+        if channel_axis is None:
+            return MeanStatisticCollector(reduction_axes=(0,), num_samples=num_samples, window_size=window_size)
+        return MeanStatisticCollector(channel_axis=channel_axis, num_samples=num_samples, window_size=window_size)
 
     @staticmethod
-    def raw_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
-        return ONNXRawStatisticCollector(num_samples)
-
-    @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
-        return ONNXNNCFTensor(raw_data[output_name])
+    def raw_statistic_collector(inplace: bool, num_samples: int = None) -> RawStatisticCollector:
+        return RawStatisticCollector(num_samples)
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[int, int]:
         return 0
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> np.ndarray:
-        return get_bias_value(node, model)
+    def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> Tensor:
+        return Tensor(get_bias_value(node, model))
 
     @staticmethod
     def get_input_name(model: onnx.ModelProto, node_name: str) -> str:

@@ -162,7 +162,7 @@ class ShapePruningProcessor:
     ) -> int:
         cluster_nodes_idxs = {node.nncf_node_id for node in cluster.elements}
         for input_mask in get_input_masks(next_node, graph):
-            if not input_mask:
+            if input_mask is None:
                 continue
             for mask_producer in input_mask.mask_producers:
                 if mask_producer.id in cluster_nodes_idxs:

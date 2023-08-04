@@ -44,4 +44,4 @@ def test_create_bias_tensor(edge_shape, dtype, ref_shape):
     graph = get_nncf_graph_for_test(edge_shape, dtype)
     val = create_bias_tensor(graph.get_node_by_name("/Conv_1_0"), graph, 5)
     assert val.shape == ref_shape
-    assert np.equal(val, np.full(ref_shape, 5)).all()
+    assert np.equal(val.data, np.full(ref_shape, 5)).all()

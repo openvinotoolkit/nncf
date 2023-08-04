@@ -12,7 +12,9 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import Counter
-from typing import TypeVar
+from typing import Dict, List, Tuple, TypeVar
+
+from nncf.experimental.tensor import Tensor
 
 TensorType = TypeVar("TensorType")
 
@@ -23,9 +25,10 @@ class TensorStatistic(ABC):
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
     @staticmethod
-    @abstractmethod
-    def tensor_eq(tensor1: TensorType, tensor2: TensorType, rtol=1e-6) -> bool:
-        pass
+    def tensor_eq(tensor1: Tensor, tensor2: Tensor, rtol=1e-6) -> bool:
+        from nncf.experimental.tensor import functions as fns
+
+        return fns.allclose(tensor1, tensor2, rtol=rtol)
 
     @abstractmethod
     def __eq__(self, other):
@@ -36,12 +39,36 @@ class MinMaxTensorStatistic(TensorStatistic):
     MIN_STAT = "min_values"
     MAX_STAT = "max_values"
 
-    def __init__(self, min_values, max_values):
+    def __init__(self, min_values: Tensor, max_values: Tensor):
         self.min_values = min_values
         self.max_values = max_values
 
     def __eq__(self, other: "MinMaxTensorStatistic") -> bool:
         return self.tensor_eq(self.min_values, other.min_values) and self.tensor_eq(self.max_values, other.max_values)
+
+    def __repr__(self):
+        return f"min: {repr(self.min_values.data)}, max: {repr(self.max_values.data)}"
+
+    @staticmethod
+    def from_stat(statistic: TensorStatistic) -> "MinMaxTensorStatistic":
+        if isinstance(statistic, MinMaxTensorStatistic):
+            return statistic
+        if isinstance(statistic, MedianMADTensorStatistic):
+            # Using three-sigma approach to estimate min and max
+            # Constant factor depends on the distribution form - assuming normal and the factor is 1.4826
+            return MinMaxTensorStatistic(
+                statistic.median_values - 3 * 1.4826230 * statistic.mad_values,
+                statistic.median_values + 3 * 1.4826230 * statistic.mad_values,
+            )
+        if isinstance(statistic, PercentileTensorStatistic):
+            if len(statistic.percentile_vs_values_dict.keys()) < 2:
+                raise ValueError("Cannot create a min-max statistic for less than 2 percentile values")
+            min_pct = min(statistic.percentile_vs_values_dict.keys())
+            max_pct = max(statistic.percentile_vs_values_dict.keys())
+            return MinMaxTensorStatistic(
+                statistic.percentile_vs_values_dict[min_pct], statistic.percentile_vs_values_dict[max_pct]
+            )
+        raise ValueError("Unknown TensorStatistic to generate min-max stat from!")
 
 
 class MeanTensorStatistic(TensorStatistic):
@@ -52,23 +79,23 @@ class MeanTensorStatistic(TensorStatistic):
     Base class for the statistics that collects as mean per-axis
     """
 
-    def __init__(self, mean_values, shape):
+    def __init__(self, mean_values: Tensor, shape: Tuple[int]):
         """
         :param mean_values: Collected mean per-axis values.
         :param shape: The shape of the collected statistics.
         """
         self.mean_values = mean_values
-        self.shape = shape
+        self.observed_shape = shape
 
     def __eq__(self, other: "MeanTensorStatistic") -> bool:
-        return self.tensor_eq(self.mean_values, other.mean_values) and self.tensor_eq(self.shape, other.shape)
+        return self.mean_values == other.mean_values and self.observed_shape == other.observed_shape
 
 
 class MedianMADTensorStatistic(TensorStatistic):
     MEDIAN_VALUES_STAT = "median_values"
     MAD_VALUES_STAT = "mad_values"
 
-    def __init__(self, median_values, mad_values):
+    def __init__(self, median_values: Tensor, mad_values: Tensor):
         self.median_values = median_values
         self.mad_values = mad_values
 
@@ -81,7 +108,7 @@ class MedianMADTensorStatistic(TensorStatistic):
 class PercentileTensorStatistic(TensorStatistic):
     PERCENTILE_VS_VALUE_DICT = "percentile_vs_values_dict"
 
-    def __init__(self, percentile_vs_values_dict):
+    def __init__(self, percentile_vs_values_dict: Dict[float, Tensor]):
         self.percentile_vs_values_dict = percentile_vs_values_dict
 
     def __eq__(self, other: "PercentileTensorStatistic", rtol=1e-9) -> bool:
@@ -100,7 +127,7 @@ class RawTensorStatistic(TensorStatistic):
     Base class for the raw statistics, without any aggregation.
     """
 
-    def __init__(self, values):
+    def __init__(self, values: List[Tensor]):
         """
         :param values: Collected raw values.
         """

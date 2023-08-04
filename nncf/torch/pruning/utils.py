@@ -17,11 +17,11 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.logging import nncf_logger
+from nncf.experimental.tensor import Tensor
 from nncf.torch.graph.graph import NNCFNode
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.tensor import PTNNCFTensor
 
 
 def get_bn_node_for_conv(graph: NNCFGraph, conv_node: NNCFNode) -> Optional[NNCFNode]:
@@ -62,7 +62,7 @@ def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
     for minfo in nodes:
         mask = minfo.operand.binary_filter_pruning_mask
         nncf_node = graph.get_node_by_id(minfo.nncf_node_id)
-        nncf_node.attributes["output_mask"] = PTNNCFTensor(mask)
+        nncf_node.attributes["output_mask"] = Tensor(mask)
 
 
 def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]:

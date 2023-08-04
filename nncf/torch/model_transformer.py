@@ -13,7 +13,7 @@ import copy
 from collections import defaultdict
 from typing import Callable, Dict, List, Tuple
 
-from torch import Tensor
+import torch
 from torch import nn
 from torch.nn.parameter import Parameter
 
@@ -222,7 +222,7 @@ class PTModelTransformer(ModelTransformer):
         return model
 
 
-def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwork) -> None:
+def update_fused_bias(target_node_name: str, new_bias: torch.Tensor, model: NNCFNetwork) -> None:
     """
     Update bias for target module or potential fused module.
 
@@ -237,7 +237,7 @@ def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwor
     update_parameter(target_node_name, "bias", new_bias, model)
 
 
-def update_parameter(target_node_name: str, parameter_name: str, new_value: Tensor, model: NNCFNetwork) -> None:
+def update_parameter(target_node_name: str, parameter_name: str, new_value: torch.Tensor, model: NNCFNetwork) -> None:
     """
     Update parameter for target module.
 

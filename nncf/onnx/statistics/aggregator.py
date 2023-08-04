@@ -11,7 +11,6 @@
 
 from typing import Dict
 
-import numpy as np
 import onnx
 
 from nncf.common.factory import TModel
@@ -20,11 +19,11 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.experimental.tensor import Tensor
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.onnx.tensor import ONNXNNCFTensor
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
@@ -34,9 +33,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         self._registered_weights = set()
         super().collect_statistics(model, graph)
 
-    def _register_statistics(
-        self, outputs: Dict[str, ONNXNNCFTensor], statistic_points: StatisticPointsContainer
-    ) -> None:
+    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         for _statistic_points in statistic_points.values():
             for statistic_point in _statistic_points:
                 target_point = statistic_point.target_point
@@ -76,7 +73,3 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     ) -> StatisticPointsContainer:
         # TODO: mirgate to experimental statistic collector and use common merging algorithm
         return statistic_points
-
-    @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, ONNXNNCFTensor]:
-        return {n: ONNXNNCFTensor(v) for n, v in outputs.items()}

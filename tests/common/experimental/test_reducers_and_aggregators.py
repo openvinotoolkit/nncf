@@ -19,7 +19,6 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
@@ -231,12 +230,10 @@ class TemplateTestReducersAggreagtors:
         "offline_aggregators_test_desc",
         OFFLINE_AGGREGATORS_TEST_CASES,
     )
-    def test_min_max_aggregators(
-        self, offline_aggregators_test_desc: OfflineAggregatorTestCase, tensor_processor: NNCFCollectorTensorProcessor
-    ):
+    def test_min_max_aggregators(self, offline_aggregators_test_desc: OfflineAggregatorTestCase):
         aggregation_axes = offline_aggregators_test_desc.aggregation_axes
-        min_aggregator = MinAggregator(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
-        max_aggregator = MaxAggregator(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
+        min_aggregator = MinAggregator(aggregation_axes=aggregation_axes)
+        max_aggregator = MaxAggregator(aggregation_axes=aggregation_axes)
         input_ = np.arange(3 * 3).reshape((1, 3, 3))
         input_[0, 0, 0] = -10000
         for i in range(-5, 5):

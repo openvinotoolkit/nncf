@@ -9,13 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import deque
-from typing import List, Tuple
+from copy import deepcopy
+from typing import Callable, Deque, List, Tuple, Union
 
-import numpy as np
+from nncf.common.quantization.structs import QuantizerScaleShape
+from nncf.experimental.tensor import Tensor
 
 
-def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
+def get_channel_count_and_dim_idx(scale_shape: Tuple[int]) -> Tuple[int, int]:
     channel_dim_idx = 0
     channel_count = 1
     for dim_idx, dim in enumerate(scale_shape):
@@ -25,9 +26,11 @@ def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
     return channel_count, channel_dim_idx
 
 
-def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.ndarray]:
+def split_into_channels(input_: Tensor, scale_shape: Tuple[int]) -> List[Tensor]:
     channel_count, channel_dim_idx = get_channel_count_and_dim_idx(scale_shape)
-    channel_first_tensor = np.moveaxis(input_, channel_dim_idx, 0)
+    from nncf.experimental.tensor import functions as fns
+
+    channel_first_tensor = fns.moveaxis(input_, channel_dim_idx, 0)
     if channel_count == 1:
         return [channel_first_tensor]
 
@@ -37,12 +40,19 @@ def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.n
     return ret_list
 
 
-def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], discard_zeros=False) -> List:
-    channel_count, _ = get_channel_count_and_dim_idx(scale_shape)
-    per_channel_history = [None for i in range(channel_count)]
+def get_per_channel_history(
+    raw_input_history: Deque[Tensor], reduction_shape: Tuple[int], discard_zeros: bool = False
+) -> List[Tensor]:
+    channel_count, _ = get_channel_count_and_dim_idx(reduction_shape)
+    per_channel_history = [None for _ in range(channel_count)]
+    if not raw_input_history:
+        return per_channel_history
+
+    from nncf.experimental.tensor import functions as fns
+
     for _ in range(len(raw_input_history)):
         entry = raw_input_history.popleft()
-        split = split_into_channels(entry, scale_shape)
+        split = split_into_channels(entry, reduction_shape)
         for i in range(channel_count):
             flat_channel_split = split[i].flatten()
 
@@ -54,18 +64,44 @@ def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], di
             if per_channel_history[i] is None:
                 per_channel_history[i] = flat_channel_split
             else:
-                per_channel_history[i] = np.concatenate([per_channel_history[i], flat_channel_split])
+                per_channel_history[i] = fns.concatenate([per_channel_history[i], flat_channel_split])
         raw_input_history.append(entry)
     return per_channel_history
 
 
-def np_percentile_reduce_like(input_: np.array, ref_tensor_shape: Tuple[int], q: float) -> np.array:
-    numel = np.prod(ref_tensor_shape)
-    if numel == 1:
-        return np.array([np.percentile(input_, q)])
-    tmp = input_
-    for dim_idx, dim in enumerate(ref_tensor_shape):
-        if dim == 1:
-            numpy_tmp = np.percentile(tmp, q, axis=dim_idx, keepdims=True)
-            tmp = numpy_tmp
-    return tmp
+ReductionAxes = Tuple[int]
+
+
+def percentile_reduce(input_: Tensor, reduction_axes: ReductionAxes, pc: float) -> Tensor:
+    from nncf.experimental.tensor import functions as fns
+
+    quantile = pc / 100
+    return fns.quantile(input_, quantile, axis=list(reduction_axes), keepdims=True)
+
+
+ReductionShape = Tuple[int]
+REDUCE_TO_SCALAR_REDUCTION_SHAPE = (-1,)
+
+
+def get_reduction_axes_from_scale_shape(scale_shape: QuantizerScaleShape, channel_idx: int = None) -> ReductionAxes:
+    if scale_shape.is_per_tensor():
+        return REDUCE_TO_SCALAR_REDUCTION_SHAPE
+    if channel_idx is not None:
+        return tuple(i for i in range(len(scale_shape.shape)) if i != channel_idx)
+    return tuple(i for i, dim in enumerate(scale_shape.shape) if dim == 1)
+
+
+def is_reduce_to_scalar(reduction_axes: ReductionAxes) -> bool:
+    return reduction_axes == REDUCE_TO_SCALAR_REDUCTION_SHAPE
+
+
+def get_reduction_shape_from_sample_shape(sample_shape: List[int], reduction_axes: ReductionAxes) -> ReductionShape:
+    if is_reduce_to_scalar(reduction_axes):
+        return (1,)
+    reduced_shape = deepcopy(list(sample_shape))
+    for ax in reduction_axes:
+        reduced_shape[ax] = 1
+    return tuple(reduced_shape)
+
+
+MaskedReduceFN = Callable[[Tensor, Union[int, tuple, list], Tensor, bool], Tensor]

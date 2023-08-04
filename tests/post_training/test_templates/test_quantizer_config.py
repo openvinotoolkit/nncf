@@ -12,7 +12,6 @@
 from abc import abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import List
 
 import pytest
 
@@ -72,15 +71,15 @@ class TemplateTestQuantizerConfig:
         pass
 
     @dataclass
-    class TestGetStatisticsCollectorParameters:
+    class GetStatisticsCollectorParameters:
         target_type: TargetType
         target_node_name: str
-        ref_per_ch_reduction_axes: List[int]
-        ref_per_tensor_reduction_axes: List[int]
+        ref_per_ch_reduction_axes: ReductionAxes
+        ref_per_tensor_reduction_axes: ReductionAxes
 
     @abstractmethod
     @pytest.fixture
-    def statistic_collector_parameters(self, request) -> TestGetStatisticsCollectorParameters:
+    def statistic_collector_parameters(self, request) -> GetStatisticsCollectorParameters:
         pass
 
     def test_default_quantizer_config(self, single_conv_nncf_graph):
@@ -221,7 +220,7 @@ class TemplateTestQuantizerConfig:
         q_config_per_channel,
         num_samples,
         conv_sum_aggregation_nncf_graph,
-        statistic_collector_parameters: TestGetStatisticsCollectorParameters,
+        statistic_collector_parameters: GetStatisticsCollectorParameters,
     ):
         params = statistic_collector_parameters
         min_max_algo = MinMaxQuantization(activations_range_estimator_params=range_estimator_params)

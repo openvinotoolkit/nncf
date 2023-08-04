@@ -55,8 +55,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def is_backend_support_custom_estimators(self) -> bool:
         return False
 
+    def no_batch_dimension_in_dataset_samples(self) -> bool:
+        return True
+
     @pytest.fixture(scope="session")
-    def test_params(self):
+    def params(self):
         return
 
     def get_dataset(self, samples):
@@ -92,11 +95,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
         return dataset_samples
 
-    @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        return False
-
-    @pytest.fixture(params=[False], ids=["out_of_palce"])
+    @pytest.fixture(params=[False], ids=["out_of_place"])
     def inplace_statistics(self, request) -> bool:
         return request.param
 
@@ -105,7 +104,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         pass
 
     @pytest.mark.skip("Merging is not implemented yet")
-    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
+    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, params, dataset_samples):
         pass
 
     @pytest.mark.skip("Merging is not implemented yet")

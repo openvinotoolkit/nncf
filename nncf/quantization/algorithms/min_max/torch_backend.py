@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import torch
 
@@ -24,8 +24,13 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerScaleShape
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -45,9 +50,6 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
-from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -147,16 +149,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise RuntimeError("FakeConvert insertion not implemented in PyTorch backend!")
 
     @staticmethod
-    def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
-        max_values, min_values = [], []
-        for statistic in statistics:
-            max_values.append(statistic.max_values.flatten())
-            min_values.append(statistic.min_values.flatten())
-        max_values = torch.amax(torch.stack(max_values), dim=0)
-        min_values = torch.amin(torch.stack(min_values), dim=0)
-        return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
-
-    @staticmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,
@@ -164,15 +156,15 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         inplace: bool,
         num_samples: int = None,
-    ) -> TensorCollector:
+    ) -> Union[MinMaxStatisticCollector, MeanMinMaxStatisticCollector]:
         collector_params = PTMinMaxAlgoBackend._default_collector_params(nncf_graph, target_point, quantizer_config)
         reduction_axes = collector_params.get_reduction_axes(per_sample_stats=False)
         aggregation_axes = collector_params.get_aggregation_axes(per_sample_stats=False)
 
-        collector = TensorCollector(PTMinMaxTensorStatistic)
+        collector = TensorCollector(MinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
-            [PTMinMaxTensorStatistic.MIN_STAT, PTMinMaxTensorStatistic.MAX_STAT],
+            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
         ):
             if params.statistics_type not in PT_REDUCERS_MAP:
                 raise RuntimeError(
@@ -187,7 +179,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             statistic_type = params.statistics_type
             if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
                 # TODO(dlyakhov): merge two quantile aggregators in one
-                if container_key == PTMinMaxTensorStatistic.MIN_STAT:
+                if container_key == MinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
@@ -198,9 +190,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 reducer = PT_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
 
             aggregator = AGGREGATORS_MAP[params.aggregator_type](
-                aggregation_axes=aggregation_axes,
-                num_samples=num_samples,
-                tensor_processor=PTNNCFCollectorTensorProcessor,
+                aggregation_axes=aggregation_axes, num_samples=num_samples
             )
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
@@ -226,7 +216,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _get_input_scale_shape(
         nncf_graph: NNCFGraph, target_point: PTTargetPoint, quantization_config: QuantizerConfig
-    ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
+    ) -> Tuple[Tuple[int, ...], QuantizerScaleShape, int]:
         is_weights = target_point.is_weight_target_point()
         if is_weights:
             module_node = nncf_graph.get_node_by_name(target_point.target_node_name)
@@ -238,10 +228,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
             channel_idx = 1  # channel dim for activations
 
-        scale_shape = tuple(
-            get_scale_shape(
-                input_shape, is_weights=is_weights, per_channel=quantization_config.per_channel, channel_idx=channel_idx
-            )
+        scale_shape = get_scale_shape(
+            input_shape, is_weights=is_weights, per_channel=quantization_config.per_channel, channel_idx=channel_idx
         )
 
         return input_shape, scale_shape, channel_idx
@@ -307,7 +295,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         _, scale_shape, _ = PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
 
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
-            quantizer_config, scale_shape, parameters, target_point.target_type
+            quantizer_config, scale_shape.shape, parameters, target_point.target_type
         )
         return PTQuantizerInsertionCommand(target_point, quantizer)
 

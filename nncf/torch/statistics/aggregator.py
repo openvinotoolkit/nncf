@@ -11,7 +11,6 @@
 
 from typing import Dict
 
-import numpy as np
 import torch
 
 from nncf.common.factory import TModel
@@ -20,10 +19,11 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.experimental.tensor import Tensor
+from nncf.experimental.torch.tensor_statistics.algo import create_register_input_hook
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.tensor import PTNNCFTensor
-from nncf.torch.tensor_statistics.algo import create_register_input_hook
+from nncf.torch.tensor_statistics.algo import get_collection_hook
 
 
 class PTStatisticsAggregator(StatisticsAggregator):
@@ -32,9 +32,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
             with model.nncf.temporary_clean_view() as intermediate_model:
                 super().collect_statistics(intermediate_model, graph)
 
-    def _register_statistics(
-        self, outputs: Dict[str, PTNNCFTensor], statistic_points: StatisticPointsContainer
-    ) -> None:
+    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         return
 
     def _get_transformation_layout_extra_outputs(
@@ -47,10 +45,11 @@ class PTStatisticsAggregator(StatisticsAggregator):
             for _statistic_point in _statistic_points:
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
+                        hook = create_register_input_hook(collector)
                         transformation_commands.append(
                             PTInsertionCommand(
                                 _statistic_point.target_point,
-                                create_register_input_hook(collector=collector),
+                                hook,
                                 TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION,
                             )
                         )
@@ -66,7 +65,3 @@ class PTStatisticsAggregator(StatisticsAggregator):
     ) -> StatisticPointsContainer:
         # TODO: mirgate to experimental statistic collector and use common merging algorithm
         return statistic_points
-
-    @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, PTNNCFTensor]:
-        return outputs

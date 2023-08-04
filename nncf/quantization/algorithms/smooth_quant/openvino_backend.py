@@ -18,8 +18,10 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
@@ -32,7 +34,6 @@ from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionComm
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 
 
@@ -70,16 +71,16 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return {"activation": activation_ports[0], "weight": weight_ports[0]}
 
     @staticmethod
-    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
+    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> ReductionAxes:
         return get_channel_agnostic_reduction_axes([channel_axis], shape)
 
     @staticmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: ReductionAxes, inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = OVAbsMaxReducer(reduction_axes=stats_reduction_axes, inplace=inplace)
-        aggregator = MaxAggregator(tensor_processor=OVNNCFCollectorTensorProcessor, num_samples=num_samples)
+        aggregator = MaxAggregator(num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
 
@@ -88,8 +89,8 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return np.max(np.abs(weights), axis=reduction_shape)
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
-        return get_weight_value(node_with_weight, model, port_id)
+    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> Tensor:
+        return Tensor(get_weight_value(node_with_weight, model, port_id))
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:

@@ -402,7 +402,7 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
     ref_concat_masks = [[0] * 8 + [1] * 8 + [0] * 8 + [1] * 8, [1] * 8 + [0] * 16 + [1] * 8 + [0] * 8 + [1] * 8]
     graph = pruned_model.nncf.get_original_graph()
     for i, node in enumerate(graph.get_nodes_by_types(["cat"])):
-        assert np.allclose(node.attributes["output_mask"].tensor.numpy(), ref_concat_masks[i])
+        assert np.allclose(node.attributes["output_mask"].data.numpy(), ref_concat_masks[i])
 
 
 @pytest.mark.parametrize('model,ref_output_shapes',
@@ -850,5 +850,5 @@ def test_disconnected_graph():
         if mask_sum is None:
             assert node.attributes["output_mask"] is None
         else:
-            assert sum(node.attributes["output_mask"].tensor) == mask_sum
+            assert sum(node.attributes["output_mask"].data) == mask_sum
         assert collected_shapes[name] == shape

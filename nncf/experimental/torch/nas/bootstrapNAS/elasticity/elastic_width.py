@@ -37,7 +37,7 @@ from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.scopes import should_consider_scope
-from nncf.common.tensor import NNCFTensor
+from nncf.experimental.tensor import Tensor
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_PARAMS
@@ -66,7 +66,6 @@ from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTI
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.operations import PTElementwisePruningOp
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
-from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.utils import get_filters_num
 from nncf.torch.utils import get_model_device
 
@@ -840,7 +839,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
             # 1.2 Setup reorder indexes as output mask to reorganize filters
             for minfo in group.elements:
                 node = self._propagation_graph.get_node_by_id(minfo.nncf_node_id)
-                node.attributes["output_mask"] = PTNNCFTensor(reorder_indexes)
+                node.attributes["output_mask"] = Tensor(reorder_indexes)
 
         # 2. Propagating masks across the graph
         reorder_algo = FilterReorderingAlgorithm(
@@ -919,7 +918,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         return elastic_width_config
 
     @staticmethod
-    def mask_to_width(mask: NNCFTensor) -> Optional[int]:
+    def mask_to_width(mask: Tensor) -> Optional[int]:
         """
         Decodes mask to a single integer. We assume that mask was constructed in a way that first N values are equal
         to 1, and the rest values are 0. The N encodes width value.
@@ -929,11 +928,11 @@ class ElasticWidthHandler(SingleElasticityHandler):
         """
         result = None
         if mask is not None:
-            actual_mask = mask.tensor
+            actual_mask = mask.data
             mask_len = sum(actual_mask.size())
             width = int(sum(actual_mask))
             device = actual_mask.device
-            ref_mask = ElasticWidthHandler._width_to_mask(width, mask_len, device).tensor
+            ref_mask = ElasticWidthHandler._width_to_mask(width, mask_len, device).data
             assert torch.equal(
                 ref_mask, actual_mask
             ), f"Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros."
@@ -941,7 +940,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         return result
 
     @staticmethod
-    def _width_to_mask(active_width: int, max_width: int, device: torch.device) -> PTNNCFTensor:
+    def _width_to_mask(active_width: int, max_width: int, device: torch.device) -> Tensor:
         """
         Encodes width to tensor filled by 1 and 0. We intentionally construct mask in a way that first N values are
         equal to 1, and the rest values are 0. The N encodes width value. The mask tensors allows to fully reuse mask
@@ -954,7 +953,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         """
         mask = torch.ones(max_width).to(device)
         mask[active_width:].fill_(0)
-        return PTNNCFTensor(mask)
+        return Tensor(mask)
 
 
 class EWBuilderStateNames:

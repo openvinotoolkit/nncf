@@ -12,12 +12,9 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.reduction import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -27,33 +24,24 @@ from tests.torch.ptq.helpers import get_depthwise_conv_nncf_graph
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
 from tests.torch.ptq.helpers import get_sum_aggregation_nncf_graph
 
-ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
+ParamsCls = TemplateTestQuantizerConfig.GetStatisticsCollectorParameters
 
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return PTMinMaxAlgoBackend()
 
-    def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
-        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
-        assert len(aggrs) == 2
-        assert MinAggregator in aggrs
-        assert MaxAggregator in aggrs
+    def check_is_min_max_statistic_collector(self, tensor_collector):
+        assert isinstance(tensor_collector, MinMaxStatisticCollector)
 
-    def check_is_mean_min_max_statistic_collector(self, tensor_collector: TensorCollector):
-        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
-        assert len(aggrs) == 2
-        assert MeanAggregator in aggrs
-        assert aggrs[0].__class__ == aggrs[1].__class__
-
-    def get_reduction_axes(self, reducer: TensorReducerBase) -> ReductionAxes:
-        return reducer._reduction_axes
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
+        assert isinstance(tensor_collector, MeanMinMaxStatisticCollector)
 
     @pytest.fixture(
         params=[
-            (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (0, 2), (0, 1, 2)),
-            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), (0, 1, 2, 3)),
-            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), (0, 1, 2, 3)),
+            (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (0, 2), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
+            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
+            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
         ]
     )
     def statistic_collector_parameters(self, request) -> ParamsCls:

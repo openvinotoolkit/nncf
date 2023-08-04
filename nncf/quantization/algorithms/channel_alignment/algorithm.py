@@ -11,8 +11,6 @@
 
 from typing import List, Optional, Tuple, TypeVar
 
-import numpy as np
-
 from nncf import Dataset
 from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
@@ -26,8 +24,11 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor.enums import TensorDataType
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
@@ -111,6 +112,7 @@ class ChannelAlignment(Algorithm):
             )
             assert len(tensor_collectors) == 1
             stat = tensor_collectors[0].get_statistics()
+            assert isinstance(stat, MinMaxTensorStatistic)
             if stat.min_values is None or stat.max_values is None:
                 nncf_logger.debug(
                     f"Skipping channel alignment for pairs {conv_in.node_name}, {conv_out.node_name} "
@@ -139,8 +141,10 @@ class ChannelAlignment(Algorithm):
                 conv_out_cont.dims,
             )
 
-            ascale = (stat.max_values - stat.min_values).astype(np.float32)
-            eps = np.finfo(ascale.dtype).eps
+            ascale = (stat.max_values - stat.min_values).astype(TensorDataType.float32)
+            from nncf.experimental.tensor import functions as fns
+
+            eps = fns.eps(ascale, ascale.dtype)
             if (ascale > eps).any():
                 conv_in_cont.weight, conv_out_cont.weight, conv_in_cont.bias = self._align_scales(
                     conv_in_cont.weight,
@@ -155,17 +159,23 @@ class ChannelAlignment(Algorithm):
             command_creator = CommandCreatorFactory.create(model)
             for container in [conv_in_cont, conv_out_cont]:
                 if container.stated_weight.is_modified():
+                    updated_value = container.weight
+                    if isinstance(updated_value, Tensor):
+                        updated_value = updated_value.to_numpy()
                     transformation_layout.register(
                         command_creator.create_command_to_update_weight(
-                            container.op, container.weight, container.weight_port_id
+                            container.op, updated_value, container.weight_port_id
                         )
                     )
 
                 if container.stated_bias.is_modified():
+                    updated_value = container.bias
+                    if isinstance(updated_value, Tensor):
+                        updated_value = updated_value.to_numpy()
                     if container.bias_op_exist():
-                        command = command_creator.create_command_to_update_bias(container.op, container.bias, graph)
+                        command = command_creator.create_command_to_update_bias(container.op, updated_value, graph)
                     else:
-                        command = command_creator.create_command_to_insert_bias(container.op, container.bias)
+                        command = command_creator.create_command_to_insert_bias(container.op, updated_value)
                     transformation_layout.register(command)
 
         transformed_model = model_transformer.transform(transformation_layout)
@@ -173,12 +183,12 @@ class ChannelAlignment(Algorithm):
 
     @staticmethod
     def _align_means(
-        bias_in_value: np.ndarray,
-        bias_out_value: np.ndarray,
-        conv_out_value: np.ndarray,
-        amean: np.ndarray,
+        bias_in_value: Tensor,
+        bias_out_value: Tensor,
+        conv_out_value: Tensor,
+        amean: Tensor,
         conv_out_descr: LayoutDescriptor,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[Tensor, Tensor]:
         """
         Function which calculates new add_in_value and add_out_value
         in ChannelAlignment pattern, so output activations of the second convolution bias
@@ -189,6 +199,8 @@ class ChannelAlignment(Algorithm):
         :param amean: Mean value to shift first and second convolutions biases.
         :param conv_out_descr: The second convolution weights layout descriptor.
         """
+        from nncf.experimental.tensor import functions as fns
+
         updated_add_in_value = bias_in_value - amean.reshape(bias_in_value.shape)
 
         weight_dims = conv_out_value.ndim
@@ -197,31 +209,31 @@ class ChannelAlignment(Algorithm):
             axes = list(range(weight_dims))
             axes.remove(conv_out_descr.conv_weight_in_channels_dim)
             axes.remove(conv_out_descr.conv_weight_out_channels_dim)
-            updated_conv_out_value = np.sum(conv_out_value, axis=tuple(axes))
+            updated_conv_out_value = fns.sum(conv_out_value, axes=axes)
 
         out_channel_dim, in_channel_dim = 0, 1
         if conv_out_descr.conv_weight_out_channels_dim > conv_out_descr.conv_weight_in_channels_dim:
             out_channel_dim, in_channel_dim = in_channel_dim, out_channel_dim
 
-        updated_conv_out_value = np.transpose(
+        updated_conv_out_value = fns.transpose(
             updated_conv_out_value,
-            (out_channel_dim, in_channel_dim),
+            [out_channel_dim, in_channel_dim],
         )
-        shift = updated_conv_out_value.dot(amean.reshape(updated_conv_out_value.shape[1]))
+        shift = updated_conv_out_value.matmul(amean.reshape(updated_conv_out_value.shape[1]))
 
         updated_add_out_value = bias_out_value + shift.reshape(bias_out_value.shape)
         return updated_add_in_value, updated_add_out_value
 
     @staticmethod
     def _align_scales(
-        conv_in_value: np.ndarray,
-        conv_out_value: np.ndarray,
-        bias_in_value: Optional[np.ndarray],
-        ascale: np.ndarray,
+        conv_in_value: Tensor,
+        conv_out_value: Tensor,
+        bias_in_value: Optional[Tensor],
+        ascale: Tensor,
         conv_in_descr: LayoutDescriptor,
         conv_out_descr: LayoutDescriptor,
         eps: float,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[Tensor, Tensor, Tensor]:
         """
         Function which calculates new conv_in_value, conv_out_value and bias_in_value
         in ChannelAlignment pattern, so output activations of conv_out are the same,
@@ -242,17 +254,19 @@ class ChannelAlignment(Algorithm):
             return conv_in_value, conv_out_value, bias_in_value
 
         positive_scales_mask = ascale > eps
-        scale_factor = ascale / np.median(ascale[positive_scales_mask])
-        scale_factor[~positive_scales_mask] = 1
-        scale_factor = np.clip(scale_factor, 1e-2, 1e2)
+        from nncf.experimental.tensor import functions as fns
 
-        scale_in_shape = np.ones(len(conv_in_shape), dtype=int)
+        scale_factor = ascale / fns.median(ascale[positive_scales_mask])
+        scale_factor[~positive_scales_mask] = 1
+        scale_factor = fns.clip(scale_factor, 1e-2, 1e2)
+
+        scale_in_shape = [1 for _ in conv_in_shape]
         scale_in_shape[conv_in_descr.conv_weight_out_channels_dim] = scale_factor.shape[conv_in_descr.bias_channels_dim]
         updated_conv_in_value = conv_in_value / scale_factor.reshape(scale_in_shape)
 
         updated_bias_in_value = bias_in_value / scale_factor.reshape(bias_in_value.shape)
 
-        scale_out_shape = np.ones(len(conv_out_value.shape), dtype=int)
+        scale_out_shape = [1 for _ in conv_out_value.shape]
         scale_out_shape[conv_out_descr.conv_weight_in_channels_dim] = scale_factor.shape[
             conv_in_descr.bias_channels_dim
         ]
@@ -277,7 +291,8 @@ class ChannelAlignment(Algorithm):
             return False
         return True
 
-    def _check_producer_conv_node(self, conv_node: NNCFNode):
+    @staticmethod
+    def _check_producer_conv_node(conv_node: NNCFNode) -> bool:
         return conv_node.layer_attributes is not None
 
     def _get_target_patterns(self) -> GraphPattern:
@@ -405,13 +420,13 @@ class ChannelAlignment(Algorithm):
         return statistic_container
 
 
-class StatedTensor:
+class StatefulTensor:
     """
     Tensor wrapper with additional method is_modified which is true if
     given tensor was modified at least once after the initialization.
     """
 
-    def __init__(self, value: np.ndarray):
+    def __init__(self, value: Tensor):
         """
         :param value: Tensor to wrap.
         """
@@ -419,11 +434,11 @@ class StatedTensor:
         self._mod_times = 0
 
     @property
-    def val(self):
+    def val(self) -> Tensor:
         return self._value
 
     @val.setter
-    def val(self, value):
+    def val(self, value: Tensor):
         if self._value is None and value is None:
             return
         self._mod_times += 1
@@ -435,6 +450,9 @@ class StatedTensor:
             initialization else False.
         """
         return self._mod_times > 0
+
+
+BackendOpType = TypeVar("BackendOpType")
 
 
 class ConvParamsContainer:
@@ -452,39 +470,40 @@ class ConvParamsContainer:
         :param backend_entity: Current backend entity to retrieve parameters from given conv node
         """
         _, self._weights_port_id = backend_entity.get_weights_port_ids_for_node(conv_op)
-        self.stated_weight = StatedTensor(backend_entity.get_weight_value(conv_op, model, self._weights_port_id))
+        self.stated_weight = StatefulTensor(backend_entity.get_weight_value(conv_op, model, self._weights_port_id))
         self._bias_op_exist = False
+        bias = None
         if backend_entity.is_node_with_bias(conv_op, nncf_graph):
             bias = backend_entity.get_bias_value(conv_op, model, nncf_graph)
             self._bias_op_exist = True
         else:
             bias = backend_entity.create_bias_tensor(conv_op, nncf_graph, 0)
-        self.stated_bias = StatedTensor(bias)
+        self.stated_bias = StatefulTensor(bias)
         self._op = conv_op
         self._dims = backend_entity.get_dims_descriptor(conv_op)
 
     @property
-    def weight(self):
+    def weight(self) -> Tensor:
         return self.stated_weight.val
 
     @weight.setter
-    def weight(self, value):
+    def weight(self, value: Tensor):
         self.stated_weight.val = value
 
     @property
-    def bias(self):
+    def bias(self) -> Tensor:
         return self.stated_bias.val
 
     @bias.setter
-    def bias(self, value):
+    def bias(self, value: Tensor):
         self.stated_bias.val = value
 
     @property
-    def op(self):
+    def op(self) -> BackendOpType:
         return self._op
 
     @property
-    def weight_port_id(self):
+    def weight_port_id(self) -> int:
         return self._weights_port_id
 
     @property

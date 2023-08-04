@@ -10,7 +10,9 @@
 # limitations under the License.
 
 import functools
-from typing import Callable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+
+import numpy as np
 
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
@@ -75,7 +77,7 @@ def flatten(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
+def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = None) -> Tensor:
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -90,7 +92,7 @@ def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims:
 
 @functools.singledispatch
 @_tensor_guard
-def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
+def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = None) -> Tensor:
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -184,14 +186,12 @@ def allclose(
       Defaults to False.
     :return: True if the two arrays are equal within the given tolerance, otherwise False.
     """
-    return Tensor(
-        allclose(
-            a.data,
-            unwrap_tensor_data(b),
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan,
-        )
+    return allclose(
+        a.data,
+        unwrap_tensor_data(b),
+        rtol=rtol,
+        atol=atol,
+        equal_nan=equal_nan,
     )
 
 
@@ -335,14 +335,17 @@ def zeros_like(a: Tensor) -> Tensor:
 @functools.singledispatch
 def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     """
-    Stacks a list of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
+    Stacks a list or deque of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
 
-    :param x: List of Tensors.
+    :param x: List or deque of Tensors.
     :param axis: The axis to stack along.
     :return: Stacked Tensor.
     """
     if isinstance(x, List):
-        return Tensor(_dispatch_list(stack, x, axis=axis))
+        unwrapped_x = [i.data for i in x]
+        # singledispatch cannot dispatch function by element in a list
+        res = stack.dispatch(type(unwrapped_x[0]))(unwrapped_x, axis=axis)
+        return Tensor(res)
     raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
 
 
@@ -362,7 +365,7 @@ def unstack(a: Tensor, axis: int = 0) -> List[Tensor]:
 
 @functools.singledispatch
 @_tensor_guard
-def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> Tensor:
+def moveaxis(a: Tensor, source: Union[int, List[int]], destination: Union[int, List[int]]) -> Tensor:
     """
     Move axes of an array to new positions.
 
@@ -376,7 +379,7 @@ def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[
 
 @functools.singledispatch
 @_tensor_guard
-def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
+def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = None) -> Tensor:
     """
     Compute the arithmetic mean along the specified axis.
 
@@ -390,7 +393,7 @@ def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims
 
 @functools.singledispatch
 @_tensor_guard
-def round(a: Tensor, decimals=0) -> Tensor:
+def round(a: Tensor, decimals=0) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Evenly round to the given number of decimals.
 
@@ -404,54 +407,167 @@ def round(a: Tensor, decimals=0) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
+def binary_operator(a: Tensor, b: Tensor, operator_fn: Callable) -> Tensor:
     """
-    Applies a binary operation with disable warnings.
+    Applies a binary operation to two tensors with disable warnings.
 
     :param a: The first tensor.
     :param b: The second tensor.
     :param operator_fn: The binary operation function.
     :return: The result of the binary operation.
     """
-    return Tensor(_binary_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
+    return Tensor(binary_operator(a.data, unwrap_tensor_data(b), operator_fn))
 
 
 @functools.singledispatch
 @_tensor_guard
-def _binary_reverse_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
+def binary_reverse_operator(a: Tensor, b: Tensor, operator_fn: Callable) -> Tensor:
     """
-    Applies a binary reverse operation with disable warnings.
+    Applies a binary reverse operation to two tensors with disable warnings.
 
     :param a: The first tensor.
     :param b: The second tensor.
     :param operator_fn: The binary operation function.
     :return: The result of the binary operation.
     """
-    return Tensor(_binary_reverse_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
+    return Tensor(binary_reverse_operator(a.data, unwrap_tensor_data(b), operator_fn))
 
 
 @functools.singledispatch
 @_tensor_guard
-def finfo(a: Tensor) -> TypeInfo:
+def to_numpy(a: Tensor) -> np.ndarray:
     """
-    Returns machine limits for tensor type.
+    Applies a binary reverse operation to two tensors with disable warnings.
 
-    :param a: Tensor.
-    :return: TypeInfo.
+    :param a: The first tensor.
+    :param b: The second tensor.
+    :param operator_fn: The binary operation function.
+    :return: The result of the binary operation.
     """
-    return finfo(a.data)
+    return to_numpy(a.data)
 
 
-def _dispatch_list(fn: "functools._SingleDispatchCallable", tensor_list: List[Tensor], *args, **kwargs):
+@functools.singledispatch
+@_tensor_guard
+def inf(a: Tensor) -> Any:
+    return inf(a.data)
+
+
+@functools.singledispatch
+def concatenate(x: List[Tensor], axis: int = 0) -> Tensor:
     """
-    Dispatches the function to the type of the wrapped data of the first element in tensor_list.
+    Stacks a list or deque of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
 
-    :param fn: A function wrapped by `functools.singledispatch`.
-    :param tensor_list: List of Tensors.
-    :return: The result value of the function call.
+    :param x: List or deque of Tensors.
+    :param axis: The axis to stack along.
+    :return: Stacked Tensor.
     """
-    unwrapped_list = [i.data for i in tensor_list]
-    return fn.dispatch(type(unwrapped_list[0]))(unwrapped_list, *args, **kwargs)
+    if isinstance(x, List):
+        unwrapped_x = [i.data for i in x]
+        # singledispatch cannot dispatch function by element in a list
+        res = concatenate.dispatch(type(unwrapped_x[0]))(unwrapped_x, axis=axis)
+        return Tensor(res)
+    raise NotImplementedError(f"Function `concatenate` is not implemented for {type(x)}")
+
+
+@functools.singledispatch
+def min_of_list(x: List[Tensor], axis: int = None) -> Tensor:
+    if isinstance(x, List):
+        unwrapped_x = [i.data for i in x]
+        # singledispatch cannot dispatch function by element in a list
+        res = min_of_list.dispatch(type(unwrapped_x[0]))(unwrapped_x, axis=axis)
+        return Tensor(res)
+    raise NotImplementedError(f"Function `min_of_list` is not implemented for {type(x)}")
+
+
+@functools.singledispatch
+def max_of_list(x: List[Tensor], axis: int = None) -> Tensor:
+    if isinstance(x, List):
+        unwrapped_x = [i.data for i in x]
+        # singledispatch cannot dispatch function by element in a list
+        res = max_of_list.dispatch(type(unwrapped_x[0]))(unwrapped_x, axis=axis)
+        return Tensor(res)
+    raise NotImplementedError(f"Function `max_of_list` is not implemented for {type(x)}")
+
+
+@functools.singledispatch
+def amax(a: Tensor, axis: Optional[List[int]] = None, keepdims: Optional[bool] = None) -> Tensor:
+    return Tensor(amax(a.data, axis, keepdims))
+
+
+@functools.singledispatch
+def amin(a: Tensor, axis: Optional[List[int]] = None, keepdims: Optional[bool] = None) -> Tensor:
+    return Tensor(amin(a.data, axis, keepdims))
+
+
+@functools.singledispatch
+def clip(a: Tensor, min_val: float, max_val: Optional[float] = None) -> Tensor:
+    return Tensor(clip(a.data, min_val, max_val))
+
+
+@functools.singledispatch
+def sum(a: Tensor, axes: List[int]) -> Tensor:
+    return Tensor(sum(a.data, axes))
+
+
+@functools.singledispatch
+def transpose(a: Tensor, axes: List[int]) -> Tensor:
+    return Tensor(transpose(a.data, axes))
+
+
+@functools.singledispatch
+def eps(a: Tensor, dtype: TensorDataType) -> float:
+    return eps(a.data, dtype)
+
+
+@functools.singledispatch
+def median(a: Tensor, axis: int = None, keepdims: Optional[bool] = None) -> Tensor:
+    return Tensor(median(a.data, axis, keepdims))
+
+
+@functools.singledispatch
+def power(a: Tensor, pwr: float) -> Tensor:
+    return Tensor(power(a.data, pwr))
+
+
+@functools.singledispatch
+def quantile(
+    a: Tensor,
+    q: Union[float, List[float]],
+    axis: Union[int, List[int]] = None,
+    keepdims: Optional[bool] = None,
+) -> Union[float, Tensor]:
+    retval = quantile(a.data, q, axis, keepdims)
+
+    if isinstance(retval, float):
+        return retval
+    return Tensor(retval)
+
+
+@functools.singledispatch
+def logical_or(tensor1: Tensor, tensor2: Tensor) -> Tensor:
+    return Tensor(logical_or(tensor1.data, tensor2.data))
+
+
+@functools.singledispatch
+def masked_mean(a: Tensor, mask: Tensor, axis: int = None, keepdims: Optional[bool] = None) -> Tensor:
+    return Tensor(masked_mean(a.data, mask.data, axis, keepdims))
+
+
+@functools.singledispatch
+def masked_median(a: Tensor, mask: Tensor, axis: int = None, keepdims: Optional[bool] = None) -> Tensor:
+    return Tensor(masked_median(a.data, mask.data, axis, keepdims))
+
+
+@functools.singledispatch
+def size(a: Tensor) -> int:
+    return size(a.data)
+
+
+@functools.singledispatch
+@_tensor_guard
+def matmul(a: Tensor, b: Tensor) -> Tensor:
+    return Tensor(matmul(a.data, b.data))
 
 
 def _initialize_backends():
@@ -459,6 +575,11 @@ def _initialize_backends():
 
     try:
         import nncf.experimental.tensor.torch_functions  # noqa: F401
+    except ImportError:
+        pass
+
+    try:
+        import nncf.experimental.tensor.tf_functions  # noqa: F401
     except ImportError:
         pass
 

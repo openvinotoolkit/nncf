@@ -27,6 +27,7 @@ from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
@@ -198,22 +199,24 @@ class TemplateTestChannelAlignment:
     )
     @pytest.mark.parametrize("transposed", [False, True])
     def test_align_means(self, conv_out_value, refs, transposed):
-        amean = np.array([10, 20, 30])
+        amean = Tensor(np.array([10, 20, 30]))
         dims_descriptor = LayoutDescriptor(0, 1, 1)
         if transposed:
             if conv_out_value.ndim == 2:
-                conv_out_value = np.transpose(conv_out_value, (1, 0))
+                conv_out_value = Tensor(np.transpose(conv_out_value, (1, 0)))
                 dims_descriptor = LayoutDescriptor(1, 0, 1)
             else:
-                conv_out_value = np.transpose(conv_out_value, (3, 1, 2, 0))
+                conv_out_value = Tensor(np.transpose(conv_out_value, (3, 1, 2, 0)))
                 dims_descriptor = LayoutDescriptor(3, 1, 1)
-        bias_in_value = np.array([2, 4, 6])
-        bias_out_value = np.array([3, 5, 9, 11])
+        else:
+            conv_out_value = Tensor(conv_out_value)
+        bias_in_value = Tensor(np.array([2, 4, 6]))
+        bias_out_value = Tensor(np.array([3, 5, 9, 11]))
         updated_add_in_vals, updated_add_out_vals = ChannelAlignment._align_means(
             bias_in_value, bias_out_value, conv_out_value, amean, dims_descriptor
         )
-        assert np.allclose(updated_add_in_vals, np.array(refs[0]))
-        assert np.allclose(updated_add_out_vals, np.array(refs[1]))
+        assert np.allclose(updated_add_in_vals.to_numpy(), np.array(refs[0]))
+        assert np.allclose(updated_add_out_vals.to_numpy(), np.array(refs[1]))
 
     REF_UPDATED_CONV_IN = np.array([[0], [1], [200], [0.03], [4]])
     REF_UPDATED_CONV_OUT = np.array([[0.0, 2.0, 0.04, 600, 8], [10, 12, 0.14, 1600, 18]])
@@ -221,17 +224,19 @@ class TemplateTestChannelAlignment:
 
     @pytest.mark.parametrize("bias_in_value", [np.array([2, 4, 6, 8, 10])])
     def test_align_scales(self, bias_in_value):
-        def check_updated_values(updated_conv_in, updated_conv_out, updated_bias_in):
+        def check_updated_values(updated_conv_in: Tensor, updated_conv_out: Tensor, updated_bias_in: Tensor):
             assert updated_conv_in.shape == self.REF_UPDATED_CONV_IN.shape
-            assert np.allclose(updated_conv_in, self.REF_UPDATED_CONV_IN)
+            assert np.allclose(updated_conv_in.to_numpy(), self.REF_UPDATED_CONV_IN)
             assert updated_conv_out.shape == self.REF_UPDATED_CONV_OUT.shape
-            assert np.allclose(updated_conv_out, self.REF_UPDATED_CONV_OUT)
+            assert np.allclose(updated_conv_out.to_numpy(), self.REF_UPDATED_CONV_OUT)
             assert updated_bias_in.shape == self.REF_UPDATED_BIAS_IN.shape
-            assert np.allclose(updated_bias_in, self.REF_UPDATED_BIAS_IN)
+            assert np.allclose(updated_bias_in.to_numpy(), self.REF_UPDATED_BIAS_IN)
 
-        conv_in_value = np.arange(5).reshape(5, 1)
-        conv_out_value = np.arange(10).reshape(2, 5) * 2
-        ascale = np.array([-5.0, 0.0, 1e-3, 1e3, 2])
+        if bias_in_value is not None:
+            bias_in_value = Tensor(bias_in_value)
+        conv_in_value = Tensor(np.arange(5).reshape(5, 1))
+        conv_out_value = Tensor(np.arange(10).reshape(2, 5) * 2)
+        ascale = Tensor(np.array([-5.0, 0.0, 1e-3, 1e3, 2]))
         eps = 1e-10
         # Check nothing will happen if dims are wrong
         dims_descriptor = LayoutDescriptor(1, 0, 0)
@@ -249,7 +254,7 @@ class TemplateTestChannelAlignment:
         check_updated_values(updated_conv_in, updated_conv_out, updated_bias_in)
 
         # Check group conv producer case
-        conv_in_value = conv_in_value.reshape(1, 5, 1)
+        conv_in_value = conv_in_value.reshape((1, 5, 1))
         dims_descriptor_in = LayoutDescriptor(1, 2, 0)
         dims_descriptor_out = LayoutDescriptor(0, 1, 0)
         updated_conv_in, updated_conv_out, updated_bias_in = ChannelAlignment._align_scales(
@@ -372,7 +377,7 @@ class TemplateTestChannelAlignment:
         if empty_statistics:
             stat_value = None, None
         else:
-            stat_value = (np.array([-1], dtype=np.int32), np.array([2], dtype=np.int32))
+            stat_value = (Tensor(np.array([-1], dtype=np.int32)), Tensor(np.array([2], dtype=np.int32)))
 
         tensor_collector.get_statistics = self._get_constant_lambda(TestTensorStats(*stat_value))
         statistic_points.add_statistic_point(StatisticPoint(target_point, tensor_collector, algorithm._algorithm_key))
@@ -434,7 +439,10 @@ class TemplateTestChannelAlignment:
         for i in range(num_biases):
             args[i] = f"ref_bias_val{i + 1}"
 
-        algorithm._align_means.assert_called_once_with(*args)
+        algorithm._align_means.assert_called_once()
+        last_args = algorithm._align_means.call_args
+        test_call_args = list(i.to_numpy() if isinstance(i, Tensor) else i for i in last_args[0])
+        assert test_call_args == args
 
         assert algorithm._align_scales.call_count == 1
         args = algorithm._align_scales.call_args.args

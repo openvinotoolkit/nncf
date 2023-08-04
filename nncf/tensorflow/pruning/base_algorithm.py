@@ -35,6 +35,7 @@ from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
 from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
 from nncf.config.schemata.defaults import PRUNE_FIRST_CONV
 from nncf.config.schemata.defaults import PRUNING_INIT
+from nncf.experimental.tensor import Tensor
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
@@ -52,7 +53,6 @@ from nncf.tensorflow.pruning.utils import get_filter_axis
 from nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.tensorflow.sparsity.utils import strip_model_from_masks
-from nncf.tensorflow.tensor import TFNNCFTensor
 
 
 class PrunedLayerInfo(PrunedLayerInfoBase):
@@ -136,7 +136,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 # Add output_mask to elements to run mask_propagation
                 # and detect spec_nodes that will be pruned.
                 # It should be done for all elements of shared layer.
-                node.attributes["output_mask"] = TFNNCFTensor(tf.ones(get_output_channels(node)))
+                node.attributes["output_mask"] = Tensor(tf.ones(get_output_channels(node)))
                 if layer_name in shared_layers:
                     continue
                 if node.is_shared():

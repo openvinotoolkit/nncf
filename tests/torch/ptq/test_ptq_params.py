@@ -15,11 +15,9 @@ from torch import nn
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
@@ -94,17 +92,11 @@ class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
         return PTMinMaxAlgoBackend()
 
-    def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
-        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
-        assert len(aggrs) == 2
-        assert MinAggregator in aggrs
-        assert MaxAggregator in aggrs
+    def check_is_min_max_statistic_collector(self, tensor_collector):
+        assert isinstance(tensor_collector, MinMaxStatisticCollector)
 
-    def check_is_mean_min_max_statistic_collector(self, tensor_collector: TensorCollector):
-        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
-        assert len(aggrs) == 2
-        assert MeanAggregator in aggrs
-        assert aggrs[0].__class__ == aggrs[1].__class__
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
+        assert isinstance(tensor_collector, MeanMinMaxStatisticCollector)
 
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:

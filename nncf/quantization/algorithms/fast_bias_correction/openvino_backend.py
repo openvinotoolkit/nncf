@@ -47,7 +47,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        channel_axis: int,
+        channel_axis: Optional[int],
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
@@ -60,12 +60,13 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_input_data(
-        shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int
+        shape: Tuple[int], data: np.ndarray, input_name: str, channel_axis: int
     ) -> Dict[str, np.ndarray]:
-        blob = np.zeros(shape, dtype=data[0].data.dtype)
-        for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
-            index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
-            blob[index] = data[j].data
+        blob = np.zeros(shape)
+        for j in range(shape[channel_axis]):
+            index = tuple(slice(None) if i != channel_axis else j for i in range(blob.ndim))
+            blob[index] = data[index]
+        blob = blob.astype(data.dtype)
         input_data = {input_name: blob}
         return input_data
 
@@ -88,12 +89,12 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return weight_node.metatype in FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
-        return Tensor(raw_data[output_name])
-
-    @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node, nncf_graph)
+
+    @staticmethod
+    def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
+        return np.array(data)
 
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:

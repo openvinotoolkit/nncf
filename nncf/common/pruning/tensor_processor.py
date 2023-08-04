@@ -12,8 +12,7 @@
 from abc import abstractmethod
 from typing import List, Union
 
-from nncf.common.tensor import DeviceType
-from nncf.common.tensor import NNCFTensor
+from nncf.experimental.tensor import Tensor
 
 
 class NNCFPruningBaseTensorProcessor:
@@ -23,7 +22,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
+    def concatenate(cls, tensors: List[Tensor], axis: int) -> Tensor:
         """
         Join a list of NNCFTensors along an existing axis.
 
@@ -34,7 +33,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def ones(cls, shape: Union[int, List[int]], device: DeviceType) -> NNCFTensor:
+    def ones(cls, shape: Union[int, List[int]], device) -> Tensor:
         """
         Return a new float tensor of given shape, filled with ones.
 
@@ -45,7 +44,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: List[Tensor]) -> None:
         """
         Raises an AssertionError if any two tensors are not equal.
 
@@ -54,7 +53,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+    def repeat(cls, tensor: Tensor, repeats: int) -> Tensor:
         """
         Successively repeat each element of given NNCFTesnor.
 
@@ -65,7 +64,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+    def elementwise_mask_propagation(cls, input_masks: List[Tensor]) -> Tensor:
         """
         Assemble output mask for elementwise pruning operation from given input masks.
         Raises an AssertionError if input masks are not pairwise equal.
@@ -76,7 +75,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
+    def split(cls, tensor: Tensor, output_shapes: List[int]) -> List[Tensor]:
         """
         Split/chunk NNCFTensor into chunks along an exsiting dimension.
 

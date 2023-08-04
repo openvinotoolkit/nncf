@@ -23,8 +23,15 @@ from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.scopes import should_consider_scope
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.config.schemata.defaults import MAX_PERCENTILE
 from nncf.config.schemata.defaults import MIN_PERCENTILE
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
@@ -32,15 +39,9 @@ from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization.layers import FakeQuantize
-from nncf.tensorflow.tensor_statistics.collectors import TFMeanMinMaxStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMeanPercentileStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMedianMADStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMinMaxStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMixedMinMaxStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFPercentileStatisticCollector
-from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_activations
-from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_weights
-from nncf.tensorflow.tensor_statistics.statistics import tf_convert_stat_to_min_max_tensor_stat
+from nncf.tensorflow.tensor_statistics.algo import get_collection_hook
+from nncf.tensorflow.tensor_statistics.reduction import get_reduction_axes_activations
+from nncf.tensorflow.tensor_statistics.reduction import get_reduction_axes_weights
 
 
 class TFRangeInitParams(RangeInitParams):
@@ -99,7 +100,7 @@ class RangeInitializer:
 
     @staticmethod
     def generate_stat_collector(
-        reduction_shape: ReductionAxes,
+        reduction_axes: ReductionAxes,
         collector_params: RangeInitCollectorParams,
         init_config: RangeInitConfig,
         num_samples_to_collect_override: int = None,
@@ -110,33 +111,33 @@ class RangeInitializer:
             num_samples = num_samples_to_collect_override
 
         if range_type == "min_max":
-            return TFMinMaxStatisticCollector(collector_params.use_abs_max, reduction_shape, num_samples)
+            return MinMaxStatisticCollector(collector_params.use_abs_max, reduction_axes, num_samples)
         if range_type == "mixed_min_max":
-            return TFMixedMinMaxStatisticCollector(
+            return MixedMinMaxStatisticCollector(
                 collector_params.use_per_sample_stats(per_sample_stats=True),
                 collector_params.use_abs_max,
                 collector_params.use_means_of_mins,
                 collector_params.use_means_of_maxs,
-                reduction_shape,
+                reduction_axes,
                 num_samples,
             )
         if range_type == "mean_min_max":
-            return TFMeanMinMaxStatisticCollector(
+            return MeanMinMaxStatisticCollector(
                 collector_params.use_per_sample_stats(per_sample_stats=True),
                 collector_params.use_abs_max,
-                reduction_shape,
+                reduction_axes,
                 num_samples,
             )
         if range_type == "threesigma":
-            return TFMedianMADStatisticCollector(reduction_shape, num_samples)
+            return MedianMADStatisticCollector(reduction_axes, num_samples)
         if range_type == "percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", MIN_PERCENTILE)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", MAX_PERCENTILE)
-            return TFPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return PercentileStatisticCollector([min_percentile, max_percentile], reduction_axes, num_samples)
         if range_type == "mean_percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", MIN_PERCENTILE)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", MAX_PERCENTILE)
-            return TFMeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_axes, num_samples)
         raise ValueError(f"Range type {range_type} is not supported.")
 
     def _register_layer_statistics(self, layer: tf.keras.layers.Layer, layer_statistics: list, handles: list):
@@ -147,16 +148,17 @@ class RangeInitializer:
         collector_params = RangeInitCollectorParams(is_weights, layer.mode, layer.per_channel)
         per_sample_stats = init_config.init_type in ["mixed_min_max", "mean_min_max"]
 
-        reduction_shape = get_reduction_shape_activations(
+        reduction_axes = get_reduction_axes_activations(
             layer, channel_axes, collector_params.use_per_sample_stats(per_sample_stats)
         )
 
         num_batches = int(np.ceil(init_config.num_init_samples / self.dataset.batch_size))
 
-        collector = RangeInitializer.generate_stat_collector(
-            reduction_shape, collector_params, init_config, num_batches
-        )
-        handles.append(layer.register_hook_pre_quantizer(collector.register_input))
+        collector = RangeInitializer.generate_stat_collector(reduction_axes, collector_params, init_config, num_batches)
+
+        hook = get_collection_hook(collector)
+
+        handles.append(layer.register_hook_pre_quantizer(hook))
         layer.enabled = False
         layer_statistics.append((layer, collector))
 
@@ -172,15 +174,18 @@ class RangeInitializer:
                     is_weights = True
                     collector_params = RangeInitCollectorParams(is_weights, op.mode, op.per_channel)
 
-                    reduction_shape = get_reduction_shape_weights(layer, weight_attr, channel_axes, op.per_channel)
+                    reduction_axes = get_reduction_axes_weights(layer, weight_attr, channel_axes, op.per_channel)
 
                     # No need to store extra statistics in memory since weights won't change during range init
                     num_batches = 1
 
                     collector = RangeInitializer.generate_stat_collector(
-                        reduction_shape, collector_params, init_config, num_batches
+                        reduction_axes, collector_params, init_config, num_batches
                     )
-                    handles.append(op.register_hook_pre_call(collector.register_input))
+
+                    hook = get_collection_hook(collector)
+
+                    handles.append(op.register_hook_pre_call(hook))
                     op.enabled = False
                     op_statistics.append((layer, op_name, op, collector))
 
@@ -201,20 +206,22 @@ class RangeInitializer:
 
         for layer, collector in layer_statistics:
             target_stat = collector.get_statistics()
-            minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
-            layer.apply_range_initialization(tf.squeeze(minmax_stats.min_values), tf.squeeze(minmax_stats.max_values))
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
+            layer.apply_range_initialization(
+                tf.squeeze(minmax_stats.min_values.data), tf.squeeze(minmax_stats.max_values.data)
+            )
             layer.enabled = True
 
         for layer, op_name, op, collector in op_statistics:
             weights = layer.get_operation_weights(op_name)
             target_stat = collector.get_statistics()
-            minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
             min_values = minmax_stats.min_values
             if len(min_values.shape) != 1:
-                min_values = tf.squeeze(min_values)
+                min_values = tf.squeeze(min_values.data)
             max_values = minmax_stats.max_values
             if len(max_values.shape) != 1:
-                max_values = tf.squeeze(max_values)
+                max_values = tf.squeeze(max_values.data)
             op.apply_range_initialization(weights, min_values, max_values)
             op.enabled = True
 

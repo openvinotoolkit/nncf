@@ -236,8 +236,8 @@ def calculate_quantizer_parameters(
         False - the full range is used.
     :return: Parameters of the FakeQuantize layer.
     """
-    min_values = Tensor(statistics.min_values).astype(TensorDataType.float32)
-    max_values = Tensor(statistics.max_values).astype(TensorDataType.float32)
+    min_values = statistics.min_values
+    max_values = statistics.max_values
 
     if half_range:
         input_low, input_high, levels = _calculate_scaled_parameters(
