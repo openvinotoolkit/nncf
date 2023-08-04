@@ -200,18 +200,6 @@ def create_softmax_div() -> GraphPattern:
     return pattern
 
 
-@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.EQUAL_LOGICALNOT)
-def create_equal_logicalnot() -> GraphPattern:
-    pattern = GraphPattern()
-    equal_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EQUAL", GraphPattern.METATYPE_ATTR: om.OVEqualMetatype})
-    logical_not_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "LOGICAL_NOT", GraphPattern.METATYPE_ATTR: om.OVLogicalNotMetatype}
-    )
-
-    pattern.add_edge(equal_node, logical_not_node)
-    return pattern
-
-
 # ACTIVATIONS
 
 

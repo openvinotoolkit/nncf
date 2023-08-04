@@ -96,3 +96,15 @@ def create_fc_bn_hswish() -> GraphPattern:
     pattern.add_edge(multiply_node, add_node)
     pattern.add_edge(add_node, squeeze_node)
     return pattern
+
+
+@OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.EQUAL_LOGICALNOT)
+def create_equal_logicalnot() -> GraphPattern:
+    pattern = GraphPattern()
+    equal_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EQUAL", GraphPattern.METATYPE_ATTR: om.OVEqualMetatype})
+    logical_not_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "LOGICAL_NOT", GraphPattern.METATYPE_ATTR: om.OVLogicalNotMetatype}
+    )
+
+    pattern.add_edge(equal_node, logical_not_node)
+    return pattern
