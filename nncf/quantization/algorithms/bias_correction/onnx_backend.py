@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from typing import Dict, List, Optional, Tuple
+from typing import Type
 
 import numpy as np
 import onnx
@@ -17,6 +18,7 @@ import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor import NNCFTensorBackend
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
@@ -34,6 +36,7 @@ from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.statistics.collectors import ONNXRawStatisticCollector
 from nncf.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.tensor import ONNXNNCFTensorBackend
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
@@ -41,6 +44,10 @@ from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionA
 # pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
+    @property
+    def tensor_backend(self) -> Type[NNCFTensorBackend]:
+        return ONNXNNCFTensorBackend
+
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
