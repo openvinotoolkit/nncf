@@ -91,16 +91,29 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @pytest.fixture(scope="session")
     def test_params(self):
+        linear_model = LinearModel().ov_model
+        linear_model_graph = GraphConverter.create_nncf_graph(linear_model)
+        depthwise_model = DepthwiseConv4DModel().ov_model
+        depthwise_model_graph = GraphConverter.create_nncf_graph(depthwise_model)
+
         return {
-            "test_range_estimator_per_tensor": {"model": LinearModel().ov_model, "stat_points_num": 2},
-            "test_range_estimator_per_channel": {"model": DepthwiseConv4DModel().ov_model, "stat_points_num": 2},
+            "test_range_estimator_per_tensor": {
+                "model": linear_model,
+                "nncf_graph": linear_model_graph,
+                "stat_points_num": 2,
+            },
+            "test_range_estimator_per_channel": {
+                "model": depthwise_model,
+                "nncf_graph": depthwise_model_graph,
+                "stat_points_num": 2,
+            },
             "test_quantize_outputs": {
-                "nncf_graph": GraphConverter.create_nncf_graph(LinearModel().ov_model),
+                "nncf_graph": linear_model_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_ignored_scopes": {
-                "nncf_graph": GraphConverter.create_nncf_graph(LinearModel().ov_model),
+                "nncf_graph": linear_model_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
@@ -110,7 +123,7 @@ class TestPTQParams(TemplateTestPTQParams):
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_validate_scope": {
-                "nncf_graph": GraphConverter.create_nncf_graph(LinearModel().ov_model),
+                "nncf_graph": linear_model_graph,
                 "ignored_patterns": get_ignored_patterns(),
             },
         }

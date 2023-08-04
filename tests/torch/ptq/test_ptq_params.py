@@ -130,10 +130,18 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @pytest.fixture(scope="session")
     def test_params(self):
+        linear_model = LinearTestModel().get_nncf_network()
+        depthwise_model = OneDepthwiseConvModel().get_nncf_network()
+
         return {
-            "test_range_estimator_per_tensor": {"model": LinearTestModel().get_nncf_network(), "stat_points_num": 5},
+            "test_range_estimator_per_tensor": {
+                "model": linear_model,
+                "nncf_graph": linear_model.nncf.get_graph(),
+                "stat_points_num": 5,
+            },
             "test_range_estimator_per_channel": {
-                "model": OneDepthwiseConvModel().get_nncf_network(),
+                "model": depthwise_model,
+                "nncf_graph": depthwise_model.nncf.get_graph(),
                 "stat_points_num": 2,
             },
             "test_quantize_outputs": {

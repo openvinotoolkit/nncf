@@ -13,7 +13,7 @@ from collections import deque
 import onnx
 
 from nncf.common.factory import ModelTransformerFactory
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
@@ -22,17 +22,16 @@ from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
 
-def remove_fq_from_inputs(model: onnx.ModelProto) -> onnx.ModelProto:
+def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx.ModelProto:
     """
     This method removes the activation Quantizer nodes from the model.
     It's needed for the further bias shift calculation that relates on quantized weights.
 
     :param model: onnx.ModelProto instance.
+    :param nncf_graph: NNCFGraph instance.
     :return: onnx.ModelProto instance without activation Quantizer nodes.
     """
     transformation_layout = TransformationLayout()
-    nncf_graph = NNCFGraphFactory.create(model)
-
     model_transformer = ModelTransformerFactory.create(model)
 
     seen_nodes = []

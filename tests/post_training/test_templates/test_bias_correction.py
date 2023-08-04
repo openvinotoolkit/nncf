@@ -134,7 +134,8 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm(disable_bias_correction=True)
-        quantized_model = quantization_algorithm.apply(model, dataset=dataset)
+        graph = NNCFGraphFactory.create(model)
+        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
         modified_model = self.remove_fq_from_inputs(quantized_model)
         return modified_model
 
@@ -160,7 +161,8 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
-        quantized_model = quantization_algorithm.apply(model, dataset=dataset)
+        graph = NNCFGraphFactory.create(model)
+        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
         mapped_ref_biases = self.map_references(ref_biases)
         self.check_bias(quantized_model, mapped_ref_biases)

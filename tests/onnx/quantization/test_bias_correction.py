@@ -18,6 +18,7 @@ import torch
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
 from tests.onnx.quantization.common import compare_nncf_graph
@@ -62,7 +63,8 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def remove_fq_from_inputs(model: onnx.ModelProto) -> onnx.ModelProto:
-        return remove_fq_from_inputs(model)
+        graph = GraphConverter.create_nncf_graph(model)
+        return remove_fq_from_inputs(model, graph)
 
     @staticmethod
     def get_ref_path(suffix: str) -> str:

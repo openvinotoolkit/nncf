@@ -59,7 +59,7 @@ def min_max_quantize_model(
 
     original_model.eval()
     nncf_network = create_nncf_network(original_model, config)
-    quantized_model = post_training_quantization.apply(nncf_network, dataset=dataset)
+    quantized_model = post_training_quantization.apply(nncf_network, nncf_network.nncf.get_graph(), dataset=dataset)
     return quantized_model
 
 

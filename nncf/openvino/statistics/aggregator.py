@@ -15,6 +15,7 @@ from typing import Dict
 import numpy as np
 import openvino.runtime as ov
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
@@ -22,16 +23,15 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.tensor import OVNNCFTensor
 
 
 class OVStatisticsAggregator(StatisticsAggregator):
-    def collect_statistics(self, model: ov.Model) -> None:
+    def collect_statistics(self, model: ov.Model, graph: NNCFGraph) -> None:
         self._name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
-        super().collect_statistics(model)
+        super().collect_statistics(model, graph)
 
     def _register_statistics(
         self, outputs: Dict[str, OVNNCFTensor], statistic_points: StatisticPointsContainer
@@ -75,17 +75,16 @@ class OVStatisticsAggregator(StatisticsAggregator):
     @staticmethod
     # TODO(dlyakhov) Move this to common part
     def _get_merged_statistic_points(
-        statistic_points: StatisticPointsContainer, model: ov.Model
+        statistic_points: StatisticPointsContainer, model: ov.Model, graph: NNCFGraph
     ) -> StatisticPointsContainer:
-        nncf_graph = GraphConverter.create_nncf_graph(model)
         merged_statistic_points = StatisticPointsContainer()
         target_type_to_tensor_collector_map = defaultdict(lambda: defaultdict(list))
         for target_node_name, _statistic_points in statistic_points.data.items():
             for statistic_point in _statistic_points:
                 target_point = statistic_point.target_point
                 if target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
-                    node = nncf_graph.get_node_by_name(target_node_name)
-                    target_input_edge = nncf_graph.get_input_edges(node)[target_point.port_id]
+                    node = graph.get_node_by_name(target_node_name)
+                    target_input_edge = graph.get_input_edges(node)[target_point.port_id]
 
                     target_type = TargetType.POST_LAYER_OPERATION
                     _target_node_name = target_input_edge.from_node.node_name
