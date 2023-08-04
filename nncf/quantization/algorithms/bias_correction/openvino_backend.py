@@ -9,8 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional
-from typing import Type
+from typing import Dict, List, Optional, Type
 
 import numpy as np
 import openvino.runtime as ov

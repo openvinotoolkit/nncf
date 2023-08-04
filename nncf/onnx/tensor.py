@@ -8,10 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List
-from typing import Tuple
-from typing import Type
-from typing import Union
+from typing import List, Tuple, Type, Union
 
 import numpy as np
 
@@ -25,7 +22,7 @@ class ONNXNNCFTensor(NNCFTensor[np.ndarray]):
     """
 
     @property
-    def backend(self) -> Type['NNCFTensorBackend']:
+    def backend(self) -> Type["NNCFTensorBackend"]:
         return ONNXNNCFTensorBackend
 
     @property
@@ -35,10 +32,10 @@ class ONNXNNCFTensor(NNCFTensor[np.ndarray]):
     def is_empty(self) -> bool:
         return self._tensor.size == 0
 
-    def mean(self, axis: int) -> 'ONNXNNCFTensor':
+    def mean(self, axis: int) -> "ONNXNNCFTensor":
         return ONNXNNCFTensor(self._tensor.mean(axis))
 
-    def reshape(self, *shape: int) -> 'ONNXNNCFTensor':
+    def reshape(self, *shape: int) -> "ONNXNNCFTensor":
         return ONNXNNCFTensor(self._tensor.reshape(*shape))
 
     def to_numpy(self) -> np.ndarray:
@@ -61,4 +58,3 @@ class ONNXNNCFTensorBackend(NNCFTensorBackend):
     @staticmethod
     def mean_of_list(tensor_list: List[ONNXNNCFTensor], axis: int) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.mean([x.tensor for x in tensor_list], axis=axis))
-

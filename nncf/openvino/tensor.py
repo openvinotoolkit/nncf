@@ -8,9 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List
-from typing import Tuple
-from typing import Type
+from typing import List, Tuple, Type
 
 import numpy as np
 
@@ -35,7 +33,7 @@ class OVNNCFTensor(NNCFTensor[np.ndarray]):
     def backend(self) -> Type:
         return OVNNCFTensorBackend
 
-    def mean(self, axis: int) -> 'OVNNCFTensor':
+    def mean(self, axis: int) -> "OVNNCFTensor":
         return OVNNCFTensor(np.mean(self.tensor, axis))
 
     @property
@@ -45,7 +43,7 @@ class OVNNCFTensor(NNCFTensor[np.ndarray]):
     def is_empty(self) -> bool:
         return self.tensor.size == 0
 
-    def reshape(self, *shape: Tuple[int, ...]) -> 'OVNNCFTensor':
+    def reshape(self, *shape: Tuple[int, ...]) -> "OVNNCFTensor":
         return OVNNCFTensor(self.tensor.reshape(*shape))
 
 
@@ -55,9 +53,9 @@ class OVNNCFTensorBackend(NNCFTensorBackend):
         return OVNNCFTensor(np.mean([x.tensor for x in tensor_list], axis=axis))
 
     @staticmethod
-    def mean(x: 'OVNNCFTensor', axis: int) -> OVNNCFTensor:
+    def mean(x: "OVNNCFTensor", axis: int) -> OVNNCFTensor:
         return OVNNCFTensor(np.mean(x.tensor, axis))
 
     @staticmethod
-    def moveaxis(x: 'OVNNCFTensor', src: int, dst: int) -> OVNNCFTensor:
+    def moveaxis(x: "OVNNCFTensor", src: int, dst: int) -> OVNNCFTensor:
         return OVNNCFTensor(np.moveaxis(x.tensor, src, dst))

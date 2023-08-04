@@ -10,11 +10,7 @@
 # limitations under the License.
 import abc
 from abc import abstractmethod
-from typing import Generic
-from typing import List, Optional, TypeVar
-from typing import Tuple
-from typing import Type
-from typing import Union
+from typing import Generic, List, Tuple, Type, TypeVar, Union
 
 import numpy as np
 
@@ -30,7 +26,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
 
     @property
     @abstractmethod
-    def backend(self) -> Type['NNCFTensorBackend']:
+    def backend(self) -> Type["NNCFTensorBackend"]:
         pass
 
     def __init__(self, tensor: TensorType):
@@ -59,11 +55,11 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         pass
 
     @abstractmethod
-    def mean(self, axis: int) -> 'NNCFTensor':
+    def mean(self, axis: int) -> "NNCFTensor":
         pass
 
     @abstractmethod
-    def reshape(self, *shape: int) -> 'NNCFTensor':
+    def reshape(self, *shape: int) -> "NNCFTensor":
         pass
 
     @abstractmethod
