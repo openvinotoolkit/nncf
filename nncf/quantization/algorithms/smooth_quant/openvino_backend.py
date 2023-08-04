@@ -64,8 +64,11 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @staticmethod
     def calculate_input_reduction_shape(nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-        channel_axis = OVSmoothQuantAlgoBackend._get_activation_channel_axis(node, input_port)
-        return get_channel_agnostic_reduction_shape([channel_axis], shape)
+        reduction_shape = tuple([0])
+        if len(shape) > 1:
+            channel_axis = OVSmoothQuantAlgoBackend._get_activation_channel_axis(node, input_port)
+            reduction_shape = get_channel_agnostic_reduction_shape([channel_axis], shape)
+        return reduction_shape
 
     @staticmethod
     def get_abs_max_channel_collector(
@@ -118,6 +121,8 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def calculate_activation_scale(scale_value: np.ndarray, nodes: List[NNCFNode], nncf_graph: NNCFGraph) -> np.ndarray:
+        activation_scale = scale_value ** (-1)
+
         activation_shapes = [n.layer_attributes.input_attributes["shape"] for n in nodes]
         activation_shape = activation_shapes[0]
         if not all(shape == activation_shape for shape in activation_shapes):
@@ -135,10 +140,12 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         if not all(axis == channel_axis for axis in channel_axes):
             raise RuntimeError(f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical")
 
-        reshape_shape = np.ones(len(activation_shape), dtype=np.int)
-        reshape_shape[channel_axis] = activation_shape[channel_axis]
+        if len(activation_shape) > 1:
+            reshape_shape = np.ones(len(activation_shape), dtype=np.int64)
+            reshape_shape[channel_axis] = activation_shape[channel_axis]
+            activation_scale = np.reshape(activation_scale, reshape_shape)
 
-        return np.reshape(scale_value, reshape_shape)
+        return activation_scale
 
     @staticmethod
     def calculate_weight_scale(scale_value: np.ndarray, node: NNCFNode) -> np.ndarray:
