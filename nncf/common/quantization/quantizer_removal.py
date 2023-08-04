@@ -110,7 +110,7 @@ def revert_operations_to_floating_point_precision(
         transformation_layout.register(command_creator.create_command_to_remove_quantizer(node))
 
     for node in operations:
-        original_bias = node.data.get("original_bias", None)
+        original_bias = node.attributes.get("original_bias", None)
         if original_bias is not None:
             transformation_layout.register(
                 command_creator.create_command_to_update_bias(node, original_bias, quantized_model_graph)
@@ -119,7 +119,7 @@ def revert_operations_to_floating_point_precision(
         if node.layer_attributes and node.layer_attributes.constant_attributes is not None:
             weight_port_ids = node.layer_attributes.get_const_port_ids()
             for port_id in weight_port_ids:
-                original_weight = node.data.get(f"original_weight.{port_id}", None)
+                original_weight = node.attributes.get(f"original_weight.{port_id}", None)
                 if original_weight is not None:
                     transformation_layout.register(
                         command_creator.create_command_to_update_weight(node, original_weight, port_id)

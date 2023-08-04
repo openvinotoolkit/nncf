@@ -23,7 +23,7 @@ from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
-from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -218,9 +218,7 @@ class PostprocessingNodeLocator:
     ):
         self._quant_prop_graph = quant_prop_graph
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
-        self._quantizable_layer_node_keys = [
-            q_nodes.node.data[NNCFGraph.KEY_NODE_ATTR] for q_nodes in quantizable_layer_nodes
-        ]
+        self._quantizable_layer_node_keys = [q_nodes.node.node_key for q_nodes in quantizable_layer_nodes]
         self._post_processing_marker_encountered = False
 
     def _is_node_has_underlying_weights(self, node_key: str) -> bool:
@@ -228,7 +226,7 @@ class PostprocessingNodeLocator:
             return False
         underlying_nncf_nodes = self._quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[node_key]
         for node in underlying_nncf_nodes:
-            if node.data[NNCFGraph.KEY_NODE_ATTR] in self._quantizable_layer_node_keys:
+            if node.node_key in self._quantizable_layer_node_keys:
                 return True
         return False
 

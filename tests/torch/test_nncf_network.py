@@ -270,9 +270,9 @@ def test_nncf_node_attrs_are_consistent():
         node_name="dummy", node_type="dummy", layer_name="dummy", node_metatype=UnknownMetatype
     )
     new_node_saved = nncf_graph.get_node_by_id(new_node.node_id)
-    assert new_node.data is new_node_saved.data
+    assert new_node.attributes is new_node_saved.attributes
     nodes_in_scope = nncf_graph.get_op_nodes_in_scope(nncf_graph.get_scope_by_node_name("dummy"))
-    assert new_node.data is nodes_in_scope[0].data
+    assert new_node.attributes is nodes_in_scope[0].attributes
 
 
 def test_can_collect_scopes_of_train_only_modules():

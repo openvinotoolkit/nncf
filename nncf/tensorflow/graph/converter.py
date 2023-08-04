@@ -22,6 +22,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvertDtypeLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -682,7 +683,7 @@ class SequentialConverter(BaseFunctionalSequentialConverter):
 
             layer_attributes = _get_layer_attributes(layer_metatype, model_layer)
             if layer_attributes is not None:
-                attrs.update({NNCFGraph.LAYER_ATTRIBUTES: layer_attributes})
+                attrs.update({NNCFNode.LAYER_ATTRIBUTES: layer_attributes})
 
             node_name = layer_name
             nncf_node = nncf_graph.add_nncf_node(
