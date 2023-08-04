@@ -25,7 +25,7 @@ from packaging import version
 try:
     _torch_version = torch.__version__
     torch_version = version.parse(_torch_version).base_version
-except:
+except:  # noqa: E722
     nncf_logger.debug("Could not parse torch version")
     _torch_version = "0.0.0"
     torch_version = version.parse(_torch_version).base_version

@@ -23,6 +23,7 @@ from nncf.torch.dynamic_graph.layer_attributes_handlers import OP_NAMES_REQUIRIN
 from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
 from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_module
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
+from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -47,7 +48,7 @@ def ignore_scope(cls):
     return cls
 
 
-def wrap_operator(operator, operator_info: "PatchedOperatorInfo"):
+def wrap_operator(operator, operator_info: PatchedOperatorInfo):
     """
     Wraps the input callable object (`operator`) with the functionality that allows the calls to this object
     to be tracked by the currently set global TracingContext. The wrapped functions can be then intercepted,
@@ -159,7 +160,7 @@ def wrap_module_call(module_call):
 
 
 def _execute_op(
-    op_address: "OperationAddress",
+    op_address: "OperationAddress",  # noqa: F821
     operator_info: "PatchedOperatorInfo",
     operator: Callable,
     ctx: "TracingContext",

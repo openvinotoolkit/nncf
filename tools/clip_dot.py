@@ -37,7 +37,6 @@ def main(argv):
         from_key, to_key, _ = edge
         id_portion = from_key.split()[0]
         has_id = id_portion.isdigit()
-        end_key = from_key
         if has_id:
             curr_id = int(id_portion)
             if curr_id >= int(args.finish_id):

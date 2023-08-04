@@ -38,7 +38,7 @@ def test_jit_if_tracing_script_source_equals():
     # Get original torch.jit._script_if_tracing source
     torch_source = remove_comments_from_source(inspect.getsource(torch.jit._script_if_tracing))
 
-    import nncf.torch  # pylint: disable=unused-import
+    import nncf.torch  # pylint: disable=unused-import  # noqa: F401
 
     # Get torch.jit._script_if_tracing source after patching was performed
     nncf_source = remove_comments_from_source(inspect.getsource(torch.jit._script_if_tracing))

@@ -218,7 +218,7 @@ class BaseSampleTestCaseDescriptor(ABC):
 
     def sample_type(self, sample_type: SampleType):
         self.sample_type_ = sample_type
-        sample_handler_cls = SAMPLE_HANDLERS.get(self.sample_type_)  # type: Type[BaseSampleHandler]
+        sample_handler_cls: Type[BaseSampleHandler] = SAMPLE_HANDLERS.get(self.sample_type_)
         self.sample_handler = sample_handler_cls()
         return self
 

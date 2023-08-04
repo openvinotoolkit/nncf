@@ -9,6 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.telemetry.decorator import tracked_function
-from nncf.telemetry.extractors import TelemetryExtractor
-from nncf.telemetry.wrapper import telemetry
+from nncf.telemetry.decorator import tracked_function as tracked_function
+from nncf.telemetry.extractors import TelemetryExtractor as TelemetryExtractor
+from nncf.telemetry.wrapper import telemetry as telemetry

@@ -66,7 +66,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         """
         super().__init__()
         self._target_model = target_model
-        self._tracing_context = self._target_model.nncf.get_tracing_context()  # type: TracingContext
+        self._tracing_context: TracingContext = self._target_model.nncf.get_tracing_context()
         self._skipped_blocks = skipped_blocks
         self._skip_dependencies = skip_dependencies
         self._node_names_per_block = node_names_per_block
@@ -384,8 +384,8 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         """
         super().__init__(ignored_scopes, target_scopes)
         self._params = params
-        self._skipped_blocks = None  # type: Optional[ExtendedBuildingBlocks]
-        self._skip_dependencies = None  # type: Optional[GroupedBlockIDs]
+        self._skipped_blocks: Optional[ExtendedBuildingBlocks] = None
+        self._skip_dependencies: Optional[GroupedBlockIDs] = None
         if self._params.skipped_blocks is not None:
             self._skipped_blocks = [BuildingBlock(*b) for b in self._params.skipped_blocks]
             self._skip_dependencies = get_group_of_dependent_blocks(self._skipped_blocks)

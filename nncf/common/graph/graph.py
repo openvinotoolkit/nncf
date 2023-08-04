@@ -194,11 +194,11 @@ class NNCFGraph:
         self._nx_graph = nx.DiGraph()
         self._node_id_to_key_dict = {}
         self._nodes: Dict[str, NNCFNode] = {}
-        self._input_nncf_nodes = {}  # type: Dict[int, NNCFNode]
-        self._output_nncf_nodes = {}  # type: Dict[int, NNCFNode]
+        self._input_nncf_nodes: Dict[int, NNCFNode] = {}
+        self._output_nncf_nodes: Dict[int, NNCFNode] = {}
 
-        self._node_ids_vs_layer_names = {}  # type: Dict[int, LayerName]
-        self._layer_name_vs_shared_nodes = defaultdict(list)  # type: Dict[LayerName, List[NNCFNode]]
+        self._node_ids_vs_layer_names: Dict[int, LayerName] = {}
+        self._layer_name_vs_shared_nodes: Dict[LayerName, List[NNCFNode]] = defaultdict(list)
 
     @property
     def nodes(self) -> Dict[str, NNCFNode]:

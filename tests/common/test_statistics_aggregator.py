@@ -38,6 +38,16 @@ from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 
+class BiasCorrectionAlgos(Enum):
+    BIAS_CORRECTION = "bias_correction"
+    FAST_BIAS_CORRECTION = "fast_bias_correction"
+
+
+class BCStatsCollectors(Enum):
+    MEAN = "mean"
+    RAW = "raw"
+
+
 # pylint: disable=too-many-public-methods
 class TemplateTestStatisticsAggregator:
     @abstractmethod
@@ -442,18 +452,10 @@ class TemplateTestStatisticsAggregator:
                 assert stat.min_values.shape == ref_shape
                 assert stat.max_values.shape == ref_shape
 
-    class BiasCorrectionAlgos(Enum):
-        BIAS_CORRECTION = "bias_correction"
-        FAST_BIAS_CORRECTION = "fast_bias_correction"
-
-    class BCStatsCollectors(Enum):
-        MEAN = "mean"
-        RAW = "raw"
-
     @dataclass
     class BCTestParameters:
-        algo: "BiasCorrectionAlgos"
-        collector_type: "BCStatsCollectors"
+        algo: BiasCorrectionAlgos
+        collector_type: BCStatsCollectors
         target_type: TargetType
         ref_values: Any = None
         axis: int = 1
@@ -576,15 +578,15 @@ class TemplateTestStatisticsAggregator:
         self, dataset_samples, test_params: BCTestParameters, inplace_statistics, is_stat_in_shape_of_scale
     ):
         name_to_algo_backend_map = {
-            self.BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
-            self.BiasCorrectionAlgos.FAST_BIAS_CORRECTION: self.get_fast_bias_correction_algo_backend_cls,
+            BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
+            BiasCorrectionAlgos.FAST_BIAS_CORRECTION: self.get_fast_bias_correction_algo_backend_cls,
         }
         algo_backend = name_to_algo_backend_map[test_params.algo]()
-        if test_params.collector_type == self.BCStatsCollectors.MEAN:
+        if test_params.collector_type == BCStatsCollectors.MEAN:
             tensor_collector = algo_backend.mean_statistic_collector(
                 test_params.axis, inplace_statistics, len(dataset_samples)
             )
-        elif test_params.collector_type == self.BCStatsCollectors.RAW:
+        elif test_params.collector_type == BCStatsCollectors.RAW:
             tensor_collector = algo_backend.raw_statistic_collector(inplace_statistics, len(dataset_samples))
         else:
             raise RuntimeError()
@@ -615,9 +617,9 @@ class TemplateTestStatisticsAggregator:
 
         for tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
-            if test_params.collector_type == self.BCStatsCollectors.MEAN:
+            if test_params.collector_type == BCStatsCollectors.MEAN:
                 ret_val = [stat.mean_values, stat.shape]
-            elif test_params.collector_type == self.BCStatsCollectors.RAW:
+            elif test_params.collector_type == BCStatsCollectors.RAW:
                 ret_val = stat.values
                 test_params.ref_values = dataset_samples
                 if not is_stat_in_shape_of_scale:

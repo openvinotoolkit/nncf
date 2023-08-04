@@ -77,7 +77,7 @@ def test_disable_shape_matching():
             ModelInputInfo(input_shape_1),
         ],
         scopes_without_shape_matching=["MatMulModel"],
-    )  # type: NNCFNetwork
+    )
 
     context = qnet_no_shape.nncf.get_tracing_context()
     context.enable_trace_dynamic_graph()
@@ -97,7 +97,7 @@ def test_disable_shape_matching():
         input_infos=[
             ModelInputInfo(input_shape_1),
         ],
-    )  # type: NNCFNetwork
+    )
     context = qnet.nncf.get_tracing_context()
     context.enable_trace_dynamic_graph()
     _ = qnet(torch.zeros(*input_shape_1))
@@ -110,7 +110,7 @@ def test_disable_shape_matching():
 
 def test_check_correct_modules_replacement():
     model = TwoConvTestModel()
-    nncf_model = NNCFNetwork(TwoConvTestModel(), input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
+    nncf_model: NNCFNetwork = NNCFNetwork(TwoConvTestModel(), input_infos=[ModelInputInfo([1, 1, 4, 4])])
 
     _, detected_nncf_modules = check_correct_nncf_modules_replacement(model, nncf_model)
     replaced_modules_reported_by_nncf_network = {
@@ -178,7 +178,7 @@ class TwoConvTestModelWithUserModule(TwoConvTestModel):
 
 def test_custom_module_registering():
     model = TwoConvTestModelWithUserModule()
-    nncf_model = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
+    nncf_model: NNCFNetwork = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])
 
     from nncf.torch.layers import UNWRAPPED_USER_MODULES
 
@@ -222,7 +222,7 @@ def test_custom_module_registering():
 
 def test_get_weighted_original_graph_nodes():
     model = TwoConvTestModelWithUserModule()
-    nncf_model = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
+    nncf_model: NNCFNetwork = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])
     weighted_nodes = nncf_model.nncf.get_weighted_original_graph_nodes()
     ref_node_names = [
         "TwoConvTestModelWithUserModule/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
@@ -239,7 +239,7 @@ def test_get_weighted_original_graph_nodes():
 # pylint: disable=protected-access
 def test_get_op_nodes_in_scope():
     model = TwoConvTestModel()
-    nncf_model = NNCFNetwork(deepcopy(model), input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
+    nncf_model: NNCFNetwork = NNCFNetwork(deepcopy(model), input_infos=[ModelInputInfo([1, 1, 4, 4])])
     nncf_graph = nncf_model.nncf.get_original_graph()
 
     # Valid scopes should be successfully found

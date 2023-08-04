@@ -37,7 +37,7 @@ class NNCFConfig(dict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__nncf_extra_structs = {}  # type: dict[str, NNCFExtraConfigStruct]
+        self.__nncf_extra_structs: Dict[str, NNCFExtraConfigStruct] = {}
 
     @classmethod
     def from_dict(cls, nncf_dict: Dict) -> "NNCFConfig":

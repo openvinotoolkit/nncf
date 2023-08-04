@@ -63,7 +63,7 @@ class TFRangeInitParams(RangeInitParams):
         return self.get_init_config_for_scope_and_group(node_name, group)
 
     def get_init_config_for_scope_and_group(self, node_name: str, group: QuantizerGroup) -> RangeInitConfig:
-        matches = []  # type: List[RangeInitConfig]
+        matches: List[RangeInitConfig] = []
         for pl_config in self.per_layer_range_init_configs:
             if should_consider_scope(
                 node_name, ignored_scopes=pl_config.ignored_scopes, target_scopes=pl_config.target_scopes

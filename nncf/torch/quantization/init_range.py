@@ -69,7 +69,7 @@ class PTRangeInitParams(RangeInitParams):
         return self.get_init_config_for_scope_and_group(qid, group)
 
     def get_init_config_for_scope_and_group(self, qid: QuantizerId, group: QuantizerGroup) -> RangeInitConfig:
-        matches = []  # type: List[RangeInitConfig]
+        matches: List[RangeInitConfig] = []
         for pl_config in self.per_layer_range_init_configs:
             if should_consider_scope(qid, pl_config.ignored_scopes, pl_config.target_scopes):
                 if group == pl_config.target_group or pl_config.target_group is None:
@@ -113,7 +113,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         :return: Shape to reduce to.
         """
         ndims = len(self._input_shape)
-        reduction_axes = list(range(ndims))  # type: List[int]
+        reduction_axes: List[int] = list(range(ndims))
         if self._per_channel:
             val = (ndims + self._channel_idx) % ndims
             reduction_axes.remove(val)
@@ -282,9 +282,9 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         self.modules_to_init = modules_to_init_vs_init_configs
         self.progressbar_description = "Range parameters initialization"
 
-        self.collectors_and_modules_to_init = (
-            OrderedDict()
-        )  # type: Dict[str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]]
+        self.collectors_and_modules_to_init: Dict[
+            str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]
+        ] = OrderedDict()
         self.hook_handles = []
         self.batch_size = batch_size
 

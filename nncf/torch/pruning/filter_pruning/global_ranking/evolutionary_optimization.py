@@ -270,7 +270,7 @@ class LeGRPruner:
     and resetting all changes in the model made by the environment.
     """
 
-    def __init__(self, filter_pruner_ctrl: "FilterPruningController", model: nn.Module):
+    def __init__(self, filter_pruner_ctrl: "FilterPruningController", model: nn.Module):  # noqa: F821
         self.filter_pruner = filter_pruner_ctrl
         self.scheduler = copy(self.filter_pruner.scheduler)
         self.model = model

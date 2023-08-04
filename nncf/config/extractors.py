@@ -105,7 +105,7 @@ def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantiz
 
     max_num_init_samples = 0
     global_range_init_config = None
-    scope_overrides = []  # type: List[PerLayerRangeInitConfig]
+    scope_overrides: List[PerLayerRangeInitConfig] = []
     if isinstance(init_range_config_dict_or_list, dict):
         global_range_init_config = RangeInitConfig.from_dict(init_range_config_dict_or_list)
         max_num_init_samples = global_range_init_config.num_init_samples

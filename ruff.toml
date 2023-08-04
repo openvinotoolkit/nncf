@@ -1,0 +1,11 @@
+line-length = 120
+ignore-init-module-imports = true
+ignore = ["E731"]
+exclude = ["nncf/tensorflow/__init__.py"]
+
+[per-file-ignores]
+"nncf/experimental/torch/nas/bootstrapNAS/__init__.py" = ["F401"]
+"nncf/torch/__init__.py" = ["F401"]
+"tests/**/*.py" = ["F403"]
+"tests/**/__init__.py" = ["F401"]
+"examples/**/*.py" = ["F403"]
