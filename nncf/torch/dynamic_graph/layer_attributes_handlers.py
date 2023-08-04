@@ -38,6 +38,7 @@ from nncf.torch.graph.operator_metatypes import PTGroupNormMetatype
 from nncf.torch.graph.operator_metatypes import PTPadMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
+from nncf.torch.graph.operator_metatypes import PTSqueezeMetatype
 from nncf.torch.layers import NNCF_MODULES_DICT
 
 OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + list(
@@ -137,7 +138,7 @@ def set_nodes_attributes_in_nncf_graph(graph: NNCFGraph) -> None:
                 layer_attributes = MultipleInputLayerAttributes(axis)
                 node.layer_attributes = layer_attributes
 
-        if node.metatype is PTReshapeMetatype:
+        if node.metatype in [PTReshapeMetatype, PTSqueezeMetatype]:
             input_nodes = graph.get_input_edges(node)
             output_nodes = graph.get_output_edges(node)
             # In case ReshapeMetatype op is intermediate node

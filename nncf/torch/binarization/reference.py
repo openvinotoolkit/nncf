@@ -32,11 +32,16 @@ class ReferenceBase:
         else:
             raise RuntimeError("Unknown backend for ReferenceQuantize")
 
+    def _astype(self, tensor: GeneralizedTensor, dtype) -> GeneralizedTensor:
+        if self.backend is np:
+            return tensor.astype(dtype)
+        return tensor.type(dtype)
+
 
 class ReferenceXNORBinarize(ReferenceBase):
     def forward(self, x: GeneralizedTensor) -> GeneralizedTensor:
         norm = self.backend.abs(x).mean((1, 2, 3), keepdims=True)
-        sign = (x > 0).astype(x.dtype) * 2 - 1
+        sign = self._astype((x > 0), x.dtype) * 2 - 1
         output = sign * norm
         return output
 
@@ -48,7 +53,7 @@ class ReferenceXNORBinarize(ReferenceBase):
 class ReferenceDOREFABinarize(ReferenceBase):
     def forward(self, x: GeneralizedTensor) -> GeneralizedTensor:
         norm = self.backend.abs(x).mean()
-        sign = (x > 0).astype(x.dtype) * 2 - 1
+        sign = self._astype((x > 0), x.dtype) * 2 - 1
         return sign * norm
 
     @staticmethod
@@ -57,19 +62,19 @@ class ReferenceDOREFABinarize(ReferenceBase):
 
 
 class ReferenceActivationBinarize(ReferenceBase):
-    @staticmethod
-    def forward(x: GeneralizedTensor, scale: GeneralizedTensor, threshold: GeneralizedTensor) -> GeneralizedTensor:
+    def forward(
+        self, x: GeneralizedTensor, scale: GeneralizedTensor, threshold: GeneralizedTensor
+    ) -> GeneralizedTensor:
         shape = [1 for s in x.shape]
         shape[1] = x.shape[1]
         t = threshold * scale
-        output = (x > t).astype(x.dtype) * scale
+        output = self._astype((x > t), x.dtype) * scale
         return output
 
-    @staticmethod
-    def backward(grad_output, x, scale, output):
+    def backward(self, grad_output, x: GeneralizedTensor, scale: GeneralizedTensor, output: GeneralizedTensor):
         # calc gradient for input
-        mask_lower = (x <= scale).astype(x.dtype)
-        grad_input = grad_output * (x >= 0).astype(x.dtype) * mask_lower
+        mask_lower = self._astype((x <= scale), x.dtype)
+        grad_input = grad_output * self._astype((x >= 0), x.dtype) * mask_lower
 
         # calc gradient for scale
         err = (output - x) / scale
@@ -77,7 +82,7 @@ class ReferenceActivationBinarize(ReferenceBase):
         grad_scale = grad_scale.sum()
 
         # calc gradient for threshold
-        grad_threshold = -grad_output * (x > 0).astype(x.dtype) * (x < scale).astype(x.dtype)
+        grad_threshold = -grad_output * self._astype((x > 0), x.dtype) * self._astype((x < scale), x.dtype)
 
         for idx, _ in enumerate(x.shape):
             if idx != 1:  # activation channel dimension

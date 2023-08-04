@@ -672,10 +672,20 @@ class PTScatterMetatype(PTOperatorMetatype):
 class PTReshapeMetatype(PTOperatorMetatype):
     name = "ReshapeOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["reshape", "view", "flatten", "squeeze", "unsqueeze"],
-        NamespaceTarget.TORCH: ["squeeze", "flatten", "unsqueeze"],
+        NamespaceTarget.TORCH_TENSOR: ["reshape", "view", "flatten", "unsqueeze"],
+        NamespaceTarget.TORCH: ["flatten", "unsqueeze"],
     }
-    hw_config_names = [HWConfigOpName.RESHAPE, HWConfigOpName.SQUEEZE, HWConfigOpName.UNSQUEEZE, HWConfigOpName.FLATTEN]
+    hw_config_names = [HWConfigOpName.RESHAPE, HWConfigOpName.UNSQUEEZE, HWConfigOpName.FLATTEN]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTSqueezeMetatype(PTOperatorMetatype):
+    name = "SqueezeOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["squeeze"],
+        NamespaceTarget.TORCH: ["squeeze"],
+    }
+    hw_config_names = [HWConfigOpName.SQUEEZE]
 
 
 @PT_OPERATOR_METATYPES.register()

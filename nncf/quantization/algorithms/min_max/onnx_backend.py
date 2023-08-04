@@ -41,7 +41,6 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.scopes import IgnoredScope
 
 
 # pylint:disable=too-many-public-methods
@@ -213,10 +212,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+        types = []
         if model_type == ModelType.TRANSFORMER:
-            types = []
-            metatypes_to_add = [
+            types = [
                 om.ONNXAddLayerMetatype,
                 om.ONNXPowMetatype,
                 om.ONNXSqueezeMetatype,
@@ -230,11 +229,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXReciprocalMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(om.ONNXMulLayerMetatype)
-            for metatype in metatypes_to_add:
-                types.extend(metatype.get_all_aliases())
-            return IgnoredScope(types=types)
-        return IgnoredScope()
+                types.append(om.ONNXMulLayerMetatype)
+        return types
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:

@@ -16,7 +16,7 @@ import subprocess
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -33,7 +33,7 @@ HOME_PATH = Path.home()
 MODEL_INFO = download.DownloadInfo(
     name="stfpm_mvtec_capsule",
     url="https://huggingface.co/alexsu52/stfpm_mvtec_capsule/resolve/main/openvino_model.tar",
-    hash="0d15817bc56af80793de38c8a0b3fd9e",
+    hash="2005ef44eb701ad35e51417d196d8632",
 )
 MODEL_PATH = HOME_PATH / ".cache/nncf/models/stfpm_mvtec_capsule"
 
@@ -45,7 +45,7 @@ DATASET_INFO = download.DownloadInfo(
 )
 DATASET_PATH = HOME_PATH / ".cache/nncf/datasets/mvtec_capsule"
 
-max_accuracy_drop = 0.005 if len(sys.argv) < 2 else float(sys.argv[1])
+max_accuracy_drop = 0.001 if len(sys.argv) < 2 else float(sys.argv[1])
 
 
 def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
@@ -61,9 +61,12 @@ def get_anomaly_images(data_loader: Iterable[Any]) -> List[Dict[str, torch.Tenso
     return anomaly_images_
 
 
-def validate(model: ov.CompiledModel, val_loader: Iterable[Any], val_params: Dict[str, float]) -> float:
+def validate(
+    model: ov.CompiledModel, val_loader: Iterable[Any], val_params: Dict[str, float]
+) -> Tuple[float, List[float]]:
     metric = create_metric_collection(["F1Score"], prefix="image_")["F1Score"]
     metric.threshold = 0.5
+    per_sample_metric_values = []
 
     output = model.outputs[0]
 
@@ -72,12 +75,16 @@ def validate(model: ov.CompiledModel, val_loader: Iterable[Any], val_params: Dic
         anomaly_maps = model(batch["image"])[output]
         pred_scores = np.max(anomaly_maps, axis=(1, 2, 3))
         pred_scores = normalize(pred_scores, val_params["image_threshold"], val_params["min"], val_params["max"])
-        metric.update(torch.from_numpy(pred_scores), batch["label"].int())
+        pred_label = 1 if pred_scores > metric.threshold else 0
+        groundtruth_label = batch["label"].int()
+        per_sample_metric = 1.0 if pred_label == groundtruth_label else 0.0
+        per_sample_metric_values.append(per_sample_metric)
+        metric.update(torch.from_numpy(pred_scores), groundtruth_label)
         counter += 1
 
     metric_value = metric.compute()
     print(f"Validate: dataset length = {counter}, metric value = {metric_value:.3f}")
-    return metric_value
+    return metric_value, per_sample_metric_values
 
 
 def run_benchmark(model_path: str, shape: Optional[List[int]] = None, verbose: bool = True) -> float:
@@ -174,12 +181,12 @@ int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 256, 256], verbose=True)
 
 print("[5/7] Validate OpenVINO FP32 model:")
 compiled_model = ov.compile_model(ov_model)
-fp32_top1 = validate(compiled_model, test_loader, validation_params)
+fp32_top1, _ = validate(compiled_model, test_loader, validation_params)
 print(f"Accuracy @ top1: {fp32_top1:.3f}")
 
 print("[6/7] Validate OpenVINO INT8 model:")
 quantized_compiled_model = ov.compile_model(ov_quantized_model)
-int8_top1 = validate(quantized_compiled_model, test_loader, validation_params)
+int8_top1, _ = validate(quantized_compiled_model, test_loader, validation_params)
 print(f"Accuracy @ top1: {int8_top1:.3f}")
 
 print("[7/7] Report:")
