@@ -832,18 +832,13 @@ class NNCFNetworkMeta(type):
         )
         # Make the signature of the forward on the resulting object same as for
         # the original forward.
-        fn = NNCFNetwork.forward
-        new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
-        new_forward.__dict__.update(fn.__dict__)
-        new_forward.__signature__ = inspect.signature(original_class.forward)
-        if is_debug():
-            new_forward = debuggable_forward(new_forward)
-        new_class.forward = new_forward
+        new_class.forward = _get_nncf_forward_function_with_signature(inspect.signature(original_class.forward))
 
         # In case of overriding forward by code like `model.forward = wrapper(model.forward)`
         forward_inst_attr_fn = original_model.__dict__.get("forward")
         if forward_inst_attr_fn is not None:
-            original_model.__dict__["forward"] = functools.partial(new_forward, original_model)
+            new_inst_forward = _get_nncf_forward_function_with_signature(inspect.signature(forward_inst_attr_fn))
+            original_model.__dict__["forward"] = functools.partial(new_inst_forward, original_model)
 
         # Make resulting class keep __module__ attributes of the original class,
         # otherwise these will point to NNCF
@@ -886,6 +881,21 @@ class NNCFNetworkMeta(type):
             original_class = cls.__bases__[1]
             return original_class == other
         return other is NNCFNetwork
+
+
+def _get_nncf_forward_function_with_signature(signature: inspect.Signature):
+    """
+    Create forward function with copy signature of forward function.
+    :param signature: Signature of function that will used for forward function.
+    :return: New copy of function NNCFNetwork.forward with specified signature.
+    """
+    fn = NNCFNetwork.forward
+    new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
+    new_forward.__dict__.update(fn.__dict__)
+    new_forward.__signature__ = signature
+    if is_debug():
+        new_forward = debuggable_forward(new_forward)
+    return new_forward
 
 
 class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):

@@ -404,7 +404,7 @@ def test_replacing_forward_with_another_own_method(_nncf_caplog):
     assert "set_original_unbound_forward" in _nncf_caplog.text
 
 
-def test_replacing_forward_of_original_model(_nncf_caplog):
+def test_replacing_forward_of_original_model():
     def decorator(func):
         def wrap(*args):
             return func(*args)
@@ -415,6 +415,7 @@ def test_replacing_forward_of_original_model(_nncf_caplog):
     model.forward = decorator(model.forward)
 
     fn_id = id(model.__dict__["forward"])
+    fn_sign = inspect.signature(model.forward)
     # type of current
     assert isinstance(model.__dict__["forward"], type(decorator))
 
@@ -423,6 +424,7 @@ def test_replacing_forward_of_original_model(_nncf_caplog):
 
     # Check that forward was updated
     assert fn_id != id(nncf_net.__dict__["forward"])
+    assert fn_sign == inspect.signature(nncf_net.forward)
     assert isinstance(nncf_net.forward, functools.partial)
 
 
