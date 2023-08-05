@@ -175,6 +175,11 @@ def _(
 def _(a: Union[np.ndarray, np.number]) -> np.ndarray:
     return np.zeros_like(a)
 
+@functions.stack.register(np.ndarray)
+@functions.stack.register(np.number)
+def _(x: Union[np.ndarray, np.number], axis: int = 0) -> List[np.ndarray]:
+    return np.stack(x, axis=axis)
+
 
 @functions.unstack.register(np.ndarray)
 @functions.unstack.register(np.number)

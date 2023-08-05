@@ -162,8 +162,13 @@ def _(a: torch.Tensor) -> torch.Tensor:
     return torch.zeros_like(a)
 
 
+@functions.stack.register(torch.Tensor)
+def _(x: List[torch.Tensor], axis: int = 0) -> List[torch.Tensor]:
+    return torch.stack(x, dim=axis)
+
+
 @functions.unstack.register(torch.Tensor)
-def unstack(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
-    if list(x.shape) == []:
+def _(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
+    if not list(x.shape):
         x = x.unsqueeze(0)
     return [i for i in torch.unbind(x, dim=axis)]

@@ -350,7 +350,8 @@ def zeros_like(a: TTensor) -> Tensor:
     return Tensor(zeros_like(a.data))
 
 
-def stack(x: List[TTensor], axis: int = 0) -> TTensor:
+@functools.singledispatch
+def stack(x: List[TTensor], axis: int = 0) -> Tensor:
     """
     Stacks a list or deque of NNCFTensors rank-R tensors into one NNCFTensor rank-(R+1) tensor.
 
@@ -358,6 +359,12 @@ def stack(x: List[TTensor], axis: int = 0) -> TTensor:
     :param axis: The axis to stack along.
     :return: Stacked NNCFTensor.
     """
+    if isinstance(x, List):
+        unwrapped_x = [i.data for i in x]
+        # singledispatch cannot dispatch function by element in a list
+        res = stack.registry[type(unwrapped_x[0])](unwrapped_x, axis=axis)
+        return Tensor(res)
+    raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
 
 
 @functools.singledispatch

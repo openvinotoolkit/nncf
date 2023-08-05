@@ -610,3 +610,27 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, list)
         for i in range(len(ref)):
             assert all(res[i] == ref[i])
+
+    @pytest.mark.parametrize(
+        "x, axis, ref",
+        (
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                0,
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                1,
+                [[0.8, 0.1], [0.2, 0.7], [0.2, 0.1]],
+            ),
+        ),
+    )
+    def test_fn_stack(self, x, axis, ref):
+        tensor = [Tensor(self.to_tensor(i)) for i in x]
+        ref = self.to_tensor(ref)
+
+        res = functions.stack(tensor, axis=axis)
+
+        assert isinstance(res, Tensor)
+        assert functions.all(res.data == ref)
