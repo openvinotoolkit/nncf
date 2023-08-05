@@ -115,10 +115,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 
     @staticmethod
-    def model_transformer(model: NNCFNetwork) -> ModelTransformer:
-        return PTModelTransformer(model)
-
-    @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             port_id = None
