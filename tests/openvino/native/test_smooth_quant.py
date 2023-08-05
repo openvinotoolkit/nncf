@@ -80,7 +80,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
             (OVConvolutionMetatype, {}, 0, 1),
         ),
     )
-    def test__get_activation_channel_axis(self, node_metatype, inputs_attributes, port_id, reference_value):
+    def test_get_activation_channel_axis(self, node_metatype, inputs_attributes, port_id, reference_value):
         backend = self.get_backend()
 
         attributes = {
@@ -91,7 +91,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
 
         try:
             # pylint: disable=protected-access
-            activation_channel_axis = backend._get_activation_channel_axis(node, port_id)
+            activation_channel_axis = backend.get_activation_channel_axis(node, port_id)
         except RuntimeError as e:
             if isinstance(e, reference_value):
                 pytest.xfail("Expected exception")

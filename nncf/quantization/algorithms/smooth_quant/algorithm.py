@@ -21,7 +21,7 @@
 
 from collections import defaultdict
 from copy import deepcopy
-from typing import Dict, List, Optional, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 from tqdm import tqdm
 
@@ -29,6 +29,7 @@ from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
@@ -116,7 +117,7 @@ class SmoothQuant(Algorithm):
                 activations_value = self._backend_entity.clip_statistics(activations_value)
 
                 weights_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
-                weights_value = self._backend_entity.get_weight_statistics(node_to_smooth, model, weights_port)
+                weights_value = self._get_weight_statistics(node_to_smooth, model, weights_port)
                 weights_value = self._backend_entity.clip_statistics(weights_value)
 
                 scales, ratio = self._backend_entity.calculate_scale_and_ratio(
@@ -129,7 +130,7 @@ class SmoothQuant(Algorithm):
 
                 weights_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
                 weights_value = self._backend_entity.get_weight_value(node_to_smooth, model, weights_port)
-                weight_scale = self._backend_entity.calculate_weight_scale(best_scale, node_to_smooth)
+                weight_scale = self._calculate_weight_scale(best_scale, node_to_smooth)
 
                 scaled_weights = weights_value * weight_scale
                 weight_update_command = self._backend_entity.weight_update_command(
@@ -137,7 +138,7 @@ class SmoothQuant(Algorithm):
                 )
                 transformation_layout.register(weight_update_command)
 
-            activation_scale = self._backend_entity.calculate_activation_scale(best_scale, nodes, nncf_graph)
+            activation_scale = self._calculate_activation_scale(best_scale, nodes, nncf_graph)
 
             scale_insertion_command = self._backend_entity.scale_insertion_command(
                 source_node, activation_scale, source_output_port_id, nodes
@@ -216,7 +217,7 @@ class SmoothQuant(Algorithm):
                 target_node_name=node_to_smooth.node_name,
                 port_id=node_data["input_act_port"],
             )
-            input_reduction_shape = self._backend_entity.calculate_input_reduction_shape(
+            input_reduction_shape = self._calculate_input_reduction_shape(
                 nncf_graph, node_to_smooth, node_data["input_act_port"]
             )
             stat_collector = self._backend_entity.get_abs_max_channel_collector(
@@ -259,3 +260,78 @@ class SmoothQuant(Algorithm):
                 }
             )
         return nodes_to_smooth_data
+
+    def _calculate_activation_scale(
+        self, scale_value: TTensor, nodes: List[NNCFNode], nncf_graph: NNCFGraph
+    ) -> TTensor:
+        """
+        Calculates activation scales for Smooth node.
+
+        :param scale_value: Base scale value.
+        :param nodes: List of consumers for Smooth node.
+        :return: Calculated per-channel activation scale.
+        """
+
+        activation_shapes = [n.layer_attributes.input_attributes["shape"] for n in nodes]
+        activation_shape = activation_shapes[0]
+        if not all(shape == activation_shape for shape in activation_shapes):
+            raise RuntimeError(f"Shapes for nodes {[n.node_name for n in nodes]} are not identical")
+
+        activation_ports_map = {
+            node: self._backend_entity.get_input_ports_map(node, nncf_graph)["activation"] for node in nodes
+        }
+        channel_axes = [
+            self._backend_entity.get_activation_channel_axis(node, port) for node, port in activation_ports_map.items()
+        ]
+        channel_axis = channel_axes[0]
+
+        if not all(axis == channel_axis for axis in channel_axes):
+            raise RuntimeError(f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical")
+
+        return self._backend_entity.calculate_activation_scale(scale_value, activation_shape, channel_axis)
+
+    def _calculate_weight_scale(self, scale_value: TTensor, node: NNCFNode) -> TTensor:
+        """
+        Calculates scale for weight tensor.
+
+        :param scale_value: Base scale value.
+        :param node: Consumer for Smooth node.
+        :return: Calculated scale for weights.
+        """
+        port_id = self._backend_entity.get_weight_tensor_port_id(node)
+        shape = node.layer_attributes.constant_attributes[port_id]["shape"]
+        if len(shape) > 1:
+            reduction_axis = self._backend_entity.get_weight_reduction_axis(node, port_id)
+            return self._backend_entity.calculate_weight_scale(scale_value, reduction_axis)
+        return scale_value
+
+    def _calculate_input_reduction_shape(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
+        """
+        Returns reduction shape for specified input.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param node: NNCFNode to check.
+        :param input_port: Specified input port id.
+        :return: Calculated reduction shape.
+        """
+        shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
+        reduction_shape = tuple([0])
+        if len(shape) > 1:
+            channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
+            reduction_shape = self._backend_entity.get_channel_agnostic_reduction_shape(channel_axis, shape)
+        return reduction_shape
+
+    def _get_weight_statistics(self, node: NNCFNode, model: TModel, port_id: int) -> TTensor:
+        """
+        Returns processed weight statistics for node.
+
+        :param node: NNCFNode to check.
+        :param model: Backend-specific model.
+        :param port_id: Weight port id.
+        :return: Weight statistics for node.
+        """
+        weights = self._backend_entity.get_weight_value(node, model, port_id)
+        reduction_axis = 0
+        if len(weights.shape) > 1:
+            reduction_axis = self._backend_entity.get_weight_reduction_axis(node, port_id)
+        return self._backend_entity.process_weight_statistics(weights, reduction_axis)

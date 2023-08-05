@@ -113,7 +113,7 @@ class TemplateTestSQAlgorithm:
         self.check_scales(quantized_model, reference_values)
 
     # pylint:disable=protected-access
-    def test_smooth_quant(self):
+    def test_get_abs_max_channel_collector(self):
         backend = self.get_backend()
         reduction_shape = (3, 2, 1)
         samples = 1

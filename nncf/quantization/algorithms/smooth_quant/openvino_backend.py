@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import deepcopy
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -62,13 +61,8 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return {"activation": activation_ports[0], "weight": weight_ports[0]}
 
     @staticmethod
-    def calculate_input_reduction_shape(nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
-        shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-        reduction_shape = tuple([0])
-        if len(shape) > 1:
-            channel_axis = OVSmoothQuantAlgoBackend._get_activation_channel_axis(node, input_port)
-            reduction_shape = get_channel_agnostic_reduction_shape([channel_axis], shape)
-        return reduction_shape
+    def get_channel_agnostic_reduction_shape(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
+        return get_channel_agnostic_reduction_shape([channel_axis], shape)
 
     @staticmethod
     def get_abs_max_channel_collector(
@@ -81,13 +75,8 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_statistics(node: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
-        weights = deepcopy(get_weight_value(node, model, port_id))
-        abs_value = np.abs(weights)
-        reduction_axis = 0
-        if len(abs_value.shape) > 1:
-            reduction_axis = OVSmoothQuantAlgoBackend._get_weight_reduction_axis(node, port_id)
-        return np.max(abs_value, axis=reduction_axis)
+    def process_weight_statistics(weights: np.ndarray, reduction_axis: int) -> np.ndarray:
+        return np.max(np.abs(weights), axis=reduction_axis)
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -120,41 +109,19 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return scales, ratio
 
     @staticmethod
-    def calculate_activation_scale(scale_value: np.ndarray, nodes: List[NNCFNode], nncf_graph: NNCFGraph) -> np.ndarray:
+    def calculate_activation_scale(
+        scale_value: np.ndarray, activation_shape: Tuple[int], channel_axis: int
+    ) -> np.ndarray:
         activation_scale = scale_value ** (-1)
-
-        activation_shapes = [n.layer_attributes.input_attributes["shape"] for n in nodes]
-        activation_shape = activation_shapes[0]
-        if not all(shape == activation_shape for shape in activation_shapes):
-            raise RuntimeError(f"Shapes for nodes {[n.node_name for n in nodes]} are not identical")
-
-        activation_ports_map = {
-            node: OVSmoothQuantAlgoBackend.get_input_ports_map(node, nncf_graph)["activation"] for node in nodes
-        }
-        channel_axes = [
-            OVSmoothQuantAlgoBackend._get_activation_channel_axis(node, port)
-            for node, port in activation_ports_map.items()
-        ]
-        channel_axis = channel_axes[0]
-
-        if not all(axis == channel_axis for axis in channel_axes):
-            raise RuntimeError(f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical")
-
         if len(activation_shape) > 1:
             reshape_shape = np.ones(len(activation_shape), dtype=np.int64)
             reshape_shape[channel_axis] = activation_shape[channel_axis]
             activation_scale = np.reshape(activation_scale, reshape_shape)
-
         return activation_scale
 
     @staticmethod
-    def calculate_weight_scale(scale_value: np.ndarray, node: NNCFNode) -> np.ndarray:
-        port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
-        shape = node.layer_attributes.constant_attributes[port_id]["shape"]
-        if len(shape) > 1:
-            reduction_axis = OVSmoothQuantAlgoBackend._get_weight_reduction_axis(node, port_id)
-            return np.expand_dims(scale_value, axis=reduction_axis)
-        return scale_value
+    def calculate_weight_scale(scale_value: np.ndarray, reduction_axis: int) -> np.ndarray:
+        return np.expand_dims(scale_value, axis=reduction_axis)
 
     @staticmethod
     def weight_update_command(
@@ -169,14 +136,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return OVCommandCreator.multiply_insertion_command(source_node, nodes, port_id, scale_value)
 
     @staticmethod
-    def _get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
-        """
-        Returns axis number of the activation tensor which correspond to it channel.
-
-        :param node: NNCFNode instance.
-        :param port_id: Specified input port id.
-        :return: Channel axis number.
-        """
+    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
         channel_axis = 1
 
         if node.metatype == OVMatMulMetatype:
@@ -195,14 +155,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return channel_axis
 
     @staticmethod
-    def _get_weight_reduction_axis(node: NNCFNode, port_id: int) -> int:
-        """
-        Returns axis number of the weight tensor which correspond to it channel.
-
-        :param node: NNCFNode instance.
-        :param port_id: Specified input port id.
-        :return: Channel axis number.
-        """
+    def get_weight_reduction_axis(node: NNCFNode, port_id: int) -> int:
         channel_axis = 1 if node.metatype.const_channel_axis is None else node.metatype.const_channel_axis[0]
 
         if node.metatype == OVMatMulMetatype:
