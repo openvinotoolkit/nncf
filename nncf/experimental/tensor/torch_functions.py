@@ -56,11 +56,25 @@ def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.T
     return torch.max(a, dim=axis).values
 
 
+@functions.amax.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
+    if axis is None:
+        return torch.amax(a)
+    return torch.amax(a, dim=axis)
+
+
 @functions.min.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
     if axis is None:
         return torch.min(a)
     return torch.min(a, dim=axis).values
+
+
+@functions.amin.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
+    if axis is None:
+        return torch.amin(a)
+    return torch.amin(a, dim=axis)
 
 
 @functions.abs.register(torch.Tensor)
@@ -146,3 +160,10 @@ def _(
 @functions.zeros_like.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.zeros_like(a)
+
+
+@functions.unstack.register(torch.Tensor)
+def unstack(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
+    if list(x.shape) == []:
+        x = x.unsqueeze(0)
+    return [i for i in torch.unbind(x, dim=axis)]

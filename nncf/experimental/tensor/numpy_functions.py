@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -52,10 +52,22 @@ def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = 
     return np.max(a, axis=axis)
 
 
+@functions.amax.register(np.ndarray)
+@functions.amax.register(np.number)
+def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
+    return np.amax(a, axis=axis)
+
+
 @functions.min.register(np.ndarray)
 @functions.min.register(np.number)
 def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
     return np.min(a, axis=axis)
+
+
+@functions.amin.register(np.ndarray)
+@functions.amin.register(np.number)
+def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
+    return np.amin(a, axis=axis)
 
 
 @functions.abs.register(np.ndarray)
@@ -162,3 +174,9 @@ def _(
 @functions.zeros_like.register(np.number)
 def _(a: Union[np.ndarray, np.number]) -> np.ndarray:
     return np.zeros_like(a)
+
+
+@functions.unstack.register(np.ndarray)
+@functions.unstack.register(np.number)
+def _(x: Union[np.ndarray, np.number], axis: int = 0) -> List[np.ndarray]:
+    return [np.squeeze(e, axis) for e in np.split(x, x.shape[axis], axis=axis)]

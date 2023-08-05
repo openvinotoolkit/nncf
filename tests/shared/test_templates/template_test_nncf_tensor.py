@@ -248,6 +248,26 @@ class TemplateTestNNCFTensorOperators:
         (
             (1, None, 1),
             ([1], None, 1),
+            ([[[[1], [2]], [[3], [4]]]], None, 4),
+            ([[1, 2], [3, 4]], 1, [2, 4]),
+        ),
+    )
+    def test_fn_amax(self, val, axis, ref):
+        tensor = self.to_tensor(val)
+        nncf_tensor = Tensor(tensor)
+        ref_tensor = self.to_tensor(ref)
+        res = functions.amax(nncf_tensor, axis=axis)
+        if isinstance(ref, list):
+            assert all(res.data == ref_tensor)
+        else:
+            assert res.data == ref_tensor
+        assert isinstance(res, Tensor)
+
+    @pytest.mark.parametrize(
+        "val, axis, ref",
+        (
+            (1, None, 1),
+            ([1], None, 1),
             ([[[[1], [2]], [[3], [4]]]], None, 1),
             ([[1, 2], [3, 4]], 1, [1, 3]),
         ),
@@ -275,6 +295,25 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(self.to_tensor(val))
         ref_tensor = self.to_tensor(ref)
         res = functions.min(nncf_tensor, axis=axis)
+        if isinstance(ref, list):
+            assert all(res.data == ref_tensor)
+        else:
+            assert res.data == ref_tensor
+        assert isinstance(res, Tensor)
+
+    @pytest.mark.parametrize(
+        "val, axis, ref",
+        (
+            (1, None, 1),
+            ([1], None, 1),
+            ([[[[1], [2]], [[3], [4]]]], None, 1),
+            ([[1, 2], [3, 4]], 1, [1, 3]),
+        ),
+    )
+    def test_fn_amin(self, val, axis, ref):
+        nncf_tensor = Tensor(self.to_tensor(val))
+        ref_tensor = self.to_tensor(ref)
+        res = functions.amin(nncf_tensor, axis=axis)
         if isinstance(ref, list):
             assert all(res.data == ref_tensor)
         else:
@@ -546,3 +585,28 @@ class TemplateTestNNCFTensorOperators:
     def test_not_implemented(self):
         with pytest.raises(NotImplementedError, match="is not implemented for"):
             functions.device({}, [1, 2])
+
+    @pytest.mark.parametrize(
+        "x, axis, ref",
+        (
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                0,
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                1,
+                [[0.8, 0.1], [0.2, 0.7], [0.2, 0.1]],
+            ),
+        ),
+    )
+    def test_fn_unstack(self, x, axis, ref):
+        tensor = Tensor(self.to_tensor(x))
+        ref = [self.to_tensor(r) for r in ref]
+
+        res = functions.unstack(tensor, axis=axis)
+
+        assert isinstance(res, list)
+        for i in range(len(ref)):
+            assert all(res[i] == ref[i])
