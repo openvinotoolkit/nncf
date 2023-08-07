@@ -187,7 +187,7 @@ class NNCFGraph:
     def __init__(self):
         self._nx_graph = nx.DiGraph()
         self._node_id_to_key_dict = {}
-        self._nodes = {}  # type: Dict[str, NNCFNode]
+        self._nodes: Dict[str, NNCFNode] = {} 
         self._input_nncf_nodes = {}  # type: Dict[int, NNCFNode]
         self._output_nncf_nodes = {}  # type: Dict[int, NNCFNode]
 
