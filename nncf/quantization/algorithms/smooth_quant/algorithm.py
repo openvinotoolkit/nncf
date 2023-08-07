@@ -109,6 +109,7 @@ class SmoothQuant(Algorithm):
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
         for group_id, nodes in tqdm(node_groups.items(), desc="Applying Smooth Quant"):
+            best_scale = None
             best_ratio = 0.0
             for node_to_smooth in nodes:
                 source_node, input_port_id, source_output_port_id, _ = group_id
