@@ -103,7 +103,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return self.conv_metatypes
 
     @property
-    def metatypes_to_insert_noop(self) -> List[OperatorMetatype]:
+    def keep_const_metatypes(self) -> List[OperatorMetatype]:
         return []
 
     @property

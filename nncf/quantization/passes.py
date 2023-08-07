@@ -10,11 +10,10 @@
 # limitations under the License.
 
 import collections
-from copy import deepcopy
-from typing import List, Optional, TypeVar
+from typing import List, Optional, Set, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.operator_metatypes import NoopMetatype
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -26,7 +25,7 @@ def transform_to_inference_graph(
     nncf_graph: NNCFGraph,
     shapeof_metatypes: List[OperatorMetatype],
     read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
-    metatypes_to_insert_noop: Optional[List[OperatorMetatype]] = None,
+    keep_const_metatypes: Optional[List[OperatorMetatype]] = None,
 ) -> NNCFGraph:
     """
     This method contains pipeline of the passes that uses to provide inference graph without constant flows.
@@ -35,12 +34,11 @@ def transform_to_inference_graph(
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
     :param read_variable_metatypes: List of backend-specific metatypes
         that also can be interpreted as inputs (ReadValue).
+    :param keep_const_metatypes: List of backend-specific metatypes that should aviod constants filtration.
     :return: NNCFGraph in the inference style.
     """
-    inference_nncf_graph = deepcopy(nncf_graph)
-    inference_nncf_graph = remove_shapeof_subgraphs(inference_nncf_graph, shapeof_metatypes, read_variable_metatypes)
-    inference_nncf_graph = filter_constant_nodes(inference_nncf_graph, read_variable_metatypes)
-    inference_nncf_graph = insert_noops_instead_constants(inference_nncf_graph, nncf_graph, metatypes_to_insert_noop)
+    inference_nncf_graph = remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, read_variable_metatypes)
+    inference_nncf_graph = filter_constant_nodes(inference_nncf_graph, read_variable_metatypes, keep_const_metatypes)
     return inference_nncf_graph
 
 
@@ -94,7 +92,9 @@ def remove_shapeof_subgraphs(
 
 
 def filter_constant_nodes(
-    nncf_graph: NNCFGraph, read_variable_metatypes: Optional[List[OperatorMetatype]] = None
+    nncf_graph: NNCFGraph,
+    read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
+    keep_const_metatypes: Optional[List[OperatorMetatype]] = None,
 ) -> NNCFGraph:
     """
     Removes all Constant nodes from NNCFGraph, making it inference graph.
@@ -103,9 +103,11 @@ def filter_constant_nodes(
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param read_variable_metatypes: List of backend-specific metatypes
         that also can be interpreted as inputs (ReadValue).
+    :param keep_const_metatypes: List of backend-specific metatypes that should aviod constants filtration.
     :return: NNCFGraph without Constant nodes.
     """
     read_variable_metatypes = read_variable_metatypes if read_variable_metatypes else []
+    keep_const_metatypes = keep_const_metatypes if keep_const_metatypes else []
     input_nodes = nncf_graph.get_input_nodes()
     similar_input_nodes = nncf_graph.get_nodes_by_metatypes(read_variable_metatypes)
 
@@ -114,15 +116,27 @@ def filter_constant_nodes(
     if not start_nodes:
         return nncf_graph
 
-    visited_nodes = set()
-    nodes_queue = collections.deque(start_nodes)
-    while nodes_queue:
-        node = nodes_queue.pop()
-        if node in visited_nodes:
-            continue
-        visited_nodes.add(node)
-        nodes_queue.extend(nncf_graph.get_next_nodes(node))
-    constant_nodes = [node for node in nncf_graph.get_all_nodes() if node not in visited_nodes]
+    def fill_nodes_list(initial_list: List[NNCFNode], fill_list: Set[NNCFNode], extend_call: callable):
+        nodes_queue = collections.deque(initial_list)
+        while nodes_queue:
+            node = nodes_queue.pop()
+            if node in fill_list:
+                continue
+            fill_list.add(node)
+            nodes_queue.extend(extend_call(node))
+
+    # Collect all activation nodes
+    keep_nodes_set = set()
+    fill_nodes_list(start_nodes, keep_nodes_set, nncf_graph.get_next_nodes)
+
+    # Then collect nodes that should keep constants
+    keep_const_list = []
+    for node in nncf_graph.get_nodes_by_metatypes(keep_const_metatypes):
+        keep_const_list.extend(nncf_graph.get_previous_nodes(node))
+
+    fill_nodes_list(keep_const_list, keep_nodes_set, nncf_graph.get_previous_nodes)
+
+    constant_nodes = [node for node in nncf_graph.get_all_nodes() if node not in keep_nodes_set]
     nncf_graph.remove_nodes_from(constant_nodes)
     return nncf_graph
 
@@ -141,33 +155,3 @@ def insert_null_biases_pass(model: TModel, graph: NNCFGraph) -> TModel:
 
         return insert_null_biases(model, graph)
     return model
-
-
-def insert_noops_instead_constants(
-    nncf_graph: NNCFGraph,
-    original_nncf_graph: NNCFGraph,
-    metatypes_to_insert_noop: Optional[List[OperatorMetatype]] = None,
-) -> NNCFGraph:
-    if metatypes_to_insert_noop is None:
-        return nncf_graph
-
-    for original_node in original_nncf_graph.get_nodes_by_metatypes(metatypes_to_insert_noop):
-        node = nncf_graph.get_node_by_name(original_node.node_name)
-        active_ports = [edge.input_port_id for edge in nncf_graph.get_input_edges(node)]
-
-        for original_edge in original_nncf_graph.get_input_edges(original_node):
-            if original_edge.input_port_id not in active_ports:
-                new_node = nncf_graph.add_nncf_node(
-                    node_name=original_edge.from_node.node_name,
-                    node_type=original_edge.from_node.node_type,
-                    node_metatype=NoopMetatype,
-                )
-                nncf_graph.add_edge_between_nncf_nodes(
-                    from_node_id=new_node.node_id,
-                    to_node_id=node.node_id,
-                    tensor_shape=original_edge.tensor_shape,
-                    input_port_id=original_edge.input_port_id,
-                    output_port_id=original_edge.output_port_id,
-                    dtype=original_edge.dtype,
-                )
-    return nncf_graph

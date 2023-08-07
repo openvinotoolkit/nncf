@@ -93,7 +93,7 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def metatypes_to_insert_noop(self) -> List[OperatorMetatype]:
+    def keep_const_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes which allowed to have pre-hooks.
         """

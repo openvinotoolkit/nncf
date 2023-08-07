@@ -86,7 +86,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVGroupConvolutionMetatype]
 
     @property
-    def metatypes_to_insert_noop(self) -> List[OperatorMetatype]:
+    def keep_const_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVGatherMetatype]
 
     @property

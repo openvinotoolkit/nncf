@@ -17,7 +17,6 @@ import pytest
 
 from nncf.common.graph import NNCFGraph
 from nncf.quantization.passes import filter_constant_nodes
-from nncf.quantization.passes import insert_noops_instead_constants
 from nncf.quantization.passes import remove_shapeof_subgraphs
 from tests.common.quantization.entities import Edge
 from tests.common.quantization.entities import Graph
@@ -180,20 +179,7 @@ TEST_CONFIGS = [
         TestCaseData(
             "graph_without_constants", {filter_constant_nodes: {"read_variable_metatypes": READ_VARIABLE_METATYPES}}
         ),
-    ),
-    (
-        graph_with_constants(),
-        TestCaseData(
-            "graph_with_noops",
-            {
-                filter_constant_nodes: {"read_variable_metatypes": READ_VARIABLE_METATYPES},
-                insert_noops_instead_constants: {
-                    "original_nncf_graph": graph_with_constants(),
-                    "metatypes_to_insert_noop": [GatherTestMetatype, AddTestMetatype],
-                },
-            },
-        ),
-    ),
+    )
 ]
 
 
