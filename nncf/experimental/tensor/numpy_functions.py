@@ -175,6 +175,7 @@ def _(
 def _(a: Union[np.ndarray, np.number]) -> np.ndarray:
     return np.zeros_like(a)
 
+
 @functions.stack.register(np.ndarray)
 @functions.stack.register(np.number)
 def _(x: Union[np.ndarray, np.number], axis: int = 0) -> List[np.ndarray]:
@@ -185,3 +186,8 @@ def _(x: Union[np.ndarray, np.number], axis: int = 0) -> List[np.ndarray]:
 @functions.unstack.register(np.number)
 def _(x: Union[np.ndarray, np.number], axis: int = 0) -> List[np.ndarray]:
     return [np.squeeze(e, axis) for e in np.split(x, x.shape[axis], axis=axis)]
+
+
+@functions.moveaxis.register(np.ndarray)
+def _(a: np.ndarray, source: Union[int, List[int]], destination: Union[int, List[int]]) -> np.ndarray:
+    return np.moveaxis(a, source, destination)

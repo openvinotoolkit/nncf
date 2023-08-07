@@ -353,11 +353,11 @@ def zeros_like(a: TTensor) -> Tensor:
 @functools.singledispatch
 def stack(x: List[TTensor], axis: int = 0) -> Tensor:
     """
-    Stacks a list or deque of NNCFTensors rank-R tensors into one NNCFTensor rank-(R+1) tensor.
+    Stacks a list or deque of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
 
-    :param x: List or deque of NNCFTensors.
+    :param x: List or deque of Tensors.
     :param axis: The axis to stack along.
-    :return: Stacked NNCFTensor.
+    :return: Stacked Tensor.
     """
     if isinstance(x, List):
         unwrapped_x = [i.data for i in x]
@@ -371,37 +371,52 @@ def stack(x: List[TTensor], axis: int = 0) -> Tensor:
 @_tensor_guard
 def unstack(a: Tensor, axis: int = 0) -> List[Tensor]:
     """
-    Unstack a NNCFTensor into list.
+    Unstack a Tensor into list.
 
-    :param a: NNCFTensor to unstack.
+    :param a: Tensor to unstack.
     :param axis: The axis to unstack along.
-    :return: List of NNCFTensor.
+    :return: List of Tensor.
     """
     res = unstack(a.data, axis=axis)
     return [Tensor(i) for i in res]
 
 
+@functools.singledispatch
+@_tensor_guard
+def moveaxis(a: Tensor, source: Union[int, List[int]], destination: Union[int, List[int]]) -> Tensor:
+    """
+    Move axes of an array to new positions.
+
+    :param a: The array whose axes should be reordered.
+    :param source: Original positions of the axes to move. These must be unique.
+    :param destination: Destination positions for each of the original axes. These must also be unique.
+    :return: Array with moved axes.
+    """
+    return Tensor(moveaxis(a.data, source, destination))
+
+
 __all__ = [
-    "device",
-    "squeeze",
-    "flatten",
-    "amax",
-    "max",
-    "amin",
-    "min",
     "abs",
-    "astype",
-    "reshape",
     "all",
     "allclose",
+    "amax",
+    "amin",
     "any",
+    "astype",
     "count_nonzero",
-    "isempty",
+    "device",
+    "flatten",
     "isclose",
+    "isempty",
+    "max",
     "maximum",
+    "min",
     "minimum",
+    "minimum",
+    "moveaxis",
     "ones_like",
-    "minimum",
+    "reshape",
+    "squeeze",
     "where",
     "zeros_like",
 ]

@@ -634,3 +634,11 @@ class TemplateTestNNCFTensorOperators:
 
         assert isinstance(res, Tensor)
         assert functions.all(res.data == ref)
+
+    def test_fn_moveaxis(self):
+        tensor = [[0, 0, 0], [0, 0, 0]]
+        tensor = Tensor(self.to_tensor(tensor))
+
+        res = functions.moveaxis(tensor, 0, -1)
+
+        assert res.shape == [3, 2]
