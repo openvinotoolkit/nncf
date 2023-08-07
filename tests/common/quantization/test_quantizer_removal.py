@@ -16,36 +16,17 @@ from typing import List
 import pytest
 
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.quantization.passes import remove_shapeof_subgraphs
+from tests.common.quantization.entities import Edge
+from tests.common.quantization.entities import Graph
+from tests.common.quantization.entities import Node
 from tests.common.quantization.metatypes import CONSTANT_METATYPES
-from tests.common.quantization.metatypes import METATYPES_FOR_TEST
 from tests.common.quantization.metatypes import QUANTIZABLE_METATYPES
 from tests.common.quantization.metatypes import QUANTIZE_AGNOSTIC_METATYPES
 from tests.common.quantization.metatypes import QUANTIZER_METATYPES
 from tests.common.quantization.metatypes import SHAPEOF_METATYPES
-
-
-@dataclass
-class Node:
-    node_id: int
-    node_type: str
-
-
-@dataclass
-class Edge:
-    from_node_id: int
-    from_port: int
-    to_node_id: int
-    to_port: int
-
-
-@dataclass
-class Graph:
-    nodes: List[Node]
-    edges: List[Edge]
-
+from tests.common.quantization.mock_graphs import create_nncf_graph
 
 GRAPHS = {
     "simple_graph": Graph(
@@ -188,30 +169,6 @@ TEST_CASES = {
     ],
     "graph_with_shapeof": [TestCase("quantizer_105", ["quantizer_105"], ["interpolate_115"])],
 }
-
-
-def create_nncf_graph(graph: Graph) -> NNCFGraph:
-    """
-    Creates NNCF graph from provided graph's description.
-
-    :param graph: Graph's description.
-    :return: NNCFGraph instance.
-    """
-    nncf_graph = NNCFGraph()
-
-    correspondences = {}
-    for v in graph.nodes:
-        node_name = f"{v.node_type}_{v.node_id}"
-        metatype = METATYPES_FOR_TEST.get_operator_metatype_by_op_name(v.node_type)
-        node = nncf_graph.add_nncf_node(node_name, v.node_type, metatype)
-        correspondences[v.node_id] = node.node_id
-
-    for e in graph.edges:
-        nncf_graph.add_edge_between_nncf_nodes(
-            correspondences[e.from_node_id], correspondences[e.to_node_id], [], e.to_port, e.from_port, Dtype.FLOAT
-        )
-
-    return nncf_graph
 
 
 def create_test_params():

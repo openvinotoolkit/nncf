@@ -149,6 +149,16 @@ class DivideTestMetatype(TestMetatype):
 
 
 @METATYPES_FOR_TEST.register()
+class ReadValueTestMetatype(TestMetatype):
+    name = "read_value"
+
+
+@METATYPES_FOR_TEST.register()
+class GatherTestMetatype(TestMetatype):
+    name = "gather"
+
+
+@METATYPES_FOR_TEST.register()
 @INPUT_NOOP_METATYPES.register()
 class ParameterTestMetatype(TestMetatype):
     name = "parameter"
@@ -199,4 +209,8 @@ QUANTIZE_AGNOSTIC_METATYPES = [
 
 SHAPEOF_METATYPES = [
     ShapeOfTestMetatype,
+]
+
+READ_VARIABLE_METATYPES = [
+    ReadValueTestMetatype,
 ]

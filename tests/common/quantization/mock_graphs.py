@@ -24,6 +24,7 @@ from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
+from tests.common.quantization.entities import Graph
 from tests.common.quantization.metatypes import METATYPES_FOR_TEST
 from tests.common.quantization.metatypes import TestMetatype
 
@@ -402,3 +403,27 @@ def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGrap
 
     mark_input_ports_lexicographically_based_on_input_node_key(graph)
     return graph
+
+
+def create_nncf_graph(graph: Graph) -> NNCFGraph:
+    """
+    Creates NNCF graph from provided graph's description.
+
+    :param graph: Graph's description.
+    :return: NNCFGraph instance.
+    """
+    nncf_graph = NNCFGraph()
+
+    correspondences = {}
+    for v in graph.nodes:
+        node_name = f"{v.node_type}_{v.node_id}"
+        metatype = METATYPES_FOR_TEST.get_operator_metatype_by_op_name(v.node_type)
+        node = nncf_graph.add_nncf_node(node_name, v.node_type, metatype)
+        correspondences[v.node_id] = node.node_id
+
+    for e in graph.edges:
+        nncf_graph.add_edge_between_nncf_nodes(
+            correspondences[e.from_node_id], correspondences[e.to_node_id], [], e.to_port, e.from_port, Dtype.FLOAT
+        )
+
+    return nncf_graph
