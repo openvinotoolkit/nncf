@@ -18,6 +18,7 @@ import torch
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
@@ -65,7 +66,8 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def remove_fq_from_inputs(model: ov.Model) -> ov.Model:
-        return remove_fq_from_inputs(model)
+        graph = GraphConverter.create_nncf_graph(model)
+        return remove_fq_from_inputs(model, graph)
 
     @staticmethod
     def get_ref_path(suffix: str) -> str:

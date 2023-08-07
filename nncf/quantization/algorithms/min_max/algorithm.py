@@ -18,7 +18,6 @@ import numpy as np
 
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -600,18 +599,18 @@ class MinMaxQuantization(Algorithm):
                 output.update(nodes)
         return output
 
-    def _apply(
+    def apply(
         self,
         model: TModel,
+        graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         transformation_layout = TransformationLayout()
-        nncf_graph = NNCFGraphFactory.create(model)
         model_transformer = ModelTransformerFactory.create(model)
-        quantization_target_points, unified_scale_groups = self._get_quantization_target_points(model, nncf_graph)
+        quantization_target_points, unified_scale_groups = self._get_quantization_target_points(model, graph)
         quantization_points_overflow_fix = self._get_quantization_points_overflow_fix(
-            self._overflow_fix, quantization_target_points, nncf_graph
+            self._overflow_fix, quantization_target_points, graph
         )
         weight_layer_names = set()
 
@@ -638,7 +637,7 @@ class MinMaxQuantization(Algorithm):
                 narrow_range = get_quantizer_narrow_range(qconfig, q_group)
                 parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
                 command = self._backend_entity.create_quantizer_insertion_command(
-                    nncf_graph, quantization_target_point, qconfig, parameters
+                    graph, quantization_target_point, qconfig, parameters
                 )
                 transformation_layout.register(command)
                 unified_ops_list.add(quantization_target_point)
@@ -651,7 +650,7 @@ class MinMaxQuantization(Algorithm):
                 target_node_name, filter_func, self._algorithm_key
             ):
                 if quantization_target_point.is_weight_target_point():
-                    weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
+                    weights_name = self._backend_entity.get_weight_name(graph, quantization_target_point)
                     if not self._backend_entity.should_quantize_weight(weights_name, weight_layer_names):
                         continue
                     weight_layer_names.add(weights_name)
@@ -664,19 +663,17 @@ class MinMaxQuantization(Algorithm):
                 statistics = tensor_collector.get_statistics()
                 parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
                 command = self._backend_entity.create_quantizer_insertion_command(
-                    nncf_graph, quantization_target_point, qconfig, parameters
+                    graph, quantization_target_point, qconfig, parameters
                 )
-
                 transformation_layout.register(command)
 
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        nncf_graph = NNCFGraphFactory.create(model)
 
-        quantization_target_points, _ = self._get_quantization_target_points(model, nncf_graph)
+        quantization_target_points, _ = self._get_quantization_target_points(model, graph)
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
             nncf_logger.debug(
@@ -687,7 +684,7 @@ class MinMaxQuantization(Algorithm):
             if quantization_target_point.is_weight_target_point():
                 # Weight statistics is constant, so only one collection is enough.
                 num_samples = 1
-            stat_collector = self._get_stat_collector(nncf_graph, quantization_target_point, qconfig, num_samples)
+            stat_collector = self._get_stat_collector(graph, quantization_target_point, qconfig, num_samples)
             output.add_statistic_point(
                 StatisticPoint(
                     target_point=quantization_target_point,

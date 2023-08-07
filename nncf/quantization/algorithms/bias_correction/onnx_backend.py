@@ -121,9 +121,9 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return is_node_with_bias(node)
 
     @staticmethod
-    def remove_fq_from_inputs(model: onnx.ModelProto) -> onnx.ModelProto:
-        return remove_fq_from_inputs(model)
+    def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx.ModelProto:
+        return remove_fq_from_inputs(model, nncf_graph)
 
     @staticmethod
-    def insert_null_biases(model: onnx.ModelProto) -> onnx.ModelProto:
+    def insert_null_biases(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx.ModelProto:
         return model

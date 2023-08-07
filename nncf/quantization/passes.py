@@ -17,6 +17,8 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 
+TModel = TypeVar("TModel")
+
 
 def transform_to_inference_graph(
     nncf_graph: NNCFGraph,
@@ -120,19 +122,17 @@ def filter_constant_nodes(
     return nncf_graph
 
 
-TModel = TypeVar("TModel")
-
-
-def insert_null_biases_pass(model: TModel) -> TModel:
+def insert_null_biases_pass(model: TModel, graph: NNCFGraph) -> TModel:
     """
     This pass finds and inserts zero biases to the given model for the layers that should have it.
 
     :param model: Model instance.
+    :param graph: NNCFGraph instance.
     :return: Updated Model instance with zero biases
     """
     model_backend = get_backend(model)
     if model_backend == BackendType.OPENVINO:
         from nncf.openvino.graph.model_utils import insert_null_biases
 
-        return insert_null_biases(model)
+        return insert_null_biases(model, graph)
     return model

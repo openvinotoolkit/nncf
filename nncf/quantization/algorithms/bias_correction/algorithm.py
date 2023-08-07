@@ -127,19 +127,21 @@ class BiasCorrection(Algorithm):
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
             )
 
-    def _apply(
+    def apply(
         self,
         model: TModel,
+        graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        model = self._backend_entity.insert_null_biases(model)
+        model = self._backend_entity.insert_null_biases(model, graph)
         main_transformations_layout = TransformationLayout()
         main_model_transformer = ModelTransformerFactory.create(model)
 
         model_copy = copy_model(model)
-        model_copy = self._backend_entity.remove_fq_from_inputs(model_copy)
+        graph_copy = NNCFGraphFactory.create(model_copy)
+        model_copy = self._backend_entity.remove_fq_from_inputs(model_copy, graph_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
 
         nodes_with_bias = []
@@ -484,10 +486,11 @@ class BiasCorrection(Algorithm):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return np.array(output_fp)
 
-    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        model_copy = self._backend_entity.remove_fq_from_inputs(copy_model(model))
-        model_copy = self._backend_entity.insert_null_biases(model_copy)
+        model_copy = self._backend_entity.remove_fq_from_inputs(copy_model(model), graph)
+        graph_copy = NNCFGraphFactory.create(model_copy)
+        model_copy = self._backend_entity.insert_null_biases(model_copy, graph_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
         statistic_container = StatisticPointsContainer()
 
