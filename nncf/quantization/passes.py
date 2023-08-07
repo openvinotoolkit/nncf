@@ -148,6 +148,9 @@ def insert_noops_instead_constants(
     original_nncf_graph: NNCFGraph,
     metatypes_to_insert_noop: Optional[List[OperatorMetatype]] = None,
 ) -> NNCFGraph:
+    if metatypes_to_insert_noop is None:
+        return nncf_graph
+
     for original_node in original_nncf_graph.get_nodes_by_metatypes(metatypes_to_insert_noop):
         node = nncf_graph.get_node_by_name(original_node.node_name)
         active_ports = [edge.input_port_id for edge in nncf_graph.get_input_edges(node)]
