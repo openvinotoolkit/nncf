@@ -1,0 +1,21 @@
+name: precommit_onnx
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+      with:
+        python-version: 3.8.10
+    - name: Install NNCF and test requirements
+      run: make install-onnx-test
+    - name: Run ONNX precommit test scope
+      run: make test-onnx
