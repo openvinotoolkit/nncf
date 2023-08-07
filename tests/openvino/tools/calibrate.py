@@ -689,7 +689,10 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     model_inputs_shapes = {}
     for input_output in model.inputs:
         input_node = input_output.get_node()
-        model_inputs_shapes[input_to_tensor_name[input_node.friendly_name]] = tuple(input_node.partial_shape)
+        partial_shape = []
+        for dim in input_node.partial_shape:
+            partial_shape.append(Dimension(str(dim)))
+        model_inputs_shapes[input_to_tensor_name[input_node.friendly_name]] = tuple(partial_shape)
 
     if len(dataset_inputs_shapes) != len(model_inputs_shapes):
         raise RuntimeError(
@@ -720,13 +723,13 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
                 dynamic_dims[name].append(idx)
 
     if not any(any(dict_.values()) for dict_ in [dynamic_dims, reshaped_static_dims]):
-        return model
+        return model, model_inputs_shapes
 
     partial_shapes = {}
-    for name, shape in model_inputs_shapes.items():
+    for name, partial_shape in model_inputs_shapes.items():
         dataset_first_shape = dataset_inputs_shapes[name].pop()
         dims = []
-        for idx, d in enumerate(shape):
+        for idx, d in enumerate(partial_shape):
             if idx in dynamic_dims[name]:
                 dim = Dimension(-1)
             elif idx in reshaped_static_dims[name]:
@@ -741,7 +744,7 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
             dims.append(dim)
         partial_shapes[name] = PartialShape(dims)
     model.reshape(partial_shapes)
-    return model
+    return model, model_inputs_shapes
 
 
 # pylint: disable=protected-access
@@ -842,8 +845,9 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_imp
     dataset = get_dataset(model_evaluator, quantization_parameters)
     calibration_dataset = nncf.Dataset(dataset, transform_fn)
 
+    original_model_shapes = None
     if get_allow_reshape_input(accuracy_checker_config):
-        ov_model = maybe_reshape_model(
+        ov_model, original_model_shapes = maybe_reshape_model(
             ov_model,
             calibration_dataset,
             quantization_parameters.get("subset_size", 300),
@@ -852,6 +856,9 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_imp
         model_evaluator.load_network([{"model": ov_model}])
 
     quantized_model = nncf.quantize(ov_model, calibration_dataset, **quantization_parameters)
+    if original_model_shapes is not None:
+        quantized_model.reshape(original_model_shapes)
+
     return quantized_model
 
 
@@ -895,8 +902,9 @@ def quantize_model_with_accuracy_control(
     calibration_dataset = nncf.Dataset(dataset, transform_fn)
     validation_dataset = ACDataset(model_evaluator, transform_fn)
 
+    original_model_shapes = None
     if get_allow_reshape_input(accuracy_checker_config):
-        ov_model = maybe_reshape_model(
+        ov_model, original_model_shapes = maybe_reshape_model(
             ov_model,
             calibration_dataset,
             quantization_parameters.get("subset_size", 300),
@@ -933,6 +941,8 @@ def quantize_model_with_accuracy_control(
     else:
         raise NotImplementedError(f"Unsupported implementation: {quantization_impl}")
 
+    if original_model_shapes is not None:
+        quantized_model.reshape(original_model_shapes)
     return quantized_model
 
 
