@@ -158,15 +158,16 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def get_weight_reduction_axis(node: NNCFNode, port_id: int) -> int:
         channel_axis = 1 if node.metatype.const_channel_axis is None else node.metatype.const_channel_axis[0]
 
+        if port_id not in node.layer_attributes.constant_attributes:
+            raise RuntimeError(f"{node.node_name} should contain {port_id} in the attributes map.")
+
         if node.metatype == OVMatMulMetatype:
             if port_id > 1:
                 raise RuntimeError(f"{OVMatMulMetatype.name} can not take more than 2 input tensors.")
 
             channel_axis = -2 + port_id
             if (
-                node.layer_attributes is not None
-                and node.layer_attributes.constant_attributes is not None
-                and "transpose" in node.layer_attributes.constant_attributes[port_id]
+                "transpose" in node.layer_attributes.constant_attributes[port_id]
                 and node.layer_attributes.constant_attributes[port_id]["transpose"]
             ):
                 channel_axis = -1 - port_id

@@ -97,3 +97,32 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
                 pytest.xfail("Expected exception")
 
         assert activation_channel_axis == reference_value
+
+    @pytest.mark.parametrize(
+        "node_metatype, constant_attributes, port_id, reference_value",
+        (
+            (OVMatMulMetatype, {1: {"transpose": False}}, 1, -1),
+            (OVMatMulMetatype, {1: {"transpose": True}}, 1, -2),
+            (OVMatMulMetatype, {0: {"transpose": False}}, 0, -2),
+            (OVMatMulMetatype, {0: {"transpose": True}}, 0, -1),
+            (OVMatMulMetatype, {1: {"transpose": False}}, 2, RuntimeError),
+            (OVConvolutionMetatype, {1: {}}, 1, 0),
+        ),
+    )
+    def test_get_weight_reduction_axis(self, node_metatype, constant_attributes, port_id, reference_value):
+        backend = self.get_backend()
+
+        attributes = {
+            NNCFGraph.METATYPE_ATTR: node_metatype,
+            NNCFGraph.LAYER_ATTRIBUTES: OVLayerAttributes(constant_attributes=constant_attributes),
+        }
+        node = NNCFNode(0, "test_node", attributes)
+
+        try:
+            # pylint: disable=protected-access
+            activation_channel_axis = backend.get_weight_reduction_axis(node, port_id)
+        except RuntimeError as e:
+            if isinstance(e, reference_value):
+                pytest.xfail("Expected exception")
+
+        assert activation_channel_axis == reference_value

@@ -139,7 +139,7 @@ class SmoothQuant(Algorithm):
                 )
                 transformation_layout.register(weight_update_command)
 
-            activation_scale = self._calculate_activation_scale(best_scale, nodes, nncf_graph)
+            activation_scale = self._calculate_activation_scale(best_scale, nodes, graph)
 
             scale_insertion_command = self._backend_entity.scale_insertion_command(
                 source_node, activation_scale, source_output_port_id, nodes

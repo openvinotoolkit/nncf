@@ -21,6 +21,7 @@ from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import get_static_dataset
@@ -135,3 +136,37 @@ class TemplateTestSQAlgorithm:
                 assert isinstance(reducer, AbsMaxReducer)
                 assert reducer.inplace == inplace_type
                 assert reducer._reduction_shape == reduction_shape
+
+    @pytest.mark.parametrize(
+        "model_cls, references",
+        (
+            (
+                LinearMultiShapeModel,
+                [
+                    ("/MatMul_1", 0),
+                    ("/MatMul", 0),
+                    ("/linear_2/MatMul", 0),
+                    ("/linear_1/MatMul", 0),
+                    ("/MatMul_2", 0),
+                    ("/MatMul_4", 1),
+                    ("55", 1),
+                    ("41", 0),
+                    ("19", 1),
+                    ("24", 0),
+                ],
+            ),
+        ),
+    )
+    # pylint:disable=protected-access
+    def test__get_nodes_to_smooth_data(self, model_cls, references, tmpdir):
+        model = self.backend_specific_model(model_cls(), tmpdir)
+        nncf_graph = NNCFGraphFactory.create(model)
+
+        algo = SmoothQuant()
+        algo._set_backend_entity(model)
+        smooth_data = algo._get_nodes_to_smooth_data(nncf_graph)
+        smooth_data = {d["node_to_smooth"].node_name: d["input_act_port"] for d in smooth_data}
+
+        for ref_node_name, ref_port_id in references:
+            assert ref_node_name in smooth_data
+            assert smooth_data[ref_node_name] == ref_port_id
