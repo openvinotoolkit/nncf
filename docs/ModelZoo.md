@@ -25,7 +25,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
+      <th>Accuracy (<em>drop</em>) %</th>
       <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
@@ -65,7 +65,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">Inception V3</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 61% (RB)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 61% (RB)</td>
       <td>ImageNet</td>
       <td>76.36 (0.97)</td>
       <td><a href="../examples/torch/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json">Config</a></td>
@@ -105,7 +105,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 52% (RB)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 52% (RB)</td>
       <td>ImageNet</td>
       <td>71.09 (0.78)</td>
       <td><a href="../examples/torch/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json">Config</a></td>
@@ -169,7 +169,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ResNet-18</td>
-      <td align="left">• Accuracy-aware compressed training<br />• Filter pruning: 60%, geometric median criterion</td>
+      <td align="left">• Accuracy-aware compressed training<br>• Filter pruning: 60%, geometric median criterion</td>
       <td>ImageNet</td>
       <td>69.2 (-0.6)</td>
       <td><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_accuracy_aware.json">Config</a></td>
@@ -185,7 +185,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ResNet-34</td>
-      <td align="left">• Filter pruning: 50%, geometric median criterion<br />• Knowledge distillation</td>
+      <td align="left">• Filter pruning: 50%, geometric median criterion<br>• Knowledge distillation</td>
       <td>ImageNet</td>
       <td>73.11 (0.19)</td>
       <td><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json">Config</a></td>
@@ -225,7 +225,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 61% (RB)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 61% (RB)</td>
       <td>ImageNet</td>
       <td>75.42 (0.73)</td>
       <td><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json">Config</a></td>
@@ -233,7 +233,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 50% (RB)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 50% (RB)</td>
       <td>ImageNet</td>
       <td>75.50 (0.65)</td>
       <td><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity50_int8.json">Config</a></td>
@@ -249,7 +249,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
-      <td align="left">• Accuracy-aware compressed training<br />• Filter pruning: 52.5%, geometric median criterion</td>
+      <td align="left">• Accuracy-aware compressed training<br>• Filter pruning: 52.5%, geometric median criterion</td>
       <td>ImageNet</td>
       <td>75.23 (0.93)</td>
       <td><a href="../examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_accuracy_aware.json">Config</a></td>
@@ -298,7 +298,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
+      <th>mAP (<em>drop</em>) %</th>
       <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
@@ -314,7 +314,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">SSD300‑MobileNet</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 70% (Magnitude)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 70% (Magnitude)</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>62.95 (-0.72)</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc_magnitude_int8.json">Config</a></td>
@@ -338,7 +338,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">SSD300‑VGG‑BN</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 70% (Magnitude)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 70% (Magnitude)</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>77.66 (0.62)</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_magnitude_sparsity_int8.json">Config</a></td>
@@ -370,7 +370,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">SSD512-VGG‑BN</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 70% (Magnitude)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 70% (Magnitude)</td>
       <td>VOC12+07 train, VOC07 eval</td>
       <td>79.68 (0.58)</td>
       <td><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json">Config</a></td>
@@ -387,7 +387,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mIoU&nbsp(<em>drop</em>)&nbsp%</th>
+      <th>mIoU (<em>drop</em>) %</th>
       <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
@@ -411,7 +411,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ICNet</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 60% (Magnitude)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 60% (Magnitude)</td>
       <td>CamVid</td>
       <td>67.16 (0.73)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json">Config</a></td>
@@ -435,7 +435,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">UNet</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 60% (Magnitude)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 60% (Magnitude)</td>
       <td>CamVid</td>
       <td>72.46 (-0.51)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_camvid_magnitude_sparsity_int8.json">Config</a></td>
@@ -459,7 +459,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">UNet</td>
-      <td align="left">• QAT: INT8<br />• Sparsity: 60% (Magnitude)</td>
+      <td align="left">• QAT: INT8<br>• Sparsity: 60% (Magnitude)</td>
       <td>Mapillary</td>
       <td>55.69 (0.55)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json">Config</a></td>
@@ -484,7 +484,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <th>PyTorch Model</th>
       <th><img width="20" height="1">Compression algorithm<img width="20" height="1"></th>
       <th>Dataset</th>
-      <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
+      <th>Accuracy (<em>drop</em>) %</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -507,7 +507,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>77.22 (0.46)</td>
     </tr>
     <tr>
-      <td align="left">BERT-large<br />(Whole Word Masking)</td>
+      <td align="left">BERT-large<br>(Whole Word Masking)</td>
       <td align="left">• QAT: INT8</td>
       <td>SQuAD v1.1</td>
       <td>F1: 92.68 (0.53)</td>
@@ -549,7 +549,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
+      <th>Accuracy (<em>drop</em>) %</th>
       <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
@@ -573,7 +573,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">Inception V3</td>
-      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity: 61% (RB)</td>
+      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)<br>• Sparsity: 61% (RB)</td>
       <td>ImageNet</td>
       <td>77.52 (0.39)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json">Config</a></td>
@@ -605,7 +605,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
-      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity: 52% (RB)</td>
+      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)<br>• Sparsity: 52% (RB)</td>
       <td>ImageNet</td>
       <td>70.94 (0.91)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json">Config</a></td>
@@ -645,7 +645,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Large)</td>
-      <td align="left">• QAT: INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)<br />• Sparsity: 42% (RB)</td>
+      <td align="left">• QAT: INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)<br>• Sparsity: 42% (RB)</td>
       <td>ImageNet</td>
       <td>75.24 (0.56)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json">Config</a></td>
@@ -669,7 +669,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Small)</td>
-      <td align="left">• QAT: INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)<br />• Sparsity: 42% (Magnitude)</td>
+      <td align="left">• QAT: INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)<br>• Sparsity: 42% (Magnitude)</td>
       <td>ImageNet</td>
       <td>67.44 (0.94)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json">Config</a></td>
@@ -693,7 +693,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
-      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)<br />• Sparsity: 65% (RB)</td>
+      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)<br>• Sparsity: 65% (RB)</td>
       <td>ImageNet</td>
       <td>74.36 (0.69)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json">Config</a></td>
@@ -717,7 +717,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
-      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)<br />• Filter pruning: 40%, geometric median criterion</td>
+      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)<br>• Filter pruning: 40%, geometric median criterion</td>
       <td>ImageNet</td>
       <td>75.09 (-0.04)</td>
       <td><a href="../examples/tensorflow/classification/configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json">Config</a></td>
@@ -725,7 +725,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ResNet50</td>
-      <td align="left">• Accuracy-aware compressed training<br />• Sparsity: 65% (Magnitude)</td>
+      <td align="left">• Accuracy-aware compressed training<br>• Sparsity: 65% (Magnitude)</td>
       <td>ImageNet</td>
       <td>74.37 (0.67)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity/resnet50_imagenet_magnitude_sparsity_accuracy_aware.json">Config</a></td>
@@ -742,7 +742,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
+      <th>mAP (<em>drop</em>) %</th>
       <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
@@ -782,7 +782,7 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">RetinaNet</td>
-      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)<br />• Filter pruning: 40%</td>
+      <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)<br>• Filter pruning: 40%</td>
       <td>COCO 2017</td>
       <td>32.67 (0.76)</td>
       <td><a href="../examples/tensorflow/object_detection/configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json">Config</a></td>
@@ -823,7 +823,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <th>Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
+      <th>mAP (<em>drop</em>) %</th>
       <th>Configuration</th>
       <th>Checkpoint</th>
     </tr>
@@ -833,7 +833,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td align="left">Mask‑R‑CNN</td>
       <td align="left">-</td>
       <td>COCO 2017</td>
-      <td>bbox: 37.33 segm: 33.56</td>
+      <td>bbox: 37.33<br>segm: 33.56</td>
       <td><a href="../examples/tensorflow/segmentation/configs/mask_rcnn_coco.json">Config</a></td>
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz">Download</a></td>
     </tr>
@@ -841,7 +841,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td align="left">Mask‑R‑CNN</td>
       <td align="left">• QAT: INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)</td>
       <td>COCO 2017</td>
-      <td>bbox: 37.19 (0.14) segm: 33.54 (0.02)</td>
+      <td>bbox: 37.19 (0.14)<br>segm: 33.54 (0.02)</td>
       <td><a href="../examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json">Config</a></td>
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz">Download</a></td>
     </tr>
@@ -849,7 +849,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td align="left">Mask‑R‑CNN</td>
       <td align="left">• Sparsity: 50% (Magnitude)</td>
       <td>COCO 2017</td>
-      <td>bbox: 36.94 (0.39) segm: 33.23 (0.33)</td>
+      <td>bbox: 36.94 (0.39)<br>segm: 33.23 (0.33)</td>
       <td><a href="../examples/tensorflow/segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json">Config</a></td>
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz">Download</a></td>
     </tr>
@@ -866,7 +866,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <th>ONNX Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>Accuracy&nbsp(<em>drop</em>)&nbsp%</th>
+      <th>Accuracy (<em>drop</em>) %</th>
     </tr>
   </thead>
   <tbody align="center">
@@ -923,7 +923,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <th>ONNX Model</th>
       <th>Compression algorithm</th>
       <th>Dataset</th>
-      <th>mAP&nbsp(<em>drop</em>)&nbsp%</th>
+      <th>mAP (<em>drop</em>) %</th>
     </tr>
   </thead>
   <tbody align="center">

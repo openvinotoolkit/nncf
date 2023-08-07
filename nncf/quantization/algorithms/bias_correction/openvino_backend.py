@@ -134,9 +134,9 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return is_node_with_bias(node, nncf_graph)
 
     @staticmethod
-    def remove_fq_from_inputs(model: ov.Model) -> ov.Model:
-        return remove_fq_from_inputs(model)
+    def remove_fq_from_inputs(model: ov.Model, nncf_graph: NNCFGraph) -> ov.Model:
+        return remove_fq_from_inputs(model, nncf_graph)
 
     @staticmethod
-    def insert_null_biases(model: ov.Model) -> ov.Model:
-        return insert_null_biases(model)
+    def insert_null_biases(model: ov.Model, nncf_graph: NNCFGraph) -> ov.Model:
+        return insert_null_biases(model, nncf_graph)

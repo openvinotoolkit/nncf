@@ -16,6 +16,7 @@ import onnx
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -65,6 +66,7 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
+    graph = GraphConverter.create_nncf_graph(model)
+    quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
     return quantized_model

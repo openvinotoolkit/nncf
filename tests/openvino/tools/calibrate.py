@@ -644,7 +644,7 @@ def get_nncf_algorithms_config(compression_config):
             raise ValueError(f"Algorithm {pot_algo_name} is not supported.")
 
         nncf_algo_name = MAP_POT_NNCF_ALGORITHMS[pot_algo_name]["method"]
-        advanced_parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("advanced_parameters", {})
+        advanced_parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("advanced_parameters", None)
         parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("parameters", {})
 
         if pot_algo_name in OVERRIDE_OPTIONS_ALGORITHMS:
@@ -657,9 +657,10 @@ def get_nncf_algorithms_config(compression_config):
 
         nncf_algo_parameters = map_paramaters(pot_algo_name, nncf_algo_name, pot_algo.params)
 
-        nncf_algo_parameters["advanced_parameters"] = replace(
-            nncf_algo_parameters["advanced_parameters"], **advanced_parameters
-        )
+        if advanced_parameters is not None:
+            nncf_algo_parameters["advanced_parameters"] = replace(
+                nncf_algo_parameters["advanced_parameters"], **advanced_parameters
+            )
         nncf_algorithms[nncf_algo_name] = nncf_algo_parameters
 
     for override_algo_name, override_values in override_options.items():

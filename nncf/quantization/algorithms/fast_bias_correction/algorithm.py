@@ -16,7 +16,7 @@ from tqdm import tqdm
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -82,7 +82,6 @@ class FastBiasCorrection(Algorithm):
         self.apply_for_all_nodes = apply_for_all_nodes
         self.inplace_statistics = inplace_statistics
         self.backend_params = backend_params
-        self.nncf_graph = None
         self._backend_entity = None
         self._algorithm_key = f"FBC_{hash(self)}"
 
@@ -119,21 +118,21 @@ class FastBiasCorrection(Algorithm):
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
             )
 
-    def _apply(
+    def apply(
         self,
         model: TModel,
+        graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
 
-        nncf_graph = NNCFGraphFactory.create(model)
         model_transformer = ModelTransformerFactory.create(model)
 
         node_and_bias_value = [
-            (node, self._backend_entity.get_bias_value(node, nncf_graph, model))
-            for node in nncf_graph.get_all_nodes()
-            if self._backend_entity.is_node_with_bias(node, nncf_graph)
+            (node, self._backend_entity.get_bias_value(node, graph, model))
+            for node in graph.get_all_nodes()
+            if self._backend_entity.is_node_with_bias(node, graph)
         ]
 
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
@@ -143,13 +142,11 @@ class FastBiasCorrection(Algorithm):
         for node, bias_value in tqdm(node_and_bias_value, desc="Applying Fast Bias correction"):
             node_name = node.node_name
 
-            if not self._backend_entity.is_quantized_weights(node, nncf_graph):
+            if not self._backend_entity.is_quantized_weights(node, graph):
                 nncf_logger.debug(f"Skipping node {node_name} because weights were not quantized")
                 continue
 
-            in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(
-                node, nncf_graph
-            )
+            in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, graph)
 
             input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
             output_fp = self._get_fp_outputs(statistic_points, out_node_name)
@@ -184,9 +181,7 @@ class FastBiasCorrection(Algorithm):
         # Create commands of bias correction and apply them to the model.
         transformation_layout = TransformationLayout()
         for node, bias_value in node_and_new_bias_value:
-            transformation_layout.register(
-                self._backend_entity.create_bias_correction_command(node, bias_value, nncf_graph)
-            )
+            transformation_layout.register(self._backend_entity.create_bias_correction_command(node, bias_value, graph))
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
@@ -309,19 +304,16 @@ class FastBiasCorrection(Algorithm):
         bias_shift = self._backend_entity.post_process_output_data(output_fp) - q_outputs
         return bias_shift
 
-    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        nncf_graph = NNCFGraphFactory.create(model)
         nodes_with_bias = [
-            node for node in nncf_graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node, nncf_graph)
+            node for node in graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node, graph)
         ]
 
         statistic_container = StatisticPointsContainer()
         for node in nodes_with_bias:
             input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
-            in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(
-                node, nncf_graph
-            )
+            in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, graph)
 
             pre_layer_statistic_point = self._backend_entity.target_point(
                 TargetType.PRE_LAYER_OPERATION, in_node_name, input_port_id

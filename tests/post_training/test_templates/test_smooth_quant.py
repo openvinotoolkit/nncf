@@ -14,6 +14,7 @@ from typing import Callable, Dict, TypeVar
 
 import pytest
 
+from nncf.common.factory import NNCFGraphFactory
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
@@ -85,7 +86,8 @@ class TemplateTestSQAlgorithm:
         dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
         quantization_algorithm = self.get_quantization_algorithm()
-        quantized_model = quantization_algorithm.apply(model, dataset=dataset)
+        graph = NNCFGraphFactory.create(model)
+        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
         self.check_scales(quantized_model, reference_values)
 

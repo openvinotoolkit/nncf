@@ -54,19 +54,19 @@
         "requirements": "examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "fp32_top1": 0.9356223344802856,
-            "int8_top1": 0.9356223344802856,
-            "accuracy_drop": 0.0
+            "fp32_top1": 0.9680365324020386,
+            "int8_top1": 0.9683257937431335,
+            "accuracy_drop": -0.0002892613410949707
         },
         "performance_metrics": {
-            "fp32_fps": 331.61,
-            "int8_fps": 937.34,
-            "performance_speed_up": 2.8266336962094027
+            "fp32_fps": 346.23,
+            "int8_fps": 833.56,
+            "performance_speed_up": 2.407532565057909
         },
         "model_size_metrics": {
-            "fp32_model_size": 21.33378505706787,
-            "int8_model_size": 5.616154670715332,
-            "model_compression_rate": 3.7986462816471147
+            "fp32_model_size": 21.33917808532715,
+            "int8_model_size": 5.725968360900879,
+            "model_compression_rate": 3.726736988461077
         }
     },
     "post_training_quantization_openvino_yolo8_quantize_with_accuracy_control": {

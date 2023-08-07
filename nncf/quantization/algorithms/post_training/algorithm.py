@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, TypeVar
 
 from nncf import Dataset
+from nncf.common.factory import NNCFGraphFactory
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
@@ -157,13 +159,8 @@ class PostTrainingQuantization(Algorithm):
     def available_backends(self) -> Dict[str, BackendType]:
         return
 
-    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
-        output = StatisticPointsContainer()
-        for algorithm in self.algorithms:
-            for statistic_points in algorithm.get_statistic_points(model).values():
-                for statistic_point in statistic_points:
-                    output.add_statistic_point(statistic_point)
-        return output
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+        return StatisticPointsContainer()
 
     def _create_statistics_aggregator(self, dataset: Dataset, backend: BackendType) -> StatisticsAggregator:
         """
@@ -189,44 +186,53 @@ class PostTrainingQuantization(Algorithm):
             return PTStatisticsAggregator(dataset)
         return None
 
-    def _apply(
+    def apply(
         self,
         model: TModel,
+        graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         modified_model = copy_model(model)
+        modified_model_graph = graph
         backend = get_backend(modified_model)
 
-        if statistic_points is None:
-            for first_stage_algorithm in self.first_stage_algorithms:
-                algorithm = first_stage_algorithm.algorithm
+        for first_stage_algorithm in self.first_stage_algorithms:
+            algorithm = first_stage_algorithm.algorithm
 
-                if isinstance(algorithm, SmoothQuant) and backend != BackendType.OPENVINO:
-                    nncf_logger.debug(f"{backend.name} does not support SmoothQuant algorithm yet.")
-                    continue
+            if isinstance(algorithm, SmoothQuant) and backend != BackendType.OPENVINO:
+                nncf_logger.debug(f"{backend.name} does not support SmoothQuant algorithm yet.")
+                continue
 
-                if isinstance(algorithm, ChannelAlignment) and backend != BackendType.OPENVINO:
-                    nncf_logger.debug(f"{backend.name} does not support ChannelAlignment algorithm yet.")
-                    continue
+            if isinstance(algorithm, ChannelAlignment) and backend != BackendType.OPENVINO:
+                nncf_logger.debug(f"{backend.name} does not support ChannelAlignment algorithm yet.")
+                continue
 
-                for pre_pass in first_stage_algorithm.pre_passes:
-                    modified_model = pre_pass(modified_model)
-
-                statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
-                algo_statistic_points = algorithm.get_statistic_points(modified_model)
-                statistics_aggregator.register_statistic_points(algo_statistic_points)
-                statistics_aggregator.collect_statistics(modified_model)
-                modified_model = algorithm.apply(modified_model, statistics_aggregator.statistic_points)
+            for pre_pass in first_stage_algorithm.pre_passes:
+                modified_model = pre_pass(modified_model, modified_model_graph)
+                modified_model_graph = NNCFGraphFactory.create(modified_model)
 
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
-            for algorithm in self.algorithms:
-                algo_statistic_points = algorithm.get_statistic_points(modified_model)
-                statistics_aggregator.register_statistic_points(algo_statistic_points)
+            algo_statistic_points = algorithm.get_statistic_points(modified_model, modified_model_graph)
+            statistics_aggregator.register_statistic_points(algo_statistic_points)
+            statistics_aggregator.collect_statistics(modified_model, modified_model_graph)
+            modified_model = algorithm.apply(
+                modified_model, modified_model_graph, statistics_aggregator.statistic_points
+            )
+            modified_model_graph = NNCFGraphFactory.create(modified_model)
 
-            statistics_aggregator.collect_statistics(modified_model)
-            statistic_points = statistics_aggregator.statistic_points
-
+        statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
         for algorithm in self.algorithms:
-            modified_model = algorithm.apply(modified_model, statistic_points)
+            algo_statistic_points = algorithm.get_statistic_points(modified_model, modified_model_graph)
+            statistics_aggregator.register_statistic_points(algo_statistic_points)
+
+        statistics_aggregator.collect_statistics(modified_model, modified_model_graph)
+        statistic_points = statistics_aggregator.statistic_points
+
+        for algorithm in self.algorithms[:-1]:
+            modified_model = algorithm.apply(modified_model, modified_model_graph, statistic_points)
+            modified_model_graph = NNCFGraphFactory.create(modified_model)
+        # building the model graph is not required after the last algorithm
+        modified_model = self.algorithms[-1].apply(modified_model, modified_model_graph, statistic_points)
+
         return modified_model
