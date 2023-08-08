@@ -177,3 +177,8 @@ def _(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
 @functions.moveaxis.register(torch.Tensor)
 def _(a: torch.Tensor, source: Union[int, List[int]], destination: Union[int, List[int]]) -> torch.Tensor:
     return torch.moveaxis(a, source, destination)
+
+
+@functions.mean.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Union[int, List[int]] = None, keepdims: bool = False) -> torch.Tensor:
+    return torch.mean(a.data, axis=axis, keepdims=keepdims)

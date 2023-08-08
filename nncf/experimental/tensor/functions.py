@@ -395,6 +395,20 @@ def moveaxis(a: Tensor, source: Union[int, List[int]], destination: Union[int, L
     return Tensor(moveaxis(a.data, source, destination))
 
 
+@functools.singledispatch
+@_tensor_guard
+def mean(a: Tensor, axis: Union[int, List[int]] = None, keepdims: bool = False) -> Tensor:
+    """
+    Compute the arithmetic mean along the specified axis.
+
+    :param a: Array containing numbers whose mean is desired.
+    :param axis: Axis or axes along which the means are computed.
+    :param keepdims: Destination positions for each of the original axes. These must also be unique.
+    :return: Array with moved axes.
+    """
+    return Tensor(mean(a.data, axis, keepdims))
+
+
 __all__ = [
     "abs",
     "all",
@@ -410,6 +424,7 @@ __all__ = [
     "isempty",
     "max",
     "maximum",
+    "mean",
     "min",
     "minimum",
     "minimum",

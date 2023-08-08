@@ -642,3 +642,44 @@ class TemplateTestNNCFTensorOperators:
         res = functions.moveaxis(tensor, 0, -1)
 
         assert res.shape == [3, 2]
+
+    @pytest.mark.parametrize(
+        "x, axis, keepdims, ref",
+        (
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                0,
+                False,
+                [0.45, 0.45, 0.15],
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                0,
+                True,
+                [[0.45, 0.45, 0.15]],
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                (0, 1),
+                True,
+                [[0.35]],
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                None,
+                False,
+                0.35,
+            ),
+        ),
+    )
+    def test_fn_mean(self, x, axis, keepdims, ref):
+        tensor = Tensor(self.to_tensor(x))
+        ref_tensor = self.to_tensor(ref)
+
+        res = functions.mean(tensor, axis, keepdims)
+
+        assert isinstance(res, Tensor)
+        if isinstance(ref, list):
+            assert functions.all(functions.isclose(res.data, ref_tensor))
+        else:
+            assert functions.isclose(res.data, ref_tensor)

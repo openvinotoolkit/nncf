@@ -191,3 +191,9 @@ def _(x: Union[np.ndarray, np.number], axis: int = 0) -> List[np.ndarray]:
 @functions.moveaxis.register(np.ndarray)
 def _(a: np.ndarray, source: Union[int, List[int]], destination: Union[int, List[int]]) -> np.ndarray:
     return np.moveaxis(a, source, destination)
+
+
+@functions.mean.register(np.ndarray)
+@functions.mean.register(np.number)
+def _(a: Union[np.ndarray, np.number], axis: Union[int, List[int]] = None, keepdims: bool = False) -> np.ndarray:
+    return np.mean(a.data, axis=axis, keepdims=keepdims)
