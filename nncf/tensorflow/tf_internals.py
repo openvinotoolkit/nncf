@@ -23,7 +23,7 @@ if version.parse(tensorflow_version) < version.parse("2.6"):
     from tensorflow.python.keras.engine.keras_tensor import KerasTensor
     from tensorflow.python.keras.layers import Rescaling
     from tensorflow.python.keras.utils.control_flow_util import smart_cond
-else:
+elif version.parse(tensorflow_version) < version.parse("2.13"):
     from keras import backend
     from keras import engine as keras_engine
     from keras import layers
@@ -31,3 +31,11 @@ else:
     from keras.engine.keras_tensor import KerasTensor
     from keras.layers import Rescaling
     from keras.utils.control_flow_util import smart_cond
+else:
+    from keras import backend
+    from keras import layers
+    from keras.layers import Rescaling
+    from keras.src import engine as keras_engine  # pylint: disable=no-name-in-module,import-error
+    from keras.src.applications import imagenet_utils  # pylint: disable=no-name-in-module,import-error
+    from keras.src.engine.keras_tensor import KerasTensor  # pylint: disable=no-name-in-module,import-error
+    from keras.src.utils.control_flow_util import smart_cond  # pylint: disable=no-name-in-module,import-error
