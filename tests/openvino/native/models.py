@@ -551,6 +551,7 @@ class IntegerModel(OVReferenceModel):
         gather_1.set_friendly_name("Gather_1")
 
         gather_2_data = self._rng.random((369, 160)).astype(np.float32)
+        gather_2_data = opset.constant(gather_2_data, name="Gather_2_data")
         gather_2 = opset.gather(gather_2_data, gather_1, axis=0, batch_dims=0)
         gather_2.set_friendly_name("Gather_2")
 
