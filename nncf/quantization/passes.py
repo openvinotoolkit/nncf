@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import collections
-from typing import List, Optional, Set, TypeVar
+from typing import Callable, List, Optional, Set, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -116,7 +116,9 @@ def filter_constant_nodes(
     if not start_nodes:
         return nncf_graph
 
-    def fill_nodes_list(initial_list: List[NNCFNode], fill_list: Set[NNCFNode], extend_call: callable):
+    def fill_nodes_list(
+        initial_list: List[NNCFNode], fill_list: Set[NNCFNode], extend_call: Callable[[NNCFNode], List[NNCFNode]]
+    ):
         nodes_queue = collections.deque(initial_list)
         while nodes_queue:
             node = nodes_queue.pop()
