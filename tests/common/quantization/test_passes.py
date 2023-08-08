@@ -23,8 +23,6 @@ from tests.common.quantization.entities import Graph
 from tests.common.quantization.entities import Node
 from tests.common.quantization.metatypes import READ_VARIABLE_METATYPES
 from tests.common.quantization.metatypes import SHAPEOF_METATYPES
-from tests.common.quantization.metatypes import AddTestMetatype
-from tests.common.quantization.metatypes import GatherTestMetatype
 from tests.common.quantization.mock_graphs import create_nncf_graph
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
@@ -179,7 +177,7 @@ TEST_CONFIGS = [
         TestCaseData(
             "graph_without_constants", {filter_constant_nodes: {"read_variable_metatypes": READ_VARIABLE_METATYPES}}
         ),
-    )
+    ),
 ]
 
 
