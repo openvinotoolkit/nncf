@@ -109,9 +109,13 @@ class SmoothQuant(Algorithm):
 
         for group_id, nodes in tqdm(node_groups.items(), desc="Applying Smooth Quant"):
             best_ratio = 0.0
+            empty_statistic = False
             for node_to_smooth in nodes:
                 source_node, port_id = group_id
                 activations_value = self._get_statistics_for_node(statistic_points, node_to_smooth.node_name, port_id)
+                if any(val is None for val in activations_value):
+                    empty_statistic = True
+                    break
                 activations_value = self._backend_entity.clip_statistics(activations_value)
 
                 weights_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
@@ -125,6 +129,9 @@ class SmoothQuant(Algorithm):
                 if ratio > best_ratio:
                     best_ratio = ratio
                     best_scale = deepcopy(scales)
+
+            if empty_statistic:
+                break
 
             activation_scales = self._backend_entity.calculate_activation_scale(best_scale, nodes)
             weight_scales = self._backend_entity.calculate_weight_scale(best_scale, nodes)

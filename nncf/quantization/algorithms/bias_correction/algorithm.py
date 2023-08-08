@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar
 
 import numpy as np
 from tqdm import tqdm
@@ -171,8 +171,11 @@ class BiasCorrection(Algorithm):
             # Then we create the necessary data lists from the previously collected statistics,
             # for the subgraph inference.
             feed_dicts = self._create_feed_dicts(model_copy_subgraph, subgraph_data, statistic_points)
+            output_fp = self._get_fp_outputs(statistic_points, node.node_name)
+            if any(val is None for feed_dict in feed_dicts for val in feed_dict.values()) or (None in output_fp):
+                continue
 
-            bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
+            bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, output_fp)
 
             current_bias = self._backend_entity.get_bias_value(node, model_copy, nncf_graph)
 
@@ -342,9 +345,7 @@ class BiasCorrection(Algorithm):
             feed_dicts.append(feed_dict)
         return feed_dicts
 
-    def _compute_bias_shift(
-        self, node: NNCFNode, model: TModel, feed_dicts: List, statistic_points: StatisticPointsContainer
-    ) -> np.ndarray:
+    def _compute_bias_shift(self, node: NNCFNode, model: TModel, feed_dicts: List, output_fp: np.array) -> np.ndarray:
         """
         Computes bias shift that will be used for the further bias correction.
 
@@ -354,7 +355,6 @@ class BiasCorrection(Algorithm):
         :param statistic_points: StatisticPointsContainer instance.
         :return: Calculated bias shift value.
         """
-        output_fp = self._get_fp_outputs(statistic_points, node.node_name)
         output_tensor_name = self._backend_entity.get_output_name(model, node.node_name, OUTPUT_PORT_OF_NODE)
         engine = EngineFactory.create(model)
         channel_axis = node.metatype.output_channel_axis
@@ -432,6 +432,13 @@ class BiasCorrection(Algorithm):
                 nncf_logger.debug(f"Dropped {activation_name} output statistics.")
                 self._fp_inputs[input_id] = []
 
+    @staticmethod
+    def _extend(list_: List[Any], value: Optional[Iterable]) -> None:
+        if value is not None:
+            list_.extend(value)
+        else:
+            list_.append(value)
+
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
         """
         Makes out pre-layer needed data from the floating-point collected statistics.
@@ -460,7 +467,7 @@ class BiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, input_filter_func, self._algorithm_key
         ):
-            input_fp.extend(tensor_collector.get_statistics().values)
+            self._extend(input_fp, tensor_collector.get_statistics().values)
         self._fp_inputs[input_id] = input_fp
         return self._fp_inputs[input_id]
 
@@ -483,7 +490,7 @@ class BiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(tensor_collector.get_statistics().mean_values)
+            self._extend(output_fp, tensor_collector.get_statistics().mean_values)
         return np.array(output_fp)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

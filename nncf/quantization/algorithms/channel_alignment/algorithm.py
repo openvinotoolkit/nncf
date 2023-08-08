@@ -114,6 +114,9 @@ class ChannelAlignment(Algorithm):
             )
             assert len(tensor_collectors) == 1
             stat = tensor_collectors[0].get_statistics()
+            if stat.min_values is None or stat.max_values is None:
+                continue
+
             conv_in_cont = ConvParamsContainer(conv_in, model, graph, self._backend_entity)
             conv_out_cont = ConvParamsContainer(conv_out, model, graph, self._backend_entity)
 

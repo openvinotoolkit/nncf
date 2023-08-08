@@ -37,7 +37,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return OVBiasCorrectionAlgoBackend
 
     @staticmethod
-    def backend_specific_model(model: torch.nn.Module, tmp_dir: str):
+    def backend_specific_model(model: torch.nn.Module, tmp_dir: str, empty_inputs: bool):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         ov_path = f"{tmp_dir}/model.xml"
@@ -45,6 +45,10 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         runner.run()
         core = ov.Core()
         ov_model = core.read_model(ov_path)
+        if empty_inputs:
+            input_shape = model.INPUT_SIZE
+            input_shape[0] = -1
+            ov_model.reshape(input_shape)
         return ov_model
 
     @staticmethod
@@ -198,3 +202,6 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     )
     def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):
         return super().test__get_subgraph_data_for_node(quantized_test_model, layer_name, ref_data)
+
+    def empty_inputs_possible(self) -> bool:
+        return True

@@ -73,7 +73,7 @@ class TemplateTestBCAlgorithm:
 
     @staticmethod
     @abstractmethod
-    def backend_specific_model(model: TModel, tmp_dir: str) -> TModel:
+    def backend_specific_model(model: TModel, tmp_dir: str, empty_inputs: bool) -> TModel:
         """
         Return backend specific model.
         """
@@ -130,7 +130,7 @@ class TemplateTestBCAlgorithm:
     @pytest.fixture()
     def quantized_test_model(self, tmpdir) -> TModel:
         model_cls = SplittedModel
-        model = self.backend_specific_model(model_cls(), tmpdir)
+        model = self.backend_specific_model(model_cls(), tmpdir, empty_inputs=False)
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm(disable_bias_correction=True)
@@ -139,6 +139,7 @@ class TemplateTestBCAlgorithm:
         modified_model = self.remove_fq_from_inputs(quantized_model)
         return modified_model
 
+    @pytest.mark.parametrize("empty_input", [False, True])
     @pytest.mark.parametrize(
         "model_cls, ref_biases",
         (
@@ -156,9 +157,14 @@ class TemplateTestBCAlgorithm:
             (ConvTestModel, {"/conv/Conv": [0.11085186, 1.0017344]}),
         ),
     )
-    def test_update_bias(self, model_cls, ref_biases, tmpdir):
-        model = self.backend_specific_model(model_cls(), tmpdir)
-        dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
+    def test_update_bias(self, empty_input, model_cls, ref_biases, tmpdir):
+        model = self.backend_specific_model(model_cls(), tmpdir, empty_input)
+        model_input = model_cls.INPUT_SIZE
+        if empty_input:
+            if not self.empty_inputs_possible():
+                pytest.skip()
+            model_input[0] = 0
+        dataset = Dataset(self.get_dataset(model_input), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
         graph = NNCFGraphFactory.create(model)
