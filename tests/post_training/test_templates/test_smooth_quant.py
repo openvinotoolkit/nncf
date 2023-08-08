@@ -80,8 +80,8 @@ class TemplateTestSQAlgorithm:
                 LinearMultiShapeModel,
                 {
                     "/Reshape_0_0/sq_multiply": [[[[1.0594617, 1.1019668, 1.2208323, 1.1003988]]]],
-                    "/Split_1_1/sq_multiply": [[[[1.1276343, 0.7605822]]]],
-                    "/Split_0_1/sq_multiply": [[[[0.32575992, 0.33121374]]]],
+                    "/Split_1_0/sq_multiply": [[[[1.1276343, 0.7605822]]]],
+                    "/Split_0_0/sq_multiply": [[[[0.32575992, 0.33121374]]]],
                     "/Reshape_1_0_0/sq_multiply": [
                         [
                             [
@@ -97,8 +97,8 @@ class TemplateTestSQAlgorithm:
                         ]
                     ],
                     "/Reshape_1_0_1/sq_multiply": [[[0.4699388], [0.3369332], [0.3674589]]],
-                    "/Reshape_2_0_1/sq_multiply": [[0.1242606]],
-                    "/ReduceMax_0_1/sq_multiply": [
+                    "/Reshape_2_0_0/sq_multiply": [[0.1242606]],
+                    "/ReduceMax_0_0/sq_multiply": [
                         [0.0944255, 0.0853033, 0.7187095, 0.3429819, 0.1422914, 0.2127623, 0.4640060, 0.7210725]
                     ],
                 },
