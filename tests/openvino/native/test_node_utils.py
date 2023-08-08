@@ -97,6 +97,7 @@ def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, e
         ((1, 128, 512), [-1], (0, 1)),
         ((1, 3, 224, 224), [1], (0, 2, 3)),
         ((1, 1, 12, 12), [1], (0, 2, 3)),
+        ((1, 1, 12, 12), [1, 2], (0, 3)),
     ],
 )
 def test_get_channel_agnostic_reduction_shape(shape, channel_axes, ref_reduction_shape):

@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import Counter
 from collections import defaultdict
 from collections import deque
 from typing import Callable, Dict, List, Tuple
@@ -505,8 +506,7 @@ class OVModelTransformer(ModelTransformer):
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
 
-        cached_multiply_name = None
-        unique_index = 0
+        cached_multiply_names = Counter()
 
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
@@ -528,11 +528,10 @@ class OVModelTransformer(ModelTransformer):
 
             multiply_name = f"{node_name}_{output_port_id}"
 
-            if multiply_name == cached_multiply_name:
-                unique_index += 1
-
-            cached_multiply_name = multiply_name
+            unique_index = cached_multiply_names.get(multiply_name, 0)
+            cached_multiply_names.update([multiply_name])
             multiply_name = f"{multiply_name}_{unique_index}/sq_multiply"
+
             scale_constant = opset.constant(transformation.scale_value, dtype=scale_dtype)
             multiply_node = opset.multiply(node_output_port, scale_constant, name=multiply_name)
 
