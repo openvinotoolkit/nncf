@@ -95,7 +95,7 @@ class MinMaxAlgoBackend(ABC):
     @abstractmethod
     def keep_const_metatypes(self) -> List[OperatorMetatype]:
         """
-        Property for the backend-specific metatypes which allowed to have pre-hooks.
+        Metatypes which all inputs subgraphs should be treated as not constant.
         """
 
     @property
