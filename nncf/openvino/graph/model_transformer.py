@@ -528,8 +528,8 @@ class OVModelTransformer(ModelTransformer):
 
             multiply_name = f"{node_name}_{output_port_id}"
 
-            unique_index = cached_multiply_names.get(multiply_name, 0)
-            cached_multiply_names.update([multiply_name])
+            unique_index = cached_multiply_names[multiply_name]
+            cached_multiply_names[multiply_name] += 1
             multiply_name = f"{multiply_name}_{unique_index}/sq_multiply"
 
             scale_constant = opset.constant(transformation.scale_value, dtype=scale_dtype)
