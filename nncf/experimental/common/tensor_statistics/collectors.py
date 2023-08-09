@@ -148,6 +148,7 @@ class TensorAggregatorBase:
     def aggregate(self) -> Any:
         """
         Aggregates collected tensors and returns aggregated result.
+        In case no tensors were collected returns None.
 
         :return: Aggregated result.
         """
