@@ -9,8 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from itertools import chain
-from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 from tqdm import tqdm
 
@@ -151,8 +150,6 @@ class FastBiasCorrection(Algorithm):
 
             input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
             output_fp = self._get_fp_outputs(statistic_points, out_node_name)
-            if any(None in val for val in (input_fp, input_shape, output_fp)):
-                continue
 
             extracted_model = self._extract_submodel(model_transformer, node_name)
 
@@ -205,13 +202,6 @@ class FastBiasCorrection(Algorithm):
             bias_shift = self._backend_entity.reshape_tensor(bias_shift, new_shape)
         return bias_shift
 
-    @staticmethod
-    def _extend(list_: List[Any], value: Optional[Iterable]) -> None:
-        if value is not None:
-            list_.extend(value)
-        else:
-            list_.append(value)
-
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
@@ -233,8 +223,8 @@ class FastBiasCorrection(Algorithm):
             node_name, input_filter_func, self._algorithm_key
         ):
             statistics = tensor_collector.get_statistics()
-            self._extend(input_fp, statistics.mean_values)
-            self._extend(input_shape, statistics.shape)
+            input_fp.extend(statistics.mean_values)
+            input_shape.extend(statistics.shape)
         return input_fp, input_shape
 
     def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[TTensor]:
@@ -256,7 +246,7 @@ class FastBiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            self._extend(output_fp, tensor_collector.get_statistics().mean_values)
+            output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
     def _extract_submodel(self, model_transformer: ModelTransformer, node_name: str) -> TModel:

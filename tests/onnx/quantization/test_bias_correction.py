@@ -43,7 +43,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         return ONNXBiasCorrectionAlgoBackend
 
     @staticmethod
-    def backend_specific_model(model: torch.nn.Module, tmp_dir: str, empty_inputs: bool) -> onnx.ModelProto:
+    def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> onnx.ModelProto:
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         onnx_model = onnx.load(onnx_path)
