@@ -446,8 +446,8 @@ class QuantizerPropagationSolver:
     def _filter_by_weight_ignored_target_scopes(
         self,
         quantizable_layer_nodes: List[QuantizableWeightedLayerNode],
-        weight_ignored_scopes: Dict[QuantizerGroup, List[str]],
-        weight_target_scopes: Dict[QuantizerGroup, List[str]],
+        weight_ignored_scopes: List[str],
+        weight_target_scopes: List[str],
     ) -> Dict[NNCFNodeName, List[QuantizerConfig]]:
         if quantizable_layer_nodes is None:
             return {}

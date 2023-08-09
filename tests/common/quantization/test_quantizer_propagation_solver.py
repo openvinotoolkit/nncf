@@ -31,6 +31,7 @@ from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropag
 from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_propagation.solver import TransitionStatus
+from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
@@ -1618,7 +1619,7 @@ class TestQuantizerPropagationSolver:
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scopes=['/gelu_0', '/conv2d_0']
+            ignored_scopes={'/gelu_0': IgnoreReason.USER_REQUESTED, '/conv2d_0': IgnoreReason.USER_REQUESTED}
         ),
         RunOnIpGraphTestStruct(
             base_nx_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
@@ -1630,7 +1631,7 @@ class TestQuantizerPropagationSolver:
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scopes=['/conv2d_0']
+            ignored_scopes={'/conv2d_0': IgnoreReason.USER_REQUESTED}
         ),
         RunOnIpGraphTestStruct(
             base_nx_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
@@ -1639,7 +1640,7 @@ class TestQuantizerPropagationSolver:
             retval_shared_input_operation_set_groups=[],
             expected_count_finished_quant=0,
             expected_count_active_quant=0,
-            ignored_scopes=['/conv2d_0', '/matmul_0']
+            ignored_scopes={'/conv2d_0': IgnoreReason.USER_REQUESTED, '/matmul_0': IgnoreReason.USER_REQUESTED}
         ),
         RunOnIpGraphTestStruct(
             base_nx_graph=TwoFcAfterDropout.get_graph(),
@@ -1653,7 +1654,7 @@ class TestQuantizerPropagationSolver:
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scopes=[TwoFcAfterDropout.FC_2_NODE_NAME]
+            ignored_scopes={TwoFcAfterDropout.FC_2_NODE_NAME: IgnoreReason.USER_REQUESTED}
         )
     ]  # fmt: skip
 
@@ -1670,9 +1671,13 @@ class TestQuantizerPropagationSolver:
         nncf_graph = run_on_ip_graph_test_struct.base_graph
         ip_graph = get_ip_graph_for_test(nncf_graph)
 
+        if run_on_ip_graph_test_struct.ignored_scopes is not None:
+            weight_ignored_scopes = list(run_on_ip_graph_test_struct.ignored_scopes.keys())
+        else:
+            weight_ignored_scopes = None
         quant_prop_solver = QuantizerPropagationSolver(
             activation_ignored_scopes=run_on_ip_graph_test_struct.ignored_scopes,
-            weight_ignored_scopes=run_on_ip_graph_test_struct.ignored_scopes,
+            weight_ignored_scopes=weight_ignored_scopes,
             default_trait_to_metatype_map=DEFAULT_TEST_QUANT_TRAIT_MAP,
             run_consistency_checks=True,
         )
