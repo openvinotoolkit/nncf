@@ -699,7 +699,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if not isinstance(node.layer_attributes, ConvertDtypeLayerAttributes):
                 continue
             if node.layer_attributes.src_dtype == node.layer_attributes.dst_dtype:
-                node.data[NNCFGraph.METATYPE_ATTR] = TFIdentityOpMetatype
+                node.attributes[NNCFNode.METATYPE_ATTR] = TFIdentityOpMetatype
         return nncf_graph
 
     def _get_fake_quantize_name(self, node_name: NNCFNodeName, input_port_id: int = None) -> str:

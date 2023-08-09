@@ -86,7 +86,7 @@ class InputPruningOp(BasePruningOp):
     def mask_propagation(
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
     ) -> None:
-        node.data["output_mask"] = None
+        node.attributes["output_mask"] = None
 
 
 class OutputPruningOp(BasePruningOp):
@@ -94,7 +94,7 @@ class OutputPruningOp(BasePruningOp):
     def mask_propagation(
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
     ) -> None:
-        node.data["output_mask"] = None
+        node.attributes["output_mask"] = None
         input_masks = get_input_masks(node, graph)
         cls.invalidate_masks(input_masks)
 
@@ -115,7 +115,7 @@ class LinearPruningOp(BasePruningOp):
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) in [1, 2]
         is_input_mask_empty_map = map(not_, input_masks)
-        output_mask = node.data.get("output_mask", None)
+        output_mask = node.attributes.get("output_mask", None)
         input_tensors_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
         node_id = node.node_id
         if all(is_input_mask_empty_map):
@@ -133,7 +133,7 @@ class LinearPruningOp(BasePruningOp):
         elif len(input_masks) == 2:
             output_mask = cls._handle_two_inputs(input_masks, input_tensors_shapes, node_id)
 
-        node.data["output_mask"] = output_mask
+        node.attributes["output_mask"] = output_mask
 
     @staticmethod
     def _handle_single_input(
@@ -221,7 +221,7 @@ class GroupNormPruningOp(BasePruningOp):
         if cls.accept_pruned_input(node):
             identity_mask_propagation(node, graph)
         else:
-            node.data["output_mask"] = None
+            node.attributes["output_mask"] = None
 
 
 class ElementwisePruningOp(BasePruningOp):
@@ -230,7 +230,7 @@ class ElementwisePruningOp(BasePruningOp):
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
     ) -> None:
         input_masks = get_input_masks(node, graph)
-        node.data["output_mask"] = cls._get_output_mask(input_masks)
+        node.attributes["output_mask"] = cls._get_output_mask(input_masks)
 
     @classmethod
     def _get_output_mask(cls, input_masks: List[Optional[PropagationMask]]) -> Optional[PropagationMask]:
@@ -284,7 +284,7 @@ class GatherPruningOp(BasePruningOp):
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) == 1
         input_mask = input_masks[0]
-        node.data["output_mask"] = cls._get_output_mask(input_mask, node, graph)
+        node.attributes["output_mask"] = cls._get_output_mask(input_mask, node, graph)
 
     @classmethod
     def _get_output_mask(
@@ -380,7 +380,7 @@ class SplitPruningOp(BasePruningOp):
                     "symbolic mask propagation for split by prune dimension is not implemented, "
                     "just propagate further for now"
                 )
-        node.data["output_mask"] = output_mask
+        node.attributes["output_mask"] = output_mask
 
 
 class ReshapeMode(Enum):
@@ -454,7 +454,7 @@ class ReshapePruningOp(BasePruningOp):
                     grouping[in_map[in_idx][0]].extend(groups)
                 output_mask.dim_groups_map = dict(grouping)
 
-        node.data["output_mask"] = output_mask
+        node.attributes["output_mask"] = output_mask
 
     @staticmethod
     def _can_reach_number_by_multiply(number_to_reach: int, array: List[int], start_idx: int) -> Tuple[bool, int]:
@@ -678,7 +678,7 @@ class TransposePruningOp(BasePruningOp):
         assert len(input_masks) == 1
         input_mask = input_masks[0]
         if not input_mask:
-            node.data["output_mask"] = None
+            node.attributes["output_mask"] = None
             return
 
         if isinstance(node.layer_attributes, TransposeLayerAttributes):
@@ -698,7 +698,7 @@ class TransposePruningOp(BasePruningOp):
             dim_groups_map={new_idx: input_mask.dim_groups_map[old_idx] for old_idx, new_idx in idx_map}
         )
 
-        node.data["output_mask"] = output_mask
+        node.attributes["output_mask"] = output_mask
 
 
 class StopMaskForwardPruningOp(BasePruningOp):
@@ -708,7 +708,7 @@ class StopMaskForwardPruningOp(BasePruningOp):
     ) -> None:
         input_masks = get_input_masks(node, graph)
         cls.invalidate_masks(input_masks)
-        node.data["output_mask"] = None
+        node.attributes["output_mask"] = None
 
 
 class ExpandAsPruningOp(BasePruningOp):
@@ -719,7 +719,7 @@ class ExpandAsPruningOp(BasePruningOp):
         input_edges = graph.get_input_edges(node)
         assert len(input_edges) == 2, "expand should always have 2 inputs"
         input_to_expand = input_edges[0].from_node
-        mask = input_to_expand.data.get("output_mask")
+        mask = input_to_expand.attributes.get("output_mask")
         propagated_mask = None
         if mask:
             nncf_logger.warning(
@@ -728,7 +728,7 @@ class ExpandAsPruningOp(BasePruningOp):
             )
             mask.invalidate_groups()
         input_to_get_shape = input_edges[1].from_node
-        mask: PropagationMask = input_to_get_shape.data.get("output_mask")
+        mask: PropagationMask = input_to_get_shape.attributes.get("output_mask")
         if mask:
             target_shape = input_edges[1].tensor_shape
             source_shape = input_edges[0].tensor_shape
@@ -744,7 +744,7 @@ class ExpandAsPruningOp(BasePruningOp):
             # TODO: (nlyalyus) assume that expand_as is on constant path that does not affect pruning, otherwise pruning
             # of self attention block would be not possible in the general case.
             propagated_mask = mask
-        node.data["output_mask"] = propagated_mask
+        node.attributes["output_mask"] = propagated_mask
 
 
 class ScatterPruningOp(BasePruningOp):
@@ -752,7 +752,7 @@ class ScatterPruningOp(BasePruningOp):
     def mask_propagation(
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
     ) -> None:
-        input_masks = [input_edge.from_node.data.get("output_mask") for input_edge in graph.get_input_edges(node)]
+        input_masks = [input_edge.from_node.attributes.get("output_mask") for input_edge in graph.get_input_edges(node)]
         assert len(input_masks) == 2, "expect that masked_fill should always have 2 inputs"
         i1, i2 = input_masks
         propagated_mask = None
@@ -766,4 +766,4 @@ class ScatterPruningOp(BasePruningOp):
                 i1.invalidate_groups()
         else:
             propagated_mask = i1
-        node.data["output_mask"] = propagated_mask
+        node.attributes["output_mask"] = propagated_mask

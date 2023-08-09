@@ -402,7 +402,7 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
     ref_concat_masks = [[0] * 8 + [1] * 8 + [0] * 8 + [1] * 8, [1] * 8 + [0] * 16 + [1] * 8 + [0] * 8 + [1] * 8]
     graph = pruned_model.nncf.get_original_graph()
     for i, node in enumerate(graph.get_nodes_by_types(["cat"])):
-        assert np.allclose(node.data["output_mask"].tensor.numpy(), ref_concat_masks[i])
+        assert np.allclose(node.attributes["output_mask"].tensor.numpy(), ref_concat_masks[i])
 
 
 @pytest.mark.parametrize('model,ref_output_shapes',
@@ -742,7 +742,7 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
     pruning_groups_next_nodes = shape_pruning_processor.get_next_nodes(graph, pruning_groups)
     # Check output_shapes are empty in graph
     for node in graph.get_all_nodes():
-        assert node.data["output_shape"] is None
+        assert node.attributes["output_shape"] is None
 
     # Next nodes cluster check
     assert len(pruning_groups_next_nodes) == len(refs["next_nodes"])
@@ -849,7 +849,7 @@ def test_disconnected_graph():
     for name, (shape, mask_sum) in nodes_output_mask_map.items():
         node = graph.get_node_by_name(name)
         if mask_sum is None:
-            assert node.data["output_mask"] is None
+            assert node.attributes["output_mask"] is None
         else:
-            assert sum(node.data["output_mask"].tensor) == mask_sum
+            assert sum(node.attributes["output_mask"].tensor) == mask_sum
         assert collected_shapes[name] == shape

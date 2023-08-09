@@ -281,7 +281,7 @@ class QuantizationAccuracyRestorer:
 
         # Collect original biases and weights because these values are
         # required to undo bias correction and weight correction.
-        # Store this data inside the `node.data` dictionary.
+        # Store this data inside the `node.attributes` dictionary.
         # This data will be used in the `revert_operations_to_floating_point_precision()` method.
         QuantizationAccuracyRestorer._collect_original_biases_and_weights(
             initial_model_graph, quantized_model_graph, initial_model, algo_backend
@@ -452,8 +452,8 @@ class QuantizationAccuracyRestorer:
         algo_backend: AccuracyControlAlgoBackend,
     ) -> None:
         """
-        Collects initial biases and weights and stores them inside the `node.data['original_bias']` and
-        `node.data['original_weight']` where `node` is a node from `quantized_model_graph`.
+        Collects initial biases and weights and stores them inside the `node.attributes['original_bias']` and
+        `node.attributes['original_weight']` where `node` is a node from `quantized_model_graph`.
 
         :param initial_model_graph: Graph for initial model.
         :param quantized_model_graph: Graph for quantized model.

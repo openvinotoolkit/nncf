@@ -15,7 +15,6 @@ import numpy as np
 import tensorflow as tf
 
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
@@ -27,10 +26,6 @@ from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
-
-
-def is_shared(node: NNCFNode) -> bool:
-    return node.data["is_shared"]
 
 
 def get_filter_axis(layer: NNCFWrapper, weight_attr: str) -> int:

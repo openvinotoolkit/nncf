@@ -19,6 +19,7 @@ from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -88,20 +89,20 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls=NNCFG
 
     for idx, curr_node_key in enumerate(lexicographical_topological_sort(nx_graph)):
         node = nx_graph.nodes[curr_node_key]
-        if NNCFGraph.NODE_NAME_ATTR in node:
-            node_name = node[NNCFGraph.NODE_NAME_ATTR]
+        if NNCFNode.NODE_NAME_ATTR in node:
+            node_name = node[NNCFNode.NODE_NAME_ATTR]
         else:
             node_name = "/" + curr_node_key + "_0"
 
-        if NNCFGraph.NODE_TYPE_ATTR in node:
-            node_type = node[NNCFGraph.NODE_TYPE_ATTR]
+        if NNCFNode.NODE_TYPE_ATTR in node:
+            node_type = node[NNCFNode.NODE_TYPE_ATTR]
         else:
             node_type = curr_node_key
 
-        layer_attributes = node.get(NNCFGraph.LAYER_ATTRIBUTES)
+        layer_attributes = node.get(NNCFNode.LAYER_ATTRIBUTES)
 
-        if NNCFGraph.METATYPE_ATTR in node:
-            metatype = node[NNCFGraph.METATYPE_ATTR]
+        if NNCFNode.METATYPE_ATTR in node:
+            metatype = node[NNCFNode.METATYPE_ATTR]
         else:
             metatype = METATYPES_FOR_TEST.get_operator_metatype_by_op_name(node_type)
             if metatype is not UnknownMetatype:
@@ -178,10 +179,10 @@ def get_mock_nncf_node_attrs(op_name=None, scope_str=None, metatype=None, type_=
     if scope_str is None:
         scope_str = ""
     output = {
-        NNCFGraph.NODE_NAME_ATTR: f"{scope_str}/{op_name_to_set}_0",
-        NNCFGraph.NODE_TYPE_ATTR: type_,
+        NNCFNode.NODE_NAME_ATTR: f"{scope_str}/{op_name_to_set}_0",
+        NNCFNode.NODE_TYPE_ATTR: type_,
     }
-    for attr_name, attr_val in [(NNCFGraph.METATYPE_ATTR, metatype), (NNCFGraph.LAYER_ATTRIBUTES, layer_attributes)]:
+    for attr_name, attr_val in [(NNCFNode.METATYPE_ATTR, metatype), (NNCFNode.LAYER_ATTRIBUTES, layer_attributes)]:
         if attr_val is not None:
             output[attr_name] = attr_val
 
@@ -194,7 +195,7 @@ def _add_nodes_with_layer_attrs(
     for node_key in node_keys:
         nx_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
         if node_key in layer_attrs:
-            nx_graph.nodes[node_key][NNCFGraph.LAYER_ATTRIBUTES] = layer_attrs[node_key]
+            nx_graph.nodes[node_key][NNCFNode.LAYER_ATTRIBUTES] = layer_attrs[node_key]
     return nx_graph
 
 
@@ -370,10 +371,10 @@ def get_randomly_connected_model_graph(op_name_keys: Set[str]) -> nx.DiGraph:
     shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
         op_name = shuffled_op_names[idx]
-        node[NNCFGraph.NODE_NAME_ATTR] = get_node_name(shuffled_op_names[idx])
-        node[NNCFGraph.NODE_TYPE_ATTR] = op_name
+        node[NNCFNode.NODE_NAME_ATTR] = get_node_name(shuffled_op_names[idx])
+        node[NNCFNode.NODE_TYPE_ATTR] = op_name
         if op_name in OP_NAMES_IN_TEST_WITH_MODULE_ATTRIBUTES:
-            node[NNCFGraph.LAYER_ATTRIBUTES] = MagicMock()
+            node[NNCFNode.LAYER_ATTRIBUTES] = MagicMock()
     mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
     return mock_graph
 
@@ -385,12 +386,12 @@ def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGrap
     actual_keys = []
     for node_key in op_name_keys:
         attrs = {
-            NNCFGraph.NODE_NAME_ATTR: get_node_name(node_key, call_order=node_key_appearances[node_key]),
-            NNCFGraph.NODE_TYPE_ATTR: node_key,
+            NNCFNode.NODE_NAME_ATTR: get_node_name(node_key, call_order=node_key_appearances[node_key]),
+            NNCFNode.NODE_TYPE_ATTR: node_key,
         }
 
         if node_key in OP_NAMES_IN_TEST_WITH_MODULE_ATTRIBUTES:
-            attrs[NNCFGraph.LAYER_ATTRIBUTES] = MagicMock()
+            attrs[NNCFNode.LAYER_ATTRIBUTES] = MagicMock()
         actual_key = node_key + "_{}".format(node_key_appearances[node_key])
         graph.add_node(actual_key, **attrs)
         node_key_appearances[node_key] += 1
