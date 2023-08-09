@@ -463,14 +463,14 @@ class QuantizationAccuracyRestorer:
         for node in initial_model_graph.get_all_nodes():
             if algo_backend.is_node_with_bias(node, initial_model_graph):
                 node_with_bias = quantized_model_graph.get_node_by_name(node.node_name)
-                node_with_bias.data["original_bias"] = algo_backend.get_bias_value(
+                node_with_bias.attributes["original_bias"] = algo_backend.get_bias_value(
                     node, initial_model_graph, initial_model
                 )
             if algo_backend.is_node_with_weight(node):
                 node_with_weight = quantized_model_graph.get_node_by_name(node.node_name)
                 for port_id in algo_backend.get_weight_tensor_port_ids(node_with_weight):
                     weight = algo_backend.get_weight_value(node, initial_model, port_id)
-                    node_with_weight.data[f"original_weight.{port_id}"] = weight
+                    node_with_weight.attributes[f"original_weight.{port_id}"] = weight
 
     @staticmethod
     def _print_report(report: QuantizationAccuracyRestorerReport, max_num_iterations: int) -> None:
