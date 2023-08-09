@@ -160,7 +160,17 @@ class PostTrainingQuantization(Algorithm):
         return
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        return StatisticPointsContainer()
+        if self.first_stage_algorithms:
+            raise NotImplementedError(
+                "Statistic points are not supported yet for SmoothQuant and ChannelAlignment algorithms."
+            )
+
+        output = StatisticPointsContainer()
+        for algorithm in self.algorithms:
+            for statistic_points in algorithm.get_statistic_points(model, graph).values():
+                for statistic_point in statistic_points:
+                    output.add_statistic_point(statistic_point)
+        return output
 
     def apply(
         self,
@@ -197,13 +207,14 @@ class PostTrainingQuantization(Algorithm):
             )
             modified_model_graph = NNCFGraphFactory.create(modified_model)
 
-        statistics_aggregator = StatisticsAggregatorFactory.create(modified_model, dataset)
-        for algorithm in self.algorithms:
-            algo_statistic_points = algorithm.get_statistic_points(modified_model, modified_model_graph)
-            statistics_aggregator.register_statistic_points(algo_statistic_points)
+        if statistic_points is None:
+            statistics_aggregator = StatisticsAggregatorFactory.create(modified_model, dataset)
+            for algorithm in self.algorithms:
+                algo_statistic_points = algorithm.get_statistic_points(modified_model, modified_model_graph)
+                statistics_aggregator.register_statistic_points(algo_statistic_points)
 
-        statistics_aggregator.collect_statistics(modified_model, modified_model_graph)
-        statistic_points = statistics_aggregator.statistic_points
+            statistics_aggregator.collect_statistics(modified_model, modified_model_graph)
+            statistic_points = statistics_aggregator.statistic_points
 
         for algorithm in self.algorithms[:-1]:
             modified_model = algorithm.apply(modified_model, modified_model_graph, statistic_points)
