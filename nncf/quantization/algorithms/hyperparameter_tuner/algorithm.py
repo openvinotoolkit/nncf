@@ -16,7 +16,9 @@ import itertools
 import operator
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Type, TypeVar, Union
 
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
@@ -275,13 +277,16 @@ class HyperparameterTuner:
 
         combinations = create_combinations(self._param_grid)
 
+        initial_graph = NNCFGraphFactory.create(model)
+
         nncf_logger.info("Start initialization of algorithms")
         with timer():
-            self._prepare_algorithms(model, combinations)
+            self._prepare_algorithms(model, initial_graph, combinations)
 
         combination_score_fn = functools.partial(
             self._calculate_combination_score,
             initial_model=model,
+            initial_graph=initial_graph,
             dataset=validation_dataset,
             subset_indices=subset_indices,
         )
@@ -291,11 +296,13 @@ class HyperparameterTuner:
             best_combination_key = find_best_combination(combinations, combination_score_fn, self._param_grid)
 
         algorithm = self._algorithms[best_combination_key]
-        result_model = algorithm.apply(model, self._statistic_points)
+        result_model = algorithm.apply(model, initial_graph, self._statistic_points)
 
         return result_model
 
-    def _prepare_algorithms(self, initial_model: TModel, combinations: Dict[CombinationKey, Combination]) -> None:
+    def _prepare_algorithms(
+        self, initial_model: TModel, initial_graph: NNCFGraph, combinations: Dict[CombinationKey, Combination]
+    ) -> None:
         """
         Creates algorithm for each combination of parameters. Collects statistics for
         created algorithms.
@@ -310,12 +317,18 @@ class HyperparameterTuner:
         # Collect required statistics for created algorithms
         stats_aggregator = StatisticsAggregatorFactory.create(initial_model, self._calibration_dataset)
         for algorithm in self._algorithms.values():
-            stats_aggregator.register_statistic_points(algorithm.get_statistic_points(initial_model))
-        stats_aggregator.collect_statistics(initial_model)
+            statistic_points = algorithm.get_statistic_points(initial_model, initial_graph)
+            stats_aggregator.register_statistic_points(statistic_points)
+        stats_aggregator.collect_statistics(initial_model, initial_graph)
         self._statistic_points = stats_aggregator.statistic_points
 
     def _calculate_combination_score(
-        self, combination_key: CombinationKey, initial_model: TModel, dataset: Dataset, subset_indices: List[int]
+        self,
+        combination_key: CombinationKey,
+        initial_model: TModel,
+        initial_graph: NNCFGraph,
+        dataset: Dataset,
+        subset_indices: List[int],
     ) -> float:
         """
         Calculates score for provided combination.
@@ -331,7 +344,7 @@ class HyperparameterTuner:
             return self._calculated_scores[combination_key]
 
         algorithm = self._algorithms[combination_key]
-        model = algorithm.apply(initial_model, self._statistic_points)
+        model = algorithm.apply(initial_model, initial_graph, self._statistic_points)
         score = self._validate_model(model, dataset, subset_indices)
         self._calculated_scores[combination_key] = score
 
