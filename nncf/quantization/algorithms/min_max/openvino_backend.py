@@ -26,7 +26,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MA
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
-from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.openvino.graph.metatypes.openvino_metatypes import EXTENDED_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -230,7 +230,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [
             node
             for node in nncf_graph.get_all_nodes()
-            if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
+            if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in EXTENDED_WEIGHT_LAYER_METATYPES
         ]
 
     @staticmethod

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import deque
 from typing import List, Type
 
 import openvino.runtime as ov
@@ -22,12 +21,12 @@ from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
 from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const_op
 
 
 class GraphConverter:
@@ -175,6 +174,9 @@ class GraphConverter:
 
                     const_port_id = inp.get_index()
                     const_node = get_operation_const_op(node, const_port_id)
+                    if const_node is None:
+                        raise RuntimeError("Constant node was expected but could not be found.")
+
                     ov_dtype = const_node.get_element_type().get_type_name()
                     if GraphConverter.convert_to_nncf_dtype(ov_dtype) == Dtype.INTEGER:
                         continue
@@ -203,38 +205,3 @@ class GraphConverter:
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
-
-
-def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
-    """
-    Returns constant node of given operation placed on given const port id.
-
-    :param operation: Given operation.
-    :param const_port_id: Given constant port id.
-    :returns: Constant node of given operation placed on given const port id.
-    """
-    node = operation.input_value(const_port_id).get_node()
-
-    # There are several cases here
-    # (Constant) -> (Operation)
-    # (Constant) -> (Convert) -> (Operation)
-    # (Constant) -> (Convert) -> (FakeQuantize) -> (Operation)
-    # (Constant) -> (Convert) -> (FakeQuantize) -> (Reshape) -> (Operation)
-    #  and etc. We need properly find the constant node. So we start with
-    # `node` and traverse up until the constant node is not found.
-    queue = deque([node])
-    constant_node = None
-
-    while len(queue) != 0:
-        curr_node = queue.popleft()
-        if OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(curr_node.get_type_name()) == OVConstantMetatype:
-            constant_node = curr_node
-            break
-        if len(curr_node.inputs()) == 0:
-            break
-        queue.append(curr_node.input_value(0).get_node())
-
-    if constant_node is None:
-        raise RuntimeError("Constant node was expected but could not be found.")
-
-    return constant_node
