@@ -686,8 +686,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
                             break
                         for previous in previous_nodes:
                             if "output_mask" in previous.data:
-                                if previous.data["output_mask"] is not None:
-                                    input_masks.append(previous.data["output_mask"])
+                                if previous.attributes["output_mask"] is not None:
+                                    input_masks.append(previous.attributes["output_mask"])
                                     input_masks = [i for i in input_masks if i]
                                 else:
                                     nodes_to_check.append(previous)
