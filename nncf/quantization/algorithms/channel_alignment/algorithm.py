@@ -9,12 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
 from tqdm import tqdm
 
-from nncf import Dataset
 from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -59,7 +58,6 @@ class ChannelAlignment(Algorithm):
         self,
         subset_size: int = 100,
         inplace_statistics: bool = True,
-        backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -67,12 +65,10 @@ class ChannelAlignment(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
-        :param backend_params: Backend specific parameters.
         """
         super().__init__()
         self.subset_size = subset_size
         self.inplace_statistics = inplace_statistics
-        self.backend_params = backend_params
         self._backend_entity = None
         self._quantile = 1e-4
         self._algorithm_key = f"CA_{hash(self)}"
@@ -93,13 +89,7 @@ class ChannelAlignment(Algorithm):
 
             self._backend_entity = OVChannelAlignmentAlgoBackend()
 
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    def apply(self, model: TModel, graph: NNCFGraph, statistic_points: StatisticPointsContainer) -> TModel:
         self._set_backend_entity(model)
         model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()

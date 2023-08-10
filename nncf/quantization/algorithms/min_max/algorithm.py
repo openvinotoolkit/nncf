@@ -12,11 +12,10 @@
 import collections
 import dataclasses
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar
+from typing import Dict, List, Optional, OrderedDict, Set, TypeVar
 
 import numpy as np
 
-from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -109,7 +108,6 @@ class MinMaxQuantization(Algorithm):
         weights_quantization_params: Optional[QuantizationParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
-        backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
         :param preset: A preset that controls the quantization mode,
@@ -137,7 +135,6 @@ class MinMaxQuantization(Algorithm):
             parameters for activation.
         :param weights_range_estimator_params: Quantization range estimation parameters
             for weights.
-        :param backend_params: Backend specific parameters.
         """
         self._target_device = target_device
         self._subset_size = subset_size
@@ -146,7 +143,6 @@ class MinMaxQuantization(Algorithm):
         self._overflow_fix = overflow_fix
         self._quantize_outputs = quantize_outputs
         self._inplace_statistics = inplace_statistics
-        self._backend_params = backend_params
 
         self._quantization_params = {
             QuantizerGroup.WEIGHTS: weights_quantization_params,
@@ -599,13 +595,7 @@ class MinMaxQuantization(Algorithm):
                 output.update(nodes)
         return output
 
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    def apply(self, model: TModel, graph: NNCFGraph, statistic_points: StatisticPointsContainer) -> TModel:
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model)
         quantization_target_points, unified_scale_groups = self._get_quantization_target_points(model, graph)

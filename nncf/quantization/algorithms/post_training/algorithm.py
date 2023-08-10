@@ -14,18 +14,16 @@ from typing import Callable, Dict, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.algorithm import QuantizationAlgorithm
 from nncf.quantization.algorithms.bias_correction.algorithm import BIAS_CORRECTION_THRESHOLD
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
@@ -40,7 +38,7 @@ TModel = TypeVar("TModel")
 TPass = Callable[[TModel], TModel]
 
 
-class PostTrainingQuantization(Algorithm):
+class PostTrainingQuantization(QuantizationAlgorithm):
     """
     Implements Post-Training Quantization algorithm, which basically includes:
     1) ChannelAlignment
@@ -103,7 +101,6 @@ class PostTrainingQuantization(Algorithm):
             channel_alignment = ChannelAlignment(
                 subset_size=subset_size,
                 inplace_statistics=advanced_parameters.inplace_statistics,
-                backend_params=advanced_parameters.backend_params,
             )
             self.first_stage_algorithms.append(self.FirstStageAlgorithm(channel_alignment, [insert_null_biases_pass]))
 
@@ -120,7 +117,6 @@ class PostTrainingQuantization(Algorithm):
             weights_quantization_params=advanced_parameters.weights_quantization_params,
             activations_range_estimator_params=advanced_parameters.activations_range_estimator_params,
             weights_range_estimator_params=advanced_parameters.weights_range_estimator_params,
-            backend_params=advanced_parameters.backend_params,
         )
 
         self.algorithms.append(min_max_quantization)
@@ -138,7 +134,6 @@ class PostTrainingQuantization(Algorithm):
                 threshold=threshold,
                 apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
                 inplace_statistics=advanced_parameters.inplace_statistics,
-                backend_params=advanced_parameters.backend_params,
             )
         else:
             threshold = BIAS_CORRECTION_THRESHOLD
@@ -150,17 +145,20 @@ class PostTrainingQuantization(Algorithm):
                 threshold=threshold,
                 apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
                 inplace_statistics=advanced_parameters.inplace_statistics,
-                backend_params=advanced_parameters.backend_params,
             )
 
         self.algorithms.append(bias_correction)
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
-        return
+        backends = set(BackendType)
+        for first_stage_algorithm in self.first_stage_algorithms:
+            backends &= set(first_stage_algorithm.available_backends.keys())
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        return StatisticPointsContainer()
+        for algorithm in self.algorithms:
+            backends &= set(algorithm.available_backends.keys())
+
+        return {self.__class__.__name__: b for b in backends}
 
     def _create_statistics_aggregator(self, dataset: Dataset, backend: BackendType) -> StatisticsAggregator:
         """
@@ -186,15 +184,9 @@ class PostTrainingQuantization(Algorithm):
             return PTStatisticsAggregator(dataset)
         return None
 
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    def apply(self, model: TModel, dataset: Dataset) -> TModel:
         modified_model = copy_model(model)
-        modified_model_graph = graph
+        modified_model_graph = NNCFGraphFactory.create(modified_model)
         backend = get_backend(modified_model)
 
         for first_stage_algorithm in self.first_stage_algorithms:

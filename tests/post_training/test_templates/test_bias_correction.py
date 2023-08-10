@@ -14,7 +14,6 @@ from typing import Dict, List, Tuple, TypeVar
 
 import pytest
 
-from nncf.common.factory import NNCFGraphFactory
 from nncf.data import Dataset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
@@ -161,8 +160,7 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
-        graph = NNCFGraphFactory.create(model)
-        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
+        quantized_model = quantization_algorithm.apply(model, dataset=dataset)
 
         mapped_ref_biases = self.map_references(ref_biases)
         self.check_bias(quantized_model, mapped_ref_biases)

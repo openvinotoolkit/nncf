@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, Optional, TypeVar
+from typing import Dict, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -36,20 +36,13 @@ class Algorithm(ABC):
         """
 
     @abstractmethod
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    def apply(self, model: TModel, graph: NNCFGraph, statistic_points: StatisticPointsContainer) -> TModel:
         """
         Applies the algorithm to the model.
 
         :param model: Model for applying algorithm.
         :param graph: Model graph.
         :param statistic_points: Statistic points with collected statistics values.
-        :param dataset: A representative dataset for the calibration process.
         :return: A resulting model.
         """
 
@@ -61,4 +54,29 @@ class Algorithm(ABC):
         :param model: Model for statististics collection.
         :param graph: Model graph.
         :retrun: Statistic points, for which StatisticsCollector should collect statistics.
+        """
+
+
+class QuantizationAlgorithm(ABC):
+    """
+    Facade of quantization algorithms.
+    """
+
+    @property
+    @abstractmethod
+    def available_backends(self) -> Dict[str, BackendType]:
+        """
+        Returns dictionary of the available backends for the algorithm.
+
+        :return: Dict of backends supported by the algorithm.
+        """
+
+    @abstractmethod
+    def apply(self, model: TModel, dataset: Dataset) -> TModel:
+        """
+        Applies the algorithm to the model.
+
+        :param model: Model for applying algorithm.
+        :param dataset: A representative dataset for the calibration process.
+        :return: A resulting model.
         """

@@ -10,12 +10,11 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Dict, List, Tuple, TypeVar
 
 import numpy as np
 from tqdm import tqdm
 
-from nncf import Dataset
 from nncf import nncf_logger
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
@@ -70,7 +69,6 @@ class BiasCorrection(Algorithm):
         threshold: float = BIAS_CORRECTION_THRESHOLD,
         apply_for_all_nodes: bool = False,
         inplace_statistics: bool = True,
-        backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -86,15 +84,12 @@ class BiasCorrection(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
-        :param backend_params: Backend specific parameters.
         """
         super().__init__()
         self.subset_size = subset_size
         self.threshold = threshold
         self.apply_for_all_nodes = apply_for_all_nodes
         self.inplace_statistics = inplace_statistics
-        self.backend_params = backend_params
-        self.nncf_graph = None
         self._backend_entity = None
         self._collected_stat_inputs_map = {}
         self._fp_inputs = defaultdict(list)
@@ -127,13 +122,7 @@ class BiasCorrection(Algorithm):
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
             )
 
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    def apply(self, model: TModel, graph: NNCFGraph, statistic_points: StatisticPointsContainer) -> TModel:
         self._set_backend_entity(model)
         model = self._backend_entity.insert_null_biases(model, graph)
         main_transformations_layout = TransformationLayout()

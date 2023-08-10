@@ -115,9 +115,7 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    quantized_model = quantization_algorithm.apply(
-        nncf_network, nncf_network.nncf.get_graph(), dataset=calibration_dataset
-    )
+    quantized_model = quantization_algorithm.apply(nncf_network, dataset=calibration_dataset)
 
     quantized_model.nncf.disable_dynamic_graph_building()
 
