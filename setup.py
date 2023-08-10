@@ -101,28 +101,28 @@ def find_version(*file_paths):
 
 
 INSTALL_REQUIRES = [
-    "ninja>=1.10.0.post2, <1.11",
-    "texttable>=1.6.3",
-    "scipy>=1.3.2, <1.11",
+    "jsonschema>=3.2.0",
+    "jstyleson>=0.0.2",
+    "natsort>=7.1.0",
     "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
+    "ninja>=1.10.0.post2, <1.11",
     "numpy>=1.19.1, <1.25",
+    "openvino-telemetry>=2023.1.1",
+    "packaging>=20.0",
+    "pandas>=1.1.5,<2.1",
+    "psutil",
+    "pydot>=1.4.1",
+    "pymoo @ git+https://github.com/anyoptimization/pymoo.git@695cb26923903f872c7256a9013609769f3cc2bd",
     # The recent pyparsing major version update seems to break
     # integration with networkx - the graphs parsed from current .dot
     # reference files no longer match against the graphs produced in tests.
     # Using 2.x versions of pyparsing seems to fix the issue.
     # Ticket: 69520
-    "packaging>=20.0",
     "pyparsing<3.0",
-    "pymoo @ git+https://github.com/anyoptimization/pymoo.git@695cb26923903f872c7256a9013609769f3cc2bd",
-    "jsonschema>=3.2.0",
-    "pydot>=1.4.1",
-    "jstyleson>=0.0.2",
-    "tqdm>=4.54.1",
-    "natsort>=7.1.0",
-    "pandas>=1.1.5,<2.1",
     "scikit-learn>=0.24.0",
-    "openvino-telemetry>=2023.1.0",
-    "psutil",
+    "scipy>=1.3.2, <1.11",
+    "texttable>=1.6.3",
+    "tqdm>=4.54.1",
 ]
 
 
