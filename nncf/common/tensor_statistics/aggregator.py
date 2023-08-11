@@ -15,8 +15,7 @@ from typing import Any, Dict, TypeVar
 
 from tqdm import tqdm
 
-from nncf.common.factory import EngineFactory
-from nncf.common.factory import ModelTransformerFactory
+from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor import NNCFTensor
@@ -48,12 +47,12 @@ class StatisticsAggregator(ABC):
         if not self.statistic_points:
             return
 
-        model_transformer = ModelTransformerFactory.create(model)
+        model_transformer = factory.ModelTransformerFactory.create(model)
 
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
         model_with_outputs = model_transformer.transform(transformation_layout)
-        engine = EngineFactory.create(model_with_outputs)
+        engine = factory.EngineFactory.create(model_with_outputs)
 
         for input_data in tqdm(
             islice(self.dataset.get_inference_data(), self.stat_subset_size),

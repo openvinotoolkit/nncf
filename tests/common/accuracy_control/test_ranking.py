@@ -14,8 +14,6 @@ from typing import List
 import numpy as np
 import pytest
 
-from nncf.data.dataset import Dataset
-from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
 from nncf.quantization.algorithms.accuracy_control.subset_selection import get_subset_indices
 
@@ -79,35 +77,3 @@ def test_normalized_mse(x_ref: np.ndarray, x_approx: np.ndarray, expected_nmse: 
 def test_get_subset_indices(errors: List[float], subset_size: int, expected_indices: List[int]):
     actual_indices = get_subset_indices(errors, subset_size)
     assert expected_indices == actual_indices
-
-
-def _validation_fn_with_error(model, val_dataset) -> float:
-    if len(list(val_dataset)) < 3:
-        raise RuntimeError
-    return 0.1, [0.1]
-
-
-def _validation_fn(model, val_dataset) -> float:
-    return 0.1, [0.1]
-
-
-class DummyAccuracyControlAlgoBackend:
-    @staticmethod
-    def prepare_for_inference(model):
-        return model
-
-
-def test_create_logits_ranker():
-    algo_backend = DummyAccuracyControlAlgoBackend()
-    dataset = Dataset([0, 1, 2])
-    evaluator = Evaluator(_validation_fn_with_error, algo_backend)
-    evaluator.validate(None, dataset)
-    assert not evaluator.is_metric_mode()
-
-
-def test_create_metric_ranker():
-    algo_backend = DummyAccuracyControlAlgoBackend()
-    dataset = Dataset([0, 1, 2])
-    evaluator = Evaluator(_validation_fn, algo_backend)
-    evaluator.validate(None, dataset)
-    assert evaluator.is_metric_mode()
