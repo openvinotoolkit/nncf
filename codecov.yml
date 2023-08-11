@@ -15,7 +15,8 @@ coverage:
           - "nncf"
 comment:
   layout: "diff, flags, files"
-  require_changes: true
+  require_changes: false
+  # require_changes: true
 
   require_head: false     # remove me
   require_base: false     # remove me
