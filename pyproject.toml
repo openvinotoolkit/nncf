@@ -90,7 +90,4 @@ all = ["nncf[torch,tf,openvino,onnx]"]
 where = ["nncf"]
 
 [build-system]
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
-
-[tool.setuptools_scm]
-version_scheme = "nncf.version:get_version"
+requires = ["setuptools>=59.5"]

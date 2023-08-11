@@ -14,7 +14,3 @@ __version__ = "2.5.0"
 BKC_TORCH_VERSION = "2.0.1"
 BKC_TORCHVISION_VERSION = "0.15.1"
 BKC_TF_VERSION = "2.12.*"
-
-def get_version(version):
-    from setuptools_scm.version import guess_next_version
-    return version.format_next_version(guess_next_version, '{guessed}b{distance}')
