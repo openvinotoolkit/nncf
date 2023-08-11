@@ -21,3 +21,8 @@ jobs:
       run: make install-onnx-test
     - name: Run ONNX precommit test scope
       run: make test-onnx
+    - name: Upload coverage report to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: codecov-onnx # optional

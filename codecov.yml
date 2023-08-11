@@ -1,0 +1,22 @@
+#codecov:
+#  notify:
+#     after_n_builds: 4
+#     wait_for_ci: yes
+
+coverage:
+  status:
+    project:
+      default:
+        branches:
+          - develop
+        informational: true
+        only_pulls: true
+        paths:
+          - "nncf"
+comment:
+  layout: "diff, flags, files"
+  require_changes: false
+  # require_changes: true
+
+  require_head: false     # remove me
+  require_base: false     # remove me
