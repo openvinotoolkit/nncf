@@ -768,6 +768,13 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
 
 
 def _is_embedding(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
+    """
+    Returns True if the layer can be represented as embedding, False - otherwise.
+
+    :param model: ONNX model to get the node's weight.
+    :param node: Layer to check whether it is embedding.
+    :return: True if the layer is embedding, False - otherwise.
+    """
     tensor_port_id = ONNXEmbeddingMetatype.weight_port_ids[0]
     onnx_graph = ONNXGraph(model)
     allowed_types_list = ["TensorProto.FLOAT", "TensorProto.DOUBLE"]
