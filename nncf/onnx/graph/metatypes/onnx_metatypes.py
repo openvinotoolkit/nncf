@@ -777,7 +777,7 @@ def _is_embedding(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     """
     tensor_port_id = ONNXEmbeddingMetatype.weight_port_ids[0]
     onnx_graph = ONNXGraph(model)
-    allowed_types_list = ["TensorProto.FLOAT", "TensorProto.DOUBLE"]
+    allowed_types_list = ["TensorProto.FLOAT"]
     weight_edge_name = get_tensor_edge_name(onnx_graph, node, tensor_port_id)
 
     if weight_edge_name is not None:
