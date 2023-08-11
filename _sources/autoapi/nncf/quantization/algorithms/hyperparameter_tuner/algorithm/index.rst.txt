@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.hyperparameter_tuner.algorithm`
+=====================================================================
+
+.. py:module:: nncf.quantization.algorithms.hyperparameter_tuner.algorithm
+
+
