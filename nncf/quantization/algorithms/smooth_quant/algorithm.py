@@ -131,7 +131,7 @@ class SmoothQuant(Algorithm):
                     best_scale = deepcopy(scales)
 
             if empty_statistic:
-                break
+                continue
 
             activation_scales = self._backend_entity.calculate_activation_scale(best_scale, nodes)
             weight_scales = self._backend_entity.calculate_weight_scale(best_scale, nodes)

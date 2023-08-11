@@ -66,6 +66,13 @@ class TemplateTestSQAlgorithm:
         """
 
     @staticmethod
+    @abstractmethod
+    def get_matmul_metatype():
+        """
+        Returns backend-specific MatMul metatype
+        """
+
+    @staticmethod
     def get_quantization_algorithm():
         return PostTrainingQuantization(
             subset_size=1,
@@ -136,4 +143,9 @@ class TemplateTestSQAlgorithm:
 
         mocked_transformer.transform.assert_called_once()
         arg = mocked_transformer.transform.call_args.args[0]
-        assert len(arg.transformations) == 0
+        assert len(arg.transformations) == 2
+
+        mm_metatype = self.get_matmul_metatype()
+        matmuls = [node for node in graph.topological_sort() if node.metatype == mm_metatype]
+        for transformation in arg.transformations:
+            assert transformation.target_point.target_node_name != matmuls[0].node_name
