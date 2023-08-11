@@ -95,12 +95,12 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_weight_statistics(weights: TTensor, reduction_axis: int) -> TTensor:
+    def process_weight_statistics(weights: TTensor, channel_axis: int) -> TTensor:
         """
         Returns processed weight statistics for node.
 
         :param weights: Weights tensor.
-        :param reduction_axis: Reduction axis for calculation.
+        :param channel_axis: Channel axis for calculation.
         :return: Weight statistics.
         """
 
@@ -153,24 +153,25 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def calculate_activation_scale(scale_value: TTensor, activation_shape: Tuple[int], channel_axis: int) -> TTensor:
+    def calculate_activation_scale(scale_value: TTensor, activations_size: int, channel_axis: int) -> TTensor:
         """
         Calculates activation scales for Smooth node.
 
         :param scale_value: Base scale value.
-        :param activation_shape: Activation shape to reshape scale.
+        :param activations_size: Size of the activation shape.
         :param channel_axis: Axis for shape calculation.
         :return: Calculated activation scale.
         """
 
     @staticmethod
     @abstractmethod
-    def calculate_weight_scale(scale_value: TTensor, reduction_axis: int) -> TTensor:
+    def calculate_weight_scale(scale_value: TTensor, weights_size: int, channel_axis: int) -> TTensor:
         """
         Calculates scale for weight tensor.
 
         :param scale_value: Base scale value.
-        :param reduction_axis: Reduction axis for calculation.
+        :param weights_size: Size of the weights shape.
+        :param channel_axis: Axis for shape calculation.
         :return: Calculated scale for weights.
         """
 
@@ -216,11 +217,22 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_reduction_axis(node: NNCFNode, port_id: int) -> int:
+    def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
         """
         Returns axis number of the weight tensor which correspond to it channel.
 
         :param node: NNCFNode instance.
         :param port_id: Specified input port id.
         :return: Channel axis number.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:
+        """
+        Returns port-based channel axis.
+
+        :param port_id: Specified input port id.
+        :param transpose: Transpose position.
+        :return: Channel axis.
         """

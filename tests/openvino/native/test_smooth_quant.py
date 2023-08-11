@@ -101,10 +101,10 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     @pytest.mark.parametrize(
         "node_metatype, constant_attributes, port_id, reference_value",
         (
-            (OVMatMulMetatype, {1: {"transpose": False}}, 1, -1),
-            (OVMatMulMetatype, {1: {"transpose": True}}, 1, -2),
-            (OVMatMulMetatype, {0: {"transpose": False}}, 0, -2),
-            (OVMatMulMetatype, {0: {"transpose": True}}, 0, -1),
+            (OVMatMulMetatype, {1: {"transpose": False}}, 1, -2),
+            (OVMatMulMetatype, {1: {"transpose": True}}, 1, -1),
+            (OVMatMulMetatype, {0: {"transpose": False}}, 0, -1),
+            (OVMatMulMetatype, {0: {"transpose": True}}, 0, -2),
             (OVMatMulMetatype, {1: {"transpose": False}}, 2, RuntimeError),
             (OVConvolutionMetatype, {1: {}}, 1, 0),
         ),
@@ -120,7 +120,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
 
         try:
             # pylint: disable=protected-access
-            activation_channel_axis = backend.get_weight_reduction_axis(node, port_id)
+            activation_channel_axis = backend.get_weight_channel_axis(node, port_id)
         except RuntimeError as e:
             if isinstance(e, reference_value):
                 pytest.xfail("Expected exception")

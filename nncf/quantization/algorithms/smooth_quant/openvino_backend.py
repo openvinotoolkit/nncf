@@ -56,7 +56,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         ]
 
         if len(weight_ports) != 1 or len(activation_ports) != 1:
-            raise RuntimeError(f"Too many weights or activation ports for {node.node_name} node")
+            raise RuntimeError(f"Too many weight or activation ports for {node.node_name} node")
 
         return {"activation": activation_ports[0], "weight": weight_ports[0]}
 
@@ -75,8 +75,10 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return collector
 
     @staticmethod
-    def process_weight_statistics(weights: np.ndarray, reduction_axis: int) -> np.ndarray:
-        return np.max(np.abs(weights), axis=reduction_axis)
+    def process_weight_statistics(weights: np.ndarray, channel_axis: int) -> np.ndarray:
+        if len(weights.shape) > 1:
+            weights = np.transpose(weights, axes=(-1, -2))
+        return np.max(np.abs(weights), axis=channel_axis)
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -109,19 +111,21 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return scales, ratio
 
     @staticmethod
-    def calculate_activation_scale(
-        scale_value: np.ndarray, activation_shape: Tuple[int], channel_axis: int
-    ) -> np.ndarray:
+    def calculate_activation_scale(scale_value: np.ndarray, activations_size: int, channel_axis: int) -> np.ndarray:
         activation_scale = scale_value ** (-1)
-        if len(activation_shape) > 1:
-            reshape_shape = np.ones(len(activation_shape), dtype=np.int64)
-            reshape_shape[channel_axis] = activation_shape[channel_axis]
+        if activations_size > 1:
+            reshape_shape = np.ones(activations_size, dtype=np.int64)
+            reshape_shape[channel_axis] = activation_scale.size
             activation_scale = np.reshape(activation_scale, reshape_shape)
         return activation_scale
 
     @staticmethod
-    def calculate_weight_scale(scale_value: np.ndarray, reduction_axis: int) -> np.ndarray:
-        return np.expand_dims(scale_value, axis=reduction_axis)
+    def calculate_weight_scale(scale_value: np.ndarray, weights_size: int, channel_axis: int) -> np.ndarray:
+        if weights_size > 1:
+            reshape_shape = np.ones(weights_size, dtype=np.int64)
+            reshape_shape[channel_axis] = scale_value.size
+            weight_scale = np.reshape(scale_value, reshape_shape)
+        return weight_scale
 
     @staticmethod
     def weight_update_command(
@@ -143,19 +147,18 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             if port_id > 1:
                 raise RuntimeError(f"{OVMatMulMetatype.name} can not take more than 2 input tensors.")
 
-            channel_axis = -1 - port_id
             if (
                 node.layer_attributes is not None
                 and node.layer_attributes.input_attributes is not None
                 and "transpose" in node.layer_attributes.input_attributes
-                and node.layer_attributes.input_attributes["transpose"]
             ):
-                channel_axis = -2 + port_id
+                transpose = node.layer_attributes.input_attributes["transpose"]
+                channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
 
         return channel_axis
 
     @staticmethod
-    def get_weight_reduction_axis(node: NNCFNode, port_id: int) -> int:
+    def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
         channel_axis = 1 if node.metatype.const_channel_axis is None else node.metatype.const_channel_axis[0]
 
         if port_id not in node.layer_attributes.constant_attributes:
@@ -165,11 +168,12 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             if port_id > 1:
                 raise RuntimeError(f"{OVMatMulMetatype.name} can not take more than 2 input tensors.")
 
-            channel_axis = -2 + port_id
-            if (
-                "transpose" in node.layer_attributes.constant_attributes[port_id]
-                and node.layer_attributes.constant_attributes[port_id]["transpose"]
-            ):
-                channel_axis = -1 - port_id
+            if "transpose" in node.layer_attributes.constant_attributes[port_id]:
+                transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
+                channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
 
         return channel_axis
+
+    @staticmethod
+    def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:
+        return -2 + port_id if transpose else -1 - port_id

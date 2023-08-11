@@ -184,13 +184,8 @@ class GraphConverter:
                         "shape": tuple(const_node.get_output_shape(0)),
                     }
 
-                    node_inputs = node.inputs()
-
-                    act_port_id = abs(const_port_id - 1)
-                    partial_shape = node_inputs[act_port_id].get_partial_shape()
-                    act_attrs["shape"] = tuple(partial_shape.get_max_shape())
-
                     if metatype == OVMatMulMetatype:
+                        act_port_id = abs(const_port_id - 1)
                         attribute_names = ["transpose_a", "transpose_b"]
                         node_attributes = node.get_attributes()
                         const_transpose_name = attribute_names[const_port_id]
