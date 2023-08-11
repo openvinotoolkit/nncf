@@ -171,7 +171,7 @@ def get_inplace_reduce_op(
 
         return op(
             op_input.output(output_port_id),
-            reduction_axes=reduction_axes_,
+            reduction_axes=np.array(reduction_axes_, dtype=np.int),
             keep_dims=True,
             name=get_ov_model_reduce_node_name(output_name, reduce_node_name, name_output_port_id),
         )
