@@ -20,7 +20,7 @@
 # +-------------------------------------+---------------------------------------------+
 # | python setup.py install             | pip install .                               |
 # | python setup.py develop             | pip install -e .                            |
-# | python setup.py develop --*arg*     | pip install --install-option="*arg*" -e  .  |
+# | python setup.py develop --*arg*     | pip install --install-option="--*arg*" -e  .  |
 # | python setup.py sdist               | python -m build -s                          | <-- using the "build" package
 # | python setup.py bdist_wheel         | python -m build -w                          | <-- pypi.org/project/build/
 # | python setup.py bdist_wheel --*arg* | python -m build -w -C--global-option=--*arg*|
@@ -124,6 +124,7 @@ INSTALL_REQUIRES = [
     "texttable>=1.6.3",
     "tqdm>=4.54.1",
 ]
+
 
 
 TF_EXTRAS = [
