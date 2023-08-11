@@ -135,9 +135,9 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def scale_insertion_command(
-        source_node: NNCFNode, scale_value: np.ndarray, port_id: int, nodes: List[NNCFNode]
+        source_node: NNCFNode, scale_value: np.ndarray, port_id: int, nodes: List[NNCFNode], scale_node_name: str
     ) -> OVMultiplyInsertionCommand:
-        return OVCommandCreator.multiply_insertion_command(source_node, nodes, port_id, scale_value)
+        return OVCommandCreator.multiply_insertion_command(source_node, nodes, port_id, scale_value, scale_node_name)
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:

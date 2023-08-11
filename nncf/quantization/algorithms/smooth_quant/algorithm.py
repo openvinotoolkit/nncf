@@ -19,6 +19,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import Counter
 from collections import defaultdict
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, TypeVar
@@ -68,6 +69,7 @@ class SmoothQuant(Algorithm):
         self._backend_entity = None
         self._alpha = alpha
         self._algorithm_key = f"SQ_{hash(self)}"
+        self._cached_multiply_names = Counter()
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -131,9 +133,9 @@ class SmoothQuant(Algorithm):
                     best_ratio = ratio
                     best_scale = deepcopy(scales)
 
-                weight_scale = self._calculate_weight_scale(best_scale, node_to_smooth)
+                weights_scale = self._calculate_weight_scale(best_scale, node_to_smooth)
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, weight_port)
-                scaled_weight = weight_value * weight_scale
+                scaled_weight = weight_value * weights_scale
                 weight_update_command = self._backend_entity.weight_update_command(
                     node_to_smooth, scaled_weight, weight_port
                 )
@@ -142,8 +144,9 @@ class SmoothQuant(Algorithm):
             activations_shape = graph.get_output_edges(source_node)[source_output_port_id].tensor_shape
             activation_scale = self._calculate_activation_scale(best_scale, activations_shape, nodes, graph)
 
+            scale_node_name = self._create_scale_node_name(source_node.node_name, source_output_port_id)
             scale_insertion_command = self._backend_entity.scale_insertion_command(
-                source_node, activation_scale, source_output_port_id, nodes
+                source_node, activation_scale, source_output_port_id, nodes, scale_node_name
             )
             transformation_layout.register(scale_insertion_command)
 
@@ -331,3 +334,16 @@ class SmoothQuant(Algorithm):
         if len(weights.shape) > 1:
             channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
         return self._backend_entity.process_weight_statistics(weights, channel_axis)
+
+    def _create_scale_node_name(self, source_name: str, source_port_id: int) -> str:
+        """
+        Returns uniqie scale node name for new layer.
+
+        :param source_name: Source layer name.
+        :param source_port_id: Source port id.
+        :return: Generated uniqie name.
+        """
+        scale_node_name = f"{source_name}_{source_port_id}"
+        unique_index = self._cached_multiply_names[scale_node_name]
+        self._cached_multiply_names[scale_node_name] += 1
+        return f"{scale_node_name}_{unique_index}/sq_multiply"
