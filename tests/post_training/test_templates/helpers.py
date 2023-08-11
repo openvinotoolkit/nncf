@@ -239,3 +239,24 @@ class SplittedModel(nn.Module):
         x = self.linear_2(x)
 
         return torch.flatten(x, 1, 2)
+
+
+class EmbeddingModel(nn.Module):
+    INPUT_SIZE = [1, 10]
+    EMBEDDING_SHAPE = [10, 20]
+    MATMUL_W_SHAPE = [5, 20]
+
+    def __init__(self) -> None:
+        super().__init__()
+        with set_torch_seed():
+            self.embedding = nn.Embedding(self.EMBEDDING_SHAPE[0], self.EMBEDDING_SHAPE[1])
+            self.embedding.weight.data = torch.randn(self.EMBEDDING_SHAPE, dtype=torch.float32)
+            self.matmul = nn.Linear(self.EMBEDDING_SHAPE[1], self.MATMUL_W_SHAPE[1])
+            self.matmul.weight.data = torch.randn(self.MATMUL_W_SHAPE, dtype=torch.float32)
+            self.matmul.bias.data = torch.randn([1, self.MATMUL_W_SHAPE[0]], dtype=torch.float32)
+
+    def forward(self, x):
+        x = x.type(torch.int32)
+        x = self.embedding(x)
+        x = self.matmul(x)
+        return x

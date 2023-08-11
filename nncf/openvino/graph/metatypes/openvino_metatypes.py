@@ -721,6 +721,7 @@ def get_operation_const_op(operation: ov.Node, const_port_id: int) -> Optional[o
     # `node` and traverse up until the constant node is not found.
     queue = deque([node])
     constant_node = None
+    allowed_propagation_types_list = ["Convert", "FakeQuantize", "Reshape"]
 
     while len(queue) != 0:
         curr_node = queue.popleft()
@@ -729,7 +730,8 @@ def get_operation_const_op(operation: ov.Node, const_port_id: int) -> Optional[o
             break
         if len(curr_node.inputs()) == 0:
             break
-        queue.append(curr_node.input_value(0).get_node())
+        if curr_node.get_type_name() in allowed_propagation_types_list:
+            queue.append(curr_node.input_value(0).get_node())
 
     return constant_node
 

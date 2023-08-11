@@ -175,7 +175,7 @@ class GraphConverter:
                     const_port_id = inp.get_index()
                     const_node = get_operation_const_op(node, const_port_id)
                     if const_node is None:
-                        raise RuntimeError("Constant node was expected but could not be found.")
+                        continue
 
                     ov_dtype = const_node.get_element_type().get_type_name()
                     if GraphConverter.convert_to_nncf_dtype(ov_dtype) == Dtype.INTEGER:
