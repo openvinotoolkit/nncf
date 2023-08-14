@@ -30,9 +30,7 @@ class SubnetGraph:
     def __init__(self, compression_graph: PTNNCFGraph, multi_elasticity_handler: MultiElasticityHandler):
         # TODO: visualize other elastic dimension: depth, kernel (ticket 76870)
         self._width_graph = compression_graph.get_graph_for_structure_analysis(extended=True)
-        for node_key in compression_graph.get_all_node_keys():
-            compression_node = compression_graph.get_node_by_key(node_key)
-
+        for node_key, compression_node in compression_graph.nodes.items():
             operator_name = self._get_operator_name(compression_node, multi_elasticity_handler.width_handler)
 
             metatype = compression_node.metatype
@@ -64,7 +62,7 @@ class SubnetGraph:
             input_widths = None
             if input_masks:
                 input_widths = [ElasticWidthHandler.mask_to_width(input_mask) for input_mask in input_masks]
-            output_width = ElasticWidthHandler.mask_to_width(node.data["output_mask"])
+            output_width = ElasticWidthHandler.mask_to_width(node.attributes["output_mask"])
 
             if input_widths:
                 IW = None

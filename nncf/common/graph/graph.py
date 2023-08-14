@@ -33,51 +33,73 @@ class NNCFNode:
     Class describing nodes used in NNCFGraph.
     """
 
-    def __init__(self, node_id: int, node_name: NNCFNodeName, data: dict = None):
-        self.node_id = node_id
-        self.data = data if data else {}
-        self.data[NNCFGraph.NODE_NAME_ATTR] = node_name
+    ID_NODE_ATTR = "id"
+    NODE_NAME_ATTR = "node_name"
+    KEY_NODE_ATTR = "key"
+    NODE_TYPE_ATTR = "type"
+    METATYPE_ATTR = "metatype"
+    LAYER_NAME_ATTR = "layer_name"
+    LAYER_ATTRIBUTES = "layer_attributes"
+    IGNORED_ALGOS_ATTR = "ignored_algos"
+    IS_IN_ITERATION_SCOPE_NODE_ATTR = "is_in_iteration_scope"
+    IS_INTEGER_INPUT_NODE_ATTR = "is_integer_input"
+    IS_SHARED_ATTR = "is_shared"
+
+    def __init__(self, attributes: Dict[str, Any]):
+        self._attributes = attributes
+
+    @property
+    def attributes(self) -> Dict[str, Any]:
+        return self._attributes
+
+    @property
+    def node_id(self) -> int:
+        return self._attributes[NNCFNode.ID_NODE_ATTR]
+
+    @property
+    def node_key(self) -> str:
+        return self._attributes[NNCFNode.KEY_NODE_ATTR]
 
     @property
     def node_name(self) -> NNCFNodeName:
-        return self.data.get(NNCFGraph.NODE_NAME_ATTR)
+        return self._attributes[NNCFNode.NODE_NAME_ATTR]
 
     @property
     def metatype(self) -> Type[OperatorMetatype]:
-        return self.data.get(NNCFGraph.METATYPE_ATTR)
+        return self._attributes[NNCFNode.METATYPE_ATTR]
 
     @property
     def node_type(self) -> str:
-        return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
+        return self._attributes[NNCFNode.NODE_TYPE_ATTR]
 
     @property
-    def layer_name(self) -> LayerName:
-        return self.data.get(NNCFGraph.LAYER_NAME_ATTR)
+    def layer_name(self) -> Optional[LayerName]:
+        return self._attributes.get(NNCFNode.LAYER_NAME_ATTR)
 
     @layer_name.setter
-    def layer_name(self, data: Any) -> None:
-        self.data[NNCFGraph.LAYER_NAME_ATTR] = data
+    def layer_name(self, value: str) -> None:
+        self._attributes[NNCFNode.LAYER_NAME_ATTR] = value
 
     @property
-    def layer_attributes(self) -> BaseLayerAttributes:
-        return self.data.get(NNCFGraph.LAYER_ATTRIBUTES)
+    def layer_attributes(self) -> Optional[BaseLayerAttributes]:
+        return self._attributes.get(NNCFNode.LAYER_ATTRIBUTES)
 
     @layer_attributes.setter
-    def layer_attributes(self, data: Any) -> None:
-        self.data[NNCFGraph.LAYER_ATTRIBUTES] = data
+    def layer_attributes(self, value: BaseLayerAttributes) -> None:
+        self._attributes[NNCFNode.LAYER_ATTRIBUTES] = value
 
     @property
     def ignored_algorithms(self) -> List[str]:
-        return self.data.get(NNCFGraph.IGNORED_ALGOS_ATTR, [])
+        return self._attributes[NNCFNode.IGNORED_ALGOS_ATTR]
 
     def is_in_iteration_scope(self) -> bool:
-        return self.data.get(NNCFGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR, False)
+        return self._attributes[NNCFNode.IS_IN_ITERATION_SCOPE_NODE_ATTR]
 
     def is_integer_input(self) -> bool:
-        return self.data.get(NNCFGraph.IS_INTEGER_INPUT_NODE_ATTR, False)
+        return self._attributes[NNCFNode.IS_INTEGER_INPUT_NODE_ATTR]
 
     def is_shared(self) -> bool:
-        return self.data.get(NNCFGraph.IS_SHARED_ATTR, False)
+        return self._attributes[NNCFNode.IS_SHARED_ATTR]
 
     def __repr__(self):
         return str(self)
@@ -89,13 +111,7 @@ class NNCFNode:
         return hash(str(self))
 
     def __eq__(self, other):
-        return (
-            isinstance(other, NNCFNode)
-            and self.node_id == other.node_id
-            and self.data == other.data
-            and self.node_type == other.node_type
-            and self.layer_attributes == other.layer_attributes
-        )
+        return isinstance(other, NNCFNode) and self.attributes == other.attributes
 
 
 class NNCFGraphEdge:
@@ -162,31 +178,25 @@ class NNCFGraph:
     providing some useful methods for graph traversal.
     """
 
-    ID_NODE_ATTR = "id"
-    KEY_NODE_ATTR = "key"
-    NODE_NAME_ATTR = "node_name"
-    NODE_TYPE_ATTR = "type"
-    METATYPE_ATTR = "metatype"
-    LAYER_NAME_ATTR = "layer_name"
-    LAYER_ATTRIBUTES = "layer_attributes"
     ACTIVATION_SHAPE_EDGE_ATTR = "activation_shape"
     INPUT_PORT_ID_EDGE_ATTR = "input_port_id"
     OUTPUT_PORT_ID_EDGE_ATTR = "output_port_id"
-    IGNORED_ALGOS_ATTR = "ignored_algos"
-    IS_IN_ITERATION_SCOPE_NODE_ATTR = "is_in_iteration_scope"
-    IS_INTEGER_INPUT_NODE_ATTR = "is_integer_input"
     DTYPE_EDGE_ATTR = "dtype"
-    IS_SHARED_ATTR = "is_shared"
     PARALLEL_INPUT_PORT_IDS_ATTR = "parallel_input_ports"
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
         self._node_id_to_key_dict = {}
+        self._nodes: Dict[str, NNCFNode] = {}
         self._input_nncf_nodes = {}  # type: Dict[int, NNCFNode]
         self._output_nncf_nodes = {}  # type: Dict[int, NNCFNode]
 
         self._node_ids_vs_layer_names = {}  # type: Dict[int, LayerName]
         self._layer_name_vs_shared_nodes = defaultdict(list)  # type: Dict[LayerName, List[NNCFNode]]
+
+    @property
+    def nodes(self) -> Dict[str, NNCFNode]:
+        return self._nodes
 
     def get_node_by_id(self, node_id: int) -> NNCFNode:
         """
@@ -200,7 +210,7 @@ class NNCFGraph:
         :param key: key (node_name) of the node.
         :return: NNCFNode in a graph with such key.
         """
-        return self._nx_node_to_nncf_node(self._nx_graph.nodes[key])
+        return self._nodes[key]
 
     def get_input_nodes(self) -> List[NNCFNode]:
         """
@@ -254,12 +264,7 @@ class NNCFGraph:
         """
         Returns list of all graph nodes.
         """
-        all_nodes = []
-        for node_key in self.get_all_node_keys():
-            nx_node = self._nx_graph.nodes[node_key]
-            nncf_node = self._nx_node_to_nncf_node(nx_node)
-            all_nodes.append(nncf_node)
-        return all_nodes
+        return list(self._nodes.values())
 
     def get_all_simple_paths(
         self, start_node_name: NNCFNodeName, end_node_name: NNCFNodeName
@@ -278,12 +283,6 @@ class NNCFGraph:
         start_node_key = self.get_node_key_by_id(start_node.node_id)
         end_node_key = self.get_node_key_by_id(end_node.node_id)
         return nx.all_simple_paths(self._nx_graph, start_node_key, end_node_key)
-
-    @staticmethod
-    def _nx_node_to_nncf_node(nx_node: dict) -> NNCFNode:
-        return NNCFNode(
-            node_id=nx_node[NNCFGraph.ID_NODE_ATTR], node_name=nx_node[NNCFGraph.NODE_NAME_ATTR], data=nx_node
-        )
 
     @staticmethod
     def _get_edge_boundaries(
@@ -311,7 +310,7 @@ class NNCFGraph:
         :return: List of consumer nodes of provided node.
         """
         nx_node_keys = self._nx_graph.succ[self._node_id_to_key_dict[node.node_id]]
-        return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
+        return [self._nodes[key] for key in nx_node_keys]
 
     def get_previous_nodes(self, node: NNCFNode) -> List[NNCFNode]:
         """
@@ -322,7 +321,7 @@ class NNCFGraph:
         """
 
         nx_node_keys = self._nx_graph.pred[self._node_id_to_key_dict[node.node_id]]
-        return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
+        return [self._nodes[key] for key in nx_node_keys]
 
     def get_input_edges(self, node: NNCFNode) -> List[NNCFGraphEdge]:
         """
@@ -383,10 +382,10 @@ class NNCFGraph:
         node_name: str,
         node_type: str,
         node_metatype: Type[OperatorMetatype],
-        layer_attributes: BaseLayerAttributes = None,
-        node_id_override: int = None,
-        layer_name: LayerName = None,
-        ignored_algorithms: List[str] = None,
+        layer_attributes: Optional[BaseLayerAttributes] = None,
+        node_id_override: Optional[int] = None,
+        layer_name: Optional[LayerName] = None,
+        ignored_algorithms: Optional[List[str]] = None,
         is_in_iteration_scope: bool = False,
         is_integer_input: bool = False,
         is_shared: bool = False,
@@ -433,25 +432,26 @@ class NNCFGraph:
 
         self._node_id_to_key_dict[node_id] = node_key
         attrs = {
-            NNCFGraph.ID_NODE_ATTR: node_id,
-            NNCFGraph.NODE_NAME_ATTR: node_name,
-            NNCFGraph.KEY_NODE_ATTR: node_key,
-            NNCFGraph.NODE_TYPE_ATTR: node_type,
-            NNCFGraph.LAYER_NAME_ATTR: layer_name,
-            NNCFGraph.METATYPE_ATTR: node_metatype,
-            NNCFGraph.IS_SHARED_ATTR: is_shared,
-            NNCFGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope,
-            NNCFGraph.IS_INTEGER_INPUT_NODE_ATTR: is_integer_input,
+            NNCFNode.ID_NODE_ATTR: node_id,
+            NNCFNode.NODE_NAME_ATTR: node_name,
+            NNCFNode.KEY_NODE_ATTR: node_key,
+            NNCFNode.NODE_TYPE_ATTR: node_type,
+            NNCFNode.LAYER_NAME_ATTR: layer_name,
+            NNCFNode.METATYPE_ATTR: node_metatype,
+            NNCFNode.IS_SHARED_ATTR: is_shared,
+            NNCFNode.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope,
+            NNCFNode.IS_INTEGER_INPUT_NODE_ATTR: is_integer_input,
         }
         if layer_attributes is not None:
-            attrs[NNCFGraph.LAYER_ATTRIBUTES] = layer_attributes
+            attrs[NNCFNode.LAYER_ATTRIBUTES] = layer_attributes
 
         if ignored_algorithms is None:
             ignored_algorithms = []
-        attrs[NNCFGraph.IGNORED_ALGOS_ATTR] = ignored_algorithms
+        attrs[NNCFNode.IGNORED_ALGOS_ATTR] = ignored_algorithms
         self._nx_graph.add_node(node_key, **attrs)
 
-        node = NNCFNode(node_id, node_name, data=self._nx_graph.nodes[node_key])
+        node = NNCFNode(self._nx_graph.nodes[node_key])
+        self._nodes[node_key] = node
 
         if node.metatype in INPUT_NOOP_METATYPES:
             self._input_nncf_nodes[node_id] = node
@@ -519,9 +519,9 @@ class NNCFGraph:
         Returns nodes in topologically sorted order, additionally sorted in ascending node ID order.
         """
         return [
-            self._nx_node_to_nncf_node(self._nx_graph.nodes[node_name])
+            self._nodes[node_name]
             for node_name in nx.lexicographical_topological_sort(
-                self._nx_graph, key=lambda x: self._nx_graph.nodes[x][NNCFGraph.ID_NODE_ATTR]
+                self._nx_graph, key=lambda x: self._nx_graph.nodes[x][NNCFNode.ID_NODE_ATTR]
             )
         ]
 
@@ -548,7 +548,7 @@ class NNCFGraph:
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
             visualization_node_name = node_name.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
-            attrs_node = {"id": node[NNCFGraph.ID_NODE_ATTR], "type": node[NNCFGraph.NODE_TYPE_ATTR]}
+            attrs_node = {"id": node[NNCFNode.ID_NODE_ATTR], "type": node[NNCFNode.NODE_TYPE_ATTR]}
             for attr in ["color", "label", "style"]:
                 if attr in node:
                     attrs_node[attr] = node[attr]
@@ -618,7 +618,7 @@ class NNCFGraph:
 
     def __eq__(self, other: "NNCFGraph"):
         nm = iso.categorical_node_match(
-            [NNCFGraph.ID_NODE_ATTR, NNCFGraph.KEY_NODE_ATTR, NNCFGraph.LAYER_ATTRIBUTES], [None, None, None]
+            [NNCFNode.ID_NODE_ATTR, NNCFNode.KEY_NODE_ATTR, NNCFNode.LAYER_ATTRIBUTES], [None, None, None]
         )
         em = iso.categorical_edge_match(
             [NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR, NNCFGraph.INPUT_PORT_ID_EDGE_ATTR], [None, None]
@@ -649,8 +649,8 @@ class NNCFGraph:
             to_node_key = nx_edge[1]
             data = nx_edge[2]
             nncf_edge = NNCFGraphEdge(
-                self._nx_node_to_nncf_node(self._nx_graph.nodes[from_node_key]),
-                self._nx_node_to_nncf_node(self._nx_graph.nodes[to_node_key]),
+                self._nodes[from_node_key],
+                self._nodes[to_node_key],
                 input_port_id=data[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR],
                 output_port_id=data[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR],
                 tensor_shape=data[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR],
@@ -705,7 +705,8 @@ class NNCFGraph:
         :param nodes: List of NNCFNodes to remove.
         """
         for node in nodes:
-            self._nx_graph.remove_node(node.data["key"])
+            self._nx_graph.remove_node(node.node_key)
+            del self._nodes[node.node_key]
 
         self._node_id_to_key_dict = {}
         for node_key, node in self._nx_graph.nodes.items():

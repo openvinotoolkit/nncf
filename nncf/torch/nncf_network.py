@@ -148,6 +148,8 @@ class NNCFNetworkInterface(torch.nn.Module):
         Returns the forward function of the original model, unmodified by NNCF. The returned function will
         have its 0-th implicit `self` argument bound to the model object.
         """
+        if self._original_instance_forward is not None:
+            return functools.partial(self._original_instance_forward, self._model_ref)
         return functools.partial(self._original_unbound_forward, self._model_ref)
 
     @contextmanager
@@ -211,10 +213,12 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._original_class = model.nncf._original_class
             self._bound_original_forward = model.nncf._bound_original_forward
             self._custom_original_unbound_forward = model.nncf._custom_original_unbound_forward
+            self._original_instance_forward = model.nncf._original_instance_forward
         else:
             self._original_class = model.__class__
             self._bound_original_forward = None
             self._custom_original_unbound_forward = None
+            self._original_instance_forward = model.__dict__.get("forward")
 
         self._forward_signature = inspect.signature(self.get_original_forward())
         self._input_infos = input_infos
@@ -828,13 +832,13 @@ class NNCFNetworkMeta(type):
         )
         # Make the signature of the forward on the resulting object same as for
         # the original forward.
-        fn = NNCFNetwork.forward
-        new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
-        new_forward.__dict__.update(fn.__dict__)
-        new_forward.__signature__ = inspect.signature(original_class.forward)
-        if is_debug():
-            new_forward = debuggable_forward(new_forward)
-        new_class.forward = new_forward
+        new_class.forward = _get_nncf_forward_function_with_signature(inspect.signature(original_class.forward))
+
+        # In case of overriding forward by code like `model.forward = wrapper(model.forward)`
+        forward_inst_attr_fn = original_model.__dict__.get("forward")
+        if forward_inst_attr_fn is not None:
+            new_inst_forward = _get_nncf_forward_function_with_signature(inspect.signature(forward_inst_attr_fn))
+            original_model.__dict__["forward"] = functools.partial(new_inst_forward, original_model)
 
         # Make resulting class keep __module__ attributes of the original class,
         # otherwise these will point to NNCF
@@ -879,6 +883,21 @@ class NNCFNetworkMeta(type):
         return other is NNCFNetwork
 
 
+def _get_nncf_forward_function_with_signature(signature: inspect.Signature):
+    """
+    Create forward function with copy signature of forward function.
+    :param signature: Signature of function that will used for forward function.
+    :return: New copy of function NNCFNetwork.forward with specified signature.
+    """
+    fn = NNCFNetwork.forward
+    new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
+    new_forward.__dict__.update(fn.__dict__)
+    new_forward.__signature__ = signature
+    if is_debug():
+        new_forward = debuggable_forward(new_forward)
+    return new_forward
+
+
 class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
     """
     A mixin-like class to dynamically extend the original model object's class with.
@@ -916,7 +935,14 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
 
             # For purposes of scope tracking, need the original forward call to occur as if it were
             # a module call of the corresponding object.
-            if self.nncf._bound_original_forward is None:
+            if self.nncf._original_instance_forward is not None:
+
+                def _unbound_like_original_instance_forward(_self, *args, **kwargs):
+                    return self.nncf._original_instance_forward(*args, **kwargs)
+
+                retval = wrap_module_call(_unbound_like_original_instance_forward)(self, *args, **kwargs)
+
+            elif self.nncf._bound_original_forward is None:
                 retval = wrap_module_call(self.nncf._original_unbound_forward)(self, *args, **kwargs)
             else:
 

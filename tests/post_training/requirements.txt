@@ -6,6 +6,7 @@ transformers==4.30.0
 onnx==1.13.1
 onnxruntime==1.14.1
 pytest
+pytest-cov
 openvino-dev==2023.0.1
 optimum[onnxruntime,openvino]==1.8.8
 optimum-intel @ git+https://github.com/huggingface/optimum-intel@47428484598986443686b7c8ba825b4a3d7b4f73

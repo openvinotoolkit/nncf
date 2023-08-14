@@ -44,7 +44,7 @@ def test_stop_propagate_ops(pruning_op, metatype, accept_pruned_input):
     node = graph.add_nncf_node("conv_op", metatype.name, metatype)
     assert pruning_op.accept_pruned_input(node) == accept_pruned_input
     pruning_op.mask_propagation(node, graph, NPNNCFTensorProcessor)
-    assert node.data["output_mask"] is None
+    assert node.attributes["output_mask"] is None
 
 
 @pytest.mark.parametrize("dummy_op_class", [dummy_types.DummyIdentityMaskForward, dummy_types.DummyBatchNormPruningOp])
@@ -67,13 +67,13 @@ def test_identity_mask_propogation_prune_ops(dummy_op_class):
     # Check with and without masks
     for output_mask in [None, NPNNCFTensor(np.ones((10,)))]:
         conv_op = graph.get_node_by_id(conv_op.node_id)
-        conv_op.data["output_mask"] = output_mask
+        conv_op.attributes["output_mask"] = output_mask
         MaskPropagationAlgorithm(
             graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor
         ).mask_propagation()
         for identity_op in identity_ops:
             identity_op = graph.get_node_by_id(identity_op.node_id)
-            assert np.all(identity_op.data["output_mask"] == output_mask)
+            assert np.all(identity_op.attributes["output_mask"] == output_mask)
 
 
 @pytest.mark.parametrize("valid_masks", [None, True, False])
@@ -98,7 +98,7 @@ def test_elementwise_prune_ops(valid_masks):
     def set_masks(masks, ops):
         for conv_op, mask in zip(ops, masks):
             conv_op = graph.get_node_by_id(conv_op.node_id)
-            conv_op.data["output_mask"] = mask
+            conv_op.attributes["output_mask"] = mask
 
     if valid_masks is None or valid_masks:
         if valid_masks:
@@ -107,7 +107,7 @@ def test_elementwise_prune_ops(valid_masks):
             graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor
         ).mask_propagation()
         elementwise_op = graph.get_node_by_id(elementwise_op.node_id)
-        assert np.all(elementwise_op.data["output_mask"] == masks[0])
+        assert np.all(elementwise_op.attributes["output_mask"] == masks[0])
     else:
 
         def check_wrong_masks(masks):
@@ -148,7 +148,7 @@ def test_group_norm_pruning_ops(num_channels, num_groups, accept_pruned_input_re
     # Check with and without masks
     for output_mask in [None, NPNNCFTensor(np.ones((10,)))]:
         conv_op = graph.get_node_by_id(conv_op.node_id)
-        conv_op.data["output_mask"] = output_mask
+        conv_op.attributes["output_mask"] = output_mask
         MaskPropagationAlgorithm(
             graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor
         ).mask_propagation()
@@ -156,7 +156,7 @@ def test_group_norm_pruning_ops(num_channels, num_groups, accept_pruned_input_re
         if not accept_pruned_input_ref:
             output_mask = None
 
-        assert np.all(identity_op.data["output_mask"] == output_mask)
+        assert np.all(identity_op.attributes["output_mask"] == output_mask)
 
 
 class DummyMaskProducerMetatype(dummy_types.DummyDefaultMetatype):
@@ -221,19 +221,19 @@ def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, 
         for output_mask in [None, ones_output_mask]:
             dummy_op_before = graph.get_node_by_id(dummy_op_before.node_id)
             conv_op_target = graph.get_node_by_id(conv_op_target.node_id)
-            dummy_op_before.data["output_mask"] = input_mask
-            conv_op_target.data["output_mask"] = output_mask
+            dummy_op_before.attributes["output_mask"] = input_mask
+            conv_op_target.attributes["output_mask"] = output_mask
             MaskPropagationAlgorithm(
                 graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor
             ).mask_propagation()
             dummy_op_before = graph.get_node_by_id(dummy_op_before.node_id)
             conv_op_target = graph.get_node_by_id(conv_op_target.node_id)
             if conv_type == "usual_conv":
-                assert np.all(conv_op_target.data["output_mask"] == output_mask)
+                assert np.all(conv_op_target.attributes["output_mask"] == output_mask)
             elif conv_type in ["grouped_conv_no_depthwise", "multiply_grouped_conv"]:
-                assert conv_op_target.data["output_mask"] is None
+                assert conv_op_target.attributes["output_mask"] is None
             else:
-                assert np.all(conv_op_target.data["output_mask"] == input_mask)
+                assert np.all(conv_op_target.attributes["output_mask"] == input_mask)
 
 
 def test_linear_pruning_ops():
@@ -266,14 +266,14 @@ def test_linear_pruning_ops():
         for output_mask in [None, ones_output_mask]:
             dummy_op_before = graph.get_node_by_id(dummy_op_before.node_id)
             linear_op_target = graph.get_node_by_id(linear_op_target.node_id)
-            dummy_op_before.data["output_mask"] = input_mask
-            linear_op_target.data["output_mask"] = output_mask
+            dummy_op_before.attributes["output_mask"] = input_mask
+            linear_op_target.attributes["output_mask"] = output_mask
             MaskPropagationAlgorithm(
                 graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor
             ).mask_propagation()
             dummy_op_before = graph.get_node_by_id(dummy_op_before.node_id)
             linear_op_target = graph.get_node_by_id(linear_op_target.node_id)
-            assert np.all(linear_op_target.data["output_mask"] == output_mask)
+            assert np.all(linear_op_target.attributes["output_mask"] == output_mask)
 
 
 @pytest.mark.parametrize("empty_mask_left_branch", [False, True])
@@ -313,11 +313,11 @@ def test_convs_elementwise_source_before_concat(
     if not empty_mask_left_branch:
         for conv_op in [conv_op_0, conv_op_1]:
             conv_op = graph.get_node_by_id(conv_op.node_id)
-            conv_op.data["output_mask"] = NPNNCFTensor(np.ones(10))
+            conv_op.attributes["output_mask"] = NPNNCFTensor(np.ones(10))
 
     if not empty_mask_right_branch:
         conv_op = graph.get_node_by_id(conv_op_2.node_id)
-        conv_op.data["output_mask"] = NPNNCFTensor(np.ones(right_branch_output_channels))
+        conv_op.attributes["output_mask"] = NPNNCFTensor(np.ones(right_branch_output_channels))
 
     # Propagate masks
     MaskPropagationAlgorithm(
@@ -326,10 +326,10 @@ def test_convs_elementwise_source_before_concat(
     # Check with masks
     concat_node = graph.get_node_by_id(concat_node.node_id)
     if empty_mask_left_branch and empty_mask_right_branch:
-        assert concat_node.data["output_mask"] is None
+        assert concat_node.attributes["output_mask"] is None
     else:
         reference_mask = np.ones((10 + right_branch_output_channels,))
-        np.testing.assert_equal(concat_node.data["output_mask"].tensor, reference_mask)
+        np.testing.assert_equal(concat_node.attributes["output_mask"].tensor, reference_mask)
 
 
 def test_concat_output_tensor_device():
@@ -356,17 +356,17 @@ def test_concat_output_tensor_device():
     ref_device = "some_test_device"
     for op in dummy_ops[:-1]:
         op = graph.get_node_by_id(op.node_id)
-        op.data["output_mask"] = None
+        op.attributes["output_mask"] = None
 
     last_op = graph.get_node_by_id(dummy_ops[-1].node_id)
-    last_op.data["output_mask"] = NPNNCFTensor(np.ones(10), dummy_device=ref_device)
+    last_op.attributes["output_mask"] = NPNNCFTensor(np.ones(10), dummy_device=ref_device)
     # Propagate masks
     MaskPropagationAlgorithm(
         graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor
     ).mask_propagation()
     # Check concat op has appropriate device
     concat_node = graph.get_node_by_id(concat_node.node_id)
-    assert concat_node.data["output_mask"].device == ref_device
+    assert concat_node.attributes["output_mask"].device == ref_device
 
 
 RESHAPE_TEST_CASES = [
@@ -443,16 +443,16 @@ def test_reshape_metatype_mask_prop(node_type, input_shape, output_shape, output
         # Get reference to graph node
         prev_node = graph.get_node_by_id(prev_node.node_id)
         reshape_node = graph.get_node_by_id(reshape_node.node_id)
-        prev_node.data["output_mask"] = NPNNCFTensor(output_mask_cur) if output_mask_cur is not None else None
+        prev_node.attributes["output_mask"] = NPNNCFTensor(output_mask_cur) if output_mask_cur is not None else None
         if isinstance(output_mask_ref_cur, str):
             with pytest.raises(AssertionError):
                 METATYPES_MAP[node_type]["ops"].mask_propagation(reshape_node, graph, NPNNCFTensorProcessor)
         else:
             METATYPES_MAP[node_type]["ops"].mask_propagation(reshape_node, graph, NPNNCFTensorProcessor)
             if output_mask_ref_cur is None:
-                assert reshape_node.data["output_mask"] is None
+                assert reshape_node.attributes["output_mask"] is None
             else:
-                assert np.all(reshape_node.data["output_mask"].tensor == output_mask_ref_cur)
+                assert np.all(reshape_node.attributes["output_mask"].tensor == output_mask_ref_cur)
 
 
 @pytest.mark.parametrize("node_type", ["reshape", "flatten"])
@@ -480,9 +480,9 @@ def test_reshape_is_last_op(node_type):
     for output_mask in (None, NPNNCFTensor(np.ones((10,)))):
         prev_node = graph.get_node_by_id(prev_node.node_id)
         reshape_node = graph.get_node_by_id(reshape_node.node_id)
-        prev_node.data["output_mask"] = output_mask
+        prev_node.attributes["output_mask"] = output_mask
         METATYPES_MAP[node_type]["ops"].mask_propagation(reshape_node, graph, NPNNCFTensorProcessor)
-        assert reshape_node.data["output_mask"] is None
+        assert reshape_node.attributes["output_mask"] is None
 
 
 SPLIT_TEST_CASES = [
@@ -549,7 +549,7 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
 
     # Set masks
     conv_op_0_node = graph.get_node_by_id(conv_op_0.node_id)
-    conv_op_0_node.data["output_mask"] = NPNNCFTensor(np.ones(10))
+    conv_op_0_node.attributes["output_mask"] = NPNNCFTensor(np.ones(10))
 
     # Set in_channles
     for node in (conv_op_1, conv_op_2):
@@ -563,7 +563,7 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
 
     # Check with masks
     split_node = graph.get_node_by_id(split_node.node_id)
-    split_output_masks = split_node.data["output_mask"]
+    split_output_masks = split_node.attributes["output_mask"]
     reference_mask = np.ones((5,))
     for node in (conv_op_1, conv_op_2):
         conv_node = graph.get_node_by_id(conv_op_1.node_id)

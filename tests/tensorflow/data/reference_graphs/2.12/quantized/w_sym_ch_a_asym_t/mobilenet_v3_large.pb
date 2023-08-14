@@ -1,0 +1,1 @@
+../../../2.5/quantized/w_sym_ch_a_asym_t/mobilenet_v3_large.pb

@@ -15,10 +15,12 @@ from nncf.common.engine import Engine
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.command_creation import CommandCreator
+from nncf.common.tensor_statistics import aggregator
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_available_backends
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.backend import is_openvino_compiled_model
+from nncf.data.dataset import Dataset
 
 TModel = TypeVar("TModel")
 
@@ -120,4 +122,31 @@ class CommandCreatorFactory:
             return OVCommandCreator()
         raise RuntimeError(
             "Cannot create backend-specific command creator because {} is not supported!".format(model_backend)
+        )
+
+
+class StatisticsAggregatorFactory:
+    @staticmethod
+    def create(model: TModel, dataset: Dataset) -> aggregator.StatisticsAggregator:
+        """
+        Factory method to create backend-specific `StatisticsAggregator` instance based on the input model.
+
+        :param model: backend-specific model instance
+        :return: backend-specific `StatisticsAggregator` instance
+        """
+        model_backend = get_backend(model)
+        if model_backend == BackendType.ONNX:
+            from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
+
+            return ONNXStatisticsAggregator(dataset)
+        if model_backend == BackendType.OPENVINO:
+            from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+
+            return OVStatisticsAggregator(dataset)
+        if model_backend == BackendType.TORCH:
+            from nncf.torch.statistics.aggregator import PTStatisticsAggregator
+
+            return PTStatisticsAggregator(dataset)
+        raise RuntimeError(
+            "Cannot create backend-specific statistics aggregator because {} is not supported!".format(model_backend)
         )
