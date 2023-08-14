@@ -17,7 +17,6 @@ import openvino.runtime as ov
 import pytest
 import torch
 
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
@@ -84,10 +83,12 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         backend = self.get_backend()
 
         attributes = {
-            NNCFGraph.METATYPE_ATTR: node_metatype,
-            NNCFGraph.LAYER_ATTRIBUTES: OVLayerAttributes(constant_attributes={}, inputs_attributes=inputs_attributes),
+            NNCFNode.METATYPE_ATTR: node_metatype,
+            NNCFNode.LAYER_ATTRIBUTES: OVLayerAttributes(constant_attributes={}, inputs_attributes=inputs_attributes),
+            NNCFNode.NODE_NAME_ATTR: "test_node",
+            NNCFNode.ID_NODE_ATTR: 0,
         }
-        node = NNCFNode(0, "test_node", attributes)
+        node = NNCFNode(attributes)
 
         try:
             # pylint: disable=protected-access
@@ -113,10 +114,12 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         backend = self.get_backend()
 
         attributes = {
-            NNCFGraph.METATYPE_ATTR: node_metatype,
-            NNCFGraph.LAYER_ATTRIBUTES: OVLayerAttributes(constant_attributes=constant_attributes),
+            NNCFNode.METATYPE_ATTR: node_metatype,
+            NNCFNode.LAYER_ATTRIBUTES: OVLayerAttributes(constant_attributes=constant_attributes),
+            NNCFNode.NODE_NAME_ATTR: "test_node",
+            NNCFNode.ID_NODE_ATTR: 0,
         }
-        node = NNCFNode(0, "test_node", attributes)
+        node = NNCFNode(attributes)
 
         try:
             # pylint: disable=protected-access
