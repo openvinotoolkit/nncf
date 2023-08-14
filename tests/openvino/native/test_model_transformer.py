@@ -609,7 +609,7 @@ def test_multiply_insertion(model_with_parameters):
         TargetType.POST_LAYER_OPERATION,
         OVMultiplyInsertionCommand,
         port_id=output_port_id,
-        **{"scale_value": scale, "destination_node_names": dest_nodes},
+        **{"scale_value": scale, "destination_node_names": dest_nodes, "multiply_node_name": "test_name"},
     )
     ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
 
