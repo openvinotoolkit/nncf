@@ -737,9 +737,6 @@ class TemplateTestStatisticsAggregator:
 
     @pytest.mark.parametrize("key", ["split_concat", "shared_conv"])
     def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics):
-        if key == "split_concat" and not inplace_statistics:
-            pytest.xfail("117593: Incorrect result in intermediate output after add node")
-
         params = test_params["test_statistic_merging"][key]
         model = params["model"](dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
