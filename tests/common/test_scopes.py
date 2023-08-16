@@ -32,6 +32,9 @@ from nncf.scopes import IgnoredScope
     ],
 )
 def test_get_not_matched_scopes(scope, ref):
-    node_lists = [NNCFNode(1, "A"), NNCFNode(2, "B")]
+    node_lists = [
+        NNCFNode({NNCFNode.ID_NODE_ATTR: 1, NNCFNode.NODE_NAME_ATTR: "A"}),
+        NNCFNode({NNCFNode.ID_NODE_ATTR: 2, NNCFNode.NODE_NAME_ATTR: "B"}),
+    ]
     not_matched = get_not_matched_scopes(scope, node_lists)
     assert not set(not_matched) - set(ref)

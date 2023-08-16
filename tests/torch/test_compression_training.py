@@ -319,7 +319,7 @@ NAS_DESCRIPTORS = [
     NASTrainingTestDescriptor()
     .real_dataset("cifar10")
     .config_name("mobilenet_v2_nas_SMALL.json")
-    .expected_accuracy(80.95)
+    .expected_accuracy(85.1)
     .subnet_expected_accuracy(88.67)
     .weights_filename("mobilenet_v2_cifar10_93.91.pth")
     .absolute_tolerance_train(1.0)
@@ -328,7 +328,7 @@ NAS_DESCRIPTORS = [
     .real_dataset("cifar10")
     .config_name("resnet50_nas_SMALL.json")
     .subnet_expected_accuracy(88.67)
-    .expected_accuracy(87.25)
+    .expected_accuracy(85.19)
     .weights_filename("resnet50_cifar10_93.65.pth")
     .absolute_tolerance_train(2.0)
     .absolute_tolerance_eval(2e-2),

@@ -63,11 +63,12 @@ class StatisticPointsContainer(UserDict):
                             _statistic_point.algorithm_to_tensor_collectors[algorithm].extend(
                                 statistic_point.algorithm_to_tensor_collectors[algorithm]
                             )
-                            return
-                        _statistic_point.algorithm_to_tensor_collectors[
-                            algorithm
-                        ] = statistic_point.algorithm_to_tensor_collectors[algorithm]
-                        return
+                        else:
+                            _statistic_point.algorithm_to_tensor_collectors[
+                                algorithm
+                            ] = statistic_point.algorithm_to_tensor_collectors[algorithm]
+                    return
+
             self.data[target_node_name].append(statistic_point)
 
     def iter_through_statistic_points_in_target_node(

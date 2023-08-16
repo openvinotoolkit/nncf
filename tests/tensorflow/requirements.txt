@@ -1,6 +1,7 @@
 PyYAML
 tensorflow_addons~=0.20.0
 pytest
+pytest-cov
 pytest-mock
 pytest-dependency
 yattag>=1.14.0

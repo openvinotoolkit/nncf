@@ -136,7 +136,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 # Add output_mask to elements to run mask_propagation
                 # and detect spec_nodes that will be pruned.
                 # It should be done for all elements of shared layer.
-                node.data["output_mask"] = TFNNCFTensor(tf.ones(get_output_channels(node)))
+                node.attributes["output_mask"] = TFNNCFTensor(tf.ones(get_output_channels(node)))
                 if layer_name in shared_layers:
                     continue
                 if node.is_shared():
@@ -175,7 +175,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         for spec_node in spec_nodes:
             layer_name = get_layer_identifier(spec_node)
             layer = model.get_layer(layer_name)
-            if spec_node.data["output_mask"] is None:
+            if spec_node.attributes["output_mask"] is None:
                 # Skip elements that will not be pruned
                 continue
             if layer_name in shared_layers:

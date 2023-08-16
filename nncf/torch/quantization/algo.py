@@ -49,6 +49,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import DuplicateFilter
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
+from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -361,8 +362,11 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         )
 
         scales_unification_map = {PTCatMetatype: UNIFICATION_PRODUCING_METATYPES}
+        ignored_scopes_for_solver = {
+            name: IgnoreReason.USER_REQUESTED for name in self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS]
+        }
         prop_graph_solver = QuantizerPropagationSolver(
-            activation_ignored_scopes=self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS],
+            activation_ignored_scopes=ignored_scopes_for_solver,
             weight_ignored_scopes=self._ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
             activation_target_scopes=self._target_scopes_per_group[QuantizerGroup.ACTIVATIONS],
             weight_target_scopes=self._target_scopes_per_group[QuantizerGroup.WEIGHTS],

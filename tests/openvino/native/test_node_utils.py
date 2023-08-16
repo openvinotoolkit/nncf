@@ -13,7 +13,6 @@ import numpy as np
 import pytest
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -76,12 +75,14 @@ def test_is_node_with_bias(model_to_create, is_with_bias, node_name):
 )
 def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, expected_channel_axes):
     attributes = {
-        NNCFGraph.METATYPE_ATTR: OVMatMulMetatype,
-        NNCFGraph.LAYER_ATTRIBUTES: OVLayerAttributes(
+        NNCFNode.ID_NODE_ATTR: 0,
+        NNCFNode.NODE_NAME_ATTR: "test",
+        NNCFNode.METATYPE_ATTR: OVMatMulMetatype,
+        NNCFNode.LAYER_ATTRIBUTES: OVLayerAttributes(
             constant_attributes={weights_port_id: {"transpose": transpose, "shape": shape}}
         ),
     }
-    node = NNCFNode(0, "test", attributes)
+    node = NNCFNode(attributes)
     actual_channel_axes = get_weight_channel_axes(node, weights_port_id)
 
     assert len(actual_channel_axes) == len(expected_channel_axes)

@@ -1,4 +1,4 @@
-name: pre-commit
+name: pre-commit-linters
 
 on:
   pull_request:
@@ -17,5 +17,5 @@ jobs:
         python-version: 3.8.10
     - name: Install pre-commit package
       run: make install-pre-commit
-    - name: Pre commit check
+    - name: Run pre-commit linter suite
       run: make pre-commit

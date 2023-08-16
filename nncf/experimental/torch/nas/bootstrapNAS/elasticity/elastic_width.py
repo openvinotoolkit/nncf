@@ -638,7 +638,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :param config: map of pruning group id to width value
         """
         for node in self._propagation_graph.get_all_nodes():
-            node.data.pop("output_mask", None)
+            node.attributes.pop("output_mask", None)
 
         names_of_processed_nodes = set()
         for cluster_id, width in config.items():
@@ -649,7 +649,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
                 max_width = elastic_width_info.elastic_op.max_width
                 device = get_model_device(self._target_model)
                 mask = self._width_to_mask(width, max_width, device)
-                node.data["output_mask"] = mask
+                node.attributes["output_mask"] = mask
                 elastic_width_info.elastic_op.set_active_width(width)
                 names_of_processed_nodes.add(node_id)
 
@@ -686,8 +686,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
                             break
                         for previous in previous_nodes:
                             if "output_mask" in previous.data:
-                                if previous.data["output_mask"] is not None:
-                                    input_masks.append(previous.data["output_mask"])
+                                if previous.attributes["output_mask"] is not None:
+                                    input_masks.append(previous.attributes["output_mask"])
                                     input_masks = [i for i in input_masks if i]
                                 else:
                                     nodes_to_check.append(previous)
@@ -764,7 +764,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         Reorder output filters in descending order of their importance.
         """
         for node in self._propagation_graph.get_all_nodes():
-            node.data.pop("output_mask", None)
+            node.attributes.pop("output_mask", None)
 
         # 1. Calculate filter importance for all groups of prunable layers
         for group in self._pruned_module_groups_info.get_all_clusters():
@@ -787,7 +787,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
             # 1.2 Setup reorder indexes as output mask to reorganize filters
             for minfo in group.elements:
                 node = self._propagation_graph.get_node_by_id(minfo.nncf_node_id)
-                node.data["output_mask"] = PTNNCFTensor(reorder_indexes)
+                node.attributes["output_mask"] = PTNNCFTensor(reorder_indexes)
 
         # 2. Propagating masks across the graph
         reorder_algo = FilterReorderingAlgorithm(
@@ -809,9 +809,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         pair_indexes = []
         for idx, (start_node_name, end_node_name) in enumerate(pairs_of_nodes):
             start_node = self._propagation_graph.get_node_by_name(start_node_name)
-            start_mask = start_node.data["output_mask"]
+            start_mask = start_node.attributes["output_mask"]
             end_node = self._propagation_graph.get_node_by_name(end_node_name)
-            end_mask = end_node.data["output_mask"]
+            end_mask = end_node.attributes["output_mask"]
 
             all_start_output_shapes = self._propagation_graph.get_output_shapes_for_node(start_node_name)
             start_output_shape = list(OrderedDict.fromkeys(all_start_output_shapes))

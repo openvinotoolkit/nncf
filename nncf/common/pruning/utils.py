@@ -367,7 +367,7 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     :return: Input masks.
     """
     retval = []
-    input_masks = [input_edge.from_node.data["output_mask"] for input_edge in graph.get_input_edges(node)]
+    input_masks = [input_edge.from_node.attributes["output_mask"] for input_edge in graph.get_input_edges(node)]
     for input_mask in input_masks:
         retval.append(input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask)
     return retval
@@ -416,4 +416,4 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
         input_masks = [None]
     assert len(input_masks) == 1
 
-    node.data["output_mask"] = input_masks[0]
+    node.attributes["output_mask"] = input_masks[0]

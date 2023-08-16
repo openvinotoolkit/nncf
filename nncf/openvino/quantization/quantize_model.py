@@ -29,7 +29,10 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
+from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
+from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry.decorator import tracked_function
@@ -159,12 +162,6 @@ def native_quantize_with_accuracy_control_impl(
     if advanced_accuracy_restorer_parameters is None:
         advanced_accuracy_restorer_parameters = AdvancedAccuracyRestorerParameters()
 
-    if advanced_accuracy_restorer_parameters.tune_hyperparams:
-        raise RuntimeError(
-            "Quantization algorithm with accuracy control from the "
-            "OpenVINO backend does not support tuning hyperparams yet"
-        )
-
     compress_weights = is_weight_compression_needed(advanced_quantization_parameters)
 
     if advanced_quantization_parameters is None:
@@ -185,18 +182,75 @@ def native_quantize_with_accuracy_control_impl(
         copied_parameters,
     )
 
-    ranking_subset_size = subset_size
-    if advanced_accuracy_restorer_parameters.ranking_subset_size is not None:
-        ranking_subset_size = advanced_accuracy_restorer_parameters.ranking_subset_size
+    evaluator = Evaluator(validation_fn)
+    evaluator.enable_iteration_count()
+    initial_metric_results = evaluator.collect_metric_results(model, validation_dataset, model_name="initial")
+    validation_dataset_size = evaluator.num_passed_iterations
+    evaluator.disable_iteration_count()
 
-    accuracy_aware_loop = QuantizationAccuracyRestorer(
-        ranking_subset_size=ranking_subset_size,
-        max_num_iterations=advanced_accuracy_restorer_parameters.max_num_iterations,
-        max_drop=max_drop,
-        drop_type=drop_type,
-        num_ranking_processes=advanced_accuracy_restorer_parameters.num_ranking_processes,
+    quantized_metric_results = evaluator.collect_metric_results(
+        quantized_model, validation_dataset, model_name="quantized"
     )
-    quantized_model = accuracy_aware_loop.apply(model, quantized_model, validation_dataset, validation_fn)
+
+    should_terminate, accuracy_drop = calculate_accuracy_drop(
+        initial_metric_results.metric_value, quantized_metric_results.metric_value, max_drop, drop_type
+    )
+
+    nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({drop_type})")
+
+    # TODO(andrey-churkin): Collect statistics only once
+    if advanced_accuracy_restorer_parameters.tune_hyperparams and not should_terminate:
+        tuned_quantized_model = quantize_with_tune_hyperparams(
+            model,
+            calibration_dataset,
+            validation_dataset,
+            validation_fn,
+            initial_metric_results,
+            quantized_metric_results,
+            subset_size,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_quantization_parameters,
+        )
+        tuned_quantized_metric_results = evaluator.collect_metric_results(
+            tuned_quantized_model, validation_dataset, model_name="tuned"
+        )
+        should_terminate, tuned_accuracy_drop = calculate_accuracy_drop(
+            initial_metric_results.metric_value, tuned_quantized_metric_results.metric_value, max_drop, drop_type
+        )
+
+        nncf_logger.info(f"Accuracy drop (tuned): {tuned_accuracy_drop} ({drop_type})")
+
+        if should_terminate or tuned_accuracy_drop < accuracy_drop:
+            quantized_model = tuned_quantized_model
+            quantized_metric_results = tuned_quantized_metric_results
+
+    if not should_terminate:
+        ranking_subset_size = subset_size
+        if advanced_accuracy_restorer_parameters.ranking_subset_size is not None:
+            ranking_subset_size = advanced_accuracy_restorer_parameters.ranking_subset_size
+
+        accuracy_restorer = QuantizationAccuracyRestorer(
+            ranking_subset_size,
+            advanced_accuracy_restorer_parameters.max_num_iterations,
+            max_drop,
+            drop_type,
+            advanced_accuracy_restorer_parameters.num_ranking_processes,
+        )
+        quantized_model = accuracy_restorer.apply(
+            model,
+            initial_metric_results,
+            quantized_model,
+            quantized_metric_results,
+            validation_dataset,
+            validation_dataset_size,
+            evaluator,
+        )
+
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 

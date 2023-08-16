@@ -14,7 +14,7 @@ from collections import Counter
 
 import pytest
 
-from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.insertion_point_graph import ConstantNodesFilter
@@ -227,7 +227,7 @@ def test_constant_nodes_filter(model_to_test):
     quantizable_layer_nodes = [
         QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in weight_nodes
     ]
-    quantizable_layer_node_keys = [node.node.data[NNCFGraph.KEY_NODE_ATTR] for node in quantizable_layer_nodes]
+    quantizable_layer_node_keys = [node.node.node_key for node in quantizable_layer_nodes]
 
     ip_graph = get_ip_graph_for_test(nncf_graph, quantizable_layer_nodes)
     filtered_ip_graph = ConstantNodesFilter.filter(ip_graph, quantizable_layer_node_keys)

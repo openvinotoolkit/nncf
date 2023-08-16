@@ -3,6 +3,7 @@ prettytable>=2.0.0
 onnx==1.13.1
 onnxruntime==1.14.1
 pytest-mock>=3.3.1
+pytest-cov
 pytest-dependency>=0.5.1
 virtualenv
 # Ticket 69520

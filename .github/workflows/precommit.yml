@@ -1,0 +1,28 @@
+name: precommit
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  onnx:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        lfs: true
+    - uses: actions/setup-python@v3
+      with:
+        python-version: 3.8.10
+    - name: Install NNCF and test requirements
+      run: make install-onnx-test
+    - name: Run ONNX precommit test scope
+      run: make test-onnx
+    - name: Upload coverage report to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: codecov-onnx # optional

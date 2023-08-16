@@ -312,7 +312,7 @@ class MinMaxQuantization(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :param inference_nncf_graph: Inference graph without constant flows.
         :param ignored_patterns: Ignored patterns.
-        :return: Ignored node names and ignored reason for quantization.
+        :return: Ignored node names and ignore reason for quantization.
         """
         user_ignored_names = get_ignored_node_names_from_ignored_scope(
             self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
@@ -383,7 +383,7 @@ class MinMaxQuantization(Algorithm):
         metatypes_to_ignore = self._backend_entity.get_ignored_metatypes(self._model_type, self._target_device)
         solver = QuantizerPropagationSolver(
             activation_ignored_scopes=ignored_names,
-            weight_ignored_scopes=ignored_names,
+            weight_ignored_scopes=list(ignored_names.keys()),
             hw_config=hw_config,
             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
             default_qconfig_list=[

@@ -138,7 +138,7 @@ def test_flops_calulation_for_spec_layers(
     next_nodes = shape_pruner.get_next_nodes(original_graph, pruning_groups)
     # Check output_shapes are empty in graph
     for node in original_graph.get_all_nodes():
-        assert node.data["output_shape"] is None
+        assert node.attributes["output_shape"] is None
 
     assert compression_ctrl._calculate_num_of_sparse_elements_by_node() == ref_num_of_sparse
 

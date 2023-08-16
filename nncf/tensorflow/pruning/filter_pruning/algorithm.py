@@ -280,7 +280,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 0. Removing masks at the elements of the NNCFGraph
         for node in self._original_graph.topological_sort():
-            node.data.pop("output_mask", None)
+            node.attributes.pop("output_mask", None)
 
         # 1. Calculate masks
         for group in self._pruned_layer_groups_info.get_all_clusters():
@@ -298,7 +298,7 @@ class FilterPruningController(BasePruningAlgoController):
             filter_mask = calculate_binary_mask(cumulative_filters_importance, threshold)
             for node in group.elements:
                 nncf_node = self._original_graph.get_node_by_id(node.nncf_node_id)
-                nncf_node.data["output_mask"] = TFNNCFTensor(filter_mask)
+                nncf_node.attributes["output_mask"] = TFNNCFTensor(filter_mask)
 
         # 2. Propagating masks across the graph
         mask_propagator = MaskPropagationAlgorithm(
@@ -310,8 +310,8 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes if layer.name == n.layer_name][0]
-            if nncf_node.data["output_mask"] is not None:
-                self._set_operation_masks([layer], nncf_node.data["output_mask"].tensor)
+            if nncf_node.attributes["output_mask"] is not None:
+                self._set_operation_masks([layer], nncf_node.attributes["output_mask"].tensor)
 
         # Calculate actual flops and weights number with new masks
         self._update_benchmark_statistics()
@@ -329,7 +329,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 0. Remove masks at the elements of the NNCFGraph
         for node in self._original_graph.topological_sort():
-            node.data.pop("output_mask", None)
+            node.attributes.pop("output_mask", None)
 
         # 1. Calculate masks
         # a. Calculate importances for all groups of filters
@@ -346,7 +346,7 @@ class FilterPruningController(BasePruningAlgoController):
             filter_mask = calculate_binary_mask(filter_importances[group.id], threshold)
             for node in group.elements:
                 nncf_node = self._original_graph.get_node_by_id(node.nncf_node_id)
-                nncf_node.data["output_mask"] = TFNNCFTensor(filter_mask)
+                nncf_node.attributes["output_mask"] = TFNNCFTensor(filter_mask)
 
         # 2. Propagate masks across the graph
         mask_propagator = MaskPropagationAlgorithm(
@@ -358,8 +358,8 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes if layer.name == n.layer_name][0]
-            if nncf_node.data["output_mask"] is not None:
-                self._set_operation_masks([layer], nncf_node.data["output_mask"].tensor)
+            if nncf_node.attributes["output_mask"] is not None:
+                self._set_operation_masks([layer], nncf_node.attributes["output_mask"].tensor)
 
         # Calculate actual flops with new masks
         self._update_benchmark_statistics()
@@ -377,7 +377,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes if layer.name == n.layer_name][0]
-            nncf_node.data["output_mask"] = TFNNCFTensor(tf.ones(get_filters_num(layer)))
+            nncf_node.attributes["output_mask"] = TFNNCFTensor(tf.ones(get_filters_num(layer)))
 
         # 1. Calculate importances for all groups of filters. Initialize masks.
         filter_importances = []
@@ -421,7 +421,7 @@ class FilterPruningController(BasePruningAlgoController):
                 for group in self._pruned_layer_groups_info.get_all_clusters():
                     for node in group.elements:
                         nncf_node = self._original_graph.get_node_by_id(node.nncf_node_id)
-                        nncf_node.data["output_mask"] = TFNNCFTensor(masks[group.id])
+                        nncf_node.attributes["output_mask"] = TFNNCFTensor(masks[group.id])
 
                 mask_propagator = MaskPropagationAlgorithm(
                     self._original_graph, TF_PRUNING_OPERATOR_METATYPES, TFNNCFPruningTensorProcessor
@@ -434,8 +434,8 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_sorted_nodes = self._original_graph.topological_sort()
                 for layer in wrapped_layers:
                     nncf_node = [n for n in nncf_sorted_nodes if layer.name == n.layer_name][0]
-                    if nncf_node.data["output_mask"] is not None:
-                        self._set_operation_masks([layer], nncf_node.data["output_mask"].tensor)
+                    if nncf_node.attributes["output_mask"] is not None:
+                        self._set_operation_masks([layer], nncf_node.attributes["output_mask"].tensor)
                 return
         raise RuntimeError(f"Unable to prune model to required flops pruning level: {target_flops_pruning_level}")
 
