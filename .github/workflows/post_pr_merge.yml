@@ -29,12 +29,10 @@ jobs:
           name: coverage_xml
           path: ./coverage.xml
       - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          name: codecov-onnx
-          override_commit:
-            ${{ github.event.pull_request.merge_commit_sha }}  # this is the fresh commit in the develop,
-                                                               # provided that github.event.pull_request.merged == true
-          override_branch: develop
-          fail_ci_if_error: true
+        run: |
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          chmod +x codecov
+
+          # github.event.pull_request.merge_commit_sha is the fresh commit in the develop,
+          # provided that github.event.pull_request.merged == true
+          ./codecov -f ./coverage.xml -t ${{ secrets.CODECOV_TOKEN }} --sha ${{ github.event.pull_request.merge_commit_sha }} -B develop
