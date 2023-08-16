@@ -21,6 +21,9 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-20.04
     steps:
+      - uses: actions/checkout@v3  # codecov uploader demands that the scanned files be present when uploading
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
       - uses: dawidd6/action-download-artifact@v2
         with:
           workflow: precommit.yml
@@ -34,4 +37,4 @@ jobs:
 
           # github.event.pull_request.merge_commit_sha is the fresh commit in the develop,
           # provided that github.event.pull_request.merged == true
-          ./codecov -f ./coverage.xml -t ${{ secrets.CODECOV_TOKEN }}  -C ${{ github.event.pull_request.merge_commit_sha }} -B develop
+          ./codecov -f ./coverage.xml -t ${{ secrets.CODECOV_TOKEN }}  -C ${{ github.event.pull_request.merge_commit_sha }} -B develop -n "codecov-onnx"
