@@ -106,7 +106,7 @@ def create_compressed_model(
             "is also re-created (via constructor call)."
         )
 
-    if config["target_device"] == "VPU":
+    if config.get("target_device") == "VPU":
         warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
     set_debug_log_dir(config.get("log_dir", "."))
