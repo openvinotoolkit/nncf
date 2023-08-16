@@ -384,6 +384,8 @@ def run(config):
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if "train" in config.mode:
+        if config.weights is None:
+            logger.warning('Pretrained checkpoint is not provided. This may lead to poor training results!')
         if is_accuracy_aware_training(config):
             train_summary_writer = SummaryWriter(config.log_dir, "train")
             timer = Timer()
