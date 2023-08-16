@@ -110,8 +110,8 @@ class SmoothQuant(Algorithm):
 
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
+        best_scale = None
         for group_id, nodes in tqdm(node_groups.items(), desc="Applying Smooth Quant"):
-            best_scale = None
             best_ratio = 0.0
             empty_statistic = False
             for node_to_smooth in nodes:
@@ -137,16 +137,27 @@ class SmoothQuant(Algorithm):
                     best_ratio = ratio
                     best_scale = deepcopy(scales)
 
+            if empty_statistic:
+                nncf_logger.debug(
+                    f"Skipped SmoothQuant for nodes after {source_node.node_name} because of the empty statistics."
+                )
+                continue
+
+            if best_scale is None:
+                nncf_logger.debug(
+                    f"Skipped SmoothQuant for nodes after {source_node.node_name} because of the empty scale."
+                )
+                continue
+
+            for node_to_smooth in nodes:
                 weights_scale = self._calculate_weight_scale(best_scale, node_to_smooth)
+                weight_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, weight_port)
                 scaled_weight = weight_value * weights_scale
                 weight_update_command = self._backend_entity.weight_update_command(
                     node_to_smooth, scaled_weight, weight_port
                 )
                 transformation_layout.register(weight_update_command)
-
-            if empty_statistic:
-                continue
 
             activations_shape = graph.get_output_edges(source_node)[source_output_port_id].tensor_shape
             activation_scale = self._calculate_activation_scale(best_scale, activations_shape, nodes, graph)
