@@ -409,6 +409,20 @@ def mean(a: Tensor, axis: Union[int, List[int]] = None, keepdims: bool = False) 
     return Tensor(mean(a.data, axis, keepdims))
 
 
+@functools.singledispatch
+@_tensor_guard
+def round(a: Tensor, decimals=0) -> Tensor:
+    """
+    Evenly round to the given number of decimals.
+
+    :param a: Input data.
+    :param decimals: Number of decimal places to round to (default: 0). If decimals is negative,
+      it specifies the number of positions to the left of the decimal point.
+    :return: An array of the same type as a, containing the rounded values.
+    """
+    return Tensor(round(a.data, decimals))
+
+
 __all__ = [
     "abs",
     "all",
@@ -431,6 +445,7 @@ __all__ = [
     "moveaxis",
     "ones_like",
     "reshape",
+    "round",
     "squeeze",
     "where",
     "zeros_like",

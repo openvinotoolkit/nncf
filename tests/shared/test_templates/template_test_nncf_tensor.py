@@ -683,3 +683,23 @@ class TemplateTestNNCFTensorOperators:
             assert functions.all(functions.isclose(res.data, ref_tensor))
         else:
             assert functions.isclose(res.data, ref_tensor)
+
+    @pytest.mark.parametrize(
+        "val, decimals, ref",
+        (
+            (1.1, 0, 1.0),
+            ([1.1, 0.9], 0, [1.0, 1.0]),
+            ([1.11, 0.91], 1, [1.1, 0.9]),
+        ),
+    )
+    def test_fn_round(self, val, decimals, ref):
+        tensor = Tensor(self.to_tensor(val))
+        ref_tensor = self.to_tensor(ref)
+
+        res = functions.round(tensor, decimals)
+
+        assert isinstance(res, Tensor)
+        if isinstance(ref, list):
+            assert functions.all(functions.isclose(res.data, ref_tensor))
+        else:
+            assert functions.isclose(res.data, ref_tensor)

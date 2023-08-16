@@ -181,4 +181,9 @@ def _(a: torch.Tensor, source: Union[int, List[int]], destination: Union[int, Li
 
 @functions.mean.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Union[int, List[int]] = None, keepdims: bool = False) -> torch.Tensor:
-    return torch.mean(a.data, axis=axis, keepdims=keepdims)
+    return torch.mean(a, axis=axis, keepdims=keepdims)
+
+
+@functions.round.register(torch.Tensor)
+def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
+    return torch.round(a, decimals=decimals)

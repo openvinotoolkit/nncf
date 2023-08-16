@@ -196,4 +196,10 @@ def _(a: np.ndarray, source: Union[int, List[int]], destination: Union[int, List
 @functions.mean.register(np.ndarray)
 @functions.mean.register(np.number)
 def _(a: Union[np.ndarray, np.number], axis: Union[int, List[int]] = None, keepdims: bool = False) -> np.ndarray:
-    return np.mean(a.data, axis=axis, keepdims=keepdims)
+    return np.mean(a, axis=axis, keepdims=keepdims)
+
+
+@functions.round.register(np.ndarray)
+@functions.round.register(np.number)
+def _(a: Union[np.ndarray, np.number], decimals: int = 0) -> np.ndarray:
+    return np.round(a, decimals=decimals)
