@@ -183,7 +183,7 @@ class SmoothQuant(Algorithm):
 
         :param statistic_points: StatisticPointsContainer instance.
         :param node_name: Name of the node for collection.
-        :param act_port: activation port id.
+        :param act_port: Activation port id.
         :return: List of the TTensor instances.
         """
 
