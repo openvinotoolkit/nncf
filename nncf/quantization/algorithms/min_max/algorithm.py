@@ -628,7 +628,10 @@ class MinMaxQuantization(Algorithm):
                 for tensor_collector in statistic_points.get_algo_statistics_for_node(
                     target_node_name, filter_func, self._algorithm_key
                 ):
-                    group_statistics.append(tensor_collector.get_statistics())
+                    statistics = tensor_collector.get_statistics()
+                    if statistics.min_values is None or statistics.max_values is None:
+                        raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
+                    group_statistics.append(statistics)
 
             unified_values = self._backend_entity.unify_statistics(group_statistics)
             for quantization_target_point in unified_scale_group:
@@ -661,6 +664,8 @@ class MinMaxQuantization(Algorithm):
                 half_range = quantization_target_point in quantization_points_overflow_fix
                 narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
                 statistics = tensor_collector.get_statistics()
+                if statistics.min_values is None or statistics.max_values is None:
+                    raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
                 parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
                 command = self._backend_entity.create_quantizer_insertion_command(
                     graph, quantization_target_point, qconfig, parameters

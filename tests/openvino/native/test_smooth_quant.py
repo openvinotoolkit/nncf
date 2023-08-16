@@ -16,6 +16,7 @@ import numpy as np
 import openvino.runtime as ov
 import torch
 
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 from tests.shared.command import Command
@@ -62,3 +63,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
             ref_value = np.array(ref_value)
             assert value.shape == ref_value.shape
             assert np.all(np.isclose(value, ref_value, atol=0.0001)), f"{value} != {ref_value}"
+
+    @staticmethod
+    def get_matmul_metatype():
+        return OVMatMulMetatype

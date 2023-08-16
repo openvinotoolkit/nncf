@@ -151,6 +151,20 @@ class LinearModel(nn.Module):
         return x_1, x_2
 
 
+class NonZeroLinearModel(nn.Module):
+    INPUT_SIZE = [10]
+
+    def forward(self, x):
+        zeros = (x > torch.inf).float()
+        empty = torch.nonzero(zeros).reshape((-1, 1, 1)).float()
+        y = torch.matmul(empty, torch.ones((1, 5)))
+        y += 5
+        y = torch.cat((torch.ones((1, 10)), y.reshape(1, -1)), dim=1)
+        y = torch.matmul(y, torch.ones(10, 10))
+        y += 5
+        return y
+
+
 class SplittedModel(nn.Module):
     INPUT_SIZE = [1, 3, 28, 28]
 
