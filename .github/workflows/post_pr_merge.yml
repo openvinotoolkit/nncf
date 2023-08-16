@@ -1,30 +1,38 @@
+# With the squash-and-merge strategy that we are employing, the final commit that ends up in the develop branch
+# after the PR merge has a brand-new commit SHA that is not equal to the SHA of the last commit in the PR.
+# This means that the coverage reports uploaded to Codecov in the course of the (yet unmerged) PR checks will not
+# be translated to the ultimate commit in the develop and Codecov will show "missing base report" errors in the UI.
+# We don't want to re-run the precommits after PR merge via a separate 'on: push' action on the develop branch, so
+# instead will grab the latest coverage report artifact from the just-merged PR and upload it as the report for the
+# new commit on develop. Note that this will break if the PR is merged before the coverage artifact for the latest
+# PR commit is generated.
+
 name: upload_coverage_for_develop
 
 on:
   pull_request_target:
+    branches:
+      - develop
     types:
       - closed
 
 jobs:
   upload-coverage:
-#    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-20.04
     steps:
-      - name: Print merge commit
-        run:
-          echo ${{ github.event.pull_request.merge_commit_sha }}
-
       - uses: dawidd6/action-download-artifact@v2
         with:
           workflow: precommit.yml
           check_artifacts: true
-          commit: ${{ github.event.pull_request.head.sha }}
+          commit: ${{ github.event.pull_request.head.sha }}  # this is the latest commit in the PR
           name: coverage_xml
           path: ./coverage.xml
-#      - name: Upload coverage report to Codecov
-#        uses: codecov/codecov-action@v3
-#        with:
-#          token: ${{ secrets.CODECOV_TOKEN }}
-#          name: codecov-onnx # optional
-#          override_commit:
-#            ${{ github.event.pull_request.merge_commit_sha }}
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: codecov-onnx
+          override_commit:
+            ${{ github.event.pull_request.merge_commit_sha }}  # this is the fresh commit in the develop,
+                                                               # provided that github.event.pull_request.merged == true
