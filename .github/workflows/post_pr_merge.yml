@@ -7,7 +7,7 @@
 # new commit on develop. Note that this will break if the PR is merged before the coverage artifact for the latest
 # PR commit is generated.
 
-name: upload_coverage_for_develop
+name: Post-PR merge actions
 
 on:
   pull_request_target:
@@ -27,7 +27,6 @@ jobs:
           check_artifacts: true
           commit: ${{ github.event.pull_request.head.sha }}  # this is the latest commit in the PR
           name: coverage_xml
-          path: ./coverage.xml
       - name: Upload coverage report to Codecov
         run: |
           curl -Os https://uploader.codecov.io/latest/linux/codecov
@@ -35,4 +34,4 @@ jobs:
 
           # github.event.pull_request.merge_commit_sha is the fresh commit in the develop,
           # provided that github.event.pull_request.merged == true
-          ./codecov -f ./coverage.xml -t ${{ secrets.CODECOV_TOKEN }} --sha ${{ github.event.pull_request.merge_commit_sha }} -B develop
+          ./codecov -f ./coverage.xml -t ${{ secrets.CODECOV_TOKEN }}  -C ${{ github.event.pull_request.merge_commit_sha }} -B develop
