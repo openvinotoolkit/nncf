@@ -9,7 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import deque
+from typing import Any
 
+import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.factory import ModelTransformerFactory
@@ -45,9 +47,24 @@ def insert_null_biases(model: ov.Model, graph: NNCFGraph) -> ov.Model:
     transformation_layout = TransformationLayout()
     model_transformer = ModelTransformerFactory.create(model)
     for node_without_bias in nodes_without_biases:
-        bias_insertion_command = OVCommandCreator.create_command_to_insert_bias(node_without_bias)
+        const_value = create_bias_constant_value(node_without_bias, 0)
+        bias_insertion_command = OVCommandCreator.create_command_to_insert_bias(node_without_bias, const_value)
         transformation_layout.register(bias_insertion_command)
     return model_transformer.transform(transformation_layout)
+
+
+def create_bias_constant_value(node_without_bias: ov.Node, value: Any) -> np.ndarray:
+    """
+    Creates bias value constant array filled by given value.
+
+    :param node_without_bias: Node to add bias to.
+    :param value: Value to fill bias constant array.
+    :return: Bias value constant array filled by given value.
+    """
+    node_shape = node_without_bias.output(0).partial_shape.get_max_shape()
+    bias_shape = [1] * len(node_shape)
+    bias_shape[1] = node_shape[1]
+    return np.full(bias_shape, value, dtype=node_without_bias.get_element_type().to_dtype())
 
 
 def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:

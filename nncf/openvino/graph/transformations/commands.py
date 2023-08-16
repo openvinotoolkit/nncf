@@ -147,16 +147,17 @@ class OVModelExtractionCommand(Command):
         raise NotImplementedError()
 
 
-class OVNullBiasInsertionCommand(TransformationCommand):
+class OVBiasInsertionCommand(TransformationCommand):
     """
     Inserts null bias for the corresponding node.
     """
 
-    def __init__(self, target_point: OVTargetPoint):
+    def __init__(self, target_point: OVTargetPoint, bias_value: np.ndarray):
         """
         :param target_point: The TargetPoint instance for the insertion that contains layer's information.
         """
         super().__init__(TransformationType.INSERT, target_point)
+        self.bias_value = bias_value
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
