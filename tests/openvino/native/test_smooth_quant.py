@@ -129,3 +129,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
                 pytest.xfail("Expected exception")
 
         assert activation_channel_axis == reference_value
+
+    @staticmethod
+    def get_matmul_metatype():
+        return OVMatMulMetatype

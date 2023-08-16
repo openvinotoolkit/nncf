@@ -15,6 +15,7 @@ from typing import Callable, Dict, TypeVar
 import pytest
 
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
@@ -24,6 +25,7 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
+from tests.post_training.test_templates.helpers import NonZeroLinearModel
 from tests.post_training.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
@@ -61,6 +63,13 @@ class TemplateTestSQAlgorithm:
     def get_backend() -> SmoothQuantAlgoBackend:
         """
         Returns backend-specific SmoothQuantAlgoBackend.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_matmul_metatype():
+        """
+        Returns backend-specific MatMul metatype
         """
 
     @staticmethod
@@ -170,3 +179,28 @@ class TemplateTestSQAlgorithm:
         for ref_node_name, ref_port_id in references:
             assert ref_node_name in smooth_data
             assert smooth_data[ref_node_name] == ref_port_id
+
+    def test_empty_stats(self, mocker, tmpdir):
+        model_cls = NonZeroLinearModel
+        model = self.backend_specific_model(model_cls(), tmpdir)
+        dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
+
+        graph = NNCFGraphFactory.create(model)
+        algo = SmoothQuant(subset_size=1, inplace_statistics=False)
+        algo_statistic_points = algo.get_statistic_points(model, graph)
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+        statistics_aggregator.register_statistic_points(algo_statistic_points)
+        statistics_aggregator.collect_statistics(model, graph)
+
+        mocked_transformer = mocker.MagicMock()
+        mocker.patch("nncf.common.factory.ModelTransformerFactory.create", return_value=mocked_transformer)
+        algo.apply(model, graph, algo_statistic_points)
+
+        mocked_transformer.transform.assert_called_once()
+        arg = mocked_transformer.transform.call_args.args[0]
+        assert len(arg.transformations) == 2
+
+        mm_metatype = self.get_matmul_metatype()
+        matmuls = [node for node in graph.topological_sort() if node.metatype == mm_metatype]
+        for transformation in arg.transformations:
+            assert transformation.target_point.target_node_name != matmuls[0].node_name
