@@ -408,6 +408,7 @@ class OVLogicalXorMetatype(OVOpMetatype):
 class OVEmbeddingMetatype(OVOpMetatype):
     name = "EmbeddingOp"
     hw_config_names = [HWConfigOpName.EMBEDDING]
+    const_channel_axis = [0]
 
     @classmethod
     def matches(cls, node: ov.Node) -> bool:
@@ -680,11 +681,10 @@ GENERAL_WEIGHT_LAYER_METATYPES = [
     OVMatMulMetatype,
     OVLSTMSequenceMetatype,
     OVGRUSequenceMetatype,
+    OVEmbeddingMetatype,
 ]
 
-EXTENDED_WEIGHT_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES + [OVEmbeddingMetatype]
-
-METATYPES_WITH_CONST_PORT_ID = EXTENDED_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
+METATYPES_WITH_CONST_PORT_ID = GENERAL_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
 
 # Contains the operation metatypes for which bias can be applied.
 OPERATIONS_WITH_BIAS_METATYPES = [
