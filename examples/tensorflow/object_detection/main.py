@@ -385,7 +385,7 @@ def run(config):
 
     if "train" in config.mode:
         if config.weights is None:
-            logger.warning('Pretrained checkpoint is not provided. This may lead to poor training results!')
+            logger.warning("Pretrained checkpoint is not provided. This may lead to poor training results!")
         if is_accuracy_aware_training(config):
             train_summary_writer = SummaryWriter(config.log_dir, "train")
             timer = Timer()
