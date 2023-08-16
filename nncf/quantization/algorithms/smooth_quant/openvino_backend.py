@@ -121,6 +121,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def calculate_weight_scale(scale_value: np.ndarray, weights_size: int, channel_axis: int) -> np.ndarray:
+        weight_scale = scale_value
         if weights_size > 1:
             reshape_shape = np.ones(weights_size, dtype=np.int64)
             reshape_shape[channel_axis] = scale_value.size
