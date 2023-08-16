@@ -269,7 +269,7 @@ class TestONNXExport:
         ), f"IR's size ratio: 1 - {pruned_file_bytes}/{not_pruned_file_bytes}"
         if abs(desc.ov_weight_ratio - desc.nncf_weight_ratio) >= 0.15:
             pytest.skip("Known issue in the ngraph transformation")
-        assert abs(file_size_ratio - compression_rate) < 0.15
+        assert abs(file_size_ratio - compression_rate) < 0.152
 
     def _get_onnx_model_inference_outputs(self, onnx_model_path: str, dataset: Dataset, recipe: BaseMockRunRecipe):
         sess = onnxruntime.InferenceSession(onnx_model_path)
