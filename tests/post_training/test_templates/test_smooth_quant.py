@@ -15,7 +15,7 @@ from typing import Callable, Dict, TypeVar
 import pytest
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.utils.backend import get_backend
+from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
@@ -131,9 +131,7 @@ class TemplateTestSQAlgorithm:
         graph = NNCFGraphFactory.create(model)
         algo = SmoothQuant(subset_size=1, inplace_statistics=False)
         algo_statistic_points = algo.get_statistic_points(model, graph)
-        statistics_aggregator = PostTrainingQuantization._create_statistics_aggregator(
-            None, dataset, get_backend(model)
-        )
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         statistics_aggregator.register_statistic_points(algo_statistic_points)
         statistics_aggregator.collect_statistics(model, graph)
 
