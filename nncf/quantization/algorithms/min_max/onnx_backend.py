@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Union
 
 import numpy as np
 
@@ -20,11 +20,12 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
-from nncf.onnx.graph.node_utils import transpose_axis
+from nncf.onnx.graph.node_utils import get_quantization_axis
+from nncf.onnx.graph.node_utils import get_quantized_tensor_shape
+from nncf.onnx.graph.node_utils import get_reduction_shape
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
@@ -105,7 +106,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if target_point.is_weight_target_point():
             tensor_type = np.int8  # The weight is restricted to have only signed range
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
-        axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
+        node = nncf_graph.get_node_by_name(target_point.target_node_name)
+        axis = get_quantization_axis(quantizer_config.per_channel, node, target_point)
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
@@ -124,51 +126,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return get_input_edges_mapping(nncf_graph)
 
     @staticmethod
-    def _get_axis(
-        nncf_graph: NNCFGraph, target_point: ONNXTargetPoint, quantizer_config: QuantizerConfig
-    ) -> Optional[int]:
-        if not quantizer_config.per_channel:
-            return None
-        if not target_point.is_weight_target_point():
-            return 1
-        node = nncf_graph.get_node_by_name(target_point.target_node_name)
-
-        weight_channel_axis = node.metatype.weight_channel_axis
-        if node.layer_attributes.has_node_attrs():
-            if node.metatype == om.ONNXGemmMetatype:
-                weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
-                if (
-                    target_point.port_id == 0
-                    and node.layer_attributes.node_attrs["transA"] == 1
-                    or target_point.port_id == 1
-                    and node.layer_attributes.node_attrs["transB"] == 1
-                ):
-                    weight_channel_axis = transpose_axis(weight_shape, weight_channel_axis)
-        return weight_channel_axis
-
-    @staticmethod
-    def _get_reduction_shape_and_use_abs_max(
-        nncf_graph: NNCFGraph, target_point: ONNXTargetPoint, quantizer_config: QuantizerConfig
-    ) -> Tuple[ReductionShape, bool]:
-        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
-        if not quantizer_config.per_channel:
-            return None, use_abs_max
-
-        if not target_point.is_weight_target_point():
-            # TODO: support reduction shapes for 3D-5D conv cases
-            return (0, 2, 3), use_abs_max
-
-        # Calculate reduction shape for weight statistic collector
-        node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        assert node.layer_attributes.has_weight()
-        weight_shape = node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
-        reduction_shape = list(range(len(weight_shape)))
-
-        axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
-        reduction_shape.pop(axis)
-        return tuple(reduction_shape), use_abs_max
-
-    @staticmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,
@@ -177,9 +134,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: int = None,
     ) -> Union[ONNXMinMaxStatisticCollector, ONNXMeanMinMaxStatisticCollector]:
-        reduction_shape, use_abs_max = ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(
-            nncf_graph, target_point, quantizer_config
-        )
+        is_per_channel = quantizer_config.per_channel
+        node = nncf_graph.get_node_by_name(target_point.target_node_name)
+        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
+        reduction_shape = None  # Per-Tensor
+        quantization_axis = get_quantization_axis(is_per_channel, node, target_point)
+        quantized_tensor_shape = get_quantized_tensor_shape(nncf_graph, node, target_point)
+        if quantization_axis is not None and quantized_tensor_shape is not None:  # Per-Channel
+            reduction_shape = get_reduction_shape(quantized_tensor_shape, quantization_axis)
 
         if (
             range_estimator_params.min.statistics_type == StatisticsType.MIN
