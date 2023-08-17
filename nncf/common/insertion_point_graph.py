@@ -19,6 +19,7 @@ import networkx as nx
 from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.patterns import GraphPattern
@@ -294,8 +295,7 @@ class InsertionPointGraph(nx.DiGraph):
                 continue
             if data[InsertionPointGraph.IS_MERGED_NODE_ATTR]:
                 for nncf_node in data[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
-                    node_k = nncf_node.data[NNCFGraph.KEY_NODE_ATTR]
-                    if self._base_nx_graph.nodes[node_k][NNCFGraph.METATYPE_ATTR] in INPUT_NOOP_METATYPES:
+                    if self._base_nx_graph.nodes[nncf_node.node_key][NNCFNode.METATYPE_ATTR] in INPUT_NOOP_METATYPES:
                         output.append(node)
                         break
             elif data[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR].metatype in INPUT_NOOP_METATYPES:
@@ -316,8 +316,7 @@ class InsertionPointGraph(nx.DiGraph):
                 continue
             if data[InsertionPointGraph.IS_MERGED_NODE_ATTR]:
                 for nncf_node in data[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
-                    node_k = nncf_node.data[NNCFGraph.KEY_NODE_ATTR]
-                    if node_key == node_k:
+                    if node_key == nncf_node.node_key:
                         return node
         return node_key
 

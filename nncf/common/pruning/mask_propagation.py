@@ -29,7 +29,7 @@ from nncf.common.pruning.utils import is_grouped_conv
 class MaskPropagationAlgorithm:
     """
     Algorithm responsible for propagation masks across all nodes in the graph.
-    Before call mask_propagation() you need set node.data['output_masks']
+    Before call mask_propagation() you need set node.attributes['output_masks']
     for nodes that have masks already defined.
     """
 
@@ -100,7 +100,7 @@ class MaskPropagationAlgorithm:
         for node in self._graph.topological_sort():
             if node.node_id in can_be_closing_convs and can_prune_after_analysis[node.node_id]:
                 # Set output mask
-                node.data["output_mask"] = SymbolicMask(get_output_channels(node), node.node_id)
+                node.attributes["output_mask"] = SymbolicMask(get_output_channels(node), node.node_id)
             # Propagate masks
             cls = self.get_meta_operation_by_type_name(node.node_type)
             cls.mask_propagation(node, self._graph, SymbolicMaskProcessor)
@@ -140,7 +140,7 @@ class MaskPropagationAlgorithm:
 
         # Clean nodes masks
         for node in self._graph.get_all_nodes():
-            node.data["output_mask"] = None
+            node.attributes["output_mask"] = None
 
         return can_prune_by_dim
 

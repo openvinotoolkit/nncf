@@ -145,8 +145,19 @@ class TensorAggregatorBase:
         :param x: Tensor to register.
         """
 
-    @abstractmethod
     def aggregate(self) -> Any:
+        """
+        Aggregates collected tensors and returns aggregated result.
+        In case no tensors were collected returns None.
+
+        :return: Aggregated result.
+        """
+        if self._collected_samples:
+            return self._aggregate_impl()
+        return None
+
+    @abstractmethod
+    def _aggregate_impl(self) -> Any:
         """
         Aggregates collected tensors and returns aggregated result.
 
@@ -503,7 +514,7 @@ class NoopAggregator(TensorAggregatorBase):
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         self._container.append(x.tensor)
 
-    def aggregate(self):
+    def _aggregate_impl(self):
         return self._container
 
 
@@ -514,7 +525,7 @@ class ShapeAggregator(TensorAggregatorBase):
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         self._container = x
 
-    def aggregate(self):
+    def _aggregate_impl(self):
         return self._container.shape
 
 
@@ -525,7 +536,7 @@ class MinAggregator(TensorAggregatorBase):
         else:
             self._container = self._tensor_processor.min(x, self._container)
 
-    def aggregate(self):
+    def _aggregate_impl(self):
         return self._container.tensor
 
 
@@ -536,7 +547,7 @@ class MaxAggregator(TensorAggregatorBase):
         else:
             self._container = self._tensor_processor.max(x, self._container)
 
-    def aggregate(self):
+    def _aggregate_impl(self):
         return self._container.tensor
 
 
@@ -555,19 +566,19 @@ class OfflineAggregatorBase(TensorAggregatorBase, ABC):
         else:
             self._container.append(x)
 
-    def _aggregate(self, fn):
+    def _offline_aggregation_impl(self, fn):
         stacked_val = self._tensor_processor.stack(self._container)
         return fn(stacked_val, axis=0, keepdims=False).tensor
 
 
 class MeanAggregator(OfflineAggregatorBase):
-    def aggregate(self):
-        return self._aggregate(self._tensor_processor.mean)
+    def _aggregate_impl(self):
+        return self._offline_aggregation_impl(self._tensor_processor.mean)
 
 
 class MedianAggregator(OfflineAggregatorBase):
-    def aggregate(self):
-        return self._aggregate(self._tensor_processor.median)
+    def _aggregate_impl(self):
+        return self._offline_aggregation_impl(self._tensor_processor.median)
 
 
 class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
@@ -582,7 +593,7 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         super().__init__(tensor_processor, use_per_sample_stats, num_samples, window_size)
         self._quantile = quantile
 
-    def _aggregate(self, fn) -> List[NNCFTensor]:
+    def _offline_aggregation_impl(self, fn) -> List[NNCFTensor]:
         stacked_val = self._tensor_processor.stack(self._container)
         result = self._tensor_processor.no_outliers_map(stacked_val, fn, axis=0, alpha=self._quantile)
         return result.tensor
@@ -595,13 +606,13 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
 
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
-    def aggregate(self) -> Any:
-        return self._aggregate(self._tensor_processor.masked_mean)
+    def _aggregate_impl(self) -> Any:
+        return self._offline_aggregation_impl(self._tensor_processor.masked_mean)
 
 
 class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
-    def aggregate(self) -> Any:
-        return self._aggregate(self._tensor_processor.masked_median)
+    def _aggregate_impl(self) -> Any:
+        return self._offline_aggregation_impl(self._tensor_processor.masked_median)
 
 
 AGGREGATORS_MAP = {

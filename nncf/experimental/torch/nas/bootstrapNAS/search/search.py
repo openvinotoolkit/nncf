@@ -29,6 +29,7 @@ from torch.utils.tensorboard import SummaryWriter
 from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.logging import nncf_logger
+from nncf.common.plotting import noninteractive_plotting
 from nncf.common.utils.decorators import skip_if_dependency_unavailable
 from nncf.common.utils.os import safe_open
 from nncf.config.extractors import get_bn_adapt_algo_kwargs
@@ -239,7 +240,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
 
         self._problem = None
         self.checkpoint_save_dir = None
-        self.type_var = np.int
+        self.type_var = int
 
     @property
     def evaluator_handlers(self) -> List[BaseEvaluatorHandler]:
@@ -399,45 +400,46 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         """
         import matplotlib.pyplot as plt
 
-        plt.figure()
-        colormap = plt.cm.get_cmap("viridis")
-        col = range(int(self.search_params.num_evals / self.search_params.population))
-        for i in range(0, len(self.search_records), self.search_params.population):
-            c = [col[int(i / self.search_params.population)]] * len(
-                self.search_records[i : i + self.search_params.population]
-            )
+        with noninteractive_plotting():
+            plt.figure()
+            colormap = plt.cm.get_cmap("viridis")
+            col = range(int(self.search_params.num_evals / self.search_params.population))
+            for i in range(0, len(self.search_records), self.search_params.population):
+                c = [col[int(i / self.search_params.population)]] * len(
+                    self.search_records[i : i + self.search_params.population]
+                )
+                plt.scatter(
+                    [abs(row[2]) for row in self.search_records][i : i + self.search_params.population],
+                    [abs(row[4]) for row in self.search_records][i : i + self.search_params.population],
+                    s=9,
+                    c=c,
+                    alpha=0.5,
+                    marker="D",
+                    cmap=colormap,
+                )
             plt.scatter(
-                [abs(row[2]) for row in self.search_records][i : i + self.search_params.population],
-                [abs(row[4]) for row in self.search_records][i : i + self.search_params.population],
-                s=9,
-                c=c,
-                alpha=0.5,
-                marker="D",
-                cmap=colormap,
-            )
-        plt.scatter(
-            *tuple(abs(ev.input_model_value) for ev in self.evaluator_handlers),
-            marker="s",
-            s=120,
-            color="blue",
-            label="Input Model",
-            edgecolors="black",
-        )
-        if None not in self.best_vals:
-            plt.scatter(
-                *tuple(abs(val) for val in self.best_vals),
-                marker="o",
+                *tuple(abs(ev.input_model_value) for ev in self.evaluator_handlers),
+                marker="s",
                 s=120,
-                color="yellow",
-                label="BootstrapNAS A",
+                color="blue",
+                label="Input Model",
                 edgecolors="black",
-                linewidth=2.5,
             )
-        plt.legend()
-        plt.title("Search Progression")
-        plt.xlabel(self.efficiency_evaluator_handler.name)
-        plt.ylabel(self.accuracy_evaluator_handler.name)
-        plt.savefig(f"{self._log_dir}/{filename}.png")
+            if None not in self.best_vals:
+                plt.scatter(
+                    *tuple(abs(val) for val in self.best_vals),
+                    marker="o",
+                    s=120,
+                    color="yellow",
+                    label="BootstrapNAS A",
+                    edgecolors="black",
+                    linewidth=2.5,
+                )
+            plt.legend()
+            plt.title("Search Progression")
+            plt.xlabel(self.efficiency_evaluator_handler.name)
+            plt.ylabel(self.accuracy_evaluator_handler.name)
+            plt.savefig(f"{self._log_dir}/{filename}.png")
 
     def save_evaluators_state(self) -> NoReturn:
         """

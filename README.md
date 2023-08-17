@@ -34,6 +34,7 @@ learning frameworks.
 | Compression algorithm                                                       |OpenVINO|PyTorch|   TensorFlow   |     ONNX       |
 |:----------------------------------------------------------------------------| :---: | :---: |:--------:|:------------------:|
 | [Post-Training Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Supported |
+| [Weights Compression](./docs/compression_algorithms/CompressWeights.md) | Not supported | Supported |Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
 
@@ -365,11 +366,11 @@ You may also use one of the Dockerfiles in the [docker](./docker) directory to b
 - Python\* 3.7 or later
 - Supported frameworks:
   - PyTorch\* >=1.13.0, <2.1
-  - TensorFlow\* >=2.4.0, <=2.11.1
+  - TensorFlow\* >=2.4.0, <=2.12.0
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolkit 11.7) and TensorFlow* 2.11.1 (NVidia CUDA\* Toolkit 11.2).
+This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolkit 11.7) and TensorFlow* 2.12.0 (NVidia CUDA\* Toolkit 11.8).
 
 ## NNCF Compressed Model Zoo
 

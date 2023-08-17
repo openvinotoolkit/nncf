@@ -15,6 +15,7 @@ import numpy as np
 import torch
 
 from nncf.common.factory import TModel
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
@@ -25,10 +26,10 @@ from nncf.torch.tensor import PTNNCFTensor
 
 
 class PTStatisticsAggregator(StatisticsAggregator):
-    def collect_statistics(self, model: NNCFNetwork) -> None:
+    def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:
         with torch.no_grad():
             with model.nncf.temporary_clean_view() as intermediate_model:
-                super().collect_statistics(intermediate_model)
+                super().collect_statistics(intermediate_model, graph)
 
     def _register_statistics(
         self, outputs: Dict[str, PTNNCFTensor], statistic_points: StatisticPointsContainer
@@ -59,7 +60,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
 
     @staticmethod
     def _get_merged_statistic_points(
-        statistic_points: StatisticPointsContainer, model: TModel
+        statistic_points: StatisticPointsContainer, model: TModel, graph: NNCFGraph
     ) -> StatisticPointsContainer:
         # TODO: mirgate to experimental statistic collector and use common merging algorithm
         return statistic_points

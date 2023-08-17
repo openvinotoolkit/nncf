@@ -20,6 +20,7 @@ import torch
 
 from nncf.common.collector import StatisticsCollector
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
@@ -178,7 +179,7 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
             shape = original_nx_graph.edges[u, v][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
             num_bits = self._get_precision_for_activation_tensor(u, v, original_nx_graph)
             original_nx_graph.edges[u, v]["precision"] = num_bits
-            u_node_name = original_nx_graph.nodes[u][NNCFGraph.NODE_NAME_ATTR]
+            u_node_name = original_nx_graph.nodes[u][NNCFNode.NODE_NAME_ATTR]
             memory_consumption_fp_model[u_node_name] = np.prod(shape) * fp_num_bits
             memory_consumption_compressed_model[u_node_name] = np.prod(shape) * num_bits
         try:
@@ -195,7 +196,7 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
         precision_enter_activation_tensor = max(
             [0] + [original_nx_graph.edges[pred_u_node, u_node]["precision"] for pred_u_node in pred_u_nodes]
         )
-        u_node_name = original_nx_graph.nodes[u_node][NNCFGraph.NODE_NAME_ATTR]
+        u_node_name = original_nx_graph.nodes[u_node][NNCFNode.NODE_NAME_ATTR]
         module = self._compressed_model.nncf.get_containing_module(u_node_name)
         if is_nncf_module(module):
             quantizer = self._get_weight_quantizer_for_module(module)
@@ -268,7 +269,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                 node = merged_original_graph.nodes[node_key]
                 if node[self.IS_MERGED_GRAPH_ATTR]:
                     last_node = node[self.NODES_GRAPH_ATTR][-1]
-                    node_name = str(last_node[NNCFGraph.NODE_NAME_ATTR])
+                    node_name = str(last_node[NNCFNode.NODE_NAME_ATTR])
                     matched = False
                     for aq_info in self._qctrl.non_weight_quantizers.values():
                         for target_point in aq_info.affected_insertions:
@@ -280,7 +281,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                     else:
                         self._marking_edges(merged_original_graph, node_key, queue, False)
                 else:
-                    node_name = str(node[NNCFGraph.NODE_NAME_ATTR])
+                    node_name = str(node[NNCFNode.NODE_NAME_ATTR])
 
                     matched = False
                     for aq_key in self._compressed_model.nncf.external_quantizers.keys():
@@ -291,7 +292,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                         self._marking_edges(merged_original_graph, node_key, queue)
                     else:
                         is_op_non_change_precision_activation_tensor = True
-                        node_metatype = node[NNCFGraph.METATYPE_ATTR]
+                        node_metatype = node[NNCFNode.METATYPE_ATTR]
                         is_op_non_change_precision_activation_tensor = (
                             node_metatype not in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]
                         )
@@ -358,7 +359,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                 merged_nodes.append(original_graph._nx_graph.nodes[node_key])
                 merged_graph.remove_node(node_key)
             merged_node_attrs = {
-                PTNNCFGraph.KEY_NODE_ATTR: merged_node_key,
+                NNCFNode.KEY_NODE_ATTR: merged_node_key,
                 self.NODES_GRAPH_ATTR: merged_nodes,
                 self.IS_MERGED_GRAPH_ATTR: True,
             }

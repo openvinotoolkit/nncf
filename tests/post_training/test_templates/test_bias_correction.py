@@ -14,19 +14,23 @@ from typing import Dict, List, Tuple, TypeVar
 
 import pytest
 
+from nncf.common.factory import NNCFGraphFactory
 from nncf.data import Dataset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import MultipleConvTestModel
+from tests.post_training.test_templates.helpers import SplittedModel
 from tests.post_training.test_templates.helpers import StaticDatasetMock
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 
 
+# pylint: disable=protected-access
 class TemplateTestBCAlgorithm:
     @staticmethod
     @abstractmethod
@@ -49,17 +53,17 @@ class TemplateTestBCAlgorithm:
         """
 
     @staticmethod
-    def fn_to_type(tensor):
+    def fn_to_type(tensor) -> TTensor:
         return tensor
 
     @staticmethod
     @abstractmethod
-    def get_transform_fn():
+    def get_transform_fn() -> callable:
         """
         Get transformation function for dataset.
         """
 
-    def get_dataset(self, input_size: Tuple):
+    def get_dataset(self, input_size: Tuple) -> StaticDatasetMock:
         """
         Return backend specific random dataset.
 
@@ -69,14 +73,14 @@ class TemplateTestBCAlgorithm:
 
     @staticmethod
     @abstractmethod
-    def backend_specific_model(model: TModel, tmp_dir: str):
+    def backend_specific_model(model: TModel, tmp_dir: str) -> TModel:
         """
         Return backend specific model.
         """
 
     @staticmethod
     @abstractmethod
-    def check_bias(model: TModel, ref_biases: Dict):
+    def check_bias(model: TModel, ref_biases: Dict) -> None:
         """
         Checks biases values.
         """
@@ -89,12 +93,51 @@ class TemplateTestBCAlgorithm:
         return ref_biases
 
     @staticmethod
-    def get_quantization_algorithm():
+    def get_quantization_algorithm(disable_bias_correction=False) -> PostTrainingQuantization:
         return PostTrainingQuantization(
             subset_size=1,
             fast_bias_correction=False,
-            advanced_parameters=AdvancedQuantizationParameters(overflow_fix=OverflowFix.DISABLE),
+            advanced_parameters=AdvancedQuantizationParameters(
+                overflow_fix=OverflowFix.DISABLE, disable_bias_correction=disable_bias_correction
+            ),
         )
+
+    @staticmethod
+    def get_bias_correction_algorithm() -> BiasCorrection:
+        return BiasCorrection(subset_size=1)
+
+    @staticmethod
+    @abstractmethod
+    def remove_fq_from_inputs(model: TModel) -> TModel:
+        """
+        Removes quantizer nodes from inputs.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_ref_path(suffix: str) -> str:
+        """
+        Returns backend-specific reference graph paths.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def compare_nncf_graphs(model: TModel, ref_path: str) -> None:
+        """
+        Compares backend-specific model with reference graph.
+        """
+
+    @pytest.fixture()
+    def quantized_test_model(self, tmpdir) -> TModel:
+        model_cls = SplittedModel
+        model = self.backend_specific_model(model_cls(), tmpdir)
+        dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
+
+        quantization_algorithm = self.get_quantization_algorithm(disable_bias_correction=True)
+        graph = NNCFGraphFactory.create(model)
+        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
+        modified_model = self.remove_fq_from_inputs(quantized_model)
+        return modified_model
 
     @pytest.mark.parametrize(
         "model_cls, ref_biases",
@@ -118,7 +161,21 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
-        quantized_model = quantization_algorithm.apply(model, dataset=dataset)
+        graph = NNCFGraphFactory.create(model)
+        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
         mapped_ref_biases = self.map_references(ref_biases)
         self.check_bias(quantized_model, mapped_ref_biases)
+
+    def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):
+        nncf_graph = NNCFGraphFactory.create(quantized_test_model)
+
+        bc_algo = self.get_bias_correction_algorithm()
+        bc_algo._set_backend_entity(quantized_test_model)
+
+        node = nncf_graph.get_node_by_name(layer_name)
+        bc_algo._collected_stat_inputs_map.update(ref_data["collected_inputs"])
+        subgraph_data = bc_algo._get_subgraph_data_for_node(node, nncf_graph)
+        ref_subgraph_data = ref_data["subgraph_data"]
+
+        assert subgraph_data == ref_subgraph_data

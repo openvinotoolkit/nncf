@@ -291,7 +291,6 @@ class HWFusedPatternNames(Enum):
     # BLOCK PATTERNS
     ADD_SCALE_SHIFT_OUTPUT = PatternDesc("add_scale_shift_output")
     BATCH_INDEX = PatternDesc("batch_index")
-    EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")
     LINEAR_WITH_BIAS = PatternDesc("linear_with_bias")
     MVN_SCALE_SHIFT = PatternDesc("mvn_scale_shift")
     NORMALIZE_L2_MULTIPLY = PatternDesc("normalize_l2_multiply")
@@ -394,3 +393,4 @@ class IgnoredPatternNames(Enum):
         devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
     )
     FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
+    EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")

@@ -13,11 +13,11 @@ import numpy as np
 import pytest
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -76,13 +76,32 @@ def test_is_node_with_bias(model_to_create, is_with_bias, node_name):
 )
 def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, expected_channel_axes):
     attributes = {
-        NNCFGraph.METATYPE_ATTR: OVMatMulMetatype,
-        NNCFGraph.LAYER_ATTRIBUTES: OVLayerAttributes(
+        NNCFNode.ID_NODE_ATTR: 0,
+        NNCFNode.NODE_NAME_ATTR: "test",
+        NNCFNode.METATYPE_ATTR: OVMatMulMetatype,
+        NNCFNode.LAYER_ATTRIBUTES: OVLayerAttributes(
             constant_attributes={weights_port_id: {"transpose": transpose, "shape": shape}}
         ),
     }
-    node = NNCFNode(0, "test", attributes)
+    node = NNCFNode(attributes)
     actual_channel_axes = get_weight_channel_axes(node, weights_port_id)
 
     assert len(actual_channel_axes) == len(expected_channel_axes)
     assert all(a == b for a, b in zip(actual_channel_axes, expected_channel_axes))
+
+
+@pytest.mark.parametrize(
+    "shape, channel_axes, ref_reduction_shape",
+    [
+        ((1, 128), [-1], (0,)),
+        ((1, 256, 1), [-2], (0, 2)),
+        ((1, 128, 512), [-1], (0, 1)),
+        ((1, 3, 224, 224), [1], (0, 2, 3)),
+        ((1, 1, 12, 12), [1], (0, 2, 3)),
+        ((1, 1, 12, 12), [1, 2], (0, 3)),
+    ],
+)
+def test_get_channel_agnostic_reduction_shape(shape, channel_axes, ref_reduction_shape):
+    reduction_shape = get_channel_agnostic_reduction_shape(channel_axes=channel_axes, shape=shape)
+
+    assert reduction_shape == ref_reduction_shape

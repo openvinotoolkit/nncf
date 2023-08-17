@@ -163,12 +163,13 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_output_name(model: TModel, node_name: str) -> str:
+    def get_output_name(model: TModel, node_name: str, output_id: int) -> str:
         """
         Returns output tensor name for the specific node.
 
         :param model: Backend-specific model.
         :param node_name: Name of the backend-specific node.
+        :param output_id: Port Id for output.
         :return: Output tensor name.
         """
 
@@ -196,21 +197,23 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def remove_fq_from_inputs(model: TModel) -> TModel:
+    def remove_fq_from_inputs(model: TModel, nncf_graph: NNCFGraph) -> TModel:
         """
         This method removes the activation Fake Quantize nodes (or Quantize-Dequantize pairs) from the model.
         It's needed for the further bias shift calculation that relates on quantized weights.
 
         :param model: TModel instance.
+        :param nncf_graph: NNCFGraph instance.
         :return: TModel without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
         """
 
     @staticmethod
     @abstractmethod
-    def insert_null_biases(model: TModel) -> TModel:
+    def insert_null_biases(model: TModel, nncf_graph: NNCFGraph) -> TModel:
         """
         This method finds and inserts zero biases for the layers that should have it.
 
         :param model: TModel instance.
+        :param nncf_graph: NNCFGraph instance.
         :return: TModel instance with zero biases
         """

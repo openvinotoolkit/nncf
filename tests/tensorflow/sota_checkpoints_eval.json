@@ -205,7 +205,8 @@
                     "compression_description": "INT8",
                     "mean_value": "[103.939,116.779,123.68]",
                     "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1
+                    "diff_fp32_max": 0.1,
+                    "diff_target_max": 0.15
                 },
                 "resnet50_imagenet_rb_sparsity_int8": {
                     "config": "examples/tensorflow/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json",

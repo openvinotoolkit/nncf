@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.api.compression import TModel
 from nncf.common.quantization.structs import QuantizationPreset
@@ -22,7 +22,13 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
+from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
+from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grid
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
+
+TTensor = TypeVar("TTensor")
 
 
 @api(canonical_alias="nncf.quantize")
@@ -238,3 +244,74 @@ def compress_weights(model: TModel, use_fake_quantize: bool = False) -> TModel:
         return nncf.torch.compress_weights(model, use_fake_quantize)
 
     raise RuntimeError(f"Unsupported type of backend: {backend}")
+
+
+def quantize_with_tune_hyperparams(
+    model: TModel,
+    calibration_dataset: Dataset,
+    validation_dataset: Dataset,
+    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+    initial_metric_results: MetricResults,
+    quantized_metric_results: MetricResults,
+    tuner_subset_size: int = 300,
+    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
+) -> TModel:
+    """
+    Applies post-training quantization algorithm with tune hyperparameters to provided model.
+
+    :param model: A model to be quantized.
+    :param calibration_dataset: A representative dataset for the calibration process.
+    :param validation_dataset: : A dataset for the validation process.
+    :param validation_fn: A validation function to validate the model.
+    :param initial_metric_results: Initial metric results.
+    :param quantized_metric_results: Quantized metric results.
+    :param tuner_subset_size: Tuner subset size.
+    :param preset: A preset that controls the quantization mode.
+    :param target_device: A target device the specificity of which will be taken
+        into account while compressing in order to obtain the best performance
+        for this type of device.
+    :param subset_size: Size of a subset to calculate activations
+        statistics used for quantization.
+    :param fast_bias_correction: Setting this option to `False` enables a different
+        bias correction method which is more accurate, in general, and takes
+        more time but requires less memory.
+    :param model_type: Model type is needed to specify additional patterns
+        in the model. Supported only `transformer` now.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
+    :param advanced_quantization_parameters: Advanced quantization parameters for
+        fine-tuning the quantization algorithm.
+    :return: The quantized model.
+    """
+    init_quantization_params = {
+        "preset": preset,
+        "target_device": target_device,
+        "subset_size": subset_size,
+        "fast_bias_correction": fast_bias_correction,
+        "model_type": model_type,
+        "ignored_scope": ignored_scope,
+        "advanced_parameters": advanced_quantization_parameters,
+    }
+
+    quantization_param_grid = get_quantization_param_grid()
+
+    hyperparameter_tuner = HyperparameterTuner(
+        PostTrainingQuantization,
+        init_quantization_params,
+        quantization_param_grid,
+        calibration_dataset,
+        validation_fn,
+        tuner_subset_size,
+        initial_metric_results,
+        quantized_metric_results,
+    )
+
+    quantized_model = hyperparameter_tuner.apply(model, validation_dataset)
+
+    return quantized_model

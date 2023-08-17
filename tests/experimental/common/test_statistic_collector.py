@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import abstractmethod
 from typing import List, Optional
 
 import numpy as np
@@ -53,7 +54,7 @@ class DummyTensorAggregator(TensorAggregatorBase):
     def _register_reduced_input_impl(self, x: TensorType):
         return self._container.append(x)
 
-    def aggregate(self):
+    def _aggregate_impl(self):
         return self._container[0]
 
 
@@ -269,3 +270,46 @@ def test_multiple_branch_reducer():
     assert len(ref_stats) == len(stats)
     for key, value in ref_stats.items():
         assert value == stats[key]
+
+
+class TemplateTestStatisticCollector:
+    @abstractmethod
+    def get_nncf_tensor_cls(self):
+        pass
+
+    @pytest.mark.parametrize("inplace", [False, True])
+    @pytest.mark.parametrize("any_not_empty", [False, True])
+    def test_empty_tensors_register(self, inplace, any_not_empty):
+        collector = TensorCollector()
+        reducer = DummyTensorReducer("Dummy", inplace)
+        aggregator = DummyTensorAggregator(5)
+        collector.register_statistic_branch("A", reducer, aggregator)
+        input_name = "input_name"
+        full_inputs = TensorCollector.get_tensor_collector_inputs(
+            {input_name: self.get_nncf_tensor_cls()(np.array([100]))}, [(hash(reducer), [input_name])]
+        )
+        empty_inputs = TensorCollector.get_tensor_collector_inputs(
+            {input_name: self.get_nncf_tensor_cls()(np.array([]))}, [(hash(reducer), [input_name])]
+        )
+
+        stats = collector.get_statistics()
+        assert len(stats) == 1
+        assert stats["A"] is None
+
+        inputs = [full_inputs, empty_inputs, full_inputs] if any_not_empty else [empty_inputs, empty_inputs]
+        for input_ in inputs:
+            collector.register_inputs(input_)
+
+        if any_not_empty:
+            assert len(aggregator._container) == 2
+            assert aggregator._collected_samples == 2
+            stats = collector.get_statistics()
+            assert len(stats) == 1
+            assert stats["A"] == self.get_nncf_tensor_cls()([100])
+            return
+
+        assert len(aggregator._container) == 0
+        assert aggregator._collected_samples == 0
+        stats = collector.get_statistics()
+        assert len(stats) == 1
+        assert stats["A"] is None

@@ -64,6 +64,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTGatherMetatype,
         operator_metatypes.PTScatterMetatype,
         operator_metatypes.PTReshapeMetatype,
+        operator_metatypes.PTSqueezeMetatype,
         operator_metatypes.PTSplitMetatype,
         operator_metatypes.PTExpandMetatype,
         operator_metatypes.PTMaxPool1dMetatype,

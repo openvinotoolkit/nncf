@@ -28,7 +28,6 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
 ALGO_BACKENDS = Registry("algo_backends")
@@ -207,13 +206,13 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
         """
-        Returns ignores scope based on a model type and device parameters.
+        Returns ignored metatypes based on a model type and device parameters.
 
         :param model_type: Model type parameter.
         :param device: Target device.
-        :return: Instance of ignored scope.
+        :return: List of ignored metatypes.
         """
 
     @staticmethod

@@ -85,14 +85,14 @@ def get_pruning_groups(
         root_group = PropagationGroup(block=PruningBlock(), producers={ProducerInfo(node.node_id, pruning_dim)})
         mask = PropagationMask(dim_groups_map={target_output_dim_for_compression: [root_group]})
         roots[node.node_id] = root_group
-        node.data["output_mask"] = mask
+        node.attributes["output_mask"] = mask
 
     def get_attributes_fn(node: NNCFNode) -> Dict[str, Any]:
         result = {"metatype": str(node.metatype.name), "node_id": str(node.node_id)}
         if node.layer_attributes:
             result.update(map(lambda pair: (pair[0], str(pair[1])), node.layer_attributes.__dict__.items()))
-        if "output_mask" in node.data:
-            output_mask = node.data["output_mask"]
+        if "output_mask" in node.attributes:
+            output_mask = node.attributes["output_mask"]
             if output_mask:
                 result["output_mask"] = str(output_mask)
         return result

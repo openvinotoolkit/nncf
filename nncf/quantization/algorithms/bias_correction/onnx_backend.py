@@ -107,10 +107,10 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return node.input[0]
 
     @staticmethod
-    def get_output_name(model: onnx.ModelProto, node_name: str) -> List[str]:
+    def get_output_name(model: onnx.ModelProto, node_name: str, output_id: int) -> List[str]:
         onnx_graph = ONNXGraph(model)
         node = onnx_graph.get_node_by_name(node_name)
-        return node.output[0]
+        return node.output[output_id]
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -121,9 +121,9 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return is_node_with_bias(node)
 
     @staticmethod
-    def remove_fq_from_inputs(model: onnx.ModelProto) -> onnx.ModelProto:
-        return remove_fq_from_inputs(model)
+    def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx.ModelProto:
+        return remove_fq_from_inputs(model, nncf_graph)
 
     @staticmethod
-    def insert_null_biases(model: onnx.ModelProto) -> onnx.ModelProto:
+    def insert_null_biases(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx.ModelProto:
         return model

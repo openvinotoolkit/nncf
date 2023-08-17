@@ -30,9 +30,9 @@ except:
 tensorflow_version_major, tensorflow_version_minor = tuple(map(int, tensorflow_version.split(".")))[:2]
 if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
     warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, _tf_version)
-elif not (tensorflow_version_major == 2 and 4 <= tensorflow_version_minor <= 11):
+elif not (tensorflow_version_major == 2 and 4 <= tensorflow_version_minor <= 13):
     raise RuntimeError(
-        f"NNCF only supports 2.4.0 <= tensorflow <= 2.11.*, while current tensorflow version is {_tf_version}"
+        f"NNCF only supports 2.4.0 <= tensorflow <= 2.13.*, while current tensorflow version is {_tf_version}"
     )
 
 

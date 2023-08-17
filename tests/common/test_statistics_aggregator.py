@@ -404,7 +404,8 @@ class TemplateTestStatisticsAggregator:
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        statistics_aggregator.collect_statistics(model)
+        graph = NNCFGraphFactory.create(model)
+        statistics_aggregator.collect_statistics(model, graph)
 
         def filter_func(point):
             return (
@@ -591,7 +592,8 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         model = self.get_backend_model(dataset_samples)
-        statistics_aggregator.collect_statistics(model)
+        graph = NNCFGraphFactory.create(model)
+        statistics_aggregator.collect_statistics(model, graph)
 
         def filter_func(point):
             return (
@@ -665,7 +667,8 @@ class TemplateTestStatisticsAggregator:
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        statistics_aggregator.collect_statistics(model)
+        graph = NNCFGraphFactory.create(model)
+        statistics_aggregator.collect_statistics(model, graph)
 
         tensor_collectors = list(statistics_points.get_tensor_collectors())
         assert len(tensor_collectors) == 3
@@ -771,7 +774,7 @@ class TemplateTestStatisticsAggregator:
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         # pylint: disable=protected-access
-        merged_statistics = statistics_aggregator._get_merged_statistic_points(statistics_points, model)
+        merged_statistics = statistics_aggregator._get_merged_statistic_points(statistics_points, model, nncf_graph)
         merged_stats_checkers_map = {
             "split_concat": self._check_split_concat_merged_stats,
             "shared_conv": self._check_shared_convs_merged_stats,
@@ -779,7 +782,7 @@ class TemplateTestStatisticsAggregator:
         merged_stats_checkers_map[key](merged_statistics)
 
         statistics_aggregator.register_statistic_points(statistics_points)
-        statistics_aggregator.collect_statistics(model)
+        statistics_aggregator.collect_statistics(model, nncf_graph)
 
         for collector, ref in collectors_and_refs:
             stat = collector.get_statistics()
@@ -842,7 +845,8 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         # Run statistic collection to check output names matches reduer names
-        statistics_aggregator.collect_statistics(model)
+        graph = NNCFGraphFactory.create(model)
+        statistics_aggregator.collect_statistics(model, graph)
 
     @pytest.mark.parametrize(
         "statistic_point_params",

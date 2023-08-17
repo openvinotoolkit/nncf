@@ -27,6 +27,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -42,7 +43,6 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.scopes import IgnoredScope
 
 
 # pylint:disable=too-many-public-methods
@@ -140,7 +140,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
             # TODO (l-bat): Disable quantizer propogation through layout changing operations
             channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
-            axes = tuple(i for i in range(len(shape)) if i != channel_axis)
+            axes = get_channel_agnostic_reduction_shape([channel_axis], shape)
             return axes, use_abs_max
 
         assert isinstance(node.layer_attributes, OVLayerAttributes)
@@ -148,7 +148,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         if quantizer_config.per_channel:
             channel_axes = get_weight_channel_axes(node, target_point.port_id)
-            axes = tuple(i for i in range(len(const_shape)) if i not in channel_axes)
+            axes = get_channel_agnostic_reduction_shape(channel_axes, const_shape)
         else:
             axes = tuple(range(len(const_shape)))
         return axes, use_abs_max
@@ -205,10 +205,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+        types = []
         if model_type == ModelType.TRANSFORMER:
-            types = []
-            metatypes_to_add = [
+            types = [
                 om.OVAddMetatype,
                 om.OVPowerMetatype,
                 om.OVSqueezeMetatype,
@@ -223,11 +223,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVMaximumMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(om.OVMultiplyMetatype)
-            for metatype in metatypes_to_add:
-                types.extend(metatype.get_all_aliases())
-            return IgnoredScope(types=types)
-        return IgnoredScope()
+                types.append(om.OVMultiplyMetatype)
+        return types
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:

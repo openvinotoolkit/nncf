@@ -36,7 +36,6 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
@@ -310,10 +309,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
     @staticmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+        types = []
         if model_type == ModelType.TRANSFORMER:
-            types = []
-            metatypes_to_add = [
+            types = [
                 om.PTAddMetatype,
                 om.PTPowerMetatype,
                 om.PTSubMetatype,
@@ -322,15 +321,11 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTReduceL2,
                 om.PTDivMetatype,
                 om.PTMaxMetatype,
+                om.PTSqueezeMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(om.PTMulMetatype)
-            type_name_to_add = ["squeeze"]
-            for metatype in metatypes_to_add:
-                types.extend(metatype.get_all_aliases())
-            types.extend(type_name_to_add)
-            return IgnoredScope(types=types)
-        return IgnoredScope()
+                types.append(om.PTMulMetatype)
+        return types
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:

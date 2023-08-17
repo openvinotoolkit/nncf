@@ -133,19 +133,158 @@ class MultipleConvTestModel(nn.Module):
         return self.conv_5(F.relu(x_1_2))
 
 
-class LinearModel(nn.Module):
+class LinearMultiShapeModel(nn.Module):
     INPUT_SIZE = [1, 3, 4, 2]
-    RESHAPE_SHAPE = (1, 3, 2, 4)
-    MATMUL_W_SHAPE = (4, 5)
 
     def __init__(self) -> None:
         super().__init__()
         with set_torch_seed():
-            self.matmul_data = torch.randn(self.MATMUL_W_SHAPE, dtype=torch.float32) - torch.tensor(0.5)
-            self.add_data = torch.randn(self.RESHAPE_SHAPE, dtype=torch.float32)
+            self.matmul_1_data = torch.randn((4, 4), dtype=torch.float32)
+            self.matmul_2_data = torch.randn((4, 4), dtype=torch.float32)
+            self.matmul_3_data = torch.randn((1, 8, 2), dtype=torch.float32)
+            self.matmul_4_data = torch.randn((1, 8, 3), dtype=torch.float32)
+            self.matmul_5_data = torch.randn((1), dtype=torch.float32)
+            self.matmul_6_data = torch.randn((8), dtype=torch.float32)
+
+            self.linear_1 = nn.Linear(2, 8)
+            self.linear_1.weight.data = torch.randn((8, 2), dtype=torch.float32)
+            self.linear_1.bias.data = torch.randn((1, 8), dtype=torch.float32)
+
+            self.linear_2 = nn.Linear(2, 8)
+            self.linear_2.weight.data = torch.randn((8, 2), dtype=torch.float32)
+            self.linear_2.bias.data = torch.randn((1, 8), dtype=torch.float32)
+
+            self.matmul_7_data = torch.randn((6, 6), dtype=torch.float32)
+            self.matmul_8_data = torch.randn((10, 6), dtype=torch.float32)
 
     def forward(self, x):
-        x = torch.reshape(x, self.RESHAPE_SHAPE)
-        x_1 = torch.matmul(x, self.matmul_data)
-        x_2 = torch.add(x, self.add_data)
-        return x_1, x_2
+        x = torch.reshape(x, (1, 3, 2, 4))
+
+        x_1 = torch.matmul(x, self.matmul_1_data)
+        x_2 = torch.matmul(x, self.matmul_2_data)
+
+        x = torch.add(x_1, x_2)
+        x_1 = torch.reshape(x, (1, 3, 8))
+
+        x_1_1 = torch.matmul(x_1, self.matmul_3_data)
+        x_1_1 = torch.reshape(x_1_1, (1, 6))
+        x_1_1 = torch.matmul(self.matmul_5_data, x_1_1)
+
+        x_1_2 = torch.matmul(self.matmul_4_data, x_1)
+        x_1_2 = torch.max(x_1_2, 1).values
+        x_1_2 = torch.matmul(x_1_2, self.matmul_6_data)
+
+        x_2, x_3 = torch.split(x, 2, 3)
+        x_2 = self.linear_1(x_2)
+        x_2 = torch.min(x_2, -1).values
+        x_2 = torch.flatten(x_2)
+        x_2 = torch.matmul(x_2, self.matmul_7_data)
+        x_3 = self.linear_2(x_3)
+        x_3 = torch.mean(x_3, -1)
+        x_3 = torch.flatten(x_3)
+        x_3 = torch.matmul(self.matmul_8_data, x_3)
+        return x_1_1, x_1_2, x_2, x_3
+
+
+class NonZeroLinearModel(nn.Module):
+    INPUT_SIZE = [10]
+
+    def forward(self, x):
+        zeros = (x > torch.inf).float()
+        empty = torch.nonzero(zeros).reshape((-1, 1, 1)).float()
+        y = torch.matmul(empty, torch.ones((1, 5)))
+        y += 5
+        y = torch.cat((torch.ones((1, 10)), y.reshape(1, -1)), dim=1)
+        y = torch.matmul(y, torch.ones(10, 10))
+        y += 5
+        return y
+
+
+class SplittedModel(nn.Module):
+    INPUT_SIZE = [1, 3, 28, 28]
+
+    def __init__(self) -> None:
+        super().__init__()
+        with set_torch_seed():
+            self.conv_1 = self._build_conv(3, 12, 3)
+            self.add_1_data = torch.randn((1, 12, 26, 26), dtype=torch.float32)
+            self.maxpool_1 = torch.nn.MaxPool2d(1)
+
+            self.conv_2 = self._build_conv(12, 18, 1)
+            self.conv_3 = self._build_conv(18, 12, 1)
+
+            self.conv_4 = self._build_conv(6, 12, 1)
+            self.conv_5 = self._build_conv(12, 18, 3)
+            self.add_2_data = torch.randn((1, 18, 24, 24), dtype=torch.float32)
+            self.conv_6 = self._build_conv(6, 18, 3)
+
+            self.conv_7 = self._build_conv(36, 48, 1)
+            self.add_3_data = torch.randn((1, 36, 24, 24), dtype=torch.float32)
+            self.conv_8 = self._build_conv(48, 24, 3)
+            self.conv_9 = self._build_conv(36, 24, 3)
+            self.conv_10 = self._build_conv(36, 24, 3)
+
+            self.conv_11 = self._build_conv(72, 48, 5)
+            self.matmul_1_data = torch.randn((96, 48), dtype=torch.float32)
+            self.add_4_data = torch.randn((1, 1, 324), dtype=torch.float32)
+
+            self.linear = nn.Linear(324, 48)
+            self.linear.weight.data = torch.randn((48, 324), dtype=torch.float32)
+            self.linear.bias.data = torch.randn((1, 48), dtype=torch.float32)
+
+            self.add_5_data = torch.randn((1, 1, 324), dtype=torch.float32)
+            self.conv_12 = self._build_conv(96, 18, 3)
+
+            self.linear_2 = nn.Linear(48, 10)
+            self.linear_2.weight.data = torch.randn((10, 48), dtype=torch.float32)
+            self.linear_2.bias.data = torch.randn((1, 10), dtype=torch.float32)
+
+    def _build_conv(self, in_channels=1, out_channels=2, kernel_size=2):
+        conv = create_conv(in_channels, out_channels, kernel_size)
+        conv.weight.data = torch.randn([out_channels, in_channels, kernel_size, kernel_size])
+        conv.bias.data = torch.randn([out_channels])
+        return conv
+
+    def forward(self, x):
+        x = self.conv_1(x)
+        x = F.relu(x)
+        x = torch.add(x, self.add_1_data)
+        x = self.maxpool_1(x)
+
+        x_1 = self.conv_2(x)
+        x_1 = F.relu(x_1)
+        x_1 = self.conv_3(x_1)
+        x = torch.add(x, x_1)
+
+        x_1, x_2 = torch.split(x, 6, 1)
+        x_1 = self.conv_4(x_1)
+        x_1 = F.relu(x_1)
+        x_1 = self.conv_5(x_1)
+        x_1 = torch.add(x_1, self.add_2_data)
+
+        x_2 = self.conv_6(x_2)
+
+        x = torch.concat([x_1, x_2], 1)
+        x_1 = self.conv_7(x)
+        x_1 = self.conv_8(x_1)
+
+        x_2 = torch.add(x, self.add_3_data)
+        x_2 = self.conv_9(x_2)
+
+        x_3 = self.conv_10(x)
+
+        x = torch.concat([x_1, x_2, x_3], 1)
+        x = self.conv_11(x)
+        x = torch.reshape(x, [1, 48, 324])
+        x = torch.matmul(self.matmul_1_data, x)
+        x = torch.add(x, self.add_4_data)
+
+        x_1 = self.linear(x)
+        x_2 = torch.reshape(x, [1, 96, 18, 18])
+        x_2 = self.conv_12(x_2)
+        x_2 = torch.reshape(x_2, [1, 96, 48])
+
+        x = torch.add(x_1, x_2)
+        x = self.linear_2(x)
+
+        return torch.flatten(x, 1, 2)
