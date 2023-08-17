@@ -541,6 +541,7 @@ class SplitConcatModel(OVReferenceModel):
         return model
 
 
+@SYNTHETIC_MODELS.register()
 class IntegerModel(OVReferenceModel):
     def _create_ov_model(self):
         input_1 = opset.parameter([1, 192, 1], name="Input")
