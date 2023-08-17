@@ -43,9 +43,6 @@ import stat
 import sys
 import sysconfig
 
-import setuptools
-from pkg_resources import parse_version
-from setuptools import find_packages
 from setuptools import setup
 
 here = os.path.abspath(os.path.dirname(__file__))
