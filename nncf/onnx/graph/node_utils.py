@@ -199,13 +199,15 @@ def _get_activation_tensor_shape(
     if not shape:  # ONNX model can not have a shape of a edge, even after shape inference.
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
             nncf_logger.info(
-                f"The shape of input edge of a node {node.node_name} is unkown. Therefore per-tensor quantizaiton is applied."
+                f"The shape of input edge of a node {node.node_name} is unkown. \
+                    Therefore per-tensor quantizaiton is applied."
             )
         elif target_point.type == TargetType.POST_LAYER_OPERATION:
             nncf_logger.info(
-                f"The shape of output edge of a node {node.node_name} is unkown. Therefore per-tensor quantizaiton is applied."
+                f"The shape of output edge of a node {node.node_name} is unkown. \
+                    Therefore per-tensor quantizaiton is applied."
             )
-        nncf_logger.info(f"Please consider to run pre-processing before quantization.")
+        nncf_logger.info("Please consider to run pre-processing before quantization.")
         # TODO: add preprocessing tool for ONNX model.
         return None
     return shape

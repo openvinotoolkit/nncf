@@ -15,8 +15,11 @@ import pytest
 
 import nncf.onnx.graph.metatypes.onnx_metatypes as om
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
-from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
+from nncf.onnx.graph.node_utils import get_quantization_axis
+from nncf.onnx.graph.node_utils import get_reduction_shape
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
 # pylint: disable=protected-access
 
@@ -24,138 +27,172 @@ from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBack
 @dataclass
 class TestCase:
     nncf_node: NNCFNode
-    weight_port_id: int
+    target_point: ONNXTargetPoint
     per_channel: bool
     ref_reduction_shape: List[int]
 
 
-unused_attrs = {"node_id": 0}
-
 test_cases = (
     TestCase(
         nncf_node=NNCFNode(
-            **unused_attrs,
-            node_name="conv_with_weight_per_tensor",
-            data={
-                "layer_attributes": ONNXLayerAttributes(weight_attrs={1: {"shape": [3, 5, 8]}}),
-                "metatype": om.ONNXConvolutionMetatype,
-            },
+            {
+                NNCFNode.ID_NODE_ATTR: 0,
+                NNCFNode.NODE_NAME_ATTR: "conv_with_weight_per_tensor",
+                NNCFNode.METATYPE_ATTR: om.ONNXConvolutionMetatype,
+                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(weight_attrs={1: {"shape": [3, 5, 8]}}),
+            }
         ),
-        weight_port_id=1,
+        target_point=ONNXTargetPoint(
+            target_type=TargetType.OPERATION_WITH_WEIGHTS,
+            target_node_name="conv_with_weight_per_tensor",
+            port_id=1,
+        ),
         per_channel=False,
         ref_reduction_shape=None,
     ),
     TestCase(
         nncf_node=NNCFNode(
-            **unused_attrs,
-            node_name="conv_with_weight_per_channel",
-            data={
-                "layer_attributes": ONNXLayerAttributes(weight_attrs={1: {"shape": [3, 5, 8]}}),
-                "metatype": om.ONNXConvolutionMetatype,
-            },
+            {
+                NNCFNode.ID_NODE_ATTR: 0,
+                NNCFNode.NODE_NAME_ATTR: "conv_with_weight_per_channel",
+                NNCFNode.METATYPE_ATTR: om.ONNXConvolutionMetatype,
+                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(weight_attrs={1: {"shape": [3, 5, 8]}}),
+            }
         ),
-        weight_port_id=1,
+        target_point=ONNXTargetPoint(
+            target_type=TargetType.OPERATION_WITH_WEIGHTS,
+            target_node_name="gemm_with_weight_per_channel_0_port",
+            port_id=1,
+        ),
         per_channel=True,
         ref_reduction_shape=(1, 2),
     ),
     TestCase(
         nncf_node=NNCFNode(
-            **unused_attrs,
-            node_name="gemm_with_weight_per_tensor",
-            data={
-                "layer_attributes": ONNXLayerAttributes(weight_attrs={1: {"shape": [5, 8]}}),
-                "metatype": om.ONNXGemmMetatype,
-            },
+            {
+                NNCFNode.ID_NODE_ATTR: 0,
+                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_tensor",
+                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
+                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(weight_attrs={1: {"shape": [5, 8]}}),
+            }
         ),
-        weight_port_id=1,
+        target_point=ONNXTargetPoint(
+            target_type=TargetType.OPERATION_WITH_WEIGHTS,
+            target_node_name="gemm_with_weight_per_tensor",
+            port_id=1,
+        ),
         per_channel=False,
         ref_reduction_shape=None,
     ),
     TestCase(
         nncf_node=NNCFNode(
-            **unused_attrs,
-            node_name="gemm_with_weight_per_channel",
-            data={
-                "layer_attributes": ONNXLayerAttributes(weight_attrs={1: {"shape": [5, 8]}}),
-                "metatype": om.ONNXGemmMetatype,
-            },
+            {
+                NNCFNode.ID_NODE_ATTR: 0,
+                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel",
+                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
+                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(weight_attrs={1: {"shape": [5, 8]}}),
+            }
         ),
-        weight_port_id=1,
+        target_point=ONNXTargetPoint(
+            target_type=TargetType.OPERATION_WITH_WEIGHTS,
+            target_node_name="gemm_with_weight_per_channel_0_port",
+            port_id=1,
+        ),
         per_channel=True,
         ref_reduction_shape=(0,),
     ),
     TestCase(
         nncf_node=NNCFNode(
-            **unused_attrs,
-            node_name="gemm_with_weight_per_channel_extra_attrs",
-            data={
-                "layer_attributes": ONNXLayerAttributes(
+            {
+                NNCFNode.ID_NODE_ATTR: 0,
+                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_extra_attrs",
+                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
+                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
                     weight_attrs={1: {"shape": [5, 8]}}, node_attrs={"transA": 0, "transB": 0}
                 ),
-                "metatype": om.ONNXGemmMetatype,
-            },
+            }
         ),
-        weight_port_id=1,
+        target_point=ONNXTargetPoint(
+            target_type=TargetType.OPERATION_WITH_WEIGHTS,
+            target_node_name="gemm_with_weight_per_channel_extra_attrs",
+            port_id=1,
+        ),
         per_channel=True,
         ref_reduction_shape=(0,),
     ),
     TestCase(
         nncf_node=NNCFNode(
-            **unused_attrs,
-            node_name="gemm_with_weight_per_channel_extra_attrs",
-            data={
-                "layer_attributes": ONNXLayerAttributes(
+            {
+                NNCFNode.ID_NODE_ATTR: 0,
+                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_extra_attrs",
+                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
+                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
                     weight_attrs={1: {"shape": [5, 8]}}, node_attrs={"transA": 1, "transB": 0}
                 ),
-                "metatype": om.ONNXGemmMetatype,
-            },
+            }
         ),
-        weight_port_id=1,
+        target_point=ONNXTargetPoint(
+            target_type=TargetType.OPERATION_WITH_WEIGHTS,
+            target_node_name="gemm_with_weight_per_channel_extra_attrs",
+            port_id=1,
+        ),
         per_channel=True,
         ref_reduction_shape=(0,),
     ),
     TestCase(
         nncf_node=NNCFNode(
-            **unused_attrs,
-            node_name="gemm_with_weight_per_channel_transpose",
-            data={
-                "layer_attributes": ONNXLayerAttributes(
+            {
+                NNCFNode.ID_NODE_ATTR: 0,
+                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_transpose",
+                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
+                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
                     weight_attrs={1: {"shape": [5, 8]}}, node_attrs={"transA": 0, "transB": 1}
                 ),
-                "metatype": om.ONNXGemmMetatype,
-            },
+            }
         ),
-        weight_port_id=1,
+        target_point=ONNXTargetPoint(
+            target_type=TargetType.OPERATION_WITH_WEIGHTS,
+            target_node_name="gemm_with_weight_per_channel_transpose",
+            port_id=1,
+        ),
         per_channel=True,
         ref_reduction_shape=(1,),
     ),
     TestCase(
         nncf_node=NNCFNode(
-            **unused_attrs,
-            node_name="gemm_with_weight_per_channel_transpose_one_dim",
-            data={
-                "layer_attributes": ONNXLayerAttributes(
+            {
+                NNCFNode.ID_NODE_ATTR: 0,
+                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_transpose_one_dim",
+                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
+                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
                     weight_attrs={1: {"shape": [5]}}, node_attrs={"transA": 0, "transB": 1}
                 ),
-                "metatype": om.ONNXGemmMetatype,
-            },
+            }
         ),
-        weight_port_id=1,
+        target_point=ONNXTargetPoint(
+            target_type=TargetType.OPERATION_WITH_WEIGHTS,
+            target_node_name="gemm_with_weight_per_channel_0_port",
+            port_id=1,
+        ),
         per_channel=True,
         ref_reduction_shape=(0,),
     ),
     TestCase(
         nncf_node=NNCFNode(
-            **unused_attrs,
-            node_name="gemm_with_weight_per_channel_0_port",
-            data={
-                "layer_attributes": ONNXLayerAttributes(
+            {
+                NNCFNode.ID_NODE_ATTR: 0,
+                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_0_port",
+                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
+                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
                     weight_attrs={0: {"shape": [10, 10, 5]}}, node_attrs={"transA": 0, "transB": 1}
                 ),
-                "metatype": om.ONNXGemmMetatype,
-            },
+            }
         ),
-        weight_port_id=0,
+        target_point=ONNXTargetPoint(
+            target_type=TargetType.OPERATION_WITH_WEIGHTS,
+            target_node_name="gemm_with_weight_per_channel_0_port",
+            port_id=0,
+        ),
         per_channel=True,
         ref_reduction_shape=(0, 1),
     ),
@@ -174,7 +211,14 @@ def test_get_reduction_shape(test_case):
     2) transpose axis of GEMM node.
     3) one dimensional weight tensor.
     """
-    reduction_shape = ONNXMinMaxAlgoBackend()._get_reduction_shape_for_weight(
-        test_case.nncf_node, test_case.weight_port_id, test_case.per_channel
+    quantization_axis = get_quantization_axis(
+        is_per_channel=test_case.per_channel, node=test_case.nncf_node, target_point=test_case.target_point
     )
-    assert reduction_shape == test_case.ref_reduction_shape
+    if quantization_axis is not None:  # Per-Channel
+        reduction_shape = get_reduction_shape(
+            test_case.nncf_node.layer_attributes.weight_attrs[test_case.target_point.port_id]["shape"],
+            quantization_axis,
+        )
+        assert reduction_shape == test_case.ref_reduction_shape
+    else:
+        assert not test_case.per_channel
