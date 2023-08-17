@@ -334,10 +334,8 @@ def run(config):
         nncf_config=config.nncf_config, data_loader=train_dataset, batch_size=train_builder.global_batch_size
     )
 
-    compression_state = None
-    if config.ckpt_path is not None:
-        # Resume training
-        compression_state = load_compression_state(config.ckpt_path)
+    resume_training = config.ckpt_path is not None
+    compression_state = load_compression_state(config.ckpt_path) if resume_training else None
 
     with TFModelManager(model_builder.build_model, config.nncf_config, weights=config.get("weights", None)) as model:
         with strategy.scope():
