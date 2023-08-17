@@ -141,8 +141,8 @@ class LinearMultiShapeModel(nn.Module):
         with set_torch_seed():
             self.matmul_1_data = torch.randn((4, 4), dtype=torch.float32)
             self.matmul_2_data = torch.randn((4, 4), dtype=torch.float32)
-            self.matmul_3_data = torch.randn((8, 2), dtype=torch.float32)
-            self.matmul_4_data = torch.randn((8, 3), dtype=torch.float32)
+            self.matmul_3_data = torch.randn((1, 8, 2), dtype=torch.float32)
+            self.matmul_4_data = torch.randn((1, 8, 3), dtype=torch.float32)
             self.matmul_5_data = torch.randn((1), dtype=torch.float32)
             self.matmul_6_data = torch.randn((8), dtype=torch.float32)
 

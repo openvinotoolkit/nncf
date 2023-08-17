@@ -77,7 +77,9 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @staticmethod
     def process_weight_statistics(weights: np.ndarray, channel_axis: int) -> np.ndarray:
         if len(weights.shape) > 1:
-            weights = np.transpose(weights, axes=(-1, -2))
+            base_axes = list(range(weights.ndim - 2))
+            transpose_axes = base_axes + [-1, -2]
+            weights = np.transpose(weights, axes=transpose_axes)
         return np.max(np.abs(weights), axis=channel_axis)
 
     @staticmethod

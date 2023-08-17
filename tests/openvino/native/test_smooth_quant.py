@@ -110,7 +110,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
             (OVConvolutionMetatype, {1: {}}, 1, 0),
         ),
     )
-    def test_get_weight_reduction_axis(self, node_metatype, constant_attributes, port_id, reference_value):
+    def test_get_weight_channel_axis(self, node_metatype, constant_attributes, port_id, reference_value):
         backend = self.get_backend()
 
         attributes = {
