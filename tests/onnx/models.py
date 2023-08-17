@@ -1540,3 +1540,93 @@ class WeightPropagationConvModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "weight_propagation_conv_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class EmbeddingModel(ONNXReferenceModel):
+    #               Constant
+    #                   |
+    #         X     Identity
+    #          \     /
+    #           Gather
+    #             |
+    #           Gather
+    #             |
+    #           MatMul
+    #             |
+    #             Y
+    def __init__(self):
+        model_input_name, model_output_name = "X", "Y"
+        model_input_channels = 10
+        model_output_channels = 10
+        input_shape = [1, model_input_channels]
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.INT64, input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [10, model_output_channels])
+
+        rng = np.random.default_rng(seed=0)
+
+        embedding_output_node_name = "Embedding_Y"
+        embedding_weights_tensor_name = "Embedding_W"
+        embedding_weights_tensor = create_initializer_tensor(
+            name=embedding_weights_tensor_name,
+            tensor_array=rng.uniform(0, 1, (10, 20)).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+
+        identity_output_name = "Identity_Y"
+        identity_node = onnx.helper.make_node(
+            name="Identity",
+            op_type="Identity",
+            inputs=[embedding_weights_tensor_name],
+            outputs=[identity_output_name],
+        )
+
+        embedding_node = onnx.helper.make_node(
+            name="Embedding",
+            op_type="Gather",
+            axis=0,
+            inputs=[identity_output_name, model_input_name],
+            outputs=[embedding_output_node_name],
+        )
+
+        gather_output_node_name = "Gather_Y"
+        gather_indices_tensor_name = "Gather_I"
+        gather_indices_initializer_tensor = create_initializer_tensor(
+            name=gather_indices_tensor_name, tensor_array=np.int64(0), data_type=onnx.TensorProto.INT64
+        )
+        gather_node = onnx.helper.make_node(
+            name="Gather",
+            op_type="Gather",
+            axis=0,
+            inputs=[embedding_output_node_name, gather_indices_tensor_name],
+            outputs=[gather_output_node_name],
+        )
+
+        shape = [20, model_output_channels]
+        w_tensor_name = "W"
+        w_tensor = create_initializer_tensor(
+            name=w_tensor_name,
+            tensor_array=rng.uniform(0, 1, shape).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+
+        matmul_node = onnx.helper.make_node(
+            name="MatMul",
+            op_type="MatMul",
+            inputs=[gather_output_node_name, w_tensor_name],
+            outputs=[model_output_name],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[identity_node, embedding_node, gather_node, matmul_node],
+            name="EmbeddingModel",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[embedding_weights_tensor, gather_indices_initializer_tensor, w_tensor],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "embedding_model.dot")

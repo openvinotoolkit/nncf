@@ -19,6 +19,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch.layers import NNCF_RNN
 from nncf.torch.layers import LSTMCellNNCF
+from tests.post_training.test_templates.helpers import EmbeddingModel
 from tests.torch import test_models
 from tests.torch.ptq.helpers import get_nncf_network
 from tests.torch.ptq.helpers import mock_collect_statistics
@@ -46,6 +47,7 @@ def get_model_name(description):
 
 
 TEST_MODELS_DESC = [
+    (ModelDesc("embedding_model", EmbeddingModel, [1, 10]), {}),
     (ModelDesc("shared_model", SharedLayersModel, [1, 1, 5, 6]), {}),
     (ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]), {}),
     (ModelDesc("lenet", test_models.LeNet, [1, 3, 32, 32]), {}),
