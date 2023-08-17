@@ -337,3 +337,17 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
             channel_axes.append(matmul_channel_axis)
 
     return channel_axes
+
+
+def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[int]) -> Tuple[int]:
+    """
+    Returns filtered reduction shape without axes that corresponds channels.
+
+    :param channel_axes: List of the channel axes.
+    :param shape: Shape that need to be filtered.
+    :return: Reduction shape in tuple format.
+    """
+    reduction_shape = list(range(len(shape)))
+    for channel_axis in sorted(channel_axes, reverse=True):
+        del reduction_shape[channel_axis]
+    return tuple(reduction_shape)
