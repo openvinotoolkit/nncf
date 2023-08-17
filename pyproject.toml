@@ -1,7 +1,7 @@
 [project]
 name = "nncf"
 authors = [
-    {name = "Intel Corporation", email = "alexander.kozlov@intel.com"},
+    { name = "Intel Corporation", email = "alexander.kozlov@intel.com" },
 ]
 description = "Neural Networks Compression Framework"
 readme = "README.md"
@@ -23,7 +23,7 @@ keywords = [
     "transformers",
     "mmdetection"
 ]
-license = {text = "Apache-2.0"}
+license = { text = "Apache-2.0" }
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache Software License",
@@ -39,7 +39,7 @@ dependencies = [
     "ninja>=1.10.0.post2, <1.11",
     "texttable>=1.6.3",
     "scipy>=1.3.2, <1.11",
-    "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
+    "networkx>=2.6, <=2.8.2", # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
     "numpy>=1.19.1, <1.25",
     # The recent pyparsing major version update seems to break
     # integration with networkx - the graphs parsed from current .dot
