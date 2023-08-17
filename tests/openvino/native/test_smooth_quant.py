@@ -17,7 +17,6 @@ import openvino.runtime as ov
 import pytest
 import torch
 
-from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -69,66 +68,32 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
             assert np.all(np.isclose(value, ref_value, atol=0.0001)), f"{value} != {ref_value}"
 
     @pytest.mark.parametrize(
-        "node_metatype, inputs_attributes, port_id, reference_value",
+        "node_metatype, layer_attributes, port_id, reference_value",
         (
-            (OVMatMulMetatype, {"transpose": False}, 0, -1),
-            (OVMatMulMetatype, {"transpose": True}, 0, -2),
-            (OVMatMulMetatype, {"transpose": False}, 1, -2),
-            (OVMatMulMetatype, {"transpose": True}, 1, -1),
-            (OVMatMulMetatype, {"transpose": False}, 2, RuntimeError),
-            (OVConvolutionMetatype, {}, 0, 1),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 0, -1),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": True}), 0, -2),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 1, -2),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": True}), 1, -1),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 2, RuntimeError),
+            (OVConvolutionMetatype, OVLayerAttributes({}, inputs_attributes={}), 0, 1),
         ),
     )
-    def test_get_activation_channel_axis(self, node_metatype, inputs_attributes, port_id, reference_value):
-        backend = self.get_backend()
-
-        attributes = {
-            NNCFNode.METATYPE_ATTR: node_metatype,
-            NNCFNode.LAYER_ATTRIBUTES: OVLayerAttributes(constant_attributes={}, inputs_attributes=inputs_attributes),
-            NNCFNode.NODE_NAME_ATTR: "test_node",
-            NNCFNode.ID_NODE_ATTR: 0,
-        }
-        node = NNCFNode(attributes)
-
-        try:
-            # pylint: disable=protected-access
-            activation_channel_axis = backend.get_activation_channel_axis(node, port_id)
-        except RuntimeError as e:
-            if isinstance(e, reference_value):
-                pytest.xfail("Expected exception")
-
-        assert activation_channel_axis == reference_value
+    def test_get_activation_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
+        return super().test_get_activation_channel_axis(node_metatype, layer_attributes, port_id, reference_value)
 
     @pytest.mark.parametrize(
-        "node_metatype, constant_attributes, port_id, reference_value",
+        "node_metatype, layer_attributes, port_id, reference_value",
         (
-            (OVMatMulMetatype, {1: {"transpose": False}}, 1, -2),
-            (OVMatMulMetatype, {1: {"transpose": True}}, 1, -1),
-            (OVMatMulMetatype, {0: {"transpose": False}}, 0, -1),
-            (OVMatMulMetatype, {0: {"transpose": True}}, 0, -2),
-            (OVMatMulMetatype, {1: {"transpose": False}}, 2, RuntimeError),
-            (OVConvolutionMetatype, {1: {}}, 1, 0),
+            (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": False}}), 1, -2),
+            (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": True}}), 1, -1),
+            (OVMatMulMetatype, OVLayerAttributes({0: {"transpose": False}}), 0, -1),
+            (OVMatMulMetatype, OVLayerAttributes({0: {"transpose": True}}), 0, -2),
+            (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": False}}), 2, RuntimeError),
+            (OVConvolutionMetatype, OVLayerAttributes({1: {}}), 1, 0),
         ),
     )
-    def test_get_weight_channel_axis(self, node_metatype, constant_attributes, port_id, reference_value):
-        backend = self.get_backend()
-
-        attributes = {
-            NNCFNode.METATYPE_ATTR: node_metatype,
-            NNCFNode.LAYER_ATTRIBUTES: OVLayerAttributes(constant_attributes=constant_attributes),
-            NNCFNode.NODE_NAME_ATTR: "test_node",
-            NNCFNode.ID_NODE_ATTR: 0,
-        }
-        node = NNCFNode(attributes)
-
-        try:
-            # pylint: disable=protected-access
-            activation_channel_axis = backend.get_weight_channel_axis(node, port_id)
-        except RuntimeError as e:
-            if isinstance(e, reference_value):
-                pytest.xfail("Expected exception")
-
-        assert activation_channel_axis == reference_value
+    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
+        return super().test_get_weight_channel_axis(node_metatype, layer_attributes, port_id, reference_value)
 
     @staticmethod
     def get_matmul_metatype():

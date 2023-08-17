@@ -16,6 +16,7 @@ import pytest
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
+from nncf.common.graph.graph import NNCFNode
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
@@ -204,3 +205,43 @@ class TemplateTestSQAlgorithm:
         matmuls = [node for node in graph.topological_sort() if node.metatype == mm_metatype]
         for transformation in arg.transformations:
             assert transformation.target_point.target_node_name != matmuls[0].node_name
+
+    def test_get_activation_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
+        backend = self.get_backend()
+
+        attributes = {
+            NNCFNode.METATYPE_ATTR: node_metatype,
+            NNCFNode.LAYER_ATTRIBUTES: layer_attributes,
+            NNCFNode.NODE_NAME_ATTR: "test_node",
+            NNCFNode.ID_NODE_ATTR: 0,
+        }
+        node = NNCFNode(attributes)
+
+        try:
+            # pylint: disable=protected-access
+            activation_channel_axis = backend.get_activation_channel_axis(node, port_id)
+        except RuntimeError as e:
+            if isinstance(e, reference_value):
+                pytest.xfail("Expected exception")
+
+        assert activation_channel_axis == reference_value
+
+    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
+        backend = self.get_backend()
+
+        attributes = {
+            NNCFNode.METATYPE_ATTR: node_metatype,
+            NNCFNode.LAYER_ATTRIBUTES: layer_attributes,
+            NNCFNode.NODE_NAME_ATTR: "test_node",
+            NNCFNode.ID_NODE_ATTR: 0,
+        }
+        node = NNCFNode(attributes)
+
+        try:
+            # pylint: disable=protected-access
+            activation_channel_axis = backend.get_weight_channel_axis(node, port_id)
+        except RuntimeError as e:
+            if isinstance(e, reference_value):
+                pytest.xfail("Expected exception")
+
+        assert activation_channel_axis == reference_value
