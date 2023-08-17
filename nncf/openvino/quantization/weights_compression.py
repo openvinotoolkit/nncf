@@ -25,19 +25,17 @@ from nncf.common.quantization.structs import  QuantizerGroup
 from openvino.runtime import opset9 as opset
 
 
-def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> ov.Model:
+def insert_pre_compression_operations(model: ov.Model, bits: int = 8):
     """
-    Inserts weights compression with FakeQuantize operation for Linear and Embedding layers.
+    Inserts in-place weights compression with FakeQuantize operation for Linear and Embedding layers.
 
     :param model: The original model to insert the weights compression.
     :param bits: number of bits for compression/quantization. Note: compressed weights type is
         uint8 with one element per 8 bit.
-    :return: The OpenVINO model with inserted operations.
     """
     allowed_metatypes_to_const_port = {OVEmbeddingMetatype: [0], OVMatMulMetatype: [0, 1]}
-    compressed_model = model.clone()
 
-    for node in compressed_model.get_ops():
+    for node in model.get_ops():
         node_type = node.get_type_name()
         metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
         if metatype not in allowed_metatypes_to_const_port:
@@ -109,5 +107,3 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> ov.Mode
                 input_node_output, input_low, input_high, output_low, output_high, levels, name=fq_name
             )
         inp_node.replace_source_output(fq.output(0))
-
-    return compressed_model
