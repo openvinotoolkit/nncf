@@ -2,6 +2,7 @@ ignore:
   - "examples"
   - "tests"
   - "tools"
+  - "setup.py"
 
 #codecov:
 #  notify:

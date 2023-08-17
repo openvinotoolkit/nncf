@@ -301,7 +301,7 @@ def _mobilenet_v3_model(
     last_channel: int,
     pretrained: bool,
     progress: bool,
-    **kwargs: Any
+    **kwargs: Any,
 ):
     model = MobileNetV3(inverted_residual_setting, last_channel, **kwargs)
     if pretrained:
