@@ -614,7 +614,7 @@ CONSTANT_WEIGHT_LAYER_METATYPES = [
     ONNXConvolutionMetatype,
     ONNXDepthwiseConvolutionMetatype,
     ONNXConvolutionTransposeMetatype,
-    ONNXEmbeddingMetatype
+    ONNXEmbeddingMetatype,
 ]
 
 MATMUL_METATYPES = [ONNXGemmMetatype, ONNXMatMulMetatype]

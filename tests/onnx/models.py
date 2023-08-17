@@ -1558,10 +1558,10 @@ class EmbeddingModel(ONNXReferenceModel):
     def __init__(self):
         model_input_name, model_output_name = "X", "Y"
         model_input_channels = 10
-        model_output_channels = 5
+        model_output_channels = 10
         input_shape = [1, model_input_channels]
         X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.INT64, input_shape)
-        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_input_channels])
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [10, model_output_channels])
 
         rng = np.random.default_rng(seed=0)
 
@@ -1592,7 +1592,7 @@ class EmbeddingModel(ONNXReferenceModel):
         gather_output_node_name = "Gather_Y"
         gather_indices_tensor_name = "Gather_I"
         gather_indices_initializer_tensor = create_initializer_tensor(
-            name=gather_indices_tensor_name, tensor_array=np.int64(2), data_type=onnx.TensorProto.INT64
+            name=gather_indices_tensor_name, tensor_array=np.int64(0), data_type=onnx.TensorProto.INT64
         )
         gather_node = onnx.helper.make_node(
             name="Gather",
@@ -1602,7 +1602,7 @@ class EmbeddingModel(ONNXReferenceModel):
             outputs=[gather_output_node_name],
         )
 
-        shape = [model_input_channels, model_output_channels]
+        shape = [20, model_output_channels]
         w_tensor_name = "W"
         w_tensor = create_initializer_tensor(
             name=w_tensor_name,
