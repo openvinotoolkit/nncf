@@ -397,7 +397,7 @@ class ONNXEmbeddingMetatype(ONNXOpMetatype):
     name = "EmbeddingOp"
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [0]
-    weight_channel_axis = [0]
+    weight_channel_axis = 0
 
     @classmethod
     def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
