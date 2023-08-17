@@ -372,13 +372,11 @@ def quantize_with_accuracy_control_impl(
     )
 
 
-def compress_weights(model: ov.Model, use_fake_quantize: bool = False) -> ov.Model:
+def compress_weights(model: ov.Model) -> ov.Model:
     """
     Implementation of the `compress_weights()` method for the OpenVINO backend.
     """
     compressed_model = insert_pre_compression_operations(model)
-
-    if not use_fake_quantize:
-       compress_quantize_weights_transformation(compressed_model)
+    compress_quantize_weights_transformation(compressed_model)
 
     return compressed_model
