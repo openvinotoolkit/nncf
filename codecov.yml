@@ -1,3 +1,8 @@
+ignore:
+  - "examples"
+  - "tests"
+  - "tools"
+
 #codecov:
 #  notify:
 #     after_n_builds: 4
@@ -15,8 +20,8 @@ coverage:
           - "nncf"
 comment:
   layout: "diff, flags, files"
-  require_changes: false
+  require_changes: false  # remove me
   # require_changes: true
 
-  require_head: false     # remove me
-  require_base: false     # remove me
+  require_head: false
+  require_base: false
