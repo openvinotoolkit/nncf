@@ -15,7 +15,7 @@ jobs:
           ref: ${{ inputs.ref }}
       - name: Install NNCF and doc requirements
         run: |
-          pip install -e .
+          pip install .
           pip install -r docs/api/requirements.txt
       - name: Build API docs
         run: |
