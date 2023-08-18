@@ -239,9 +239,9 @@ def compress_weights(model: TModel) -> TModel:
 
         return nncf.torch.compress_weights(model)
     if backend == BackendType.OPENVINO:
-        from nncf.openvino.quantization.quantize_model import compress_weights
+        from nncf.openvino.quantization.quantize_model import compress_weights_impl
 
-        return compress_weights(model)
+        return compress_weights_impl(model)
 
     raise RuntimeError(f"Unsupported type of backend: {backend}")
 

@@ -55,6 +55,7 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8):
     )
 
     for node in model.get_ops():
+        # pylint:disable=protected-access
         metatype = GraphConverter._get_node_metatype(node)
         if metatype not in allowed_metatypes_to_const_port:
             continue
