@@ -157,11 +157,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
         res = nncf_tensor.squeeze(axis=axis)
-        if isinstance(ref, list):
-            assert functions.all(res == ref_tensor)
-        else:
-            assert res == ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor)
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -178,11 +175,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
         res = functions.squeeze(nncf_tensor, axis=axis)
-        if isinstance(ref, list):
-            assert functions.all(res == ref_tensor)
-        else:
-            assert res == ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor)
 
     @pytest.mark.parametrize(
         "val,ref",
@@ -197,11 +191,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
         res = nncf_tensor.flatten()
-        if isinstance(ref, list):
-            assert all(res.data == ref_tensor)
-        else:
-            assert res.data == ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor)
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -217,11 +208,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
         res = nncf_tensor.max(axis=axis)
-        if isinstance(ref, list):
-            assert all(res.data == ref_tensor)
-        else:
-            assert res.data == ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor)
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -237,11 +225,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
         res = functions.max(nncf_tensor, axis=axis)
-        if isinstance(ref, list):
-            assert all(res.data == ref_tensor)
-        else:
-            assert res.data == ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor)
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -257,11 +242,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
         res = functions.amax(nncf_tensor, axis=axis)
-        if isinstance(ref, list):
-            assert all(res.data == ref_tensor)
-        else:
-            assert res.data == ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor)
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -276,11 +258,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(self.to_tensor(val))
         ref_tensor = self.to_tensor(ref)
         res = nncf_tensor.min(axis=axis)
-        if isinstance(ref, list):
-            assert all(res.data == ref_tensor)
-        else:
-            assert res.data == ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor)
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -295,11 +274,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(self.to_tensor(val))
         ref_tensor = self.to_tensor(ref)
         res = functions.min(nncf_tensor, axis=axis)
-        if isinstance(ref, list):
-            assert all(res.data == ref_tensor)
-        else:
-            assert res.data == ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor)
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -314,11 +290,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(self.to_tensor(val))
         ref_tensor = self.to_tensor(ref)
         res = functions.amin(nncf_tensor, axis=axis)
-        if isinstance(ref, list):
-            assert all(res.data == ref_tensor)
-        else:
-            assert res.data == ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor)
 
     @pytest.mark.parametrize(
         "val, ref",
@@ -331,11 +304,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(self.to_tensor(val))
         nncf_ref_tensor = Tensor(self.to_tensor(ref))
         res = nncf_tensor.abs()
-        if isinstance(ref, list):
-            assert all(res == nncf_ref_tensor)
-        else:
-            assert res == nncf_ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, nncf_ref_tensor)
 
     @pytest.mark.parametrize(
         "val, ref",
@@ -348,11 +318,8 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(self.to_tensor(val))
         nncf_ref_tensor = Tensor(self.to_tensor(ref))
         res = functions.abs(nncf_tensor)
-        if isinstance(ref, list):
-            assert all(res == nncf_ref_tensor)
-        else:
-            assert res == nncf_ref_tensor
         assert isinstance(res, Tensor)
+        assert functions.allclose(res, nncf_ref_tensor)
 
     def test_getitem(self):
         arr = [0, 1, 2]
@@ -384,11 +351,9 @@ class TemplateTestNNCFTensorOperators:
         nncf_tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
         res = functions.count_nonzero(nncf_tensor, axis=axis)
-        if axis is None:
-            assert res.data == ref_tensor
-        else:
-            assert all(res.data == self.to_tensor(ref))
+
         assert isinstance(res, Tensor)
+        assert functions.allclose(res.data, ref_tensor)
 
     def test_fn_zeros_like(self):
         tensor = self.to_tensor([1, 2])
@@ -454,11 +419,8 @@ class TemplateTestNNCFTensorOperators:
     def test_fn_all(self, val, axis, ref):
         tensor = Tensor(self.to_tensor(val))
         res = functions.all(tensor, axis=axis)
-        if isinstance(ref, list):
-            assert all(res.data == self.to_tensor(ref))
-        else:
-            assert res.data == self.to_tensor(ref)
         assert isinstance(res, Tensor)
+        assert functions.allclose(res.data, self.to_tensor(ref))
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -472,11 +434,9 @@ class TemplateTestNNCFTensorOperators:
     def test_fn_any(self, val, axis, ref):
         tensor = Tensor(self.to_tensor(val))
         res = functions.any(tensor, axis=axis)
-        if isinstance(ref, list):
-            assert all(res.data == self.to_tensor(ref))
-        else:
-            assert res == ref
+
         assert isinstance(res, Tensor)
+        assert functions.allclose(res.data, self.to_tensor(ref))
 
     def test_fn_where(self):
         tensor = Tensor(self.to_tensor([1, -1]))
@@ -679,10 +639,7 @@ class TemplateTestNNCFTensorOperators:
         res = functions.mean(tensor, axis, keepdims)
 
         assert isinstance(res, Tensor)
-        if isinstance(ref, list):
-            assert functions.all(functions.isclose(res.data, ref_tensor))
-        else:
-            assert functions.isclose(res.data, ref_tensor)
+        assert functions.allclose(res.data, ref_tensor)
 
     @pytest.mark.parametrize(
         "val, decimals, ref",
@@ -699,7 +656,50 @@ class TemplateTestNNCFTensorOperators:
         res = functions.round(tensor, decimals)
 
         assert isinstance(res, Tensor)
-        if isinstance(ref, list):
-            assert functions.all(functions.isclose(res.data, ref_tensor))
-        else:
-            assert functions.isclose(res.data, ref_tensor)
+        assert functions.allclose(res.data, ref_tensor)
+
+    @pytest.mark.parametrize(
+        "val, axis, ref",
+        (
+            (1.1, 0, 1.1),
+            (
+                [[[9.0, 9.0], [0.0, 3.0]], [[5.0, 1.0], [7.0, 1.0]]],
+                0,
+                [5.25, 3.5],
+            ),
+            (
+                [[[9.0, 9.0], [0.0, 3.0]], [[5.0, 1.0], [7.0, 1.0]]],
+                2,
+                [5.25, 3.5],
+            ),
+            (
+                [
+                    [[[9.0, 6.0], [8.0, 5.0]], [[3.0, 9.0], [4.0, 6.0]]],
+                    [[[3.0, 9.0], [9.0, 2.0]], [[2.0, 4.0], [2.0, 5.0]]],
+                ],
+                0,
+                [6.25, 4.5],
+            ),
+            (
+                [
+                    [[[9.0, 6.0], [8.0, 5.0]], [[3.0, 9.0], [4.0, 6.0]]],
+                    [[[3.0, 9.0], [9.0, 2.0]], [[2.0, 4.0], [2.0, 5.0]]],
+                ],
+                1,
+                [6.375, 4.375],
+            ),
+            (
+                [
+                    [[[9.0, 6.0], [8.0, 5.0]], [[3.0, 9.0], [4.0, 6.0]]],
+                    [[[3.0, 9.0], [9.0, 2.0]], [[2.0, 4.0], [2.0, 5.0]]],
+                ],
+                -1,
+                [5.0, 5.75],
+            ),
+        ),
+    )
+    def test_fn_mean_per_channel(self, val, axis, ref):
+        tensor = Tensor(self.to_tensor(val))
+        ref_tensor = self.to_tensor(ref)
+        res = functions.mean_per_channel(tensor, axis)
+        assert functions.allclose(res.data, ref_tensor), f"{res.data}"

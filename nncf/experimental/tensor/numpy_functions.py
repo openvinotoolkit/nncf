@@ -28,10 +28,16 @@ DTYPE_MAP = {
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-def registry_numpy_types(registry_fn):
+def registry_numpy_types(singledispatch_fn):
+    """
+    Decorator to register function to singledispatch for numpy classes.
+
+    :param singledispatch_fn: singledispatch function.
+    """
+
     def inner(func):
-        registry_fn.register(np.ndarray)(func)
-        registry_fn.register(np.generic)(func)
+        singledispatch_fn.register(np.ndarray)(func)
+        singledispatch_fn.register(np.generic)(func)
         return func
 
     return inner
