@@ -139,7 +139,7 @@ def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwor
     :param new_bias: New bias value.
     :param model: The model.
     """
-    nncf_graph = model.get_graph()
+    nncf_graph = model.nncf.get_graph()
     fused_node = get_potential_fused_node(target_node_name, nncf_graph)
     if fused_node:
         target_node_name = fused_node.node_name
@@ -158,7 +158,7 @@ def extraction_potential_fused_modules(node_name: str, model: NNCFNetwork) -> nn
     :return nn.Sequential: Copy of the modules.
     """
     extracted_node_names = [node_name]
-    nncf_graph = model.get_graph()
+    nncf_graph = model.nncf.get_graph()
     fused_node = get_potential_fused_node(node_name, nncf_graph)
     if fused_node:
         extracted_node_names.append(fused_node.node_name)
