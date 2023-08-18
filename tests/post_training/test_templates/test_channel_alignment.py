@@ -287,9 +287,11 @@ class TemplateTestChannelAlignment:
             constant_metatype=self.get_constant_metatype(),
         ).nncf_graph
 
+    @pytest.mark.parametrize("empty_statistics", [False, True])
     @pytest.mark.parametrize("num_biases", [0, 1, 2])
     # pylint: disable=too-many-statements
-    def test_transformation_layout(self, num_biases, mocker):
+    # pylint: disable=too-many-branches
+    def test_transformation_layout(self, empty_statistics, num_biases, mocker):
         mocked_transformer = mocker.MagicMock()
         self.mock_model_transformer_factory(mocker, mocked_transformer)
 
@@ -325,9 +327,12 @@ class TemplateTestChannelAlignment:
 
         algorithm = ChannelAlignment()
         tensor_collector = TensorCollector()
-        tensor_collector.get_statistics = get_constant_lambda(
-            TestTensorStats(np.array([-1], dtype=np.int32), np.array([2], dtype=np.int32))
-        )
+        if empty_statistics:
+            stat_value = None, None
+        else:
+            stat_value = (np.array([-1], dtype=np.int32), np.array([2], dtype=np.int32))
+
+        tensor_collector.get_statistics = get_constant_lambda(TestTensorStats(*stat_value))
         statistic_points.add_statistic_point(StatisticPoint(target_point, tensor_collector, algorithm._algorithm_key))
 
         class MockBackend(backend_cls):
@@ -356,6 +361,14 @@ class TemplateTestChannelAlignment:
             )
         )
         algorithm.apply(None, nncf_graph, statistic_points)
+
+        if empty_statistics:
+            assert algorithm._align_means.call_count == 0
+            assert algorithm._align_scales.call_count == 0
+            mocked_transformer.transform.assert_called_once()
+            arg = mocked_transformer.transform.call_args.args[0]
+            assert len(arg.transformations) == 0
+            return
 
         align_means_called = 1 if num_biases == 2 else 0
         assert algorithm._align_means.call_count == align_means_called

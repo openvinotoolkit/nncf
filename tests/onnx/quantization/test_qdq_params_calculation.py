@@ -19,6 +19,7 @@ from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from tests.onnx.conftest import ONNX_TEST_ROOT
+from tests.onnx.models import EmbeddingModel
 from tests.onnx.models import GEMMTransposeWeightModel
 from tests.onnx.models import LinearModel
 from tests.onnx.models import MatMulActivationModel
@@ -78,6 +79,7 @@ MODELS = [
     ReshapeWeightModel,
     LinearModel,
     OneDepthwiseConvolutionalModel,
+    EmbeddingModel,
 ]
 
 
@@ -97,6 +99,7 @@ MODELS = [
         "ReshapeWeightModel",
         "LinearModel",
         "OneDepthwiseConvolutionalModel",
+        "EmbeddingModel",
     ],
 )
 def test_scales(model, preset):

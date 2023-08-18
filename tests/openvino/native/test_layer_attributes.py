@@ -215,7 +215,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
             OVLayerAttributes(
                 {1: {"name": "Const", "shape": (1, 4), "transpose": True}},
                 {1: GenericWeightedLayerAttributes(False, (1, 4))},
-                {"shape": (1, 3, 4), "transpose": False},
+                {"transpose": False},
             ),
         ),
         (
@@ -224,7 +224,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
             OVLayerAttributes(
                 {1: {"name": "Const", "shape": (3, 1), "transpose": False}},
                 {1: GenericWeightedLayerAttributes(False, (3, 1))},
-                {"shape": (1, 3, 4), "transpose": True},
+                {"transpose": True},
             ),
         ),
     ],
