@@ -1820,6 +1820,20 @@ class TestOutputQuantAsWeightsSetup:
                 ),
             ],
         ),
+        (
+            # Weights #6
+            [
+                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            ],
+            # Activations #6
+            [
+                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            ],
+            # Reference #6
+            [
+                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            ],
+        ),
     ],
 )
 def test_get_weight_and_activation_qconfig_list_intersection(weight_configs, activation_configs, reference_configs):
