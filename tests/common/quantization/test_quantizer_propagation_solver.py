@@ -22,6 +22,7 @@ from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
@@ -30,6 +31,7 @@ from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropag
 from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_propagation.solver import TransitionStatus
+from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
@@ -70,18 +72,18 @@ class TwoFcAfterDropout:
     def get_graph():
         graph = nx.DiGraph()
         dropout_node_attrs = {
-            NNCFGraph.NODE_NAME_ATTR: TwoFcAfterDropout.DROPOUT_NODE_NAME,
-            NNCFGraph.NODE_TYPE_ATTR: TwoFcAfterDropout.DROPOUT_OP_TYPE_STR,
+            NNCFNode.NODE_NAME_ATTR: TwoFcAfterDropout.DROPOUT_NODE_NAME,
+            NNCFNode.NODE_TYPE_ATTR: TwoFcAfterDropout.DROPOUT_OP_TYPE_STR,
         }
 
         fc_1_node_attrs = {
-            NNCFGraph.NODE_NAME_ATTR: TwoFcAfterDropout.FC_1_NODE_NAME,
-            NNCFGraph.NODE_TYPE_ATTR: TwoFcAfterDropout.FC_OP_TYPE_STR,
+            NNCFNode.NODE_NAME_ATTR: TwoFcAfterDropout.FC_1_NODE_NAME,
+            NNCFNode.NODE_TYPE_ATTR: TwoFcAfterDropout.FC_OP_TYPE_STR,
         }
 
         fc_2_node_attrs = {
-            NNCFGraph.NODE_NAME_ATTR: TwoFcAfterDropout.FC_2_NODE_NAME,
-            NNCFGraph.NODE_TYPE_ATTR: TwoFcAfterDropout.FC_OP_TYPE_STR,
+            NNCFNode.NODE_NAME_ATTR: TwoFcAfterDropout.FC_2_NODE_NAME,
+            NNCFNode.NODE_TYPE_ATTR: TwoFcAfterDropout.FC_OP_TYPE_STR,
         }
 
         graph.add_node("dropout", **dropout_node_attrs)
@@ -1124,7 +1126,7 @@ class TestQuantizerPropagationSolver:
         metatypes = {k: v.op_meta for k, v in init_node_to_trait_and_configs_dict.items()}
         for node_key, metatype in metatypes.items():
             node = ip_graph.nodes[node_key]
-            node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR].data[NNCFGraph.METATYPE_ATTR] = metatype
+            node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR].attributes[NNCFNode.METATYPE_ATTR] = metatype
 
         quant_prop_graph = QPSG(ip_graph)
         for node in quant_prop_graph.nodes.values():
@@ -1617,7 +1619,7 @@ class TestQuantizerPropagationSolver:
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scopes=['/gelu_0', '/conv2d_0']
+            ignored_scopes={'/gelu_0': IgnoreReason.USER_REQUESTED, '/conv2d_0': IgnoreReason.USER_REQUESTED}
         ),
         RunOnIpGraphTestStruct(
             base_nx_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
@@ -1629,7 +1631,7 @@ class TestQuantizerPropagationSolver:
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scopes=['/conv2d_0']
+            ignored_scopes={'/conv2d_0': IgnoreReason.USER_REQUESTED}
         ),
         RunOnIpGraphTestStruct(
             base_nx_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
@@ -1638,7 +1640,7 @@ class TestQuantizerPropagationSolver:
             retval_shared_input_operation_set_groups=[],
             expected_count_finished_quant=0,
             expected_count_active_quant=0,
-            ignored_scopes=['/conv2d_0', '/matmul_0']
+            ignored_scopes={'/conv2d_0': IgnoreReason.USER_REQUESTED, '/matmul_0': IgnoreReason.USER_REQUESTED}
         ),
         RunOnIpGraphTestStruct(
             base_nx_graph=TwoFcAfterDropout.get_graph(),
@@ -1652,7 +1654,7 @@ class TestQuantizerPropagationSolver:
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scopes=[TwoFcAfterDropout.FC_2_NODE_NAME]
+            ignored_scopes={TwoFcAfterDropout.FC_2_NODE_NAME: IgnoreReason.USER_REQUESTED}
         )
     ]  # fmt: skip
 
@@ -1669,9 +1671,13 @@ class TestQuantizerPropagationSolver:
         nncf_graph = run_on_ip_graph_test_struct.base_graph
         ip_graph = get_ip_graph_for_test(nncf_graph)
 
+        if run_on_ip_graph_test_struct.ignored_scopes is not None:
+            weight_ignored_scopes = list(run_on_ip_graph_test_struct.ignored_scopes.keys())
+        else:
+            weight_ignored_scopes = None
         quant_prop_solver = QuantizerPropagationSolver(
             activation_ignored_scopes=run_on_ip_graph_test_struct.ignored_scopes,
-            weight_ignored_scopes=run_on_ip_graph_test_struct.ignored_scopes,
+            weight_ignored_scopes=weight_ignored_scopes,
             default_trait_to_metatype_map=DEFAULT_TEST_QUANT_TRAIT_MAP,
             run_consistency_checks=True,
         )

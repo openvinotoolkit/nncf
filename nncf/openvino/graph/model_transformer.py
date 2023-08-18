@@ -504,10 +504,12 @@ class OVModelTransformer(ModelTransformer):
         :returns: Transformed model with Multiply nodes.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
             node = name_to_node_mapping[node_name]
-            node_output_port = node.output(transformation.target_point.port_id)
+            output_port_id = transformation.target_point.port_id
+            node_output_port = node.output(output_port_id)
 
             destination_ports = []
 
@@ -520,11 +522,9 @@ class OVModelTransformer(ModelTransformer):
             fp16_dtype = ov.Type(np.float16)
             if all(p.get_element_type() == fp16_dtype for p in destination_ports):
                 scale_dtype = fp16_dtype
-            scale_constant = opset.constant(
-                transformation.scale_value, dtype=scale_dtype, name=f"{node_name}/smooth_quant_const"
-            )
 
-            multiply_node = opset.multiply(node_output_port, scale_constant, name=f"{node_name}/smooth_quant_multiply")
+            scale_constant = opset.constant(transformation.scale_value, dtype=scale_dtype)
+            multiply_node = opset.multiply(node_output_port, scale_constant, name=transformation.multiply_node_name)
 
             for destination_port in destination_ports:
                 destination_port.replace_source_output(multiply_node.output(0))

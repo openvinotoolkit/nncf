@@ -126,7 +126,7 @@ INPLACE_OPS_TEST_CASES = [
         "abs_max", None, lambda o, r: get_inplace_max_op(o, r, True), ["Abs", "ReduceMax"], [None, (0, 1, 2, 3)]
     ),
     # Batch mean and mean per ch operations
-    InplaceOpTestCase("batch_mean", None, lambda o, r: get_inplace_batch_mean_op(o), ["ReduceMean"], [(0,)]),
+    InplaceOpTestCase("batch_mean", None, lambda o, r: get_inplace_batch_mean_op(o), ["ReduceMean"], [0]),
     InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape", "ReduceMean"], [(1, 3, 16), (0, 2)]),
     InplaceOpTestCase(
         "mean_per_ch",
@@ -135,7 +135,21 @@ INPLACE_OPS_TEST_CASES = [
         ["Transpose", "Reshape", "ReduceMean"],
         [(0, 2, 1, 3), (1, 4, 12), (0, 2)],
     ),
-    InplaceOpTestCase("mean_per_ch", 0, get_inplace_mean_per_ch, ["ReduceMean"], [(0,)], dims="SHORT"),
+    InplaceOpTestCase(
+        "mean_per_ch",
+        0,
+        get_inplace_mean_per_ch,
+        ["ReduceMean"],
+        [
+            0,
+        ],
+        dims="SHORT",
+    ),
+    # EmptyCase
+    InplaceOpTestCase("min", (), get_inplace_min_op, ["ReduceMin"], [()]),
+    InplaceOpTestCase("mean", (), get_inplace_mean_op, ["ReduceMean"], [()]),
+    InplaceOpTestCase("max", (), lambda o, r: get_inplace_max_op(o, r, False), ["ReduceMax"], [()]),
+    InplaceOpTestCase("abs_max", (), lambda o, r: get_inplace_max_op(o, r, True), ["Abs", "ReduceMax"], [None, ()]),
 ]
 
 
@@ -164,9 +178,12 @@ def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num, out
             const = get_prev_node(node, 1)
             if ref_val == []:
                 assert const.get_data().shape == (0,)
+            elif not isinstance(ref_val, tuple):
+                assert const.get_data() == ref_val
             else:
                 res = np.equal(const.get_data(), np.array(ref_val))
                 assert all(res)
+                assert const.get_data().shape == np.array(ref_val).shape
 
         nodes = get_next_nodes(node, 0)
         assert len(nodes) == 1
@@ -609,7 +626,7 @@ def test_multiply_insertion(model_with_parameters):
         TargetType.POST_LAYER_OPERATION,
         OVMultiplyInsertionCommand,
         port_id=output_port_id,
-        **{"scale_value": scale, "destination_node_names": dest_nodes},
+        **{"scale_value": scale, "destination_node_names": dest_nodes, "multiply_node_name": "test_name"},
     )
     ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
 

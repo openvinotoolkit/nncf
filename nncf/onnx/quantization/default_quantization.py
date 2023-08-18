@@ -65,5 +65,5 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         # and we can therefore have better quantization resolution while preserving the original dynamic range
     ],
     QuantizationTrait.CONCAT: [onnx_metatypes.ONNXConcatMetatype],
-    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [],
+    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [onnx_metatypes.ONNXEmbeddingMetatype],
 }

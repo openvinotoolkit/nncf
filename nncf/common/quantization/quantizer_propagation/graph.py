@@ -74,13 +74,16 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     BARRIER_NODE_KEY_POSTFIX = "BARRIER"
 
     def __init__(
-        self, ip_graph: InsertionPointGraph, ignored_scopes: List[str] = None, target_scopes: List[str] = None
+        self,
+        ip_graph: InsertionPointGraph,
+        ignored_scopes: Dict[str, IgnoreReason] = None,
+        target_scopes: List[str] = None,
     ):
         super().__init__()
         ip_graph = deepcopy(ip_graph)
         self._created_prop_quantizer_counter = 0
 
-        self._ignored_scopes = deepcopy(ignored_scopes)
+        self._ignored_scopes = list(ignored_scopes.keys()) if ignored_scopes is not None else None
         self._target_scopes = deepcopy(target_scopes)
         self.ignored_node_keys = {}  # type: Dict[str, IgnoreReason]
 
@@ -134,7 +137,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
                 if ignored:
                     qpg_node[self.IS_IN_IGNORED_SCOPES] = True
-                    self.ignored_node_keys[node_key] = IgnoreReason.USER_REQUESTED
+                    self.ignored_node_keys[node_key] = ignored_scopes.get(
+                        primary_node.node_name, IgnoreReason.USER_REQUESTED
+                    )
                     # TODO (vshampor): do we need here NoopMetatype
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = NoopMetatype
                 else:

@@ -1,0 +1,57 @@
+name: precommit
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  common:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+      - uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.10
+      - name: Install NNCF and test requirements
+        run: make install-common-test
+      - name: Run common precommit test scope
+        run: make test-common
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage_xml_common
+          path: ./coverage.xml
+      - name: Upload coverage report to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: codecov-common
+  onnx:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+      - uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.10
+      - name: Install NNCF and test requirements
+        run: make install-onnx-test
+      - name: Run ONNX precommit test scope
+        run: make test-onnx
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage_xml_onnx
+          path: ./coverage.xml
+      - name: Upload coverage report to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: codecov-onnx
+

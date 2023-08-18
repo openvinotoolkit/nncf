@@ -1,0 +1,1 @@
+../../../2.5/sparsity/magnitude_sparsity/resnet50.pb

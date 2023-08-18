@@ -184,7 +184,7 @@ class ShapePruningProcessor:
         # 1. Propagate symbolic masks throught the net
         for pruned_layer_info in pruning_groups.get_all_nodes():
             node = graph.get_node_by_id(pruned_layer_info.nncf_node_id)
-            node.data["output_mask"] = SymbolicMask(get_output_channels(node), node.node_id)
+            node.attributes["output_mask"] = SymbolicMask(get_output_channels(node), node.node_id)
 
         MaskPropagationAlgorithm(graph, self._pruning_operations_metatype, SymbolicMaskProcessor).mask_propagation()
 
@@ -209,6 +209,6 @@ class ShapePruningProcessor:
 
         # 3. Clean graph output shapes
         for node in graph.get_all_nodes():
-            node.data["output_shape"] = None
+            node.attributes["output_shape"] = None
 
         return next_nodes

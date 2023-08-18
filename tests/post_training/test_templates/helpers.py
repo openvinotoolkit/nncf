@@ -133,22 +133,71 @@ class MultipleConvTestModel(nn.Module):
         return self.conv_5(F.relu(x_1_2))
 
 
-class LinearModel(nn.Module):
+class LinearMultiShapeModel(nn.Module):
     INPUT_SIZE = [1, 3, 4, 2]
-    RESHAPE_SHAPE = (1, 3, 2, 4)
-    MATMUL_W_SHAPE = (4, 5)
 
     def __init__(self) -> None:
         super().__init__()
         with set_torch_seed():
-            self.matmul_data = torch.randn(self.MATMUL_W_SHAPE, dtype=torch.float32) - torch.tensor(0.5)
-            self.add_data = torch.randn(self.RESHAPE_SHAPE, dtype=torch.float32)
+            self.matmul_1_data = torch.randn((4, 4), dtype=torch.float32)
+            self.matmul_2_data = torch.randn((4, 4), dtype=torch.float32)
+            self.matmul_3_data = torch.randn((1, 8, 2), dtype=torch.float32)
+            self.matmul_4_data = torch.randn((1, 8, 3), dtype=torch.float32)
+            self.matmul_5_data = torch.randn((1), dtype=torch.float32)
+            self.matmul_6_data = torch.randn((8), dtype=torch.float32)
+
+            self.linear_1 = nn.Linear(2, 8)
+            self.linear_1.weight.data = torch.randn((8, 2), dtype=torch.float32)
+            self.linear_1.bias.data = torch.randn((1, 8), dtype=torch.float32)
+
+            self.linear_2 = nn.Linear(2, 8)
+            self.linear_2.weight.data = torch.randn((8, 2), dtype=torch.float32)
+            self.linear_2.bias.data = torch.randn((1, 8), dtype=torch.float32)
+
+            self.matmul_7_data = torch.randn((6, 6), dtype=torch.float32)
+            self.matmul_8_data = torch.randn((10, 6), dtype=torch.float32)
 
     def forward(self, x):
-        x = torch.reshape(x, self.RESHAPE_SHAPE)
-        x_1 = torch.matmul(x, self.matmul_data)
-        x_2 = torch.add(x, self.add_data)
-        return x_1, x_2
+        x = torch.reshape(x, (1, 3, 2, 4))
+
+        x_1 = torch.matmul(x, self.matmul_1_data)
+        x_2 = torch.matmul(x, self.matmul_2_data)
+
+        x = torch.add(x_1, x_2)
+        x_1 = torch.reshape(x, (1, 3, 8))
+
+        x_1_1 = torch.matmul(x_1, self.matmul_3_data)
+        x_1_1 = torch.reshape(x_1_1, (1, 6))
+        x_1_1 = torch.matmul(self.matmul_5_data, x_1_1)
+
+        x_1_2 = torch.matmul(self.matmul_4_data, x_1)
+        x_1_2 = torch.max(x_1_2, 1).values
+        x_1_2 = torch.matmul(x_1_2, self.matmul_6_data)
+
+        x_2, x_3 = torch.split(x, 2, 3)
+        x_2 = self.linear_1(x_2)
+        x_2 = torch.min(x_2, -1).values
+        x_2 = torch.flatten(x_2)
+        x_2 = torch.matmul(x_2, self.matmul_7_data)
+        x_3 = self.linear_2(x_3)
+        x_3 = torch.mean(x_3, -1)
+        x_3 = torch.flatten(x_3)
+        x_3 = torch.matmul(self.matmul_8_data, x_3)
+        return x_1_1, x_1_2, x_2, x_3
+
+
+class NonZeroLinearModel(nn.Module):
+    INPUT_SIZE = [10]
+
+    def forward(self, x):
+        zeros = (x > torch.inf).float()
+        empty = torch.nonzero(zeros).reshape((-1, 1, 1)).float()
+        y = torch.matmul(empty, torch.ones((1, 5)))
+        y += 5
+        y = torch.cat((torch.ones((1, 10)), y.reshape(1, -1)), dim=1)
+        y = torch.matmul(y, torch.ones(10, 10))
+        y += 5
+        return y
 
 
 class SplittedModel(nn.Module):
@@ -239,3 +288,24 @@ class SplittedModel(nn.Module):
         x = self.linear_2(x)
 
         return torch.flatten(x, 1, 2)
+
+
+class EmbeddingModel(nn.Module):
+    INPUT_SIZE = [1, 10]
+    EMBEDDING_SHAPE = [10, 20]
+    MATMUL_W_SHAPE = [5, 20]
+
+    def __init__(self) -> None:
+        super().__init__()
+        with set_torch_seed():
+            self.embedding = nn.Embedding(self.EMBEDDING_SHAPE[0], self.EMBEDDING_SHAPE[1])
+            self.embedding.weight.data = torch.randn(self.EMBEDDING_SHAPE, dtype=torch.float32)
+            self.matmul = nn.Linear(self.EMBEDDING_SHAPE[1], self.MATMUL_W_SHAPE[1])
+            self.matmul.weight.data = torch.randn(self.MATMUL_W_SHAPE, dtype=torch.float32)
+            self.matmul.bias.data = torch.randn([1, self.MATMUL_W_SHAPE[0]], dtype=torch.float32)
+
+    def forward(self, x):
+        x = x.type(torch.int32)
+        x = self.embedding(x)
+        x = self.matmul(x)
+        return x

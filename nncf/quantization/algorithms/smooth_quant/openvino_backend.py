@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import deepcopy
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -23,6 +22,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
@@ -56,20 +56,13 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         ]
 
         if len(weight_ports) != 1 or len(activation_ports) != 1:
-            raise RuntimeError(f"Too many weights or activation ports for {node.node_name} node")
+            raise RuntimeError(f"Too many weight or activation ports for {node.node_name} node")
 
         return {"activation": activation_ports[0], "weight": weight_ports[0]}
 
     @staticmethod
-    def calculate_input_reduction_shape(nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
-        shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-        channels = shape[node.metatype.output_channel_axis]
-
-        if node.layer_attributes.input_attributes["transpose"]:
-            channels = shape[1]
-
-        reduction_shape = tuple(i for i, val in enumerate(shape) if val != channels)
-        return reduction_shape
+    def get_channel_agnostic_reduction_shape(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
+        return get_channel_agnostic_reduction_shape([channel_axis], shape)
 
     @staticmethod
     def get_abs_max_channel_collector(
@@ -82,12 +75,12 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_statistics(node: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
-        weights = deepcopy(get_weight_value(node, model, port_id))
-        abs_value = np.abs(weights)
-        transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
-        axis = 0 if transpose else -1
-        return np.max(abs_value, axis=axis)
+    def process_weight_statistics(weights: np.ndarray, channel_axis: int) -> np.ndarray:
+        if len(weights.shape) > 1:
+            base_axes = list(range(weights.ndim - 2))
+            transpose_axes = base_axes + [-1, -2]
+            weights = np.transpose(weights, axes=transpose_axes)
+        return np.max(np.abs(weights), axis=channel_axis)
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -120,44 +113,22 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return scales, ratio
 
     @staticmethod
-    def calculate_activation_scale(scale_value: np.ndarray, nodes: List[NNCFNode]) -> np.ndarray:
-        activation_scales = scale_value ** (-1)
-
-        activation_shapes = [n.layer_attributes.input_attributes["shape"] for n in nodes]
-        activation_shape = activation_shapes[0]
-        if not all(shape == activation_shape for shape in activation_shapes):
-            raise RuntimeError(f"Shapes for nodes {[n.node_name for n in nodes]} are not identical")
-
-        transpose_attrs = [n.layer_attributes.input_attributes["transpose"] for n in nodes]
-        if not all(attr == transpose_attrs[0] for attr in transpose_attrs):
-            raise RuntimeError(f"Transpose attributes for nodes {[n.node_name for n in nodes]} are not identical")
-
-        activation_scales = np.expand_dims(activation_scales, axis=0)
-
-        if len(activation_shape) > 2:
-            if all(transpose_attrs):
-                activation_scales = np.expand_dims(activation_scales, axis=2)
-            else:
-                activation_scales = np.expand_dims(activation_scales, axis=1)
-        return activation_scales
+    def calculate_activation_scale(scale_value: np.ndarray, activations_size: int, channel_axis: int) -> np.ndarray:
+        activation_scale = scale_value ** (-1)
+        if activations_size > 1:
+            reshape_shape = np.ones(activations_size, dtype=np.int64)
+            reshape_shape[channel_axis] = activation_scale.size
+            activation_scale = np.reshape(activation_scale, reshape_shape)
+        return activation_scale
 
     @staticmethod
-    def calculate_weight_scale(scale_value: np.ndarray, nodes: List[NNCFNode]) -> np.ndarray:
-        transpose_attrs = []
-        for node in nodes:
-            port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
-            transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
-            transpose_attrs.append(transpose)
-
-        if not all(attr == transpose_attrs[0] for attr in transpose_attrs):
-            raise RuntimeError(f"Transpose attributes for nodes {[n.node_name for n in nodes]} are not identical")
-
-        if all(transpose_attrs):
-            weight_scales = np.expand_dims(scale_value, axis=0)
-        else:
-            weight_scales = np.expand_dims(scale_value, axis=-1)
-
-        return weight_scales
+    def calculate_weight_scale(scale_value: np.ndarray, weights_size: int, channel_axis: int) -> np.ndarray:
+        weight_scale = scale_value
+        if weights_size > 1:
+            reshape_shape = np.ones(weights_size, dtype=np.int64)
+            reshape_shape[channel_axis] = scale_value.size
+            weight_scale = np.reshape(scale_value, reshape_shape)
+        return weight_scale
 
     @staticmethod
     def weight_update_command(
@@ -167,6 +138,45 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def scale_insertion_command(
-        source_node: NNCFNode, scale_value: np.ndarray, port_id: int, nodes: List[NNCFNode]
+        source_node: NNCFNode, scale_value: np.ndarray, port_id: int, nodes: List[NNCFNode], scale_node_name: str
     ) -> OVMultiplyInsertionCommand:
-        return OVCommandCreator.multiply_insertion_command(source_node, nodes, port_id, scale_value)
+        return OVCommandCreator.multiply_insertion_command(source_node, nodes, port_id, scale_value, scale_node_name)
+
+    @staticmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+        channel_axis = 1
+
+        if node.metatype == OVMatMulMetatype:
+            if port_id > 1:
+                raise RuntimeError(f"{OVMatMulMetatype.name} can not take more than 2 input tensors.")
+
+            if (
+                node.layer_attributes is not None
+                and node.layer_attributes.input_attributes is not None
+                and "transpose" in node.layer_attributes.input_attributes
+            ):
+                transpose = node.layer_attributes.input_attributes["transpose"]
+                channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
+
+        return channel_axis
+
+    @staticmethod
+    def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
+        channel_axis = 1 if node.metatype.const_channel_axis is None else node.metatype.const_channel_axis[0]
+
+        if port_id not in node.layer_attributes.constant_attributes:
+            raise RuntimeError(f"{node.node_name} should contain {port_id} in the attributes map.")
+
+        if node.metatype == OVMatMulMetatype:
+            if port_id > 1:
+                raise RuntimeError(f"{OVMatMulMetatype.name} can not take more than 2 input tensors.")
+
+            if "transpose" in node.layer_attributes.constant_attributes[port_id]:
+                transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
+                channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
+
+        return channel_axis
+
+    @staticmethod
+    def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:
+        return -2 + port_id if transpose else -1 - port_id

@@ -15,6 +15,7 @@ from typing import Dict
 import networkx as nx
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.layers import NNCFConv2d
@@ -46,8 +47,7 @@ class BitwidthGraph:
                 flops_vs_node_group[idx] = (flops, node_set)
 
         grouped_mode = bool(groups_of_adjacent_quantizers)
-        for node_key in nncf_graph.get_all_node_keys():
-            node = nncf_graph.get_node_by_key(node_key)
+        for node_key, node in nncf_graph.nodes.items():
             color = ""
             operator_name = node.node_type
             module = model.nncf.get_containing_module(node.node_name)
@@ -161,7 +161,7 @@ class BitwidthGraph:
             bitwidth = quantizer_info.quantizer_module_ref.num_bits
             activation_fq_node["color"] = bitwidth_color_map[bitwidth]
             activation_fq_node["style"] = "filled"
-            node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
+            node_id = activation_fq_node[NNCFNode.ID_NODE_ATTR]
 
             activation_fq_node["label"] = "AFQ_[{}]_#{}".format(
                 quantizer_info.quantizer_module_ref.get_quantizer_config(), str(node_id)

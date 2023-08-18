@@ -21,6 +21,7 @@ import pytest
 from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
@@ -1230,7 +1231,7 @@ class TestUnifinedScaleTypeAfterMergeQuantizers:
             mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
             if node_key == "B":
                 # Split have no POST_HOOK
-                mock_node_attrs[NNCFGraph.NODE_TYPE_ATTR] = "split"
+                mock_node_attrs[NNCFNode.NODE_TYPE_ATTR] = "split"
             mock_graph.add_node(node_key, **mock_node_attrs)
 
         mock_graph.add_edges_from([("A", "B"), ("B", "C"), ("B", "D"), ("C", "E"), ("D", "E")])

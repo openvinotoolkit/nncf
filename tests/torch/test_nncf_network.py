@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import functools
 import inspect
 from abc import ABCMeta
 from abc import abstractmethod
@@ -270,9 +271,9 @@ def test_nncf_node_attrs_are_consistent():
         node_name="dummy", node_type="dummy", layer_name="dummy", node_metatype=UnknownMetatype
     )
     new_node_saved = nncf_graph.get_node_by_id(new_node.node_id)
-    assert new_node.data is new_node_saved.data
+    assert new_node.attributes is new_node_saved.attributes
     nodes_in_scope = nncf_graph.get_op_nodes_in_scope(nncf_graph.get_scope_by_node_name("dummy"))
-    assert new_node.data is nodes_in_scope[0].data
+    assert new_node.attributes is nodes_in_scope[0].attributes
 
 
 def test_can_collect_scopes_of_train_only_modules():
@@ -401,6 +402,30 @@ def test_replacing_forward_with_another_own_method(_nncf_caplog):
 
     nncf_network.forward = nncf_network.other_forward
     assert "set_original_unbound_forward" in _nncf_caplog.text
+
+
+def test_replacing_forward_of_original_model():
+    def decorator(func):
+        def wrap(*args):
+            return func(*args)
+
+        return wrap
+
+    model = BasicConvTestModel()
+    model.forward = decorator(model.forward)
+
+    fn_id = id(model.__dict__["forward"])
+    fn_sign = inspect.signature(model.forward)
+    # type of current
+    assert isinstance(model.__dict__["forward"], type(decorator))
+
+    nncf_net = NNCFNetwork(model, [ModelInputInfo(model.INPUT_SIZE)])
+    nncf_net.forward(torch.ones(model.INPUT_SIZE))
+
+    # Check that forward was updated
+    assert fn_id != id(nncf_net.__dict__["forward"])
+    assert fn_sign == inspect.signature(nncf_net.forward)
+    assert isinstance(nncf_net.forward, functools.partial)
 
 
 def test_temporary_clean_view():

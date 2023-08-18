@@ -738,7 +738,7 @@ def test_symbolic_mask_propagation(test_input_info_struct_):
     final_can_prune = algo.symbolic_mask_propagation(pruning_types, test_input_info_struct_.can_prune_after_analysis)
     # Check all output masks are deleted
     for node in graph.get_all_nodes():
-        assert node.data["output_mask"] is None
+        assert node.attributes["output_mask"] is None
 
     # Check ref decisions
     ref_final_can_prune = test_input_info_struct_.final_can_prune

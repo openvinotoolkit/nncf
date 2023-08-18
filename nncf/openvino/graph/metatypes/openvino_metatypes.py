@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import deque
 from typing import List, Optional, Type
 
 import openvino.runtime as ov
@@ -404,6 +405,17 @@ class OVLogicalXorMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVEmbeddingMetatype(OVOpMetatype):
+    name = "EmbeddingOp"
+    hw_config_names = [HWConfigOpName.EMBEDDING]
+    const_channel_axis = [0]
+
+    @classmethod
+    def matches(cls, node: ov.Node) -> bool:
+        return _is_embedding(node)
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVFloorMetatype(OVOpMetatype):
     name = "FloorOp"
     op_names = ["Floor"]
@@ -460,6 +472,7 @@ class OVRoiAlignMetatype(OVOpMetatype):
 class OVGatherMetatype(OVOpMetatype):
     name = "GatherOp"
     op_names = ["Gather"]
+    subtypes = [OVEmbeddingMetatype]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -668,6 +681,7 @@ GENERAL_WEIGHT_LAYER_METATYPES = [
     OVMatMulMetatype,
     OVLSTMSequenceMetatype,
     OVGRUSequenceMetatype,
+    OVEmbeddingMetatype,
 ]
 
 METATYPES_WITH_CONST_PORT_ID = GENERAL_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
@@ -688,6 +702,40 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     return list(OV_OPERATOR_METATYPES.registry_dict.values())
 
 
+def get_operation_const_op(operation: ov.Node, const_port_id: int) -> Optional[ov.Node]:
+    """
+    Returns constant node of given operation placed on given const port id.
+
+    :param operation: Given operation.
+    :param const_port_id: Given constant port id.
+    :returns: Constant node of given operation placed on given const port id.
+    """
+    node = operation.input_value(const_port_id).get_node()
+
+    # There are several cases here
+    # (Constant) -> (Operation)
+    # (Constant) -> (Convert) -> (Operation)
+    # (Constant) -> (Convert) -> (FakeQuantize) -> (Operation)
+    # (Constant) -> (Convert) -> (FakeQuantize) -> (Reshape) -> (Operation)
+    #  and etc. We need properly find the constant node. So we start with
+    # `node` and traverse up until the constant node is not found.
+    queue = deque([node])
+    constant_node = None
+    allowed_propagation_types_list = ["Convert", "FakeQuantize", "Reshape"]
+
+    while len(queue) != 0:
+        curr_node = queue.popleft()
+        if curr_node.get_type_name() == "Constant":
+            constant_node = curr_node
+            break
+        if len(curr_node.inputs()) == 0:
+            break
+        if curr_node.get_type_name() in allowed_propagation_types_list:
+            queue.append(curr_node.input_value(0).get_node())
+
+    return constant_node
+
+
 def _is_depthwise_conv(node: ov.Node) -> bool:
     """
     Returns True if the group convolution is depthwise, False - otherwise.
@@ -706,3 +754,21 @@ def _is_depthwise_conv(node: ov.Node) -> bool:
     inp_channels = inp_channels.get_length()
     groups = groups.get_length()
     return groups == inp_channels and inp_channels > 1
+
+
+def _is_embedding(node: ov.Node) -> bool:
+    """
+    Returns True if the layer can be represented as embedding, False - otherwise.
+
+    :param node: Layer to check whether it is embedding.
+    :return: True if the layer is embedding, False - otherwise.
+    """
+    allowed_types_list = ["f16", "f32", "f64"]
+    const_port_id = 0
+    input_tensor = node.input_value(const_port_id)
+    if input_tensor.get_element_type().get_type_name() in allowed_types_list:
+        const_node = get_operation_const_op(node, const_port_id)
+        if const_node is not None:
+            return True
+
+    return False

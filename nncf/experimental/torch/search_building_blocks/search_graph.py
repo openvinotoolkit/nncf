@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Set
 import networkx as nx
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns.manager import PatternsManager
@@ -50,21 +51,21 @@ class SearchGraphNode:
 
     @property
     def node_name(self) -> NNCFNodeName:
-        return self.data.get(NNCFGraph.NODE_NAME_ATTR)
+        return self.data.get(NNCFNode.NODE_NAME_ATTR)
 
     @property
     def node_type(self) -> str:
         """
         Returns type of node.
         """
-        return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
+        return self.data.get(NNCFNode.NODE_TYPE_ATTR)
 
     @property
     def layer_name(self) -> str:
         """
         Returns the name of the layer to which the node corresponds.
         """
-        return self.data.get(NNCFGraph.LAYER_NAME_ATTR)
+        return self.data.get(NNCFNode.LAYER_NAME_ATTR)
 
     @property
     def main_id(self) -> int:
