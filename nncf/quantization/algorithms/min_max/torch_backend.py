@@ -279,8 +279,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer.eps = 0
         if isinstance(quantizer, AsymmetricQuantizer):
             quantizer.input_low = torch.nn.Parameter(parameters.input_low.data)
-            range = parameters.input_high - parameters.input_low
-            quantizer.input_range = torch.nn.Parameter(range.data)
+            input_range = parameters.input_high - parameters.input_low
+            quantizer.input_range = torch.nn.Parameter(input_range.data)
         else:
             quantizer.signed = bool(torch.any(parameters.input_low.data < 0))
             quantizer.scale = torch.nn.Parameter(parameters.input_high.data)
