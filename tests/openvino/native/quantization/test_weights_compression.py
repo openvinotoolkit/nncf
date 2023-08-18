@@ -9,17 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 import numpy as np
 import openvino.runtime as ov
+import pytest
+
 from nncf.quantization import compress_weights
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import WeightsModel
 
 TEST_MODELS = {
     IntegerModel: ["gather_2_data", "matmul_1_data", "matmul_2_data"],
-    WeightsModel: ["weights_0", "weights_1"]
+    WeightsModel: ["weights_0", "weights_1"],
 }
 
 
@@ -31,7 +31,7 @@ def test_compress_weights(model_creator_func):
 
     n_compressed_weights = 0
     for op in compressed_model.get_ops():
-        if op.get_type_name() == 'Constant' and op.get_friendly_name() in ref_compressed_weights:
+        if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_compressed_weights:
             assert op.get_element_type() == ov.Type(np.int8)
             n_compressed_weights += 1
 

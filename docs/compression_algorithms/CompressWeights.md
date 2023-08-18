@@ -14,6 +14,7 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 from nncf import compress_weights
 compressed_model = compress_weights(model)
 ```
+
 ##### Limitations
 
 - The algorithm is supported for OpenVINO and PyTorch models.

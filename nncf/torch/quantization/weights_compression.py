@@ -39,8 +39,8 @@ class WeightsDecompressor(nn.Module):
 
 
 def _insert_pre_compression_operations(
-        module: nn.Module, allowed_types: List, level_high: int = 255
-    ) -> Optional[nn.Module]:
+    module: nn.Module, allowed_types: List, level_high: int = 255
+) -> Optional[nn.Module]:
     """
     Inserts weights compression with dequantization for layers in `allowed_types`.
 
