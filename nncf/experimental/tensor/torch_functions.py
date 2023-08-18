@@ -171,7 +171,7 @@ def _(x: List[torch.Tensor], axis: int = 0) -> List[torch.Tensor]:
 def _(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
     if not list(x.shape):
         x = x.unsqueeze(0)
-    return [i for i in torch.unbind(x, dim=axis)]
+    return torch.unbind(x, dim=axis)
 
 
 @functions.moveaxis.register(torch.Tensor)

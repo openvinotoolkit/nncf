@@ -142,7 +142,7 @@ class Tensor:
     def astype(self, dtype: TensorDataType):
         return _call_function("astype", self, dtype)
 
-    def reshape(self, shape: TTensor) -> "Tensor":
+    def reshape(self, shape: List) -> "Tensor":
         return _call_function("reshape", self, shape)
 
 

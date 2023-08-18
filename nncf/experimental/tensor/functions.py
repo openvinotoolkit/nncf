@@ -411,7 +411,7 @@ def mean(a: Tensor, axis: Union[int, List[int]] = None, keepdims: bool = False) 
 
 @functools.singledispatch
 @_tensor_guard
-def round(a: Tensor, decimals=0) -> Tensor:
+def round(a: Tensor, decimals=0) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Evenly round to the given number of decimals.
 
@@ -421,18 +421,6 @@ def round(a: Tensor, decimals=0) -> Tensor:
     :return: An array of the same type as a, containing the rounded values.
     """
     return Tensor(round(a.data, decimals))
-
-
-@functools.singledispatch
-@_tensor_guard
-def ndim(a: Tensor) -> int:
-    """
-    Returns the number of dimensions of tensor.
-
-    :param a: Input data.
-    :return: Number of dimensions.
-    """
-    return Tensor(ndim(a.data))
 
 
 def mean_per_channel(x: Tensor, axis: int) -> Tensor:
@@ -446,7 +434,7 @@ def mean_per_channel(x: Tensor, axis: int) -> Tensor:
     if len(x.shape) < 3:
         return mean(x.data, axis=0)
     x = moveaxis(x.data, axis, 1)
-    t = x.reshape(x.shape[0], x.shape[1], -1)
+    t = x.reshape([x.shape[0], x.shape[1], -1])
     return mean(t, axis=(0, 2))
 
 
