@@ -109,7 +109,7 @@ def export_to_ir(model_path: str, save_path: str, model_name: str) -> None:
     :param save_path: Path directory to save OpenVINO IR model.
     :param model_name: Model name.
     """
-    runner = Command(f"mo -m {model_path} -o {save_path} -n {model_name}")
+    runner = Command(f"mo -m {model_path} -o {save_path} -n {model_name} --compress_to_fp16=False")
     runner.run()
 
 
