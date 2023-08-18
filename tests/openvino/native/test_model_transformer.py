@@ -568,7 +568,7 @@ def test_null_biases_insertion(model_with_parameters):
         TargetType.LAYER,
         OVBiasInsertionCommand,
         port_id=0,
-        command_kwargs=[{"bias_value": np.zeros(shape, dtype=np.float32)} for shape in layers[1]],
+        command_kwargs=[{"bias_value": np.zeros(shape, dtype=np.int8)} for shape in layers[1]],
     )
     ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
 

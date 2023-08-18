@@ -16,6 +16,7 @@ import openvino.runtime as ov
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
@@ -47,24 +48,25 @@ def insert_null_biases(model: ov.Model, graph: NNCFGraph) -> ov.Model:
     transformation_layout = TransformationLayout()
     model_transformer = ModelTransformerFactory.create(model)
     for node_without_bias in nodes_without_biases:
-        const_value = create_bias_constant_value(node_without_bias, 0)
+        const_value = create_bias_constant_value(node_without_bias, graph, 0)
         bias_insertion_command = OVCommandCreator.create_command_to_insert_bias(node_without_bias, const_value)
         transformation_layout.register(bias_insertion_command)
     return model_transformer.transform(transformation_layout)
 
 
-def create_bias_constant_value(node_without_bias: ov.Node, value: Any) -> np.ndarray:
+def create_bias_constant_value(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:
     """
     Creates bias value constant array filled by given value.
 
-    :param node_without_bias: Node to add bias to.
+    :param node_without_bias: NNCFNode to add bias to.
+    :param graph: Target NNCFgraph.
     :param value: Value to fill bias constant array.
     :return: Bias value constant array filled by given value.
     """
-    node_shape = node_without_bias.output(0).partial_shape.get_max_shape()
+    node_shape = graph.get_output_edges(node_without_bias)[0].tensor_shape
     bias_shape = [1] * len(node_shape)
     bias_shape[1] = node_shape[1]
-    return np.full(bias_shape, value, dtype=node_without_bias.get_element_type().to_dtype())
+    return np.full(bias_shape, value)
 
 
 def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:

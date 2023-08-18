@@ -11,27 +11,38 @@
 
 import numpy as np
 import pytest
-from openvino.runtime import opset9 as opset
 
 from nncf.openvino.graph.model_utils import create_bias_constant_value
+from tests.common.quantization.mock_graphs import NodeWithType
+from tests.common.quantization.mock_graphs import create_mock_graph
+from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
+
+# pylint:disable=protected-access
 
 
-def get_conv_node(input_shape, dtype):
-    input_node = opset.parameter(input_shape, dtype=dtype)
-    strides = [1, 1]
-    pads = [0, 0]
-    dilations = [1, 1]
-    return opset.convolution(
-        input_node, np.zeros((4, input_shape[1], 1, 1), dtype=dtype), strides, pads, pads, dilations
-    )
+def get_nncf_graph_for_test(edge_shape, dtype):
+    nodes = [
+        NodeWithType("Input_1", None),
+        NodeWithType("Conv_1", None),
+        NodeWithType("Output_1", None),
+    ]
+    node_edges = [
+        ("Input_1", "Conv_1"),
+        ("Conv_1", "Output_1"),
+    ]
+    original_mock_graph = create_mock_graph(nodes, node_edges)
+    nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
+    nncf_graph._nx_graph.out_edges[("0 /Input_1_0", "1 /Conv_1_0")][nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR] = edge_shape
+    nncf_graph._nx_graph.out_edges[("0 /Input_1_0", "1 /Conv_1_0")][nncf_graph.DTYPE_EDGE_ATTR] = dtype
+    return nncf_graph
 
 
 @pytest.mark.parametrize(
-    "input_shape,dtype",
-    [((2, 3, 4, 5), np.float32), ((1, 1, 1, 1), np.float64)],
+    "edge_shape,dtype,ref_shape",
+    [((2, 3, 4, 5), np.float32, (1, 3, 1, 1)), ((1, 1, 2, 3), np.float64, (1, 1, 1, 1))],
 )
-def test_create_bias_constant_value(input_shape, dtype):
-    conv = get_conv_node(input_shape, dtype)
-    val = create_bias_constant_value(conv, 5)
-    assert val.shape == (1, 4, 1, 1)
-    assert np.equal(val, np.full((1, 4, 1, 1), 5)).all()
+def test_create_bias_constant_value(edge_shape, dtype, ref_shape):
+    graph = get_nncf_graph_for_test(edge_shape, dtype)
+    val = create_bias_constant_value(graph.get_node_by_name("/Input_1_0"), graph, 5)
+    assert val.shape == ref_shape
+    assert np.equal(val, np.full(ref_shape, 5)).all()
