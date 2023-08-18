@@ -574,13 +574,13 @@ class TemplateTestNNCFTensorOperators:
 
     def test_reshape(self):
         tensor = Tensor(self.to_tensor([1, 1]))
-        assert tensor.shape == [2]
-        assert tensor.reshape([1, 2]).shape == [1, 2]
+        assert tensor.shape == (2,)
+        assert tensor.reshape([1, 2]).shape == (1, 2)
 
     def test_fn_reshape(self):
         tensor = Tensor(self.to_tensor([1, 1]))
-        assert tensor.shape == [2]
-        assert functions.reshape(tensor, [1, 2]).shape == [1, 2]
+        assert tensor.shape == (2,)
+        assert functions.reshape(tensor, [1, 2]).shape == (1, 2)
 
     def test_not_implemented(self):
         with pytest.raises(NotImplementedError, match="is not implemented for"):
@@ -608,7 +608,7 @@ class TemplateTestNNCFTensorOperators:
         res = functions.unstack(tensor, axis=axis)
 
         assert isinstance(res, list)
-        for i in range(len(ref)):
+        for i, _ in enumerate(ref):
             assert all(res[i] == ref[i])
 
     @pytest.mark.parametrize(
@@ -641,7 +641,7 @@ class TemplateTestNNCFTensorOperators:
 
         res = functions.moveaxis(tensor, 0, -1)
 
-        assert res.shape == [3, 2]
+        assert res.shape == (3, 2)
 
     @pytest.mark.parametrize(
         "x, axis, keepdims, ref",

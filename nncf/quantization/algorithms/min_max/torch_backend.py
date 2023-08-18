@@ -11,7 +11,6 @@
 
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-import numpy as np
 import torch
 
 import nncf.torch.graph.operator_metatypes as om

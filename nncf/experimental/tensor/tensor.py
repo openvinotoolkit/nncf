@@ -32,7 +32,7 @@ class Tensor:
 
     @property
     def shape(self) -> List[int]:
-        return list(self.data.shape)
+        return tuple(self.data.shape)
 
     @property
     def ndim(self) -> int:
