@@ -343,11 +343,11 @@ class TemplateTestNNCFTensorOperators:
         "axis, ref",
         (
             (None, 3),
-            (0, [2, 1]),
+            (0, [2.0, 1.0]),
         ),
     )
     def test_fn_count_nonzero(self, axis, ref):
-        tensor = self.to_tensor([[1, 2], [1, 0]])
+        tensor = self.to_tensor([[1.0, 2.0], [1.0, 0.0]])
         nncf_tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
         res = functions.count_nonzero(nncf_tensor, axis=axis)
@@ -661,7 +661,11 @@ class TemplateTestNNCFTensorOperators:
     @pytest.mark.parametrize(
         "val, axis, ref",
         (
-            (1.1, 0, 1.1),
+            (
+                [[9.0, 9.0], [7.0, 1.0]],
+                0,
+                [8.0, 5.0],
+            ),
             (
                 [[[9.0, 9.0], [0.0, 3.0]], [[5.0, 1.0], [7.0, 1.0]]],
                 0,
@@ -702,4 +706,5 @@ class TemplateTestNNCFTensorOperators:
         tensor = Tensor(self.to_tensor(val))
         ref_tensor = self.to_tensor(ref)
         res = functions.mean_per_channel(tensor, axis)
-        assert functions.allclose(res.data, ref_tensor), f"{res.data}"
+        assert isinstance(res, Tensor)
+        assert functions.allclose(res, ref_tensor), f"{res.data}"

@@ -121,7 +121,7 @@ def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = 
 
 @registry_numpy_types(functions.count_nonzero)
 def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
-    return np.count_nonzero(a, axis=axis)
+    return np.array(np.count_nonzero(a, axis=axis))
 
 
 @registry_numpy_types(functions.isempty)

@@ -432,10 +432,10 @@ def mean_per_channel(x: Tensor, axis: int) -> Tensor:
     :return: Reduced Tensor.
     """
     if len(x.shape) < 3:
-        return mean(x.data, axis=0)
+        return Tensor(mean(x.data, axis=0))
     x = moveaxis(x.data, axis, 1)
     t = x.reshape([x.shape[0], x.shape[1], -1])
-    return mean(t, axis=(0, 2))
+    return Tensor(mean(t, axis=(0, 2)))
 
 
 __all__ = [
