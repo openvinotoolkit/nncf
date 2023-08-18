@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -69,19 +70,18 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_input_data(
-        shape: Tuple[int], data: List[np.ndarray], input_name: str, channel_axis: int
+        shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int
     ) -> Dict[str, np.ndarray]:
-        blob = np.zeros(shape)
+        blob = np.zeros(shape, dtype=data[0].data.dtype)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
-            blob[index] = data[j]
-        blob = blob.astype(data[0].dtype)
+            blob[index] = data[j].data
         input_data = {input_name: blob}
         return input_data
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
-        return get_bias_value(node, nncf_graph, model)
+        return Tensor(get_bias_value(node, nncf_graph, model))
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
@@ -99,26 +99,11 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> OVNNCFTensor:
-        return OVNNCFTensor(raw_data[output_name])
+        return Tensor(raw_data[output_name])
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node, nncf_graph)
-
-    @staticmethod
-    def get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
-        bias_shift_magnitude = np.inf
-        if np.count_nonzero(current_bias_value == 0) == 0:
-            bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
-        return bias_shift_magnitude
-
-    @staticmethod
-    def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
-        return np.array(data)
-
-    @staticmethod
-    def reshape_tensor(data: np.ndarray, new_shape: List[int]) -> np.ndarray:
-        return data.reshape(new_shape)
 
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:

@@ -179,37 +179,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_shift_magnitude(current_bias_value: TTensor, updated_bias_value: TTensor) -> float:
-        """
-        Calculates bias shift magnitude based on the current and updated values.
-
-        :param current_bias_value: The original bias value.
-        :param updated_bias_value: The updated bias value.
-        :return: Magnitude between original and updated bias values.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def post_process_output_data(data: List[TTensor]) -> TTensor:
-        """
-        Convert data to backend specific type.
-
-        :param data: List of data.
-        :return: Converted data.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def reshape_tensor(data: TTensor, new_shape: List[int]) -> TTensor:
-        """
-        Reshape tensor.
-
-        :param data: Tensor.
-        :param new_shape: New shape.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
         """
         Return name of nodes to collect statistics.

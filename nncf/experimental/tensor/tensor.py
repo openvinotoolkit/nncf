@@ -35,6 +35,10 @@ class Tensor:
         return list(self.data.shape)
 
     @property
+    def ndim(self) -> int:
+        return self.data.ndim
+
+    @property
     def device(self) -> TensorDeviceType:
         return _call_function("device", self)
 

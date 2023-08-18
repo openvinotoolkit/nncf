@@ -20,6 +20,7 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
+from nncf.experimental.tensor import Tensor
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
@@ -80,18 +81,16 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return None, None
 
     @staticmethod
-    def create_input_data(
-        shape: Tuple[int], data: List[torch.Tensor], input_name: str, channel_axis: int
-    ) -> torch.Tensor:
-        blob = torch.zeros(shape, dtype=data[0].dtype)
+    def create_input_data(shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int) -> torch.Tensor:
+        blob = torch.zeros(shape, dtype=data[0].data.dtype, device=data[0].data.device)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
-            blob[index] = data[j]
+            blob[index] = data[j].data
         return blob
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> np.ndarray:
-        return get_fused_bias_value(node, model)
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> Tensor:
+        return Tensor(get_fused_bias_value(node, model))
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
@@ -99,7 +98,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> PTNNCFTensor:
-        return PTNNCFTensor(raw_data)
+        return Tensor(raw_data)
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -108,21 +107,6 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_fused_bias(node, nncf_graph)
-
-    @staticmethod
-    def get_bias_shift_magnitude(current_bias_value: torch.Tensor, updated_bias_value: torch.Tensor) -> float:
-        bias_shift_magnitude = torch.inf
-        if torch.count_nonzero(current_bias_value == 0) == 0:
-            bias_shift_magnitude = torch.max(torch.abs((updated_bias_value - current_bias_value) / current_bias_value))
-        return bias_shift_magnitude
-
-    @staticmethod
-    def post_process_output_data(data: List[torch.Tensor]) -> torch.Tensor:
-        return torch.Tensor(data)
-
-    @staticmethod
-    def reshape_tensor(data: torch.Tensor, new_shape: List[int]) -> torch.Tensor:
-        return data.reshape(new_shape)
 
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:

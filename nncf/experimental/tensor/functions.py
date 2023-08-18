@@ -362,7 +362,7 @@ def stack(x: List[TTensor], axis: int = 0) -> Tensor:
     if isinstance(x, List):
         unwrapped_x = [i.data for i in x]
         # singledispatch cannot dispatch function by element in a list
-        res = stack.registry[type(unwrapped_x[0])](unwrapped_x, axis=axis)
+        res = stack.dispatch(type(unwrapped_x[0]))(unwrapped_x, axis=axis)
         return Tensor(res)
     raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
 
@@ -423,6 +423,33 @@ def round(a: Tensor, decimals=0) -> Tensor:
     return Tensor(round(a.data, decimals))
 
 
+@functools.singledispatch
+@_tensor_guard
+def ndim(a: Tensor) -> int:
+    """
+    Returns the number of dimensions of tensor.
+
+    :param a: Input data.
+    :return: Number of dimensions.
+    """
+    return Tensor(ndim(a.data))
+
+
+def mean_per_channel(x: Tensor, axis: int) -> Tensor:
+    """
+    Computes the mean of elements across given channel dimension of Tensor.
+
+    :param x: Tensor to reduce.
+    :param axis: The channel dimensions to reduce.
+    :return: Reduced Tensor.
+    """
+    if len(x.shape) < 3:
+        return mean(x.data, axis=0)
+    x = moveaxis(x.data, axis, 1)
+    t = x.reshape(x.shape[0], x.shape[1], -1)
+    return mean(t, axis=(0, 2))
+
+
 __all__ = [
     "abs",
     "all",
@@ -439,6 +466,7 @@ __all__ = [
     "max",
     "maximum",
     "mean",
+    "mean_per_channel",
     "min",
     "minimum",
     "minimum",
