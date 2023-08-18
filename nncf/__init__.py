@@ -28,30 +28,15 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope
 from nncf.version import __version__
 
-_LOADED_FRAMEWORKS = {"torch": True, "tensorflow": True, "onnx": True, "openvino": True}  # fmt: off
 
-try:
-    import torch
-except ImportError:
-    _LOADED_FRAMEWORKS["torch"] = False
-
-try:
-    import tensorflow as tf
-except ImportError:
-    _LOADED_FRAMEWORKS["tensorflow"] = False
-
-try:
-    import onnx
-except ImportError:
-    _LOADED_FRAMEWORKS["onnx"] = False
-
-try:
-    import openvino.runtime as ov_runtime
-except ImportError:
-    _LOADED_FRAMEWORKS["openvino"] = False
+_SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
 
 
-if not any(_LOADED_FRAMEWORKS.values()):
+from importlib.util import find_spec as _find_spec  # pylint:disable=wrong-import-position
+
+_AVAILABLE_FRAMEWORKS = {name: _find_spec(name) is not None for name in _SUPPORTED_FRAMEWORKS}
+
+if not any(_AVAILABLE_FRAMEWORKS.values()):
     nncf_logger.error(
         "Neither PyTorch, TensorFlow, ONNX or OpenVINO Python packages have been found in your Python "
         "environment.\n"
@@ -61,5 +46,5 @@ if not any(_LOADED_FRAMEWORKS.values()):
 else:
     nncf_logger.info(
         f"NNCF initialized successfully. Supported frameworks detected: "
-        f"{', '.join([name for name, loaded in _LOADED_FRAMEWORKS.items() if loaded])}"
+        f"{', '.join([name for name, loaded in _AVAILABLE_FRAMEWORKS.items() if loaded])}"
     )
