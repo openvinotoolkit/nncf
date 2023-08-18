@@ -28,7 +28,6 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope
 from nncf.version import __version__
 
-
 _SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
 
 
