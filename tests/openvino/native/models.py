@@ -211,9 +211,9 @@ class WeightsModel(OVReferenceModel):
             conv, kernel_2, output_shape, strides, pads, pads, dilations, name="Conv_backprop"
         )
 
-        weights_1 = self._rng.random((1, 4)).astype(np.float32)
+        weights_1 = opset.constant(self._rng.random((1, 4)), dtype=np.float32, name="weights_1")
         matmul_1 = opset.matmul(conv_tr, weights_1, transpose_a=False, transpose_b=False, name="MatMul_1")
-        weights_0 = self._rng.random((1, 1)).astype(np.float32)
+        weights_0 = opset.constant(self._rng.random((1, 1)), dtype=np.float32, name="weights_0")
         matmul_0 = opset.matmul(weights_0, matmul_1, transpose_a=False, transpose_b=False, name="MatMul_0")
         matmul = opset.matmul(matmul_0, matmul_1, transpose_a=False, transpose_b=True, name="MatMul")
         matmul_const = opset.matmul(weights_1, weights_0, transpose_a=True, transpose_b=False, name="MatMul_const")
@@ -550,21 +550,21 @@ class IntegerModel(OVReferenceModel):
         gather_1 = opset.gather(convert_1, 2, axis=0, batch_dims=0)
         gather_1.set_friendly_name("Gather_1")
 
-        gather_2_data = self._rng.random((369, 160)).astype(np.float32)
+        gather_2_data = opset.constant(self._rng.random((369, 160)), dtype=np.float32, name="gather_2_data")
         gather_2 = opset.gather(gather_2_data, gather_1, axis=0, batch_dims=0)
         gather_2.set_friendly_name("Gather_2")
 
         gather_3 = opset.gather(gather_2, 2, axis=0, batch_dims=0)
         gather_3.set_friendly_name("Gather_3")
 
-        matmul_1_data = self._rng.random((160, 160)).astype(np.float32)
+        matmul_1_data = opset.constant(self._rng.random((160, 160)), dtype=np.float32, name="matmul_1_data")
         matmul_1 = opset.matmul(gather_3, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_1")
 
         gather_4 = opset.gather(input_1, 0, axis=2, batch_dims=0)
         gather_4.set_friendly_name("Gather_4")
 
-        matmul_1_data = self._rng.random((160, 192)).astype(np.float32)
-        matmul_2 = opset.matmul(gather_4, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_2")
+        matmul_2_data = opset.constant(self._rng.random((160, 192)), dtype=np.float32, name="matmul_2_data")
+        matmul_2 = opset.matmul(gather_4, matmul_2_data, transpose_a=False, transpose_b=True, name="MatMul_2")
         add_1 = opset.add(matmul_1, matmul_2, name="Add_1")
 
         result = opset.result(add_1, name="Result")
