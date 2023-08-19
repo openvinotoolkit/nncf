@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, TypeVar
 
 from nncf import Dataset
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -87,6 +88,9 @@ class PostTrainingQuantization(Algorithm):
         super().__init__()
         self.algorithms = []
         self.first_stage_algorithms: List[self.FirstStageAlgorithm] = []
+
+        if target_device is TargetDevice.VPU:
+            warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()

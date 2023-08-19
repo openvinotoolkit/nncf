@@ -15,6 +15,7 @@ import torch
 
 import nncf
 from nncf import NNCFConfig
+from nncf.torch.initialization import PTInitializingDataLoader
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -52,11 +53,11 @@ def get_config_for_logarithm_scale(logarithm_scale: bool, quantization_type: str
 
     data_loader = torch.utils.data.DataLoader(RandDatasetMock(), batch_size=1, shuffle=False, drop_last=True)
 
-    class SquadInitializingDataloader(nncf.torch.initialization.PTInitializingDataLoader):
-        def get_inputs(self, batch):
-            return batch, {}
+    class SquadInitializingDataloader(PTInitializingDataLoader):
+        def get_inputs(self, dataloader_output):
+            return dataloader_output, {}
 
-        def get_target(self, batch):
+        def get_target(self, dataloader_output):
             return None
 
     initializing_data_loader = SquadInitializingDataloader(data_loader)
