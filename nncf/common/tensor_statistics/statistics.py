@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import Counter
-from typing import TypeVar, List
+from typing import TypeVar, List, Dict
 
 from nncf.common.tensor import NNCFTensor
 
@@ -37,7 +37,7 @@ class MinMaxTensorStatistic(TensorStatistic):
     MIN_STAT = "min_values"
     MAX_STAT = "max_values"
 
-    def __init__(self, min_values, max_values):
+    def __init__(self, min_values: NNCFTensor, max_values: NNCFTensor):
         self.min_values = min_values
         self.max_values = max_values
 
@@ -66,7 +66,7 @@ class MeanTensorStatistic(TensorStatistic):
 
 
 class MedianMADTensorStatistic(TensorStatistic):
-    def __init__(self, median_values, mad_values):
+    def __init__(self, median_values: NNCFTensor, mad_values: NNCFTensor):
         self.median_values = median_values
         self.mad_values = mad_values
 
@@ -77,7 +77,7 @@ class MedianMADTensorStatistic(TensorStatistic):
 
 
 class PercentileTensorStatistic(TensorStatistic):
-    def __init__(self, percentile_vs_values_dict):
+    def __init__(self, percentile_vs_values_dict: Dict[float, NNCFTensor]):
         self.percentile_vs_values_dict = percentile_vs_values_dict
 
     def __eq__(self, other: "PercentileTensorStatistic", rtol=1e-9) -> bool:
@@ -96,7 +96,7 @@ class RawTensorStatistic(TensorStatistic):
     Base class for the raw statistics, without any aggregation.
     """
 
-    def __init__(self, values):
+    def __init__(self, values: NNCFTensor):
         """
         :param values: Collected raw values.
         """

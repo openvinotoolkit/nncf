@@ -23,8 +23,10 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
@@ -111,6 +113,7 @@ class ChannelAlignment(Algorithm):
             )
             assert len(tensor_collectors) == 1
             stat = tensor_collectors[0].get_statistics()
+            assert isinstance(stat, MinMaxTensorStatistic)
             if stat.min_values is None or stat.max_values is None:
                 continue
 
@@ -160,12 +163,12 @@ class ChannelAlignment(Algorithm):
 
     @staticmethod
     def _align_means(
-        bias_in_value: np.ndarray,
-        bias_out_value: np.ndarray,
-        conv_out_value: np.ndarray,
-        amean: np.ndarray,
+        bias_in_value: NNCFTensor,
+        bias_out_value: NNCFTensor,
+        conv_out_value: NNCFTensor,
+        amean: NNCFTensor,
         conv_out_descr: LayoutDescriptor,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[NNCFTensor, NNCFTensor]:
         """
         Function which calculates new add_in_value and add_out_value
         in ChannelAlignment pattern, so output activations of the second convolution bias
@@ -176,7 +179,8 @@ class ChannelAlignment(Algorithm):
         :param amean: Mean value to shift first and second convolutions biases.
         :param conv_out_descr: The second convolution weights layout descriptor.
         """
-        updated_add_in_value = bias_in_value - amean.reshape(bias_in_value.shape)
+        backend = bias_in_value.backend
+        updated_add_in_value = bias_in_value - amean.reshape(*bias_in_value.shape)
 
         weight_dims = conv_out_value.ndim
         updated_conv_out_value = conv_out_value
@@ -184,19 +188,19 @@ class ChannelAlignment(Algorithm):
             axes = list(range(weight_dims))
             axes.remove(conv_out_descr.conv_weight_in_channels_dim)
             axes.remove(conv_out_descr.conv_weight_out_channels_dim)
-            updated_conv_out_value = np.sum(conv_out_value, axis=tuple(axes))
+            updated_conv_out_value = backend.sum(conv_out_value, axes=axes)
 
         out_channel_dim, in_channel_dim = 0, 1
         if conv_out_descr.conv_weight_out_channels_dim > conv_out_descr.conv_weight_in_channels_dim:
             out_channel_dim, in_channel_dim = in_channel_dim, out_channel_dim
 
-        updated_conv_out_value = np.transpose(
+        updated_conv_out_value = backend.transpose(
             updated_conv_out_value,
-            (out_channel_dim, in_channel_dim),
+            [out_channel_dim, in_channel_dim],
         )
         shift = updated_conv_out_value.dot(amean.reshape(updated_conv_out_value.shape[1]))
 
-        updated_add_out_value = bias_out_value + shift.reshape(bias_out_value.shape)
+        updated_add_out_value = bias_out_value + shift.reshape(*bias_out_value.shape)
         return updated_add_in_value, updated_add_out_value
 
     @staticmethod

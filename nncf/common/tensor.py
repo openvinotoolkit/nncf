@@ -36,18 +36,20 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         # Assuming every backend implements this basic semantic
         return self._tensor == other.tensor
 
-    def __add__(self, other: 'NNCFTensor') -> 'NNCFTensor':
+    def __add__(self, other: Any) -> 'NNCFTensor':
         return self._tensor + other.tensor
 
-    def __sub__(self, other: 'NNCFTensor') -> 'NNCFTensor':
+    def __sub__(self, other: Any) -> 'NNCFTensor':
         return self._tensor - other.tensor
 
-    def __len__(self) -> int:
-        return len(self._tensor)
+    def __mul__(self, other: Any) -> 'NNCFTensor':
+        return self._tensor * other.tensor
 
     def __truediv__(self, other: Any) -> 'NNCFTensor':
         return self._tensor / other
 
+    def __len__(self) -> int:
+        return len(self._tensor)
     @property
     def tensor(self):
         return self._tensor
@@ -85,6 +87,9 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
 
     @abstractmethod
     def __iter__(self):
+        pass
+
+    def dot(self, other: "NNCFTensor") -> "NNCFTensor":
         pass
 
 
@@ -135,4 +140,14 @@ class NNCFTensorBackend(abc.ABC):
     @staticmethod
     @abstractmethod
     def expand_dims(tensor: NNCFTensor, axes: List[int]) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def sum(tensor: NNCFTensor, axes: List[int]) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def transpose(tensor: NNCFTensor, axes: List[int]) -> NNCFTensor:
         pass
