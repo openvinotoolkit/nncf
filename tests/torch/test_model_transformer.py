@@ -489,7 +489,7 @@ def test_bias_correction_transformations():
 def test_rebuild_graph_after_insert_transformation():
     model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
 
-    graph = model.get_graph()
+    graph = model.nncf.get_graph()
 
     command = PTInsertionCommand(
         PTTargetPoint(
@@ -503,5 +503,5 @@ def test_rebuild_graph_after_insert_transformation():
 
     model_transformer = PTModelTransformer(model)
     transformed_model = model_transformer.transform(transformation_layout=transformation_layout)
-    new_graph = transformed_model.get_graph()
+    new_graph = transformed_model.nncf.get_graph()
     assert len(new_graph.get_all_nodes()) == len(graph.get_all_nodes()) + 1

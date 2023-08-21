@@ -53,5 +53,5 @@ DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
     ],
     QuantizationTrait.QUANTIZATION_AGNOSTIC: QUANTIZE_AGNOSTIC_OPERATIONS,
     QuantizationTrait.CONCAT: [ov_metatypes.OVConcatMetatype],
-    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [],
+    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [ov_metatypes.OVEmbeddingMetatype],
 }

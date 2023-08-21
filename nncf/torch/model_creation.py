@@ -18,6 +18,7 @@ from torch.nn import Module
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import set_debug_log_dir
@@ -104,6 +105,9 @@ def create_compressed_model(
             "re-running cells involving `nncf.torch.create_compressed_model` the original model object "
             "is also re-created (via constructor call)."
         )
+
+    if config.get("target_device") == "VPU":
+        warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
     set_debug_log_dir(config.get("log_dir", "."))
 

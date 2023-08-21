@@ -58,7 +58,7 @@ class Algorithm(ABC):
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
 
-        :param model: Model for statististics collection.
+        :param model: Model for statistics collection.
         :param graph: Model graph.
-        :retrun: Statistic points, for which StatisticsCollector should collect statistics.
+        :return: Statistic points, for which StatisticsCollector should collect statistics.
         """

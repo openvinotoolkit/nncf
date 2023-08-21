@@ -18,10 +18,18 @@ coverage:
         only_pulls: true
         paths:
           - "nncf"
+    patch:
+      default:
+        branches:
+          - develop
+        informational: true
+        only_pulls: true
+        paths:
+          - "nncf/onnx"  # extend this once we collect coverage reports for more than just onnx part of precommit
+
 comment:
   layout: "diff, flags, files"
-  require_changes: false  # remove me
-  # require_changes: true
+  require_changes: false
 
   require_head: false
   require_base: false
