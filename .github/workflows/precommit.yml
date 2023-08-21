@@ -21,6 +21,8 @@ jobs:
         run: make install-common-test
       - name: Run common precommit test scope
         run: make test-common
+        env:
+          NNCF_COVERAGE: 1
       - name: Upload coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -44,6 +46,8 @@ jobs:
         run: make install-onnx-test
       - name: Run ONNX precommit test scope
         run: make test-onnx
+        env:
+          NNCF_COVERAGE: 1
       - name: Upload coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
