@@ -59,12 +59,13 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> TransformationCommand:
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 
         :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
+        :param nncf_graph: NNCFGraph for the model in question
         :return: Backend-specific command to update bias value.
         """
 
@@ -146,7 +147,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> NNCFTensor:
         """
         Returns bias value in the NumPy format of provided node.
 

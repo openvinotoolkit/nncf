@@ -14,21 +14,18 @@ import numpy as np
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
+from nncf.onnx.tensor import ONNXNNCFTensor
 
 
 class ONNXMinMaxTensorStatistic(MinMaxTensorStatistic):
     @staticmethod
-    def tensor_eq(tensor1: np.ndarray, tensor2: np.ndarray, rtol=1e-6) -> bool:
-        return bool(np.allclose(tensor1, tensor2, rtol=rtol))
+    def tensor_eq(tensor1: ONNXNNCFTensor, tensor2: ONNXNNCFTensor, rtol=1e-6) -> bool:
+        return super().tensor_eq(tensor1, tensor2, rtol=rtol)
 
 
 class ONNXMeanTensorStatistic(MeanTensorStatistic):
-    @staticmethod
-    def tensor_eq(tensor: np.ndarray, rtol=1e-6) -> bool:
-        return bool(np.all(tensor, rtol=rtol))
+    pass
 
 
 class ONNXRawTensorStatistic(RawTensorStatistic):
-    @staticmethod
-    def tensor_eq(tensor: np.ndarray, rtol=1e-6) -> bool:
-        return bool(np.all(tensor, rtol=rtol))
+    pass

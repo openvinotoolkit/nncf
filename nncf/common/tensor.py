@@ -10,7 +10,7 @@
 # limitations under the License.
 import abc
 from abc import abstractmethod
-from typing import Generic, List, Tuple, Type, TypeVar, Union
+from typing import Generic, List, Tuple, Type, TypeVar, Union, Any
 
 import numpy as np
 
@@ -32,13 +32,30 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def __init__(self, tensor: TensorType):
         self._tensor: TensorType = tensor
 
-    def __eq__(self, other: "NNCFTensor") -> bool:
+    def __eq__(self, other: Any) -> Union[bool, "NNCFTensor"]:
         # Assuming every backend implements this basic semantic
         return self._tensor == other.tensor
+
+    def __add__(self, other: 'NNCFTensor') -> 'NNCFTensor':
+        return self._tensor + other.tensor
+
+    def __sub__(self, other: 'NNCFTensor') -> 'NNCFTensor':
+        return self._tensor - other.tensor
+
+    def __len__(self) -> int:
+        return len(self._tensor)
+
+    def __truediv__(self, other: Any) -> 'NNCFTensor':
+        return self._tensor / other
 
     @property
     def tensor(self):
         return self._tensor
+
+    @property
+    @abstractmethod
+    def ndim(self) -> int:
+        pass
 
     @property
     @abstractmethod
@@ -66,8 +83,14 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def to_numpy(self) -> np.ndarray:
         pass
 
+    @abstractmethod
+    def __iter__(self):
+        pass
+
 
 class NNCFTensorBackend(abc.ABC):
+    inf = None  # TODO(vshampor): IMPLEMENT ME
+
     @staticmethod
     @abstractmethod
     def moveaxis(x: NNCFTensor, src: int, dst: int) -> NNCFTensor:
@@ -81,4 +104,35 @@ class NNCFTensorBackend(abc.ABC):
     @staticmethod
     @abstractmethod
     def mean_of_list(tensor_list: List[NNCFTensor], axis: int) -> NNCFTensor:
+        pass
+
+
+    @staticmethod
+    @abstractmethod
+    def isclose(tensor1: NNCFTensor, tensor2: NNCFTensor, rtol=1e-05, atol=1e-08) -> bool:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def stack(tensor_list: List[NNCFTensor]) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def count_nonzero(mask: NNCFTensor) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def abs(tensor: NNCFTensor) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def max(tensor1: NNCFTensor, tensor2: NNCFTensor) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def expand_dims(tensor: NNCFTensor, axes: List[int]) -> NNCFTensor:
         pass

@@ -12,7 +12,9 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import Counter
-from typing import TypeVar
+from typing import TypeVar, List
+
+from nncf.common.tensor import NNCFTensor
 
 TensorType = TypeVar("TensorType")
 
@@ -22,8 +24,9 @@ class TensorStatistic(ABC):
 
     @staticmethod
     @abstractmethod
-    def tensor_eq(tensor1: TensorType, tensor2: TensorType, rtol=1e-6) -> bool:
-        pass
+    def tensor_eq(tensor1: NNCFTensor, tensor2: NNCFTensor, rtol=1e-6) -> bool:
+        backend = tensor1.backend
+        return backend.isclose(tensor1, tensor2, rtol=rtol)
 
     @abstractmethod
     def __eq__(self, other):
@@ -50,7 +53,7 @@ class MeanTensorStatistic(TensorStatistic):
     Base class for the statistics that collects as mean per-axis
     """
 
-    def __init__(self, mean_values, shape):
+    def __init__(self, mean_values: NNCFTensor, shape: List[int]):
         """
         :param mean_values: Collected mean per-axis values.
         :param shape: The shape of the collected statistics.
@@ -59,7 +62,7 @@ class MeanTensorStatistic(TensorStatistic):
         self.shape = shape
 
     def __eq__(self, other: "MeanTensorStatistic") -> bool:
-        return self.tensor_eq(self.mean_values, other.mean_values) and self.tensor_eq(self.shape, other.shape)
+        return self.mean_values == other.mean_values and self.shape == other.shape
 
 
 class MedianMADTensorStatistic(TensorStatistic):

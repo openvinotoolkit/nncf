@@ -15,6 +15,7 @@ import numpy as np
 import onnxruntime as rt
 
 from nncf.common.engine import Engine
+from nncf.onnx.tensor import ONNXNNCFTensor
 
 
 class ONNXEngine(Engine):
@@ -31,7 +32,7 @@ class ONNXEngine(Engine):
         for inp in self.sess.get_inputs():
             self.input_names.add(inp.name)
 
-    def infer(self, input_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def infer(self, input_data: Dict[str, np.ndarray]) -> Dict[str, ONNXNNCFTensor]:
         """
         Runs model on the provided input via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.
@@ -41,4 +42,4 @@ class ONNXEngine(Engine):
         output_tensors = self.sess.run([], {k: v for k, v in input_data.items() if k in self.input_names})
         model_outputs = self.sess.get_outputs()
 
-        return {output.name: tensor for tensor, output in zip(output_tensors, model_outputs)}
+        return {output.name: ONNXNNCFTensor(tensor) for tensor, output in zip(output_tensors, model_outputs)}

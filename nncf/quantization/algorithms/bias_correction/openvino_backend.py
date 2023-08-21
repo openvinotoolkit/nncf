@@ -96,8 +96,8 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return activation_ports[0]
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> np.ndarray:
-        return get_bias_value(node, nncf_graph, model)
+    def get_bias_value(node: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> OVNNCFTensor:
+        return OVNNCFTensor(get_bias_value(node, nncf_graph, model))
 
     @staticmethod
     def get_input_name(model: ov.Model, node_name: str) -> str:

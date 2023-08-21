@@ -15,6 +15,8 @@ import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.engine import Engine
+from nncf.common.tensor import NNCFTensor
+from nncf.openvino.tensor import OVNNCFTensor
 from nncf.parameters import TargetDevice
 
 
@@ -54,7 +56,7 @@ class OVCompiledModelEngine(Engine):
 
     def infer(
         self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
-    ) -> Dict[str, np.ndarray]:
+    ) -> Dict[str, OVNNCFTensor]:
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.
@@ -68,7 +70,7 @@ class OVCompiledModelEngine(Engine):
         output_data = {}
         for tensor, value in model_outputs.items():
             for tensor_name in tensor.get_names():
-                output_data[tensor_name] = value
+                output_data[tensor_name] = OVNNCFTensor(value)
         return output_data
 
 
@@ -91,7 +93,7 @@ class OVNativeEngine(Engine):
 
     def infer(
         self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
-    ) -> Dict[str, np.ndarray]:
+    ) -> Dict[str, OVNNCFTensor]:
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.

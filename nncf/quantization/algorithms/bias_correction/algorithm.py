@@ -27,8 +27,10 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic, RawTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
@@ -99,7 +101,7 @@ class BiasCorrection(Algorithm):
         self.nncf_graph = None
         self._backend_entity: BiasCorrectionAlgoBackend = None
         self._collected_stat_inputs_map = {}
-        self._fp_inputs = defaultdict(list)
+        self._fp_inputs: Dict[Tuple[str, int], List[NNCFTensor]] = defaultdict(list)
         self._algorithm_key = f"BC_{hash(self)}"
 
         if self.apply_for_all_nodes:
@@ -177,12 +179,13 @@ class BiasCorrection(Algorithm):
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
 
             current_bias = self._backend_entity.get_bias_value(node, model_copy, nncf_graph)
+            backend = current_bias.backend
 
             channel_axis = node.metatype.output_channel_axis
             if current_bias.ndim > 1:
                 channel_axis = range(current_bias.ndim)[channel_axis]
                 axes = [i for i in range(current_bias.ndim) if i != channel_axis]
-                bias_shift = np.expand_dims(bias_shift, axes)
+                bias_shift = backend.expand_dims(bias_shift, axes)
 
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
@@ -190,7 +193,7 @@ class BiasCorrection(Algorithm):
             if magnitude < self.threshold:
                 nncf_logger.debug(f"{node_name} bias would be changed. Magnitude: {magnitude}")
                 bias_correction_command = self._backend_entity.create_bias_correction_command(
-                    node, updated_bias, nncf_graph
+                    node, updated_bias.to_numpy(), nncf_graph
                 )
                 model_copy_subgraph = self._correct_bias(model_copy_subgraph, bias_correction_command)
                 model_copy = self._correct_bias(model_copy, bias_correction_command)
@@ -313,7 +316,7 @@ class BiasCorrection(Algorithm):
 
     def _create_feed_dicts(
         self, model: TModel, subgraph_data: Dict, statistic_points: StatisticPointsContainer
-    ) -> List[Dict]:
+    ) -> List[Dict[str, NNCFTensor]]:
         """
         Creates the list of the dictionaries that contains the input data for the model execution.
 
@@ -346,7 +349,7 @@ class BiasCorrection(Algorithm):
 
     def _compute_bias_shift(
         self, node: NNCFNode, model: TModel, feed_dicts: List, statistic_points: StatisticPointsContainer
-    ) -> np.ndarray:
+    ) -> NNCFTensor:
         """
         Computes bias shift that will be used for the further bias correction.
 
@@ -367,7 +370,7 @@ class BiasCorrection(Algorithm):
             q_outputs.append(self._mean_per_channel(q_output, channel_axis))
         # Here we get the per-sample average, so the axis is 0.
         tensor_backend = self._backend_entity.tensor_backend()
-        q_output = tensor_backend.mean_of_list(q_outputs, axis=0).to_numpy()
+        q_output = tensor_backend.mean_of_list(q_outputs, axis=0)
         return output_fp - q_output
 
     def _mean_per_channel(self, x: NNCFTensor, channel_axis: int) -> NNCFTensor:
@@ -379,7 +382,7 @@ class BiasCorrection(Algorithm):
         return backend.mean(t, axis=(0, 2))
 
     @staticmethod
-    def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
+    def _get_bias_shift_magnitude(current_bias_value: NNCFTensor, updated_bias_value: NNCFTensor) -> float:
         """
         Calculates bias shift magnitude based on the current and updated values.
 
@@ -387,9 +390,10 @@ class BiasCorrection(Algorithm):
         :param updated_bias_value: Updated bias value.
         :return: Magnitude between original and updated bias values.
         """
-        bias_shift_magnitude = np.inf
-        if np.count_nonzero(current_bias_value == 0) == 0:
-            bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
+        backend = current_bias_value.backend
+        bias_shift_magnitude = backend.inf
+        if backend.count_nonzero(current_bias_value == 0) == 0:
+            bias_shift_magnitude = backend.max(backend.abs((updated_bias_value - current_bias_value) / current_bias_value))
         return bias_shift_magnitude
 
     def _correct_bias(self, model: TModel, bias_correction_command: TransformationCommand) -> TModel:
@@ -421,7 +425,7 @@ class BiasCorrection(Algorithm):
                 output_tensor_name = self._backend_entity.get_output_name(model, output_node_name, output_id)
                 self._fp_inputs[(output_node_name, output_id)].append(new_q_output[output_tensor_name])
 
-    def _remove_unnecessary_stats(self, position: int, subgraphs_data: Dict[str, Dict]) -> None:
+    def _remove_unnecessary_stats(self, position: int, subgraphs_data:  List[Dict[str, List[str]]]) -> None:
         """
         Removes unnecessary statistics that were collected before to reduce the memory usage.
 
@@ -443,7 +447,7 @@ class BiasCorrection(Algorithm):
                 nncf_logger.debug(f"Dropped {activation_name} output statistics.")
                 self._fp_inputs[input_id] = []
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
+    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> List[NNCFTensor]:
         """
         Makes out pre-layer needed data from the floating-point collected statistics.
 
@@ -464,18 +468,20 @@ class BiasCorrection(Algorithm):
             )
 
         input_id = (node_name, port_id)
-        if input_id in self._fp_inputs:
-            return self._fp_inputs[input_id]
+        if input_id not in self._fp_inputs:
+            input_fp = []
+            for tensor_collector in statistic_points.get_algo_statistics_for_node(
+                    node_name, input_filter_func, self._algorithm_key
+            ):
+                stat = tensor_collector.get_statistics()
+                assert isinstance(stat, RawTensorStatistic)
+                input_fp.extend(stat.values)
+            self._fp_inputs[input_id] = input_fp
 
-        input_fp = []
-        for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            node_name, input_filter_func, self._algorithm_key
-        ):
-            input_fp.extend(tensor_collector.get_statistics().values)
-        self._fp_inputs[input_id] = input_fp
-        return self._fp_inputs[input_id]
+        tensor_list = self._fp_inputs[input_id]
+        return tensor_list
 
-    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> np.ndarray:
+    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Optional[NNCFTensor]:
         """
         Makes out post-layer needed data from the floating-point collected statistics.
 
@@ -491,11 +497,17 @@ class BiasCorrection(Algorithm):
             )
 
         output_fp = []
+        statistic: NNCFTensor = None
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(tensor_collector.get_statistics().mean_values)
-        return np.array(output_fp)
+            statistic = tensor_collector.get_statistics()
+            assert isinstance(statistic, MeanTensorStatistic)
+            output_fp.extend(statistic.mean_values)
+        if statistic is not None:
+            backend = statistic.backend
+            return backend.stack(output_fp)
+        return None
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)

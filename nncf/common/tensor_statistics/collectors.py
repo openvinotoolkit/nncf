@@ -20,6 +20,7 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 
 ReductionShape = Tuple[int]
 MaskedReduceFN = Callable[[NNCFTensor, Union[int, tuple, list], NNCFTensor, bool], NNCFTensor]
@@ -60,14 +61,14 @@ class TensorStatisticCollectorBase(ABC):
     def _register_input(self, x: TensorType):
         pass
 
-    def get_statistics(self):
+    def get_statistics(self) -> TensorStatistic:
         """Returns collected statistics, if present."""
         if self._collected_samples == 0:
             raise StatisticsNotCollectedError()
         return self._get_statistics()
 
     @abstractmethod
-    def _get_statistics(self):
+    def _get_statistics(self) -> TensorStatistic:
         pass
 
     def enable(self):

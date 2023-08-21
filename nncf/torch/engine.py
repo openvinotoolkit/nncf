@@ -15,6 +15,8 @@ import torch
 from torch import nn
 
 from nncf.common.engine import Engine
+from nncf.common.tensor import NNCFTensor
+from nncf.openvino.tensor import OVNNCFTensor
 
 
 class PTEngine(Engine):
@@ -32,7 +34,7 @@ class PTEngine(Engine):
         self._model = model
         self._model.eval()
 
-    def infer(self, input_data: Union[torch.Tensor, Dict[str, torch.Tensor]]) -> Union[torch.Tensor, Dict[str, Any]]:
+    def infer(self, input_data: Union[torch.Tensor, Dict[str, torch.Tensor]]) -> Dict[str, OVNNCFTensor]:
         """
         Runs Torch model on the provided input.
 

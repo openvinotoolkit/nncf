@@ -11,7 +11,9 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any
+from typing import Any, Dict
+
+from nncf.common.tensor import NNCFTensor
 
 
 class Engine(ABC):
@@ -20,7 +22,7 @@ class Engine(ABC):
     """
 
     @abstractmethod
-    def infer(self, input_data: Any) -> Any:
+    def infer(self, input_data: Any) -> Dict[str, NNCFTensor]:
         """
         Runs model on the provided input data.
         Returns the raw model outputs.

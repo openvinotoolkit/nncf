@@ -103,8 +103,8 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return 0
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> np.ndarray:
-        return get_bias_value(node, model)
+    def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> ONNXNNCFTensor:
+        return ONNXNNCFTensor(get_bias_value(node, model))
 
     @staticmethod
     def get_input_name(model: onnx.ModelProto, node_name: str) -> str:
