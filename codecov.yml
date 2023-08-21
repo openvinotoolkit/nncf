@@ -3,10 +3,10 @@ ignore:
   - "tests"
   - "tools"
 
-#codecov:
-#  notify:
-#     after_n_builds: 4
-#     wait_for_ci: yes
+codecov:
+  notify:
+     after_n_builds: 2
+     wait_for_ci: no
 
 coverage:
   status:
@@ -25,7 +25,8 @@ coverage:
         informational: true
         only_pulls: true
         paths:
-          - "nncf/onnx"  # extend this once we collect coverage reports for more than just onnx part of precommit
+          - "nncf/onnx"
+          - "nncf/common"  # extend this once we collect coverage reports for more than just onnx and common part of precommit
 
 comment:
   layout: "diff, flags, files"
