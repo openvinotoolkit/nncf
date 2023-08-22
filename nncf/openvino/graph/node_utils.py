@@ -325,17 +325,30 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
     if node.metatype == OVMatMulMetatype:
         assert isinstance(node.layer_attributes, OVLayerAttributes)
         assert len(channel_axes) == 1
-        matmul_channel_axis = channel_axes[0]
         const_attrs = node.layer_attributes.constant_attributes[weights_port_id]
-        if (weights_port_id == 1) == const_attrs["transpose"]:
-            matmul_channel_axis -= 1
-        shape = const_attrs["shape"]
-        ndims = len(shape)
-        channel_axes = list(range(ndims - 2)) if ndims > 2 else []
-        matmul_channel_axis = max(ndims, 2) + matmul_channel_axis
-        if matmul_channel_axis < ndims:
-            channel_axes.append(matmul_channel_axis)
+        transpose = const_attrs["transpose"]
+        ndims = len(const_attrs["shape"])
+        channel_axes = get_matmul_channel_axes(weights_port_id, ndims, transpose)
 
+    return channel_axes
+
+
+def get_matmul_channel_axes(weights_port_id: int, ndims: int, transpose: bool) -> List[int]:
+    """
+    Calculate channel axes for the MatMul operation.
+
+    :param weights_port_id: Weight port id of the target node.
+    :param ndims: The number of MatMul dimensions.
+    :param transpose: Whether the transpose is applied to weights.
+    :return: List of channel axes for the MatMul operation.
+    """
+    matmul_channel_axis = OVMatMulMetatype.const_channel_axis[0]
+    if (weights_port_id == 1) == transpose:
+        matmul_channel_axis -= 1
+    matmul_channel_axis = max(ndims, 2) + matmul_channel_axis
+    channel_axes = list(range(ndims - 2))
+    if matmul_channel_axis < ndims:
+        channel_axes.append(matmul_channel_axis)
     return channel_axes
 
 

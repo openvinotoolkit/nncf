@@ -26,6 +26,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_const_value
+from nncf.openvino.graph.node_utils import get_matmul_channel_axes
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
@@ -102,11 +103,7 @@ def _get_reduction_axes(metatype: Type[OperatorMetatype], node: ov.Node, const_p
     if metatype is OVMatMulMetatype:
         transpose = node.get_attributes()[f"transpose_{'a' if const_port_id == 0 else 'b'}"]
         ndims = node.input(const_port_id).get_partial_shape().rank.get_max_length()
-        target_dim = -2 if (const_port_id == 1) and transpose else -1
-        target_dim = max(ndims, 2) + target_dim
-        channel_axes = list(range(ndims - 2))
-        if target_dim < ndims:
-            channel_axes.append(target_dim)
+        channel_axes = get_matmul_channel_axes(const_port_id, ndims, transpose)
         axes = tuple(i for i in range(ndims) if i not in channel_axes)
     else:
         axes = 1
