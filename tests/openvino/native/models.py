@@ -613,3 +613,31 @@ class ZeroRankEltwiseModel(OVReferenceModel):
         result_1 = opset.result(add, name="Result")
         model = ov.Model([result_1], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class GroupConvWithShapeModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 18, 28, 28, 10], name="Input_1")
+        kernel = self._rng.random((9, 18, 3, 3, 3)).astype(np.float16)
+        strides = [1, 1, 1]
+        pads = [0, 0, 0]
+        dilations = [1, 1, 1]
+
+        # ShapeOf subgraph for weights
+        shape_of = opset.shape_of(input_1, name="ShapeOf")
+        slice = opset.strided_slice(shape_of, [1], [2], [1], begin_mask=[0], end_mask=[0], name="Slice")
+        divide_1 = opset.divide(slice, [18], name="Divide_1")
+        divide_2 = opset.divide([9], divide_1, name="Divide_2")
+        concat = opset.concat([divide_1, divide_2, [18, 3, 3, 3]], axis=0, name="Concat")
+
+        convert = opset.convert(kernel, np.float32, name="Convert")
+        reshape = opset.reshape(convert, concat, special_zero=False, name="Reshape")
+        conv = opset.group_convolution(input_1, reshape, strides, pads, pads, dilations, name="GroupConv")
+        bias = self._rng.random((1, 9, 1, 1, 1)).astype(np.float32)
+        add = opset.add(conv, bias, name="Add")
+
+        result = opset.result(add, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_1])
+        return model
