@@ -626,8 +626,8 @@ class GroupConvWithShapeModel(OVReferenceModel):
 
         # ShapeOf subgraph for weights
         shape_of = opset.shape_of(input_1, name="ShapeOf")
-        slice = opset.strided_slice(shape_of, [1], [2], [1], begin_mask=[0], end_mask=[0], name="Slice")
-        divide_1 = opset.divide(slice, [18], name="Divide_1")
+        slice_1 = opset.strided_slice(shape_of, [1], [2], [1], begin_mask=[0], end_mask=[0], name="Slice")
+        divide_1 = opset.divide(slice_1, [18], name="Divide_1")
         divide_2 = opset.divide([9], divide_1, name="Divide_2")
         concat = opset.concat([divide_1, divide_2, [18, 3, 3, 3]], axis=0, name="Concat")
 
