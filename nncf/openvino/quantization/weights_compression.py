@@ -32,7 +32,7 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 
 
-def insert_pre_compression_operations(model: ov.Model, bits: int = 8):
+def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
     """
     Inserts in-place weights compression with FakeQuantize operation for Linear and Embedding layers.
 
@@ -90,27 +90,29 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8):
             _insert_fake_quantize(fq_params, weight_output, fq_name)
 
 
-def _get_reduction_axes(metatype: Type[OperatorMetatype], node: ov.Node, const_port_id: int) -> Union[int, Tuple[int]]:
+def _get_reduction_axes(metatype: Type[OperatorMetatype], node: ov.Node, weight_port_id: int) -> Union[int, Tuple[int]]:
     """
     Determines reduction axes by given metatype and node information.
 
     :param metatype: The metatype of the operator.
     :param node: The OpenVINO node.
-    :param const_port_id : The weight port ID.
+    :param weight_port_id: The weight port ID.
 
     :return: The reduction axes as an integer or a tuple of integers.
     """
     if metatype is OVMatMulMetatype:
-        transpose = node.get_attributes()[f"transpose_{'a' if const_port_id == 0 else 'b'}"]
-        ndims = node.input(const_port_id).get_partial_shape().rank.get_max_length()
-        channel_axes = get_matmul_channel_axes(const_port_id, ndims, transpose)
+        transpose = node.get_attributes()[f"transpose_{'a' if weight_port_id == 0 else 'b'}"]
+        ndims = node.input(weight_port_id).get_partial_shape().rank.get_max_length()
+        channel_axes = get_matmul_channel_axes(weight_port_id, ndims, transpose)
         axes = tuple(i for i in range(ndims) if i not in channel_axes)
+    elif metatype is OVEmbeddingMetatype:
+        axes = (metatype.const_channel_axis[0] + 1) % 2
     else:
-        axes = 1
+        RuntimeError("Unsupported metatype to find reduction axes.")
     return axes
 
 
-def _insert_fake_quantize(fq_params: FakeQuantizeParameters, weight_output: ov.Output, fq_name: str):
+def _insert_fake_quantize(fq_params: FakeQuantizeParameters, weight_output: ov.Output, fq_name: str) -> None:
     """
     Inserts a FakeQuantize operation into the model based on the given parameters.
 
@@ -118,6 +120,8 @@ def _insert_fake_quantize(fq_params: FakeQuantizeParameters, weight_output: ov.O
     :param weight_output: Output of OpenVINO node.
     :param fq_name : Name for the inserted FakeQuantize operation.
     """
+    target_inputs = weight_output.get_target_inputs()
+
     if weight_output.get_element_type() == ov.Type(np.float16):
         input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_fp16(fq_params)
     else:
@@ -127,8 +131,6 @@ def _insert_fake_quantize(fq_params: FakeQuantizeParameters, weight_output: ov.O
         output_high = fq_params.output_high
     levels = fq_params.levels
 
-    target_inputs = weight_output.get_target_inputs()
     fq = opset.fake_quantize(weight_output, input_low, input_high, output_low, output_high, levels, name=fq_name)
-
     for target_input in target_inputs:
         target_input.replace_source_output(fq.output(0))
