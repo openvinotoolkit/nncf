@@ -168,10 +168,6 @@ class GraphConverter:
             elif metatype in METATYPES_WITH_CONST_PORT_ID:
                 const_attrs, act_attrs = {}, {}
                 for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
-                    inp_name = inp.get_source_output().get_node().get_friendly_name()
-                    if inp_name in visited:
-                        continue
-
                     const_port_id = inp.get_index()
                     const_node = get_operation_const_op(node, const_port_id)
                     if const_node is None:
