@@ -12,7 +12,8 @@
 import numpy as np
 import pytest
 
-from nncf.openvino.graph.model_utils import create_bias_constant_value
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.node_utils import create_bias_constant_value
 from tests.common.quantization.mock_graphs import NodeWithType
 from tests.common.quantization.mock_graphs import create_mock_graph
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
@@ -23,7 +24,7 @@ from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_gr
 def get_nncf_graph_for_test(edge_shape, dtype):
     nodes = [
         NodeWithType("Input_1", None),
-        NodeWithType("Conv_1", None),
+        NodeWithType("Conv_1", OVConvolutionMetatype),
         NodeWithType("Output_1", None),
     ]
     node_edges = [
@@ -32,8 +33,8 @@ def get_nncf_graph_for_test(edge_shape, dtype):
     ]
     original_mock_graph = create_mock_graph(nodes, node_edges)
     nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
-    nncf_graph._nx_graph.out_edges[("0 /Input_1_0", "1 /Conv_1_0")][nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR] = edge_shape
-    nncf_graph._nx_graph.out_edges[("0 /Input_1_0", "1 /Conv_1_0")][nncf_graph.DTYPE_EDGE_ATTR] = dtype
+    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0")][nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR] = edge_shape
+    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0")][nncf_graph.DTYPE_EDGE_ATTR] = dtype
     return nncf_graph
 
 
@@ -43,6 +44,6 @@ def get_nncf_graph_for_test(edge_shape, dtype):
 )
 def test_create_bias_constant_value(edge_shape, dtype, ref_shape):
     graph = get_nncf_graph_for_test(edge_shape, dtype)
-    val = create_bias_constant_value(graph.get_node_by_name("/Input_1_0"), graph, 5)
+    val = create_bias_constant_value(graph.get_node_by_name("/Conv_1_0"), graph, 5)
     assert val.shape == ref_shape
     assert np.equal(val, np.full(ref_shape, 5)).all()

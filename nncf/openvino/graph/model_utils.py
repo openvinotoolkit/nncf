@@ -16,7 +16,6 @@ import openvino.runtime as ov
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
@@ -24,6 +23,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetaty
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
+from nncf.openvino.graph.node_utils import create_bias_constant_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 
@@ -52,21 +52,6 @@ def insert_null_biases(model: ov.Model, graph: NNCFGraph) -> ov.Model:
         bias_insertion_command = OVCommandCreator.create_command_to_insert_bias(node_without_bias, const_value)
         transformation_layout.register(bias_insertion_command)
     return model_transformer.transform(transformation_layout)
-
-
-def create_bias_constant_value(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:
-    """
-    Creates bias value constant array filled by given value.
-
-    :param node_without_bias: NNCFNode to add bias to.
-    :param graph: Target NNCFgraph.
-    :param value: Value to fill bias constant array.
-    :return: Bias value constant array filled by given value.
-    """
-    node_shape = graph.get_output_edges(node_without_bias)[0].tensor_shape
-    bias_shape = [1] * len(node_shape)
-    bias_shape[1] = node_shape[1]
-    return np.full(bias_shape, value)
 
 
 def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:
