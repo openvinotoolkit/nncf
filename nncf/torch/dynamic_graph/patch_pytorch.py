@@ -201,7 +201,12 @@ def torch_jit_script_wrapper(*args, **kwargs):
             frames_up = bound_args.get("_frames_up", 0)
             rcb = createResolutionCallbackFromFrame(frames_up + 1)
             kwargs["_rcb"] = rcb
-        retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
+        try:
+            retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
+        except Exception as e:
+            if apply_unpatch:
+                patch_torch_operators()
+            raise e
     else:
         # For some reason resolution callback may return patched methods, so we wrap it to avoid this
         if "_rcb" in kwargs:
@@ -215,7 +220,12 @@ def torch_jit_script_wrapper(*args, **kwargs):
 
             kwargs["_rcb"] = rcb_wrapper
 
-        retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
+        try:
+            retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
+        except Exception as e:
+            if apply_unpatch:
+                patch_torch_operators()
+            raise e
 
     if apply_unpatch:
         patch_torch_operators()
