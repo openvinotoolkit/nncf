@@ -33,7 +33,13 @@ _SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
 
 from importlib.util import find_spec as _find_spec  # pylint:disable=wrong-import-position
 
-_AVAILABLE_FRAMEWORKS = {name: _find_spec(name) is not None for name in _SUPPORTED_FRAMEWORKS}
+_AVAILABLE_FRAMEWORKS = {}
+
+for fw_name in _SUPPORTED_FRAMEWORKS:
+    spec = _find_spec(fw_name)
+    # if the framework is not present, spec may still be not None because it found our nncf.*backend_name* subpackage
+    framework_present = spec is not None and spec.origin is not None and "nncf" not in spec.origin
+    _AVAILABLE_FRAMEWORKS[fw_name] = framework_present
 
 if not any(_AVAILABLE_FRAMEWORKS.values()):
     nncf_logger.error(
