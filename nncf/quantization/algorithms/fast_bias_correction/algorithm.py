@@ -13,6 +13,9 @@ from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 from tqdm import tqdm
 
+from common.graph import NNCFNode
+from common.tensor import NNCFTensor
+from common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
@@ -129,7 +132,7 @@ class FastBiasCorrection(Algorithm):
 
         model_transformer = ModelTransformerFactory.create(model)
 
-        node_and_bias_value = [
+        node_and_bias_value: List[Tuple[NNCFNode, NNCFTensor]] = [
             (node, self._backend_entity.get_bias_value(node, graph, model))
             for node in graph.get_all_nodes()
             if self._backend_entity.is_node_with_bias(node, graph)
@@ -169,8 +172,8 @@ class FastBiasCorrection(Algorithm):
             )
 
             bias_shift = self.reshape_bias_shift(bias_shift, bias_value, channel_axis)
-            updated_bias = bias_value + bias_shift
-            magnitude = self._backend_entity.get_bias_shift_magnitude(bias_value, updated_bias)
+            updated_bias: NNCFTensor = bias_value + bias_shift
+            magnitude = self._get_bias_shift_magnitude(bias_value, updated_bias)
 
             if magnitude < self.threshold:
                 nncf_logger.debug(f"{node_name} bias would be changed")
@@ -186,7 +189,7 @@ class FastBiasCorrection(Algorithm):
 
         return transformed_model
 
-    def reshape_bias_shift(self, bias_shift: TTensor, bias_value: TTensor, channel_axis: int) -> TTensor:
+    def reshape_bias_shift(self, bias_shift: NNCFTensor, bias_value: NNCFTensor, channel_axis: int) -> NNCFTensor:
         """
         Reshape bias_shift tensor in case of dimensions of bias_value is more then 1.
 
@@ -199,8 +202,16 @@ class FastBiasCorrection(Algorithm):
         if bias_value.ndim > 1:
             new_shape = [1] * bias_value.ndim
             new_shape[channel_axis] = bias_shift.shape[0]
-            bias_shift = self._backend_entity.reshape_tensor(bias_shift, new_shape)
+            bias_shift = bias_shift.reshape(*new_shape)
         return bias_shift
+
+    @staticmethod
+    def _get_bias_shift_magnitude(current_bias_value: NNCFTensor, updated_bias_value: NNCFTensor) -> float:
+        backend = current_bias_value.backend
+        bias_shift_magnitude = backend.inf
+        if backend.count_nonzero(current_bias_value == 0) == 0:
+            bias_shift_magnitude = backend.max(backend.abs((updated_bias_value - current_bias_value) / current_bias_value))
+        return bias_shift_magnitude
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
         """
@@ -223,11 +234,12 @@ class FastBiasCorrection(Algorithm):
             node_name, input_filter_func, self._algorithm_key
         ):
             statistics = tensor_collector.get_statistics()
+            assert isinstance(statistics, MeanTensorStatistic)
             input_fp.extend(statistics.mean_values)
             input_shape.extend(statistics.shape)
         return input_fp, input_shape
 
-    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[TTensor]:
+    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[NNCFTensor]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 
@@ -246,7 +258,9 @@ class FastBiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(tensor_collector.get_statistics().mean_values)
+            statistic = tensor_collector.get_statistics()
+            assert isinstance(statistic, MeanTensorStatistic)
+            output_fp.extend(statistic.mean_values)
         return output_fp
 
     def _extract_submodel(self, model_transformer: ModelTransformer, node_name: str) -> TModel:
@@ -282,10 +296,10 @@ class FastBiasCorrection(Algorithm):
         self,
         model: TModel,
         input_blob: Union[TTensor, Dict[str, TTensor]],
-        channel_axis: Tuple[int],
-        output_fp: List[TTensor],
+        channel_axis: int,
+        output_fp: List[NNCFTensor],
         output_name: str,
-    ) -> TTensor:
+    ) -> NNCFTensor:
         """
         Calculates updated bias.
 
@@ -300,9 +314,19 @@ class FastBiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
-        q_outputs = self._backend_entity.tensor_processor.mean_per_channel(q_outputs, channel_axis).tensor
-        bias_shift = self._backend_entity.post_process_output_data(output_fp) - q_outputs
+        q_outputs = self._mean_per_channel(q_outputs, channel_axis)
+        backend = q_outputs.backend
+        bias_shift = backend.stack(output_fp) - q_outputs
         return bias_shift
+
+    @staticmethod
+    def _mean_per_channel(x: NNCFTensor, channel_axis: int) -> NNCFTensor:
+        backend = x.backend
+        if len(x.shape) < 3:
+            return x.mean(axis=0)
+        x = backend.moveaxis(x, channel_axis, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return backend.mean(t, axis=(0, 2))
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)

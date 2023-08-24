@@ -221,8 +221,8 @@ def calculate_quantizer_parameters(
         False - the full range is used.
     :return: Parameters of the FakeQuantize layer.
     """
-    min_values = np.array(statistics.min_values).astype(np.float32)
-    max_values = np.array(statistics.max_values).astype(np.float32)
+    min_values = statistics.min_values.to_numpy().astype(np.float32)
+    max_values = statistics.max_values.to_numpy().astype(np.float32)
 
     if half_range:
         input_low, input_high, levels = _calculate_scaled_parameters(

@@ -121,7 +121,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> NNCFTensor:
         """
         Returns bias value in the NumPy format of provided node.
 

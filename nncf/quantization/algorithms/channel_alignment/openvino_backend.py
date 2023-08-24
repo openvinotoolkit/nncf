@@ -18,6 +18,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
@@ -37,6 +38,7 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
+from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
@@ -49,12 +51,12 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> np.ndarray:
-        return get_bias_value(node, nncf_graph, model)
+    def get_bias_value(node: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> NNCFTensor:
+        return OVNNCFTensor(get_bias_value(node, nncf_graph, model))
 
     @staticmethod
-    def get_weight_value(node: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
-        return get_weight_value(node, model, port_id)
+    def get_weight_value(node: NNCFNode, model: ov.Model, port_id: int) -> NNCFTensor:
+        return OVNNCFTensor(get_weight_value(node, model, port_id))
 
     @staticmethod
     def get_activation_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:

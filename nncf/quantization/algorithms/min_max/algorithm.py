@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar
 
 import numpy as np
 
+from common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -59,6 +60,7 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 
 TModel = TypeVar("TModel")
 
@@ -147,6 +149,7 @@ class MinMaxQuantization(Algorithm):
         self._quantize_outputs = quantize_outputs
         self._inplace_statistics = inplace_statistics
         self._backend_params = backend_params
+        self._backend_entity: MinMaxAlgoBackend = None
 
         self._quantization_params = {
             QuantizerGroup.WEIGHTS: weights_quantization_params,
@@ -648,11 +651,12 @@ class MinMaxQuantization(Algorithm):
                     target_node_name, filter_func, self._algorithm_key
                 ):
                     statistics = tensor_collector.get_statistics()
+                    assert isinstance(statistics, MinMaxTensorStatistic)
                     if statistics.min_values is None or statistics.max_values is None:
                         raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
                     group_statistics.append(statistics)
 
-            unified_values = self._backend_entity.unify_statistics(group_statistics)
+            unified_values = self._unify_statistics(group_statistics)
             for quantization_target_point in unified_scale_group:
                 qconfig = quantization_target_points[quantization_target_point]
                 q_group = QuantizerGroup.ACTIVATIONS
@@ -683,6 +687,7 @@ class MinMaxQuantization(Algorithm):
                 half_range = quantization_target_point in quantization_points_overflow_fix
                 narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
                 statistics = tensor_collector.get_statistics()
+                assert isinstance(statistics, MinMaxTensorStatistic)
                 if statistics.min_values is None or statistics.max_values is None:
                     raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
                 parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
@@ -693,6 +698,17 @@ class MinMaxQuantization(Algorithm):
 
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
+
+    @staticmethod
+    def _unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        backend = next(iter(max_values)).backend
+        max_values = backend.max(max_values, axis=0)
+        min_values = backend.min(min_values, axis=0)
+        return MinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)

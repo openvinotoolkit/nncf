@@ -10,6 +10,7 @@
 # limitations under the License.
 import abc
 from abc import abstractmethod
+from enum import IntEnum
 from typing import Generic, List, Tuple, Type, TypeVar, Union, Any
 
 import numpy as np
@@ -17,6 +18,11 @@ import numpy as np
 TensorType = TypeVar("TensorType")
 DeviceType = TypeVar("DeviceType")
 TensorElementsType = TypeVar("TensorElementsType")
+
+
+class TensorDtype(IntEnum):
+    FLOAT32 = 0
+    INT64 = 1
 
 
 class NNCFTensor(Generic[TensorType], abc.ABC):
@@ -32,9 +38,19 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def __init__(self, tensor: TensorType):
         self._tensor: TensorType = tensor
 
-    def __eq__(self, other: Any) -> Union[bool, "NNCFTensor"]:
+    def __eq__(self, other: Any) -> "NNCFTensor":
         # Assuming every backend implements this basic semantic
-        return self._tensor == other.tensor
+        if isinstance(other, NNCFTensor):
+            return self._tensor == other.tensor
+        return self._tensor > other
+
+    def __gt__(self, other: Any) -> "NNCFTensor":
+        if isinstance(other, NNCFTensor):
+            return self._tensor > other.tensor
+        return self._tensor > other
+
+    def __invert__(self) -> "NNCFTensor":
+        return ~self._tensor
 
     def __add__(self, other: Any) -> 'NNCFTensor':
         return self._tensor + other.tensor
@@ -50,6 +66,13 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
 
     def __len__(self) -> int:
         return len(self._tensor)
+
+    def __getitem__(self, item) -> 'NNCFTensor':
+        return self._tensor[item]
+
+    def __setitem__(self, key, value):
+        self._tensor[key] = value
+
     @property
     def tensor(self):
         return self._tensor
@@ -62,7 +85,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     @property
     @abstractmethod
     def shape(self) -> List[int]:
-        return self._tensor.shape
+        pass
 
     @property
     @abstractmethod
@@ -89,8 +112,23 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def __iter__(self):
         pass
 
+    @abstractmethod
     def dot(self, other: "NNCFTensor") -> "NNCFTensor":
         pass
+
+    @abstractmethod
+    def as_float32(self) -> "NNCFTensor":
+        pass
+
+    @property
+    @abstractmethod
+    def dtype(self) -> TensorDtype:
+        pass
+
+    @abstractmethod
+    def any(self) -> bool:
+        pass
+
 
 
 class NNCFTensorBackend(abc.ABC):
@@ -134,7 +172,12 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def max(tensor1: NNCFTensor, tensor2: NNCFTensor) -> NNCFTensor:
+    def min(tensor1: Union[NNCFTensor, List[NNCFTensor]], tensor2: NNCFTensor = None, axis: int = None) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def max(tensor1: Union[NNCFTensor, List[NNCFTensor]], tensor2: NNCFTensor = None, axis: int = None) -> NNCFTensor:
         pass
 
     @staticmethod
@@ -150,4 +193,24 @@ class NNCFTensorBackend(abc.ABC):
     @staticmethod
     @abstractmethod
     def transpose(tensor: NNCFTensor, axes: List[int]) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def eps(dtype: TensorDtype) -> float:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def median(tensor: NNCFTensor) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def clip(tensor: NNCFTensor, min_val: float, max_val: float) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def ones(shape: Union[int, List[int]], dtype: TensorDtype) -> NNCFTensor:
         pass
