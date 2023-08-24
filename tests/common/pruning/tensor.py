@@ -10,11 +10,14 @@
 # limitations under the License.
 
 from typing import List, Optional, Union
+from typing import Type
 
 import numpy as np
 
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import TensorDtype
+from nncf.common.tensor_impl_np import NPNNCFTensor
 
 
 class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
@@ -50,18 +53,3 @@ class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
         chunks = len(output_shapes)
         ret_tensors = np.split(tensor.tensor, chunks)
         return [NPNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]
-
-
-class NPNNCFTensor(NNCFTensor):
-    def __init__(self, tensor: np.array, dummy_device: Optional[str] = None):
-        # In case somebody attempts to wrap
-        # tensor twice
-        if isinstance(tensor, self.__class__):
-            tensor = tensor.tensor
-
-        super().__init__(tensor)
-        self.dummy_device = dummy_device
-
-    @property
-    def device(self) -> Optional[str]:
-        return self.dummy_device

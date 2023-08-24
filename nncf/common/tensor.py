@@ -11,6 +11,7 @@
 import abc
 from abc import abstractmethod
 from enum import IntEnum
+from typing import Callable
 from typing import Generic, List, Tuple, Type, TypeVar, Union, Any
 from typing import Optional
 
@@ -42,37 +43,37 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def __eq__(self, other: Any) -> "NNCFTensor":
         # Assuming every backend implements this basic semantic
         if isinstance(other, NNCFTensor):
-            return self._tensor == other.tensor
+            return self.__class__(self._tensor == other.tensor)
         return self._tensor > other
 
     def __gt__(self, other: Any) -> "NNCFTensor":
         if isinstance(other, NNCFTensor):
-            return self._tensor > other.tensor
+            return self.__class__(self._tensor > other.tensor)
         return self._tensor > other
 
     def __pow__(self, other) -> "NNCFTensor":
-        return self._tensor ** other
+        return self.__class__(self._tensor ** other)
 
     def __invert__(self) -> "NNCFTensor":
-        return ~self._tensor
+        return self.__class__(~self._tensor)
 
     def __add__(self, other: Any) -> 'NNCFTensor':
-        return self._tensor + other.tensor
+        return self.__class__(self._tensor + other.tensor)
 
     def __sub__(self, other: Any) -> 'NNCFTensor':
-        return self._tensor - other.tensor
+        return self.__class__(self._tensor - other.tensor)
 
     def __mul__(self, other: Any) -> 'NNCFTensor':
-        return self._tensor * other.tensor
+        return self.__class__(self._tensor * other.tensor)
 
     def __truediv__(self, other: Any) -> 'NNCFTensor':
-        return self._tensor / other
+        return self.__class__(self._tensor / other)
 
     def __len__(self) -> int:
         return len(self._tensor)
 
     def __getitem__(self, item) -> 'NNCFTensor':
-        return self._tensor[item]
+        return self.__class__(self._tensor[item])
 
     def __setitem__(self, key, value):
         self._tensor[key] = value

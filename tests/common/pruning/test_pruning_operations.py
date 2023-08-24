@@ -26,8 +26,8 @@ from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
+from nncf.common.tensor_impl_np import NPNNCFTensor
 from tests.common.pruning import dummy_types
-from tests.common.pruning.tensor import NPNNCFTensor
 from tests.common.pruning.tensor import NPNNCFTensorProcessor
 
 
@@ -48,7 +48,7 @@ def test_stop_propagate_ops(pruning_op, metatype, accept_pruned_input):
 
 
 @pytest.mark.parametrize("dummy_op_class", [dummy_types.DummyIdentityMaskForward, dummy_types.DummyBatchNormPruningOp])
-def test_identity_mask_propogation_prune_ops(dummy_op_class):
+def test_identity_mask_propagation_prune_ops(dummy_op_class):
     assert dummy_op_class.accept_pruned_input(None)
     graph = NNCFGraph()
     conv_op = graph.add_nncf_node("conv_op", "conv", dummy_types.DummyConvMetatype)
