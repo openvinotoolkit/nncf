@@ -26,7 +26,7 @@ class TensorStatistic(ABC):
     @abstractmethod
     def tensor_eq(tensor1: NNCFTensor, tensor2: NNCFTensor, rtol=1e-6) -> bool:
         backend = tensor1.backend
-        return backend.isclose(tensor1, tensor2, rtol=rtol)
+        return backend.isclose_all(tensor1, tensor2, rtol=rtol)
 
     @abstractmethod
     def __eq__(self, other):

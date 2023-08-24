@@ -14,6 +14,7 @@ from functools import partial
 import numpy as np
 import pytest
 
+from nncf import TargetDevice
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -353,13 +354,13 @@ def test_concat_output_tensor_device():
         )
 
     # Set mask to last dummy node
-    ref_device = "some_test_device"
+    ref_device = TargetDevice.CPU.value
     for op in dummy_ops[:-1]:
         op = graph.get_node_by_id(op.node_id)
         op.attributes["output_mask"] = None
 
     last_op = graph.get_node_by_id(dummy_ops[-1].node_id)
-    last_op.attributes["output_mask"] = NPNNCFTensor(np.ones(10), dummy_device=ref_device)
+    last_op.attributes["output_mask"] = NPNNCFTensor(np.ones(10))
     # Propagate masks
     MaskPropagationAlgorithm(
         graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor

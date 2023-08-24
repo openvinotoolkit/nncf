@@ -13,6 +13,7 @@ from abc import abstractmethod
 from enum import IntEnum
 from typing import Callable
 from typing import Generic, List, Tuple, Type, TypeVar, Union, Any
+from typing import Iterator
 from typing import Optional
 
 import numpy as np
@@ -119,7 +120,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         pass
 
     @abstractmethod
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         pass
 
     @abstractmethod
@@ -127,7 +128,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         pass
 
     @abstractmethod
-    def as_float32(self) -> "NNCFTensor":
+    def astype(self, dtype: TensorDtype) -> "NNCFTensor":
         pass
 
     @property
@@ -164,10 +165,9 @@ class NNCFTensorBackend(abc.ABC):
     def mean_of_list(tensor_list: List[NNCFTensor], axis: int) -> NNCFTensor:
         pass
 
-
     @staticmethod
     @abstractmethod
-    def isclose(tensor1: NNCFTensor, tensor2: NNCFTensor, rtol=1e-05, atol=1e-08) -> bool:
+    def isclose_all(tensor1: NNCFTensor, tensor2: NNCFTensor, rtol=1e-05, atol=1e-08) -> bool:
         pass
 
     @staticmethod
@@ -187,12 +187,12 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def min(tensor1: Union[NNCFTensor, List[NNCFTensor]], tensor2: NNCFTensor = None, axis: int = None) -> NNCFTensor:
+    def min(tensor: NNCFTensor, axis: int = None) -> NNCFTensor:
         pass
 
     @staticmethod
     @abstractmethod
-    def max(tensor1: Union[NNCFTensor, List[NNCFTensor]], tensor2: NNCFTensor = None, axis: int = None) -> NNCFTensor:
+    def max(tensor: NNCFTensor, axis: int = None) -> NNCFTensor:
         pass
 
     @staticmethod

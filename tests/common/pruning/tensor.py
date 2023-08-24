@@ -27,11 +27,11 @@ class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
             assert tensors[0].device == tensor.device
 
         ret_tensor = np.concatenate([t.tensor for t in tensors], axis=axis)
-        return NPNNCFTensor(ret_tensor, tensors[0].device)
+        return NPNNCFTensor(ret_tensor)
 
     @classmethod
     def ones(cls, shape: Union[int, List[int]], device: Optional[str]) -> NNCFTensor:
-        return NPNNCFTensor(np.ones(shape), device)
+        return NPNNCFTensor(np.ones(shape))
 
     @classmethod
     def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
