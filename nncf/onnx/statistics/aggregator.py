@@ -22,7 +22,7 @@ from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
-from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.onnx_helper import get_node_edge_names
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.tensor import ONNXNNCFTensor
 
@@ -30,7 +30,7 @@ from nncf.onnx.tensor import ONNXNNCFTensor
 class ONNXStatisticsAggregator(StatisticsAggregator):
     def collect_statistics(self, model: onnx.ModelProto, graph: NNCFGraph) -> None:
         self.input_edges_mapping = get_input_edges_mapping(graph)
-        self._onnx_graph = ONNXGraph(model)
+        self._model = model
         self._registered_weights = set()
         super().collect_statistics(model, graph)
 
@@ -42,15 +42,13 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
                 target_point = statistic_point.target_point
                 port_id = target_point.port_id
                 if target_point.target_node_name in self.input_edges_mapping:  # Input case
-                    edge_name = get_input_edge(
-                        target_point.target_node_name, self.input_edges_mapping, self._onnx_graph
-                    )
+                    edge_name = get_input_edge(target_point.target_node_name, self.input_edges_mapping, self._model)
                     statistic_point.register_tensor(outputs[edge_name])
                 elif target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = self._onnx_graph.get_node_edge_names(node_name)["output"][port_id]
+                    edge_name = get_node_edge_names(self._model, node_name)["output"][port_id]
                     statistic_point.register_tensor(outputs[edge_name])
                 elif target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
-                    edge_name = self._onnx_graph.get_node_edge_names(node_name)["input"][port_id]
+                    edge_name = get_node_edge_names(self._model, node_name)["input"][port_id]
                     statistic_point.register_tensor(outputs[edge_name])
 
     def _get_transformation_layout_extra_outputs(
