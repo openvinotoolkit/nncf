@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import tensorflow as tf
-from packaging import version
 
 from nncf.tensorflow.tf_internals import backend
 from nncf.tensorflow.tf_internals import imagenet_utils

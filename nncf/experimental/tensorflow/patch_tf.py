@@ -17,7 +17,6 @@ import tensorflow as tf
 from tensorflow.python.eager import context
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import math_ops
-from tensorflow.python.ops import nn
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.tensorflow.context import get_current_context
