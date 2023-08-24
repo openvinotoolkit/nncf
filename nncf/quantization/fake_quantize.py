@@ -287,3 +287,28 @@ def _calculate_scaled_parameters(
     input_low *= (export_levels - 1) / (levels - 1)
 
     return input_low, input_high, export_levels
+
+
+def calculate_scale_zero_point(
+    input_low: np.ndarray, input_high: np.ndarray, level_low: int, level_high: int, narrow_range: bool
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Calculates scale and zero_point values for the quantizer.
+
+    :param input_low: The minimum limit for an input value based on collected statistics.
+    :param input_high: The maximum limit for an input value based on collected statistics.
+    :param level_low: The minimum level in the integer range to quantize.
+        The default is "0" for an unsigned range, and "-2^(bit-1)" for a signed one .
+    :param level_high: The maximum level in the integer range to quantize.
+        The default is "2^bits-1" for an unsigned range, and "2^(bit-1)-1" for a signed one.
+    :param narrow_range: True if the range of quantized values is narrowed as compared to the
+        naive case, False otherwise.
+    :return: Scale and Zero point values.
+    """
+    levels = level_high - level_low if narrow_range else level_high - level_low + 1
+    scale = np.array((input_high - input_low) / (levels - 1))
+    expected_level_low = level_low + 1 if narrow_range else level_low
+    zero_point = expected_level_low - np.round(input_low / scale)
+    zero_point = np.minimum(np.maximum(zero_point.astype(np.int32), level_low), level_high)
+
+    return scale, zero_point

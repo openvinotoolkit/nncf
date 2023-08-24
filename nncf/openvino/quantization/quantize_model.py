@@ -377,6 +377,4 @@ def compress_weights_impl(model: ov.Model) -> ov.Model:
     Implementation of the `compress_weights()` method for the OpenVINO backend.
     """
     insert_pre_compression_operations(model)
-    compress_quantize_weights_transformation(model)
-
     return model
