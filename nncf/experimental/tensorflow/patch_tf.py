@@ -198,12 +198,6 @@ class TFPatcher:
                         curr_module = getattr(curr_module, curr_name)
                     setattr(curr_module, name, tf_op_wrapper)
 
-            # TODO(andrey-churkin): Changes references from the `tensorflow.python.ops.nn`
-            # module because the Keras uses it (Only for TF versions: 2.4.x, 2.5.x). Need
-            # to remove this for new versions.
-            if getattr(nn, fn_name, None) is fn:
-                setattr(nn, fn_name, tf_op_wrapper)
-
             # TODO(andrey-churkin): This is required because `tensorflow.python.ops.math_ops` module
             # contains following import `from tensorflow.python.ops.gen_math_ops import *`
             if getattr(math_ops, fn_name, None) is fn:
