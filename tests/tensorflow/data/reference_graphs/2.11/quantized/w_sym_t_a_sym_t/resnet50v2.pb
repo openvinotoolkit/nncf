@@ -1,1 +1,1 @@
-../../../2.5/quantized/w_sym_t_a_sym_t/resnet50v2.pb
+../../../2.8/quantized/w_sym_t_a_sym_t/resnet50v2.pb

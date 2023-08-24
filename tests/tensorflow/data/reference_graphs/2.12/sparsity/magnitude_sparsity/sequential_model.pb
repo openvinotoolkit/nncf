@@ -1,1 +1,1 @@
-../../../2.5/sparsity/magnitude_sparsity/sequential_model.pb
+../../../2.11/sparsity/magnitude_sparsity/sequential_model.pb
