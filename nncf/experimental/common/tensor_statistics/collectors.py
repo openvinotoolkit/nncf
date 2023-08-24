@@ -8,12 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import abc
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
 from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Deque
 
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
@@ -108,44 +109,36 @@ class TensorReducerBase(ABC):
         return tuple(range(len(tensor.shape)))
 
 
-class TensorAggregatorBase:
-    """
-    Tensor aggregator is designed to receive (register) calculated statistics and
-    aggregate them in terms of NNCFCollectorTensorProcessor operations.
-    """
-
-    def __init__(self, tensor_processor: NNCFCollectorTensorProcessor, num_samples: Optional[int] = None):
+class Aggregator(abc.ABC):
+    def __init__(self, num_samples: Optional[int] = None):
         """
-        :param tensor_processor: Backend-specific tensor processor.
         :param num_samples: Maximum number of samples to collect. Aggregator
             skips tensor registration if tensor registration was called num_samples times before.
             Aggregator never skips registration if num_samples is None.
         """
 
-        self._tensor_processor = tensor_processor
         self._num_samples = num_samples
         self._collected_samples = 0
-        self._container = []
 
     @property
     def num_samples(self) -> int:
         return self._num_samples
 
-    def register_reduced_input(self, x: TensorType):
+    def register_reduced_input(self, x: NNCFTensor):
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return
         self._register_reduced_input_impl(x)
         self._collected_samples += 1
 
     @abstractmethod
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
+    def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
         """
         Registers incoming tensor in tensor aggregator.
 
         :param x: Tensor to register.
         """
 
-    def aggregate(self) -> Any:
+    def aggregate(self) -> Optional[NNCFTensor]:
         """
         Aggregates collected tensors and returns aggregated result.
         In case no tensors were collected returns None.
@@ -157,7 +150,7 @@ class TensorAggregatorBase:
         return None
 
     @abstractmethod
-    def _aggregate_impl(self) -> Any:
+    def _aggregate_impl(self) -> NNCFTensor:
         """
         Aggregates collected tensors and returns aggregated result.
 
@@ -166,13 +159,57 @@ class TensorAggregatorBase:
 
     def reset(self):
         self._collected_samples = 0
-        self._container = []
+        self._reset_sample_container()
+
+    @abstractmethod
+    def _reset_sample_container(self):
+        pass
 
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, self.__class__) and self._num_samples == __o.num_samples
 
     def __hash__(self) -> int:
         return hash(self.__class__.__name__)
+
+
+class TensorAggregatorBase(Aggregator, abc.ABC):
+    """
+    Tensor aggregator is designed to receive (register) calculated statistics and
+    aggregate them in terms of NNCFCollectorTensorProcessor operations.
+    """
+
+    def __init__(self, tensor_processor: NNCFCollectorTensorProcessor, num_samples: Optional[int] = None):
+        super().__init__(num_samples)
+        self._tensor_processor = tensor_processor
+
+    def aggregate(self) -> Optional[NNCFTensor]:
+        """
+        Aggregates collected tensors and returns aggregated result.
+        In case no tensors were collected returns None.
+
+        :return: Aggregated result.
+        """
+        if self._collected_samples:
+            return self._aggregate_impl()
+        return None
+
+    def __eq__(self, __o: object) -> bool:
+        return isinstance(__o, self.__class__) and self._num_samples == __o.num_samples
+
+    def __hash__(self) -> int:
+        return hash(self.__class__.__name__)
+
+
+class OnlineTensorAggregator(TensorAggregatorBase, abc.ABC):
+    def __init__(self, tensor_processor: NNCFCollectorTensorProcessor, num_samples: Optional[int] = None):
+        super().__init__(tensor_processor, num_samples)
+        self._samples = None
+
+    def _reset_sample_container(self):
+        self._samples = None
+
+
+AggregatorKey = Tuple[int, int]
 
 
 class TensorCollector:
@@ -187,7 +224,7 @@ class TensorCollector:
 
     def __init__(self, statistic_container: Optional[TensorStatistic] = None) -> None:
         self._reducers: Set[TensorReducerBase] = set()
-        self._aggregators: Dict[Tuple[int, int], TensorAggregatorBase] = {}
+        self._aggregators: Dict[AggregatorKey, TensorAggregatorBase] = {}
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int]] = {}
         self._stat_container = statistic_container
         self._enabled = True
@@ -290,7 +327,7 @@ class TensorCollector:
             if reducer_hash in reduced_inputs:
                 aggregator.register_reduced_input(reduced_inputs[reducer_hash][reducer_port_id])
 
-    def _aggregate(self) -> None:
+    def _aggregate(self) -> Dict[AggregatorKey, ]:
         result = {}
         for (
             key,
@@ -507,78 +544,96 @@ class MeanPerChReducer(TensorReducerBase):
 ##################################################Aggregators##################################################
 
 
-class NoopAggregator(TensorAggregatorBase):
+class NoopAggregator(Aggregator):
     def __init__(self, num_samples: Optional[int]):
-        super().__init__(None, num_samples)
+        super().__init__(num_samples)
 
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
-        self._container.append(x.tensor)
+    def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
+        pass
 
-    def _aggregate_impl(self):
-        return self._container
+    def _aggregate_impl(self) -> None:
+        pass
+
+    def _reset_sample_container(self):
+        pass
 
 
-class ShapeAggregator(TensorAggregatorBase):
+class ShapeAggregator(Aggregator):
     def __init__(self):
-        super().__init__(None, 1)
+        super().__init__(num_samples=1)
+        self._shape = None
 
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
-        self._container = x
+    def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
+        self._shape = x.shape
 
-    def _aggregate_impl(self):
-        return self._container.shape
+    def _aggregate_impl(self) -> List[int]:
+        return self._shape
+
+    def _reset_sample_container(self):
+        self._shape = None
 
 
-class MinAggregator(TensorAggregatorBase):
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
-        if not self._container:
-            self._container = x
+class MinAggregator(OnlineTensorAggregator):
+    def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
+        if not self._samples:
+            self._samples = x
         else:
-            self._container = self._tensor_processor.min(x, self._container)
+            self._samples = self._tensor_processor.min(x, self._samples)
 
-    def _aggregate_impl(self):
-        return self._container.tensor
+    def _aggregate_impl(self) -> NNCFTensor:
+        return self._samples
 
 
-class MaxAggregator(TensorAggregatorBase):
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
-        if not self._container:
-            self._container = x
+class MaxAggregator(OnlineTensorAggregator):
+    def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
+        if not self._samples:
+            self._samples = x
         else:
-            self._container = self._tensor_processor.max(x, self._container)
+            self._samples = self._tensor_processor.max(x, self._samples)
 
-    def _aggregate_impl(self):
-        return self._container.tensor
+    def _aggregate_impl(self) -> NNCFTensor:
+        return self._samples
 
 
 class OfflineAggregatorBase(TensorAggregatorBase, ABC):
     def __init__(
-        self, tensor_processor, use_per_sample_stats: bool = False, num_samples: Optional[int] = None, window_size=None
+        self, tensor_processor: NNCFCollectorTensorProcessor,
+            use_per_sample_stats: bool = False,
+            num_samples: Optional[int] = None,
+            window_size: int = None
     ):
         super().__init__(tensor_processor, num_samples)
         self._window_size = window_size
-        self._container = deque(maxlen=window_size)
+        self._samples: Deque[NNCFTensor] = deque(maxlen=window_size)
         self._use_per_sample_stats = use_per_sample_stats
 
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
+    def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
         if self._use_per_sample_stats:
-            self._container.extend(self._tensor_processor.unstack(x))
+            self._samples.extend(self._tensor_processor.unstack(x))
         else:
-            self._container.append(x)
+            self._samples.append(x)
 
-    def _offline_aggregation_impl(self, fn):
-        stacked_val = self._tensor_processor.stack(self._container)
-        return fn(stacked_val, axis=0, keepdims=False).tensor
+    def _aggregate_impl(self) -> NNCFTensor:
+        backend = next(iter(self._samples)).backend
+        stacked_val = backend.stack(list(self._samples))
+        return self._aggregate_stacked_samples(stacked_val)
+
+    def _reset_sample_container(self):
+        self._samples.clear()
+
+    @abstractmethod
+    def _aggregate_stacked_samples(self, stacked_samples: NNCFTensor) -> NNCFTensor:
+        pass
 
 
 class MeanAggregator(OfflineAggregatorBase):
-    def _aggregate_impl(self):
-        return self._offline_aggregation_impl(self._tensor_processor.mean)
+    def _aggregate_stacked_samples(self, stacked_samples: NNCFTensor) -> NNCFTensor:
+        return stacked_samples.mean(axis=0, keepdims=False)
 
 
 class MedianAggregator(OfflineAggregatorBase):
-    def _aggregate_impl(self):
-        return self._offline_aggregation_impl(self._tensor_processor.median)
+    def _aggregate_stacked_samples(self, stacked_samples: NNCFTensor) -> NNCFTensor:
+        return stacked_samples.median(axis=0, keepdims=False)
 
 
 class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
@@ -587,16 +642,24 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         tensor_processor,
         use_per_sample_stats: bool = False,
         num_samples: Optional[int] = None,
-        window_size=None,
+        window_size: int = None,
         quantile: float = 0.01,
     ):
         super().__init__(tensor_processor, use_per_sample_stats, num_samples, window_size)
         self._quantile = quantile
 
-    def _offline_aggregation_impl(self, fn) -> List[NNCFTensor]:
-        stacked_val = self._tensor_processor.stack(self._container)
-        result = self._tensor_processor.no_outliers_map(stacked_val, fn, axis=0, alpha=self._quantile)
-        return result.tensor
+    def _aggregate_stacked_samples(self, stacked_val: NNCFTensor) -> NNCFTensor:
+        backend = stacked_val.backend
+        alpha = self._quantile
+
+        low_values, high_values = backend.quantile(stacked_val, [alpha, 1 - alpha], 0)
+        outliers_mask = backend.logical_or(stacked_val < low_values, high_values < stacked_val)
+        return self._aggregate_stacked_samples_with_no_outliers(stacked_val, outliers_mask)
+
+    @abstractmethod
+    def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: NNCFTensor,
+                                                    outliers_mask: NNCFTensor) -> NNCFTensor:
+        pass
 
     def __eq__(self, __o: object) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile
@@ -606,13 +669,17 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
 
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
-    def _aggregate_impl(self) -> Any:
-        return self._offline_aggregation_impl(self._tensor_processor.masked_mean)
+    def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: NNCFTensor,
+                                                    outliers_mask: NNCFTensor) -> NNCFTensor:
+        backend = stacked_val.backend
+        return backend.masked_mean(stacked_val, mask=outliers_mask)
 
 
 class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
-    def _aggregate_impl(self) -> Any:
-        return self._offline_aggregation_impl(self._tensor_processor.masked_median)
+    def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: NNCFTensor,
+                                                    outliers_mask: NNCFTensor) -> NNCFTensor:
+        backend = stacked_val.backend
+        return backend.masked_median(stacked_val, mask=outliers_mask)
 
 
 AGGREGATORS_MAP = {

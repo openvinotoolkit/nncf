@@ -51,11 +51,11 @@ class DummyTensorAggregator(TensorAggregatorBase):
     def __init__(self, num_samples: Optional[int]):
         super().__init__(None, num_samples)
 
-    def _register_reduced_input_impl(self, x: TensorType):
-        return self._container.append(x)
+    def _register_reduced_input_impl(self, x: NNCFTensor):
+        return self._samples.append(x)
 
-    def _aggregate_impl(self):
-        return self._container[0]
+    def _aggregate_impl(self) -> NNCFTensor:
+        return self._samples[0]
 
 
 class DummyTensorAggregatorA(DummyTensorAggregator):
@@ -74,25 +74,25 @@ def test_aggregator_enabled_and_reset():
 
     for _ in range(3):
         collector.register_inputs(inputs)
-    assert len(aggregator._container) == 3
+    assert len(aggregator._samples) == 3
     assert aggregator._collected_samples == 3
 
     collector.disable()
 
     for _ in range(3):
         collector.register_inputs(inputs)
-    assert len(aggregator._container) == 3
+    assert len(aggregator._samples) == 3
     assert aggregator._collected_samples == 3
 
     collector.enable()
 
     for _ in range(3):
         collector.register_inputs(inputs)
-    assert len(aggregator._container) == 5
+    assert len(aggregator._samples) == 5
     assert aggregator._collected_samples == 5
 
     collector.reset()
-    assert len(aggregator._container) == 0
+    assert len(aggregator._samples) == 0
     assert aggregator._collected_samples == 0
 
 
@@ -301,14 +301,14 @@ class TemplateTestStatisticCollector:
             collector.register_inputs(input_)
 
         if any_not_empty:
-            assert len(aggregator._container) == 2
+            assert len(aggregator._samples) == 2
             assert aggregator._collected_samples == 2
             stats = collector.get_statistics()
             assert len(stats) == 1
             assert stats["A"] == self.get_nncf_tensor_cls()([100])
             return
 
-        assert len(aggregator._container) == 0
+        assert len(aggregator._samples) == 0
         assert aggregator._collected_samples == 0
         stats = collector.get_statistics()
         assert len(stats) == 1

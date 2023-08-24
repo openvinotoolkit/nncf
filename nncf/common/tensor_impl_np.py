@@ -75,8 +75,13 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
     def backend(self) -> Type[NNCFTensorBackend]:
         return NPNNCFTensorBackend
 
-    def mean(self, axis: int) -> "NPNNCFTensor":
-        return self.__class__(np.mean(self.tensor, axis))
+    def mean(self, axis: int, keepdims: bool = None) -> "NPNNCFTensor":
+        if keepdims is None:
+            keepdims = np._NoValue
+        return self.__class__(np.mean(self.tensor, axis=axis, keepdims=keepdims))
+
+    def median(self, axis: int, keepdims: bool = False) -> "NNCFTensor":
+        return self.__class__(np.median(self.tensor, axis=axis, keepdims=keepdims))
 
     @property
     def device(self):
@@ -151,8 +156,8 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.power(tensor.tensor, pwr))
 
     @staticmethod
-    def quantile(tensor: NPNNCFTensor, quantile: float) -> float:
-        return np.quantile(tensor.tensor, quantile)
+    def quantile(tensor: NPNNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None) -> Union[float, List[float]]:
+        return np.quantile(tensor.tensor, quantile, axis=axis)
 
     @staticmethod
     def mean_of_list(tensor_list: List[NPNNCFTensor], axis: int) -> NPNNCFTensor:
@@ -165,3 +170,17 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
     @staticmethod
     def moveaxis(x: "NPNNCFTensor", src: int, dst: int) -> NPNNCFTensor:
         return NPNNCFTensor(np.moveaxis(x.tensor, src, dst))
+
+    @staticmethod
+    def logical_or(tensor1: NNCFTensor, tensor2: NNCFTensor) -> NNCFTensor:
+        return NPNNCFTensor(np.logical_or(tensor1, tensor2))
+
+    @staticmethod
+    def masked_mean(tensor: NNCFTensor, mask: NNCFTensor, axis: int = None, keepdims: bool = False) -> NNCFTensor:
+        masked_x = np.ma.array(tensor.tensor, mask=mask.tensor)
+        return NPNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=False).data)
+
+    @staticmethod
+    def masked_median(tensor: NNCFTensor, mask: NNCFTensor, axis: int = None, keepdims: bool = False) -> NNCFTensor:
+        masked_x = np.ma.array(tensor.tensor, mask=mask.tensor)
+        return NPNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=False).data)

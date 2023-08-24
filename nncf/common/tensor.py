@@ -39,6 +39,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         pass
 
     def __init__(self, tensor: TensorType):
+        assert not isinstance(tensor, NNCFTensor)
         self._tensor: TensorType = tensor
 
     def __eq__(self, other: Any) -> "NNCFTensor":
@@ -46,6 +47,11 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         if isinstance(other, NNCFTensor):
             return self.__class__(self._tensor == other.tensor)
         return self._tensor > other
+
+    def __lt__(self, other: Any) -> "NNCFTensor":
+        if isinstance(other, NNCFTensor):
+            return self.__class__(self._tensor < other.tensor)
+        return self._tensor < other
 
     def __gt__(self, other: Any) -> "NNCFTensor":
         if isinstance(other, NNCFTensor):
@@ -108,8 +114,13 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         pass
 
     @abstractmethod
-    def mean(self, axis: int) -> "NNCFTensor":
+    def mean(self, axis: int, keepdims: bool = None) -> "NNCFTensor":
         pass
+
+    @abstractmethod
+    def median(self, axis: int, keepdims: bool = False) -> "NNCFTensor":
+        pass
+
 
     @abstractmethod
     def reshape(self, *shape: int) -> "NNCFTensor":
@@ -145,6 +156,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
 
     def max(self) -> float:
         pass
+
 
 
 class NNCFTensorBackend(abc.ABC):
@@ -242,5 +254,20 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def quantile(tensor: NNCFTensor, quantile: float) -> float:
+    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None) -> Union[float, List[float]]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def logical_or(tensor1: NNCFTensor, tensor2: NNCFTensor) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def masked_mean(tensor: NNCFTensor, mask: NNCFTensor, axis: int = None, keepdims: bool = False) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def masked_median(tensor: NNCFTensor, mask: NNCFTensor, axis: int = None, keepdims: bool = False) -> NNCFTensor:
         pass

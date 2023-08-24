@@ -74,7 +74,3 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     ) -> StatisticPointsContainer:
         # TODO: mirgate to experimental statistic collector and use common merging algorithm
         return statistic_points
-
-    @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, ONNXNNCFTensor]:
-        return {n: ONNXNNCFTensor(v) for n, v in outputs.items()}

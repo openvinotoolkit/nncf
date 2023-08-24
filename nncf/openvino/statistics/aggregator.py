@@ -108,6 +108,3 @@ class OVStatisticsAggregator(StatisticsAggregator):
             merged_statistic_points.add_statistic_point(stat_point)
         return merged_statistic_points
 
-    @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, OVNNCFTensor]:
-        return {n: OVNNCFTensor(v) for n, v in outputs.items()}

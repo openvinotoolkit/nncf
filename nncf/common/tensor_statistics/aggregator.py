@@ -60,8 +60,7 @@ class StatisticsAggregator(ABC):
             desc="Statistics collection",
         ):
             outputs = engine.infer(input_data)
-            processed_outputs = self._process_outputs(outputs)
-            self._register_statistics(processed_outputs, merged_statistics)
+            self._register_statistics(outputs, merged_statistics)
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -118,14 +117,4 @@ class StatisticsAggregator(ABC):
         :param model: Backend-specific target model.
         :param graph: Model graph.
         :return: Merged statistic points container bounded with given statistic point container.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def _process_outputs(outputs: Any) -> Dict[str, NNCFTensor]:
-        """
-        Post-process model outputs for the further statistics collection.
-
-        :param outputs: raw model outputs
-        :return: processed model outputs in Dict[str, NNCFTensor] format
         """

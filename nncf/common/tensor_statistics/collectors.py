@@ -232,7 +232,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def stack(x: NNCFTensor, axis: int = 0) -> NNCFTensor:
+    def stack(x: List[NNCFTensor], axis: int = 0) -> NNCFTensor:
         """
         Stacks a list or deque of NNCFTensors rank-R tensors into one NNCFTensor rank-(R+1) tensor.
 
