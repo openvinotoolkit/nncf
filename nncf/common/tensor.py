@@ -12,6 +12,7 @@ import abc
 from abc import abstractmethod
 from enum import IntEnum
 from typing import Generic, List, Tuple, Type, TypeVar, Union, Any
+from typing import Optional
 
 import numpy as np
 
@@ -48,6 +49,9 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         if isinstance(other, NNCFTensor):
             return self._tensor > other.tensor
         return self._tensor > other
+
+    def __pow__(self, other) -> "NNCFTensor":
+        return self._tensor ** other
 
     def __invert__(self) -> "NNCFTensor":
         return ~self._tensor
@@ -92,6 +96,11 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def device(self) -> DeviceType:
         pass
 
+    @property
+    @abstractmethod
+    def size(self) -> int:
+        pass
+
     @abstractmethod
     def is_empty(self) -> bool:
         pass
@@ -129,6 +138,11 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def any(self) -> bool:
         pass
 
+    def min(self) -> float:
+        pass
+
+    def max(self) -> float:
+        pass
 
 
 class NNCFTensorBackend(abc.ABC):
@@ -207,10 +221,25 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def clip(tensor: NNCFTensor, min_val: float, max_val: float) -> NNCFTensor:
+    def clip(tensor: NNCFTensor, min_val: float, max_val: Optional[float] = None) -> NNCFTensor:
         pass
 
     @staticmethod
     @abstractmethod
     def ones(shape: Union[int, List[int]], dtype: TensorDtype) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def squeeze(tensor: NNCFTensor) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def power(tensor: NNCFTensor, pwr: float) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def quantile(tensor: NNCFTensor, quantile: float) -> float:
         pass

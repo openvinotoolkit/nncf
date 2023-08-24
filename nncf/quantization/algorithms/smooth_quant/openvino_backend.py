@@ -32,6 +32,7 @@ from nncf.openvino.statistics.collectors import OVAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.quantization.algorithms.smooth_quant.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
+from openvino.tensor import OVNNCFTensor
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
@@ -83,8 +84,8 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return np.max(np.abs(weights), axis=channel_axis)
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
-        return get_weight_value(node_with_weight, model, port_id)
+    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> OVNNCFTensor:
+        return OVNNCFTensor(get_weight_value(node_with_weight, model, port_id))
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:

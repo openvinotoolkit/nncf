@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar
 
 import numpy as np
 
-from common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -60,7 +60,7 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
-from quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 
 TModel = TypeVar("TModel")
 

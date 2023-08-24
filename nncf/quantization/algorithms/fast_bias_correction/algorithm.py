@@ -13,9 +13,9 @@ from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 from tqdm import tqdm
 
-from common.graph import NNCFNode
-from common.tensor import NNCFTensor
-from common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.graph import NNCFNode
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory

@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple, TypeVar
 import numpy as np
 from tqdm import tqdm
 
-from common.tensor import TensorDtype
+from nncf.common.tensor import TensorDtype
 from nncf import Dataset
 from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory

@@ -13,6 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Dict, List, Optional, Tuple, TypeVar
 
+from nncf.common.tensor import NNCFTensor
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -106,7 +107,7 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: TModel, port_id: int) -> TTensor:
+    def get_weight_value(node_with_weight: NNCFNode, model: TModel, port_id: int) -> NNCFTensor:
         """
         Returns the weight value for the node with weight.
 
@@ -139,7 +140,7 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def calculate_scale_and_ratio(
-        activations: TTensor, weights: TTensor, alpha: float, quantile: Optional[float]
+        activations: TTensor, weights: TTensor, alpha: float, quantile: Optional[float] = None
     ) -> Tuple[TTensor, TTensor]:
         """
         Calculates base scale value and it's ratio.
