@@ -149,12 +149,13 @@ class OVModelExtractionCommand(Command):
 
 class OVBiasInsertionCommand(TransformationCommand):
     """
-    Inserts null bias for the corresponding node.
+    Inserts bias for the corresponding node.
     """
 
     def __init__(self, target_point: OVTargetPoint, bias_value: np.ndarray):
         """
         :param target_point: The TargetPoint instance for the insertion that contains layer's information.
+        :param bias_value: Constant value for the bias layer.
         """
         super().__init__(TransformationType.INSERT, target_point)
         self.bias_value = bias_value

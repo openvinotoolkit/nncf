@@ -465,7 +465,7 @@ class OVModelTransformer(ModelTransformer):
         model: ov.Model, transformations: List[OVBiasInsertionCommand]
     ) -> ov.Model:
         """
-        Inserts null bias operation after corresponding layer.
+        Inserts bias operation after corresponding layer.
 
         :param transformations: List of the bias insertion transformations.
         :returns: Transformed model with null biases.

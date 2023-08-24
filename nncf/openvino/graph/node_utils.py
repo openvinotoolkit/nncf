@@ -353,7 +353,7 @@ def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[in
     return tuple(reduction_shape)
 
 
-def create_bias_constant_value(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:
+def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:
     """
     Creates bias value constant array filled by given value.
 

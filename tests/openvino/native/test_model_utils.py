@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.openvino.graph.node_utils import create_bias_constant_value
+from nncf.openvino.graph.node_utils import create_bias_tensor
 from tests.common.quantization.mock_graphs import NodeWithType
 from tests.common.quantization.mock_graphs import create_mock_graph
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
@@ -44,6 +44,6 @@ def get_nncf_graph_for_test(edge_shape, dtype):
 )
 def test_create_bias_constant_value(edge_shape, dtype, ref_shape):
     graph = get_nncf_graph_for_test(edge_shape, dtype)
-    val = create_bias_constant_value(graph.get_node_by_name("/Conv_1_0"), graph, 5)
+    val = create_bias_tensor(graph.get_node_by_name("/Conv_1_0"), graph, 5)
     assert val.shape == ref_shape
     assert np.equal(val, np.full(ref_shape, 5)).all()
