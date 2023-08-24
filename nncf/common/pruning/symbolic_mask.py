@@ -47,9 +47,9 @@ class SymbolicMaskProducer:
         return list(merged_producers.values())
 
 
-class SymbolicMask(NNCFTensor):
+class SymbolicMask:
     """
-    Framework agnostic 1D NNCFTensor representation which only uses given dimension and do not uses value
+    Framework agnostic representation of a tensor pruning mask which only uses given dimension and do not uses value
     of the tensor. Keeps additional attribute - symbolic mask producer, pointer to NNCFNode which produced
     this mask during symbolic mask propagation algorithm. NNCFNode produced a (symbolic or not) mask means
     this mask was set as an output mask to this NNCFNode during (symbolic or not) mask propagation.
@@ -58,7 +58,6 @@ class SymbolicMask(NNCFTensor):
     """
 
     def __init__(self, dimension: int, mask_producers: Union[int, List[SymbolicMaskProducer]] = None):
-        super().__init__(None)
         self._mask_producers = mask_producers
         if mask_producers is None:
             self._mask_producers = []
