@@ -23,14 +23,12 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const_op
-from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_matmul_channel_axes
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
-from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
+from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
 
 def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
