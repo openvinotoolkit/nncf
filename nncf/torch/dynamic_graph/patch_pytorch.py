@@ -188,7 +188,7 @@ def torch_jit_script_wrapper(*args, **kwargs):
     # so at call of torch.jit.script function we need to
     # un-patch the torch operators
 
-    with disable():
+    with disable_patching():
         signature = inspect.signature(_ORIG_JIT_SCRIPT)
         bound_args = signature.bind(*args, **kwargs).arguments
         # Process the case when the object-to-script is a class as in the original jit.script logic
@@ -218,7 +218,7 @@ def torch_jit_script_wrapper(*args, **kwargs):
 
 
 def torch_jit_trace_make_module_wrapper(*args, **kwargs):
-    with disable():
+    with disable_patching():
         retval = _ORIG_JIT_TRACE_MAKE_MODULE(*args, **kwargs)
     return retval
 
@@ -408,7 +408,7 @@ def unpatch_torch_operators():
 
 
 @contextmanager
-def disable():
+def disable_patching():
     was_patched = _OPERATORS_ALREADY_WRAPPED
     if was_patched:
         unpatch_torch_operators()
