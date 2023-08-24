@@ -63,7 +63,6 @@ def get_edge(model: onnx.ModelProto, edge_name: str) -> Optional[onnx.ValueInfoP
     v_info = seek_v_info(model, edge_name)
     if v_info is not None:
         return v_info
-    print("Shape infe")
     infered_model = onnx.shape_inference.infer_shapes(model)
     return seek_v_info(infered_model, edge_name)
 
