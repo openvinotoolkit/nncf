@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
 from typing import Tuple, Type, Union
 
 import numpy as np
@@ -17,18 +16,12 @@ import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const_op
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_matmul_channel_axes
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
-from nncf.quantization.fake_quantize import calculate_quantizer_parameters
-from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
 
 def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
