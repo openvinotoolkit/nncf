@@ -39,6 +39,9 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
     Implementation of NNCFTensor over NumPy.
     """
 
+    def _is_native_bool(self, bool_result: Any) -> bool:
+        return isinstance(bool_result, np.bool_)
+
     @property
     def ndim(self) -> int:
         return self._tensor.ndim

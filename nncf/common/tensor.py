@@ -38,12 +38,16 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def backend(self) -> Type["NNCFTensorBackend"]:
         pass
 
+    @abstractmethod
+    def _is_native_bool(self, bool_result: Any) -> bool:
+        pass
+
     def _bool_operator_resolver(self, bound_predicate: Callable[[TensorType], Union[bool, "NNCFTensor"]],
                                 other: Any) -> Union[bool, "NNCFTensor"]:
         if isinstance(other, NNCFTensor):
             return self.__class__(self._tensor == other.tensor)
         retval = bound_predicate(other)
-        if isinstance(retval, bool):
+        if isinstance(retval, bool) or self._is_native_bool(retval):
             return retval
         return self.__class__(retval)
 

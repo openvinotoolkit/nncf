@@ -348,7 +348,7 @@ class BiasCorrection(Algorithm):
         return feed_dicts
 
     def _compute_bias_shift(
-        self, node: NNCFNode, model: TModel, feed_dicts: List, statistic_points: StatisticPointsContainer
+        self, node: NNCFNode, model: TModel, feed_dicts: List[Dict[str, NNCFTensor]], statistic_points: StatisticPointsContainer
     ) -> NNCFTensor:
         """
         Computes bias shift that will be used for the further bias correction.
@@ -365,8 +365,9 @@ class BiasCorrection(Algorithm):
         channel_axis = node.metatype.output_channel_axis
         q_outputs = []
         for feed_dict in feed_dicts:
-            q_output = engine.infer(feed_dict)
-            q_output = self._backend_entity.process_model_output(q_output, output_tensor_name)
+            native_dict = {k: v.tensor for k, v in feed_dict.items()}
+            e_out = engine.infer(native_dict)
+            q_output = e_out[output_tensor_name]
             q_outputs.append(self._mean_per_channel(q_output, channel_axis))
         # Here we get the per-sample average, so the axis is 0.
         tensor_backend = self._backend_entity.tensor_backend()
@@ -475,7 +476,7 @@ class BiasCorrection(Algorithm):
             ):
                 stat = tensor_collector.get_statistics()
                 assert isinstance(stat, RawTensorStatistic)
-                input_fp.extend(stat.values)
+                input_fp.append(stat.values)
             self._fp_inputs[input_id] = input_fp
 
         tensor_list = self._fp_inputs[input_id]
@@ -497,15 +498,17 @@ class BiasCorrection(Algorithm):
             )
 
         output_fp = []
-        statistic: NNCFTensor = None
+        mean_val_tensor: NNCFTensor = None
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
             statistic = tensor_collector.get_statistics()
             assert isinstance(statistic, MeanTensorStatistic)
-            output_fp.extend(statistic.mean_values)
-        if statistic is not None:
-            backend = statistic.backend
+            mean_val_tensor = statistic.mean_values
+            output_fp.append(statistic.mean_values)
+        if output_fp:
+            mean_val_tensor = next(iter(output_fp))
+            backend = mean_val_tensor.backend
             return backend.stack(output_fp)
         return None
 

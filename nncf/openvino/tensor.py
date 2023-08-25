@@ -15,6 +15,7 @@ import numpy as np
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFTensorBackend
 from nncf.common.tensor_impl_np import NPNNCFTensor
+from nncf.common.tensor_impl_np import NPNNCFTensorBackend
 from nncf.parameters import TargetDevice
 
 
@@ -22,5 +23,5 @@ class OVNNCFTensor(NPNNCFTensor):
     pass
 
 
-class OVNNCFTensorBackend(NNCFTensorBackend):
+class OVNNCFTensorBackend(NPNNCFTensorBackend):
     pass

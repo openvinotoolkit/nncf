@@ -203,10 +203,10 @@ class TensorAggregatorBase(Aggregator, abc.ABC):
 class OnlineTensorAggregator(TensorAggregatorBase, abc.ABC):
     def __init__(self, tensor_processor: NNCFCollectorTensorProcessor, num_samples: Optional[int] = None):
         super().__init__(tensor_processor, num_samples)
-        self._samples = None
+        self._current_aggregate = None
 
     def _reset_sample_container(self):
-        self._samples = None
+        self._current_aggregate = None
 
 
 AggregatorKey = Tuple[int, int]
@@ -544,18 +544,15 @@ class MeanPerChReducer(TensorReducerBase):
 ##################################################Aggregators##################################################
 
 
-class NoopAggregator(Aggregator):
+class NoopAggregator(OnlineTensorAggregator):
     def __init__(self, num_samples: Optional[int]):
-        super().__init__(num_samples)
+        super().__init__(None, num_samples)
 
     def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
-        pass
+        self._current_aggregate = x
 
-    def _aggregate_impl(self) -> None:
-        pass
-
-    def _reset_sample_container(self):
-        pass
+    def _aggregate_impl(self) -> NNCFTensor:
+        return self._current_aggregate
 
 
 class ShapeAggregator(Aggregator):
@@ -575,24 +572,24 @@ class ShapeAggregator(Aggregator):
 
 class MinAggregator(OnlineTensorAggregator):
     def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
-        if not self._samples:
-            self._samples = x
+        if self._current_aggregate is None:
+            self._current_aggregate = x
         else:
-            self._samples = self._tensor_processor.min(x, self._samples)
+            self._current_aggregate = self._tensor_processor.min(x, self._current_aggregate)
 
     def _aggregate_impl(self) -> NNCFTensor:
-        return self._samples
+        return self._current_aggregate
 
 
 class MaxAggregator(OnlineTensorAggregator):
     def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
-        if not self._samples:
-            self._samples = x
+        if not self._current_aggregate:
+            self._current_aggregate = x
         else:
-            self._samples = self._tensor_processor.max(x, self._samples)
+            self._current_aggregate = self._tensor_processor.max(x, self._current_aggregate)
 
     def _aggregate_impl(self) -> NNCFTensor:
-        return self._samples
+        return self._current_aggregate
 
 
 class OfflineAggregatorBase(TensorAggregatorBase, ABC):
