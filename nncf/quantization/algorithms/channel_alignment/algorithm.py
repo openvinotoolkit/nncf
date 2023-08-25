@@ -27,7 +27,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.openvino.graph.node_utils import create_bias_tensor
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
@@ -445,7 +444,7 @@ class ConvParamsContainer:
             bias = backend_entity.get_bias_value(conv_op, model, nncf_graph)
             self._bias_op_exist = True
         else:
-            bias = create_bias_tensor(conv_op, nncf_graph, 0)
+            bias = backend_entity.create_bias_tensor(conv_op, nncf_graph, 0)
         self.stated_bias = StatedTensor(bias)
         self._op = conv_op
         self._dims = backend_entity.get_dims_descriptor(conv_op)
