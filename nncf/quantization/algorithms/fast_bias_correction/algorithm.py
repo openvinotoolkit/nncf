@@ -185,7 +185,7 @@ class FastBiasCorrection(Algorithm):
         # Create commands of bias correction and apply them to the model.
         transformation_layout = TransformationLayout()
         for node, bias_value in node_and_new_bias_value:
-            transformation_layout.register(self._backend_entity.create_bias_correction_command(node, bias_value, graph))
+            transformation_layout.register(self._backend_entity.create_bias_correction_command(node, bias_value.to_numpy(), graph))
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model

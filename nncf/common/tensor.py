@@ -93,9 +93,15 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         return len(self._tensor)
 
     def __getitem__(self, item) -> 'NNCFTensor':
+        if isinstance(item, NNCFTensor):
+            item = item.tensor
         return self.__class__(self._tensor[item])
 
     def __setitem__(self, key, value):
+        if isinstance(key, NNCFTensor):
+            key = key.tensor
+        if isinstance(value, NNCFTensor):
+            value = value.tensor
         self._tensor[key] = value
 
     @property
@@ -162,6 +168,10 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
 
     @abstractmethod
     def any(self) -> bool:
+        pass
+
+    @abstractmethod
+    def all(self) -> bool:
         pass
 
     @abstractmethod

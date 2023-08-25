@@ -471,13 +471,13 @@ class BiasCorrection(Algorithm):
 
         input_id = (node_name, port_id)
         if input_id not in self._fp_inputs:
-            input_fp = []
+            input_fp: List[NNCFTensor] = []
             for tensor_collector in statistic_points.get_algo_statistics_for_node(
                     node_name, input_filter_func, self._algorithm_key
             ):
                 stat = tensor_collector.get_statistics()
                 assert isinstance(stat, RawTensorStatistic)
-                input_fp.append(stat.values)
+                input_fp.extend(stat.values)
             self._fp_inputs[input_id] = input_fp
 
         tensor_list = self._fp_inputs[input_id]

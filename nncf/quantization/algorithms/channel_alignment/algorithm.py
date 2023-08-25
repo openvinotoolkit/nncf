@@ -130,7 +130,7 @@ class ChannelAlignment(Algorithm):
                 conv_out_cont.dims,
             )
 
-            ascale = (stat.max_values - stat.min_values).astype()
+            ascale = (stat.max_values - stat.min_values).astype(TensorDtype.FLOAT32)
             backend = ascale.backend
             eps = backend.eps(ascale.dtype)
             if (ascale > eps).any():
@@ -240,13 +240,13 @@ class ChannelAlignment(Algorithm):
         scale_factor[~positive_scales_mask] = 1
         scale_factor = backend.clip(scale_factor, 1e-2, 1e2)
 
-        scale_in_shape = backend.ones(len(conv_in_shape), dtype=TensorDtype.INT64)
+        scale_in_shape = [1 for _ in conv_in_shape]
         scale_in_shape[conv_in_descr.conv_weight_out_channels_dim] = scale_factor.shape[conv_in_descr.bias_channels_dim]
         updated_conv_in_value = conv_in_value / scale_factor.reshape(*scale_in_shape)
 
         updated_bias_in_value = bias_in_value / scale_factor.reshape(*bias_in_value.shape)
 
-        scale_out_shape = backend.ones(len(conv_out_value.shape), dtype=TensorDtype.INT64)
+        scale_out_shape =[1 for _ in conv_out_value.shape]
         scale_out_shape[conv_out_descr.conv_weight_in_channels_dim] = scale_factor.shape[
             conv_in_descr.bias_channels_dim
         ]

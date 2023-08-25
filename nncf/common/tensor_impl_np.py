@@ -19,6 +19,7 @@ from typing import Type
 from typing import Union
 
 import numpy as np
+from numpy import dtype
 from numpy.ma import MaskedArray
 from numpy.ma.core import MaskedConstant
 
@@ -34,6 +35,7 @@ _DTYPE_MAP: Dict[TensorDtype, Any] = {
 }
 
 _INV_DTYPE_MAP = {v: k for k, v in _DTYPE_MAP.items()}
+_INV_DTYPE_MAP[dtype('float32')] = TensorDtype.FLOAT32
 
 
 class WrappingIterator:
@@ -80,6 +82,9 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
 
     def any(self) -> bool:
         return self._tensor.any()
+
+    def all(self) -> bool:
+        return self._tensor.all()
 
     def to_numpy(self) -> np.ndarray:
         return self._tensor
@@ -158,7 +163,7 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def sum(tensor: NPNNCFTensor, axes: List[int]) -> NPNNCFTensor:
-        return NPNNCFTensor(np.sum(tensor.tensor, axis=axes))
+        return NPNNCFTensor(np.sum(tensor.tensor, axis=tuple(axes)))
 
     @staticmethod
     def transpose(tensor: NPNNCFTensor, axes: List[int]) -> NPNNCFTensor:

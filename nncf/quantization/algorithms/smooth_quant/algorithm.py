@@ -158,7 +158,7 @@ class SmoothQuant(Algorithm):
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, weight_port)
                 scaled_weight = weight_value * weights_scale
                 weight_update_command = self._backend_entity.weight_update_command(
-                    node_to_smooth, scaled_weight, weight_port
+                    node_to_smooth, scaled_weight.to_numpy(), weight_port
                 )
                 transformation_layout.register(weight_update_command)
 
@@ -167,7 +167,7 @@ class SmoothQuant(Algorithm):
 
             scale_node_name = self._create_scale_node_name(source_node.node_name, source_output_port_id)
             scale_insertion_command = self._backend_entity.scale_insertion_command(
-                source_node, activation_scale, source_output_port_id, nodes, scale_node_name
+                source_node, activation_scale.to_numpy(), source_output_port_id, nodes, scale_node_name
             )
             transformation_layout.register(scale_insertion_command)
 
@@ -322,7 +322,7 @@ class SmoothQuant(Algorithm):
         activation_scale = scale_value ** (-1)
         backend = activation_scale.backend
         if activations_size > 1:
-            reshape_shape = backend.ones(activations_size, dtype=TensorDtype.INT64)
+            reshape_shape = [1 for _ in range(activations_size)]
             reshape_shape[channel_axis] = activation_scale.size
             activation_scale = activation_scale.reshape(*reshape_shape)
         return activation_scale
@@ -350,7 +350,7 @@ class SmoothQuant(Algorithm):
             weight_scale = scale_value
             backend = scale_value.backend
             if weights_size > 1:
-                reshape_shape = backend.ones(weights_size, dtype=TensorDtype.INT64)
+                reshape_shape = [1 for _ in range(weights_size)]
                 reshape_shape[channel_axis] = scale_value.size
                 weight_scale = scale_value.reshape(*reshape_shape)
             return weight_scale
