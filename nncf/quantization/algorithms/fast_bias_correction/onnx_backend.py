@@ -88,8 +88,8 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return input_data
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> np.ndarray:
-        return get_bias_value(node, model)
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> ONNXNNCFTensor:
+        return ONNXNNCFTensor(get_bias_value(node, model))
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:

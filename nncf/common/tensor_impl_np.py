@@ -95,6 +95,8 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
 
 
 class NPNNCFTensorBackend(NNCFTensorBackend):
+    inf = np.inf
+
     @staticmethod
     def isclose_all(tensor1: NPNNCFTensor, tensor2: NPNNCFTensor, rtol=1e-05, atol=1e-08) -> bool:
         return bool(np.isclose(tensor1.tensor, tensor2.tensor, rtol, atol))

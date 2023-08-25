@@ -316,7 +316,7 @@ class FastBiasCorrection(Algorithm):
         q_outputs = raw_output[output_name]
         q_outputs = self._mean_per_channel(q_outputs, channel_axis)
         backend = q_outputs.backend
-        bias_shift = backend.stack(output_fp) - q_outputs
+        bias_shift = backend.stack(output_fp).mean(axis=0) - q_outputs
         return bias_shift
 
     @staticmethod

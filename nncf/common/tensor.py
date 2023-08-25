@@ -38,25 +38,28 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def backend(self) -> Type["NNCFTensorBackend"]:
         pass
 
+    def _bool_operator_resolver(self, bound_predicate: Callable[[TensorType], Union[bool, "NNCFTensor"]],
+                                other: Any) -> Union[bool, "NNCFTensor"]:
+        if isinstance(other, NNCFTensor):
+            return self.__class__(self._tensor == other.tensor)
+        retval = bound_predicate(other)
+        if isinstance(retval, bool):
+            return retval
+        return self.__class__(retval)
+
     def __init__(self, tensor: TensorType):
         assert not isinstance(tensor, NNCFTensor)
         self._tensor: TensorType = tensor
 
     def __eq__(self, other: Any) -> "NNCFTensor":
         # Assuming every backend implements this basic semantic
-        if isinstance(other, NNCFTensor):
-            return self.__class__(self._tensor == other.tensor)
-        return self._tensor > other
+        return self._bool_operator_resolver(self._tensor.__eq__, other)
 
     def __lt__(self, other: Any) -> "NNCFTensor":
-        if isinstance(other, NNCFTensor):
-            return self.__class__(self._tensor < other.tensor)
-        return self._tensor < other
+        return self._bool_operator_resolver(self._tensor.__lt__, other)
 
     def __gt__(self, other: Any) -> "NNCFTensor":
-        if isinstance(other, NNCFTensor):
-            return self.__class__(self._tensor > other.tensor)
-        return self._tensor > other
+        return self._bool_operator_resolver(self._tensor.__gt__, other)
 
     def __pow__(self, other) -> "NNCFTensor":
         return self.__class__(self._tensor ** other)
