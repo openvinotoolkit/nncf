@@ -216,6 +216,16 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
+    def min_of_list(tensor_list: List[NNCFTensor], axis: int = None) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def max_of_list(tensor_list: List[NNCFTensor], axis: int = None) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
     def expand_dims(tensor: NNCFTensor, axes: List[int]) -> NNCFTensor:
         pass
 
@@ -277,4 +287,9 @@ class NNCFTensorBackend(abc.ABC):
     @staticmethod
     @abstractmethod
     def masked_median(tensor: NNCFTensor, mask: NNCFTensor, axis: int = None, keepdims: bool = False) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def concatenate(tensor_list: List[NNCFTensor]):
         pass

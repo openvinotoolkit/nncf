@@ -410,7 +410,7 @@ class BiasCorrection(Algorithm):
         transformation_layout.register(bias_correction_command)
         return model_transformer.transform(transformation_layout)
 
-    def _collect_new_stats(self, model: TModel, feed_dicts: List, subgraph_data: Dict) -> None:
+    def _collect_new_stats(self, model: TModel, feed_dicts: List[Dict[str, NNCFTensor]], subgraph_data: Dict) -> None:
         """
         Updates the self._fp_inputs with the new statistics for the next layers
         after the correction of the bias for the current.
@@ -421,7 +421,8 @@ class BiasCorrection(Algorithm):
         """
         engine = EngineFactory.create(model)
         for feed_dict in feed_dicts:
-            new_q_output = engine.infer(feed_dict)
+            native_dict = {k: v.tensor for k, v in feed_dict.items()}
+            new_q_output = engine.infer(native_dict)
             for output_node_name, output_id in subgraph_data["subgraph_output_ids"]:
                 output_tensor_name = self._backend_entity.get_output_name(model, output_node_name, output_id)
                 self._fp_inputs[(output_node_name, output_id)].append(new_q_output[output_tensor_name])
@@ -498,18 +499,17 @@ class BiasCorrection(Algorithm):
             )
 
         output_fp = []
-        mean_val_tensor: NNCFTensor = None
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
             statistic = tensor_collector.get_statistics()
             assert isinstance(statistic, MeanTensorStatistic)
-            mean_val_tensor = statistic.mean_values
             output_fp.append(statistic.mean_values)
+
         if output_fp:
             mean_val_tensor = next(iter(output_fp))
             backend = mean_val_tensor.backend
-            return backend.stack(output_fp)
+            return backend.concatenate(output_fp)
         return None
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

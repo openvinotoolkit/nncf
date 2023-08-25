@@ -23,7 +23,6 @@ class TensorStatistic(ABC):
     """Base class that stores statistic data"""
 
     @staticmethod
-    @abstractmethod
     def tensor_eq(tensor1: NNCFTensor, tensor2: NNCFTensor, rtol=1e-6) -> bool:
         backend = tensor1.backend
         return backend.isclose_all(tensor1, tensor2, rtol=rtol)

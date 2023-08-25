@@ -706,8 +706,8 @@ class MinMaxQuantization(Algorithm):
             max_values.append(statistic.max_values)
             min_values.append(statistic.min_values)
         backend = next(iter(max_values)).backend
-        max_values = backend.max(max_values, axis=0)
-        min_values = backend.min(min_values, axis=0)
+        max_values = backend.max_of_list(max_values, axis=0)
+        min_values = backend.min_of_list(min_values, axis=0)
         return MinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

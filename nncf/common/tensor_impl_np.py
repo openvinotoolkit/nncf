@@ -125,6 +125,14 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.max(tensor.tensor, axis=axis))
 
     @staticmethod
+    def min_of_list(tensor_list: List[NNCFTensor], axis: int = None) -> NNCFTensor:
+        return NPNNCFTensor(np.min([t.tensor for t in tensor_list], axis=axis))
+
+    @staticmethod
+    def max_of_list(tensor_list: List[NNCFTensor], axis: int = None) -> NNCFTensor:
+        return NPNNCFTensor(np.max([t.tensor for t in tensor_list], axis=axis))
+
+    @staticmethod
     def expand_dims(tensor: NPNNCFTensor, axes: List[int]) -> NPNNCFTensor:
         return NPNNCFTensor(np.expand_dims(tensor.tensor, axis=axes))
 
@@ -177,15 +185,19 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.moveaxis(x.tensor, src, dst))
 
     @staticmethod
-    def logical_or(tensor1: NNCFTensor, tensor2: NNCFTensor) -> NNCFTensor:
+    def logical_or(tensor1: NPNNCFTensor, tensor2: NPNNCFTensor) -> NPNNCFTensor:
         return NPNNCFTensor(np.logical_or(tensor1, tensor2))
 
     @staticmethod
-    def masked_mean(tensor: NNCFTensor, mask: NNCFTensor, axis: int = None, keepdims: bool = False) -> NNCFTensor:
+    def masked_mean(tensor: NPNNCFTensor, mask: NPNNCFTensor, axis: int = None, keepdims: bool = False) -> NPNNCFTensor:
         masked_x = np.ma.array(tensor.tensor, mask=mask.tensor)
         return NPNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=False).data)
 
     @staticmethod
-    def masked_median(tensor: NNCFTensor, mask: NNCFTensor, axis: int = None, keepdims: bool = False) -> NNCFTensor:
+    def masked_median(tensor: NPNNCFTensor, mask: NPNNCFTensor, axis: int = None, keepdims: bool = False) -> NPNNCFTensor:
         masked_x = np.ma.array(tensor.tensor, mask=mask.tensor)
         return NPNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=False).data)
+
+    @staticmethod
+    def concatenate(tensor_list: List[NPNNCFTensor]) -> NPNNCFTensor:
+        return NPNNCFTensor(np.concatenate([t.tensor for t in tensor_list]))
