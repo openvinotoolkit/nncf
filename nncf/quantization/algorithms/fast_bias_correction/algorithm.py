@@ -162,7 +162,8 @@ class FastBiasCorrection(Algorithm):
             if bias_value.ndim > 1:
                 # Make index positive
                 channel_axis = range(bias_value.ndim)[channel_axis]
-            input_blob = self._backend_entity.create_input_data(input_shape, input_fp, sub_input_name, channel_axis)
+            input_blob = self._backend_entity.create_input_data(input_shape, [t.tensor for t in input_fp],
+                                                                sub_input_name, channel_axis)
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,
@@ -213,7 +214,7 @@ class FastBiasCorrection(Algorithm):
             bias_shift_magnitude = backend.max(backend.abs((updated_bias_value - current_bias_value) / current_bias_value))
         return bias_shift_magnitude
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
+    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List[NNCFTensor], List[NNCFTensor]]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 

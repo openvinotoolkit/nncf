@@ -139,7 +139,7 @@ class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):
         self._register_input_common(x)
 
     def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
-        return ONNXMinMaxTensorStatistic(self._min_values.tensor, self._max_values.tensor)
+        return ONNXMinMaxTensorStatistic(self._min_values, self._max_values)
 
 
 class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
@@ -151,7 +151,7 @@ class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
         self._register_input_common(x)
 
     def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
-        return ONNXMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
+        return ONNXMinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
 
 
 class ONNXMeanStatisticCollector(MeanStatisticCollector):
@@ -163,7 +163,7 @@ class ONNXMeanStatisticCollector(MeanStatisticCollector):
         self._register_input_common(x)
 
     def _get_statistics(self) -> ONNXMeanTensorStatistic:
-        return ONNXMeanTensorStatistic(self._mean_aggregate().tensor, self._shape())
+        return ONNXMeanTensorStatistic(self._mean_aggregate(), self._shape())
 
 
 class ONNXRawStatisticCollector(RawStatisticCollector):

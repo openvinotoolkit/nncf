@@ -327,7 +327,7 @@ class BiasCorrection(Algorithm):
         """
         feed_dicts = []
         statistics_size = self.subset_size
-        statistics_per_input = {}
+        statistics_per_input: Dict[str, List[NNCFTensor]] = {}
 
         for input_node_name in subgraph_data["subgraph_input_names"]:
             input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
@@ -337,7 +337,7 @@ class BiasCorrection(Algorithm):
             statistics_size = min(statistics_size, len(input_fp))
 
         for stat_id in range(statistics_size):
-            feed_dict = {}
+            feed_dict: Dict[str, NNCFTensor] = {}
             for input_node_name in subgraph_data["subgraph_input_names"]:
                 input_tensor_name = self._backend_entity.get_input_name(model, input_node_name)
                 # Since we do not use as inputs the layers from which the statistics are gathered,

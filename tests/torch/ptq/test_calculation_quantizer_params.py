@@ -33,7 +33,6 @@ from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
-from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
 
@@ -346,8 +345,3 @@ def test_quantizer_parameters_export(tmp_path: Path):
         assert np.allclose(param["input_low"], torch_ptq_params[name]["input_low"])
         assert np.allclose(param["input_high"], torch_ptq_params[name]["input_high"])
 
-
-class TestFQParams(TemplateTestFQParams):
-    @property
-    def tensor_statistic(self):
-        return PTMinMaxTensorStatistic

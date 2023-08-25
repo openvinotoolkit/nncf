@@ -94,7 +94,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def is_stat_in_shape_of_scale(self) -> bool:
         return False
 
-    @pytest.fixture(params=[False], ids=["out_of_palce"])
+    @pytest.fixture(params=[False], ids=["out_of_place"])
     def inplace_statistics(self, request) -> bool:
         return request.param
 

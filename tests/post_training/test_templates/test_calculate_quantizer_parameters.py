@@ -19,6 +19,8 @@ import pytest
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_impl_np import NPNNCFTensor
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from tests.post_training.conftest import FQ_CALCULATED_PARAMETERS_PATH
@@ -187,11 +189,10 @@ TO_TEST = [
 ]
 
 
-class TemplateTestFQParams(ABC):
+class TestFQParams:
     @property
-    @abstractmethod
     def tensor_statistic(self):
-        raise NotImplementedError
+        return MinMaxTensorStatistic
 
     @pytest.mark.parametrize("case_to_test", TO_TEST)
     def test_calculate_quantizer_parameters(self, case_to_test):
@@ -207,11 +208,11 @@ class TemplateTestFQParams(ABC):
             axes = tuple(range(1, len(data.shape)))  # channel_axis = 0
         else:
             axes = None
-        min_values = np.amin(data, axis=axes, keepdims=q_config.per_channel)
+        min_values = NPNNCFTensor(np.amin(data, axis=axes, keepdims=q_config.per_channel))
         if q_config.mode == QuantizationMode.SYMMETRIC:
-            max_values = np.amax(np.abs(data), axis=axes, keepdims=q_config.per_channel)
+            max_values = NPNNCFTensor(np.amax(np.abs(data), axis=axes, keepdims=q_config.per_channel))
         else:
-            max_values = np.amax(data, axis=axes, keepdims=q_config.per_channel)
+            max_values = NPNNCFTensor(np.amax(data, axis=axes, keepdims=q_config.per_channel))
 
         statistics = self.tensor_statistic(max_values=max_values, min_values=min_values)
 
