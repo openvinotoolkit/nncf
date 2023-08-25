@@ -23,7 +23,6 @@ import torch
 from torch import nn
 
 from nncf import nncf_logger
-from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME

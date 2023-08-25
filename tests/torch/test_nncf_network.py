@@ -24,7 +24,6 @@ from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.torch import register_module
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
