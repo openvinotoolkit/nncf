@@ -49,6 +49,18 @@ class CommandCreator(ABC):
 
     @staticmethod
     @abstractmethod
+    def create_command_to_insert_bias(node_without_bias: NNCFNode, bias_value: Any) -> TransformationCommand:
+        """
+        Creates command to insert bias after given node.
+
+        :param node_without_bias: The node that corresponds to the operation without bias.
+        :param bias_value: Bias value to insert.
+        :param nncf_graph: The NNCF graph.
+        :return: The command to insert bias value.
+        """
+
+    @staticmethod
+    @abstractmethod
     def create_command_to_update_weight(
         node_with_weight: NNCFNode, weight_value: Any, weight_port_id: int
     ) -> TransformationCommand:
