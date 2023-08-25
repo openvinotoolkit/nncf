@@ -32,7 +32,7 @@ def test_compress_weights(model_creator_func):
     n_compressed_weights = 0
     for op in compressed_model.get_ops():
         if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_compressed_weights:
-            assert op.get_element_type() == ov.Type(np.int8)
+            assert op.get_element_type() == ov.Type(np.uint8)
             n_compressed_weights += 1
 
     assert n_compressed_weights == len(ref_compressed_weights)

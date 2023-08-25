@@ -33,26 +33,15 @@ from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
 def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
     """
-    Inserts in-place weights compression with FakeQuantize operation for Linear and Embedding layers.
+    Compress weights of Linear and Embedding layers to uint8.
+    The result of compression is the same as asymmetric weight quantization.
 
-    :param model: The original model to insert the weights compression.
+    :param model: The model to be transformed.
     :param bits: Number of bits for quantization.
     """
     allowed_metatypes_to_const_port = {OVEmbeddingMetatype: [0], OVMatMulMetatype: [0, 1]}
-    quantizer_config = QuantizerConfig(
-        num_bits=bits,
-        mode=QuantizationMode.ASYMMETRIC,
-        signedness_to_force=None,
-        per_channel=True,
-    )
-
-    get_fq_params = partial(
-        calculate_quantizer_parameters,
-        quantizer_config=quantizer_config,
-        quant_group=QuantizerGroup.WEIGHTS,
-        narrow_range=False,
-        half_range=False,
-    )
+    level_low = 0
+    level_high = 2**bits - 1
 
     for node in model.get_ops():
         # pylint:disable=protected-access
@@ -67,9 +56,9 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
 
             weight_output = weight_node.output(0)
             weight_name = weight_node.get_friendly_name()
-            original_weight_dtype = weight_output.get_element_type().to_dtype()
             target_inputs = weight_output.get_target_inputs()
 
+            original_weight_dtype = weight_output.get_element_type().to_dtype()
             if original_weight_dtype not in [np.float32, np.float16]:
                 continue
 
@@ -77,24 +66,16 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
             axes = _get_reduction_axes(metatype, node, const_port_id)
             min_values = np.min(weight, axis=axes, keepdims=True)
             max_values = np.max(weight, axis=axes, keepdims=True)
-            stats = OVMinMaxTensorStatistic(min_values, max_values)
-            fq_params = get_fq_params(stats)
 
-            input_low = fq_params.input_low
-            input_high = fq_params.input_high
-            assert np.allclose(fq_params.output_low, input_low)
-            assert np.allclose(fq_params.output_high, input_high)
+            scale = (max_values - min_values) / (level_high - level_low)
+            zero_point = (level_low * max_values - level_high * min_values) / (max_values - min_values)
+            zero_point = np.clip(zero_point, level_low, level_high)
 
-            levels = fq_params.levels
-            new_output_low = -levels // 2
-            new_output_high = levels - 1 + new_output_low
-            scale, zero_point = calculate_scale_zero_point(
-                input_low, input_high, new_output_low, new_output_high, narrow_range=False
-            )
+            compressed_weights = np.round(weight / scale + zero_point)
+            compressed_weights = np.clip(compressed_weights, level_low, level_high).astype(np.uint8)
 
-            int8_weight = np.round(weight / scale + zero_point).astype(np.int8)
-            quantized_weight = opset.constant(int8_weight, dtype=np.int8, name=weight_name)
-            convert = opset.convert(quantized_weight, original_weight_dtype)
+            compressed_const = opset.constant(compressed_weights, dtype=np.uint8, name=weight_name)
+            convert = opset.convert(compressed_const, original_weight_dtype)
             sub = opset.subtract(convert, zero_point.astype(original_weight_dtype))
             fq_name = f"{node.get_friendly_name()}/fq_weights_{const_port_id}"
             mul = opset.multiply(sub, scale.astype(original_weight_dtype), name=fq_name)
