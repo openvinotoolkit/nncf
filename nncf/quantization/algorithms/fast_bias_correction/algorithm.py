@@ -260,7 +260,7 @@ class FastBiasCorrection(Algorithm):
         ):
             statistic = tensor_collector.get_statistics()
             assert isinstance(statistic, MeanTensorStatistic)
-            output_fp.extend(statistic.mean_values)
+            output_fp.append(statistic.mean_values)
         return output_fp
 
     def _extract_submodel(self, model_transformer: ModelTransformer, node_name: str) -> TModel:
@@ -313,7 +313,7 @@ class FastBiasCorrection(Algorithm):
         """
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
-        q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
+        q_outputs = raw_output[output_name]
         q_outputs = self._mean_per_channel(q_outputs, channel_axis)
         backend = q_outputs.backend
         bias_shift = backend.stack(output_fp) - q_outputs

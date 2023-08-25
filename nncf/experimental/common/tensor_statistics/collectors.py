@@ -327,7 +327,7 @@ class TensorCollector:
             if reducer_hash in reduced_inputs:
                 aggregator.register_reduced_input(reduced_inputs[reducer_hash][reducer_port_id])
 
-    def _aggregate(self) -> Dict[AggregatorKey, ]:
+    def _aggregate(self) -> Dict[AggregatorKey, Optional[NNCFTensor]]:
         result = {}
         for (
             key,
