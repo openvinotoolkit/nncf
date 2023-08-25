@@ -226,9 +226,7 @@ class TemplateTestSQAlgorithm:
 
         assert activation_channel_axis == reference_value
 
-    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
-        backend = self.get_backend()
-
+    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):
         attributes = {
             NNCFNode.METATYPE_ATTR: node_metatype,
             NNCFNode.LAYER_ATTRIBUTES: layer_attributes,
@@ -239,7 +237,7 @@ class TemplateTestSQAlgorithm:
 
         try:
             # pylint: disable=protected-access
-            activation_channel_axis = backend.get_weight_channel_axis(node, port_id)
+            activation_channel_axis = SmoothQuant._get_weight_channel_axis(node)
         except RuntimeError as e:
             if isinstance(e, reference_value):
                 pytest.xfail("Expected exception")

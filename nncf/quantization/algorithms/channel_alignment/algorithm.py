@@ -19,14 +19,17 @@ from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import LayoutElem
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
@@ -112,10 +115,23 @@ class ChannelAlignment(Algorithm):
             assert len(tensor_collectors) == 1
             stat = tensor_collectors[0].get_statistics()
             if stat.min_values is None or stat.max_values is None:
+                nncf_logger.debug(
+                    f"Skipping channel alignment for pairs {conv_in.node_name}, {conv_out.node_name} "
+                    "because statistics were not collected for this pair."
+                )
                 continue
 
             conv_in_cont = ConvParamsContainer(conv_in, model, graph, self._backend_entity)
             conv_out_cont = ConvParamsContainer(conv_out, model, graph, self._backend_entity)
+            if (
+                conv_in_cont.dims.conv_weight_out_channels_dim is None
+                or conv_out_cont.dims.conv_weight_out_channels_dim is None
+            ):
+                nncf_logger.debug(
+                    f"Skipping channel alignment for pairs {conv_in.node_name}, {conv_out.node_name} "
+                    " because one of the node is 1D MatMul, 1D Matmuls are not supported by CA algortihm yet."
+                )
+                continue
 
             amean = (stat.max_values + stat.min_values) * 0.5
             conv_in_cont.bias, conv_out_cont.bias = self._align_means(
@@ -247,7 +263,7 @@ class ChannelAlignment(Algorithm):
         return updated_conv_in_value, updated_conv_out_value, updated_bias_in_value
 
     def _check_consumer_conv_node(self, conv_node: NNCFNode) -> bool:
-        attrs = self._backend_entity.get_conv_layer_attributes(conv_node)
+        attrs = conv_node.layer_attributes.get_backend_agnostic_attributes()
         if attrs is None:
             return False
         # Check groups amount == 1
@@ -373,9 +389,10 @@ class ChannelAlignment(Algorithm):
         statistic_container = StatisticPointsContainer()
         for conv_in, add_in, _ in self._get_node_pairs(graph):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
+
             channel_axis = conv_in.metatype.output_channel_axis
-            reduction_shape = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
-            reduction_shape.remove(channel_axis)
+            activation_shape = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
+            reduction_shape = get_channel_agnostic_reduction_shape([channel_axis], activation_shape)
 
             statistic_collector = self._backend_entity.get_statistic_collector(
                 tuple(reduction_shape), self._quantile, self.subset_size, self.inplace_statistics
@@ -447,7 +464,21 @@ class ConvParamsContainer:
             bias = backend_entity.create_bias_tensor(conv_op, nncf_graph, 0)
         self.stated_bias = StatedTensor(bias)
         self._op = conv_op
-        self._dims = backend_entity.get_dims_descriptor(conv_op)
+        weights_layout = conv_op.layer_attributes.get_backend_agnostic_attributes().weights_layout
+        if LayoutElem.GROUPS in weights_layout:
+            # Using groups dim as output channels dim for ChannelAlignment algorithm
+            # TODO(dlyakhov) support group convolutions with groups number not in [1, out_channels]
+            self._dims = LayoutDescriptor(
+                weights_layout.index(LayoutElem.GROUPS),
+                weights_layout.index(LayoutElem.C_IN),
+                conv_op.metatype.output_channel_axis,
+            )
+        else:
+            self._dims = LayoutDescriptor(
+                weights_layout.index(LayoutElem.C_OUT) if LayoutElem.C_OUT in weights_layout else None,
+                weights_layout.index(LayoutElem.C_IN),
+                conv_op.metatype.output_channel_axis,
+            )
 
     @property
     def weight(self):

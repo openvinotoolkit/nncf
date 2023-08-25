@@ -13,12 +13,19 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 
 class Dtype(Enum):
     FLOAT = "float"
     INTEGER = "int"
+
+
+class LayoutElem(Enum):
+    C_IN = "channels_in"
+    C_OUT = "channels_out"
+    SPATIAL = "spatial"
+    GROUPS = "groups"
 
 
 class BaseLayerAttributes(ABC):
@@ -29,6 +36,9 @@ class BaseLayerAttributes(ABC):
 
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, self.__class__) and self.__dict__ == __o.__dict__
+
+    def get_backend_agnostic_attributes(self) -> "BaseLayerAttributes":
+        return self
 
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
@@ -109,7 +119,14 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
 
 
 class LinearLayerAttributes(WeightedLayerAttributes):
-    def __init__(self, weight_requires_grad: bool, in_features: int, out_features: int, with_bias: bool = True):
+    def __init__(
+        self,
+        weight_requires_grad: bool,
+        in_features: int,
+        out_features: int,
+        with_bias: bool = True,
+        weights_layout: Optional[Tuple[LayoutElem, ...]] = None,
+    ):
         """
 
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
@@ -120,6 +137,7 @@ class LinearLayerAttributes(WeightedLayerAttributes):
         super().__init__(weight_requires_grad, with_bias=with_bias)
         self.in_features = in_features
         self.out_features = out_features
+        self.weights_layout = weights_layout
 
     def get_weight_shape(self) -> List[int]:
         return [self.out_features, self.in_features]
@@ -144,6 +162,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         transpose: bool,
         padding_values: Tuple[int, ...],
         with_bias: bool = False,
+        weights_layout: Optional[Tuple[LayoutElem, ...]] = None,
     ):
         """
 
@@ -167,6 +186,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         self.groups = groups
         self.transpose = transpose
         self.padding_values = padding_values
+        self.weights_layout = weights_layout
 
     def get_weight_shape(self) -> List[int]:
         if not self.transpose:

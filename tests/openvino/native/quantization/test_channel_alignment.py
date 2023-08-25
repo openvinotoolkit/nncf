@@ -11,35 +11,18 @@
 
 from typing import Type
 
-import pytest
-
-from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
-from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 from nncf.quantization.algorithms.channel_alignment.openvino_backend import OVChannelAlignmentAlgoBackend
 from tests.post_training.test_templates.test_channel_alignment import TemplateTestChannelAlignment
-
-
-def _get_nncf_node(metatype, layer_attrs):
-    return NNCFNode(
-        {
-            NNCFNode.ID_NODE_ATTR: 0,
-            NNCFNode.NODE_NAME_ATTR: "test",
-            NNCFNode.METATYPE_ATTR: metatype,
-            NNCFNode.LAYER_ATTRIBUTES: layer_attrs,
-        }
-    )
 
 
 class TestOVChannelAlignment(TemplateTestChannelAlignment):
@@ -50,7 +33,7 @@ class TestOVChannelAlignment(TemplateTestChannelAlignment):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     def convert_conv_layer_attrs(self, layer_attributes):
-        return OVLayerAttributes({}, {1: layer_attributes})
+        return OVLayerAttributes({}, layer_attributes)
 
     def get_conv_metatype(self):
         return OVConvolutionMetatype
@@ -69,40 +52,3 @@ class TestOVChannelAlignment(TemplateTestChannelAlignment):
 
     def mock_command_creation_factory(self, mocker) -> None:
         mocker.patch("nncf.common.factory.CommandCreatorFactory.create", return_value=OVCommandCreator)
-
-    @pytest.mark.parametrize("transpose", [False, True])
-    @pytest.mark.parametrize("shape", [[3, 4], [1, 2, 3, 4]])
-    @pytest.mark.parametrize("port_id", [-1, -2])
-    def test_get_dims_descriptor_matmul(self, transpose, shape, port_id):
-        _port_id = len(shape) + port_id
-        node = _get_nncf_node(OVMatMulMetatype, OVLayerAttributes({_port_id: {"transpose": transpose, "shape": shape}}))
-        dims_descr = OVChannelAlignmentAlgoBackend.get_dims_descriptor(node)
-
-        in_dims, out_dims = (0, 1) if port_id == -1 else (1, 0)
-        if len(shape) > 2:
-            in_dims += 2
-            out_dims += 2
-        if transpose:
-            in_dims, out_dims = out_dims, in_dims
-
-        assert dims_descr.conv_weight_in_channels_dim == in_dims
-        assert dims_descr.conv_weight_out_channels_dim == out_dims
-        assert dims_descr.bias_channels_dim == OVMatMulMetatype.output_channel_axis
-
-    def test_get_dims_descriptor_mm_no_layer_attrs(self):
-        node = _get_nncf_node(OVMatMulMetatype, None)
-        with pytest.raises(RuntimeError):
-            OVChannelAlignmentAlgoBackend.get_dims_descriptor(node)
-
-    @pytest.mark.parametrize(
-        "metatype,ref_desc",
-        [
-            (OVConvolutionMetatype, LayoutDescriptor(0, 1, 1)),
-            (OVGroupConvolutionMetatype, LayoutDescriptor(0, 2, 1)),
-            (OVGroupConvolutionMetatype, LayoutDescriptor(0, 2, 1)),
-        ],
-    )
-    def test_get_dims_descriptor_convs(self, metatype, ref_desc):
-        node = _get_nncf_node(metatype, None)
-        dims_descr = OVChannelAlignmentAlgoBackend.get_dims_descriptor(node)
-        assert dims_descr.__dict__ == ref_desc.__dict__

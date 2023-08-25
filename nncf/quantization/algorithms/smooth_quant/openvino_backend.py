@@ -161,22 +161,5 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return channel_axis
 
     @staticmethod
-    def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
-        channel_axis = 1 if node.metatype.const_channel_axis is None else node.metatype.const_channel_axis[0]
-
-        if port_id not in node.layer_attributes.constant_attributes:
-            raise RuntimeError(f"{node.node_name} should contain {port_id} in the attributes map.")
-
-        if node.metatype == OVMatMulMetatype:
-            if port_id > 1:
-                raise RuntimeError(f"{OVMatMulMetatype.name} can not take more than 2 input tensors.")
-
-            if "transpose" in node.layer_attributes.constant_attributes[port_id]:
-                transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
-                channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
-
-        return channel_axis
-
-    @staticmethod
     def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:
         return -2 + port_id if transpose else -1 - port_id

@@ -16,12 +16,15 @@ import openvino.runtime as ov
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
+from nncf.common.graph.layer_attributes import LayoutElem
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 
 
@@ -33,7 +36,7 @@ class OVLayerAttributes(BaseLayerAttributes):
     def __init__(
         self,
         constant_attributes: Dict[int, Any],
-        layer_attributes: Optional[Dict[int, BaseLayerAttributes]] = None,
+        layer_attributes: Optional[BaseLayerAttributes] = None,
         inputs_attributes: Optional[Dict[Any, Any]] = None,
     ):
         """
@@ -50,10 +53,6 @@ class OVLayerAttributes(BaseLayerAttributes):
         return self._constant_attributes
 
     @property
-    def layer_attributes(self) -> Optional[Dict[int, BaseLayerAttributes]]:
-        return self._layer_attributes
-
-    @property
     def input_attributes(self) -> Optional[Dict[Any, Any]]:
         return self._inputs_attributes
 
@@ -67,6 +66,9 @@ class OVLayerAttributes(BaseLayerAttributes):
             return list(self._constant_attributes.keys())
         return []
 
+    def get_backend_agnostic_attributes(self):
+        return self._layer_attributes
+
 
 def get_weighted_layer_attributes(
     ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: Dict[str, Any]
@@ -79,51 +81,71 @@ def get_weighted_layer_attributes(
     :param constant_attributes: Constant attributes collected for the given node.
     :return: Weighted layer attributes for the given node.
     """
-    retval = {}
-    for port_id, attrs in constant_attributes.items():
-        if ov_metatype in [
-            OVConvolutionMetatype,
-            OVDepthwiseConvolutionMetatype,
-            OVGroupConvolutionMetatype,
-            OVConvolutionBackpropDataMetatype,
-            OVGroupConvolutionBackpropDataMetatype,
-        ]:
-            node_attrs = ov_node.get_attributes()
-            kwargs = {
-                "weight_requires_grad": False,
-                "stride": tuple(node_attrs["strides"]),
-                "dilations": node_attrs["dilations"],
-                "transpose": ov_metatype in [OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype],
-                # TODO: ticket 114378: unify pad attribute
-                "padding_values": tuple(node_attrs["pads_begin"] + node_attrs["pads_end"]),
+    if len(constant_attributes) != 1:
+        return None
+
+    port_id, attrs = constant_attributes.copy().popitem()
+    if ov_metatype in [
+        OVConvolutionMetatype,
+        OVDepthwiseConvolutionMetatype,
+        OVGroupConvolutionMetatype,
+        OVConvolutionBackpropDataMetatype,
+        OVGroupConvolutionBackpropDataMetatype,
+    ]:
+        node_attrs = ov_node.get_attributes()
+        kwargs = {
+            "weight_requires_grad": False,
+            "stride": tuple(node_attrs["strides"]),
+            "dilations": node_attrs["dilations"],
+            "transpose": ov_metatype in [OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype],
+            # TODO: ticket 114378: unify pad attribute
+            "padding_values": tuple(node_attrs["pads_begin"] + node_attrs["pads_end"]),
+        }
+
+        weights_layout_map = {
+            OVConvolutionMetatype: [LayoutElem.C_OUT, LayoutElem.C_IN],
+            OVGroupConvolutionMetatype: [LayoutElem.GROUPS, LayoutElem.C_OUT, LayoutElem.C_IN],
+            OVDepthwiseConvolutionMetatype: [LayoutElem.GROUPS, LayoutElem.C_OUT, LayoutElem.C_IN],
+            OVConvolutionBackpropDataMetatype: [LayoutElem.C_IN, LayoutElem.C_OUT],
+            OVGroupConvolutionBackpropDataMetatype: [LayoutElem.GROUPS, LayoutElem.C_IN, LayoutElem.C_OUT],
+        }
+
+        weights_layout = weights_layout_map[ov_metatype]
+        weights_shape = attrs["shape"]
+        kwargs.update(
+            {
+                "in_channels": weights_shape[weights_layout.index(LayoutElem.C_IN)],
+                "out_channels": weights_shape[weights_layout.index(LayoutElem.C_OUT)],
+                "kernel_size": tuple(weights_shape[len(weights_layout) :]),
+                "groups": weights_shape[weights_layout.index(LayoutElem.GROUPS)]
+                if LayoutElem.GROUPS in weights_layout
+                else 1,
             }
+        )
+        kwargs.update({"weights_layout": tuple(weights_layout + len(kwargs["kernel_size"]) * [LayoutElem.SPATIAL])})
 
-            const_shape = attrs["shape"]
-            if ov_metatype in [OVConvolutionMetatype, OVConvolutionBackpropDataMetatype]:
-                kwargs.update(
-                    {
-                        "in_channels": const_shape[1],
-                        "out_channels": const_shape[0],
-                        "kernel_size": tuple(const_shape[2:]),
-                        "groups": 1,
-                    }
-                )
+        return ConvolutionLayerAttributes(**kwargs)
+    if ov_metatype == OVMatMulMetatype:
+        weights_shape = attrs["shape"]
+
+        weights_layout = [LayoutElem.SPATIAL] * (len(weights_shape) - 2)
+        if len(weights_shape) > 1:
+            transpose = attrs.get("transpose", False)
+            if (transpose and port_id == 0) or (not transpose and port_id == 1):
+                weights_layout += [LayoutElem.C_IN, LayoutElem.C_OUT]
             else:
-                kwargs.update(
-                    {
-                        "in_channels": const_shape[2],
-                        "out_channels": const_shape[1],
-                        "kernel_size": tuple(const_shape[3:]),
-                        "groups": const_shape[0],
-                    }
-                )
-            if kwargs["transpose"]:
-                kwargs["in_channels"], kwargs["out_channels"] = kwargs["out_channels"], kwargs["in_channels"]
-
-            common_layer_attr = ConvolutionLayerAttributes(**kwargs)
+                weights_layout += [LayoutElem.C_OUT, LayoutElem.C_IN]
         else:
-            common_layer_attr = GenericWeightedLayerAttributes(
-                weight_requires_grad=False, weight_shape=attrs.get("shape", None)
-            )
-        retval[port_id] = common_layer_attr
-    return retval
+            weights_layout += [LayoutElem.C_IN]
+
+        kwargs = {
+            "weight_requires_grad": False,
+            "in_features": weights_shape[weights_layout.index(LayoutElem.C_IN)],
+            "out_features": weights_shape[weights_layout.index(LayoutElem.C_OUT)]
+            if LayoutElem.C_OUT in weights_layout
+            else None,
+            "with_bias": False,
+            "weights_layout": weights_layout,
+        }
+        return LinearLayerAttributes(**kwargs)
+    return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=attrs.get("shape", None))

@@ -124,27 +124,6 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
-        """
-        Return weights layout descriptor of the given node if it is possible and None otherwise.
-        Only convolutional and linear nodes are supported.
-
-        :param node: NNCFNode to get layout descriptor from.
-        :return: Weights layout descriptor of the given node if it is possible and None otherwise.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_conv_layer_attributes(node: NNCFNode) -> Optional[ConvolutionLayerAttributes]:
-        """
-        Returns convolutional layer attributes of given node if they are present and None otherwise.
-
-        :param node: NNCFNode to take convolutional layer attributes from.
-        :return: Convolutional layer attributes of given node if they are present and None otherwise
-        """
-
-    @staticmethod
-    @abstractmethod
     def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
         """
         Creates bias value constant array filled by given value.

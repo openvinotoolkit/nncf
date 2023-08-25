@@ -102,52 +102,5 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return bias_constant is not None
 
     @staticmethod
-    def get_dims_descriptor(node: NNCFNode):
-        if node.metatype == OVConvolutionMetatype:
-            return LayoutDescriptor(
-                conv_weight_out_channels_dim=0,
-                conv_weight_in_channels_dim=1,
-                bias_channels_dim=node.metatype.output_channel_axis,
-            )
-        if node.metatype in [OVGroupConvolutionMetatype, OVDepthwiseConvolutionMetatype]:
-            # Using groups dim as output channels dim for ChannelAlignment algorithm
-            # TODO(dlyakhov) support group convolutions with groups number not in [1, out_channels]
-            return LayoutDescriptor(
-                conv_weight_out_channels_dim=0,
-                conv_weight_in_channels_dim=2,
-                bias_channels_dim=node.metatype.output_channel_axis,
-            )
-        if node.metatype == OVMatMulMetatype:
-            if node.layer_attributes is None:
-                raise RuntimeError(f"Attempt to align matmul node {node.node_name} that have no any constant inputs")
-            layer_attributes: OVLayerAttributes = node.layer_attributes
-            key = layer_attributes.get_const_port_ids()
-            assert len(key) == 1
-            key = key[0]
-            const_attr = layer_attributes.constant_attributes[key]
-            a, b = list(range(len(const_attr["shape"])))[-2:]
-            assert key in [a, b]
-            if key == a:
-                out_ch_dim = a
-                in_ch_dim = b
-            else:
-                out_ch_dim = b
-                in_ch_dim = a
-            if const_attr.get("transpose", False):
-                out_ch_dim, in_ch_dim = in_ch_dim, out_ch_dim
-            return LayoutDescriptor(
-                conv_weight_in_channels_dim=in_ch_dim,
-                conv_weight_out_channels_dim=out_ch_dim,
-                bias_channels_dim=node.metatype.output_channel_axis,
-            )
-        raise RuntimeError(f"Could not retrieve dims description for node {node} with metatype {node.metatype}")
-
-    @staticmethod
-    def get_conv_layer_attributes(node: NNCFNode) -> Optional[ConvolutionLayerAttributes]:
-        if node.layer_attributes is None:
-            return None
-        return node.layer_attributes.layer_attributes[1]
-
-    @staticmethod
-    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any)-> np.ndarray:
         return create_bias_tensor(node, nncf_graph, value)

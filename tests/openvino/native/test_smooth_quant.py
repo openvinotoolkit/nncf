@@ -17,6 +17,9 @@ import openvino.runtime as ov
 import pytest
 import torch
 
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import LayoutElem
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -82,18 +85,68 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         return super().test_get_activation_channel_axis(node_metatype, layer_attributes, port_id, reference_value)
 
     @pytest.mark.parametrize(
-        "node_metatype, layer_attributes, port_id, reference_value",
+        "node_metatype,layer_attributes,reference_value",
         (
-            (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": False}}), 1, -2),
-            (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": True}}), 1, -1),
-            (OVMatMulMetatype, OVLayerAttributes({0: {"transpose": False}}), 0, -1),
-            (OVMatMulMetatype, OVLayerAttributes({0: {"transpose": True}}), 0, -2),
-            (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": False}}), 2, RuntimeError),
-            (OVConvolutionMetatype, OVLayerAttributes({1: {}}), 1, 0),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    {},
+                    LinearLayerAttributes(
+                        weight_requires_grad=False,
+                        in_features=5,
+                        out_features=10,
+                        with_bias=False,
+                        weights_layout=[LayoutElem.C_OUT, LayoutElem.C_IN],
+                    ),
+                ),
+                1,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    {},
+                    LinearLayerAttributes(
+                        weight_requires_grad=False,
+                        in_features=5,
+                        out_features=None,
+                        with_bias=False,
+                        weights_layout=[LayoutElem.C_IN],
+                    ),
+                ),
+                0,
+            ),
+            (
+                OVConvolutionMetatype,
+                OVLayerAttributes(
+                    {},
+                    ConvolutionLayerAttributes(
+                        weight_requires_grad=False,
+                        in_channels=5,
+                        out_channels=10,
+                        kernel_size=(5, 5),
+                        stride=(1, 1),
+                        dilations=(1, 1),
+                        groups=1,
+                        transpose=False,
+                        padding_values=[1, 1, 1, 1],
+                        with_bias=False,
+                        weights_layout=[LayoutElem.SPATIAL, LayoutElem.SPATIAL, LayoutElem.C_IN, LayoutElem.C_OUT],
+                    ),
+                ),
+                2,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    {},
+                    None,
+                ),
+                1,
+            ),
         ),
     )
-    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
-        return super().test_get_weight_channel_axis(node_metatype, layer_attributes, port_id, reference_value)
+    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):
+        return super().test_get_weight_channel_axis(node_metatype, layer_attributes, reference_value)
 
     @staticmethod
     def get_matmul_metatype():

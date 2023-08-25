@@ -30,6 +30,7 @@ from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import LayoutElem
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
@@ -313,7 +314,7 @@ class SmoothQuant(Algorithm):
         port_id = self._backend_entity.get_weight_tensor_port_id(node)
         weights_size = len(node.layer_attributes.constant_attributes[port_id]["shape"])
         if weights_size > 1:
-            channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
+            channel_axis = self._get_weight_channel_axis(node)
             return self._backend_entity.calculate_weight_scale(scale_value, weights_size, channel_axis)
         return scale_value
 
@@ -344,7 +345,7 @@ class SmoothQuant(Algorithm):
         """
         channel_axis = 0
         if len(weights.shape) > 1:
-            channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
+            channel_axis = self._get_weight_channel_axis(node)
         return self._backend_entity.process_weight_statistics(weights, channel_axis)
 
     def _create_scale_node_name(self, source_name: str, source_port_id: int) -> str:
@@ -359,3 +360,10 @@ class SmoothQuant(Algorithm):
         unique_index = self._cached_multiply_names[scale_node_name]
         self._cached_multiply_names[scale_node_name] += 1
         return f"{scale_node_name}_{unique_index}/sq_multiply"
+
+    @staticmethod
+    def _get_weight_channel_axis(node: NNCFNode) -> int:
+        layer_attributes = node.layer_attributes.get_backend_agnostic_attributes()
+        if layer_attributes is None or layer_attributes.weights_layout is None:
+            return 1
+        return layer_attributes.weights_layout.index(LayoutElem.C_IN)
