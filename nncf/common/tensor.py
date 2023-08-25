@@ -51,7 +51,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def _bool_operator_resolver(self, bound_predicate: Callable[[TensorType], Union[bool, "NNCFTensor"]],
                                 other: Any) -> Union[bool, "NNCFTensor"]:
         if isinstance(other, NNCFTensor):
-            return self.__class__(self._tensor == other.tensor)
+            return self.__class__(bound_predicate(other.tensor))
         retval = bound_predicate(other)
         if isinstance(retval, bool) or self._is_native_bool(retval):
             return retval
@@ -279,7 +279,7 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None) -> Union[float, List[float]]:
+    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None) -> Union[float, NNCFTensor]:
         pass
 
     @staticmethod

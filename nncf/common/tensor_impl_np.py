@@ -19,6 +19,7 @@ from typing import Type
 from typing import Union
 
 import numpy as np
+from numpy.ma.core import MaskedConstant
 
 from nncf import TargetDevice
 from nncf.common.tensor import NNCFTensor
@@ -32,6 +33,18 @@ _DTYPE_MAP: Dict[TensorDtype, Any] = {
 }
 
 _INV_DTYPE_MAP = {v: k for k, v in _DTYPE_MAP.items()}
+
+
+class WrappingIterator:
+    def __init__(self, orig_iter: Iterator):
+        self._orig_iter = orig_iter
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        retval = next(self._orig_iter)
+        return NPNNCFTensor(retval)
 
 
 class NPNNCFTensor(NNCFTensor[np.ndarray]):
@@ -51,7 +64,7 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
         return self._tensor.size
 
     def __iter__(self) -> Iterator:
-        return iter(self._tensor)
+        return WrappingIterator(iter(self._tensor))
 
     def dot(self, other: "NPNNCFTensor") -> "NPNNCFTensor":
         return self.__class__(self._tensor.dot(other._tensor))
@@ -175,8 +188,12 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.power(tensor.tensor, pwr))
 
     @staticmethod
-    def quantile(tensor: NPNNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None) -> Union[float, List[float]]:
-        return np.quantile(tensor.tensor, quantile, axis=axis)
+    def quantile(tensor: NPNNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None) -> Union[float, NNCFTensor]:
+        retval = np.quantile(tensor.tensor, quantile, axis=axis)
+        if not isinstance(quantile, list):
+            return retval
+        else:
+            return NPNNCFTensor(retval)
 
     @staticmethod
     def mean_of_list(tensor_list: List[NPNNCFTensor], axis: int) -> NPNNCFTensor:
@@ -192,17 +209,21 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def logical_or(tensor1: NPNNCFTensor, tensor2: NPNNCFTensor) -> NPNNCFTensor:
-        return NPNNCFTensor(np.logical_or(tensor1, tensor2))
+        return NPNNCFTensor(np.logical_or(tensor1.tensor, tensor2.tensor))
 
     @staticmethod
     def masked_mean(tensor: NPNNCFTensor, mask: NPNNCFTensor, axis: int = None, keepdims: bool = False) -> NPNNCFTensor:
         masked_x = np.ma.array(tensor.tensor, mask=mask.tensor)
-        return NPNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=False).data)
+        result = np.ma.mean(masked_x, axis=axis, keepdims=False)
+        if isinstance(result, MaskedConstant):
+            result = result.data
+        return NPNNCFTensor(result)
 
     @staticmethod
     def masked_median(tensor: NPNNCFTensor, mask: NPNNCFTensor, axis: int = None, keepdims: bool = False) -> NPNNCFTensor:
         masked_x = np.ma.array(tensor.tensor, mask=mask.tensor)
-        return NPNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=False).data)
+        result = np.ma.median(masked_x, axis=axis, keepdims=False)
+        return NPNNCFTensor(result.data)
 
     @staticmethod
     def concatenate(tensor_list: List[NPNNCFTensor]) -> NPNNCFTensor:
