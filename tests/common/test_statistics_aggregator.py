@@ -26,6 +26,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
@@ -677,9 +678,10 @@ class TemplateTestStatisticsAggregator:
         assert len(tensor_collectors) == 3
         for algorithm, _, tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
+            assert isinstance(stat, MinMaxTensorStatistic)
             ref_min_val, ref_max_val = ref_val[algorithm]
-            assert np.allclose(stat.min_values, ref_min_val)
-            assert np.allclose(stat.max_values, ref_max_val)
+            assert np.allclose(stat.min_values.to_numpy(), ref_min_val)
+            assert np.allclose(stat.max_values.to_numpy(), ref_max_val)
 
     @classmethod
     def _check_static_point_common(cls, stat_point, ref_type=TargetType.POST_LAYER_OPERATION):
@@ -789,8 +791,9 @@ class TemplateTestStatisticsAggregator:
 
         for collector, ref in collectors_and_refs:
             stat = collector.get_statistics()
-            assert np.allclose(stat.min_values, ref[0])
-            assert np.allclose(stat.max_values, ref[1])
+            assert isinstance(stat, MinMaxTensorStatistic)
+            assert np.allclose(stat.min_values.to_numpy(), ref[0])
+            assert np.allclose(stat.max_values.to_numpy(), ref[1])
 
             if isinstance(ref[0], np.ndarray):
                 assert stat.min_values.shape == ref[0].shape

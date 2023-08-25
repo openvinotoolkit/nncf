@@ -544,15 +544,23 @@ class MeanPerChReducer(TensorReducerBase):
 ##################################################Aggregators##################################################
 
 
-class NoopAggregator(OnlineTensorAggregator):
+class NoopAggregator(TensorAggregatorBase):
+    # TODO (vshampor): this seems to be a bad design since this class does not actually aggregate anything
+    #  and therefore cannot be an `Aggregator` instance. In particular this is visible in the interface violation
+    #  for the _aggregate_impl function, which is supposed to return a single tensor - the aggregate - but has to
+    #  return a list of tensors instead in order for the purpose of the class to be served.
+    def _reset_sample_container(self):
+        pass
+
     def __init__(self, num_samples: Optional[int]):
         super().__init__(None, num_samples)
+        self._unaggregated_samples = []
 
     def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
-        self._current_aggregate = x
+        self._unaggregated_samples.append(x)
 
-    def _aggregate_impl(self) -> NNCFTensor:
-        return self._current_aggregate
+    def _aggregate_impl(self) -> List[NNCFTensor]:
+        return self._unaggregated_samples
 
 
 class ShapeAggregator(Aggregator):
