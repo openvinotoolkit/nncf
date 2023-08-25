@@ -175,4 +175,4 @@ class ONNXRawStatisticCollector(RawStatisticCollector):
         self._register_input_common(x)
 
     def _get_statistics(self) -> ONNXRawTensorStatistic:
-        return ONNXRawTensorStatistic(self._all_values)
+        return ONNXRawTensorStatistic([ONNXNNCFTensor(t) for t in self._all_values])

@@ -95,7 +95,7 @@ class RawTensorStatistic(TensorStatistic):
     Base class for the raw statistics, without any aggregation.
     """
 
-    def __init__(self, values: NNCFTensor):
+    def __init__(self, values: List[NNCFTensor]):
         """
         :param values: Collected raw values.
         """
