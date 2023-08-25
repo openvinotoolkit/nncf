@@ -23,6 +23,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
@@ -620,6 +621,8 @@ class TemplateTestStatisticsAggregator:
             for val, ref in zip(ret_val, test_params.ref_values):
                 if isinstance(ref, np.ndarray):
                     assert ref.shape == val.shape
+                if isinstance(val, NNCFTensor):
+                    val = val.to_numpy()
                 assert np.allclose(val, ref)
 
     def create_statistics_point(

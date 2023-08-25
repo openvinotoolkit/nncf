@@ -669,14 +669,14 @@ class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
     def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: NNCFTensor,
                                                     outliers_mask: NNCFTensor) -> NNCFTensor:
         backend = stacked_val.backend
-        return backend.masked_mean(stacked_val, mask=outliers_mask)
+        return backend.masked_mean(stacked_val, mask=outliers_mask, axis=0)
 
 
 class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
     def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: NNCFTensor,
                                                     outliers_mask: NNCFTensor) -> NNCFTensor:
         backend = stacked_val.backend
-        return backend.masked_median(stacked_val, mask=outliers_mask)
+        return backend.masked_median(stacked_val, mask=outliers_mask, axis=0)
 
 
 AGGREGATORS_MAP = {

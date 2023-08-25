@@ -19,6 +19,7 @@ from typing import Type
 from typing import Union
 
 import numpy as np
+from numpy.ma import MaskedArray
 from numpy.ma.core import MaskedConstant
 
 from nncf import TargetDevice
@@ -215,7 +216,7 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
     def masked_mean(tensor: NPNNCFTensor, mask: NPNNCFTensor, axis: int = None, keepdims: bool = False) -> NPNNCFTensor:
         masked_x = np.ma.array(tensor.tensor, mask=mask.tensor)
         result = np.ma.mean(masked_x, axis=axis, keepdims=False)
-        if isinstance(result, MaskedConstant):
+        if isinstance(result, (MaskedConstant, MaskedArray)):
             result = result.data
         return NPNNCFTensor(result)
 
@@ -223,6 +224,8 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
     def masked_median(tensor: NPNNCFTensor, mask: NPNNCFTensor, axis: int = None, keepdims: bool = False) -> NPNNCFTensor:
         masked_x = np.ma.array(tensor.tensor, mask=mask.tensor)
         result = np.ma.median(masked_x, axis=axis, keepdims=False)
+        if isinstance(result, (MaskedConstant, MaskedArray)):
+            result = result.data
         return NPNNCFTensor(result.data)
 
     @staticmethod
