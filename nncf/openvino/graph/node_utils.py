@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Optional, Tuple, Type
+from typing import Any, Callable, List, Optional, Tuple, Type
 
 import numpy as np
 import openvino.runtime as ov
@@ -364,3 +364,19 @@ def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[in
     for channel_axis in sorted(channel_axes, reverse=True):
         del reduction_shape[channel_axis]
     return tuple(reduction_shape)
+
+
+def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:
+    """
+    Creates bias value constant array filled by given value.
+
+    :param node_without_bias: NNCFNode to add bias to.
+    :param graph: Target NNCFgraph.
+    :param value: Value to fill bias constant array.
+    :return: Bias value constant array filled by given value.
+    """
+    node_shape = graph.get_output_edges(node_without_bias)[0].tensor_shape
+    bias_shape = [1] * len(node_shape)
+    channel_axis = node_without_bias.metatype.output_channel_axis
+    bias_shape[channel_axis] = node_shape[1]
+    return np.full(bias_shape, value)
