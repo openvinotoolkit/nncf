@@ -17,6 +17,7 @@ import pytest
 
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import OfflineAggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorAggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
@@ -47,9 +48,12 @@ class DummyTensorReducerA(DummyTensorReducer):
     pass
 
 
-class DummyTensorAggregator(TensorAggregatorBase):
+class DummyTensorAggregator(OfflineAggregatorBase):
+    def _aggregate_stacked_samples(self, stacked_samples: NNCFTensor) -> NNCFTensor:
+        return stacked_samples
+
     def __init__(self, num_samples: Optional[int]):
-        super().__init__(None, num_samples)
+        super().__init__(None, num_samples=num_samples)
 
     def _register_reduced_input_impl(self, x: NNCFTensor):
         return self._samples.append(x)

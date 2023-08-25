@@ -48,7 +48,7 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
 
     @property
     def size(self) -> int:
-        return self.size
+        return self._tensor.size
 
     def __iter__(self) -> Iterator:
         return iter(self._tensor)
@@ -96,6 +96,12 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
     def reshape(self, *shape: Tuple[int, ...]) -> "NPNNCFTensor":
         return self.__class__(self.tensor.reshape(*shape))
 
+    def min(self) -> float:
+        return self._tensor.min()
+
+    def max(self) -> float:
+        return self._tensor.max()
+
 
 class NPNNCFTensorBackend(NNCFTensorBackend):
     inf = np.inf
@@ -142,7 +148,7 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def transpose(tensor: NPNNCFTensor, axes: List[int]) -> NPNNCFTensor:
-        return NPNNCFTensor(np.transpose(tensor.tensor, axis=axes))
+        return NPNNCFTensor(np.transpose(tensor.tensor, axes=axes))
 
     @staticmethod
     def eps(dtype: TensorDtype) -> float:

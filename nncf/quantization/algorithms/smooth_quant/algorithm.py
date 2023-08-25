@@ -132,7 +132,7 @@ class SmoothQuant(Algorithm):
                 weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value, weight_port)
                 weight_statistics = self._clip_statistics([weight_statistics])
 
-                scales, ratio = self._backend_entity.calculate_scale_and_ratio(
+                scales, ratio = self.calculate_scale_and_ratio(
                     activations_value, weight_statistics, self._alpha
                 )
 

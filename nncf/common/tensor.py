@@ -42,6 +42,12 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def _is_native_bool(self, bool_result: Any) -> bool:
         pass
 
+    def _get_rhs(self, other: Any) -> Any:
+        if isinstance(other, NNCFTensor):
+            return other.tensor
+        else:
+            return other
+
     def _bool_operator_resolver(self, bound_predicate: Callable[[TensorType], Union[bool, "NNCFTensor"]],
                                 other: Any) -> Union[bool, "NNCFTensor"]:
         if isinstance(other, NNCFTensor):
@@ -66,22 +72,22 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         return self._bool_operator_resolver(self._tensor.__gt__, other)
 
     def __pow__(self, other) -> "NNCFTensor":
-        return self.__class__(self._tensor ** other)
+        return self.__class__(self._tensor ** self._get_rhs(other))
 
     def __invert__(self) -> "NNCFTensor":
         return self.__class__(~self._tensor)
 
     def __add__(self, other: Any) -> 'NNCFTensor':
-        return self.__class__(self._tensor + other.tensor)
+        return self.__class__(self._tensor + self._get_rhs(other))
 
     def __sub__(self, other: Any) -> 'NNCFTensor':
-        return self.__class__(self._tensor - other.tensor)
+        return self.__class__(self._tensor - self._get_rhs(other))
 
     def __mul__(self, other: Any) -> 'NNCFTensor':
-        return self.__class__(self._tensor * other.tensor)
+        return self.__class__(self._tensor * self._get_rhs(other))
 
     def __truediv__(self, other: Any) -> 'NNCFTensor':
-        return self.__class__(self._tensor / other)
+        return self.__class__(self._tensor / self._get_rhs(other))
 
     def __len__(self) -> int:
         return len(self._tensor)
@@ -158,9 +164,11 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def any(self) -> bool:
         pass
 
+    @abstractmethod
     def min(self) -> float:
         pass
 
+    @abstractmethod
     def max(self) -> float:
         pass
 

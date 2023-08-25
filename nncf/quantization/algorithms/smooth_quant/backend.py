@@ -141,7 +141,7 @@ class SmoothQuantAlgoBackend(ABC):
     @abstractmethod
     def calculate_scale_and_ratio(
         activations: TTensor, weights: TTensor, alpha: float, quantile: Optional[float] = None
-    ) -> Tuple[TTensor, TTensor]:
+    ) -> Tuple[NNCFTensor, float]:
         """
         Calculates base scale value and it's ratio.
 
