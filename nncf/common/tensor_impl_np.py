@@ -239,11 +239,11 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def amin(tensor: NPNNCFTensor, axis: List[int], keepdims: bool = None) -> NPNNCFTensor:
-        return NPNNCFTensor(np.amin(tensor.tensor, axis, keepdims))
+        return NPNNCFTensor(np.amin(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def amax(tensor: NPNNCFTensor, axis: List[int], keepdims: bool = None) -> NPNNCFTensor:
-        return NPNNCFTensor(np.amax(tensor.tensor, axis, keepdims))
+        return NPNNCFTensor(np.amax(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def minimum(tensor1: NPNNCFTensor, tensor2: NPNNCFTensor) -> NPNNCFTensor:

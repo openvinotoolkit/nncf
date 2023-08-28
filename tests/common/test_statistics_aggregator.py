@@ -421,6 +421,7 @@ class TemplateTestStatisticsAggregator:
         assert len(tensor_collectors) == 1
         for tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
+            assert isinstance(stat, MinMaxTensorStatistic)
             # Torch and Openvino backends tensor collectors return values in shape of scale
             # in comparison to ONNX backends.
             ref_min_val, ref_max_val = test_parameters.ref_min_val, test_parameters.ref_max_val

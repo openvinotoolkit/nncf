@@ -500,7 +500,7 @@ class QuantileReducer(QuantileReducerBase):
         x = x[0]
         reduction_shape = self._get_reduction_shape(x)
         backend = x.backend
-        return [backend.quantile(x, self._quantile, reduction_shape, keepdims=True)]
+        return [t for t in backend.quantile(x, self._quantile, reduction_shape, keepdims=True)]
 
 
 class AbsQuantileReducer(QuantileReducerBase):
@@ -651,13 +651,12 @@ class MedianAggregator(OfflineAggregatorBase):
 class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
     def __init__(
             self,
-            tensor_processor,
             use_per_sample_stats: bool = False,
             num_samples: Optional[int] = None,
             window_size: int = None,
             quantile: float = 0.01,
     ):
-        super().__init__(tensor_processor, use_per_sample_stats, num_samples, window_size)
+        super().__init__(use_per_sample_stats, num_samples, window_size)
         self._quantile = quantile
 
     def _aggregate_stacked_samples(self, stacked_val: NNCFTensor) -> NNCFTensor:
