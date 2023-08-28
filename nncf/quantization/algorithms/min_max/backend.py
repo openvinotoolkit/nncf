@@ -144,16 +144,6 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
-        """
-        Returns backend-specific unified statistics.
-
-        :param statistics: List of MinMaxTensorStatistic instances.
-        :return: Unified MinMaxTensorStatistic value.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,

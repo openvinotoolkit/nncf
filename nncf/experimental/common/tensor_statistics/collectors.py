@@ -538,7 +538,7 @@ class MeanPerChReducer(TensorReducerBase):
         x = x[0]
         backend = x.backend
         if len(x.shape) < 3:
-            retval = backend.mean(x, axis=0)
+            return [backend.mean(x, axis=0)]
         x = backend.moveaxis(x, self._reduction_shape, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
         retval = backend.mean(t, axis=(0, 2))
@@ -557,7 +557,7 @@ class NoopAggregator(TensorAggregatorBase):
         pass
 
     def __init__(self, num_samples: Optional[int]):
-        super().__init__(None, num_samples)
+        super().__init__(num_samples)
         self._unaggregated_samples = []
 
     def _register_reduced_input_impl(self, x: NNCFTensor) -> None:

@@ -114,16 +114,6 @@ class BiasCorrectionAlgoBackend(ABC):
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
 
-    @staticmethod
-    @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: str) -> NNCFTensor:
-        """
-        Returns backend-specific processed output from the model.
-
-        :param raw_data: Backend-specific output from the model.
-        :param output_name: Name of the output layer or tensor name.
-        :return: Processed output as NNCFTensor.
-        """
 
     @staticmethod
     @abstractmethod

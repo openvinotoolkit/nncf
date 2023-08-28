@@ -89,9 +89,6 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
         return ONNXRawStatisticCollector(num_samples)
 
-    @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
-        return ONNXNNCFTensor(raw_data[output_name])
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[int, int]:

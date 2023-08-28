@@ -77,9 +77,6 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> TensorCollector:
         return get_raw_stat_collector(num_samples, inplace)
 
-    @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> OVNNCFTensor:
-        return OVNNCFTensor(raw_data[output_name])
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:

@@ -148,16 +148,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :return: boolean indicating whether the node has a quantized weights or not
         """
 
-    @staticmethod
-    @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: str) -> NNCFTensor:
-        """
-        Returns backend-specific processed output from the model.
-
-        :param raw_data: Backend-specific output from the model.
-        :param output_name: Name of the output layer or tensor name.
-        :return: Processed output as NNCFTensor.
-        """
 
     @staticmethod
     @abstractmethod
@@ -172,33 +162,12 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_shift_magnitude(current_bias_value: TTensor, updated_bias_value: TTensor) -> float:
-        """
-        Calculates bias shift magnitude based on the current and updated values.
-
-        :param current_bias_value: The original bias value.
-        :param updated_bias_value: The updated bias value.
-        :return: Magnitude between original and updated bias values.
-        """
-
-    @staticmethod
-    @abstractmethod
     def post_process_output_data(data: List[TTensor]) -> TTensor:
         """
         Convert data to backend specific type.
 
         :param data: List of data.
         :return: Converted data.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def reshape_tensor(data: TTensor, new_shape: List[int]) -> TTensor:
-        """
-        Reshape tensor.
-
-        :param data: Tensor.
-        :param new_shape: New shape.
         """
 
     @staticmethod

@@ -113,16 +113,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
     @staticmethod
-    def unify_statistics(statistics: List[ONNXMinMaxTensorStatistic]) -> ONNXMinMaxTensorStatistic:
-        max_values, min_values = [], []
-        for statistic in statistics:
-            max_values.append(np.array(statistic.max_values).flatten())
-            min_values.append(np.array(statistic.min_values).flatten())
-        max_values = np.max(max_values, axis=0)
-        min_values = np.min(min_values, axis=0)
-        return ONNXMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
-
-    @staticmethod
     def _get_input_edges_mapping(nncf_graph: NNCFGraph):
         return get_input_edges_mapping(nncf_graph)
 

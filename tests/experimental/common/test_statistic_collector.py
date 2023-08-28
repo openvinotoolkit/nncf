@@ -21,7 +21,6 @@ from nncf.experimental.common.tensor_statistics.collectors import OfflineAggrega
 from nncf.experimental.common.tensor_statistics.collectors import TensorAggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
-from nncf.experimental.common.tensor_statistics.collectors import TensorType
 
 
 # pylint: disable=(protected-access)
@@ -31,7 +30,7 @@ class DummyTensorReducer(TensorReducerBase):
         self._output_name = output_name
         self._inplace_mock = inplace_mock
 
-    def _reduce_out_of_place(self, x: List[TensorType]):
+    def _reduce_out_of_place(self, x: List[NNCFTensor]):
         return x
 
     def get_inplace_fn(self):
@@ -234,7 +233,7 @@ class DummyMultipleInpOutTensorReducer(DummyTensorReducer):
     NUM_INPUTS = 3
     NUM_OUTPUTS = 2
 
-    def _reduce_out_of_place(self, x: List[TensorType]):
+    def _reduce_out_of_place(self, x: List[NNCFTensor]):
         return x[: self.NUM_OUTPUTS]
 
     def get_output_names(self, target_node_name: str, port_id: int) -> str:

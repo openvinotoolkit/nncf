@@ -207,7 +207,7 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def mean(x: "NPNNCFTensor", axis: int, keepdims: bool = False) -> NPNNCFTensor:
-        return NPNNCFTensor(np.mean(x.tensor, axis, keepdims))
+        return NPNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def moveaxis(x: "NPNNCFTensor", src: int, dst: int) -> NPNNCFTensor:

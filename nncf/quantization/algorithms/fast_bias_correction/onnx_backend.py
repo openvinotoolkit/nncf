@@ -91,10 +91,6 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
-        return ONNXNNCFTensor(raw_data[output_name])
-
-    @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_any_weight_quantized(node, nncf_graph)
 
@@ -103,19 +99,8 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return is_node_with_bias(node)
 
     @staticmethod
-    def get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
-        bias_shift_magnitude = np.inf
-        if np.count_nonzero(current_bias_value == 0) == 0:
-            bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
-        return bias_shift_magnitude
-
-    @staticmethod
     def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
         return np.array(data)
-
-    @staticmethod
-    def reshape_tensor(data: np.ndarray, new_shape: List[int]) -> np.ndarray:
-        return data.reshape(new_shape)
 
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
