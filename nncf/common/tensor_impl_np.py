@@ -194,8 +194,8 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.power(tensor.tensor, pwr))
 
     @staticmethod
-    def quantile(tensor: NPNNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None) -> Union[float, NNCFTensor]:
-        retval = np.quantile(tensor.tensor, quantile, axis=axis)
+    def quantile(tensor: NPNNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None, keepdims: bool = False) -> Union[float, NNCFTensor]:
+        retval = np.quantile(tensor.tensor, quantile, axis=axis, keepdims=keepdims)
         if not isinstance(quantile, list):
             return retval
         else:
@@ -206,8 +206,8 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.mean([x.tensor for x in tensor_list], axis=axis))
 
     @staticmethod
-    def mean(x: "NPNNCFTensor", axis: int) -> NPNNCFTensor:
-        return NPNNCFTensor(np.mean(x.tensor, axis))
+    def mean(x: "NPNNCFTensor", axis: int, keepdims: bool = False) -> NPNNCFTensor:
+        return NPNNCFTensor(np.mean(x.tensor, axis, keepdims))
 
     @staticmethod
     def moveaxis(x: "NPNNCFTensor", src: int, dst: int) -> NPNNCFTensor:
@@ -236,3 +236,23 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
     @staticmethod
     def concatenate(tensor_list: List[NPNNCFTensor]) -> NPNNCFTensor:
         return NPNNCFTensor(np.concatenate([t.tensor for t in tensor_list]))
+
+    @staticmethod
+    def amin(tensor: NPNNCFTensor, axis: List[int], keepdims: bool = None) -> NPNNCFTensor:
+        return NPNNCFTensor(np.amin(tensor.tensor, axis, keepdims))
+
+    @staticmethod
+    def amax(tensor: NPNNCFTensor, axis: List[int], keepdims: bool = None) -> NPNNCFTensor:
+        return NPNNCFTensor(np.amax(tensor.tensor, axis, keepdims))
+
+    @staticmethod
+    def minimum(tensor1: NPNNCFTensor, tensor2: NPNNCFTensor) -> NPNNCFTensor:
+        return NPNNCFTensor(np.minimum(tensor1.tensor, tensor2.tensor))
+
+    @staticmethod
+    def maximum(tensor1: NPNNCFTensor, tensor2: NPNNCFTensor) -> NPNNCFTensor:
+        return NPNNCFTensor(np.maximum(tensor1.tensor, tensor2.tensor))
+
+    @staticmethod
+    def unstack(tensor: NPNNCFTensor, axis: int = 0) -> List[NPNNCFTensor]:
+        return [NPNNCFTensor(np.squeeze(e, axis)) for e in np.split(tensor.tensor, tensor.tensor.shape[axis], axis=axis)]

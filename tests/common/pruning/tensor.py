@@ -14,6 +14,7 @@ from typing import Type
 
 import numpy as np
 
+from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorDtype
@@ -34,9 +35,9 @@ class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
         return NPNNCFTensor(np.ones(shape))
 
     @classmethod
-    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: List[np.ndarray]) -> None:
         for input_mask in tensors[1:]:
-            np.testing.assert_allclose(tensors[0].tensor, input_mask.tensor)
+            np.testing.assert_allclose(tensors[0], input_mask)
 
     @classmethod
     def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
@@ -44,8 +45,8 @@ class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
         return NPNNCFTensor(ret_tensor)
 
     @classmethod
-    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
-        cls.assert_allclose(input_masks)
+    def elementwise_mask_propagation(cls, input_masks: List[SymbolicMask]) -> SymbolicMask:
+        cls.assert_allclose([np.asarray(im.shape) for im in input_masks])
         return input_masks[0]
 
     @classmethod

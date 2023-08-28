@@ -63,7 +63,7 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def min(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
         return OVNNCFTensor(np.minimum(x1.tensor, x2.tensor))
-
+;
     @staticmethod
     def max(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
         return OVNNCFTensor(np.maximum(x1.tensor, x2.tensor))

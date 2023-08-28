@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union, Deque
 
 import numpy as np
 
@@ -313,31 +313,28 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
     def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, num_samples: int = None):
         super().__init__(reduction_shape, num_samples)
         self._use_abs_max = use_abs_max
-        self._tensor_processor = self._get_processor()
 
         self._min_values = None
         self._max_values = None
 
-    @staticmethod
-    @abstractmethod
-    def _get_processor():
-        pass
 
     def _register_input_common(self, x: NNCFTensor):
-        min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
+        backend = x.backend
+        min_reduced = backend.amin(x, axis=self._reduction_shape, keepdims=True)
+
         if self._use_abs_max:
-            x = self._tensor_processor.abs(x)
-        max_reduced = self._tensor_processor.reduce_max(x, self._reduction_shape)
+            x = backend.abs(x)
+        max_reduced = backend.amax(x, self._reduction_shape, keepdims=True)
 
         if self._min_values is None:
             self._min_values = min_reduced
         else:
-            self._min_values = self._tensor_processor.min(min_reduced, self._min_values)
+            self._min_values = backend.minimum(min_reduced, self._min_values)
 
         if self._max_values is None:
             self._max_values = max_reduced
         else:
-            self._max_values = self._tensor_processor.max(max_reduced, self._max_values)
+            self._max_values = backend.maximum(max_reduced, self._max_values)
 
     def _reset(self):
         self._min_values = None
@@ -361,25 +358,21 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
         super().__init__(reduction_shape, num_samples)
         self._use_per_sample_stats = use_per_sample_stats
         self._use_abs_max = use_abs_max
-        self._tensor_processor = self._get_processor()
 
-        self._all_min_values = deque(maxlen=window_size)
-        self._all_max_values = deque(maxlen=window_size)
+        self._all_min_values: Deque[NNCFTensor] = deque(maxlen=window_size)
+        self._all_max_values: Deque[NNCFTensor] = deque(maxlen=window_size)
 
-    @staticmethod
-    @abstractmethod
-    def _get_processor():
-        pass
 
     def _register_input_common(self, x: NNCFTensor):
-        min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
+        backend = x.backend
+        min_reduced = backend.amin(x, axis=self._reduction_shape, keepdims=True)
         if self._use_abs_max:
-            x = self._tensor_processor.abs(x)
-        max_reduced = self._tensor_processor.reduce_max(x, self._reduction_shape)
+            x = backend.abs(x)
+        max_reduced = backend.amax(x, axis=self._reduction_shape, keepdims=True)
 
         if self._use_per_sample_stats:
-            self._all_min_values.extend(self._tensor_processor.unstack(min_reduced))
-            self._all_max_values.extend(self._tensor_processor.unstack(max_reduced))
+            self._all_min_values.extend(backend.unstack(min_reduced))
+            self._all_max_values.extend(backend.unstack(max_reduced))
         else:
             self._all_min_values.append(min_reduced)
             self._all_max_values.append(max_reduced)
@@ -417,16 +410,18 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         self._use_means_of_maxs = use_means_of_maxs
 
     def _min_aggregate(self):
-        stacked_min = self._tensor_processor.stack(self._all_min_values)
+        backend = next(iter(self._all_min_values)).backend
+        stacked_min = backend.stack(list(self._all_min_values))
         if self._use_means_of_mins:
-            return self._tensor_processor.mean(stacked_min, axis=0)
-        return self._tensor_processor.reduce_min(stacked_min, axis=0)
+            return backend.mean(stacked_min, axis=0)
+        return backend.amin(stacked_min, axis=0, keepdims=True)
 
     def _max_aggregate(self):
-        stacked_max = self._tensor_processor.stack(self._all_max_values)
+        backend = next(iter(self._all_max_values)).backend
+        stacked_max = backend.stack(list(self._all_max_values))
         if self._use_means_of_maxs:
-            return self._tensor_processor.mean(stacked_max, axis=0)
-        return self._tensor_processor.reduce_max(stacked_max, axis=0)
+            return backend.mean(stacked_max, axis=0)
+        return backend.amin(stacked_max, axis=0, keepdims=True)
 
 
 class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
@@ -435,12 +430,14 @@ class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     """
 
     def _min_aggregate(self):
-        stacked_min = self._tensor_processor.stack(self._all_min_values)
-        return self._tensor_processor.mean(stacked_min, axis=0)
+        backend = next(iter(self._all_max_values)).backend
+        stacked_min = backend.stack(list(self._all_min_values))
+        return backend.mean(stacked_min, axis=0)
 
     def _max_aggregate(self):
-        stacked_max = self._tensor_processor.stack(self._all_max_values)
-        return self._tensor_processor.mean(stacked_max, axis=0)
+        backend = next(iter(self._all_max_values)).backend
+        stacked_max = backend.stack(list(self._all_max_values))
+        return backend.mean(stacked_max, axis=0)
 
 
 class MeanStatisticCollector(OfflineTensorStatisticCollector):
@@ -459,29 +456,33 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         :param window_size: Optional maximum length for the statistic collection
         """
         super().__init__(reduction_shape, num_samples)
-        self._tensor_processor = self._get_processor()
-        self._all_values = deque(maxlen=window_size)
-        self._all_shapes = deque(maxlen=window_size)
-
-    @staticmethod
-    @abstractmethod
-    def _get_processor():
-        pass
+        self._all_values: Deque[NNCFTensor] = deque(maxlen=window_size)
+        self._all_shapes: Deque[List[int]] = deque(maxlen=window_size)
 
     def _register_input_common(self, x: NNCFTensor):
+        backend = x.backend
         if self._reduction_shape == 0:
-            self._all_values.append(self._tensor_processor.batch_mean(x))
+            self._all_values.append(backend.mean(x, axis=0, keepdims=True))
         else:
-            self._all_values.append(self._tensor_processor.mean_per_channel(x, self._reduction_shape))
+            self._all_values.append(self._mean_per_channel(x, self._reduction_shape))
         self._all_shapes.append(x.shape)
+
+    def _mean_per_channel(self, x: NNCFTensor, reduction_shape: ReductionShape) -> NNCFTensor:
+        backend = x.backend
+        if len(x.shape) < 3:
+            return backend.mean(x, axis=0)
+        x = backend.moveaxis(x, reduction_shape, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return backend.mean(t, axis=(0, 2))
 
     def _reset(self):
         self._all_values.clear()
         self._all_shapes.clear()
 
     def _mean_aggregate(self):
-        all_values_stack = self._tensor_processor.stack(self._all_values)
-        return self._tensor_processor.mean(all_values_stack, 0)
+        backend = next(iter(self._all_values)).backend
+        all_values_stack = backend.stack(list(self._all_values))
+        return backend.mean(all_values_stack, 0)
 
     def _shape(self):
         return self._all_shapes[0]
@@ -500,11 +501,6 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
         """
         super().__init__(num_samples=num_samples)
         self._all_values = []
-
-    @staticmethod
-    @abstractmethod
-    def _get_processor():
-        pass
 
     def _register_input_common(self, x: NNCFTensor):
         self._all_values.append(x.tensor)

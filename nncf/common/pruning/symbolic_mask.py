@@ -11,6 +11,8 @@
 
 from typing import List, Union
 
+import numpy as np
+
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
 
@@ -77,6 +79,9 @@ class SymbolicMask:
     @property
     def device(self) -> None:
         return None
+
+    def to_numpy(self) -> np.ndarray:
+        return np.array(self.shape)
 
 
 class AmbiguousSymbolicMask(SymbolicMask):

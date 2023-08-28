@@ -194,7 +194,7 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...]]) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...]], keepdims: bool = False) -> NNCFTensor:
         pass
 
     @staticmethod
@@ -289,7 +289,7 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None) -> Union[float, NNCFTensor]:
+    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None, keepdims: bool = False) -> Union[float, NNCFTensor]:
         pass
 
     @staticmethod
@@ -310,4 +310,29 @@ class NNCFTensorBackend(abc.ABC):
     @staticmethod
     @abstractmethod
     def concatenate(tensor_list: List[NNCFTensor]):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def amin(tensor: NNCFTensor, axis: List[int], keepdims: bool = None) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def amax(tensor: NNCFTensor, axis: List[int], keepdims: bool = None) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def minimum(tensor1: NNCFTensor, tensor2: NNCFTensor) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def maximum(tensor1: NNCFTensor, tensor2: NNCFTensor) -> NNCFTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def unstack(tensor: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         pass

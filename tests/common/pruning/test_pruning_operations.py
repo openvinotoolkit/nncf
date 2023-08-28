@@ -66,7 +66,7 @@ def test_identity_mask_propagation_prune_ops(dummy_op_class):
         )
         identity_ops.append(identity_op)
     # Check with and without masks
-    for output_mask in [None, NPNNCFTensor(np.ones((10,)))]:
+    for output_mask in [None, np.ones((10,))]:
         conv_op = graph.get_node_by_id(conv_op.node_id)
         conv_op.attributes["output_mask"] = output_mask
         MaskPropagationAlgorithm(
@@ -74,7 +74,11 @@ def test_identity_mask_propagation_prune_ops(dummy_op_class):
         ).mask_propagation()
         for identity_op in identity_ops:
             identity_op = graph.get_node_by_id(identity_op.node_id)
-            assert np.all(identity_op.attributes["output_mask"] == output_mask)
+            identity_mask = identity_op.attributes["output_mask"]
+            if output_mask is None:
+                assert identity_mask is None
+            else:
+                assert np.all(identity_mask == output_mask)
 
 
 @pytest.mark.parametrize("valid_masks", [None, True, False])
@@ -94,7 +98,7 @@ def test_elementwise_prune_ops(valid_masks):
     # conv_op_1 -> elementwise
     add_node(from_node_id=conv_op_1.node_id, to_node_id=elementwise_op.node_id)
 
-    masks = [NPNNCFTensor(np.ones((10,))), NPNNCFTensor(np.ones((10,)))] if valid_masks is not None else [None, None]
+    masks = [np.ones((10,)), np.ones((10,))] if valid_masks is not None else [None, None]
 
     def set_masks(masks, ops):
         for conv_op, mask in zip(ops, masks):
@@ -118,9 +122,9 @@ def test_elementwise_prune_ops(valid_masks):
                     graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor
                 ).mask_propagation()
 
-        masks[0].tensor[0] = 0
+        masks[0][0] = 0
         check_wrong_masks(masks)
-        masks[0] = NPNNCFTensorProcessor.concatenate([masks[1], NPNNCFTensor(np.array([1]))], axis=0)
+        masks[0] = np.concatenate([masks[1], np.array([1])], axis=0)
         check_wrong_masks(masks)
 
 
@@ -147,7 +151,7 @@ def test_group_norm_pruning_ops(num_channels, num_groups, accept_pruned_input_re
         dtype=Dtype.FLOAT,
     )
     # Check with and without masks
-    for output_mask in [None, NPNNCFTensor(np.ones((10,)))]:
+    for output_mask in [None, np.ones((10,))]:
         conv_op = graph.get_node_by_id(conv_op.node_id)
         conv_op.attributes["output_mask"] = output_mask
         MaskPropagationAlgorithm(
@@ -215,8 +219,8 @@ def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, 
     )
     pruning_op_class = dummy_types.DummyTransposeConvPruningOp if transpose else dummy_types.DummyConvPruningOp
     assert pruning_op_class.accept_pruned_input(conv_op_target) == ref_accept_pruned_input
-    ones_input_mask = NPNNCFTensor(np.ones((layer_attributes["in_channels"],)))
-    ones_output_mask = NPNNCFTensor(np.ones((layer_attributes["out_channels"],)))
+    ones_input_mask = np.ones((layer_attributes["in_channels"],))
+    ones_output_mask = np.ones((layer_attributes["out_channels"],))
     # Check all combinations of masks
     for input_mask in [None, ones_input_mask]:
         for output_mask in [None, ones_output_mask]:
@@ -260,8 +264,8 @@ def test_linear_pruning_ops():
     )
     # Check linear layer always accept pruned input
     assert dummy_types.LinearPruningOp.accept_pruned_input(linear_op_target)
-    ones_input_mask = NPNNCFTensor(np.ones((in_features)))
-    ones_output_mask = NPNNCFTensor(np.ones((out_features)))
+    ones_input_mask = np.ones((in_features))
+    ones_output_mask = np.ones((out_features))
     # Check all combinations of masks
     for input_mask in [None, ones_input_mask]:
         for output_mask in [None, ones_output_mask]:
