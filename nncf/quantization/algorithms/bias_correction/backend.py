@@ -38,13 +38,6 @@ class BiasCorrectionAlgoBackend(ABC):
     def tensor_backend(self) -> Type[NNCFTensorBackend]:
         pass
 
-    @property
-    @abstractmethod
-    def tensor_processor(self):
-        """
-        Returns backend-specific instance of the NNCFCollectorTensorProcessor.
-        """
-
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:

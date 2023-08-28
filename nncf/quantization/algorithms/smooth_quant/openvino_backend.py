@@ -29,7 +29,6 @@ from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionComm
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.quantization.algorithms.smooth_quant.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.openvino.tensor import OVNNCFTensor
@@ -71,7 +70,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = OVAbsMaxReducer(stats_reduction_shape, inplace)
-        aggregator = MaxAggregator(OVNNCFCollectorTensorProcessor, num_samples)
+        aggregator = MaxAggregator(num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
 

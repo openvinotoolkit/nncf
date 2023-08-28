@@ -32,13 +32,6 @@ ALGO_BACKENDS = Registry("algo_backends")
 
 
 class FastBiasCorrectionAlgoBackend(ABC):
-    @property
-    @abstractmethod
-    def tensor_processor(self):
-        """
-        Returns backend-specific instance of the NNCFCollectorTensorProcessor.
-        """
-
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:

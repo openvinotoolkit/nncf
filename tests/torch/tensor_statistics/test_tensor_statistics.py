@@ -26,7 +26,6 @@ from nncf.torch.tensor_statistics.collectors import PTMeanPercentileStatisticCol
 from nncf.torch.tensor_statistics.collectors import PTMedianMADStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMixedMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.tensor_statistics.collectors import PTPercentileStatisticCollector
 from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
@@ -274,17 +273,3 @@ class TestCollectedStatistics:
             collector_for_num_samples_test.register_input(input_)
         assert collector_for_num_samples_test.collected_samples() == TestCollectedStatistics.REF_NUM_SAMPLES
 
-
-class TestCollectorTensorProcessor:
-    tensor_processor = PTNNCFCollectorTensorProcessor()
-
-    def test_unstack(self):
-        # Unstack tensor with dimensions
-        tensor1 = torch.tensor([1.0])
-        tensor_unstacked1 = TestCollectorTensorProcessor.tensor_processor.unstack(PTNNCFTensor(tensor1))
-
-        # Unstack dimensionless tensor
-        tensor2 = torch.tensor(1.0)
-        tensor_unstacked2 = TestCollectorTensorProcessor.tensor_processor.unstack(PTNNCFTensor(tensor2))
-
-        assert tensor_unstacked1 == tensor_unstacked2 == [PTNNCFTensor(torch.tensor(1.0))]

@@ -21,7 +21,6 @@ from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
@@ -34,99 +33,12 @@ from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 
 
-class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
-    """
-    A realization of the processing methods for PTNNCFTensors.
-    """
-
-    @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
-        return PTNNCFTensor(torch.amin(x.tensor, dim=axis, keepdim=keepdims))
-
-    @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
-        return PTNNCFTensor(torch.amax(x.tensor, dim=axis, keepdim=keepdims))
-
-    @staticmethod
-    def abs(x: NNCFTensor) -> NNCFTensor:
-        return PTNNCFTensor(torch.abs(x.tensor))
-
-    @staticmethod
-    def min(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
-        return PTNNCFTensor(torch.min(x1.tensor, x2.tensor))
-
-    @staticmethod
-    def max(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
-        return PTNNCFTensor(torch.max(x1.tensor, x2.tensor))
-
-    @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
-        return PTNNCFTensor(x.tensor.mean(dim=axis, keepdim=keepdims))
-
-    @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
-        return PTNNCFTensor(x.tensor.median(dim=axis, keepdim=keepdims))
-
-    @staticmethod
-    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
-        if len(x.shape) < 3:
-            return PTNNCFTensor(torch.mean(x.tensor, axis=0))
-        x = torch.moveaxis(x.tensor, axis, 1)
-        t = x.reshape(x.shape[0], x.shape[1], -1)
-        return PTNNCFTensor(torch.mean(t, axis=(0, 2)))
-
-    @staticmethod
-    def batch_mean(x: NNCFTensor) -> NNCFTensor:
-        return PTNNCFTensor(torch.mean(x.tensor, axis=0, keepdims=True))
-
-    @staticmethod
-    def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
-        x = [t.tensor for t in x]
-        return PTNNCFTensor(torch.stack(x, dim=axis))
-
-    @staticmethod
-    def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
-        tensor = x.tensor
-        if list(tensor.shape) == []:  # pylint: disable=C1803
-            tensor = tensor.unsqueeze(0)
-        tensor_list = torch.unbind(tensor, dim=axis)
-        return [PTNNCFTensor(t) for t in tensor_list]
-
-    @staticmethod
-    def sum(tensor: NNCFTensor) -> TensorElementsType:
-        return torch.sum(tensor.tensor).item()
-
-    @staticmethod
-    def quantile(
-        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list], keepdims: bool = False
-    ) -> List[NNCFTensor]:
-        raise NotImplementedError()
-
-    @classmethod
-    def no_outliers_map(
-        cls, x: NNCFTensor, fn: Callable[[NNCFTensor, Optional[int]], Any], axis: int = 0, alpha: float = 0.01
-    ):
-        raise NotImplementedError()
-
-
 class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
     def __init__(
         self, use_abs_max: bool, reduction_shape: ReductionShape, output_shape: ReductionShape, num_samples: int = None
     ):
         super().__init__(use_abs_max, reduction_shape, num_samples)
         self._output_shape = output_shape
-
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return PTNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
@@ -161,10 +73,6 @@ class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
         )
         self._output_shape = output_shape
 
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return PTNNCFCollectorTensorProcessor()
-
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
             self._register_input_common(PTNNCFTensor(x))
@@ -187,10 +95,6 @@ class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
     ):
         super().__init__(use_per_sample_stats, use_abs_max, reduction_shape, num_samples, window_size)
         self._output_shape = output_shape
-
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return PTNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
@@ -248,10 +152,6 @@ class PTMeanPercentileStatisticCollector(MeanPercentileStatisticCollector):
 
 
 class PTMeanStatisticCollector(MeanStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return PTNNCFCollectorTensorProcessor()
-
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
             self._register_input_common(PTNNCFTensor(x))

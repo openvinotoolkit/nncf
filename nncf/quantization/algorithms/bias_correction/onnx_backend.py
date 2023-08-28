@@ -32,7 +32,6 @@ from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionComman
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.statistics.collectors import ONNXRawStatisticCollector
 from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.onnx.tensor import ONNXNNCFTensorBackend
@@ -46,10 +45,6 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def tensor_backend(self) -> Type[NNCFTensorBackend]:
         return ONNXNNCFTensorBackend
-
-    @property
-    def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor()
 
     @property
     def types_to_insert_bias(self):

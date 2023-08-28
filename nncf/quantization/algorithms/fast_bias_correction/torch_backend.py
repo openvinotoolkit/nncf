@@ -33,7 +33,6 @@ from nncf.torch.model_analyzer import is_quantized_weights
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.collectors import PTMeanStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 
 
 @ALGO_BACKENDS.register(BackendType.TORCH)
@@ -42,10 +41,6 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
-
-    @property
-    def tensor_processor(self) -> PTNNCFCollectorTensorProcessor:
-        return PTNNCFCollectorTensorProcessor()
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:

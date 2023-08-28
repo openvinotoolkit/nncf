@@ -31,7 +31,6 @@ from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import get_mean_stat_collector
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 from nncf.openvino.tensor import OVNNCFTensor
@@ -46,10 +45,6 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def tensor_backend(self) -> Type[NNCFTensorBackend]:
         return OVNNCFTensorBackend
-
-    @property
-    def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
-        return OVNNCFCollectorTensorProcessor
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:

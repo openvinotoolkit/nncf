@@ -26,7 +26,6 @@ from nncf.tensorflow.tensor_statistics.collectors import TFMeanPercentileStatist
 from nncf.tensorflow.tensor_statistics.collectors import TFMedianMADStatisticCollector
 from nncf.tensorflow.tensor_statistics.collectors import TFMinMaxStatisticCollector
 from nncf.tensorflow.tensor_statistics.collectors import TFMixedMinMaxStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFNNCFCollectorTensorProcessor
 from nncf.tensorflow.tensor_statistics.collectors import TFPercentileStatisticCollector
 from nncf.tensorflow.tensor_statistics.statistics import TFMedianMADTensorStatistic
 from nncf.tensorflow.tensor_statistics.statistics import TFMinMaxTensorStatistic
@@ -261,17 +260,3 @@ class TestCollectedStatistics:
             collector_for_num_samples_test.register_input(input_)
         assert collector_for_num_samples_test.collected_samples() == TestCollectedStatistics.REF_NUM_SAMPLES
 
-
-class TestCollectorTensorProcessor:
-    tensor_processor = TFNNCFCollectorTensorProcessor()
-
-    def test_unstack(self):
-        # Unstack tensor with dimensions
-        tensor1 = tf.constant([1.0])
-        tensor_unstacked1 = TestCollectorTensorProcessor.tensor_processor.unstack(TFNNCFTensor(tensor1))
-
-        # Unstack dimensionless tensor
-        tensor2 = tf.constant(1.0)
-        tensor_unstacked2 = TestCollectorTensorProcessor.tensor_processor.unstack(TFNNCFTensor(tensor2))
-
-        assert tensor_unstacked1 == tensor_unstacked2 == [TFNNCFTensor(tf.constant(1.0))]

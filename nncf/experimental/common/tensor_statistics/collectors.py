@@ -16,7 +16,6 @@ from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union
 from typing import Deque
 
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.statistics import TensorStatistic
@@ -56,7 +55,7 @@ class TensorReducerBase(ABC):
     @abstractmethod
     def _reduce_out_of_place(self, x: NNCFTensor) -> NNCFTensor:
         """
-        Specifies the reduction rule in terms of NNCFCollectorTensorProcessor.
+        Specifies the reduction rule in terms of NNCFTensor and NNCFTensorBackend opset.
 
         :param x: Tensor to register.
         """
@@ -168,7 +167,7 @@ class Aggregator(abc.ABC):
 class TensorAggregatorBase(Aggregator, abc.ABC):
     """
     Tensor aggregator is designed to receive (register) calculated statistics and
-    aggregate them in terms of NNCFCollectorTensorProcessor operations.
+    aggregate them in terms of NNCFTensor and NNCFTensorBackend opset.
     """
 
     def __init__(self, num_samples: Optional[int] = None):
@@ -193,8 +192,8 @@ class TensorAggregatorBase(Aggregator, abc.ABC):
 
 
 class OnlineTensorAggregator(TensorAggregatorBase, abc.ABC):
-    def __init__(self, tensor_processor: NNCFCollectorTensorProcessor, num_samples: Optional[int] = None):
-        super().__init__(tensor_processor, num_samples)
+    def __init__(self, num_samples: Optional[int] = None):
+        super().__init__(num_samples)
         self._current_aggregate = None
 
     def _reset_sample_container(self):
@@ -609,12 +608,12 @@ class MaxAggregator(OnlineTensorAggregator):
 
 class OfflineAggregatorBase(TensorAggregatorBase, ABC):
     def __init__(
-            self, tensor_processor: NNCFCollectorTensorProcessor,
+            self,
             use_per_sample_stats: bool = False,
             num_samples: Optional[int] = None,
             window_size: int = None
     ):
-        super().__init__(tensor_processor, num_samples)
+        super().__init__(num_samples)
         self._window_size = window_size
         self._samples: Deque[NNCFTensor] = deque(maxlen=window_size)
         self._use_per_sample_stats = use_per_sample_stats
