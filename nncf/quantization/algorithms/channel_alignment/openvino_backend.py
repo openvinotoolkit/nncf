@@ -20,6 +20,7 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -36,7 +37,6 @@ from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVQuantileReducer
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
@@ -81,10 +81,10 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     def get_statistic_collector(
         reduction_shape, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
-        tensor_collector = TensorCollector(OVMinMaxTensorStatistic)
+        tensor_collector = TensorCollector(MinMaxTensorStatistic)
         quantile_reducer = OVQuantileReducer(reduction_shape, (q, 1 - q), inplace)
 
-        for port_id, container_key in enumerate([OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
+        for port_id, container_key in enumerate([MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT]):
             aggregator = MedianAggregator(num_samples=num_samples)
             tensor_collector.register_statistic_branch(container_key, quantile_reducer, aggregator, port_id)
         return tensor_collector

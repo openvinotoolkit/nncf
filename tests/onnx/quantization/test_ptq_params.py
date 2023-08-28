@@ -14,6 +14,7 @@ import pytest
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector, MeanMinMaxStatisticCollector
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
@@ -21,8 +22,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
@@ -60,10 +59,10 @@ class TestPTQParams(TemplateTestPTQParams):
         return ONNXMinMaxAlgoBackend()
 
     def check_is_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
+        assert isinstance(tensor_collector, MinMaxStatisticCollector)
 
     def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
+        assert isinstance(tensor_collector, MeanMinMaxStatisticCollector)
 
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:

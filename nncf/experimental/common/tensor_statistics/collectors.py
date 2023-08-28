@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
 from collections import deque
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union, Type
 from typing import Deque
 
 from nncf.common.tensor_statistics.collectors import NNCFTensor
@@ -213,7 +213,7 @@ class TensorCollector:
     a dict could be collected by `get_statistics` call.
     """
 
-    def __init__(self, statistic_container: Optional[TensorStatistic] = None) -> None:
+    def __init__(self, statistic_container: Optional[Type[TensorStatistic]] = None) -> None:
         self._reducers: Set[TensorReducerBase] = set()
         self._aggregators: Dict[AggregatorKey, TensorAggregatorBase] = {}
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int]] = {}

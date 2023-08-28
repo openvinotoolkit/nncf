@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector, MinMaxStatisticCollector
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
@@ -32,9 +33,6 @@ from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onnx_params
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
-from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AggregatorType
@@ -124,7 +122,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         inplace: bool,
         num_samples: int = None,
-    ) -> Union[ONNXMinMaxStatisticCollector, ONNXMeanMinMaxStatisticCollector]:
+    ) -> Union[MinMaxStatisticCollector, MeanMinMaxStatisticCollector]:
         is_per_channel = quantizer_config.per_channel
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
@@ -140,7 +138,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             and range_estimator_params.max.statistics_type == StatisticsType.MAX
             and range_estimator_params.max.aggregator_type == AggregatorType.MAX
         ):
-            return ONNXMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
+            return MinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
 
         if (
             range_estimator_params.min.statistics_type == StatisticsType.MIN
@@ -148,7 +146,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             and range_estimator_params.max.statistics_type == StatisticsType.MAX
             and range_estimator_params.max.aggregator_type == AggregatorType.MEAN
         ):
-            return ONNXMeanMinMaxStatisticCollector(
+            return MeanMinMaxStatisticCollector(
                 use_per_sample_stats=False,
                 use_abs_max=use_abs_max,
                 reduction_shape=reduction_shape,

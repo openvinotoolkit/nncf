@@ -15,18 +15,4 @@ from nncf.common.tensor import NNCFTensor
 
 
 class PTNNCFTensor(NNCFTensor):
-    """
-    A realisation of torch tensors wrapper for common NNCF algorithms.
-    """
-
-    def __init__(self, tensor: torch.tensor):
-        # In case somebody attempts to wrap
-        # tensor twice
-        if isinstance(tensor, self.__class__):
-            tensor = tensor.tensor
-
-        super().__init__(tensor)
-
-    @property
-    def device(self) -> torch.device:
-        return self._tensor.device
+    pass
