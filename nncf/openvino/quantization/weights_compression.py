@@ -52,7 +52,7 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
             target_inputs = weight_output.get_target_inputs()
 
             original_weight_dtype = weight_output.get_element_type().to_dtype()
-            if original_weight_dtype not in [np.float32, np.float16]:
+            if original_weight_dtype not in [np.float32, np.float16, np.float64]:
                 continue
 
             weight = get_const_value(weight_node)
