@@ -94,6 +94,8 @@ class ModelToTest1:
             "TopK_1",
             "NMS_1",
             "NMS_2",
+            "Identity_3",
+            "Input_2",
         ]
 
 
@@ -463,7 +465,7 @@ class ModelToTest9:
         ]
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
-        self.reference_ignored_scopes = []
+        self.reference_ignored_scopes = ["Input_1", "Identity_1", "TopK_1", "Identity_2"]
 
 
 @pytest.mark.parametrize("model_to_test", ALL_SYNTHETIC_NNCF_GRAPH.values())
