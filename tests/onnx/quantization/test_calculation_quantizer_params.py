@@ -35,9 +35,6 @@ from tests.post_training.test_templates.test_calculate_quantizer_parameters impo
 def test_calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, narrow_range, ref_scale, ref_zero_point):
     inp_low, inp_high = np.array(inp_low), np.array(inp_high)
     scale, zero_point = calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, narrow_range)
-    scale = np.array(np.squeeze(scale).astype(np.float32))
-    zero_point = np.array(np.squeeze(zero_point).astype(np.int32))
-
     ref_zero_point = np.array(ref_zero_point, dtype=np.int32)
     assert np.allclose(ref_scale, scale)
     assert np.allclose(ref_zero_point, zero_point)

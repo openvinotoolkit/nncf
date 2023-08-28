@@ -64,8 +64,6 @@ def convert_fq_params_to_onnx_params(
     level_low, level_high = get_level_low_level_high(tensor_type)
     narrow_range = levels == 2**num_bits - 1
     scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, narrow_range)
-    scale = np.array(np.squeeze(scale).astype(np.float32))
-    zero_point = np.array(np.squeeze(zero_point).astype(np.int32))
     return ONNXQuantizerLayerParameters(scale, zero_point, tensor_type, axis)
 
 
