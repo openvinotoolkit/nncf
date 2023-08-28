@@ -183,6 +183,10 @@ def native_quantize_with_accuracy_control_impl(
         copied_parameters,
     )
 
+    if advanced_accuracy_restorer_parameters.intermediate_model_dir:
+        quantized_model_path = f"{advanced_accuracy_restorer_parameters.intermediate_model_dir}/intermediate_model.xml"
+        ov.serialize(quantized_model, quantized_model_path)
+
     evaluator = Evaluator(validation_fn)
     evaluator.enable_iteration_count()
     initial_metric_results = evaluator.collect_metric_results(model, validation_dataset, model_name="initial")
