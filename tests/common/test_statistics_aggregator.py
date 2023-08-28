@@ -615,7 +615,8 @@ class TemplateTestStatisticsAggregator:
                 ret_val = stat.values
                 test_params.ref_values = dataset_samples
                 if not is_stat_in_shape_of_scale:
-                    ret_val = [np.squeeze(x) for x in ret_val]
+                    backend = next(iter(ret_val)).backend
+                    ret_val = [backend.squeeze(x) for x in ret_val]
             else:
                 raise RuntimeError()
 
@@ -624,6 +625,14 @@ class TemplateTestStatisticsAggregator:
                     assert ref.shape == val.shape
                 if isinstance(val, NNCFTensor):
                     val = val.to_numpy()
+                if isinstance(val, list):
+                    new_val = []
+                    for t in val:
+                        if isinstance(t, NNCFTensor):
+                            new_val.append(t.to_numpy())
+                        else:
+                            new_val.append(t)
+                    val = new_val
                 assert np.allclose(val, ref)
 
     def create_statistics_point(
