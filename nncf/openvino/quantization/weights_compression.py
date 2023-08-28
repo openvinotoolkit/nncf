@@ -18,10 +18,11 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const_op
-from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_matmul_channel_axes
+from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
 
 def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
@@ -37,8 +38,7 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
     level_high = 2**bits - 1
 
     for node in model.get_ops():
-        # pylint:disable=protected-access
-        metatype = GraphConverter._get_node_metatype(node)
+        metatype = get_node_metatype(node)
         if metatype not in allowed_metatypes_to_const_port:
             continue
 
@@ -60,9 +60,9 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
             min_values = np.min(weight, axis=axes, keepdims=True)
             max_values = np.max(weight, axis=axes, keepdims=True)
 
-            scale = (max_values - min_values) / (level_high - level_low)
-            zero_point = (level_low * max_values - level_high * min_values) / (max_values - min_values)
-            zero_point = np.clip(zero_point, level_low, level_high)
+            scale, zero_point = calculate_scale_zero_point(
+                min_values, max_values, level_low, level_high, narrow_range=False
+            )
 
             compressed_weights = np.round(weight / scale + zero_point)
             compressed_weights = np.clip(compressed_weights, level_low, level_high).astype(np.uint8)
