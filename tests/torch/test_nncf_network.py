@@ -649,10 +649,10 @@ def test_reset_original_unbound_forward():
     inp = torch.ones((1,))
     assert nncf_network.forward(inp) == inp
 
-    nncf_network.set_original_unbound_forward(model.__class__.other_forward)
+    nncf_network.nncf.set_original_unbound_forward(model.__class__.other_forward)
     assert nncf_network.forward(inp) == inp * 2
 
-    nncf_network.reset_original_unbound_forward()
+    nncf_network.nncf.reset_original_unbound_forward()
     assert nncf_network.forward(inp) == inp
 
 
