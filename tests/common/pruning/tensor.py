@@ -35,9 +35,9 @@ class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
         return NPNNCFTensor(np.ones(shape))
 
     @classmethod
-    def assert_allclose(cls, tensors: List[np.ndarray]) -> None:
+    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
-            np.testing.assert_allclose(tensors[0], input_mask)
+            np.testing.assert_allclose(tensors[0].to_numpy(), input_mask.to_numpy())
 
     @classmethod
     def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
@@ -45,8 +45,8 @@ class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
         return NPNNCFTensor(ret_tensor)
 
     @classmethod
-    def elementwise_mask_propagation(cls, input_masks: List[SymbolicMask]) -> SymbolicMask:
-        cls.assert_allclose([np.asarray(im.shape) for im in input_masks])
+    def elementwise_mask_propagation(cls, input_masks: List[np.ndarray]) -> np.ndarray:
+        cls.assert_allclose(input_masks)
         return input_masks[0]
 
     @classmethod

@@ -15,6 +15,7 @@ import numpy as np
 
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_impl_np import NPNNCFTensor
 
 
 class SymbolicMaskProducer:
@@ -49,7 +50,7 @@ class SymbolicMaskProducer:
         return list(merged_producers.values())
 
 
-class SymbolicMask:
+class SymbolicMask(NPNNCFTensor):
     """
     Framework agnostic representation of a tensor pruning mask which only uses given dimension and do not uses value
     of the tensor. Keeps additional attribute - symbolic mask producer, pointer to NNCFNode which produced
@@ -60,28 +61,31 @@ class SymbolicMask:
     """
 
     def __init__(self, dimension: int, mask_producers: Union[int, List[SymbolicMaskProducer]] = None):
+        if dimension == -1:
+            init_arr = np.empty([1])
+        else:
+            init_arr = np.zeros([dimension], dtype=np.int64)
+        super().__init__(init_arr)
         self._mask_producers = mask_producers
         if mask_producers is None:
             self._mask_producers = []
         elif isinstance(mask_producers, int):
             self._mask_producers = [SymbolicMaskProducer(mask_producers)]
 
-        self._shape = dimension
-
-    @property
-    def shape(self) -> List[int]:
-        return [self._shape]
-
     @property
     def mask_producers(self) -> List[SymbolicMaskProducer]:
         return self._mask_producers
 
-    @property
-    def device(self) -> None:
-        return None
+    @classmethod
+    def from_numpy(cls, ndarr: np.ndarray) -> "SymbolicMask":
+        new = cls(-1)
+        new._tensor = ndarr
+        return new
 
-    def to_numpy(self) -> np.ndarray:
-        return np.array(self.shape)
+    def __eq__(self, other: "SymbolicMask") -> np.ndarray:
+        assert isinstance(other, SymbolicMask)
+        return self.to_numpy() == other.to_numpy()
+
 
 
 class AmbiguousSymbolicMask(SymbolicMask):

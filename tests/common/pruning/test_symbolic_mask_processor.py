@@ -28,7 +28,7 @@ def test_ones(shape, raise_runtime_error):
         assert tensor.mask_producers == []
         assert len(tensor.shape) == 1
         assert tensor.shape[0] == shape[0] if isinstance(shape, list) else shape
-        assert tensor.device is None
+        assert tensor.device is 'CPU'
 
 
 def test_repeat():

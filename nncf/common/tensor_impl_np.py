@@ -234,8 +234,8 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(result.data)
 
     @staticmethod
-    def concatenate(tensor_list: List[NPNNCFTensor]) -> NPNNCFTensor:
-        return NPNNCFTensor(np.concatenate([t.tensor for t in tensor_list]))
+    def concatenate(tensor_list: List[NPNNCFTensor], axis: int = None) -> NPNNCFTensor:
+        return NPNNCFTensor(np.concatenate([t.tensor for t in tensor_list], axis=axis))
 
     @staticmethod
     def amin(tensor: NPNNCFTensor, axis: List[int], keepdims: bool = None) -> NPNNCFTensor:

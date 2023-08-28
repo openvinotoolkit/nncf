@@ -26,6 +26,7 @@ from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.operations import BasePruningOp
+from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor_impl_np import NPNNCFTensor
 from tests.common.pruning import dummy_types
@@ -98,7 +99,8 @@ def test_elementwise_prune_ops(valid_masks):
     # conv_op_1 -> elementwise
     add_node(from_node_id=conv_op_1.node_id, to_node_id=elementwise_op.node_id)
 
-    masks = [np.ones((10,)), np.ones((10,))] if valid_masks is not None else [None, None]
+    masks = [SymbolicMask.from_numpy(np.ones((10,))),
+             SymbolicMask.from_numpy(np.ones((10,)))] if valid_masks is not None else [None, None]
 
     def set_masks(masks, ops):
         for conv_op, mask in zip(ops, masks):
@@ -112,7 +114,11 @@ def test_elementwise_prune_ops(valid_masks):
             graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor
         ).mask_propagation()
         elementwise_op = graph.get_node_by_id(elementwise_op.node_id)
-        assert np.all(elementwise_op.attributes["output_mask"] == masks[0])
+        equal_mask = elementwise_op.attributes["output_mask"] == masks[0]
+        if isinstance(equal_mask, bool):
+            assert equal_mask
+        else:
+            assert equal_mask.all()
     else:
 
         def check_wrong_masks(masks):
@@ -124,7 +130,8 @@ def test_elementwise_prune_ops(valid_masks):
 
         masks[0][0] = 0
         check_wrong_masks(masks)
-        masks[0] = np.concatenate([masks[1], np.array([1])], axis=0)
+        backend = masks[1].backend
+        masks[0] = backend.concatenate([masks[1], SymbolicMask.from_numpy(np.array([1]))], axis=0)
         check_wrong_masks(masks)
 
 

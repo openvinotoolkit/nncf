@@ -309,7 +309,7 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def concatenate(tensor_list: List[NNCFTensor]):
+    def concatenate(tensor_list: List[NNCFTensor], axis: int = None) -> NNCFTensor:
         pass
 
     @staticmethod
