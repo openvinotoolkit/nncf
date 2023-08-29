@@ -122,7 +122,7 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def isclose_all(tensor1: TFNNCFTensor, tensor2: TFNNCFTensor, rtol=1e-05, atol=1e-08) -> bool:
-        return tf.experimental.numpy.isclose(tensor1, tensor2, rtol=rtol, atol=atol)
+        return bool(tf.reduce_all(tf.experimental.numpy.isclose(tensor1.tensor, tensor2.tensor, rtol=rtol, atol=atol)))
 
     @staticmethod
     def stack(tensor_list: List[TFNNCFTensor]) -> TFNNCFTensor:
@@ -227,11 +227,11 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def amin(tensor: TFNNCFTensor, axis: List[int], keepdims: bool = None) -> TFNNCFTensor:
-        return TFNNCFTensor(tf.experimental.numpy.amin(tensor, axis=axis, keepdims=keepdims))
+        return TFNNCFTensor(tf.experimental.numpy.amin(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def amax(tensor: TFNNCFTensor, axis: List[int], keepdims: bool = None) -> TFNNCFTensor:
-        return TFNNCFTensor(tf.experimental.numpy.amax(tensor, axis=axis, keepdims=keepdims))
+        return TFNNCFTensor(tf.experimental.numpy.amax(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def minimum(tensor1: TFNNCFTensor, tensor2: TFNNCFTensor) -> TFNNCFTensor:

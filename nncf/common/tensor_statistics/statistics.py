@@ -43,6 +43,8 @@ class MinMaxTensorStatistic(TensorStatistic):
     def __eq__(self, other: "MinMaxTensorStatistic") -> bool:
         return self.tensor_eq(self.min_values, other.min_values) and self.tensor_eq(self.max_values, other.max_values)
 
+    def __repr__(self):
+        return f"min: {repr(self.min_values.tensor)}, max: {repr(self.min_values.tensor)}"
 
 class MeanTensorStatistic(TensorStatistic):
     MEAN_STAT = "mean_values"

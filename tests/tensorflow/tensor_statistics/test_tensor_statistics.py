@@ -114,7 +114,7 @@ class TestCollectedStatistics:
         for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
             collector_obj = collector(use_abs_max=True, reduction_shape=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
-                collector_obj.register_input(input_)
+                collector_obj.register_input(TFNNCFTensor(input_))
             test_stats = collector_obj.get_statistics()
             assert reduction_shapes_vs_ref_statistic[reduction_shape] == test_stats
 

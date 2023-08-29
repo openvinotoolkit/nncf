@@ -38,6 +38,7 @@ from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization.layers import FakeQuantize
+from nncf.tensorflow.tensor import TFNNCFTensor
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_activations
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_weights
 from nncf.tensorflow.tensor_statistics.statistics import tf_convert_stat_to_min_max_tensor_stat
@@ -156,7 +157,9 @@ class RangeInitializer:
         collector = RangeInitializer.generate_stat_collector(
             reduction_shape, collector_params, init_config, num_batches
         )
-        handles.append(layer.register_hook_pre_quantizer(collector.register_input))
+
+        hook = lambda x: collector.register_input(TFNNCFTensor(x))
+        handles.append(layer.register_hook_pre_quantizer(hook))
         layer.enabled = False
         layer_statistics.append((layer, collector))
 
