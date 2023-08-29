@@ -237,7 +237,6 @@ class PostprocessingNodeLocator:
         node = self._quant_prop_graph.nodes[node_key]
         return node.get(self._quant_prop_graph.NODE_TYPE_NODE_ATTR) == QuantizerPropagationStateGraphNodeType.OPERATOR
 
-    # pylint:disable=protected-access
     def get_post_processing_node_keys(self) -> Set[str]:
         """
         Finds out the nodes of the QuantizerPropagationStateGraph, which are in post-processing part of the model.
@@ -278,7 +277,7 @@ class PostprocessingNodeLocator:
 
                 if (
                     self._is_node_has_underlying_weights(node_key)
-                    or node_key in self._quant_prop_graph._input_node_keys_vs_nncf_nodes.keys()
+                    or node_key in self._quant_prop_graph.get_input_node_keys()
                 ):
                     if post_proc_encountered:
                         _extend_ignored_operations(path)
