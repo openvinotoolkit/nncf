@@ -15,21 +15,21 @@ from typing import Dict, Tuple, Type
 import pytest
 import tensorflow as tf
 
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticCollector
+from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import StatisticsNotCollectedError
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.tensorflow.tensor import TFNNCFTensor
-from nncf.tensorflow.tensor_statistics.collectors import TFMeanMinMaxStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMeanPercentileStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMedianMADStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMinMaxStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMixedMinMaxStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFPercentileStatisticCollector
-from nncf.tensorflow.tensor_statistics.statistics import TFMedianMADTensorStatistic
-from nncf.tensorflow.tensor_statistics.statistics import TFMinMaxTensorStatistic
-from nncf.tensorflow.tensor_statistics.statistics import TFPercentileTensorStatistic
 
 
 class TestCollectedStatistics:
@@ -42,14 +42,17 @@ class TestCollectedStatistics:
         ("collector", "reduction_shapes_vs_ref_statistic"),
         [
             (
-                TFMinMaxStatisticCollector,
+                MinMaxStatisticCollector,
                 {
-                    (0, 1): TFMinMaxTensorStatistic(min_values=tf.constant(-4.0), max_values=tf.constant(6.1)),
-                    (1,): TFMinMaxTensorStatistic(
-                        min_values=tf.constant([1.0, -4.0, 4.0]), max_values=tf.constant([4.5, 4.0, 6.1])
+                    (0, 1): MinMaxTensorStatistic(min_values=TFNNCFTensor(tf.constant(-4.0)),
+                                                  max_values=TFNNCFTensor(tf.constant(6.1))),
+                    (1,): MinMaxTensorStatistic(
+                        min_values=TFNNCFTensor(tf.constant([1.0, -4.0, 4.0])),
+                        max_values=TFNNCFTensor(tf.constant([4.5, 4.0, 6.1]))
                     ),
-                    (0,): TFMinMaxTensorStatistic(
-                        min_values=tf.constant([[-1.3, -4.0, -3.5]]), max_values=tf.constant([[4.5, 5.8, 6.1]])
+                    (0,): MinMaxTensorStatistic(
+                        min_values=TFNNCFTensor(tf.constant([[-1.3, -4.0, -3.5]])),
+                        max_values=TFNNCFTensor(tf.constant([[4.5, 5.8, 6.1]]))
                     ),
                     # Not supported for now:
                     # ((3, 3), ): PTTFMinMaxTensorStatistic(
@@ -67,31 +70,37 @@ class TestCollectedStatistics:
                 },
             ),
             (
-                partial(TFMeanMinMaxStatisticCollector, use_per_sample_stats=False),
+                partial(MeanMinMaxStatisticCollector, use_per_sample_stats=False),
                 {
-                    (0, 1): TFMinMaxTensorStatistic(min_values=tf.constant(-3.5), max_values=tf.constant(6.05)),
-                    (1,): TFMinMaxTensorStatistic(
-                        min_values=tf.constant([1.8, -3.5, 4.15]), max_values=tf.constant([3.75, 3.5, 6.05])
+                    (0, 1): MinMaxTensorStatistic(min_values=TFNNCFTensor(tf.constant(-3.5)),
+                                                  max_values=TFNNCFTensor(tf.constant(6.05))),
+                    (1,): MinMaxTensorStatistic(
+                        min_values=TFNNCFTensor(tf.constant([1.8, -3.5, 4.15])),
+                        max_values=TFNNCFTensor(tf.constant([3.75, 3.5, 6.05]))
                     ),
-                    (0,): TFMinMaxTensorStatistic(
-                        min_values=tf.constant([[-1.15, -3, -3.25]]), max_values=tf.constant([[4.25, 5.4, 6.05]])
+                    (0,): MinMaxTensorStatistic(
+                        min_values=TFNNCFTensor(tf.constant([[-1.15, -3, -3.25]])),
+                        max_values=TFNNCFTensor(tf.constant([[4.25, 5.4, 6.05]]))
                     ),
                 },
             ),
             (
                 partial(
-                    TFMixedMinMaxStatisticCollector,
+                    MixedMinMaxStatisticCollector,
                     use_per_sample_stats=False,
                     use_means_of_mins=False,
                     use_means_of_maxs=True,
                 ),
                 {
-                    (0, 1): TFMinMaxTensorStatistic(min_values=tf.constant(-4.0), max_values=tf.constant(6.05)),
-                    (1,): TFMinMaxTensorStatistic(
-                        min_values=tf.constant([1.0, -4.0, 4.0]), max_values=tf.constant([3.75, 3.5, 6.05])
+                    (0, 1): MinMaxTensorStatistic(min_values=TFNNCFTensor(tf.constant(-4.0)),
+                                                  max_values=TFNNCFTensor(tf.constant(6.05))),
+                    (1,): MinMaxTensorStatistic(
+                        min_values=TFNNCFTensor(tf.constant([1.0, -4.0, 4.0])),
+                        max_values=TFNNCFTensor(tf.constant([3.75, 3.5, 6.05]))
                     ),
-                    (0,): TFMinMaxTensorStatistic(
-                        min_values=tf.constant([[-1.3, -4.0, -3.5]]), max_values=tf.constant([[4.25, 5.4, 6.05]])
+                    (0,): MinMaxTensorStatistic(
+                        min_values=TFNNCFTensor(tf.constant([[-1.3, -4.0, -3.5]])),
+                        max_values=TFNNCFTensor(tf.constant([[4.25, 5.4, 6.05]]))
                     ),
                 },
             ),
@@ -113,14 +122,14 @@ class TestCollectedStatistics:
         ("collector", "reduction_shapes_vs_ref_statistic"),
         [
             (
-                TFMedianMADStatisticCollector,
+                MedianMADStatisticCollector,
                 {
-                    (0, 1): TFMedianMADTensorStatistic(median_values=tf.constant([2.8]), mad_values=tf.constant([2.6])),
-                    (1,): TFMedianMADTensorStatistic(
-                        median_values=tf.constant([2.8, -2.5, 5.4]), mad_values=tf.constant([0.85, 1.1, 0.65])
+                    (0, 1): MedianMADTensorStatistic(median_values=TFNNCFTensor(tf.constant([2.8])), mad_values=TFNNCFTensor(tf.constant([2.6]))),
+                    (1,): MedianMADTensorStatistic(
+                        median_values=tf.constant([2.8, -2.5, 5.4]), mad_values=TFNNCFTensor(tf.constant([0.85, 1.1, 0.65]))
                     ),
-                    (0,): TFMedianMADTensorStatistic(
-                        median_values=tf.constant([[2.5, 2.3, 3.35]]), mad_values=tf.constant([[1.9, 3.1, 2.7]])
+                    (0,): MedianMADTensorStatistic(
+                        median_values=TFNNCFTensor(tf.constant([[2.5, 2.3, 3.35]])), mad_values=TFNNCFTensor(tf.constant([[1.9, 3.1, 2.7]]))
                     ),
                     # Not supported for now:
                     # (3, 3): TFMedianMADTensorStatistic(
@@ -138,13 +147,13 @@ class TestCollectedStatistics:
                 },
             ),
             (
-                partial(TFPercentileStatisticCollector, percentiles_to_collect=[10.0]),
+                partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
                 {
-                    (0, 1): TFPercentileTensorStatistic({10.0: tf.constant([-3.15])}),
-                    (1,): TFPercentileTensorStatistic({10.0: tf.constant([1.5, -3.75, 4.15])}),
-                    (0,): TFPercentileTensorStatistic({10.0: tf.constant([[-1.15, -3, -3.25]])}),
+                    (0, 1): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([-3.15]))}),
+                    (1,): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([1.5, -3.75, 4.15]))}),
+                    (0,): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([[-1.15, -3, -3.25]]))}),
                     # Not supported for now:
-                    # (3, 3): TFPercentileTensorStatistic(
+                    # (3, 3): PercentileTensorStatistic(
                     #     {
                     #         10.0: tf.constant([
                     #             [1.35, 2.06, 3.07],
@@ -156,13 +165,13 @@ class TestCollectedStatistics:
                 },
             ),
             (
-                partial(TFMeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
+                partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
                 {
-                    (0, 1): TFPercentileTensorStatistic({10.0: tf.constant([-2.9])}),
-                    (1,): TFPercentileTensorStatistic({10.0: tf.constant([[2.0100], [-3.3500], [4.4000]])}),
-                    (0,): TFPercentileTensorStatistic({10.0: tf.constant([[-0.3900, -1.9400, -1.9300]])}),
+                    (0, 1): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([-2.9]))}),
+                    (1,): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([[2.0100], [-3.3500], [4.4000]]))}),
+                    (0,): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([[-0.3900, -1.9400, -1.9300]]))}),
                     # Not supported for now:
-                    # (3, 3): TFPercentileTensorStatistic(
+                    # (3, 3): PercentileTensorStatistic(
                     #     {
                     #         10.0: tf.constant([
                     #             [ 2.7500,  2.3000,  3.3500],
@@ -188,18 +197,18 @@ class TestCollectedStatistics:
             assert reduction_shapes_vs_ref_statistic[reduction_shape] == test_stats
 
     COLLECTORS = [
-        partial(TFMinMaxStatisticCollector, use_abs_max=False),
+        partial(MinMaxStatisticCollector, use_abs_max=False),
         partial(
-            TFMixedMinMaxStatisticCollector,
+            MixedMinMaxStatisticCollector,
             use_per_sample_stats=False,
             use_abs_max=False,
             use_means_of_mins=False,
             use_means_of_maxs=False,
         ),
-        partial(TFMeanMinMaxStatisticCollector, use_per_sample_stats=False, use_abs_max=False),
-        TFMedianMADStatisticCollector,
-        partial(TFPercentileStatisticCollector, percentiles_to_collect=[10.0]),
-        partial(TFMeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
+        partial(MeanMinMaxStatisticCollector, use_per_sample_stats=False, use_abs_max=False),
+        MedianMADStatisticCollector,
+        partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
+        partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
     ]
 
     @pytest.fixture(params=COLLECTORS)
@@ -236,16 +245,16 @@ class TestCollectedStatistics:
 
     OFFLINE_COLLECTORS = [
         partial(
-            TFMixedMinMaxStatisticCollector,
+            MixedMinMaxStatisticCollector,
             use_per_sample_stats=False,
             use_abs_max=False,
             use_means_of_mins=False,
             use_means_of_maxs=False,
         ),
-        partial(TFMeanMinMaxStatisticCollector, use_per_sample_stats=False, use_abs_max=False),
-        TFMedianMADStatisticCollector,
-        partial(TFPercentileStatisticCollector, percentiles_to_collect=[10.0]),
-        partial(TFMeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
+        partial(MeanMinMaxStatisticCollector, use_per_sample_stats=False, use_abs_max=False),
+        MedianMADStatisticCollector,
+        partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
+        partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
     ]
 
     REF_NUM_SAMPLES = 3

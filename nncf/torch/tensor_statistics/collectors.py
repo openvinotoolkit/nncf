@@ -42,7 +42,7 @@ class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
 
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
-            self._register_input_common(PTNNCFTensor(x))
+            self._register_input(PTNNCFTensor(x))
 
     def _get_statistics(self) -> PTMinMaxTensorStatistic:
         min_values = self._min_values.tensor.view(self._output_shape)

@@ -229,6 +229,8 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
             return backend.mean(stacked_max, axis=0)
         return backend.amin(stacked_max, axis=0, keepdims=True)
 
+    def _get_statistics(self) -> MinMaxTensorStatistic:
+        return MinMaxTensorStatistic(self._min_values, self._max_values)
 
 class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     """
