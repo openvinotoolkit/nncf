@@ -16,7 +16,6 @@ from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar
 
 import numpy as np
 
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -44,6 +43,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import ModelType
@@ -53,6 +53,7 @@ from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.advanced_parameters import changes_asdict
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
@@ -60,7 +61,6 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
-from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 
 TModel = TypeVar("TModel")
 

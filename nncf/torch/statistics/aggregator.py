@@ -64,4 +64,3 @@ class PTStatisticsAggregator(StatisticsAggregator):
     ) -> StatisticPointsContainer:
         # TODO: mirgate to experimental statistic collector and use common merging algorithm
         return statistic_points
-

@@ -11,8 +11,7 @@
 
 from abc import abstractmethod
 from itertools import product
-from typing import Dict
-from typing import Type
+from typing import Dict, Type
 
 import numpy as np
 import pytest
@@ -77,7 +76,7 @@ class TestReducersAggreagtors:
             "quantile": QuantileReducer,
             "abs_quantile": AbsQuantileReducer,
             "batch_mean": BatchMeanReducer,
-            "mean_per_ch": MeanPerChReducer
+            "mean_per_ch": MeanPerChReducer,
         }
 
     def all_close(self, val: NNCFTensor, ref: NNCFTensor) -> bool:
@@ -109,8 +108,11 @@ class TestReducersAggreagtors:
             assert self.all_close(val[0].tensor, ref[i])
 
     @pytest.mark.parametrize(
-        "reducer_name,ref", [("quantile", NPNNCFTensor(np.ndarray(
-            ([[[[-20000]]]], [[[[10000]]]])))), NPNNCFTensor(np.ndarray(("abs_quantile", ([[[[20000]]]],))))]
+        "reducer_name,ref",
+        [
+            ("quantile", NPNNCFTensor(np.ndarray(([[[[-20000]]]], [[[[10000]]]])))),
+            NPNNCFTensor(np.ndarray(("abs_quantile", ([[[[20000]]]],)))),
+        ],
     )
     def test_quantile_reducers(self, reducer_name, ref, reducers):
         reduction_shape = (1, 2, 3)
@@ -125,8 +127,10 @@ class TestReducersAggreagtors:
 
     @pytest.mark.parametrize(
         "reducer_name,ref",
-        [("batch_mean", NPNNCFTensor(np.array([[[[-12.5, -11.5, -10.5], [-9.5, -8.5, -7.5], [-6.5, -5.5, -4.5]]]]))),
-         ("mean_per_ch", [-8.5])],
+        [
+            ("batch_mean", NPNNCFTensor(np.array([[[[-12.5, -11.5, -10.5], [-9.5, -8.5, -7.5], [-6.5, -5.5, -4.5]]]]))),
+            ("mean_per_ch", [-8.5]),
+        ],
     )
     def test_batch_mean_mean_per_ch_reducers(self, reducer_name, ref, reducers):
         input_ = np.arange(-26, 10).reshape((4, 1, 3, 3))

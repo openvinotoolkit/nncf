@@ -107,4 +107,3 @@ class OVStatisticsAggregator(StatisticsAggregator):
             stat_point = StatisticPoint(target_point, merged_collector, "Merged")
             merged_statistic_points.add_statistic_point(stat_point)
         return merged_statistic_points
-

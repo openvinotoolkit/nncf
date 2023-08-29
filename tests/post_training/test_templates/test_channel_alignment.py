@@ -189,7 +189,9 @@ class TemplateTestChannelAlignment:
 
     @pytest.mark.parametrize("bias_in_value", [np.array([2, 4, 6, 8, 10])])
     def test_align_scales(self, bias_in_value):
-        def check_updated_values(updated_conv_in: NNCFTensor, updated_conv_out: NNCFTensor, updated_bias_in: NNCFTensor):
+        def check_updated_values(
+            updated_conv_in: NNCFTensor, updated_conv_out: NNCFTensor, updated_bias_in: NNCFTensor
+        ):
             assert updated_conv_in.shape == self.REF_UPDATED_CONV_IN.shape
             assert np.allclose(updated_conv_in.to_numpy(), self.REF_UPDATED_CONV_IN)
             assert updated_conv_out.shape == self.REF_UPDATED_CONV_OUT.shape
@@ -332,8 +334,7 @@ class TemplateTestChannelAlignment:
         if empty_statistics:
             stat_value = None, None
         else:
-            stat_value = (NPNNCFTensor(np.array([-1], dtype=np.int32)),
-                          NPNNCFTensor(np.array([2], dtype=np.int32)))
+            stat_value = (NPNNCFTensor(np.array([-1], dtype=np.int32)), NPNNCFTensor(np.array([2], dtype=np.int32)))
 
         tensor_collector.get_statistics = get_constant_lambda(TestTensorStats(*stat_value))
         statistic_points.add_statistic_point(StatisticPoint(target_point, tensor_collector, algorithm._algorithm_key))

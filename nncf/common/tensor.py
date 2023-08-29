@@ -11,10 +11,7 @@
 import abc
 from abc import abstractmethod
 from enum import IntEnum
-from typing import Callable
-from typing import Generic, List, Tuple, Type, TypeVar, Union, Any
-from typing import Iterator
-from typing import Optional
+from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 
@@ -48,8 +45,9 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         else:
             return other
 
-    def _bool_operator_resolver(self, bound_predicate: Callable[[TensorType], Union[bool, "NNCFTensor"]],
-                                other: Any) -> Union[bool, "NNCFTensor"]:
+    def _bool_operator_resolver(
+        self, bound_predicate: Callable[[TensorType], Union[bool, "NNCFTensor"]], other: Any
+    ) -> Union[bool, "NNCFTensor"]:
         if isinstance(other, NNCFTensor):
             return self.__class__(bound_predicate(other.tensor))
         retval = bound_predicate(other)
@@ -77,22 +75,22 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def __invert__(self) -> "NNCFTensor":
         return self.__class__(~self._tensor)
 
-    def __add__(self, other: Any) -> 'NNCFTensor':
+    def __add__(self, other: Any) -> "NNCFTensor":
         return self.__class__(self._tensor + self._get_rhs(other))
 
-    def __sub__(self, other: Any) -> 'NNCFTensor':
+    def __sub__(self, other: Any) -> "NNCFTensor":
         return self.__class__(self._tensor - self._get_rhs(other))
 
-    def __mul__(self, other: Any) -> 'NNCFTensor':
+    def __mul__(self, other: Any) -> "NNCFTensor":
         return self.__class__(self._tensor * self._get_rhs(other))
 
-    def __truediv__(self, other: Any) -> 'NNCFTensor':
+    def __truediv__(self, other: Any) -> "NNCFTensor":
         return self.__class__(self._tensor / self._get_rhs(other))
 
     def __len__(self) -> int:
         return len(self._tensor)
 
-    def __getitem__(self, item) -> 'NNCFTensor':
+    def __getitem__(self, item) -> "NNCFTensor":
         if isinstance(item, NNCFTensor):
             item = item.tensor
         return self.__class__(self._tensor[item])
@@ -140,7 +138,6 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def median(self, axis: int, keepdims: bool = False) -> "NNCFTensor":
         pass
 
-
     @abstractmethod
     def reshape(self, *shape: int) -> "NNCFTensor":
         pass
@@ -181,7 +178,6 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     @abstractmethod
     def max(self) -> float:
         pass
-
 
 
 class NNCFTensorBackend(abc.ABC):
@@ -289,7 +285,12 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def quantile(tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None, keepdims: bool = False) -> Union[float, NNCFTensor]:
+    def quantile(
+        tensor: NNCFTensor,
+        quantile: Union[float, List[float]],
+        axis: Union[int, List[int]] = None,
+        keepdims: bool = False,
+    ) -> Union[float, NNCFTensor]:
         pass
 
     @staticmethod

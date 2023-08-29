@@ -13,8 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
 from collections import deque
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union
-from typing import Deque
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
 from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.common.tensor_statistics.collectors import ReductionShape
@@ -87,9 +86,9 @@ class TensorReducerBase(ABC):
 
     def __eq__(self, __o: object) -> bool:
         return (
-                isinstance(__o, self.__class__)
-                and self._reduction_shape == __o._reduction_shape
-                and self._inplace == __o.inplace
+            isinstance(__o, self.__class__)
+            and self._reduction_shape == __o._reduction_shape
+            and self._inplace == __o.inplace
         )
 
     def __hash__(self) -> int:
@@ -249,11 +248,11 @@ class TensorCollector:
         self._enabled = False
 
     def register_statistic_branch(
-            self,
-            container_key: str,
-            reducer: TensorReducerBase,
-            aggregator: TensorAggregatorBase,
-            reducer_output_port_id: int = 0,
+        self,
+        container_key: str,
+        reducer: TensorReducerBase,
+        aggregator: TensorAggregatorBase,
+        reducer_output_port_id: int = 0,
     ) -> None:
         """
         Registers statistic collection branch for a container key. Correspondent input will be reduced
@@ -312,8 +311,8 @@ class TensorCollector:
             reduced_inputs[reducer_hash] = reducer(input_)
 
         for (
-                (reducer_hash, reducer_port_id, _),
-                aggregator,
+            (reducer_hash, reducer_port_id, _),
+            aggregator,
         ) in self._aggregators.items():
             if reducer_hash in reduced_inputs:
                 aggregator.register_reduced_input(reduced_inputs[reducer_hash][reducer_port_id])
@@ -321,8 +320,8 @@ class TensorCollector:
     def _aggregate(self) -> Dict[AggregatorKey, Optional[NNCFTensor]]:
         result = {}
         for (
-                key,
-                aggregator,
+            key,
+            aggregator,
         ) in self._aggregators.items():
             val = aggregator.aggregate()
             result[key] = val
@@ -385,7 +384,7 @@ class TensorCollector:
 
     @staticmethod
     def get_tensor_collector_inputs(
-            outputs: Dict[str, NNCFTensor], output_info: List[Tuple[int, List[str]]]
+        outputs: Dict[str, NNCFTensor], output_info: List[Tuple[int, List[str]]]
     ) -> Dict[int, List[NNCFTensor]]:
         """
         Static method that converts all model outputs and collected output_info
@@ -480,10 +479,10 @@ class MeanReducer(TensorReducerBase):
 
 class QuantileReducerBase(TensorReducerBase):
     def __init__(
-            self,
-            reduction_shape: Optional[ReductionShape] = None,
-            quantile: Optional[Union[float, Tuple[float]]] = None,
-            inplace: bool = False,
+        self,
+        reduction_shape: Optional[ReductionShape] = None,
+        quantile: Optional[Union[float, Tuple[float]]] = None,
+        inplace: bool = False,
     ):
         super().__init__(reduction_shape, False)
         self._quantile = (0.01, 0.99) if quantile is None else quantile
@@ -505,10 +504,10 @@ class QuantileReducer(QuantileReducerBase):
 
 class AbsQuantileReducer(QuantileReducerBase):
     def __init__(
-            self,
-            reduction_shape: Optional[ReductionShape] = None,
-            quantile: Union[float, List[float]] = 0.99,
-            inplace: bool = False,
+        self,
+        reduction_shape: Optional[ReductionShape] = None,
+        quantile: Union[float, List[float]] = 0.99,
+        inplace: bool = False,
     ):
         super().__init__(reduction_shape, quantile, False)
 
@@ -607,12 +606,7 @@ class MaxAggregator(OnlineTensorAggregator):
 
 
 class OfflineAggregatorBase(TensorAggregatorBase, ABC):
-    def __init__(
-            self,
-            use_per_sample_stats: bool = False,
-            num_samples: Optional[int] = None,
-            window_size: int = None
-    ):
+    def __init__(self, use_per_sample_stats: bool = False, num_samples: Optional[int] = None, window_size: int = None):
         super().__init__(num_samples)
         self._window_size = window_size
         self._samples: Deque[NNCFTensor] = deque(maxlen=window_size)
@@ -650,11 +644,11 @@ class MedianAggregator(OfflineAggregatorBase):
 
 class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
     def __init__(
-            self,
-            use_per_sample_stats: bool = False,
-            num_samples: Optional[int] = None,
-            window_size: int = None,
-            quantile: float = 0.01,
+        self,
+        use_per_sample_stats: bool = False,
+        num_samples: Optional[int] = None,
+        window_size: int = None,
+        quantile: float = 0.01,
     ):
         super().__init__(use_per_sample_stats, num_samples, window_size)
         self._quantile = quantile
@@ -668,8 +662,9 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         return self._aggregate_stacked_samples_with_no_outliers(stacked_val, outliers_mask)
 
     @abstractmethod
-    def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: NNCFTensor,
-                                                    outliers_mask: NNCFTensor) -> NNCFTensor:
+    def _aggregate_stacked_samples_with_no_outliers(
+        self, stacked_val: NNCFTensor, outliers_mask: NNCFTensor
+    ) -> NNCFTensor:
         pass
 
     def __eq__(self, __o: object) -> bool:
@@ -680,15 +675,17 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
 
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
-    def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: NNCFTensor,
-                                                    outliers_mask: NNCFTensor) -> NNCFTensor:
+    def _aggregate_stacked_samples_with_no_outliers(
+        self, stacked_val: NNCFTensor, outliers_mask: NNCFTensor
+    ) -> NNCFTensor:
         backend = stacked_val.backend
         return backend.masked_mean(stacked_val, mask=outliers_mask, axis=0)
 
 
 class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
-    def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: NNCFTensor,
-                                                    outliers_mask: NNCFTensor) -> NNCFTensor:
+    def _aggregate_stacked_samples_with_no_outliers(
+        self, stacked_val: NNCFTensor, outliers_mask: NNCFTensor
+    ) -> NNCFTensor:
         backend = stacked_val.backend
         return backend.masked_median(stacked_val, mask=outliers_mask, axis=0)
 

@@ -29,9 +29,9 @@ from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionComm
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
+from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.smooth_quant.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
-from nncf.openvino.tensor import OVNNCFTensor
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)

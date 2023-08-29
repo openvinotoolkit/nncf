@@ -148,7 +148,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :return: boolean indicating whether the node has a quantized weights or not
         """
 
-
     @staticmethod
     @abstractmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

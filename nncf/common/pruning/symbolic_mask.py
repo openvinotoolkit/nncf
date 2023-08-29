@@ -87,7 +87,6 @@ class SymbolicMask(NPNNCFTensor):
         return self.to_numpy() == other.to_numpy()
 
 
-
 class AmbiguousSymbolicMask(SymbolicMask):
     """
     Special case of symbolic mask used when pruning operation

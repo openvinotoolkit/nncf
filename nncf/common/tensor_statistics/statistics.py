@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import Counter
-from typing import TypeVar, List, Dict
+from typing import Dict, List, TypeVar
 
 from nncf.common.tensor import NNCFTensor
 

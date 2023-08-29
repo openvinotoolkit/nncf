@@ -26,8 +26,6 @@ from typing import Dict, List, Optional, Tuple, TypeVar
 
 from tqdm import tqdm
 
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorDtype
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -35,6 +33,8 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import TensorDtype
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -132,9 +132,7 @@ class SmoothQuant(Algorithm):
                 weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value, weight_port)
                 weight_statistics = self._clip_statistics([weight_statistics])
 
-                scales, ratio = self.calculate_scale_and_ratio(
-                    activations_value, weight_statistics, self._alpha
-                )
+                scales, ratio = self.calculate_scale_and_ratio(activations_value, weight_statistics, self._alpha)
 
                 if ratio > best_ratio:
                     best_ratio = ratio
@@ -176,7 +174,7 @@ class SmoothQuant(Algorithm):
 
     @staticmethod
     def calculate_scale_and_ratio(
-            activations: NNCFTensor, weights: NNCFTensor, alpha: float, quantile: Optional[float] = 0.1
+        activations: NNCFTensor, weights: NNCFTensor, alpha: float, quantile: Optional[float] = 0.1
     ) -> Tuple[NNCFTensor, float]:
         backend = activations.backend
         eps = backend.eps(TensorDtype.FLOAT32)

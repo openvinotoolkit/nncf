@@ -8,15 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Type
-from typing import Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from numpy import dtype
@@ -28,14 +20,10 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFTensorBackend
 from nncf.common.tensor import TensorDtype
 
-
-_DTYPE_MAP: Dict[TensorDtype, Any] = {
-    TensorDtype.FLOAT32: np.float32,
-    TensorDtype.INT64: np.int64
-}
+_DTYPE_MAP: Dict[TensorDtype, Any] = {TensorDtype.FLOAT32: np.float32, TensorDtype.INT64: np.int64}
 
 _INV_DTYPE_MAP = {v: k for k, v in _DTYPE_MAP.items()}
-_INV_DTYPE_MAP[dtype('float32')] = TensorDtype.FLOAT32
+_INV_DTYPE_MAP[dtype("float32")] = TensorDtype.FLOAT32
 
 
 class WrappingIterator:
@@ -194,7 +182,12 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.power(tensor.tensor, pwr))
 
     @staticmethod
-    def quantile(tensor: NPNNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None, keepdims: bool = False) -> Union[float, NNCFTensor]:
+    def quantile(
+        tensor: NPNNCFTensor,
+        quantile: Union[float, List[float]],
+        axis: Union[int, List[int]] = None,
+        keepdims: bool = False,
+    ) -> Union[float, NNCFTensor]:
         retval = np.quantile(tensor.tensor, quantile, axis=axis, keepdims=keepdims)
         if not isinstance(quantile, list):
             return retval
@@ -226,7 +219,9 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(result)
 
     @staticmethod
-    def masked_median(tensor: NPNNCFTensor, mask: NPNNCFTensor, axis: int = None, keepdims: bool = False) -> NPNNCFTensor:
+    def masked_median(
+        tensor: NPNNCFTensor, mask: NPNNCFTensor, axis: int = None, keepdims: bool = False
+    ) -> NPNNCFTensor:
         masked_x = np.ma.array(tensor.tensor, mask=mask.tensor)
         result = np.ma.median(masked_x, axis=axis, keepdims=False)
         if isinstance(result, (MaskedConstant, MaskedArray)):
@@ -255,4 +250,6 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def unstack(tensor: NPNNCFTensor, axis: int = 0) -> List[NPNNCFTensor]:
-        return [NPNNCFTensor(np.squeeze(e, axis)) for e in np.split(tensor.tensor, tensor.tensor.shape[axis], axis=axis)]
+        return [
+            NPNNCFTensor(np.squeeze(e, axis)) for e in np.split(tensor.tensor, tensor.tensor.shape[axis], axis=axis)
+        ]

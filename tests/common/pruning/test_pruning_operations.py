@@ -99,8 +99,11 @@ def test_elementwise_prune_ops(valid_masks):
     # conv_op_1 -> elementwise
     add_node(from_node_id=conv_op_1.node_id, to_node_id=elementwise_op.node_id)
 
-    masks = [SymbolicMask.from_numpy(np.ones((10,))),
-             SymbolicMask.from_numpy(np.ones((10,)))] if valid_masks is not None else [None, None]
+    masks = (
+        [SymbolicMask.from_numpy(np.ones((10,))), SymbolicMask.from_numpy(np.ones((10,)))]
+        if valid_masks is not None
+        else [None, None]
+    )
 
     def set_masks(masks, ops):
         for conv_op, mask in zip(ops, masks):

@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Callable, List, Optional, Tuple, Union, Deque
+from typing import Callable, Deque, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -146,6 +146,7 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
 
     def _get_statistics(self) -> MinMaxTensorStatistic:
         return MinMaxTensorStatistic(self._min_values, self._max_values)
+
 
 class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
     """
@@ -321,7 +322,6 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
 
     def _get_statistics(self) -> RawTensorStatistic:
         return RawTensorStatistic(self._all_values)
-
 
 
 class MedianMADStatisticCollector(OfflineTensorStatisticCollector):

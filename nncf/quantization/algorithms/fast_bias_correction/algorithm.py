@@ -13,20 +13,20 @@ from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 from tqdm import tqdm
 
-from nncf.common.graph import NNCFNode
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
@@ -162,8 +162,9 @@ class FastBiasCorrection(Algorithm):
             if bias_value.ndim > 1:
                 # Make index positive
                 channel_axis = range(bias_value.ndim)[channel_axis]
-            input_blob = self._backend_entity.create_input_data(input_shape, [t.tensor for t in input_fp],
-                                                                sub_input_name, channel_axis)
+            input_blob = self._backend_entity.create_input_data(
+                input_shape, [t.tensor for t in input_fp], sub_input_name, channel_axis
+            )
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,
@@ -185,7 +186,9 @@ class FastBiasCorrection(Algorithm):
         # Create commands of bias correction and apply them to the model.
         transformation_layout = TransformationLayout()
         for node, bias_value in node_and_new_bias_value:
-            transformation_layout.register(self._backend_entity.create_bias_correction_command(node, bias_value.to_numpy(), graph))
+            transformation_layout.register(
+                self._backend_entity.create_bias_correction_command(node, bias_value.to_numpy(), graph)
+            )
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
@@ -211,10 +214,14 @@ class FastBiasCorrection(Algorithm):
         backend = current_bias_value.backend
         bias_shift_magnitude = backend.inf
         if backend.count_nonzero(current_bias_value == 0) == 0:
-            bias_shift_magnitude = backend.max(backend.abs((updated_bias_value - current_bias_value) / current_bias_value))
+            bias_shift_magnitude = backend.max(
+                backend.abs((updated_bias_value - current_bias_value) / current_bias_value)
+            )
         return bias_shift_magnitude
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List[NNCFTensor], List[NNCFTensor]]:
+    def _get_fp_inputs(
+        self, statistic_points: StatisticPointsContainer, node_name: str
+    ) -> Tuple[List[NNCFTensor], List[NNCFTensor]]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 

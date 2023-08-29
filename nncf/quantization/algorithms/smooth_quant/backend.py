@@ -13,13 +13,13 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Dict, List, Optional, Tuple, TypeVar
 
-from nncf.common.tensor import NNCFTensor
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.registry import Registry
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 

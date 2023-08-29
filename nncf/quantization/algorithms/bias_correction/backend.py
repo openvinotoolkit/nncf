@@ -52,7 +52,9 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph) -> TransformationCommand:
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+    ) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 
@@ -113,7 +115,6 @@ class BiasCorrectionAlgoBackend(ABC):
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
-
 
     @staticmethod
     @abstractmethod

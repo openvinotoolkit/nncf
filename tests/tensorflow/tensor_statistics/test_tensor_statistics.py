@@ -259,4 +259,3 @@ class TestCollectedStatistics:
         for input_ in TestCollectedStatistics.REF_INPUTS * 10:
             collector_for_num_samples_test.register_input(input_)
         assert collector_for_num_samples_test.collected_samples() == TestCollectedStatistics.REF_NUM_SAMPLES
-

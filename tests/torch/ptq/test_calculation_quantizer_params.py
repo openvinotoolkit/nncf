@@ -344,4 +344,3 @@ def test_quantizer_parameters_export(tmp_path: Path):
         assert name in torch_ptq_params
         assert np.allclose(param["input_low"], torch_ptq_params[name]["input_low"])
         assert np.allclose(param["input_high"], torch_ptq_params[name]["input_high"])
-
