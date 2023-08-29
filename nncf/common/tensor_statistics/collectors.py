@@ -19,6 +19,7 @@ import numpy as np
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
@@ -106,7 +107,7 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
         self, reduction_shape: Optional[ReductionShape] = None, num_samples: int = None, window_size: int = None
     ):
         super().__init__(reduction_shape, num_samples)
-        self._samples = deque(maxlen=window_size)
+        self._samples: Deque[NNCFTensor] = deque(maxlen=window_size)
 
     def _reset(self):
         self._samples.clear()
@@ -184,11 +185,11 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
             self._all_max_values.append(max_reduced)
 
     @abstractmethod
-    def _min_aggregate(self):
+    def _min_aggregate(self) -> NNCFTensor:
         pass
 
     @abstractmethod
-    def _max_aggregate(self):
+    def _max_aggregate(self) -> NNCFTensor:
         pass
 
     def _reset(self):
@@ -215,14 +216,14 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         self._use_means_of_mins = use_means_of_mins
         self._use_means_of_maxs = use_means_of_maxs
 
-    def _min_aggregate(self):
+    def _min_aggregate(self) -> NNCFTensor:
         backend = next(iter(self._all_min_values)).backend
         stacked_min = backend.stack(list(self._all_min_values))
         if self._use_means_of_mins:
             return backend.mean(stacked_min, axis=0)
         return backend.amin(stacked_min, axis=0, keepdims=True)
 
-    def _max_aggregate(self):
+    def _max_aggregate(self) -> NNCFTensor:
         backend = next(iter(self._all_max_values)).backend
         stacked_max = backend.stack(list(self._all_max_values))
         if self._use_means_of_maxs:
@@ -230,19 +231,19 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         return backend.amin(stacked_max, axis=0, keepdims=True)
 
     def _get_statistics(self) -> MinMaxTensorStatistic:
-        return MinMaxTensorStatistic(self._min_values, self._max_values)
+        return MinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
 
 class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     """
     Collector aggregates mean of minimum values and mean of maximum values.
     """
 
-    def _min_aggregate(self):
+    def _min_aggregate(self) -> NNCFTensor:
         backend = next(iter(self._all_max_values)).backend
         stacked_min = backend.stack(list(self._all_min_values))
         return backend.mean(stacked_min, axis=0)
 
-    def _max_aggregate(self):
+    def _max_aggregate(self) -> NNCFTensor:
         backend = next(iter(self._all_max_values)).backend
         stacked_max = backend.stack(list(self._all_max_values))
         return backend.mean(stacked_max, axis=0)
@@ -290,7 +291,7 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         self._all_values.clear()
         self._all_shapes.clear()
 
-    def _mean_aggregate(self):
+    def _mean_aggregate(self) -> NNCFTensor:
         backend = next(iter(self._all_values)).backend
         all_values_stack = backend.stack(list(self._all_values))
         return backend.mean(all_values_stack, 0)
@@ -331,15 +332,23 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     Collector estimates median and median absolute deviation (MAD).
     """
 
-    def _prepare_statistics(self):
+    def _prepare_statistics(self) -> Tuple[NNCFTensor, NNCFTensor]:
         per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape), discard_zeros=True)
-        per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
+        backend = next(iter(per_channel_history)).backend
+        per_channel_median = [backend.median(channel_hist) for channel_hist in per_channel_history]
         per_channel_mad = []
         for idx, median in enumerate(per_channel_median):
-            per_channel_mad.append(np.median(abs(per_channel_history[idx] - median)))
-        numpy_median = np.asarray(per_channel_median)
-        numpy_mad = np.asarray(per_channel_mad)
-        return numpy_median, numpy_mad
+            per_channel_mad.append(backend.median(backend.abs(per_channel_history[idx] - median)))
+        median = backend.concatenate(per_channel_median)
+        mad = backend.concatenate(per_channel_mad)
+        return median, mad
+
+    def _get_statistics(self) -> MedianMADTensorStatistic:
+        median, mad = self._prepare_statistics()
+        return MedianMADTensorStatistic(median, mad)
+
+    def _register_input(self, x: NNCFTensor):
+        self._samples.append(x)
 
 
 class PercentileStatisticCollector(OfflineTensorStatisticCollector):
@@ -366,6 +375,8 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
             percentile_vs_values_dict[pc] = numpy_percentiles
         return percentile_vs_values_dict
 
+    def _register_input(self, x: NNCFTensor):
+        self._samples.append(x)
 
 class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
     """
@@ -387,3 +398,6 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
     def _reset(self):
         for _, val in self._all_pct_values.items():
             val.clear()
+
+    def _register_input(self, x: NNCFTensor):
+        self._samples.append(x)

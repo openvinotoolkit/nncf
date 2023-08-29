@@ -98,6 +98,9 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
     def max(self) -> float:
         return self._tensor.max()
 
+    def flatten(self) -> "NPNNCFTensor":
+        return NPNNCFTensor(self._tensor.flatten())
+
 
 class NPNNCFTensorBackend(NNCFTensorBackend):
     inf = np.inf

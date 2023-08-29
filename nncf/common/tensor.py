@@ -179,6 +179,10 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def max(self) -> float:
         pass
 
+    @abstractmethod
+    def flatten(self) -> "NNCFTensor":
+        pass
+
 
 class NNCFTensorBackend(abc.ABC):
     inf = None  # TODO(vshampor): IMPLEMENT ME

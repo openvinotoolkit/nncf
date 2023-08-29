@@ -44,11 +44,11 @@ class TestCollectedStatistics:
             (
                 MinMaxStatisticCollector,
                 {
-                    (0, 1): MinMaxTensorStatistic(min_values=TFNNCFTensor(tf.constant(-4.0)),
-                                                  max_values=TFNNCFTensor(tf.constant(6.1))),
+                    (0, 1): MinMaxTensorStatistic(min_values=TFNNCFTensor(tf.constant([[-4.0]])),
+                                                  max_values=TFNNCFTensor(tf.constant([[6.1]]))),
                     (1,): MinMaxTensorStatistic(
-                        min_values=TFNNCFTensor(tf.constant([1.0, -4.0, 4.0])),
-                        max_values=TFNNCFTensor(tf.constant([4.5, 4.0, 6.1]))
+                        min_values=TFNNCFTensor(tf.constant([[1.0], [-4.0], [4.0]])),
+                        max_values=TFNNCFTensor(tf.constant([[4.5], [4.0], [6.1]]))
                     ),
                     (0,): MinMaxTensorStatistic(
                         min_values=TFNNCFTensor(tf.constant([[-1.3, -4.0, -3.5]])),
@@ -72,11 +72,11 @@ class TestCollectedStatistics:
             (
                 partial(MeanMinMaxStatisticCollector, use_per_sample_stats=False),
                 {
-                    (0, 1): MinMaxTensorStatistic(min_values=TFNNCFTensor(tf.constant(-3.5)),
-                                                  max_values=TFNNCFTensor(tf.constant(6.05))),
+                    (0, 1): MinMaxTensorStatistic(min_values=TFNNCFTensor(tf.constant([[-3.5]])),
+                                                  max_values=TFNNCFTensor(tf.constant([[6.05]]))),
                     (1,): MinMaxTensorStatistic(
-                        min_values=TFNNCFTensor(tf.constant([1.8, -3.5, 4.15])),
-                        max_values=TFNNCFTensor(tf.constant([3.75, 3.5, 6.05]))
+                        min_values=TFNNCFTensor(tf.constant([[1.8], [-3.5], [4.15]])),
+                        max_values=TFNNCFTensor(tf.constant([[3.75], [3.5], [6.05]]))
                     ),
                     (0,): MinMaxTensorStatistic(
                         min_values=TFNNCFTensor(tf.constant([[-1.15, -3, -3.25]])),
@@ -92,11 +92,11 @@ class TestCollectedStatistics:
                     use_means_of_maxs=True,
                 ),
                 {
-                    (0, 1): MinMaxTensorStatistic(min_values=TFNNCFTensor(tf.constant(-4.0)),
-                                                  max_values=TFNNCFTensor(tf.constant(6.05))),
+                    (0, 1): MinMaxTensorStatistic(min_values=TFNNCFTensor(tf.constant([[-4.0]])),
+                                                  max_values=TFNNCFTensor(tf.constant([[6.05]]))),
                     (1,): MinMaxTensorStatistic(
-                        min_values=TFNNCFTensor(tf.constant([1.0, -4.0, 4.0])),
-                        max_values=TFNNCFTensor(tf.constant([3.75, 3.5, 6.05]))
+                        min_values=TFNNCFTensor(tf.constant([[1.0], [-4.0], [4.0]])),
+                        max_values=TFNNCFTensor(tf.constant([[3.75], [3.5], [6.05]]))
                     ),
                     (0,): MinMaxTensorStatistic(
                         min_values=TFNNCFTensor(tf.constant([[-1.3, -4.0, -3.5]])),
@@ -116,7 +116,8 @@ class TestCollectedStatistics:
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(TFNNCFTensor(input_))
             test_stats = collector_obj.get_statistics()
-            assert reduction_shapes_vs_ref_statistic[reduction_shape] == test_stats
+            ref_stats = reduction_shapes_vs_ref_statistic[reduction_shape]
+            assert ref_stats == test_stats
 
     @pytest.mark.parametrize(
         ("collector", "reduction_shapes_vs_ref_statistic"),
@@ -192,7 +193,7 @@ class TestCollectedStatistics:
         for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
             collector_obj = collector(reduction_shape=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
-                collector_obj.register_input(input_)
+                collector_obj.register_input(TFNNCFTensor(input_))
             test_stats = collector_obj.get_statistics()
             assert reduction_shapes_vs_ref_statistic[reduction_shape] == test_stats
 
@@ -218,12 +219,12 @@ class TestCollectedStatistics:
 
     def test_collected_samples(self, collector_for_interface_test: TensorStatisticCollectorBase):
         for input_ in TestCollectedStatistics.REF_INPUTS:
-            collector_for_interface_test.register_input(input_)
+            collector_for_interface_test.register_input(TFNNCFTensor(input_))
         assert collector_for_interface_test.collected_samples() == len(TestCollectedStatistics.REF_INPUTS)
 
     def test_reset(self, collector_for_interface_test: TensorStatisticCollectorBase):
         for input_ in TestCollectedStatistics.REF_INPUTS:
-            collector_for_interface_test.register_input(input_)
+            collector_for_interface_test.register_input(TFNNCFTensor(input_))
         collector_for_interface_test.reset()
         assert collector_for_interface_test.collected_samples() == 0
         with pytest.raises(StatisticsNotCollectedError):
@@ -231,16 +232,16 @@ class TestCollectedStatistics:
 
     def test_enable_disable(self, collector_for_interface_test: TensorStatisticCollectorBase):
         for input_ in TestCollectedStatistics.REF_INPUTS:
-            collector_for_interface_test.register_input(input_)
+            collector_for_interface_test.register_input(TFNNCFTensor(input_))
 
         collector_for_interface_test.disable()
         for input_ in TestCollectedStatistics.REF_INPUTS:
-            collector_for_interface_test.register_input(input_)
+            collector_for_interface_test.register_input(TFNNCFTensor(input_))
         assert collector_for_interface_test.collected_samples() == len(TestCollectedStatistics.REF_INPUTS)
 
         collector_for_interface_test.enable()
         for input_ in TestCollectedStatistics.REF_INPUTS:
-            collector_for_interface_test.register_input(input_)
+            collector_for_interface_test.register_input(TFNNCFTensor(input_))
         assert collector_for_interface_test.collected_samples() == 2 * len(TestCollectedStatistics.REF_INPUTS)
 
     OFFLINE_COLLECTORS = [
@@ -266,5 +267,5 @@ class TestCollectedStatistics:
 
     def test_num_samples(self, collector_for_num_samples_test: OfflineTensorStatisticCollector):
         for input_ in TestCollectedStatistics.REF_INPUTS * 10:
-            collector_for_num_samples_test.register_input(input_)
+            collector_for_num_samples_test.register_input(TFNNCFTensor(input_))
         assert collector_for_num_samples_test.collected_samples() == TestCollectedStatistics.REF_NUM_SAMPLES

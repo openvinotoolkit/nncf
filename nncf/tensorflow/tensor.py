@@ -103,6 +103,9 @@ class TFNNCFTensor(NNCFTensor[tf.Tensor]):
     def max(self) -> float:
         return tf.reduce_max(self._tensor).numpy().item()
 
+    def flatten(self) -> "TFNNCFTensor":
+        return TFNNCFTensor(tf.reshape(self._tensor, [-1]))
+
 
 class TFNNCFTensorBackend(NNCFTensorBackend):
     inf = np.inf  # TF seems to reuse the np.inf value for representing own inf values

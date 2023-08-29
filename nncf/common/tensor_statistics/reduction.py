@@ -10,9 +10,12 @@
 # limitations under the License.
 
 from collections import deque
+from typing import Deque
 from typing import List, Tuple
 
 import numpy as np
+
+from nncf.common.tensor import NNCFTensor
 
 
 def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
@@ -25,9 +28,10 @@ def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
     return channel_count, channel_dim_idx
 
 
-def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.ndarray]:
+def split_into_channels(input_: NNCFTensor, scale_shape: List[int]) -> List[NNCFTensor]:
     channel_count, channel_dim_idx = get_channel_count_and_dim_idx(scale_shape)
-    channel_first_tensor = np.moveaxis(input_, channel_dim_idx, 0)
+    backend = input_.backend
+    channel_first_tensor = backend.moveaxis(input_, channel_dim_idx, 0)
     if channel_count == 1:
         return [channel_first_tensor]
 
@@ -37,9 +41,13 @@ def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.n
     return ret_list
 
 
-def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], discard_zeros=False) -> List:
+def get_per_channel_history(raw_input_history: Deque[NNCFTensor], scale_shape: List[int], discard_zeros=False) -> List[NNCFTensor]:
     channel_count, _ = get_channel_count_and_dim_idx(scale_shape)
-    per_channel_history = [None for i in range(channel_count)]
+    per_channel_history = [None for _ in range(channel_count)]
+    if not raw_input_history:
+        return per_channel_history
+
+    backend = next(iter(raw_input_history)).backend
     for _ in range(len(raw_input_history)):
         entry = raw_input_history.popleft()
         split = split_into_channels(entry, scale_shape)
@@ -54,7 +62,7 @@ def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], di
             if per_channel_history[i] is None:
                 per_channel_history[i] = flat_channel_split
             else:
-                per_channel_history[i] = np.concatenate([per_channel_history[i], flat_channel_split])
+                per_channel_history[i] = backend.concatenate([per_channel_history[i], flat_channel_split])
         raw_input_history.append(entry)
     return per_channel_history
 
