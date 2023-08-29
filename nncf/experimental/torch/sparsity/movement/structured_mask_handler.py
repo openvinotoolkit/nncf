@@ -391,7 +391,7 @@ class StructuredMaskHandler:
         module_vs_sparse_module_info_map = {minfo.module: minfo for minfo in sparsified_module_info_list}
 
         pruning_producing_types = ["linear"]
-        nncf_graph = nncf_network.get_original_graph()
+        nncf_graph = nncf_network.nncf.get_original_graph()
         pruning_groups = get_pruning_groups(
             nncf_graph, PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types
         )

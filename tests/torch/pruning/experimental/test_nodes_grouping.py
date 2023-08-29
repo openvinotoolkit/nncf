@@ -474,7 +474,7 @@ def test_groups(desc: GroupTestDesc, mocker, tmp_path):
     pruning_producing_types = ["linear"]
     get_graph_spy = mocker.spy(BlockHierarchy, "_get_graph_for_visualization")
     not_filtered_groups = get_pruning_groups(
-        nncf_network.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types, tmp_path
+        nncf_network.nncf.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types, tmp_path
     )
 
     nx_graph = get_graph_spy.spy_return
@@ -511,7 +511,7 @@ def test_all_groups_valid(desc: GroupTestDesc):
     nncf_network = create_nncf_network(model, config)
     pruning_producing_types = ["linear"]
     all_groups = get_pruning_groups(
-        nncf_network.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types
+        nncf_network.nncf.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types
     )
     for group in all_groups:
         assert group.consumers
