@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import deque
+from typing import Tuple
 
 import numpy as np
 import onnx
@@ -58,7 +59,15 @@ def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx
     return model_transformer.transform(transformation_layout)
 
 
-def get_q_linear_params(node: onnx.NodeProto, onnx_graph: ONNXGraph):
+def _get_q_linear_params(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Tuple[np.dtype, int, np.ndarray, np.ndarray]:
+    """
+
+
+    :param node:
+    :param onnx_graph:
+    :return:
+    """
+    assert node.op_type in ONNXQuantizeLinearMetatype.get_all_aliases()
     scale = onnx_graph.get_tensor_value(node.input[1])
     zero_point = onnx_graph.get_tensor_value(node.input[2])
     dtype = zero_point.dtype
@@ -67,21 +76,6 @@ def get_q_linear_params(node: onnx.NodeProto, onnx_graph: ONNXGraph):
         if attr.name == "axis":
             axis = get_attribute_value(attr)
     return dtype, axis, scale, zero_point
-
-
-def quantize_tensor(weight, dtype, axis, scale, zero_point, low=None, high=None):
-    cliplow = max(0 if dtype == np.uint8 else -127, -127 if low is None else low)
-    cliphigh = min(255 if dtype == np.uint8 else 127, 255 if high is None else high)
-    arr_fp32 = []
-    if axis is not None:
-        for idx, subarray in enumerate(np.moveaxis(weight, axis, 0)):
-            arr_fp32.append(np.asarray((subarray.astype(np.float32) / scale[idx]).round() + zero_point[idx]))
-        arr_fp32 = np.array(arr_fp32)
-        arr_fp32 = np.moveaxis(arr_fp32, 0, axis)
-    else:
-        arr_fp32 = np.asarray((weight.astype(np.float32) / scale).round() + zero_point)
-    arr_fp32 = np.clip(arr_fp32, cliplow, cliphigh)
-    return arr_fp32.astype(dtype)
 
 
 def remove_node(node, onnx_graph):
@@ -93,20 +87,61 @@ def remove_node(node, onnx_graph):
     onnx_graph.onnx_model.graph.node.remove(node)
 
 
+def remove_unused_nodes(onnx_graph: ONNXGraph):
+    model_outputs = [o.name for o in onnx_graph.get_model_outputs()]
+    for node in onnx_graph.get_all_nodes():
+        if not onnx_graph.get_nodes_by_input(node.output[0]) and node.output[0] not in model_outputs:
+            onnx_graph.onnx_model.graph.node.remove(node)
+
+
+def create_initializer_tensor(
+    name: str, tensor_array: np.ndarray, data_type: onnx.TensorProto = onnx.TensorProto.FLOAT
+) -> onnx.TensorProto:
+    initializer_tensor = onnx.helper.make_tensor(
+        name=name, data_type=data_type, dims=tensor_array.shape, vals=tensor_array.flatten().tolist()
+    )
+    return initializer_tensor
+
+
 def compress_quantize_weights_transformation(model: onnx.ModelProto) -> onnx.ModelProto:
     onnx_graph = ONNXGraph(model)
     for node in onnx_graph.get_all_nodes():
         if node.op_type in ONNXQuantizeLinearMetatype.get_all_aliases():
-            init_tensor_name = get_tensor_edge_name(onnx_graph, node=node, port_id=0)
-            if init_tensor_name:
-                original_weight = onnx_graph.get_tensor_value(init_tensor_name)
+            if get_tensor_edge_name(onnx_graph, node=node, port_id=0):
+                init_tensor_name = None
+                if not onnx_graph.has_tensor(node.input[0]):
+                    e = onnx.utils.Extractor(model)
+                    extracted = e.extract_model([], [node.input[0]])
+                    from nncf.onnx.engine import ONNXEngine
+
+                    engine = ONNXEngine(extracted)
+                    outputs = engine.infer({})
+                    original_weight = outputs[node.input[0]]
+                else:
+                    init_tensor_name = node.input[0]  # get_tensor_edge_name(onnx_graph, node=node, port_id=0)
+                    original_weight = onnx_graph.get_tensor_value(init_tensor_name)
+
                 dtype, axis, scale, zero_point = get_q_linear_params(node, onnx_graph)
                 int8_weight = quantize_tensor(original_weight, dtype, axis, scale, zero_point)
+                if init_tensor_name:
+                    int8_weight_tensor = numpy_helper.from_array(int8_weight, name=init_tensor_name)
 
-                int8_weight_tensor = numpy_helper.from_array(int8_weight, name=init_tensor_name)
-                initializer = onnx_graph.get_tensor(init_tensor_name)
-                initializer.CopyFrom(int8_weight_tensor)
+                    initializer = onnx_graph.get_tensor(init_tensor_name)
+                    initializer.CopyFrom(int8_weight_tensor)
 
-                remove_node(node, onnx_graph)
+                    remove_node(node, onnx_graph)
+                else:
+                    init_tensor_name = get_tensor_edge_name(onnx_graph, node=node, port_id=0)
+                    int8_weight_tensor = numpy_helper.from_array(int8_weight, name=init_tensor_name)
 
+                    initializer = onnx_graph.get_tensor(init_tensor_name)
+                    initializer.CopyFrom(int8_weight_tensor)
+                    # initializzer = create_initializer_tensor(
+                    #     'weight_tensor_' + str(cnt), int8_weight, np_dtype_to_tensor_dtype(int8_weight.dtype)
+                    # )
+                    # onnx_graph.onnx_model.graph.initializer.append(initializzer)
+                    node.input[0] = init_tensor_name  # 'weight_tensor_' + str(cnt)
+
+                    remove_node(node, onnx_graph)
+    remove_unused_nodes(onnx_graph)
     return model
