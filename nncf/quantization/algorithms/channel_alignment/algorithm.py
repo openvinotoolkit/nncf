@@ -200,7 +200,7 @@ class ChannelAlignment(Algorithm):
             updated_conv_out_value,
             [out_channel_dim, in_channel_dim],
         )
-        shift = updated_conv_out_value.dot(amean.reshape(updated_conv_out_value.shape[1]))
+        shift = updated_conv_out_value.matmul(amean.reshape(updated_conv_out_value.shape[1]))
 
         updated_add_out_value = bias_out_value + shift.reshape(*bias_out_value.shape)
         return updated_add_in_value, updated_add_out_value

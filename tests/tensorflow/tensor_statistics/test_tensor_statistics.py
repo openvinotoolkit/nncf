@@ -55,7 +55,7 @@ class TestCollectedStatistics:
                         max_values=TFNNCFTensor(tf.constant([[4.5, 5.8, 6.1]]))
                     ),
                     # Not supported for now:
-                    # ((3, 3), ): PTTFMinMaxTensorStatistic(
+                    # ((3, 3), ): MinMaxTensorStatistic(
                     #     min_values=tf.constant([
                     #         [1.0, 2.0, 3.0],
                     #         [-1.3, -4, -3.5],
@@ -132,7 +132,7 @@ class TestCollectedStatistics:
                         median_values=TFNNCFTensor(tf.constant([[2.5, 2.3, 3.35]])), mad_values=TFNNCFTensor(tf.constant([[1.9, 3.1, 2.7]]))
                     ),
                     # Not supported for now:
-                    # (3, 3): TFMedianMADTensorStatistic(
+                    # (3, 3): MedianMADTensorStatistic(
                     #     median_values=tf.constant([
                     #         [2.75, 2.3, 3.35],
                     #         [-1.15, -3, -3.25],

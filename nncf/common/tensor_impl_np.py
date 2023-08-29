@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from numpy import dtype
@@ -19,23 +19,12 @@ from nncf import TargetDevice
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFTensorBackend
 from nncf.common.tensor import TensorDtype
+from nncf.common.tensor import WrappingIterator
 
 _DTYPE_MAP: Dict[TensorDtype, Any] = {TensorDtype.FLOAT32: np.float32, TensorDtype.INT64: np.int64}
 
 _INV_DTYPE_MAP = {v: k for k, v in _DTYPE_MAP.items()}
 _INV_DTYPE_MAP[dtype("float32")] = TensorDtype.FLOAT32
-
-
-class WrappingIterator:
-    def __init__(self, orig_iter: Iterator):
-        self._orig_iter = orig_iter
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        retval = next(self._orig_iter)
-        return NPNNCFTensor(retval)
 
 
 class NPNNCFTensor(NNCFTensor[np.ndarray]):
@@ -55,10 +44,10 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
         return self._tensor.size
 
     def __iter__(self) -> Iterator:
-        return WrappingIterator(iter(self._tensor))
+        return WrappingIterator[NPNNCFTensor](iter(self._tensor))
 
-    def dot(self, other: "NPNNCFTensor") -> "NPNNCFTensor":
-        return self.__class__(self._tensor.dot(other._tensor))
+    def matmul(self, other: "NPNNCFTensor") -> "NPNNCFTensor":
+        return self.__class__(np.matmul(self._tensor, other._tensor))
 
     def astype(self, dtype: TensorDtype) -> "NPNNCFTensor":
         return self.__class__(self._tensor.astype(_DTYPE_MAP[dtype]))
@@ -90,7 +79,7 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
             keepdims = np._NoValue
         return self.__class__(np.mean(self.tensor, axis=axis, keepdims=keepdims))
 
-    def median(self, axis: int, keepdims: bool = False) -> "NNCFTensor":
+    def median(self, axis: int = None, keepdims: bool = False) -> "NNCFTensor":
         return self.__class__(np.median(self.tensor, axis=axis, keepdims=keepdims))
 
     @property
@@ -122,8 +111,8 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.stack([nt.tensor for nt in tensor_list]))
 
     @staticmethod
-    def count_nonzero(mask: NPNNCFTensor) -> NPNNCFTensor:
-        return NPNNCFTensor(np.count_nonzero(mask.tensor))
+    def count_nonzero(tensor: NPNNCFTensor) -> NPNNCFTensor:
+        return NPNNCFTensor(np.count_nonzero(tensor.tensor))
 
     @staticmethod
     def abs(tensor: NPNNCFTensor) -> NPNNCFTensor:
@@ -199,12 +188,12 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.mean([x.tensor for x in tensor_list], axis=axis))
 
     @staticmethod
-    def mean(x: "NPNNCFTensor", axis: int, keepdims: bool = False) -> NPNNCFTensor:
-        return NPNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
+    def mean(tensor: "NPNNCFTensor", axis: int, keepdims: bool = False) -> NPNNCFTensor:
+        return NPNNCFTensor(np.mean(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def moveaxis(x: "NPNNCFTensor", src: int, dst: int) -> NPNNCFTensor:
-        return NPNNCFTensor(np.moveaxis(x.tensor, src, dst))
+    def moveaxis(tensor: "NPNNCFTensor", src: int, dst: int) -> NPNNCFTensor:
+        return NPNNCFTensor(np.moveaxis(tensor.tensor, src, dst))
 
     @staticmethod
     def logical_or(tensor1: NPNNCFTensor, tensor2: NPNNCFTensor) -> NPNNCFTensor:

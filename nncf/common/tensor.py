@@ -11,13 +11,13 @@
 import abc
 from abc import abstractmethod
 from enum import IntEnum
-from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Generic, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Iterator
 
 import numpy as np
 
 TensorType = TypeVar("TensorType")
 DeviceType = TypeVar("DeviceType")
-TensorElementsType = TypeVar("TensorElementsType")
 
 
 class TensorDtype(IntEnum):
@@ -135,7 +135,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         pass
 
     @abstractmethod
-    def median(self, axis: int, keepdims: bool = False) -> "NNCFTensor":
+    def median(self, axis: int = None, keepdims: bool = False) -> "NNCFTensor":
         pass
 
     @abstractmethod
@@ -151,7 +151,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         pass
 
     @abstractmethod
-    def dot(self, other: "NNCFTensor") -> "NNCFTensor":
+    def matmul(self, other: "NNCFTensor") -> "NNCFTensor":
         pass
 
     @abstractmethod
@@ -185,12 +185,12 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def moveaxis(x: NNCFTensor, src: int, dst: int) -> NNCFTensor:
+    def moveaxis(tensor: NNCFTensor, src: int, dst: int) -> NNCFTensor:
         pass
 
     @staticmethod
     @abstractmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...]], keepdims: bool = False) -> NNCFTensor:
+    def mean(tensor: NNCFTensor, axis: Union[int, Tuple[int, ...]], keepdims: bool = False) -> NNCFTensor:
         pass
 
     @staticmethod
@@ -210,7 +210,7 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def count_nonzero(mask: NNCFTensor) -> NNCFTensor:
+    def count_nonzero(tensor: NNCFTensor) -> NNCFTensor:
         pass
 
     @staticmethod
@@ -337,3 +337,18 @@ class NNCFTensorBackend(abc.ABC):
     @abstractmethod
     def unstack(tensor: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         pass
+
+
+T = TypeVar('T')
+
+
+class WrappingIterator(Generic[T]):
+    def __init__(self, orig_iter: Iterator):
+        self._orig_iter = orig_iter
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        retval = next(self._orig_iter)
+        return T(retval)

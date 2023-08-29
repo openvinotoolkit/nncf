@@ -13,8 +13,6 @@ from typing import Any, Callable, Deque, List, Optional, Union
 
 import torch
 
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
@@ -98,7 +96,7 @@ class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
 
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
-            self._register_input_common(PTNNCFTensor(x))
+            super()._register_input(PTNNCFTensor(x))
 
     def _get_statistics(self) -> PTMinMaxTensorStatistic:
         min_values = self._min_aggregate().tensor.view(self._output_shape)
