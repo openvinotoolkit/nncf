@@ -16,7 +16,9 @@ import onnx
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.onnx.graph.model_utils import compress_quantize_weights_transformation
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.quantization.backend_parameters import is_weight_compression_needed
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -68,5 +70,8 @@ def quantize_impl(
 
     graph = GraphConverter.create_nncf_graph(model)
     quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
+
+    if is_weight_compression_needed(advanced_parameters):
+        quantized_model = compress_quantize_weights_transformation(quantized_model)
 
     return quantized_model
