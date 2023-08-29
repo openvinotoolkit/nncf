@@ -83,6 +83,11 @@ def _get_input_q_linear_tensor(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> n
     return onnx_graph.get_tensor_value(node.input[0])
 
 
+def _update_initializer_value(initializer: onnx.TensorProto, new_value: np.ndarray) -> None:
+    int8_weight_tensor = numpy_helper.from_array(new_value, name=initializer.name)
+    initializer.CopyFrom(int8_weight_tensor)
+
+
 def remove_node(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> None:
     for i in range(len(node.input)):
         parent = onnx_graph.get_parent(node, i)
@@ -108,11 +113,9 @@ def compress_quantize_weights_transformation(model: onnx.ModelProto) -> onnx.Mod
             int8_weight = quantize_tensor(original_weight, dtype, axis, scale, zero_point)
 
             initializer_to_update_name = get_tensor_edge_name(onnx_graph, node=node, port_id=0)
-            int8_weight_tensor = numpy_helper.from_array(int8_weight, name=initializer_to_update_name)
             initializer = onnx_graph.get_tensor(initializer_to_update_name)
-            initializer.CopyFrom(int8_weight_tensor)
-
-            node.input[0] = initializer_to_update_name
+            _update_initializer_value(initializer, int8_weight)
             remove_node(node, onnx_graph)
+            node.input[0] = initializer_to_update_name
 
     return model
