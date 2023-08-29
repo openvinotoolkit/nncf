@@ -20,12 +20,14 @@ from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.onnx.engine import ONNXEngine
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_tensor_edge_name
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.quantization.quantizer_parameters import quantize_tensor
 
 
 def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx.ModelProto:
@@ -60,13 +62,6 @@ def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx
 
 
 def _get_q_linear_params(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Tuple[np.dtype, int, np.ndarray, np.ndarray]:
-    """
-
-
-    :param node:
-    :param onnx_graph:
-    :return:
-    """
     assert node.op_type in ONNXQuantizeLinearMetatype.get_all_aliases()
     scale = onnx_graph.get_tensor_value(node.input[1])
     zero_point = onnx_graph.get_tensor_value(node.input[2])
@@ -78,7 +73,22 @@ def _get_q_linear_params(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Tuple[n
     return dtype, axis, scale, zero_point
 
 
-def remove_node(node, onnx_graph):
+def _get_input_q_linear_tensor(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> np.ndarray:
+    if not onnx_graph.has_tensor(node.input[0]):
+        e = onnx.utils.Extractor(onnx_graph.onnx_model)
+        extracted = e.extract_model([], [node.input[0]])
+        engine = ONNXEngine(extracted)
+        outputs = engine.infer({})
+        return outputs[node.input[0]]
+    return onnx_graph.get_tensor_value(node.input[0])
+
+
+def remove_node(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> None:
+    for i in range(len(node.input)):
+        parent = onnx_graph.get_parent(node, i)
+        if parent:
+            remove_node(parent, onnx_graph)
+
     node_children = onnx_graph.get_children(node)
     for node_child in node_children:
         for input_id, input_obj in enumerate(node_child.input):
@@ -87,61 +97,22 @@ def remove_node(node, onnx_graph):
     onnx_graph.onnx_model.graph.node.remove(node)
 
 
-def remove_unused_nodes(onnx_graph: ONNXGraph):
-    model_outputs = [o.name for o in onnx_graph.get_model_outputs()]
-    for node in onnx_graph.get_all_nodes():
-        if not onnx_graph.get_nodes_by_input(node.output[0]) and node.output[0] not in model_outputs:
-            onnx_graph.onnx_model.graph.node.remove(node)
-
-
-def create_initializer_tensor(
-    name: str, tensor_array: np.ndarray, data_type: onnx.TensorProto = onnx.TensorProto.FLOAT
-) -> onnx.TensorProto:
-    initializer_tensor = onnx.helper.make_tensor(
-        name=name, data_type=data_type, dims=tensor_array.shape, vals=tensor_array.flatten().tolist()
-    )
-    return initializer_tensor
-
-
 def compress_quantize_weights_transformation(model: onnx.ModelProto) -> onnx.ModelProto:
     onnx_graph = ONNXGraph(model)
     for node in onnx_graph.get_all_nodes():
-        if node.op_type in ONNXQuantizeLinearMetatype.get_all_aliases():
-            if get_tensor_edge_name(onnx_graph, node=node, port_id=0):
-                init_tensor_name = None
-                if not onnx_graph.has_tensor(node.input[0]):
-                    e = onnx.utils.Extractor(model)
-                    extracted = e.extract_model([], [node.input[0]])
-                    from nncf.onnx.engine import ONNXEngine
+        if node.op_type in ONNXQuantizeLinearMetatype.get_all_aliases() and get_tensor_edge_name(
+            onnx_graph, node=node, port_id=0
+        ):
+            original_weight = _get_input_q_linear_tensor(node, onnx_graph)
+            dtype, axis, scale, zero_point = _get_q_linear_params(node, onnx_graph)
+            int8_weight = quantize_tensor(original_weight, dtype, axis, scale, zero_point)
 
-                    engine = ONNXEngine(extracted)
-                    outputs = engine.infer({})
-                    original_weight = outputs[node.input[0]]
-                else:
-                    init_tensor_name = node.input[0]  # get_tensor_edge_name(onnx_graph, node=node, port_id=0)
-                    original_weight = onnx_graph.get_tensor_value(init_tensor_name)
+            initializer_to_update_name = get_tensor_edge_name(onnx_graph, node=node, port_id=0)
+            int8_weight_tensor = numpy_helper.from_array(int8_weight, name=initializer_to_update_name)
+            initializer = onnx_graph.get_tensor(initializer_to_update_name)
+            initializer.CopyFrom(int8_weight_tensor)
 
-                dtype, axis, scale, zero_point = get_q_linear_params(node, onnx_graph)
-                int8_weight = quantize_tensor(original_weight, dtype, axis, scale, zero_point)
-                if init_tensor_name:
-                    int8_weight_tensor = numpy_helper.from_array(int8_weight, name=init_tensor_name)
+            node.input[0] = initializer_to_update_name
+            remove_node(node, onnx_graph)
 
-                    initializer = onnx_graph.get_tensor(init_tensor_name)
-                    initializer.CopyFrom(int8_weight_tensor)
-
-                    remove_node(node, onnx_graph)
-                else:
-                    init_tensor_name = get_tensor_edge_name(onnx_graph, node=node, port_id=0)
-                    int8_weight_tensor = numpy_helper.from_array(int8_weight, name=init_tensor_name)
-
-                    initializer = onnx_graph.get_tensor(init_tensor_name)
-                    initializer.CopyFrom(int8_weight_tensor)
-                    # initializzer = create_initializer_tensor(
-                    #     'weight_tensor_' + str(cnt), int8_weight, np_dtype_to_tensor_dtype(int8_weight.dtype)
-                    # )
-                    # onnx_graph.onnx_model.graph.initializer.append(initializzer)
-                    node.input[0] = init_tensor_name  # 'weight_tensor_' + str(cnt)
-
-                    remove_node(node, onnx_graph)
-    remove_unused_nodes(onnx_graph)
     return model
