@@ -12,11 +12,12 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector, MeanMinMaxStatisticCollector
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
+from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -31,10 +32,10 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
         return ONNXMinMaxAlgoBackend()
 
     def check_is_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, MinMaxStatisticCollector)
+        assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
 
     def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, MeanMinMaxStatisticCollector)
+        assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
 
     @pytest.fixture(
         params=[

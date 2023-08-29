@@ -11,7 +11,6 @@
 
 from typing import List, Optional
 
-from nncf.common.tensor_statistics.statistics import MeanTensorStatistic, RawTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
@@ -33,6 +32,8 @@ from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_min_op
 from nncf.openvino.graph.node_utils import get_reducer_output_node_names
 from nncf.openvino.graph.node_utils import get_result_node_name
+from nncf.openvino.statistics.statistics import OVMeanTensorStatistic
+from nncf.openvino.statistics.statistics import OVRawTensorStatistic
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
@@ -123,9 +124,9 @@ def get_mean_stat_collector(num_samples, channel_axis, window_size=None, inplace
     aggregate_mean = MeanAggregator(**kwargs)
     aggregate_shape = ShapeAggregator()
 
-    collector = TensorCollector(MeanTensorStatistic)
-    collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector = TensorCollector(OVMeanTensorStatistic)
+    collector.register_statistic_branch(OVMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
+    collector.register_statistic_branch(OVMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
     return collector
 
 
@@ -133,8 +134,8 @@ def get_raw_stat_collector(num_samples, inplace=False):
     reducer = OVNoopReducer()
     aggregator = NoopAggregator(num_samples)
 
-    collector = TensorCollector(RawTensorStatistic)
-    collector.register_statistic_branch(RawTensorStatistic.VALUES_STATS, reducer, aggregator)
+    collector = TensorCollector(OVRawTensorStatistic)
+    collector.register_statistic_branch(OVRawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
 
 

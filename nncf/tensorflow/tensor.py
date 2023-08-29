@@ -15,4 +15,18 @@ from nncf.common.tensor import NNCFTensor
 
 
 class TFNNCFTensor(NNCFTensor):
-    pass
+    """
+    A realisation of tensorflow tensors wrapper for common NNCF algorithms.
+    """
+
+    def __init__(self, tensor: tf.Tensor):
+        # In case somebody attempts to wrap
+        # tensor twice
+        if isinstance(tensor, self.__class__):
+            tensor = tensor.tensor
+
+        super().__init__(tensor)
+
+    @property
+    def device(self) -> tf.device:
+        return self._tensor.device
