@@ -18,6 +18,8 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensorBackend
+from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
+from nncf.common.tensor_statistics.collectors import RawStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
@@ -31,8 +33,6 @@ from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXRawStatisticCollector
 from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.onnx.tensor import ONNXNNCFTensorBackend
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
@@ -82,12 +82,12 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
-    ) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
+    ) -> MeanStatisticCollector:
+        return MeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def raw_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
-        return ONNXRawStatisticCollector(num_samples)
+    def raw_statistic_collector(inplace: bool, num_samples: int = None) -> RawStatisticCollector:
+        return RawStatisticCollector(num_samples)
 
 
     @staticmethod

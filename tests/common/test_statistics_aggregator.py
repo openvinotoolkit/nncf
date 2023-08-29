@@ -97,6 +97,9 @@ class TemplateTestStatisticsAggregator:
     def inplace_statistics(self) -> bool:
         pass
 
+    def no_batch_dimension_in_dataset_samples(self) -> bool:
+        return False
+
     @abstractmethod
     @pytest.fixture
     def is_backend_support_custom_estimators(self) -> bool:
@@ -614,7 +617,10 @@ class TemplateTestStatisticsAggregator:
                 ret_val = [stat.mean_values, stat.shape]
             elif test_params.collector_type == self.BCStatsCollectors.RAW:
                 ret_val = stat.values
-                test_params.ref_values = dataset_samples
+                if self.no_batch_dimension_in_dataset_samples():
+                    test_params.ref_values = [np.expand_dims(arr, 0) for arr in dataset_samples]
+                else:
+                    test_params.ref_values = dataset_samples
                 if not is_stat_in_shape_of_scale:
                     backend = next(iter(ret_val)).backend
                     ret_val = [backend.squeeze(x) for x in ret_val]

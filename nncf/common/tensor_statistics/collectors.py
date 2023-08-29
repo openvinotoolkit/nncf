@@ -17,8 +17,6 @@ from typing import Callable, List, Optional, Tuple, Union, Deque
 import numpy as np
 
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorElementsType
-from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -48,7 +46,7 @@ class TensorStatisticCollectorBase(ABC):
     def num_samples(self) -> int:
         return self._num_samples
 
-    def register_input(self, x: TensorType) -> TensorType:
+    def register_input(self, x: NNCFTensor) -> NNCFTensor:
         """Registers input tensor"""
         if not self._enabled:
             return x
@@ -61,7 +59,7 @@ class TensorStatisticCollectorBase(ABC):
         return x
 
     @abstractmethod
-    def _register_input(self, x: TensorType):
+    def _register_input(self, x: NNCFTensor):
         pass
 
     def get_statistics(self) -> TensorStatistic:
@@ -124,7 +122,7 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
         self._min_values = None
         self._max_values = None
 
-    def _register_input_common(self, x: NNCFTensor):
+    def _register_input(self, x: NNCFTensor):
         backend = x.backend
         min_reduced = backend.amin(x, axis=self._reduction_shape, keepdims=True)
 
@@ -170,8 +168,7 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
         self._all_min_values: Deque[NNCFTensor] = deque(maxlen=window_size)
         self._all_max_values: Deque[NNCFTensor] = deque(maxlen=window_size)
 
-
-    def _register_input_common(self, x: NNCFTensor):
+    def _register_input(self, x: NNCFTensor):
         backend = x.backend
         min_reduced = backend.amin(x, axis=self._reduction_shape, keepdims=True)
         if self._use_abs_max:
@@ -270,7 +267,7 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         self._all_values: Deque[NNCFTensor] = deque(maxlen=window_size)
         self._all_shapes: Deque[List[int]] = deque(maxlen=window_size)
 
-    def _register_input_common(self, x: NNCFTensor):
+    def _register_input(self, x: NNCFTensor):
         backend = x.backend
         if self._reduction_shape == 0:
             self._all_values.append(backend.mean(x, axis=0, keepdims=True))
@@ -316,8 +313,8 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
         super().__init__(num_samples=num_samples)
         self._all_values: List[NNCFTensor] = []
 
-    def _register_input_common(self, x: NNCFTensor):
-        self._all_values.append(x.tensor)
+    def _register_input(self, x: NNCFTensor):
+        self._all_values.append(x)
 
     def _reset(self):
         self._all_values.clear()

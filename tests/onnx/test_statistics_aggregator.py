@@ -54,6 +54,9 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def is_backend_support_custom_estimators(self) -> bool:
         return False
 
+    def no_batch_dimension_in_dataset_samples(self) -> bool:
+        return True
+
     @pytest.fixture(scope="session")
     def test_params(self):
         return
@@ -90,9 +93,12 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
         return dataset_samples
 
+    def no_batch_dimension_in_dataset_samples(self) -> bool:
+        return True
+
     @pytest.fixture
     def is_stat_in_shape_of_scale(self) -> bool:
-        return False
+        return True
 
     @pytest.fixture(params=[False], ids=["out_of_place"])
     def inplace_statistics(self, request) -> bool:
