@@ -20,6 +20,9 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 
 ReductionShape = Tuple[int]
@@ -143,6 +146,8 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
         self._min_values = None
         self._max_values = None
 
+    def _get_statistics(self) -> MinMaxTensorStatistic:
+        return MinMaxTensorStatistic(self._min_values, self._max_values)
 
 class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
     """
@@ -242,6 +247,9 @@ class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         stacked_max = backend.stack(list(self._all_max_values))
         return backend.mean(stacked_max, axis=0)
 
+    def _get_statistics(self) -> MinMaxTensorStatistic:
+        return MinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
+
 
 class MeanStatisticCollector(OfflineTensorStatisticCollector):
     """
@@ -290,6 +298,9 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     def _shape(self):
         return self._all_shapes[0]
 
+    def _get_statistics(self) -> MeanTensorStatistic:
+        return MeanTensorStatistic(self._mean_aggregate(), self._shape())
+
 
 class RawStatisticCollector(OfflineTensorStatisticCollector):
     """
@@ -303,13 +314,17 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
             the number of samples that will be processed.
         """
         super().__init__(num_samples=num_samples)
-        self._all_values = []
+        self._all_values: List[NNCFTensor] = []
 
     def _register_input_common(self, x: NNCFTensor):
         self._all_values.append(x.tensor)
 
     def _reset(self):
         self._all_values.clear()
+
+    def _get_statistics(self) -> RawTensorStatistic:
+        return RawTensorStatistic(self._all_values)
+
 
 
 class MedianMADStatisticCollector(OfflineTensorStatisticCollector):

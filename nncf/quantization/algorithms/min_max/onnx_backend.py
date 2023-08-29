@@ -34,7 +34,6 @@ from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT
 from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onnx_params
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
-from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AggregatorType
