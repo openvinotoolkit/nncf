@@ -222,7 +222,7 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
         return TFNNCFTensor(tf.convert_to_tensor(result))
 
     @staticmethod
-    def concatenate(tensor_list: List[TFNNCFTensor], axis: int = None) -> TFNNCFTensor:
+    def concatenate(tensor_list: List[TFNNCFTensor], axis: int = 0) -> TFNNCFTensor:
         return tf.concat([t.tensor for t in tensor_list])
 
     @staticmethod

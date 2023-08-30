@@ -205,7 +205,7 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
         return PTNNCFTensor(torch.masked.median(masked_tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
-    def concatenate(tensor_list: List[PTNNCFTensor], axis: int = None) -> PTNNCFTensor:
+    def concatenate(tensor_list: List[PTNNCFTensor], axis: int = 0) -> PTNNCFTensor:
         return PTNNCFTensor(torch.concatenate([t.tensor for t in tensor_list], dim=axis))
 
     @staticmethod

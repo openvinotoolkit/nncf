@@ -63,6 +63,10 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         # Assuming every backend implements this basic semantic
         return self._bool_operator_resolver(self._tensor.__eq__, other)
 
+    def __ne__(self, other: Any) -> "NNCFTensor":
+        # Assuming every backend implements this basic semantic
+        return self._bool_operator_resolver(self._tensor.__ne__, other)
+
     def __lt__(self, other: Any) -> "NNCFTensor":
         return self._bool_operator_resolver(self._tensor.__lt__, other)
 
@@ -313,7 +317,7 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def concatenate(tensor_list: List[NNCFTensor], axis: int = None) -> NNCFTensor:
+    def concatenate(tensor_list: List[NNCFTensor], axis: int = 0) -> NNCFTensor:
         pass
 
     @staticmethod

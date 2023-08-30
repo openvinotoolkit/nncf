@@ -218,7 +218,7 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(result.data)
 
     @staticmethod
-    def concatenate(tensor_list: List[NPNNCFTensor], axis: int = None) -> NPNNCFTensor:
+    def concatenate(tensor_list: List[NPNNCFTensor], axis: int = 0) -> NPNNCFTensor:
         return NPNNCFTensor(np.concatenate([t.tensor for t in tensor_list], axis=axis))
 
     @staticmethod
