@@ -22,7 +22,7 @@ from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import StatisticsNotCollectedError
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
@@ -109,10 +109,10 @@ class TestCollectedStatistics:
     def test_collected_statistics_with_shape_convert(
         self,
         collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[Tuple[ReductionShape, ReductionShape], TensorStatistic],
+        reduction_shapes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
         for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
-            collector_obj = collector(use_abs_max=True, reduction_shape=reduction_shape)
+            collector_obj = collector(use_abs_max=True, reduction_axes=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(TFNNCFTensor(input_))
             test_stats = collector_obj.get_statistics()
@@ -188,10 +188,10 @@ class TestCollectedStatistics:
     def test_collected_statistics(
         self,
         collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[ReductionShape, TensorStatistic],
+        reduction_shapes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
     ):
         for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
-            collector_obj = collector(reduction_shape=reduction_shape)
+            collector_obj = collector(reduction_axes=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(TFNNCFTensor(input_))
             test_stats = collector_obj.get_statistics()

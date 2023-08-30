@@ -278,8 +278,8 @@ class TemplateTestQuantizerConfig:
 
         for reducer in reducers:
             if q_config_per_channel:
-                assert reducer._reduction_shape == params.ref_per_ch_reduction_shape
+                assert reducer._reduction_axes == params.ref_per_ch_reduction_shape
             else:
-                assert reducer._reduction_shape == params.ref_per_tensor_reduction_shape
+                assert reducer._reduction_axes == params.ref_per_tensor_reduction_shape
 
         assert tensor_collector.num_samples == num_samples

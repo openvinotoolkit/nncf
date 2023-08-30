@@ -16,7 +16,7 @@ from collections import deque
 from typing import Any, Deque, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
 from nncf.common.tensor_statistics.collectors import NNCFTensor
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.quantization.advanced_parameters import AggregatorType
 
@@ -29,7 +29,7 @@ class TensorReducerBase(ABC):
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(self, reduction_shape: Optional[ReductionShape] = None, inplace: bool = False):
+    def __init__(self, reduction_shape: Optional[ReductionAxes] = None, inplace: bool = False):
         """
         :param reduction_shape: Reduction shape for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
@@ -480,7 +480,7 @@ class MeanReducer(TensorReducerBase):
 class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
-        reduction_shape: Optional[ReductionShape] = None,
+        reduction_shape: Optional[ReductionAxes] = None,
         quantile: Optional[Union[float, Tuple[float]]] = None,
         inplace: bool = False,
     ):
@@ -505,7 +505,7 @@ class QuantileReducer(QuantileReducerBase):
 class AbsQuantileReducer(QuantileReducerBase):
     def __init__(
         self,
-        reduction_shape: Optional[ReductionShape] = None,
+        reduction_shape: Optional[ReductionAxes] = None,
         quantile: Union[float, List[float]] = 0.99,
         inplace: bool = False,
     ):

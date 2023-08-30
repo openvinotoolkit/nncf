@@ -29,7 +29,7 @@ from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.config.schemata.defaults import MAX_PERCENTILE
@@ -100,7 +100,7 @@ class RangeInitializer:
 
     @staticmethod
     def generate_stat_collector(
-        reduction_shape: ReductionShape,
+        reduction_shape: ReductionAxes,
         collector_params: RangeInitCollectorParams,
         init_config: RangeInitConfig,
         num_samples_to_collect_override: int = None,

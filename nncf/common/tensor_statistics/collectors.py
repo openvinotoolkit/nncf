@@ -27,21 +27,21 @@ from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 
-ReductionShape = Tuple[int]
+ReductionAxes = Tuple[int]
 MaskedReduceFN = Callable[[NNCFTensor, Union[int, tuple, list], NNCFTensor, bool], NNCFTensor]
 
 
 class TensorStatisticCollectorBase(ABC):
     """Collector estimate statistics at the quantization point based on the provided reduction shape."""
 
-    def __init__(self, reduction_shape: Optional[ReductionShape] = None, num_samples: Optional[int] = None):
+    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, num_samples: Optional[int] = None):
         """
         Initializes Tensor Statistic Collector
 
-        :param reduction_shape: Shape that defines tensor dimensions to reduce.
+        :param reduction_axes: Shape that defines tensor dimensions to reduce.
         :param num_samples: Maximum number of samples to collect.
         """
-        self._reduction_shape = reduction_shape
+        self._reduction_axes = reduction_axes
         self._enabled = True
         self._collected_samples = 0
         self._num_samples = num_samples
@@ -56,8 +56,8 @@ class TensorStatisticCollectorBase(ABC):
             return x
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
-        if self._reduction_shape is None:
-            self._reduction_shape = tuple(range(len(x.shape)))
+        if self._reduction_axes is None:
+            self._reduction_axes = tuple(range(len(x.shape)))
         self._register_input(x)
         self._collected_samples += 1
         return x
@@ -107,9 +107,9 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
     """Collects statistics in offline regime by storing the data and aggregating it afterwards."""
 
     def __init__(
-        self, reduction_shape: Optional[ReductionShape] = None, num_samples: int = None, window_size: int = None
+        self, reduction_axes: Optional[ReductionAxes] = None, num_samples: int = None, window_size: int = None
     ):
-        super().__init__(reduction_shape, num_samples)
+        super().__init__(reduction_axes, num_samples)
         self._samples: Deque[NNCFTensor] = deque(maxlen=window_size)
 
     def _reset(self):
@@ -119,8 +119,8 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
     """Collector estimates min of minimum values and max of maximum values."""
 
-    def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, num_samples: int = None):
-        super().__init__(reduction_shape, num_samples)
+    def __init__(self, use_abs_max: bool, reduction_axes: ReductionAxes, num_samples: int = None):
+        super().__init__(reduction_axes, num_samples)
         self._use_abs_max = use_abs_max
 
         self._min_values = None
@@ -128,11 +128,11 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
 
     def _register_input(self, x: NNCFTensor):
         backend = x.backend
-        min_reduced = backend.amin(x, axis=self._reduction_shape, keepdims=True)
+        min_reduced = backend.amin(x, axis=self._reduction_axes, keepdims=True)
 
         if self._use_abs_max:
             x = backend.abs(x)
-        max_reduced = backend.amax(x, self._reduction_shape, keepdims=True)
+        max_reduced = backend.amax(x, self._reduction_axes, keepdims=True)
 
         if self._min_values is None:
             self._min_values = min_reduced
@@ -162,11 +162,11 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
         self,
         use_per_sample_stats: bool,
         use_abs_max: bool,
-        reduction_shape: ReductionShape,
+        reduction_axes: ReductionAxes,
         num_samples: int = None,
         window_size: int = None,
     ):
-        super().__init__(reduction_shape, num_samples)
+        super().__init__(reduction_axes, num_samples)
         self._use_per_sample_stats = use_per_sample_stats
         self._use_abs_max = use_abs_max
 
@@ -175,10 +175,10 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
 
     def _register_input(self, x: NNCFTensor):
         backend = x.backend
-        min_reduced = backend.amin(x, axis=self._reduction_shape, keepdims=True)
+        min_reduced = backend.amin(x, axis=self._reduction_axes, keepdims=True)
         if self._use_abs_max:
             x = backend.abs(x)
-        max_reduced = backend.amax(x, axis=self._reduction_shape, keepdims=True)
+        max_reduced = backend.amax(x, axis=self._reduction_axes, keepdims=True)
 
         if self._use_per_sample_stats:
             self._all_min_values.extend(backend.unstack(min_reduced))
@@ -211,11 +211,11 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         use_abs_max: bool,
         use_means_of_mins: bool,
         use_means_of_maxs: bool,
-        reduction_shape: ReductionShape,
+        reduction_axes: ReductionAxes,
         num_samples: int = None,
         window_size: int = None,
     ):
-        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape, num_samples, window_size)
+        super().__init__(use_per_sample_stats, use_abs_max, reduction_axes, num_samples, window_size)
         self._use_means_of_mins = use_means_of_mins
         self._use_means_of_maxs = use_means_of_maxs
 
@@ -262,28 +262,28 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     """
 
     def __init__(
-        self, reduction_shape: ReductionShape, num_samples: Optional[int] = None, window_size: Optional[int] = None
+        self, reduction_axes: ReductionAxes, num_samples: Optional[int] = None, window_size: Optional[int] = None
     ) -> None:
         """
-        :param reduction_shape: The shape for the reduction while statistics collection.
+        :param reduction_axes: The shape for the reduction while statistics collection.
             For the MeanStatisticCollector this parameter contains the main axis.
         :param num_samples: Optional parameter for statistic collection that regulates
             the number of samples that will be processed.
         :param window_size: Optional maximum length for the statistic collection
         """
-        super().__init__(reduction_shape, num_samples)
+        super().__init__(reduction_axes, num_samples)
         self._all_values: Deque[NNCFTensor] = deque(maxlen=window_size)
         self._all_shapes: Deque[List[int]] = deque(maxlen=window_size)
 
     def _register_input(self, x: NNCFTensor):
         backend = x.backend
-        if self._reduction_shape == 0:
+        if self._reduction_axes == 0:
             self._all_values.append(backend.mean(x, axis=0, keepdims=True))
         else:
-            self._all_values.append(self._mean_per_channel(x, self._reduction_shape))
+            self._all_values.append(self._mean_per_channel(x, self._reduction_axes))
         self._all_shapes.append(x.shape)
 
-    def _mean_per_channel(self, x: NNCFTensor, reduction_shape: ReductionShape) -> NNCFTensor:
+    def _mean_per_channel(self, x: NNCFTensor, reduction_shape: ReductionAxes) -> NNCFTensor:
         backend = x.backend
         if len(x.shape) < 3:
             return backend.mean(x, axis=0)
@@ -337,7 +337,7 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     """
 
     def _prepare_statistics(self) -> Tuple[NNCFTensor, NNCFTensor]:
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape), discard_zeros=True)
+        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_axes), discard_zeros=True)
         backend = next(iter(per_channel_history)).backend
         per_channel_median = [backend.median(channel_hist) for channel_hist in per_channel_history]
         per_channel_mad = []
@@ -363,15 +363,15 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
     def __init__(
         self,
         percentiles_to_collect: List[float],
-        reduction_shape: Optional[ReductionShape] = None,
+        reduction_axes: Optional[ReductionAxes] = None,
         num_samples: int = None,
         window_size: int = None,
     ):
-        super().__init__(reduction_shape, num_samples, window_size)
+        super().__init__(reduction_axes, num_samples, window_size)
         self._percentiles_to_collect = percentiles_to_collect
 
     def _prepare_statistics(self) -> Dict[float, NNCFTensor]:
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape))
+        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_axes))
         backend = next(iter(per_channel_history)).backend
         percentile_vs_values_dict: Dict[float, NNCFTensor] = {}
         for pc in self._percentiles_to_collect:
@@ -395,11 +395,11 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
     def __init__(
         self,
         percentiles_to_collect: List[float],
-        reduction_shape: Optional[ReductionShape] = None,
+        reduction_axes: Optional[ReductionAxes] = None,
         num_samples: int = None,
         window_size: int = None,
     ):
-        super().__init__(reduction_shape, num_samples, window_size)
+        super().__init__(reduction_axes, num_samples, window_size)
         self._all_pct_values: Dict[float, Deque[NNCFTensor]] = {}
         for pc in percentiles_to_collect:
             self._all_pct_values[pc] = deque(maxlen=window_size)
@@ -410,7 +410,7 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
 
     def _register_input(self, x: NNCFTensor):
         for pct, values in self._all_pct_values.items():
-            pct_vals = percentile_reduce_like(x, self._reduction_shape, pct)
+            pct_vals = percentile_reduce_like(x, self._reduction_axes, pct)
             values.append(pct_vals)
 
     def _get_statistics(self) -> PercentileTensorStatistic:

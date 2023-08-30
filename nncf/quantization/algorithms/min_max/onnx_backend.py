@@ -150,7 +150,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             return MeanMinMaxStatisticCollector(
                 use_per_sample_stats=False,
                 use_abs_max=use_abs_max,
-                reduction_shape=reduction_shape,
+                reduction_axes=reduction_shape,
                 num_samples=num_samples,
                 window_size=None,
             )
