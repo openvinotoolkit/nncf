@@ -24,6 +24,7 @@ from nncf.torch import no_nncf_trace
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor import PTNNCFTensor
+from nncf.torch.tensor_statistics.algo import get_collection_hook
 
 
 class PTStatisticsAggregator(StatisticsAggregator):
@@ -46,12 +47,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
             for _statistic_point in _statistic_points:
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
-
-                        def hook(x: torch.Tensor) -> torch.Tensor:
-                            with no_nncf_trace():
-                                collector.register_input(PTNNCFTensor(x))
-                            return x
-
+                        hook = get_collection_hook(collector)
                         transformation_commands.append(
                             PTInsertionCommand(
                                 _statistic_point.target_point,

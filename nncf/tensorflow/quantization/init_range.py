@@ -40,6 +40,7 @@ from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.tensor import TFNNCFTensor
+from nncf.tensorflow.tensor_statistics.algo import get_collection_hook
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_activations
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_weights
 
@@ -158,9 +159,7 @@ class RangeInitializer:
             reduction_shape, collector_params, init_config, num_batches
         )
 
-        def hook(x):
-            collector.register_input(TFNNCFTensor(x))
-            return x
+        hook = get_collection_hook(collector)
 
         handles.append(layer.register_hook_pre_quantizer(hook))
         layer.enabled = False
@@ -187,9 +186,7 @@ class RangeInitializer:
                         reduction_shape, collector_params, init_config, num_batches
                     )
 
-                    def hook(x):
-                        collector.register_input(TFNNCFTensor(x))
-                        return x
+                    hook = get_collection_hook(collector)
 
                     handles.append(op.register_hook_pre_call(hook))
                     op.enabled = False

@@ -34,7 +34,9 @@ from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import get_reduction_axes_from_scale_shape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.config.schemata.algo.quantization import RANGE_INIT_TYPES_VS_DESCRIPTIONS
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -125,7 +127,7 @@ class StatCollectorGenerator:
     @staticmethod
     def generate_collectors_for_range_init_statistics_collection(
         target_model_graph: PTNNCFGraph, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[TensorStatisticObservationPoint, Dict[ReductionAxes, TensorStatisticCollectorBase]]:
+    ) -> Dict[TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]]:
         retval = {}
         for qp in quantizer_setup.quantization_points.values():
             init_config = range_init_params.get_init_config_for_quantization_point(qp)
@@ -139,17 +141,21 @@ class StatCollectorGenerator:
 
             tp = PTTargetPointTranslator.translate(qp.insertion_point)
             scale_shapes_vs_params = StatCollectorGenerator.get_all_scale_shapes_with_params(qp, target_model_graph)
-            
 
-            obs_p = TensorStatisticObservationPoint(tp, reduction_axes=set(scale_shapes_vs_params.keys()))
-
-            retval[obs_p] = {}
-            for scale_shape in obs_p.reduction_axes:
-                collector_params = scale_shapes_vs_params[scale_shape]
+            reduction_axes_set = set()
+            reduction_axes_vs_collector = {}
+            for ss, params in scale_shapes_vs_params.items():
+                reduction_axes = get_reduction_axes_from_scale_shape(ss)
+                reduction_axes_set.add(reduction_axes)
                 collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
-                    init_config, scale_shape, collector_params, num_samples_to_collect_override=num_batches
-                )
-                retval[obs_p][scale_shape] = collector
+                        init_config, reduction_axes, params, num_samples_to_collect_override=num_batches
+                    )
+                reduction_axes_vs_collector[reduction_axes] = collector
+            obs_p = TensorStatisticObservationPoint(tp, reduction_axes_set=reduction_axes_set)
+            retval[obs_p] = {}
+            for scale_shape in scale_shapes_vs_params:
+                reduction_axes = get_reduction_axes_from_scale_shape(scale_shape)
+                retval[obs_p][scale_shape] = reduction_axes_vs_collector[reduction_axes]
 
         return retval
 
@@ -201,7 +207,7 @@ class StatCollectorGenerator:
     @classmethod
     def get_all_scale_shapes_with_params(
         cls, qp: QuantizationPointBase, target_nncf_graph: PTNNCFGraph
-    ) -> Dict[ReductionAxes, PTRangeInitCollectorParams]:
+    ) -> Dict[Tuple[int], PTRangeInitCollectorParams]:
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -285,7 +291,9 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             )
 
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
-                init_config, tuple(quantizer_module.scale_shape), collector_params, num_samples_override
+                init_config,
+                get_reduction_axes_from_scale_shape(quantizer_module.scale_shape),
+                collector_params, num_samples_override
             )
 
             self.collectors_and_modules_to_init[name] = collector, quantizer_module

@@ -44,7 +44,7 @@ class MinMaxTensorStatistic(TensorStatistic):
         return self.tensor_eq(self.min_values, other.min_values) and self.tensor_eq(self.max_values, other.max_values)
 
     def __repr__(self):
-        return f"min: {repr(self.min_values.tensor)}, max: {repr(self.min_values.tensor)}"
+        return f"min: {repr(self.min_values.tensor)}, max: {repr(self.max_values.tensor)}"
 
     @staticmethod
     def from_stat(statistic: TensorStatistic) -> "MinMaxTensorStatistic":

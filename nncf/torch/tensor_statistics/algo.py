@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Callable
 from typing import Dict, Set
 
 import torch
@@ -16,6 +17,7 @@ from nncf.api.compression import CompressionStage
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.config import NNCFConfig
 from nncf.torch.algo_selector import ZeroCompressionLoss
@@ -29,10 +31,24 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor import PTNNCFTensor
 
 
+def get_collection_hook(collector: TensorStatisticCollectorBase) -> Callable[[torch.Tensor], torch.Tensor]:
+    # The hook closure function should be instantiated and returned in a separate function - inlining this in
+    # "for" loops iterating over `collector` leads to unexpected behaviour of closure binding to wrong collector
+    # instance
+    from nncf.torch import no_nncf_trace
+
+    def hook(x: torch.Tensor) -> torch.Tensor:
+        with no_nncf_trace():
+            collector.register_input(PTNNCFTensor(x))
+        return x
+
+    return hook
+
+
 class TensorStatisticObservationPoint:
-    def __init__(self, target_point: PTTargetPoint, reduction_axes: Set[ReductionAxes] = None):
+    def __init__(self, target_point: PTTargetPoint, reduction_axes_set: Set[ReductionAxes] = None):
         self.target_point = target_point
-        self.reduction_axes = reduction_axes
+        self.reduction_axes_set = reduction_axes_set
 
     def __hash__(self):
         return hash(self.target_point)
@@ -45,25 +61,19 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def __init__(
         self,
         config: NNCFConfig,
-        observation_points_vs_collectors: Dict[TensorStatisticObservationPoint, Dict[ReductionAxes, TensorStatisticCollectorBase]],
+        observation_points_vs_collectors: Dict[TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]],
     ):
         super().__init__(config)
         self._observation_points_vs_collectors = observation_points_vs_collectors
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
-        from nncf.torch import no_nncf_trace
         # Will it really suffice to use a single collector for all threads? After all, each of the threads
         # receives its own data, and should we use a thread-local collector, there would have to be a
         # separate thread reduction step involved. Still, is there a better option here than to rely on GIL?
         layout = PTTransformationLayout()
-        for op, ra_vs_collector in self._observation_points_vs_collectors.items():
-            for collector in ra_vs_collector.values():
-
-                def hook(x: torch.Tensor) -> torch.Tensor:
-                    with no_nncf_trace():
-                        collector.register_input(PTNNCFTensor(x))
-                    return x
-
+        for op, ss_vs_collector in self._observation_points_vs_collectors.items():
+            for collector in ss_vs_collector.values():
+                hook = get_collection_hook(collector)
                 command = PTInsertionCommand(
                     op.target_point, hook, TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION
                 )

@@ -64,6 +64,7 @@ from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
@@ -592,7 +593,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     def _get_minmax_values_for_quantizer_locations(
         self,
         quantizer_setup: SingleConfigQuantizerSetup,
-        tensor_statistics: Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]],
+        tensor_statistics: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
         target_model_graph: PTNNCFGraph,
     ) -> Dict[QuantizationPointId, MinMaxTensorStatistic]:
         retval = {}
@@ -672,7 +673,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     @staticmethod
     def get_statistics_for_quantizer_setup(
         target_model: NNCFNetwork, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]]:
+    ) -> Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
         if range_init_params is None:
             return {}
         observation_points_vs_collectors_dict = (
@@ -698,7 +699,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
     def _get_statistics_for_final_range_init(
         self, target_model: NNCFNetwork, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]]:
+    ) -> Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
         return self.get_statistics_for_quantizer_setup(target_model, quantizer_setup, range_init_params)
 
     def _get_single_config_quantizer_setup(self, target_model) -> SingleConfigQuantizerSetup:
@@ -970,7 +971,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if minmax_values_for_range_init:
                 minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
                 if minmax_stat is not None:
-                    range_init_minmax_values = (minmax_stat.min_values, minmax_stat.max_values)
+                    range_init_minmax_values = (minmax_stat.min_values.tensor, minmax_stat.max_values.tensor)
 
             quantizer_module_id, commands = self._quantize_at_points_by_single_module(
                 target_model,
@@ -1115,22 +1116,22 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if minmax_values_for_range_init:
             # Hopefully this will suffice.
             # TODO: gather unified statistic by linking stat collectors_and_modules_to_init instead
-            min_values = None
-            max_values = None
+            min_values: torch.Tensor = None
+            max_values: torch.Tensor = None
             for qp_id in sorted_qp_ids:
                 minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
                 if minmax_stat is None:
                     continue
 
                 if min_values is None:
-                    min_values = minmax_stat.min_values
+                    min_values = minmax_stat.min_values.tensor
                 else:
-                    min_values = torch.min(min_values, minmax_stat.min_values)
+                    min_values = torch.min(min_values, minmax_stat.min_values.tensor)
 
                 if max_values is None:
-                    max_values = minmax_stat.max_values
+                    max_values = minmax_stat.max_values.tensor
                 else:
-                    max_values = torch.max(max_values, minmax_stat.max_values)
+                    max_values = torch.max(max_values, minmax_stat.max_values.tensor)
             if min_values is not None and max_values is not None:
                 range_init_minmax_values = min_values, max_values
 

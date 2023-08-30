@@ -13,6 +13,7 @@ from collections import UserDict
 from typing import Callable, Generator, Optional, Tuple
 
 from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
@@ -29,13 +30,13 @@ class StatisticPoint:
         self.target_point = target_point
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
 
-    def __eq__(self, other):
+    def __eq__(self, other: "StatisticPoint") -> bool:
         return (
             self.target_point == other.target_point
             and self.algorithm_to_tensor_collectors == other.self.algorithm_to_tensor_collectors
         )
 
-    def register_tensor(self, x: TensorType):
+    def register_tensor(self, x: NNCFTensor):
         for tensor_collectors in self.algorithm_to_tensor_collectors.values():
             for tensor_collector in tensor_collectors:
                 tensor_collector.register_input(x)

@@ -35,7 +35,7 @@ class PTNNCFTensor(NNCFTensor[torch.Tensor]):
         return PTNNCFTensorBackend
 
     def _is_native_bool(self, bool_result: Any) -> bool:
-        assert False  # TODO (vshampor): check whether this is relevant for PT
+        return False  # TODO (vshampor): check whether this is relevant for PT
 
     @property
     def ndim(self) -> int:
@@ -210,10 +210,14 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def amin(tensor: PTNNCFTensor, axis: List[int], keepdims: bool = None) -> PTNNCFTensor:
+        if keepdims is None:
+            keepdims = False
         return PTNNCFTensor(torch.amin(tensor.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
     def amax(tensor: PTNNCFTensor, axis: List[int], keepdims: bool = None) -> PTNNCFTensor:
+        if keepdims is None:
+            keepdims = False
         return PTNNCFTensor(torch.amax(tensor.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod

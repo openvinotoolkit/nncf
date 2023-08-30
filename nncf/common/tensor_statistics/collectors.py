@@ -12,6 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
+from copy import deepcopy
 from typing import Callable, Deque, List, Optional, Tuple, Union
 from typing import Dict
 
@@ -28,6 +29,19 @@ from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 
 ReductionAxes = Tuple[int]
+ReductionShape = Tuple[int]
+
+def get_reduction_axes_from_scale_shape(scale_shape: Tuple[int]) -> ReductionAxes:
+    return tuple(i for i, dim in enumerate(scale_shape) if dim == 1)
+
+
+def get_reduction_shape_from_sample_shape(sample_shape: List[int], reduction_axes: ReductionAxes) -> ReductionShape:
+    reduced_shape = deepcopy(list(sample_shape))
+    for ax in reduction_axes:
+        reduced_shape[ax] = 1
+    return tuple(reduced_shape)
+
+
 MaskedReduceFN = Callable[[NNCFTensor, Union[int, tuple, list], NNCFTensor, bool], NNCFTensor]
 
 
@@ -224,14 +238,14 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         stacked_min = backend.stack(list(self._all_min_values))
         if self._use_means_of_mins:
             return backend.mean(stacked_min, axis=0)
-        return backend.amin(stacked_min, axis=0, keepdims=True)
+        return backend.amin(stacked_min, axis=0)
 
     def _max_aggregate(self) -> NNCFTensor:
         backend = next(iter(self._all_max_values)).backend
         stacked_max = backend.stack(list(self._all_max_values))
         if self._use_means_of_maxs:
             return backend.mean(stacked_max, axis=0)
-        return backend.amin(stacked_max, axis=0, keepdims=True)
+        return backend.amin(stacked_max, axis=0)
 
     def _get_statistics(self) -> MinMaxTensorStatistic:
         return MinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
@@ -337,8 +351,10 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     """
 
     def _prepare_statistics(self) -> Tuple[NNCFTensor, NNCFTensor]:
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_axes), discard_zeros=True)
-        backend = next(iter(per_channel_history)).backend
+        first_sample = next(iter(self._samples))
+        backend = first_sample.backend
+        reduction_shape = get_reduction_shape_from_sample_shape(first_sample.shape, self._reduction_axes)
+        per_channel_history = get_per_channel_history(self._samples, reduction_shape, discard_zeros=True)
         per_channel_median = [backend.median(channel_hist) for channel_hist in per_channel_history]
         per_channel_mad = []
         for idx, median in enumerate(per_channel_median):
@@ -371,8 +387,10 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
         self._percentiles_to_collect = percentiles_to_collect
 
     def _prepare_statistics(self) -> Dict[float, NNCFTensor]:
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_axes))
-        backend = next(iter(per_channel_history)).backend
+        first_sample = next(iter(self._samples))
+        backend = first_sample.backend
+        reduction_shape = get_reduction_shape_from_sample_shape(first_sample.shape, self._reduction_axes)
+        per_channel_history = get_per_channel_history(self._samples, list(reduction_shape))
         percentile_vs_values_dict: Dict[float, NNCFTensor] = {}
         for pc in self._percentiles_to_collect:
             per_channel_percentiles = [backend.quantile(channel_hist, pc / 100) for channel_hist in per_channel_history]
