@@ -41,7 +41,8 @@ def split_into_channels(input_: NNCFTensor, scale_shape: List[int]) -> List[NNCF
     return ret_list
 
 
-def get_per_channel_history(raw_input_history: Deque[NNCFTensor], scale_shape: List[int], discard_zeros=False) -> List[NNCFTensor]:
+def get_per_channel_history(raw_input_history: Deque[NNCFTensor], scale_shape: List[int],
+                            discard_zeros: bool = False) -> List[NNCFTensor]:
     channel_count, _ = get_channel_count_and_dim_idx(scale_shape)
     per_channel_history = [None for _ in range(channel_count)]
     if not raw_input_history:
@@ -67,13 +68,15 @@ def get_per_channel_history(raw_input_history: Deque[NNCFTensor], scale_shape: L
     return per_channel_history
 
 
-def np_percentile_reduce_like(input_: np.array, ref_tensor_shape: Tuple[int], q: float) -> np.array:
-    numel = np.prod(ref_tensor_shape)
+def percentile_reduce_like(input_: NNCFTensor, ref_tensor_shape: Tuple[int], pc: float) -> NNCFTensor:
+    numel = input_.size
+    backend = input_.backend
+    quantile = pc / 100
     if numel == 1:
-        return np.array([np.percentile(input_, q)])
+        return backend.quantile(input_, quantile / 100)
     tmp = input_
     for dim_idx, dim in enumerate(ref_tensor_shape):
         if dim == 1:
-            numpy_tmp = np.percentile(tmp, q, axis=dim_idx, keepdims=True)
+            numpy_tmp = backend.quantile(tmp, quantile, axis=dim_idx, keepdims=True)
             tmp = numpy_tmp
     return tmp

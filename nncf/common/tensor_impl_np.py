@@ -43,8 +43,6 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
     def size(self) -> int:
         return self._tensor.size
 
-    def __iter__(self) -> Iterator:
-        return WrappingIterator[NPNNCFTensor](iter(self._tensor))
 
     def matmul(self, other: "NPNNCFTensor") -> "NPNNCFTensor":
         return self.__class__(np.matmul(self._tensor, other._tensor))

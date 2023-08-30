@@ -17,40 +17,22 @@ from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 
 
-class TFMinMaxTensorStatistic(MinMaxTensorStatistic):
-    @staticmethod
-    def tensor_eq(tensor1: tf.Tensor, tensor2: tf.Tensor, rtol=1e-6) -> bool:
-        return bool(tf.experimental.numpy.allclose(tensor1, tensor2, rtol=rtol))
-
-
-class TFMedianMADTensorStatistic(MedianMADTensorStatistic):
-    @staticmethod
-    def tensor_eq(tensor1: tf.Tensor, tensor2: tf.Tensor, rtol=1e-6) -> bool:
-        return bool(tf.experimental.numpy.allclose(tensor1, tensor2, rtol=rtol))
-
-
-class TFPercentileTensorStatistic(PercentileTensorStatistic):
-    @staticmethod
-    def tensor_eq(tensor1: tf.Tensor, tensor2: tf.Tensor, rtol=1e-6) -> bool:
-        return bool(tf.experimental.numpy.allclose(tensor1, tensor2, rtol=rtol))
-
-
-def tf_convert_stat_to_min_max_tensor_stat(statistic: TensorStatistic) -> TFMinMaxTensorStatistic:
-    if isinstance(statistic, TFMinMaxTensorStatistic):
+def tf_convert_stat_to_min_max_tensor_stat(statistic: TensorStatistic) -> MinMaxTensorStatistic:
+    if isinstance(statistic, MinMaxTensorStatistic):
         return statistic
-    if isinstance(statistic, TFMedianMADTensorStatistic):
+    if isinstance(statistic, MedianMADTensorStatistic):
         # Using three-sigma approach to estimate min and max
         # Constant factor depends on the distribution form - assuming normal and the factor is 1.4826
-        return TFMinMaxTensorStatistic(
+        return MinMaxTensorStatistic(
             statistic.median_values - 3 * 1.4826230 * statistic.mad_values,
             statistic.median_values + 3 * 1.4826230 * statistic.mad_values,
         )
-    if isinstance(statistic, TFPercentileTensorStatistic):
+    if isinstance(statistic, PercentileTensorStatistic):
         if len(statistic.percentile_vs_values_dict.keys()) < 2:
             raise ValueError("Cannot create a min-max statistic for less than 2 percentile values")
         min_pct = min(statistic.percentile_vs_values_dict.keys())
         max_pct = max(statistic.percentile_vs_values_dict.keys())
-        return TFMinMaxTensorStatistic(
+        return MinMaxTensorStatistic(
             statistic.percentile_vs_values_dict[min_pct], statistic.percentile_vs_values_dict[max_pct]
         )
     raise ValueError("Unknown TensorStatistic to generate min-max stat from!")

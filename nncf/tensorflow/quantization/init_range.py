@@ -158,7 +158,10 @@ class RangeInitializer:
             reduction_shape, collector_params, init_config, num_batches
         )
 
-        hook = lambda x: collector.register_input(TFNNCFTensor(x))
+        def hook(x):
+            collector.register_input(TFNNCFTensor(x))
+            return x
+
         handles.append(layer.register_hook_pre_quantizer(hook))
         layer.enabled = False
         layer_statistics.append((layer, collector))
@@ -183,7 +186,12 @@ class RangeInitializer:
                     collector = RangeInitializer.generate_stat_collector(
                         reduction_shape, collector_params, init_config, num_batches
                     )
-                    handles.append(op.register_hook_pre_call(collector.register_input))
+
+                    def hook(x):
+                        collector.register_input(TFNNCFTensor(x))
+                        return x
+
+                    handles.append(op.register_hook_pre_call(hook))
                     op.enabled = False
                     op_statistics.append((layer, op_name, op, collector))
 
@@ -205,7 +213,8 @@ class RangeInitializer:
         for layer, collector in layer_statistics:
             target_stat = collector.get_statistics()
             minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
-            layer.apply_range_initialization(tf.squeeze(minmax_stats.min_values), tf.squeeze(minmax_stats.max_values))
+            layer.apply_range_initialization(tf.squeeze(minmax_stats.min_values.tensor),
+                                             tf.squeeze(minmax_stats.max_values.tensor))
             layer.enabled = True
 
         for layer, op_name, op, collector in op_statistics:
@@ -214,10 +223,10 @@ class RangeInitializer:
             minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
             min_values = minmax_stats.min_values
             if len(min_values.shape) != 1:
-                min_values = tf.squeeze(min_values)
+                min_values = tf.squeeze(min_values.tensor)
             max_values = minmax_stats.max_values
             if len(max_values.shape) != 1:
-                max_values = tf.squeeze(max_values)
+                max_values = tf.squeeze(max_values.tensor)
             op.apply_range_initialization(weights, min_values, max_values)
             op.enabled = True
 

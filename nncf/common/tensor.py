@@ -126,6 +126,9 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def size(self) -> int:
         pass
 
+    def __iter__(self) -> Iterator:
+        return WrappingIterator(iter(self._tensor), self.__class__)
+
     @abstractmethod
     def is_empty(self) -> bool:
         pass
@@ -144,10 +147,6 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
 
     @abstractmethod
     def to_numpy(self) -> np.ndarray:
-        pass
-
-    @abstractmethod
-    def __iter__(self) -> Iterator:
         pass
 
     @abstractmethod
@@ -343,16 +342,17 @@ class NNCFTensorBackend(abc.ABC):
         pass
 
 
-T = TypeVar('T')
+T = TypeVar('T', bound=NNCFTensor)
 
 
 class WrappingIterator(Generic[T]):
-    def __init__(self, orig_iter: Iterator):
+    def __init__(self, orig_iter: Iterator, nncf_tensor_type: Type[T]):
         self._orig_iter = orig_iter
+        self._nncf_tensor_type = nncf_tensor_type
 
-    def __iter__(self):
+    def __iter__(self) -> "WrappingIterator[T]":
         return self
 
-    def __next__(self):
+    def __next__(self) -> T:
         retval = next(self._orig_iter)
-        return T(retval)
+        return self._nncf_tensor_type(retval)

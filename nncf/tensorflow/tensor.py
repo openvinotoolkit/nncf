@@ -78,14 +78,11 @@ class TFNNCFTensor(NNCFTensor[tf.Tensor]):
     def to_numpy(self) -> np.ndarray:
         return self._tensor.numpy()
 
-    def __iter__(self) -> Iterator:
-        return WrappingIterator[TFNNCFTensor](iter(self._tensor))
-
     def matmul(self, other: "TFNNCFTensor") -> "TFNNCFTensor":
         return TFNNCFTensor(tf.matmul(self._tensor, other.tensor))
 
     def astype(self, dtype: TensorDtype) -> "TFNNCFTensor":
-        return TFNNCFTensor(tf.cast(self._tensor, _INV_DTYPE_MAP[dtype]))
+        return TFNNCFTensor(tf.cast(self._tensor, _DTYPE_MAP[dtype]))
 
     @property
     def dtype(self) -> TensorDtype:

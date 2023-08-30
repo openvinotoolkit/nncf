@@ -13,14 +13,17 @@ from abc import ABC
 from abc import abstractmethod
 from collections import deque
 from typing import Callable, Deque, List, Optional, Tuple, Union
+from typing import Dict
 
 import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
+from nncf.common.tensor_statistics.reduction import percentile_reduce_like
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 
@@ -233,6 +236,7 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     def _get_statistics(self) -> MinMaxTensorStatistic:
         return MinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
 
+
 class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     """
     Collector aggregates mean of minimum values and mean of maximum values.
@@ -366,17 +370,22 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
         super().__init__(reduction_shape, num_samples, window_size)
         self._percentiles_to_collect = percentiles_to_collect
 
-    def _prepare_statistics(self):
+    def _prepare_statistics(self) -> Dict[float, NNCFTensor]:
         per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape))
-        percentile_vs_values_dict = {}
+        backend = next(iter(per_channel_history)).backend
+        percentile_vs_values_dict: Dict[float, NNCFTensor] = {}
         for pc in self._percentiles_to_collect:
-            per_channel_percentiles = [np.percentile(channel_hist, pc) for channel_hist in per_channel_history]
-            numpy_percentiles = np.asarray(per_channel_percentiles)
-            percentile_vs_values_dict[pc] = numpy_percentiles
+            per_channel_percentiles = [backend.quantile(channel_hist, pc / 100) for channel_hist in per_channel_history]
+            percentile_vs_values_dict[pc] = backend.concatenate(per_channel_percentiles)
         return percentile_vs_values_dict
 
     def _register_input(self, x: NNCFTensor):
         self._samples.append(x)
+
+    def _get_statistics(self) -> PercentileTensorStatistic:
+        percentile_vs_values_dict = self._prepare_statistics()
+        return PercentileTensorStatistic(percentile_vs_values_dict)
+
 
 class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
     """
@@ -391,7 +400,7 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
         window_size: int = None,
     ):
         super().__init__(reduction_shape, num_samples, window_size)
-        self._all_pct_values = {}
+        self._all_pct_values: Dict[float, Deque[NNCFTensor]] = {}
         for pc in percentiles_to_collect:
             self._all_pct_values[pc] = deque(maxlen=window_size)
 
@@ -400,4 +409,14 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
             val.clear()
 
     def _register_input(self, x: NNCFTensor):
-        self._samples.append(x)
+        for pct, values in self._all_pct_values.items():
+            pct_vals = percentile_reduce_like(x, self._reduction_shape, pct)
+            values.append(pct_vals)
+
+    def _get_statistics(self) -> PercentileTensorStatistic:
+        mean_percentile_values = {}
+        for pct, values in self._all_pct_values.items():
+            backend = next(iter(values)).backend
+            stacked_pct_vals = backend.stack(list(values))
+            mean_percentile_values[pct] = backend.mean(stacked_pct_vals, axis=0)
+        return PercentileTensorStatistic(mean_percentile_values)

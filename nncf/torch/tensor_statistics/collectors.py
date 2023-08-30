@@ -21,7 +21,7 @@ from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
-from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
+from nncf.common.tensor_statistics.reduction import percentile_reduce_like
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.reduction import expand_like
@@ -137,7 +137,7 @@ class PTMeanPercentileStatisticCollector(MeanPercentileStatisticCollector):
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
             for pct, val in self._all_pct_values.items():
-                np_vals = np_percentile_reduce_like(x.cpu().numpy(), self._reduction_shape, pct)
+                np_vals = percentile_reduce_like(x.cpu().numpy(), self._reduction_shape, pct)
                 torch_vals = torch.from_numpy(np_vals).to(dtype=torch.float)
                 val.append(torch_vals)
 

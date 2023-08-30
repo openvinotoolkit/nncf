@@ -370,7 +370,8 @@ class SymmetricQuantizer(Quantizer):
         max_range = tf.reduce_max(ranges)
         lower_threshold = tf.maximum(eps * max_range, min_range)
         scale = tf.maximum(ranges, lower_threshold)
-        weights["scale_var"].assign(scale)
+        scale_var = weights["scale_var"]
+        scale_var.assign(tf.reshape(scale, scale_var.shape))
 
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(
