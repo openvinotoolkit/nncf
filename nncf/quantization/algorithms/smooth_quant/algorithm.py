@@ -63,6 +63,10 @@ class SmoothQuant(Algorithm):
         :param alpha: The parameter that regulates the calculation of the scale.
             The default value is 0.95. Negative value switches off the algorithm.
         """
+
+        if alpha < 0:
+            raise RuntimeError("Smooth Quant algorithm does not support negative alpha parameter!")
+
         super().__init__()
         self._subset_size = subset_size
         self._inplace_statistics = inplace_statistics
@@ -98,10 +102,6 @@ class SmoothQuant(Algorithm):
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
-        if self._alpha < 0:
-            nncf_logger.info("Skipping SmoothQuant algorithm because alfa parameter is negative.")
-            return model
-
         self._set_backend_entity(model)
 
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph)
@@ -221,12 +221,6 @@ class SmoothQuant(Algorithm):
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         statistic_container = StatisticPointsContainer()
-
-        if self._alpha < 0:
-            nncf_logger.debug(
-                "Skipping statistics collection for SmoothQuant algorithm because alfa parameter is negative."
-            )
-            return statistic_container
 
         self._set_backend_entity(model)
 
