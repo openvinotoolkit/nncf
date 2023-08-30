@@ -31,6 +31,7 @@ from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollect
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.config.schemata.defaults import MAX_PERCENTILE
 from nncf.config.schemata.defaults import MIN_PERCENTILE
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
@@ -41,7 +42,6 @@ from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.tensor import TFNNCFTensor
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_activations
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_weights
-from nncf.tensorflow.tensor_statistics.statistics import tf_convert_stat_to_min_max_tensor_stat
 
 
 class TFRangeInitParams(RangeInitParams):
@@ -212,7 +212,7 @@ class RangeInitializer:
 
         for layer, collector in layer_statistics:
             target_stat = collector.get_statistics()
-            minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
             layer.apply_range_initialization(tf.squeeze(minmax_stats.min_values.tensor),
                                              tf.squeeze(minmax_stats.max_values.tensor))
             layer.enabled = True
@@ -220,7 +220,7 @@ class RangeInitializer:
         for layer, op_name, op, collector in op_statistics:
             weights = layer.get_operation_weights(op_name)
             target_stat = collector.get_statistics()
-            minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
             min_values = minmax_stats.min_values
             if len(min_values.shape) != 1:
                 min_values = tf.squeeze(min_values.tensor)

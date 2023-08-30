@@ -27,9 +27,17 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.scopes import should_consider_scope
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.config.schemata.algo.quantization import RANGE_INIT_TYPES_VS_DESCRIPTIONS
+from nncf.torch import no_nncf_trace
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
@@ -37,14 +45,8 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.quantization.translator import PTTargetPointTranslator
+from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.algo import TensorStatisticObservationPoint
-from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMeanPercentileStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMedianMADStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMixedMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTPercentileStatisticCollector
-from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 
 
 class PTRangeInitParams(RangeInitParams):
@@ -164,40 +166,36 @@ class StatCollectorGenerator:
         if init_config.init_type not in RANGE_INIT_TYPES_VS_DESCRIPTIONS:
             raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
         if init_config.init_type == "min_max":
-            reduction_shape_converted = collector_params.convert_reduction_shape(per_sample_stats=False)
-            return PTMinMaxStatisticCollector(
-                collector_params.use_abs_max, reduction_shape_converted, reduction_shape, num_samples
+            reduction_shape_converted = collector_params.convert_reduction_shape(per_sample_stats=False)  # TODO (vshampor): handle this
+            return MinMaxStatisticCollector(
+                collector_params.use_abs_max, reduction_shape, num_samples
             )
         if init_config.init_type == "mixed_min_max":
-            reduction_shape_converted = collector_params.convert_reduction_shape(per_sample_stats=True)
-            return PTMixedMinMaxStatisticCollector(
+            return MixedMinMaxStatisticCollector(
                 collector_params.use_per_sample_stats(per_sample_stats=True),
                 collector_params.use_abs_max,
                 collector_params.use_means_of_mins,
                 collector_params.use_means_of_maxs,
-                reduction_shape_converted,
                 reduction_shape,
                 num_samples,
             )
         if init_config.init_type == "mean_min_max":
-            reduction_shape_converted = collector_params.convert_reduction_shape(per_sample_stats=False)
-            return PTMeanMinMaxStatisticCollector(
+            return MeanMinMaxStatisticCollector(
                 collector_params.use_per_sample_stats(per_sample_stats=False),
                 collector_params.use_abs_max,
-                reduction_shape_converted,
                 reduction_shape,
                 num_samples,
             )
         if init_config.init_type == "threesigma":
-            return PTMedianMADStatisticCollector(reduction_shape, num_samples)
+            return MedianMADStatisticCollector(reduction_shape, num_samples)
         if init_config.init_type == "percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return PTPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return PercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
         if init_config.init_type == "mean_percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return PTMeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
         raise ValueError("Range init type not handled!")
 
     @classmethod
@@ -251,7 +249,8 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
 
     def _get_fwd_hook(self, collector: TensorStatisticCollectorBase) -> Callable:
         def fwd_hook(module, input_, output):
-            collector.register_input(input_[0])
+            with no_nncf_trace():
+                collector.register_input(PTNNCFTensor(input_[0]))
 
         return fwd_hook
 
@@ -297,7 +296,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         for scope_str, collector_and_module in self.collectors_and_modules_to_init.items():
             collector, quantizer_module = collector_and_module
             target_stat = collector.get_statistics()
-            minmax_stats = pt_convert_stat_to_min_max_tensor_stat(target_stat)
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
             quantizer_module.apply_minmax_init(
                 minmax_stats.min_values, minmax_stats.max_values, log_module_name=scope_str
             )

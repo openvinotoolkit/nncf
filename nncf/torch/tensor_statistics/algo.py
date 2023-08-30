@@ -10,12 +10,15 @@
 # limitations under the License.
 from typing import Dict, Set
 
+import torch
+
 from nncf.api.compression import CompressionStage
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.config import NNCFConfig
+from nncf.torch import no_nncf_trace
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -24,6 +27,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.tensor import PTNNCFTensor
 
 
 class TensorStatisticObservationPoint:
@@ -54,9 +58,14 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
         layout = PTTransformationLayout()
         for op, rs_vs_collector in self._observation_points_vs_collectors.items():
             for collector in rs_vs_collector.values():
-                hook_obj = collector.register_input
+
+                def hook(x: torch.Tensor) -> torch.Tensor:
+                    with no_nncf_trace():
+                        collector.register_input(PTNNCFTensor(x))
+                    return x
+
                 command = PTInsertionCommand(
-                    op.target_point, hook_obj, TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION
+                    op.target_point, hook, TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION
                 )
                 layout.register(command)
         return layout

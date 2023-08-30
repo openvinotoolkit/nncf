@@ -25,6 +25,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
@@ -32,7 +33,7 @@ from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
+from nncf.torch.tensor import PTNNCFTensor
 from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
 
@@ -269,8 +270,9 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
     else:
         max_values = np.amax(data, axes)
 
-    statistics = PTMinMaxTensorStatistic(
-        min_values=torch.from_numpy(np.array(min_values)), max_values=torch.from_numpy(np.array(max_values))
+    statistics = MinMaxTensorStatistic(
+        min_values=PTNNCFTensor(torch.from_numpy(np.array(min_values))),
+        max_values=PTNNCFTensor(torch.from_numpy(np.array(max_values)))
     )
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
     qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)

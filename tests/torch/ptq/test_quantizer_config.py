@@ -12,9 +12,9 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
-from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
@@ -31,10 +31,10 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
         return PTMinMaxAlgoBackend()
 
     def check_is_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, PTMinMaxStatisticCollector)
+        assert isinstance(tensor_collector, MinMaxStatisticCollector)
 
     def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, PTMeanMinMaxStatisticCollector)
+        assert isinstance(tensor_collector, MeanMinMaxStatisticCollector)
 
     @pytest.fixture(
         params=[

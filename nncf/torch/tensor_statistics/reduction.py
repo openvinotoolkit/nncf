@@ -14,6 +14,7 @@ from typing import List, Tuple
 import numpy as np
 import torch
 
+# TODO (vshampor): looks like these aren't used now, delete?
 
 def max_reduce_like(input_: torch.Tensor, ref_tensor_shape: List[int]) -> torch.Tensor:
     numel = np.prod(ref_tensor_shape)

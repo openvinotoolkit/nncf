@@ -19,11 +19,10 @@ from nncf import TargetDevice
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFTensorBackend
 from nncf.common.tensor import TensorDtype
-from nncf.common.tensor import WrappingIterator
 
 _DTYPE_MAP: Dict[TensorDtype, Any] = {TensorDtype.FLOAT32: np.float32, TensorDtype.INT64: np.int64}
 
-_INV_DTYPE_MAP = {v: k for k, v in _DTYPE_MAP.items()}
+_INV_DTYPE_MAP: Dict[Any, TensorDtype] = {v: k for k, v in _DTYPE_MAP.items()}
 _INV_DTYPE_MAP[dtype("float32")] = TensorDtype.FLOAT32
 
 

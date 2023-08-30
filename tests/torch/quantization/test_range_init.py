@@ -31,6 +31,9 @@ from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertion
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.config import NNCFConfig
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch import utils
@@ -46,10 +49,6 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMedianMADStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import safe_thread_call
 from tests.torch.helpers import TwoConvTestModel
@@ -680,13 +679,13 @@ def test_per_layer_range_init_collectors_are_called_the_required_number_of_times
     data_loader = TestRangeInit.create_dataloader(True, config, 10)
     config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
 
-    range_minmax_init_create_spy = mocker.spy(PTMinMaxStatisticCollector, "__init__")
-    range_meanminmax_init_create_spy = mocker.spy(PTMeanMinMaxStatisticCollector, "__init__")
-    range_threesigma_init_create_spy = mocker.spy(PTMedianMADStatisticCollector, "__init__")
+    range_minmax_init_create_spy = mocker.spy(MinMaxStatisticCollector, "__init__")
+    range_meanminmax_init_create_spy = mocker.spy(MeanMinMaxStatisticCollector, "__init__")
+    range_threesigma_init_create_spy = mocker.spy(MedianMADStatisticCollector, "__init__")
 
-    range_minmax_init_register_input_spy = mocker.spy(PTMinMaxStatisticCollector, "_register_input")
-    range_meanminmax_init_register_input_spy = mocker.spy(PTMeanMinMaxStatisticCollector, "_register_input")
-    range_threesigma_init_register_input_spy = mocker.spy(PTMedianMADStatisticCollector, "_register_input")
+    range_minmax_init_register_input_spy = mocker.spy(MinMaxStatisticCollector, "_register_input")
+    range_meanminmax_init_register_input_spy = mocker.spy(MeanMinMaxStatisticCollector, "_register_input")
+    range_threesigma_init_register_input_spy = mocker.spy(MedianMADStatisticCollector, "_register_input")
 
     TestRangeInit.create_algo_and_compressed_model(config)
 

@@ -27,6 +27,8 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -49,9 +51,6 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
-from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
 # pylint:disable=too-many-public-methods
@@ -145,7 +144,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         inplace: bool,
         num_samples: int = None,
-    ) -> Union[PTMinMaxStatisticCollector, PTMeanMinMaxStatisticCollector]:
+    ) -> Union[MinMaxStatisticCollector, MeanMinMaxStatisticCollector]:
         if (
             range_estimator_params.min.statistics_type == StatisticsType.MIN
             and range_estimator_params.min.aggregator_type == AggregatorType.MIN
@@ -237,7 +236,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         num_samples: int = None,
-    ) -> PTMeanMinMaxStatisticCollector:
+    ) -> MeanMinMaxStatisticCollector:
         collector_params, scale_shape = PTMinMaxAlgoBackend._default_collector_params_and_scale_shape(
             nncf_graph, target_point, quantizer_config
         )

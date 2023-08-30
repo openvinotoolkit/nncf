@@ -141,10 +141,9 @@ from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
-from nncf.torch.tensor_statistics.collectors import ReductionShape
-from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.torch.tensor_statistics.statistics import TensorStatistic
-from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
+from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_model_dtype
 from nncf.torch.utils import get_state_dict_names_with_modules
@@ -621,7 +620,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                     nncf_logger.debug(f"Did not collect tensor statistics at {tp} for shape {scale_shape}")
                     retval[qp_id] = None
                 else:
-                    minmax_stat = pt_convert_stat_to_min_max_tensor_stat(tensor_statistics[tp][scale_shape])
+                    minmax_stat = MinMaxTensorStatistic.from_stat(tensor_statistics[tp][scale_shape])
                     retval[qp_id] = minmax_stat
         return retval
 

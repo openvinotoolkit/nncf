@@ -46,6 +46,27 @@ class MinMaxTensorStatistic(TensorStatistic):
     def __repr__(self):
         return f"min: {repr(self.min_values.tensor)}, max: {repr(self.min_values.tensor)}"
 
+    @staticmethod
+    def from_stat(statistic: TensorStatistic) -> "MinMaxTensorStatistic":
+        if isinstance(statistic, MinMaxTensorStatistic):
+            return statistic
+        if isinstance(statistic, MedianMADTensorStatistic):
+            # Using three-sigma approach to estimate min and max
+            # Constant factor depends on the distribution form - assuming normal and the factor is 1.4826
+            return MinMaxTensorStatistic(
+                statistic.median_values - 3 * 1.4826230 * statistic.mad_values,
+                statistic.median_values + 3 * 1.4826230 * statistic.mad_values,
+            )
+        if isinstance(statistic, PercentileTensorStatistic):
+            if len(statistic.percentile_vs_values_dict.keys()) < 2:
+                raise ValueError("Cannot create a min-max statistic for less than 2 percentile values")
+            min_pct = min(statistic.percentile_vs_values_dict.keys())
+            max_pct = max(statistic.percentile_vs_values_dict.keys())
+            return MinMaxTensorStatistic(
+                statistic.percentile_vs_values_dict[min_pct], statistic.percentile_vs_values_dict[max_pct]
+            )
+        raise ValueError("Unknown TensorStatistic to generate min-max stat from!")
+
 class MeanTensorStatistic(TensorStatistic):
     MEAN_STAT = "mean_values"
     SHAPE_STAT = "shape"

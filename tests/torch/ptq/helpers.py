@@ -15,13 +15,14 @@ import torch
 
 from nncf import NNCFConfig
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from nncf.torch.model_creation import create_nncf_network
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
+from nncf.torch.tensor import PTNNCFTensor
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
@@ -92,8 +93,8 @@ def mock_collect_statistics(mocker):
         "nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics", return_value=None
     )
     min_, max_ = 0.0, 1.0
-    min_, max_ = torch.tensor(min_), torch.tensor(max_)
+    min_, max_ = PTNNCFTensor(torch.tensor(min_)), PTNNCFTensor(torch.tensor(max_))
     _ = mocker.patch(
         "nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics",
-        return_value=PTMinMaxTensorStatistic(min_, max_),
+        return_value=MinMaxTensorStatistic(min_, max_),
     )

@@ -18,13 +18,13 @@ from nncf.common.logging.progress_bar import ProgressBar
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.quantization.quantizers import NNCF_QUANTIZATION_OPERATIONS_V2
 from nncf.experimental.tensorflow.quantization.quantizers import InputType
 from nncf.tensorflow.quantization.init_range import RangeInitializer
 from nncf.tensorflow.quantization.init_range import TFRangeInitParams
 from nncf.tensorflow.tensor_statistics.reduction import get_axes
-from nncf.tensorflow.tensor_statistics.statistics import tf_convert_stat_to_min_max_tensor_stat
 
 
 class TFRangeInitParamsV2(TFRangeInitParams):
@@ -84,7 +84,7 @@ class RangeInitializerV2(RangeInitializer):
 
         for op, collector, op_weights in collectors:
             target_stat = collector.get_statistics()
-            minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
 
             min_values = minmax_stats.min_values
             if len(min_values.shape) != 1:

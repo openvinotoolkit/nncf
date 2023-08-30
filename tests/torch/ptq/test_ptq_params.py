@@ -33,8 +33,8 @@ from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
 from nncf.torch.quantization.quantize_model import _create_nncf_config
-from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
@@ -105,10 +105,10 @@ class TestPTQParams(TemplateTestPTQParams):
         return PTMinMaxAlgoBackend()
 
     def check_is_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, PTMinMaxStatisticCollector)
+        assert isinstance(tensor_collector, MinMaxStatisticCollector)
 
     def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, PTMeanMinMaxStatisticCollector)
+        assert isinstance(tensor_collector, MeanMinMaxStatisticCollector)
 
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:
