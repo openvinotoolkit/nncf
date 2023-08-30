@@ -211,7 +211,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed, ca
         args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.retries_run()  # WA for 119128
 
 
 @pytest.mark.dependency()
@@ -249,7 +249,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         )
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.retries_run()  # WA for 119128
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     if "compression" in config["sample_config"]:
@@ -303,7 +303,7 @@ def test_trained_model_eval(request, config, tmp_path, multiprocessing_distribut
         args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.retries_run()  # WA for 119128
 
 
 def get_resuming_checkpoint_path(config_factory, multiprocessing_distributed, checkpoint_save_dir):
@@ -348,7 +348,7 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
         args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.retries_run()  # WA for 119128
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     if "compression" in config["sample_config"]:
@@ -386,7 +386,7 @@ def test_export_with_resume(request, config, tmp_path, multiprocessing_distribut
         args["--cpu-only"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.retries_run()  # WA for 119128
     assert os.path.exists(onnx_path)
 
 
@@ -410,7 +410,7 @@ def test_export_with_pretrained(tmp_path):
         args["--cpu-only"] = True
 
     runner = Command(create_command_line(args, "classification"), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.retries_run()  # WA for 119128
     assert os.path.exists(onnx_path)
 
 
@@ -576,7 +576,7 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
         args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, accuracy_aware_config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.retries_run()  # WA for 119128
 
     checkpoint_save_dir = log_dir / get_run_name(config_factory.config)
     aa_checkpoint_path = get_accuracy_aware_checkpoint_dir_path(checkpoint_save_dir)
