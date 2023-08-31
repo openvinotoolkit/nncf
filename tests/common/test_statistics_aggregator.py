@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from itertools import product
 from typing import Any, List, Type, Union
+from typing import Tuple
 
 import numpy as np
 import pytest
@@ -26,7 +27,9 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
@@ -76,7 +79,7 @@ class TemplateTestStatisticsAggregator:
 
     @abstractmethod
     @pytest.fixture(scope="session")
-    def test_params(self):
+    def params(self):
         """
         Please make the same topologies with the same names as it
         presented in Openvino tests.
@@ -443,6 +446,7 @@ class TemplateTestStatisticsAggregator:
         collector_type: "BCStatsCollectors"
         target_type: TargetType
         ref_values: Any = None
+        ref_observed_shape: Tuple[int, ...] = None
         channel_axis: int = 1
 
     MEAN_ACT_AXIS_0_REF = np.array(
@@ -466,49 +470,55 @@ class TemplateTestStatisticsAggregator:
     )
 
     @pytest.mark.parametrize(
-        "test_params",
+        "params",
         [
             # TargeType: activations
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (MEAN_ACT_AXIS_0_REF, (1, 3, 3, 3)),
+                ref_values=MEAN_ACT_AXIS_0_REF,
+                ref_observed_shape=(1, 3, 3, 3),
                 channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (MEAN_ACT_AXIS_0_REF, (1, 3, 3, 3)),
+                ref_values=MEAN_ACT_AXIS_0_REF,
+                ref_observed_shape=(1, 3, 3, 3),
                 channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (np.array((0.0, 0.45, 0.5)), (1, 3, 3, 3)),
+                ref_values=np.array((0.0, 0.45, 0.5)),
+                ref_observed_shape=(1, 3, 3, 3),
                 channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (np.array((0.0, 0.45, 0.5)), (1, 3, 3, 3)),
+                ref_values=np.array((0.0, 0.45, 0.5)),
+                ref_observed_shape=(1, 3, 3, 3),
                 channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (np.array([-0.04999995, 0.5, 0.5]), (1, 3, 3, 3)),
+                ref_values=np.array([-0.04999995, 0.5, 0.5]),
+                ref_observed_shape=(1, 3, 3, 3),
                 channel_axis=2,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
-                (np.array([-0.04999995, 0.5, 0.5]), (1, 3, 3, 3)),
+                ref_values=np.array([-0.04999995, 0.5, 0.5]),
+                ref_observed_shape=(1, 3, 3, 3),
                 channel_axis=2,
             ),
             BCTestParameters(
@@ -519,66 +529,72 @@ class TemplateTestStatisticsAggregator:
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (MEAN_WEIGHTS_AXIS_0_REF, (3, 3, 3, 3)),
+                ref_values=MEAN_WEIGHTS_AXIS_0_REF,
+                ref_observed_shape=(3, 3, 3, 3),
                 channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (MEAN_WEIGHTS_AXIS_0_REF, (3, 3, 3, 3)),
+                ref_values=MEAN_WEIGHTS_AXIS_0_REF,
+                ref_observed_shape=(3, 3, 3, 3),
                 channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-0.36666664, -0.36666664, -0.36666664]), (3, 3, 3, 3)),
+                ref_values=np.array([-0.36666664, -0.36666664, -0.36666664]),
+                ref_observed_shape=(3, 3, 3, 3),
                 channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-0.36666664, -0.36666664, -0.36666664]), (3, 3, 3, 3)),
+                ref_values=np.array([-0.36666664, -0.36666664, -0.36666664]),
+                ref_observed_shape=(3, 3, 3, 3),
                 channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-1.1, 0.0, 0.0]), (3, 3, 3, 3)),
+                ref_values=np.array([-1.1, 0.0, 0.0]),
+                ref_observed_shape=(3, 3, 3, 3),
                 channel_axis=2,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-1.1, 0.0, 0.0]), (3, 3, 3, 3)),
+                ref_values=np.array([-1.1, 0.0, 0.0]),
+                ref_observed_shape=(3, 3, 3, 3),
                 channel_axis=2,
             ),
         ],
     )
     def test_statistics_aggregator_bias_correction(
-        self, dataset_samples, test_params: BCTestParameters, inplace_statistics
+        self, dataset_samples, params, inplace_statistics
     ):
         name_to_algo_backend_map = {
             self.BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
             self.BiasCorrectionAlgos.FAST_BIAS_CORRECTION: self.get_fast_bias_correction_algo_backend_cls,
         }
-        algo_backend = name_to_algo_backend_map[test_params.algo]()
-        if test_params.collector_type == self.BCStatsCollectors.MEAN:
-            ref_shape = test_params.ref_values[1]
-            reduction_axes = tuple(i for i, _ in enumerate(ref_shape) if i != test_params.channel_axis)
+        algo_backend = name_to_algo_backend_map[params.algo]()
+        if params.collector_type == self.BCStatsCollectors.MEAN:
+            ref_observed_shape = params.ref_observed_shape
+            reduction_axes = tuple(i for i, _ in enumerate(ref_observed_shape) if i != params.channel_axis)
             tensor_collector = algo_backend.mean_statistic_collector(
                 reduction_axes, inplace_statistics, len(dataset_samples)
             )
-        elif test_params.collector_type == self.BCStatsCollectors.RAW:
+        elif params.collector_type == self.BCStatsCollectors.RAW:
             tensor_collector = algo_backend.raw_statistic_collector(inplace_statistics, len(dataset_samples))
         else:
             raise RuntimeError()
 
-        target_point = self.get_target_point(test_params.target_type)
+        target_point = self.get_target_point(params.target_type)
 
         statistics_points = StatisticPointsContainer()
         algorithm_name = "TestAlgo"
@@ -604,31 +620,26 @@ class TemplateTestStatisticsAggregator:
 
         for tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
-            if test_params.collector_type == self.BCStatsCollectors.MEAN:
-                ret_val = [stat.mean_values, stat.shape]
-            elif test_params.collector_type == self.BCStatsCollectors.RAW:
-                ret_val = stat.values
+            if params.collector_type == self.BCStatsCollectors.MEAN:
+                assert isinstance(stat, MeanTensorStatistic)
+                test_stat_value = stat.mean_values.to_numpy()
+                ref_stat_value = params.ref_values
+                assert test_stat_value.shape == ref_stat_value.shape
+                assert np.allclose(test_stat_value, ref_stat_value)
+                assert stat.observed_shape == params.ref_observed_shape
+            elif params.collector_type == self.BCStatsCollectors.RAW:
+                assert isinstance(stat, RawTensorStatistic)
                 if self.no_batch_dimension_in_dataset_samples():
-                    test_params.ref_values = [np.expand_dims(arr, 0) for arr in dataset_samples]
+                    params.ref_values = [np.expand_dims(arr, 0) for arr in dataset_samples]
                 else:
-                    test_params.ref_values = dataset_samples
+                    params.ref_values = dataset_samples
+                for test_val, ref_val in zip(stat.values, params.ref_values):
+                    np_tested_val = test_val.to_numpy()
+                    assert np_tested_val.shape == ref_val.shape
+                    assert np.allclose(test_val, ref_val)
             else:
                 raise RuntimeError()
 
-            for val, ref in zip(ret_val, test_params.ref_values):
-                if isinstance(ref, np.ndarray):
-                    assert ref.shape == val.shape
-                if isinstance(val, NNCFTensor):
-                    val = val.to_numpy()
-                if isinstance(val, list):
-                    new_val = []
-                    for t in val:
-                        if isinstance(t, NNCFTensor):
-                            new_val.append(t.to_numpy())
-                        else:
-                            new_val.append(t)
-                    val = new_val
-                assert np.allclose(val, ref)
 
     def create_statistics_point(
         self, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator
@@ -745,8 +756,8 @@ class TemplateTestStatisticsAggregator:
     }
 
     @pytest.mark.parametrize("key", ["split_concat", "shared_conv"])
-    def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics):
-        params = test_params["test_statistic_merging"][key]
+    def test_statistic_merging(self, params, key, dataset_samples, inplace_statistics):
+        params = params["test_statistic_merging"][key]
         model = params["model"](dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
 
@@ -816,8 +827,8 @@ class TemplateTestStatisticsAggregator:
             "mean_per_ch",
         ],
     )
-    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
-        params = test_params["test_statistic_merging"]["split_concat"]
+    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, params, dataset_samples):
+        params = params["test_statistic_merging"]["split_concat"]
         model = params["model"](dataset_samples)
         params = {}
         if statistics_type in [StatisticsType.MIN, StatisticsType.MAX, StatisticsType.ABS_MAX, StatisticsType.MEAN]:

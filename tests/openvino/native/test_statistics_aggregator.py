@@ -65,7 +65,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return get_StatisticAgregatorTestModel(INPUT_SHAPE, conv_w)
 
     @pytest.fixture(scope="session")
-    def test_params(self):
+    def params(self):
         return {
             "test_statistic_merging": {
                 "split_concat": {"model": self._get_split_concat_backend_model},

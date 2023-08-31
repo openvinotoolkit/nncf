@@ -81,10 +81,10 @@ class MeanTensorStatistic(TensorStatistic):
         :param shape: The shape of the collected statistics.
         """
         self.mean_values = mean_values
-        self.shape = shape
+        self.observed_shape = shape
 
     def __eq__(self, other: "MeanTensorStatistic") -> bool:
-        return self.mean_values == other.mean_values and self.shape == other.shape
+        return self.mean_values == other.mean_values and self.observed_shape == other.observed_shape
 
 
 class MedianMADTensorStatistic(TensorStatistic):

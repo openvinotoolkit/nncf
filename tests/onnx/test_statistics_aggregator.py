@@ -58,7 +58,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return True
 
     @pytest.fixture(scope="session")
-    def test_params(self):
+    def params(self):
         return
 
     def get_dataset(self, samples):

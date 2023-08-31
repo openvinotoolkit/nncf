@@ -244,7 +244,7 @@ class FastBiasCorrection(Algorithm):
             statistics = tensor_collector.get_statistics()
             assert isinstance(statistics, MeanTensorStatistic)
             input_fp.extend(statistics.mean_values)
-            input_shape.extend(statistics.shape)
+            input_shape.extend(statistics.observed_shape)
         return input_fp, input_shape
 
     def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[NNCFTensor]:
