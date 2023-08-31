@@ -27,6 +27,7 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.utils.backend import BackendType
@@ -191,7 +192,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _get_input_scale_shape(
         nncf_graph: NNCFGraph, target_point: PTTargetPoint, quantization_config: QuantizerConfig
-    ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
+    ) -> Tuple[Tuple[int, ...], QuantizerScaleShape, int]:
         is_weights = target_point.is_weight_target_point()
         if is_weights:
             module_node = nncf_graph.get_node_by_name(target_point.target_node_name)
@@ -203,11 +204,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
             channel_idx = 1  # channel dim for activations
 
-        scale_shape = tuple(
-            get_scale_shape(
+        scale_shape = get_scale_shape(
                 input_shape, is_weights=is_weights, per_channel=quantization_config.per_channel, channel_idx=channel_idx
             )
-        )
 
         return input_shape, scale_shape, channel_idx
 

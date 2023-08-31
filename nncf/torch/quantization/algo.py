@@ -61,6 +61,7 @@ from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
@@ -593,7 +594,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     def _get_minmax_values_for_quantizer_locations(
         self,
         quantizer_setup: SingleConfigQuantizerSetup,
-        tensor_statistics: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
+        tensor_statistics: Dict[PTTargetPoint, Dict[QuantizerScaleShape, TensorStatistic]],
         target_model_graph: PTNNCFGraph,
     ) -> Dict[QuantizationPointId, MinMaxTensorStatistic]:
         retval = {}
@@ -613,9 +614,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 else:
                     input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
                     channel_idx = 1  # channel dim for activations
-                scale_shape = tuple(
-                    get_scale_shape(input_shape, qp.is_weight_quantization_point(), qp.qconfig.per_channel, channel_idx)
-                )
+                scale_shape = get_scale_shape(input_shape, qp.is_weight_quantization_point(), qp.qconfig.per_channel, channel_idx)
 
                 if scale_shape not in tensor_statistics[tp]:
                     nncf_logger.debug(f"Did not collect tensor statistics at {tp} for shape {scale_shape}")
@@ -673,7 +672,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     @staticmethod
     def get_statistics_for_quantizer_setup(
         target_model: NNCFNetwork, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
+    ) -> Dict[PTTargetPoint, Dict[QuantizerScaleShape, TensorStatistic]]:
         if range_init_params is None:
             return {}
         observation_points_vs_collectors_dict = (
@@ -694,12 +693,12 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         retval = {}
         for ip, rs_vs_collector in stat_ctrl.ip_vs_collector_dict.items():
-            retval[ip] = {rs: collector.get_statistics() for rs, collector in rs_vs_collector.items()}
+            retval[ip] = {QuantizerScaleShape(rs): collector.get_statistics() for rs, collector in rs_vs_collector.items()}
         return retval
 
     def _get_statistics_for_final_range_init(
         self, target_model: NNCFNetwork, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
+    ) -> Dict[PTTargetPoint, Dict[QuantizerScaleShape, TensorStatistic]]:
         return self.get_statistics_for_quantizer_setup(target_model, quantizer_setup, range_init_params)
 
     def _get_single_config_quantizer_setup(self, target_model) -> SingleConfigQuantizerSetup:
@@ -793,7 +792,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             qspec = PTQuantizerSpec.from_config(
                 qconfig,
                 narrow_range=narrow_range,
-                scale_shape=tuple(scale_shape),
+                scale_shape=scale_shape.shape,
                 logarithm_scale=use_logarithm_scale,
                 half_range=half_range,
                 is_quantized_on_export=qp.is_weight_quantization_point(),

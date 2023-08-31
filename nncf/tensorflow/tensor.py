@@ -112,7 +112,7 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
         return TFNNCFTensor(tf.experimental.numpy.moveaxis(tensor.tensor, src, dst))
 
     @staticmethod
-    def mean(tensor: TFNNCFTensor, axis: Union[int, Tuple[int, ...]], keepdims: bool = False) -> TFNNCFTensor:
+    def mean(tensor: TFNNCFTensor, axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> TFNNCFTensor:
         return TFNNCFTensor(tf.reduce_mean(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
@@ -226,11 +226,11 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
         return tf.concat([t.tensor for t in tensor_list])
 
     @staticmethod
-    def amin(tensor: TFNNCFTensor, axis: List[int], keepdims: bool = None) -> TFNNCFTensor:
+    def amin(tensor: TFNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> TFNNCFTensor:
         return TFNNCFTensor(tf.experimental.numpy.amin(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def amax(tensor: TFNNCFTensor, axis: List[int], keepdims: bool = None) -> TFNNCFTensor:
+    def amax(tensor: TFNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> TFNNCFTensor:
         return TFNNCFTensor(tf.experimental.numpy.amax(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod

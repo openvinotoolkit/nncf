@@ -88,6 +88,9 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def __mul__(self, other: Any) -> "NNCFTensor":
         return self.__class__(self._tensor * self._get_rhs(other))
 
+    def __rmul__(self, other: Any) -> "NNCFTensor":
+        return self.__class__(self._tensor.__rmul__(self._get_rhs(other)))
+
     def __truediv__(self, other: Any) -> "NNCFTensor":
         return self.__class__(self._tensor / self._get_rhs(other))
 
@@ -197,7 +200,7 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def mean(tensor: NNCFTensor, axis: Union[int, Tuple[int, ...]], keepdims: bool = False) -> NNCFTensor:
+    def mean(tensor: NNCFTensor, axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> NNCFTensor:
         pass
 
     @staticmethod
@@ -322,12 +325,12 @@ class NNCFTensorBackend(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def amin(tensor: NNCFTensor, axis: List[int], keepdims: bool = None) -> NNCFTensor:
+    def amin(tensor: NNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> NNCFTensor:
         pass
 
     @staticmethod
     @abstractmethod
-    def amax(tensor: NNCFTensor, axis: List[int], keepdims: bool = None) -> NNCFTensor:
+    def amax(tensor: NNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> NNCFTensor:
         pass
 
     @staticmethod

@@ -102,7 +102,7 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
         return PTNNCFTensor(torch.moveaxis(tensor.tensor, source=src, destination=dst))
 
     @staticmethod
-    def mean(tensor: PTNNCFTensor, axis: Union[int, Tuple[int, ...]], keepdims: bool = False) -> PTNNCFTensor:
+    def mean(tensor: PTNNCFTensor, axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> PTNNCFTensor:
         return PTNNCFTensor(torch.mean(tensor.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
@@ -209,13 +209,13 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
         return PTNNCFTensor(torch.concatenate([t.tensor for t in tensor_list], dim=axis))
 
     @staticmethod
-    def amin(tensor: PTNNCFTensor, axis: List[int], keepdims: bool = None) -> PTNNCFTensor:
+    def amin(tensor: PTNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> PTNNCFTensor:
         if keepdims is None:
             keepdims = False
         return PTNNCFTensor(torch.amin(tensor.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
-    def amax(tensor: PTNNCFTensor, axis: List[int], keepdims: bool = None) -> PTNNCFTensor:
+    def amax(tensor: PTNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> PTNNCFTensor:
         if keepdims is None:
             keepdims = False
         return PTNNCFTensor(torch.amax(tensor.tensor, dim=axis, keepdim=keepdims))

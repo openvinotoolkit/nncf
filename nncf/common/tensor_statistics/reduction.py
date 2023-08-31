@@ -18,7 +18,7 @@ import numpy as np
 from nncf.common.tensor import NNCFTensor
 
 
-def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
+def get_channel_count_and_dim_idx(scale_shape: Tuple[int]) -> Tuple[int, int]:
     channel_dim_idx = 0
     channel_count = 1
     for dim_idx, dim in enumerate(scale_shape):
@@ -28,7 +28,7 @@ def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
     return channel_count, channel_dim_idx
 
 
-def split_into_channels(input_: NNCFTensor, scale_shape: List[int]) -> List[NNCFTensor]:
+def split_into_channels(input_: NNCFTensor, scale_shape: Tuple[int]) -> List[NNCFTensor]:
     channel_count, channel_dim_idx = get_channel_count_and_dim_idx(scale_shape)
     backend = input_.backend
     channel_first_tensor = backend.moveaxis(input_, channel_dim_idx, 0)
@@ -41,9 +41,9 @@ def split_into_channels(input_: NNCFTensor, scale_shape: List[int]) -> List[NNCF
     return ret_list
 
 
-def get_per_channel_history(raw_input_history: Deque[NNCFTensor], scale_shape: List[int],
+def get_per_channel_history(raw_input_history: Deque[NNCFTensor], reduction_shape: Tuple[int],
                             discard_zeros: bool = False) -> List[NNCFTensor]:
-    channel_count, _ = get_channel_count_and_dim_idx(scale_shape)
+    channel_count, _ = get_channel_count_and_dim_idx(reduction_shape)
     per_channel_history = [None for _ in range(channel_count)]
     if not raw_input_history:
         return per_channel_history
@@ -51,7 +51,7 @@ def get_per_channel_history(raw_input_history: Deque[NNCFTensor], scale_shape: L
     backend = next(iter(raw_input_history)).backend
     for _ in range(len(raw_input_history)):
         entry = raw_input_history.popleft()
-        split = split_into_channels(entry, scale_shape)
+        split = split_into_channels(entry, reduction_shape)
         for i in range(channel_count):
             flat_channel_split = split[i].flatten()
 

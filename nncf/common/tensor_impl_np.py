@@ -188,7 +188,7 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.mean([x.tensor for x in tensor_list], axis=axis))
 
     @staticmethod
-    def mean(tensor: "NPNNCFTensor", axis: int, keepdims: bool = False) -> NPNNCFTensor:
+    def mean(tensor: "NPNNCFTensor", axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> NPNNCFTensor:
         return NPNNCFTensor(np.mean(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
@@ -222,11 +222,11 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         return NPNNCFTensor(np.concatenate([t.tensor for t in tensor_list], axis=axis))
 
     @staticmethod
-    def amin(tensor: NPNNCFTensor, axis: List[int], keepdims: bool = None) -> NPNNCFTensor:
+    def amin(tensor: NPNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> NPNNCFTensor:
         return NPNNCFTensor(np.amin(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def amax(tensor: NPNNCFTensor, axis: List[int], keepdims: bool = None) -> NPNNCFTensor:
+    def amax(tensor: NPNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> NPNNCFTensor:
         return NPNNCFTensor(np.amax(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod

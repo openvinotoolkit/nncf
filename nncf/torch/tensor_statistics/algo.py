@@ -97,7 +97,8 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
 
 class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(
-        self, target_model: NNCFNetwork, ip_vs_collector_dict: Dict[TensorStatisticObservationPoint, Dict[ReductionAxes, TensorStatisticCollectorBase]]
+        self, target_model: NNCFNetwork, ip_vs_collector_dict: Dict[TensorStatisticObservationPoint,
+            Dict[ReductionShape, TensorStatisticCollectorBase]]
     ):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict

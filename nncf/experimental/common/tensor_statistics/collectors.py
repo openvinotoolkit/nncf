@@ -29,14 +29,14 @@ class TensorReducerBase(ABC):
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(self, reduction_shape: Optional[ReductionAxes] = None, inplace: bool = False):
+    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, inplace: bool = False):
         """
-        :param reduction_shape: Reduction shape for reduction calculation. Equal to list(range(len(input.shape)))
+        :param reduction_axes: Reduction shape for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
         :param inplace: Whether should be calculated inplace or out of place.
 
         """
-        self._reduction_shape = reduction_shape
+        self._reduction_axes = reduction_axes
         self._inplace = inplace
 
     @property
@@ -86,17 +86,17 @@ class TensorReducerBase(ABC):
 
     def __eq__(self, __o: object) -> bool:
         return (
-            isinstance(__o, self.__class__)
-            and self._reduction_shape == __o._reduction_shape
-            and self._inplace == __o.inplace
+                isinstance(__o, self.__class__)
+                and self._reduction_axes == __o._reduction_axes
+                and self._inplace == __o.inplace
         )
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._reduction_shape))
+        return hash((self.__class__.__name__, self.inplace, self._reduction_axes))
 
     def _get_reduction_shape(self, tensor: NNCFTensor) -> Union[int, Tuple[int, ...]]:
-        if self._reduction_shape is not None:
-            return self._reduction_shape
+        if self._reduction_axes is not None:
+            return self._reduction_axes
         return tuple(range(len(tensor.shape)))
 
 
@@ -480,18 +480,18 @@ class MeanReducer(TensorReducerBase):
 class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
-        reduction_shape: Optional[ReductionAxes] = None,
+        reduction_axes: Optional[ReductionAxes] = None,
         quantile: Optional[Union[float, Tuple[float]]] = None,
         inplace: bool = False,
     ):
-        super().__init__(reduction_shape, False)
+        super().__init__(reduction_axes, False)
         self._quantile = (0.01, 0.99) if quantile is None else quantile
 
     def __eq__(self, __o: object) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._reduction_shape, tuple(self._quantile)))
+        return hash((self.__class__.__name__, self.inplace, self._reduction_axes, tuple(self._quantile)))
 
 
 class QuantileReducer(QuantileReducerBase):
@@ -505,11 +505,11 @@ class QuantileReducer(QuantileReducerBase):
 class AbsQuantileReducer(QuantileReducerBase):
     def __init__(
         self,
-        reduction_shape: Optional[ReductionAxes] = None,
+        reduction_axes: Optional[ReductionAxes] = None,
         quantile: Union[float, List[float]] = 0.99,
         inplace: bool = False,
     ):
-        super().__init__(reduction_shape, quantile, False)
+        super().__init__(reduction_axes, quantile, False)
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
@@ -538,7 +538,7 @@ class MeanPerChReducer(TensorReducerBase):
         backend = x.backend
         if len(x.shape) < 3:
             return [backend.mean(x, axis=0)]
-        x = backend.moveaxis(x, self._reduction_shape, 1)
+        x = backend.moveaxis(x, self._reduction_axes, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
         retval = backend.mean(t, axis=(0, 2))
         return [retval]

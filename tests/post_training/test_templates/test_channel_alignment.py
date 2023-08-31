@@ -497,7 +497,7 @@ class TemplateTestChannelAlignment:
         assert len(statistic_collector.reducers) == 1
         reducer = statistic_collector.reducers.pop()
         assert isinstance(reducer, QuantileReducer)
-        assert reducer._reduction_shape == reduction_shape_ref
+        assert reducer._reduction_axes == reduction_shape_ref
         assert np.allclose(reducer._quantile, (q_ref, 1 - q_ref))
 
         assert len(statistic_collector.aggregators) == 2

@@ -12,6 +12,8 @@
 from copy import deepcopy
 from enum import Enum
 from typing import Any, Dict, List, Optional
+from typing import Tuple
+from typing import Union
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -336,3 +338,21 @@ class QuantizationPreset(Enum):
         if quant_group == QuantizerGroup.ACTIVATIONS and self == QuantizationPreset.MIXED:
             return {"mode": QuantizationMode.ASYMMETRIC}
         return {"mode": QuantizationMode.SYMMETRIC}
+
+
+class QuantizerScaleShape:
+    def __init__(self, shape: Union[Tuple[int, ...], List[int]]):
+        self._shape = tuple(shape)
+
+    @property
+    def shape(self) -> Tuple[int, ...]:
+        return self._shape
+
+    def is_per_tensor(self) -> bool:
+        return len(self._shape) == 1 and next(iter(self._shape)) == 1
+
+    def __hash__(self):
+        return hash(self._shape)
+
+    def __eq__(self, other: "QuantizerScaleShape") -> bool:
+        return self._shape == other._shape

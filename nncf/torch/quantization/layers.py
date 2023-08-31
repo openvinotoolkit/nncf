@@ -31,6 +31,7 @@ from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.registry import Registry
@@ -996,7 +997,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         )
 
 
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None):
+def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None) -> QuantizerScaleShape:
     scale_shape = [1 for _ in input_shape]
     if channel_idx is None:
         if is_weights:
@@ -1004,10 +1005,10 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None
         else:
             channel_idx = 1  # Per activation channel scales
     scale_shape[channel_idx] = input_shape[channel_idx]
-    return scale_shape
+    return QuantizerScaleShape(scale_shape)
 
 
-def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool, channel_idx: int = None) -> List[int]:
+def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool, channel_idx: int = None) -> QuantizerScaleShape:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
     or derivatives.
@@ -1020,5 +1021,5 @@ def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
     :return: The shape for the quantizer's scale tensors.
     """
     if not per_channel:
-        return [1]
+        return QuantizerScaleShape([1])
     return get_per_channel_scale_shape(input_shape, is_weights, channel_idx)

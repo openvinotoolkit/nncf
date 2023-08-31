@@ -145,7 +145,7 @@ class TemplateTestSQAlgorithm:
             for reducer in backend_tensor_collector.reducers:
                 assert isinstance(reducer, AbsMaxReducer)
                 assert reducer.inplace == inplace_type
-                assert reducer._reduction_shape == reduction_shape
+                assert reducer._reduction_axes == reduction_shape
 
     @pytest.mark.parametrize(
         "model_cls, references",

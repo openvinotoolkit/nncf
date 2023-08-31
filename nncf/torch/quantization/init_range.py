@@ -25,6 +25,7 @@ from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
@@ -106,7 +107,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         self._input_shape = input_shape
         self._channel_idx = channel_idx
 
-    def convert_reduction_shape(self, per_sample_stats) -> ReductionAxes:
+    def get_reduction_axes(self, per_sample_stats: bool) -> ReductionAxes:
         """
         Calculates the reduction shape of the tensor.
 
@@ -155,7 +156,8 @@ class StatCollectorGenerator:
             retval[obs_p] = {}
             for scale_shape in scale_shapes_vs_params:
                 reduction_axes = get_reduction_axes_from_scale_shape(scale_shape)
-                retval[obs_p][scale_shape] = reduction_axes_vs_collector[reduction_axes]
+                reduction_shape = scale_shape.shape
+                retval[obs_p][reduction_shape] = reduction_axes_vs_collector[reduction_axes]
 
         return retval
 
@@ -172,7 +174,6 @@ class StatCollectorGenerator:
         if init_config.init_type not in RANGE_INIT_TYPES_VS_DESCRIPTIONS:
             raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
         if init_config.init_type == "min_max":
-            reduction_shape_converted = collector_params.convert_reduction_shape(per_sample_stats=False)  # TODO (vshampor): handle this
             return MinMaxStatisticCollector(
                 collector_params.use_abs_max, reduction_axes, num_samples
             )
@@ -207,7 +208,7 @@ class StatCollectorGenerator:
     @classmethod
     def get_all_scale_shapes_with_params(
         cls, qp: QuantizationPointBase, target_nncf_graph: PTNNCFGraph
-    ) -> Dict[Tuple[int], PTRangeInitCollectorParams]:
+    ) -> Dict[QuantizerScaleShape, PTRangeInitCollectorParams]:
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -222,11 +223,9 @@ class StatCollectorGenerator:
         retval = {}
         for qconfig in qconfigs:
             is_weights = qp.is_weight_quantization_point()
-            scale_shape = tuple(
-                get_scale_shape(
+            scale_shape = get_scale_shape(
                     input_shape, is_weights=is_weights, per_channel=qconfig.per_channel, channel_idx=channel_idx
                 )
-            )
 
             if scale_shape not in retval:
                 retval[scale_shape] = PTRangeInitCollectorParams(
@@ -292,7 +291,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
 
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
                 init_config,
-                get_reduction_axes_from_scale_shape(quantizer_module.scale_shape),
+                get_reduction_axes_from_scale_shape(QuantizerScaleShape(quantizer_module.scale_shape)),
                 collector_params, num_samples_override
             )
 
@@ -308,5 +307,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             target_stat = collector.get_statistics()
             minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
             quantizer_module.apply_minmax_init(
-                minmax_stats.min_values, minmax_stats.max_values, log_module_name=scope_str
+                minmax_stats.min_values.tensor,
+                minmax_stats.max_values.tensor,
+                log_module_name=scope_str
             )

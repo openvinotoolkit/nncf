@@ -31,9 +31,11 @@ from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertion
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import get_reduction_axes_from_scale_shape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.config import NNCFConfig
 from nncf.config.structures import QuantizationRangeInitArgs
@@ -793,7 +795,9 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
         )
 
         collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
-            range_init_config, tuple(quantizer.scale_shape), collector_params
+            range_init_config,
+            get_reduction_axes_from_scale_shape(QuantizerScaleShape(quantizer.scale_shape)),
+            collector_params
         )
         collector.register_input(PTNNCFTensor(torch.ones(test_struct.input_shape)))
         stat = collector.get_statistics()
