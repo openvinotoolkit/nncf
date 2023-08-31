@@ -10,6 +10,10 @@ ifdef DATA
 	DATA_ARG := --data $(DATA)
 endif
 
+ifdef WEEKLY_MODELS
+	WEEKLY_MODELS_ARG := --weekly-models $(WEEKLY_MODELS)
+endif
+
 install-pre-commit:
 	pip install pre-commit==3.2.2
 
@@ -130,7 +134,7 @@ test-torch-nightly:
 	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-weekly:
-	pytest ${COVERAGE_ARGS} tests/torch -m weekly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	pytest ${COVERAGE_ARGS} tests/torch -m weekly --junitxml ${JUNITXML_PATH} $(DATA_ARG) ${WEEKLY_MODELS_ARG}
 
 COMMON_PYFILES := $(shell python3 tools/collect_pylint_input_files_for_backend.py common)
 pylint-torch:

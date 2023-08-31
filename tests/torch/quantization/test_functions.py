@@ -585,7 +585,7 @@ class BaseParametrized:
 
 
 @pytest.mark.parametrize("input_size", [[1, 16, 64, 64], [4, 16, 16, 16]], ids=idfn)
-class TestParametrized(BaseParametrized):
+class TestParametrizedFast(BaseParametrized):
     pass
 
 
@@ -595,7 +595,7 @@ class TestParametrized(BaseParametrized):
     [[1, 48, 112, 112], [1, 96, 28, 28], [1, 288, 14, 14], [16, 96, 112, 112], [16, 192, 28, 28], [16, 576, 14, 14]],
     ids=idfn,
 )
-class TestParametrizedNightly(BaseParametrized):
+class TestParametrizedLong(BaseParametrized):
     pass
 
 
