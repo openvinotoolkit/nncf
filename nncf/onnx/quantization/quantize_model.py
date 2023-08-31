@@ -72,6 +72,12 @@ def quantize_impl(
     quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):
-        quantized_model = compress_quantize_weights_transformation(quantized_model)
+        try:
+            quantized_model = compress_quantize_weights_transformation(quantized_model)
+        except Exception:
+            nncf_logger.warning(
+                "Could not compress weights onto lower precision." "The model with Q/DQ nodes will be returned."
+            )
+            return quantized_model
 
     return quantized_model

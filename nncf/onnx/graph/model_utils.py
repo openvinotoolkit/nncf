@@ -61,34 +61,51 @@ def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx
     return model_transformer.transform(transformation_layout)
 
 
-def _get_q_linear_params(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Tuple[np.dtype, int, np.ndarray, np.ndarray]:
+def _get_q_linear_params(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Tuple[int, np.ndarray, np.ndarray]:
+    """
+    Returns axis, scale and zero_point parameters of QuantizeLinear node.
+
+    :param node: QuantizeLinear node.
+    :param onnx_graph: ONNXGraph.
+    :return: axis, scale, zero_point parameters of the node.
+    """
     assert node.op_type in ONNXQuantizeLinearMetatype.get_all_aliases()
     scale = onnx_graph.get_tensor_value(node.input[1])
     zero_point = onnx_graph.get_tensor_value(node.input[2])
-    dtype = zero_point.dtype
     axis = None
     for attr in node.attribute:
         if attr.name == "axis":
             axis = get_attribute_value(attr)
-    return dtype, axis, scale, zero_point
+    return axis, scale, zero_point
 
 
-def _get_input_q_linear_tensor(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> np.ndarray:
-    if not onnx_graph.has_tensor(node.input[0]):
-        e = onnx.utils.Extractor(onnx_graph.onnx_model)
-        extracted = e.extract_model([], [node.input[0]])
-        engine = ONNXEngine(extracted)
-        outputs = engine.infer({})
-        return outputs[node.input[0]]
-    return onnx_graph.get_tensor_value(node.input[0])
+def _get_input_constant_tensor(node: onnx.NodeProto, port_id: int, onnx_graph: ONNXGraph) -> np.ndarray:
+    """
+    Returns an input constant tensor of a node.
+    There are two cases:
+    1) if there is a constant tensor directly used as input to a node - then returns this tensor.
+    2) if there is a constant subgraph - extract this subgraph and infer subgraph returns an output tensor.
 
-
-def _update_initializer_value(initializer: onnx.TensorProto, new_value: np.ndarray) -> None:
-    int8_weight_tensor = numpy_helper.from_array(new_value, name=initializer.name)
-    initializer.CopyFrom(int8_weight_tensor)
+    :param node: ONNX node.
+    :param onnx_graph: ONNXGraph.
+    :return: Tensor value.
+    """
+    if onnx_graph.has_tensor(node.input[port_id]):
+        return onnx_graph.get_tensor_value(node.input[port_id])
+    extractor = onnx.utils.Extractor(onnx_graph.onnx_model)
+    constant_subgraph = extractor.extract_model([], [node.input[port_id]])
+    engine = ONNXEngine(constant_subgraph)
+    outputs = engine.infer({})
+    return outputs[node.input[port_id]]
 
 
 def remove_node(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> None:
+    """
+    Remove all parents node while saving
+
+    :param onnx.NodeProto node: _description_
+    :param ONNXGraph onnx_graph: _description_
+    """
     for i in range(len(node.input)):
         parent = onnx_graph.get_parent(node, i)
         if parent:
@@ -103,19 +120,25 @@ def remove_node(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> None:
 
 
 def compress_quantize_weights_transformation(model: onnx.ModelProto) -> onnx.ModelProto:
+    """
+    Returns model with compressed weights.
+    All QuantizeLinear nodes, which inputs constant tensor, are applied to original precision weight tensor and, then removed from a model.
+
+    :param model: ONNX model.
+    :return: ONNX model with conpressed weights.
+    """
     onnx_graph = ONNXGraph(model)
     for node in onnx_graph.get_all_nodes():
-        if node.op_type in ONNXQuantizeLinearMetatype.get_all_aliases() and get_tensor_edge_name(
-            onnx_graph, node=node, port_id=0
-        ):
-            original_weight = _get_input_q_linear_tensor(node, onnx_graph)
-            dtype, axis, scale, zero_point = _get_q_linear_params(node, onnx_graph)
-            int8_weight = quantize_tensor(original_weight, dtype, axis, scale, zero_point)
-
+        if node.op_type in ONNXQuantizeLinearMetatype.get_all_aliases():
             initializer_to_update_name = get_tensor_edge_name(onnx_graph, node=node, port_id=0)
-            initializer = onnx_graph.get_tensor(initializer_to_update_name)
-            _update_initializer_value(initializer, int8_weight)
-            remove_node(node, onnx_graph)
-            node.input[0] = initializer_to_update_name
+            if initializer_to_update_name:
+                original_precision_weight = _get_input_constant_tensor(node, 0, onnx_graph)
+                axis, scale, zero_point = _get_q_linear_params(node, onnx_graph)
+                quantized_weight = quantize_tensor(original_precision_weight, axis, scale, zero_point)
 
+                initializer = onnx_graph.get_tensor(initializer_to_update_name)
+                int8_weight_tensor = numpy_helper.from_array(quantized_weight, name=initializer.name)
+                initializer.CopyFrom(int8_weight_tensor)
+                remove_node(node, onnx_graph)
+                node.input[0] = initializer_to_update_name
     return model

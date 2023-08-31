@@ -105,16 +105,24 @@ def calculate_scale_zero_point(
     return scale, zero_point
 
 
-def quantize_tensor(weight, dtype, axis, scale, zero_point, low=None, high=None):
-    cliplow = max(0 if dtype == np.uint8 else -127, -127 if low is None else low)
-    cliphigh = min(255 if dtype == np.uint8 else 127, 255 if high is None else high)
-    arr_fp32 = []
-    if axis is not None:
-        for idx, subarray in enumerate(np.moveaxis(weight, axis, 0)):
-            arr_fp32.append(np.asarray((subarray.astype(np.float32) / scale[idx]).round() + zero_point[idx]))
-        arr_fp32 = np.array(arr_fp32)
-        arr_fp32 = np.moveaxis(arr_fp32, 0, axis)
+def quantize_tensor(
+    weight: np.ndarray,
+    axis: int,
+    scale: np.ndarray,
+    zero_point: np.ndarray,
+    level_low: int = -127,
+    level_high: int = 255,
+):
+    dtype = zero_point.dtype
+    level_low = max(0 if dtype == np.uint8 else -127, level_low)
+    level_high = min(255 if dtype == np.uint8 else 127, level_high)
+    if axis is None or scale.ndim == 0:
+        result = (weight.astype(np.float32) / scale).round() + zero_point
     else:
-        arr_fp32 = np.asarray((weight.astype(np.float32) / scale).round() + zero_point)
-    arr_fp32 = np.clip(arr_fp32, cliplow, cliphigh)
-    return arr_fp32.astype(dtype)
+        moved_axis_weight = np.moveaxis(weight, axis, 0)
+        result = np.empty_like(moved_axis_weight)
+        for idx, subarray in enumerate(moved_axis_weight):
+            result[idx] = (subarray.astype(np.float32) / scale[idx]).round() + zero_point[idx]
+        result = np.moveaxis(result, 0, axis)
+    result = np.clip(result, level_low, level_high)
+    return result.astype(dtype)
