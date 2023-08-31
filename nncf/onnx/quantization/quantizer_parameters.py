@@ -117,12 +117,12 @@ def quantize_tensor(
     level_low = max(0 if dtype == np.uint8 else -127, level_low)
     level_high = min(255 if dtype == np.uint8 else 127, level_high)
     if axis is None or scale.ndim == 0:
-        result = (weight.astype(np.float32) / scale).round() + zero_point
+        result = np.round(weight / scale) + zero_point
     else:
         moved_axis_weight = np.moveaxis(weight, axis, 0)
         result = np.empty_like(moved_axis_weight)
         for idx, subarray in enumerate(moved_axis_weight):
-            result[idx] = (subarray.astype(np.float32) / scale[idx]).round() + zero_point[idx]
+            result[idx] = np.round(subarray / scale[idx]) + zero_point[idx]
         result = np.moveaxis(result, 0, axis)
     result = np.clip(result, level_low, level_high)
     return result.astype(dtype)
