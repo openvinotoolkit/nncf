@@ -32,15 +32,16 @@ from nncf.common.tensor_statistics.statistics import TensorStatistic
 ReductionAxes = Tuple[int]
 ReductionShape = Tuple[int]
 
+REDUCE_TO_SCALAR_REDUCTION_SHAPE = (-1,)
 
 def get_reduction_axes_from_scale_shape(scale_shape: QuantizerScaleShape) -> ReductionAxes:
     if scale_shape.is_per_tensor():
-        return (-1, )
+        return REDUCE_TO_SCALAR_REDUCTION_SHAPE
     return tuple(i for i, dim in enumerate(scale_shape.shape) if dim == 1)
 
 
 def is_reduce_to_scalar(reduction_axes: ReductionAxes) -> bool:
-    return reduction_axes == (-1, )
+    return reduction_axes == REDUCE_TO_SCALAR_REDUCTION_SHAPE
 
 
 def get_reduction_shape_from_sample_shape(sample_shape: List[int], reduction_axes: ReductionAxes) -> ReductionShape:
