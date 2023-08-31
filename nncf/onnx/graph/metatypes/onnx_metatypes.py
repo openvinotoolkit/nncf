@@ -16,6 +16,9 @@ import onnx
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
+from nncf.onnx.graph.metatypes.groups import CONSTANT_WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
+from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry("onnx_operator_metatypes")
@@ -610,24 +613,6 @@ class ONNXDeformableConvolutionMetatype(ONNXOpMetatype):
     op_names = ["DeformConv"]
 
 
-CONSTANT_WEIGHT_LAYER_METATYPES = [
-    ONNXConvolutionMetatype,
-    ONNXDepthwiseConvolutionMetatype,
-    ONNXConvolutionTransposeMetatype,
-    ONNXEmbeddingMetatype,
-]
-
-MATMUL_METATYPES = [ONNXGemmMetatype, ONNXMatMulMetatype]
-
-GENERAL_WEIGHT_LAYER_METATYPES = CONSTANT_WEIGHT_LAYER_METATYPES + MATMUL_METATYPES
-
-# Contains the operation metatypes for which bias can be applied.
-OPERATIONS_WITH_BIAS_METATYPES = [
-    ONNXConvolutionMetatype,
-    ONNXDepthwiseConvolutionMetatype,
-]
-
-
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
@@ -685,7 +670,7 @@ def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int
     :param node: Node, for which input port id is returned,
     :return: Input port id, where a weight bias should output or None if node can not have bias.
     """
-    if metatype in OPERATIONS_WITH_BIAS_METATYPES:
+    if metatype in OPERATIONS_WITH_BIAS:
         return metatype.bias_port_id
     return None
 
