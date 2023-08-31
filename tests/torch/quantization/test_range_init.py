@@ -802,8 +802,8 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
         collector.register_input(PTNNCFTensor(torch.ones(test_struct.input_shape)))
         stat = collector.get_statistics()
         minmax_values = MinMaxTensorStatistic.from_stat(stat)
-        quantizer.apply_minmax_init(min_values=minmax_values.min_values.tensor,
-                                    max_values=minmax_values.max_values.tensor)
+        quantizer.apply_minmax_init(min_values=minmax_values.min_values.tensor.reshape(quantizer.scale_shape),
+                                    max_values=minmax_values.max_values.tensor.reshape(quantizer.scale_shape))
 
         assert quantizer.scale_shape == test_struct.ref_scale_shape
         if quantization_mode == QuantizationMode.SYMMETRIC:

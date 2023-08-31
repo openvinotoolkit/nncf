@@ -41,8 +41,8 @@ from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.tensor import TFNNCFTensor
 from nncf.tensorflow.tensor_statistics.algo import get_collection_hook
-from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_activations
-from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_weights
+from nncf.tensorflow.tensor_statistics.reduction import get_reduction_axes_activations
+from nncf.tensorflow.tensor_statistics.reduction import get_reduction_axes_weights
 
 
 class TFRangeInitParams(RangeInitParams):
@@ -101,7 +101,7 @@ class RangeInitializer:
 
     @staticmethod
     def generate_stat_collector(
-        reduction_shape: ReductionAxes,
+        reduction_axes: ReductionAxes,
         collector_params: RangeInitCollectorParams,
         init_config: RangeInitConfig,
         num_samples_to_collect_override: int = None,
@@ -112,33 +112,33 @@ class RangeInitializer:
             num_samples = num_samples_to_collect_override
 
         if range_type == "min_max":
-            return MinMaxStatisticCollector(collector_params.use_abs_max, reduction_shape, num_samples)
+            return MinMaxStatisticCollector(collector_params.use_abs_max, reduction_axes, num_samples)
         if range_type == "mixed_min_max":
             return MixedMinMaxStatisticCollector(
                 collector_params.use_per_sample_stats(per_sample_stats=True),
                 collector_params.use_abs_max,
                 collector_params.use_means_of_mins,
                 collector_params.use_means_of_maxs,
-                reduction_shape,
+                reduction_axes,
                 num_samples,
             )
         if range_type == "mean_min_max":
             return MeanMinMaxStatisticCollector(
                 collector_params.use_per_sample_stats(per_sample_stats=True),
                 collector_params.use_abs_max,
-                reduction_shape,
+                reduction_axes,
                 num_samples,
             )
         if range_type == "threesigma":
-            return MedianMADStatisticCollector(reduction_shape, num_samples)
+            return MedianMADStatisticCollector(reduction_axes, num_samples)
         if range_type == "percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", MIN_PERCENTILE)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", MAX_PERCENTILE)
-            return PercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return PercentileStatisticCollector([min_percentile, max_percentile], reduction_axes, num_samples)
         if range_type == "mean_percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", MIN_PERCENTILE)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", MAX_PERCENTILE)
-            return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_axes, num_samples)
         raise ValueError(f"Range type {range_type} is not supported.")
 
     def _register_layer_statistics(self, layer: tf.keras.layers.Layer, layer_statistics: list, handles: list):
@@ -149,14 +149,14 @@ class RangeInitializer:
         collector_params = RangeInitCollectorParams(is_weights, layer.mode, layer.per_channel)
         per_sample_stats = init_config.init_type in ["mixed_min_max", "mean_min_max"]
 
-        reduction_shape = get_reduction_shape_activations(
+        reduction_axes = get_reduction_axes_activations(
             layer, channel_axes, collector_params.use_per_sample_stats(per_sample_stats)
         )
 
         num_batches = int(np.ceil(init_config.num_init_samples / self.dataset.batch_size))
 
         collector = RangeInitializer.generate_stat_collector(
-            reduction_shape, collector_params, init_config, num_batches
+            reduction_axes, collector_params, init_config, num_batches
         )
 
         hook = get_collection_hook(collector)
@@ -177,13 +177,13 @@ class RangeInitializer:
                     is_weights = True
                     collector_params = RangeInitCollectorParams(is_weights, op.mode, op.per_channel)
 
-                    reduction_shape = get_reduction_shape_weights(layer, weight_attr, channel_axes, op.per_channel)
+                    reduction_axes = get_reduction_axes_weights(layer, weight_attr, channel_axes, op.per_channel)
 
                     # No need to store extra statistics in memory since weights won't change during range init
                     num_batches = 1
 
                     collector = RangeInitializer.generate_stat_collector(
-                        reduction_shape, collector_params, init_config, num_batches
+                        reduction_axes, collector_params, init_config, num_batches
                     )
 
                     hook = get_collection_hook(collector)

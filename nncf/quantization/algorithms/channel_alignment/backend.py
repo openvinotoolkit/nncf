@@ -21,6 +21,7 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
 
@@ -99,12 +100,12 @@ class ChannelAlignmentAlgoBackend:
     @staticmethod
     @abstractmethod
     def get_statistic_collector(
-        reduction_shape, q: float, num_samples: int, inplace: bool
+        reduction_axes: ReductionAxes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
         """
         Get backend-specific tensor collector that collects medians of minimal and maximal quantiles.
 
-        :param reduction_shape: Target reduction shape for the reduction.
+        :param reduction_axes: Target reduction shape for the reduction.
         :param q: Minimal quantile for the tensor collector.
         :param num_samples: Num samples to collect by the tensor collector.
         :param inplace: Should statistic be calculated inplace or out of place.

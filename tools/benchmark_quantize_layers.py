@@ -179,7 +179,7 @@ def get_module(params_struct: ParamStruct) -> BaseQuantizer:
         1,
     ]
     if params_struct.granularity == GranularityType.PER_CHANNEL:
-        scale_shape = get_per_channel_scale_shape(input_shape, is_weights=is_weights)
+        scale_shape = get_per_channel_scale_shape(input_shape, is_weights=is_weights).shape
     specs = DefaultedPTQuantizerSpec(scale_shape=scale_shape, narrow_range=params_struct.narrow_range, num_bits=NBITS)
 
     module_cls = SymmetricQuantizer if params_struct.symmetric else AsymmetricQuantizer

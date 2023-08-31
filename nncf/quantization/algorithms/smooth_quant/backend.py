@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.utils.registry import Registry
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 
@@ -71,7 +72,7 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_channel_agnostic_reduction_shape(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
+    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> ReductionAxes:
         """
         Returns filtered reduction shape without axes that corresponds channels.
 
@@ -83,12 +84,12 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_shape: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         """
         Returns TensorCollector with MaxAggregator and AbsMaxReducer.
 
-        :param stats_reduction_shape: Calculated reduction shape.
+        :param stats_reduction_axes: Calculated reduction shape.
         :param inplace: Whether to calculate statistic inplace or not.
         :param branch_key: Specific string for branch key.
         :return: TensorCollector instance.

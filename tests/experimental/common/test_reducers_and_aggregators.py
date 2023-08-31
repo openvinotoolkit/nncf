@@ -99,9 +99,9 @@ class TestReducersAggreagtors:
         ],
     )
     def test_min_max_mean_reducers(self, reducer_name, ref, reducers):
-        reduction_shape = (1, 2)
+        reduction_axes = (1, 2)
         input_ = np.arange(-26, 10).reshape((4, 3, 3))
-        for i, red_shape in enumerate([reduction_shape, None]):
+        for i, red_shape in enumerate([reduction_axes, None]):
             reducer = reducers[reducer_name](red_shape, False)
             val = reducer([NPNNCFTensor(input_)])
             assert len(val) == 1
@@ -115,11 +115,11 @@ class TestReducersAggreagtors:
         ],
     )
     def test_quantile_reducers(self, reducer_name, ref, reducers):
-        reduction_shape = (1, 2, 3)
+        reduction_axes = (1, 2, 3)
         input_ = np.arange(-26, 10).reshape((1, 4, 3, 3))
         input_[0][0][0] = -20000
         input_[0][0][1] = 10000
-        reducer = reducers[reducer_name](reduction_shape, inplace=False)
+        reducer = reducers[reducer_name](reduction_axes, inplace=False)
         val = reducer([NPNNCFTensor(input_)])
         assert len(val) == len(ref)
         for i, ref_ in enumerate(ref):
@@ -259,10 +259,10 @@ class TestReducersAggreagtors:
 
         params = {}
         if reducer_name in ["min", "max", "abs_max", "mean"]:
-            params["reduction_shape"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["inplace"] = [False, True]
         elif reducer_name in ["quantile", "abs_quantile"]:
-            params["reduction_shape"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif reducer_name == "batch_mean":
             params["inplace"] = [False, True]

@@ -26,35 +26,22 @@ def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple
     return axes
 
 
-def get_reduction_shape_activations(
+def get_reduction_axes_activations(
     layer: tf.keras.layers.Layer, channel_axes: Union[int, tuple, list], use_per_sample_stats: bool
 ) -> ReductionAxes:
     ndims = len(layer.get_input_shape_at(0))
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
-    reduction_shape = get_axes(ndims, layer.per_channel, channel_axes_)
+    reduction_axes = get_axes(ndims, layer.per_channel, channel_axes_)
     if use_per_sample_stats:
-        reduction_shape = reduction_shape[1:]
-    return tuple(reduction_shape)
+        reduction_axes = reduction_axes[1:]
+    return tuple(reduction_axes)
 
 
-def get_reduction_shape_weights(
+def get_reduction_axes_weights(
     layer: tf.keras.layers.Layer, weight_attr: str, channel_axes: Union[int, tuple, list], per_channel: bool
 ) -> ReductionAxes:
     weight_shape = get_weight_shape(layer, weight_attr)
     ndims = len(weight_shape)
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
-    reduction_shape = get_axes(ndims, per_channel, channel_axes_)
-    return tuple(reduction_shape)
-
-
-def convert_rs_to_pt_type(input_shape: Tuple[int], reduction_shape: ReductionAxes) -> ReductionAxes:
-    if len(reduction_shape) == len(input_shape):
-        pt_reduction_shape = [1]
-    else:
-        pt_reduction_shape = []
-        for dim_idx, dim in enumerate(input_shape):
-            if dim_idx in reduction_shape:
-                pt_reduction_shape.append(1)
-            else:
-                pt_reduction_shape.append(dim)
-    return tuple(pt_reduction_shape)
+    reduction_axes = get_axes(ndims, per_channel, channel_axes_)
+    return tuple(reduction_axes)

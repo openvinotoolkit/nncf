@@ -51,12 +51,12 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionAxes,
+        reduction_axes: ReductionAxes,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> TensorCollector:
-        return get_mean_stat_collector(num_samples, reduction_shape, window_size, inplace)
+        return get_mean_stat_collector(num_samples, reduction_axes, window_size, inplace)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: ov.Model) -> Tuple[str, str]:

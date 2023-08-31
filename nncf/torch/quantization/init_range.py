@@ -115,13 +115,13 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         :return: Shape to reduce to.
         """
         ndims = len(self._input_shape)
-        reduction_shape = list(range(ndims))  # type: List[int]
+        reduction_axes = list(range(ndims))  # type: List[int]
         if self._per_channel:
             val = (ndims + self._channel_idx) % ndims
-            reduction_shape.remove(val)
+            reduction_axes.remove(val)
         if self.use_per_sample_stats(per_sample_stats):
-            reduction_shape = reduction_shape[1:]  # Assumes batch is the first dimension
-        return tuple(reduction_shape)
+            reduction_axes = reduction_axes[1:]  # Assumes batch is the first dimension
+        return tuple(reduction_axes)
 
 
 class StatCollectorGenerator:
@@ -307,7 +307,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             target_stat = collector.get_statistics()
             minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
             quantizer_module.apply_minmax_init(
-                minmax_stats.min_values.tensor,
-                minmax_stats.max_values.tensor,
+                minmax_stats.min_values.tensor.reshape(quantizer_module.scale_shape),
+                minmax_stats.max_values.tensor.reshape(quantizer_module.scale_shape),
                 log_module_name=scope_str
             )

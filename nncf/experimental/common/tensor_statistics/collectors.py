@@ -14,6 +14,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from collections import deque
 from typing import Any, Deque, Dict, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Type
 
 from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.common.tensor_statistics.collectors import ReductionAxes
@@ -94,7 +95,7 @@ class TensorReducerBase(ABC):
     def __hash__(self) -> int:
         return hash((self.__class__.__name__, self.inplace, self._reduction_axes))
 
-    def _get_reduction_shape(self, tensor: NNCFTensor) -> Union[int, Tuple[int, ...]]:
+    def _get_reduction_axes(self, tensor: NNCFTensor) -> Union[int, Tuple[int, ...]]:
         if self._reduction_axes is not None:
             return self._reduction_axes
         return tuple(range(len(tensor.shape)))
@@ -212,7 +213,7 @@ class TensorCollector:
     a dict could be collected by `get_statistics` call.
     """
 
-    def __init__(self, statistic_container: Optional[TensorStatistic] = None) -> None:
+    def __init__(self, statistic_container: Optional[Type[TensorStatistic]] = None) -> None:
         self._reducers: Set[TensorReducerBase] = set()
         self._aggregators: Dict[AggregatorKey, TensorAggregatorBase] = {}
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int]] = {}
@@ -447,17 +448,17 @@ class NoopReducer(TensorReducerBase):
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
-        reduction_shape = self._get_reduction_shape(x)
+        reduction_axes = self._get_reduction_axes(x)
         backend = x.backend
-        return [backend.amin(x, axis=reduction_shape, keepdims=True)]
+        return [backend.amin(x, axis=reduction_axes, keepdims=True)]
 
 
 class MaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
-        reduction_shape = self._get_reduction_shape(x)
+        reduction_axes = self._get_reduction_axes(x)
         backend = x.backend
-        return [backend.amax(x, axis=reduction_shape, keepdims=True)]
+        return [backend.amax(x, axis=reduction_axes, keepdims=True)]
 
 
 class AbsMaxReducer(TensorReducerBase):
@@ -465,16 +466,16 @@ class AbsMaxReducer(TensorReducerBase):
         x = x[0]
         backend = x.backend
         x = backend.abs(x)
-        reduction_shape = self._get_reduction_shape(x)
-        return [backend.amax(x, axis=reduction_shape, keepdims=True)]
+        reduction_axes = self._get_reduction_axes(x)
+        return [backend.amax(x, axis=reduction_axes, keepdims=True)]
 
 
 class MeanReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
         backend = x.backend
-        reduction_shape = self._get_reduction_shape(x)
-        return [backend.mean(x, reduction_shape, keepdims=True)]
+        reduction_axes = self._get_reduction_axes(x)
+        return [backend.mean(x, reduction_axes, keepdims=True)]
 
 
 class QuantileReducerBase(TensorReducerBase):
@@ -497,9 +498,9 @@ class QuantileReducerBase(TensorReducerBase):
 class QuantileReducer(QuantileReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
-        reduction_shape = self._get_reduction_shape(x)
+        reduction_axes = self._get_reduction_axes(x)
         backend = x.backend
-        return [t for t in backend.quantile(x, self._quantile, reduction_shape, keepdims=True)]
+        return [t for t in backend.quantile(x, self._quantile, reduction_axes, keepdims=True)]
 
 
 class AbsQuantileReducer(QuantileReducerBase):
@@ -515,8 +516,8 @@ class AbsQuantileReducer(QuantileReducerBase):
         x = x[0]
         backend = x.backend
         x = backend.abs(x)
-        reduction_shape = self._get_reduction_shape(x)
-        return [backend.quantile(x, self._quantile, reduction_shape, keepdims=True)]
+        reduction_axes = self._get_reduction_axes(x)
+        return [backend.quantile(x, self._quantile, reduction_axes, keepdims=True)]
 
 
 class BatchMeanReducer(TensorReducerBase):

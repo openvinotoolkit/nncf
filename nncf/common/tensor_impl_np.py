@@ -223,10 +223,14 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def amin(tensor: NPNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> NPNNCFTensor:
+        if keepdims is None:
+            keepdims = np._NoValue
         return NPNNCFTensor(np.amin(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def amax(tensor: NPNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> NPNNCFTensor:
+        if keepdims is None:
+            keepdims = np._NoValue
         return NPNNCFTensor(np.amax(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod

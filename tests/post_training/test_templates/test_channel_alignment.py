@@ -488,16 +488,16 @@ class TemplateTestChannelAlignment:
     @pytest.mark.parametrize("inplace_ref", [False, True])
     @pytest.mark.parametrize("q_ref", [1e-4, 0.3])
     def test_statistic_collectors(self, inplace_ref, q_ref):
-        reduction_shape_ref = (0, 2, 3)
+        reduction_axes_ref = (0, 2, 3)
         num_samples_ref = 123
         statistic_collector: TensorCollector = self.get_backend_cls().get_statistic_collector(
-            reduction_shape=reduction_shape_ref, q=q_ref, num_samples=num_samples_ref, inplace=inplace_ref
+            reduction_axes=reduction_axes_ref, q=q_ref, num_samples=num_samples_ref, inplace=inplace_ref
         )
 
         assert len(statistic_collector.reducers) == 1
         reducer = statistic_collector.reducers.pop()
         assert isinstance(reducer, QuantileReducer)
-        assert reducer._reduction_axes == reduction_shape_ref
+        assert reducer._reduction_axes == reduction_axes_ref
         assert np.allclose(reducer._quantile, (q_ref, 1 - q_ref))
 
         assert len(statistic_collector.aggregators) == 2

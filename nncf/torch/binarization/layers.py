@@ -106,7 +106,7 @@ class ActivationBinarizationScaleThreshold(ActivationBinarizer):
 
         threshold_shape = get_per_channel_scale_shape(self.input_shape, is_weights=False)
         self.threshold = CompressionParameter(
-            torch.ones(threshold_shape), requires_grad=enabled, compression_lr_multiplier=compression_lr_multiplier
+            torch.ones(threshold_shape.shape), requires_grad=enabled, compression_lr_multiplier=compression_lr_multiplier
         )
         self.threshold.data.zero_()
         self.bin = activation_bin_scale_threshold_op

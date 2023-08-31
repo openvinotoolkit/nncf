@@ -39,7 +39,7 @@ class TestCollectedStatistics:
     ]
 
     @pytest.mark.parametrize(
-        ("collector", "reduction_shapes_vs_ref_statistic"),
+        ("collector", "reduction_axes_vs_ref_statistic"),
         [
             (
                 MinMaxStatisticCollector,
@@ -109,18 +109,18 @@ class TestCollectedStatistics:
     def test_collected_statistics_with_shape_convert(
         self,
         collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
+        reduction_axes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
-        for shapes in reduction_shapes_vs_ref_statistic.keys():
+        for shapes in reduction_axes_vs_ref_statistic.keys():
             output_shape, reduction_shape = shapes
             collector_obj = collector(use_abs_max=True, reduction_axes=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(input_)
             test_stats = collector_obj.get_statistics()
-            assert reduction_shapes_vs_ref_statistic[shapes] == test_stats
+            assert reduction_axes_vs_ref_statistic[shapes] == test_stats
 
     @pytest.mark.parametrize(
-        ("collector", "reduction_shapes_vs_ref_statistic"),
+        ("collector", "reduction_axes_vs_ref_statistic"),
         [
             (
                 MedianMADStatisticCollector,
@@ -189,15 +189,15 @@ class TestCollectedStatistics:
     def test_collected_statistics(
         self,
         collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
+        reduction_axes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
     ):
-        for shapes in reduction_shapes_vs_ref_statistic.keys():
+        for shapes in reduction_axes_vs_ref_statistic.keys():
             reduction_shape = shapes
             collector_obj = collector(reduction_axes=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(input_)
             test_stats = collector_obj.get_statistics()
-            assert reduction_shapes_vs_ref_statistic[shapes] == test_stats
+            assert reduction_axes_vs_ref_statistic[shapes] == test_stats
 
     COLLECTORS = [
         partial(MinMaxStatisticCollector, use_abs_max=False, output_shape=(1,)),

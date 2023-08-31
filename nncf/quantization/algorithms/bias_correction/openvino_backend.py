@@ -66,12 +66,12 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionAxes,
+        reduction_axes: ReductionAxes,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> TensorCollector:
-        return get_mean_stat_collector(num_samples, reduction_shape, window_size, inplace)
+        return get_mean_stat_collector(num_samples, reduction_axes, window_size, inplace)
 
     @staticmethod
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> TensorCollector:

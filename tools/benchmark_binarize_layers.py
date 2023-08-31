@@ -118,7 +118,7 @@ def get_test_scale(num_channels):
 def get_test_threshold(input_shape):
     torch.manual_seed(0)
     threshold_shape = get_per_channel_scale_shape(input_shape, is_weights=False)
-    retval = torch.Tensor(torch.zeros(threshold_shape))
+    retval = torch.Tensor(torch.zeros(threshold_shape.shape))
     retval.random_(-10, 10)
     return retval
 

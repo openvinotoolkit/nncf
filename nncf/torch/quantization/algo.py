@@ -818,7 +818,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             build_time_range_init_params=self._range_init_params,
         )
 
-    def __create_quantize_module(self, quantizer_spec: PTQuantizerSpec):
+    def __create_quantize_module(self, quantizer_spec: PTQuantizerSpec) -> BaseQuantizer:
         quantizer_cls = QUANTIZATION_MODULES.get(quantizer_spec.mode)
         return quantizer_cls(quantizer_spec)
 
@@ -1186,10 +1186,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             # AMP autocast model (and therefore be FP16 since AMP autocast switches precision of activations
             # at forward pass time)
             own_type = get_model_dtype(target_model)
-            min_values = range_init_minmax_values[0].type(own_type)
-            max_values = range_init_minmax_values[1].type(own_type)
+            min_values = range_init_minmax_values[0].type(own_type).reshape(quantizer.scale_shape)
+            max_values = range_init_minmax_values[1].type(own_type).reshape(quantizer.scale_shape)
 
-            quantizer.apply_minmax_init(min_values=min_values, max_values=max_values, log_module_name=str(primary_ip))
+            quantizer.apply_minmax_init(min_values=min_values,
+                                        max_values=max_values, log_module_name=str(primary_ip))
 
         qids = []  # type: List[QuantizerId]
         for ip in insertion_points:

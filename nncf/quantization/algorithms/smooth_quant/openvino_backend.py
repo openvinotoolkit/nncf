@@ -18,11 +18,12 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
@@ -61,15 +62,15 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return {"activation": activation_ports[0], "weight": weight_ports[0]}
 
     @staticmethod
-    def get_channel_agnostic_reduction_shape(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
-        return get_channel_agnostic_reduction_shape([channel_axis], shape)
+    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> ReductionAxes:
+        return get_channel_agnostic_reduction_axes([channel_axis], shape)
 
     @staticmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_shape: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
-        reducer = OVAbsMaxReducer(stats_reduction_shape, inplace)
+        reducer = OVAbsMaxReducer(stats_reduction_axes, inplace)
         aggregator = MaxAggregator(num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector

@@ -59,12 +59,12 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionAxes,
+        reduction_axes: ReductionAxes,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> MeanStatisticCollector:
-        return MeanStatisticCollector(reduction_shape, num_samples, window_size)
+        return MeanStatisticCollector(reduction_axes, num_samples, window_size)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: onnx.ModelProto) -> Tuple[str, str]:

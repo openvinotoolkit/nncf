@@ -39,7 +39,7 @@ class TestCollectedStatistics:
     ]
 
     @pytest.mark.parametrize(
-        ("collector", "reduction_shapes_vs_ref_statistic"),
+        ("collector", "reduction_axes_vs_ref_statistic"),
         [
             (
                 MinMaxStatisticCollector,
@@ -109,18 +109,18 @@ class TestCollectedStatistics:
     def test_collected_statistics_with_shape_convert(
         self,
         collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
+        reduction_axes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
-        for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
-            collector_obj = collector(use_abs_max=True, reduction_axes=reduction_shape)
+        for reduction_axes in reduction_axes_vs_ref_statistic.keys():
+            collector_obj = collector(use_abs_max=True, reduction_axes=reduction_axes)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(TFNNCFTensor(input_))
             test_stats = collector_obj.get_statistics()
-            ref_stats = reduction_shapes_vs_ref_statistic[reduction_shape]
+            ref_stats = reduction_axes_vs_ref_statistic[reduction_axes]
             assert ref_stats == test_stats
 
     @pytest.mark.parametrize(
-        ("collector", "reduction_shapes_vs_ref_statistic"),
+        ("collector", "reduction_axes_vs_ref_statistic"),
         [
             (
                 MedianMADStatisticCollector,
@@ -188,14 +188,14 @@ class TestCollectedStatistics:
     def test_collected_statistics(
         self,
         collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
+        reduction_axes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
     ):
-        for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
-            collector_obj = collector(reduction_axes=reduction_shape)
+        for reduction_axes in reduction_axes_vs_ref_statistic.keys():
+            collector_obj = collector(reduction_axes=reduction_axes)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(TFNNCFTensor(input_))
             test_stats = collector_obj.get_statistics()
-            assert reduction_shapes_vs_ref_statistic[reduction_shape] == test_stats
+            assert reduction_axes_vs_ref_statistic[reduction_axes] == test_stats
 
     COLLECTORS = [
         partial(MinMaxStatisticCollector, use_abs_max=False),
@@ -215,7 +215,7 @@ class TestCollectedStatistics:
     @pytest.fixture(params=COLLECTORS)
     def collector_for_interface_test(self, request):
         collector_type = request.param
-        return collector_type(reduction_shape=(1,))
+        return collector_type(reduction_axes=(1,))
 
     def test_collected_samples(self, collector_for_interface_test: TensorStatisticCollectorBase):
         for input_ in TestCollectedStatistics.REF_INPUTS:
@@ -263,7 +263,7 @@ class TestCollectedStatistics:
     @pytest.fixture(params=OFFLINE_COLLECTORS)
     def collector_for_num_samples_test(self, request):
         collector_type = request.param
-        return collector_type(reduction_shape=(1,), num_samples=TestCollectedStatistics.REF_NUM_SAMPLES)
+        return collector_type(reduction_axes=(1,), num_samples=TestCollectedStatistics.REF_NUM_SAMPLES)
 
     def test_num_samples(self, collector_for_num_samples_test: OfflineTensorStatisticCollector):
         for input_ in TestCollectedStatistics.REF_INPUTS * 10:

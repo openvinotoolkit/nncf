@@ -21,20 +21,20 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.hardware.config import OVHWConfig
 from nncf.openvino.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
@@ -111,7 +111,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def _get_reduction_shape_and_use_abs_max(
+    def _get_reduction_axes_and_use_abs_max(
         nncf_graph: NNCFGraph, target_point: OVTargetPoint, quantizer_config: QuantizerConfig
     ) -> Tuple[ReductionAxes, bool]:
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
@@ -129,7 +129,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
             # TODO (l-bat): Disable quantizer propogation through layout changing operations
             channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
-            axes = get_channel_agnostic_reduction_shape([channel_axis], shape)
+            axes = get_channel_agnostic_reduction_axes([channel_axis], shape)
             return axes, use_abs_max
 
         assert isinstance(node.layer_attributes, OVLayerAttributes)
@@ -137,7 +137,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         if quantizer_config.per_channel:
             channel_axes = get_weight_channel_axes(node, target_point.port_id)
-            axes = get_channel_agnostic_reduction_shape(channel_axes, const_shape)
+            axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
         else:
             axes = tuple(range(len(const_shape)))
         return axes, use_abs_max
@@ -151,14 +151,14 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: int = None,
     ) -> TensorCollector:
-        reduction_shape, use_abs_max = OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(
+        reduction_axes, use_abs_max = OVMinMaxAlgoBackend._get_reduction_axes_and_use_abs_max(
             nncf_graph, target_point, quantizer_config
         )
 
-        collector = TensorCollector(OVMinMaxTensorStatistic)
+        collector = TensorCollector(MinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
-            [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT],
+            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
         ):
             if not params.statistics_type in OV_REDUCERS_MAP:
                 raise RuntimeError(
@@ -170,9 +170,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                     f"Aggregator type: {params.aggregator_type} is not supported for OpenVino PTQ backend yet."
                 )
 
-            kwargs = {"reduction_shape": reduction_shape, "inplace": inplace}
+            kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
             if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-                if container_key == OVMinMaxTensorStatistic.MIN_STAT:
+                if container_key == MinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
