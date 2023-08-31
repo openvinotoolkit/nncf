@@ -42,9 +42,7 @@ def get_callbacks(
     return callbacks
 
 
-def get_progress_bar(stateful_metrics: list = None):
-    # TODO: This is a workaround for tf2.4.0. Remove when fixed
-    stateful_metrics = stateful_metrics or []
+def get_progress_bar(stateful_metrics: list):
     stateful_metrics.extend(["val_" + metric_name for metric_name in stateful_metrics])
     return tf.keras.callbacks.ProgbarLogger(count_mode="steps", stateful_metrics=stateful_metrics)
 
