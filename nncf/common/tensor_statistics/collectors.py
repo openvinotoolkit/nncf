@@ -155,11 +155,11 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
     def _register_input(self, x: NNCFTensor):
         backend = x.backend
         axis = self._get_axis()
-        min_reduced = backend.amin(x, axis=axis)
+        min_reduced = backend.amin(x, axis=axis, keepdims=True)
 
         if self._use_abs_max:
             x = backend.abs(x)
-        max_reduced = backend.amax(x, axis=axis)
+        max_reduced = backend.amax(x, axis=axis, keepdims=True)
 
         if self._min_values is None:
             self._min_values = min_reduced
