@@ -18,6 +18,7 @@ from typing import Type
 
 from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.collectors import is_reduce_to_scalar
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.quantization.advanced_parameters import AggregatorType
 
@@ -95,10 +96,8 @@ class TensorReducerBase(ABC):
     def __hash__(self) -> int:
         return hash((self.__class__.__name__, self.inplace, self._reduction_axes))
 
-    def _get_reduction_axes(self, tensor: NNCFTensor) -> Union[int, Tuple[int, ...]]:
-        if self._reduction_axes is not None:
-            return self._reduction_axes
-        return tuple(range(len(tensor.shape)))
+    def _get_axis(self, tensor: NNCFTensor) -> Optional[ReductionAxes]:
+        return self._reduction_axes if not is_reduce_to_scalar(self._reduction_axes) else None
 
 
 class Aggregator(abc.ABC):
@@ -448,17 +447,17 @@ class NoopReducer(TensorReducerBase):
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
-        reduction_axes = self._get_reduction_axes(x)
+        axis = self._get_axis(x)
         backend = x.backend
-        return [backend.amin(x, axis=reduction_axes)]
+        return [backend.amin(x, axis=axis)]
 
 
 class MaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
-        reduction_axes = self._get_reduction_axes(x)
+        axis = self._get_axis(x)
         backend = x.backend
-        return [backend.amax(x, axis=reduction_axes)]
+        return [backend.amax(x, axis=axis)]
 
 
 class AbsMaxReducer(TensorReducerBase):
@@ -466,16 +465,16 @@ class AbsMaxReducer(TensorReducerBase):
         x = x[0]
         backend = x.backend
         x = backend.abs(x)
-        reduction_axes = self._get_reduction_axes(x)
-        return [backend.amax(x, axis=reduction_axes, keepdims=True)]
+        axis = self._get_axis(x)
+        return [backend.amax(x, axis=axis, keepdims=True)]
 
 
 class MeanReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
         backend = x.backend
-        reduction_axes = self._get_reduction_axes(x)
-        return [backend.mean(x, reduction_axes, keepdims=True)]
+        axis = self._get_axis(x)
+        return [backend.mean(x, axis, keepdims=True)]
 
 
 class QuantileReducerBase(TensorReducerBase):
@@ -498,9 +497,9 @@ class QuantileReducerBase(TensorReducerBase):
 class QuantileReducer(QuantileReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
-        reduction_axes = self._get_reduction_axes(x)
+        axis = self._get_axis(x)
         backend = x.backend
-        return [t for t in backend.quantile(x, self._quantile, reduction_axes, keepdims=True)]
+        return [t for t in backend.quantile(x, self._quantile, axis=axis, keepdims=True)]
 
 
 class AbsQuantileReducer(QuantileReducerBase):
@@ -516,8 +515,8 @@ class AbsQuantileReducer(QuantileReducerBase):
         x = x[0]
         backend = x.backend
         x = backend.abs(x)
-        reduction_axes = self._get_reduction_axes(x)
-        return [backend.quantile(x, self._quantile, reduction_axes, keepdims=True)]
+        axis = self._get_axis(x)
+        return [backend.quantile(x, self._quantile, axis=axis, keepdims=True)]
 
 
 class BatchMeanReducer(TensorReducerBase):
