@@ -17,7 +17,6 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from nncf import nncf_logger
 from nncf.common.utils.os import is_windows
 
 
@@ -111,18 +110,6 @@ class Command:
 
     def get_execution_time(self):
         return self.exec_time
-
-    def retries_run(self, timeout=3600, num_retries=3):
-        """
-        Runs a command until command return zero, with a maximum of `num_retries` attempts.
-        """
-        for i in range(num_retries):
-            nncf_logger.info(f"Try {i+1} from {num_retries}:")
-            returncode = self.run(timeout=timeout, assert_returncode_zero=False)
-            if returncode == 0:
-                return
-
-        raise RuntimeError(f"Command failed after {num_retries} retries")
 
 
 def arg_list_from_arg_dict(dct: Dict[str, Any]) -> List[str]:

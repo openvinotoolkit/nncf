@@ -124,7 +124,13 @@ install-torch-dev: install-torch-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
 test-torch:
-	pytest ${COVERAGE_ARGS} tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	pytest ${COVERAGE_ARGS} tests/common tests/torch -m "not weekly and not nightly" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+
+test-torch-nightly:
+	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+
+test-torch-weekly:
+	pytest ${COVERAGE_ARGS} tests/torch -m weekly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 COMMON_PYFILES := $(shell python3 tools/collect_pylint_input_files_for_backend.py common)
 pylint-torch:
