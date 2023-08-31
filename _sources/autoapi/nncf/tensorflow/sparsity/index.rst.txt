@@ -1,3 +1,5 @@
+:orphan:
+
 :py:mod:`nncf.tensorflow.sparsity`
 ==================================
 
@@ -7,15 +9,5 @@
 
    Backend-specific implementations of sparsity algorithms.
 
-
-
-Subpackages
------------
-.. toctree::
-   :titlesonly:
-   :maxdepth: 3
-
-   magnitude/index.rst
-   rb/index.rst
 
 
