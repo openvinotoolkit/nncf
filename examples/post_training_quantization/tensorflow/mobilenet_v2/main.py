@@ -18,7 +18,6 @@ from typing import List, Optional
 import openvino.runtime as ov
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from keras.utils import data_utils
 from openvino.tools import mo
 from tqdm import tqdm
 
@@ -113,7 +112,7 @@ def preprocess_for_eval(image, label):
 val_dataset = tfds.load("imagenette/320px-v2", split="validation", shuffle_files=False, as_supervised=True)
 val_dataset = val_dataset.map(preprocess_for_eval).batch(128)
 
-weights_path = data_utils.get_file("mobilenet_v2_imagenette_weights.h5", WEIGHTS_URL, cache_subdir="models")
+weights_path = tf.keras.utils.get_file("mobilenet_v2_imagenette_weights.h5", WEIGHTS_URL, cache_subdir="models")
 tf_model = tf.keras.applications.MobileNetV2(weights=weights_path, classes=DATASET_CLASSES)
 
 ###############################################################################
