@@ -235,9 +235,9 @@ def compress_weights(model: TModel) -> TModel:
     """
     backend = get_backend(model)
     if backend == BackendType.TORCH:
-        import nncf.torch
+        from nncf.torch.quantization.quantize_model import compress_weights_impl
 
-        return nncf.torch.compress_weights(model)
+        return compress_weights_impl(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl
 

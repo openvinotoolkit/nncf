@@ -260,7 +260,7 @@ def quantize_impl(
     return compressed_model
 
 
-def compress_weights(model: torch.nn.Module) -> torch.nn.Module:
+def compress_weights_impl(model: torch.nn.Module) -> torch.nn.Module:
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.
     """
