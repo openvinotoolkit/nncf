@@ -479,7 +479,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.POST_LAYER_OPERATION,
                 ref_values=MEAN_ACT_AXIS_0_REF,
                 ref_observed_shape=(1, 3, 3, 3),
-                channel_axis=0,
+                channel_axis=None,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
@@ -487,7 +487,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.POST_LAYER_OPERATION,
                 ref_values=MEAN_ACT_AXIS_0_REF,
                 ref_observed_shape=(1, 3, 3, 3),
-                channel_axis=0,
+                channel_axis=None,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
@@ -531,7 +531,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.OPERATION_WITH_WEIGHTS,
                 ref_values=MEAN_WEIGHTS_AXIS_0_REF,
                 ref_observed_shape=(3, 3, 3, 3),
-                channel_axis=0,
+                channel_axis=None,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
@@ -539,7 +539,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.OPERATION_WITH_WEIGHTS,
                 ref_values=MEAN_WEIGHTS_AXIS_0_REF,
                 ref_observed_shape=(3, 3, 3, 3),
-                channel_axis=0,
+                channel_axis=None,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
@@ -584,8 +584,11 @@ class TemplateTestStatisticsAggregator:
         }
         algo_backend = name_to_algo_backend_map[params.algo]()
         if params.collector_type == self.BCStatsCollectors.MEAN:
-            ref_observed_shape = params.ref_observed_shape
-            reduction_axes = tuple(i for i, _ in enumerate(ref_observed_shape) if i != params.channel_axis)
+            if params.channel_axis is None:
+                reduction_axes = (0, )  # batch mean
+            else:
+                ref_observed_shape = params.ref_observed_shape
+                reduction_axes = tuple(i for i, _ in enumerate(ref_observed_shape) if i != params.channel_axis)
             tensor_collector = algo_backend.mean_statistic_collector(
                 reduction_axes, inplace_statistics, len(dataset_samples)
             )
