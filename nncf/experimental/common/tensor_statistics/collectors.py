@@ -450,7 +450,7 @@ class MinReducer(TensorReducerBase):
         x = x[0]
         reduction_axes = self._get_reduction_axes(x)
         backend = x.backend
-        return [backend.amin(x, axis=reduction_axes, keepdims=True)]
+        return [backend.amin(x, axis=reduction_axes)]
 
 
 class MaxReducer(TensorReducerBase):
@@ -458,7 +458,7 @@ class MaxReducer(TensorReducerBase):
         x = x[0]
         reduction_axes = self._get_reduction_axes(x)
         backend = x.backend
-        return [backend.amax(x, axis=reduction_axes, keepdims=True)]
+        return [backend.amax(x, axis=reduction_axes)]
 
 
 class AbsMaxReducer(TensorReducerBase):

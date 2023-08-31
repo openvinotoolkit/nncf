@@ -84,11 +84,6 @@ class TemplateTestStatisticsAggregator:
 
     @abstractmethod
     @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        pass
-
-    @abstractmethod
-    @pytest.fixture
     def dataset_samples(self):
         pass
 
@@ -376,7 +371,6 @@ class TemplateTestStatisticsAggregator:
         self,
         test_parameters: MinMaxTestParameters,
         dataset_samples,
-        is_stat_in_shape_of_scale,
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
@@ -428,17 +422,12 @@ class TemplateTestStatisticsAggregator:
             # Torch and Openvino backends tensor collectors return values in shape of scale
             # in comparison to ONNX backends.
             ref_min_val, ref_max_val = test_parameters.ref_min_val, test_parameters.ref_max_val
-            if isinstance(ref_min_val, np.ndarray) and is_stat_in_shape_of_scale:
-                shape = (1, 3, 1, 1)
-                if test_parameters.target_type == TargetType.OPERATION_WITH_WEIGHTS:
-                    shape = (3, 1, 1, 1)
-                ref_min_val, ref_max_val = map(lambda x: np.reshape(x, shape), (ref_min_val, ref_max_val))
 
             assert np.allclose(stat.min_values.to_numpy(), ref_min_val)
             assert np.allclose(stat.max_values.to_numpy(), ref_max_val)
             if isinstance(ref_min_val, np.ndarray):
-                assert stat.min_values.shape == ref_min_val.shape
-                assert stat.max_values.shape == ref_max_val.shape
+                assert tuple(stat.min_values.shape) == ref_min_val.shape
+                assert tuple(stat.max_values.shape) == ref_max_val.shape
 
     class BiasCorrectionAlgos(Enum):
         BIAS_CORRECTION = "bias_correction"
@@ -454,7 +443,7 @@ class TemplateTestStatisticsAggregator:
         collector_type: "BCStatsCollectors"
         target_type: TargetType
         ref_values: Any = None
-        axis: int = 1
+        channel_axis: int = 1
 
     MEAN_ACT_AXIS_0_REF = np.array(
         [
@@ -485,42 +474,42 @@ class TemplateTestStatisticsAggregator:
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
                 (MEAN_ACT_AXIS_0_REF, (1, 3, 3, 3)),
-                axis=0,
+                channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
                 (MEAN_ACT_AXIS_0_REF, (1, 3, 3, 3)),
-                axis=0,
+                channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
                 (np.array((0.0, 0.45, 0.5)), (1, 3, 3, 3)),
-                axis=1,
+                channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
                 (np.array((0.0, 0.45, 0.5)), (1, 3, 3, 3)),
-                axis=1,
+                channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
                 (np.array([-0.04999995, 0.5, 0.5]), (1, 3, 3, 3)),
-                axis=2,
+                channel_axis=2,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.POST_LAYER_OPERATION,
                 (np.array([-0.04999995, 0.5, 0.5]), (1, 3, 3, 3)),
-                axis=2,
+                channel_axis=2,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION, BCStatsCollectors.RAW, TargetType.POST_LAYER_OPERATION
@@ -531,47 +520,47 @@ class TemplateTestStatisticsAggregator:
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
                 (MEAN_WEIGHTS_AXIS_0_REF, (3, 3, 3, 3)),
-                axis=0,
+                channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
                 (MEAN_WEIGHTS_AXIS_0_REF, (3, 3, 3, 3)),
-                axis=0,
+                channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
                 (np.array([-0.36666664, -0.36666664, -0.36666664]), (3, 3, 3, 3)),
-                axis=1,
+                channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
                 (np.array([-0.36666664, -0.36666664, -0.36666664]), (3, 3, 3, 3)),
-                axis=1,
+                channel_axis=1,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
                 (np.array([-1.1, 0.0, 0.0]), (3, 3, 3, 3)),
-                axis=2,
+                channel_axis=2,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
                 BCStatsCollectors.MEAN,
                 TargetType.OPERATION_WITH_WEIGHTS,
                 (np.array([-1.1, 0.0, 0.0]), (3, 3, 3, 3)),
-                axis=2,
+                channel_axis=2,
             ),
         ],
     )
     def test_statistics_aggregator_bias_correction(
-        self, dataset_samples, test_params: BCTestParameters, inplace_statistics, is_stat_in_shape_of_scale
+        self, dataset_samples, test_params: BCTestParameters, inplace_statistics
     ):
         name_to_algo_backend_map = {
             self.BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
@@ -579,8 +568,10 @@ class TemplateTestStatisticsAggregator:
         }
         algo_backend = name_to_algo_backend_map[test_params.algo]()
         if test_params.collector_type == self.BCStatsCollectors.MEAN:
+            ref_shape = test_params.ref_values[1]
+            reduction_axes = tuple(i for i, _ in enumerate(ref_shape) if i != test_params.channel_axis)
             tensor_collector = algo_backend.mean_statistic_collector(
-                test_params.axis, inplace_statistics, len(dataset_samples)
+                reduction_axes, inplace_statistics, len(dataset_samples)
             )
         elif test_params.collector_type == self.BCStatsCollectors.RAW:
             tensor_collector = algo_backend.raw_statistic_collector(inplace_statistics, len(dataset_samples))
@@ -621,9 +612,6 @@ class TemplateTestStatisticsAggregator:
                     test_params.ref_values = [np.expand_dims(arr, 0) for arr in dataset_samples]
                 else:
                     test_params.ref_values = dataset_samples
-                if not is_stat_in_shape_of_scale:
-                    backend = next(iter(ret_val)).backend
-                    ret_val = [backend.squeeze(x) for x in ret_val]
             else:
                 raise RuntimeError()
 

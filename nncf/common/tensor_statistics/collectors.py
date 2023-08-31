@@ -305,19 +305,9 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
 
     def _register_input(self, x: NNCFTensor):
         backend = x.backend
-        if is_reduce_to_scalar(self._reduction_axes):
-            self._all_values.append(backend.mean(x, keepdims=True))
-        else:
-            self._all_values.append(self._mean_per_channel(x, self._reduction_axes))
+        axis = self._get_axis()
+        self._all_values.append(backend.mean(x, axis=axis, keepdims=True))
         self._all_shapes.append(x.shape)
-
-    def _mean_per_channel(self, x: NNCFTensor, reduction_axes: ReductionAxes) -> NNCFTensor:
-        backend = x.backend
-        if len(x.shape) < 3:
-            return backend.mean(x, axis=0)
-        x = backend.moveaxis(x, reduction_axes, 1)
-        t = x.reshape(x.shape[0], x.shape[1], -1)
-        return backend.mean(t, axis=(0, 2))
 
     def _reset(self):
         self._all_values.clear()

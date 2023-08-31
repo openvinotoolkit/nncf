@@ -30,6 +30,8 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import get_reduction_axes_from_scale_shape
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -213,7 +215,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _default_collector_params_and_scale_shape(
         nncf_graph: NNCFGraph, target_point: PTTargetPoint, quantizer_config: QuantizerConfig
-    ) -> Tuple[PTRangeInitCollectorParams, Tuple[int, ...]]:
+    ) -> Tuple[PTRangeInitCollectorParams, QuantizerScaleShape]:
         input_shape, scale_shape, channel_idx = PTMinMaxAlgoBackend._get_input_scale_shape(
             nncf_graph, target_point, quantizer_config
         )
@@ -235,13 +237,14 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         num_samples: int = None,
-    ) -> MeanMinMaxStatisticCollector:
+    ) -> TensorStatisticCollectorBase:
         collector_params, scale_shape = PTMinMaxAlgoBackend._default_collector_params_and_scale_shape(
             nncf_graph, target_point, quantizer_config
         )
         init_config = RangeInitConfig(collector_name, num_samples)
+        reduction_axes = get_reduction_axes_from_scale_shape(scale_shape)
         return StatCollectorGenerator.generate_stat_collector_for_range_init_config(
-            init_config, scale_shape, collector_params, num_samples
+            init_config, reduction_axes, collector_params, num_samples
         )
 
     @staticmethod
