@@ -231,8 +231,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 0.55, 64.5)),
-                    np.array((-4.5, 0.0, -63.5)),
+                    np.array((1, 0.55, 64.5)).reshape([1, 3, 1, 1]),
+                    np.array((-4.5, 0.0, -63.5)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -241,8 +241,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((5.5, 1.0, 64.5)),
-                    np.array((-4.5, 0.0, -63.5)),
+                    np.array((5.5, 1.0, 64.5)).reshape([1, 3, 1, 1]),
+                    np.array((-4.5, 0.0, -63.5)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -271,8 +271,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 0, 0)),
-                    np.array((0, 0, 0)),
+                    np.array((1, 0, 0)).reshape([1, 3, 1, 1]),
+                    np.array((0, 0, 0)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -281,8 +281,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((0, 1, 0)),
-                    np.array((0, 0, 0)),
+                    np.array((0, 1, 0)).reshape([1, 3, 1, 1]),
+                    np.array((0, 0, 0)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -311,8 +311,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((0.96, 0.546, 59.38)),
-                    np.array((-4.100e00, 4.000e-02, -5.838e01)),
+                    np.array((0.96, 0.546, 59.38)).reshape([1, 3, 1, 1]),
+                    np.array((-4.100e00, 4.000e-02, -5.838e01)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -321,8 +321,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((0.96, 0.546, 59.38)),
-                    np.array((-4.100e00, 4.000e-02, -5.838e01)),
+                    np.array((0.96, 0.546, 59.38)).reshape([1, 3, 1, 1]),
+                    np.array((-4.100e00, 4.000e-02, -5.838e01)).reshape([1, 3, 1, 1]),
                 )
             ),
             # Weight collectors

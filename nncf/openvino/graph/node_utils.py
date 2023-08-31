@@ -364,7 +364,7 @@ def get_channel_agnostic_reduction_axes(channel_axes: List[int], shape: List[int
     reduction_axes = list(range(len(shape)))
     for channel_axis in sorted(channel_axes, reverse=True):
         del reduction_axes[channel_axis]
-    return reduction_axes
+    return tuple(reduction_axes)
 
 
 def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:
