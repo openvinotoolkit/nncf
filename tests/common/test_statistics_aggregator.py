@@ -422,8 +422,6 @@ class TemplateTestStatisticsAggregator:
         for tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
             assert isinstance(stat, MinMaxTensorStatistic)
-            # Torch and Openvino backends tensor collectors return values in shape of scale
-            # in comparison to ONNX backends.
             ref_min_val, ref_max_val = test_parameters.ref_min_val, test_parameters.ref_max_val
 
             assert np.allclose(stat.min_values.to_numpy(), ref_min_val)
@@ -637,9 +635,9 @@ class TemplateTestStatisticsAggregator:
                 else:
                     params.ref_values = dataset_samples
                 for test_val, ref_val in zip(stat.values, params.ref_values):
-                    np_tested_val = test_val.to_numpy()
-                    assert np_tested_val.shape == ref_val.shape
-                    assert np.allclose(test_val, ref_val)
+                    test_stat_value = test_val.to_numpy()
+                    assert test_stat_value.shape == ref_val.shape
+                    assert np.allclose(test_stat_value, ref_val)
             else:
                 raise RuntimeError()
 
