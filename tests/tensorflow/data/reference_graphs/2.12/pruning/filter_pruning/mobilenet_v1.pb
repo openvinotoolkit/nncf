@@ -1,1 +1,1 @@
-../../../2.8/pruning/filter_pruning/mobilenet_v1.pb
+../../../2.11/pruning/filter_pruning/mobilenet_v1.pb

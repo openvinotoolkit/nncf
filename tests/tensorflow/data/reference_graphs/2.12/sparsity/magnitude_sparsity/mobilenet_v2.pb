@@ -1,1 +1,1 @@
-../../../2.5/sparsity/magnitude_sparsity/mobilenet_v2.pb
+../../../2.11/sparsity/magnitude_sparsity/mobilenet_v2.pb
