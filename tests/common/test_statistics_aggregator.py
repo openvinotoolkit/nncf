@@ -151,8 +151,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 0.55, 64.5)),
-                    np.array((-4.5, 0, -63.5)),
+                    np.array((1, 0.55, 64.5)).reshape([1, 3, 1, 1]),
+                    np.array((-4.5, 0, -63.5)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -161,8 +161,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((5.5, 1, 64.5)),
-                    np.array((-4.5, 0, -63.5)),
+                    np.array((5.5, 1, 64.5)).reshape([1, 3, 1, 1]),
+                    np.array((-4.5, 0, -63.5)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -191,8 +191,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 1, 128)),
-                    np.array((-10, -1, -128)),
+                    np.array((1, 1, 128)).reshape([1, 3, 1, 1]),
+                    np.array((-10, -1, -128)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -201,8 +201,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.POST_LAYER_OPERATION,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((10, 1, 128)),
-                    np.array((-10, -1, -128)),
+                    np.array((10, 1, 128)).reshape([1, 3, 1, 1]),
+                    np.array((-10, -1, -128)).reshape([1, 3, 1, 1]),
                 )
             ),
             (
@@ -354,8 +354,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.OPERATION_WITH_WEIGHTS,
                     QuantizationMode.SYMMETRIC,
                     True,
-                    np.array((10, 1, 128)),
-                    np.array((-10, -1, -128)),
+                    np.array((10, 1, 128)).reshape([3, 1, 1, 1]),
+                    np.array((-10, -1, -128)).reshape([3, 1, 1, 1]),
                 )
             ),
             (
@@ -364,8 +364,8 @@ class TemplateTestStatisticsAggregator:
                     TargetType.OPERATION_WITH_WEIGHTS,
                     QuantizationMode.ASYMMETRIC,
                     True,
-                    np.array((1, 0.1, 128)),
-                    np.array((-10, -1, -128)),
+                    np.array((1, 0.1, 128)).reshape([3, 1, 1, 1]),
+                    np.array((-10, -1, -128)).reshape([3, 1, 1, 1]),
                 )
             ),
         ),
@@ -424,11 +424,12 @@ class TemplateTestStatisticsAggregator:
             assert isinstance(stat, MinMaxTensorStatistic)
             ref_min_val, ref_max_val = test_parameters.ref_min_val, test_parameters.ref_max_val
 
-            assert np.allclose(stat.min_values.to_numpy(), ref_min_val)
-            assert np.allclose(stat.max_values.to_numpy(), ref_max_val)
             if isinstance(ref_min_val, np.ndarray):
                 assert tuple(stat.min_values.shape) == ref_min_val.shape
                 assert tuple(stat.max_values.shape) == ref_max_val.shape
+
+            assert np.allclose(stat.min_values.to_numpy(), ref_min_val)
+            assert np.allclose(stat.max_values.to_numpy(), ref_max_val)
 
     class BiasCorrectionAlgos(Enum):
         BIAS_CORRECTION = "bias_correction"
