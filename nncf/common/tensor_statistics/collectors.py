@@ -301,13 +301,13 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         """
         super().__init__(reduction_axes, num_samples)
         self._all_values: Deque[NNCFTensor] = deque(maxlen=window_size)
-        self._all_shapes: Deque[List[int]] = deque(maxlen=window_size)
+        self._all_shapes: Deque[Tuple[int]] = deque(maxlen=window_size)
 
     def _register_input(self, x: NNCFTensor):
         backend = x.backend
         axis = self._get_axis()
         self._all_values.append(backend.mean(x, axis=axis, keepdims=True))
-        self._all_shapes.append(x.shape)
+        self._all_shapes.append(tuple(x.shape))
 
     def _reset(self):
         self._all_values.clear()
