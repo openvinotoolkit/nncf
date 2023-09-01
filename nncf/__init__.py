@@ -11,6 +11,7 @@
 """
 Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.
 """
+
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import disable_logging
 from nncf.common.logging.logger import set_log_level
@@ -32,13 +33,20 @@ _SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
 
 
 from importlib.util import find_spec as _find_spec  # pylint:disable=wrong-import-position
+from pathlib import Path as _Path
 
 _AVAILABLE_FRAMEWORKS = {}
 
 for fw_name in _SUPPORTED_FRAMEWORKS:
     spec = _find_spec(fw_name)
-    # if the framework is not present, spec may still be not None because it found our nncf.*backend_name* subpackage
-    framework_present = spec is not None and spec.origin is not None and "nncf" not in spec.origin
+    framework_present = False
+    if spec is not None and spec.origin is not None:
+        origin_path = _Path(spec.origin)
+        here = _Path(__file__)
+        if origin_path not in here.parents:
+            # if the framework is not present, spec may still be not None because
+            # it found our nncf.*backend_name* subpackage, and spec.origin will point to a folder in NNCF code
+            framework_present = True
     _AVAILABLE_FRAMEWORKS[fw_name] = framework_present
 
 if not any(_AVAILABLE_FRAMEWORKS.values()):
