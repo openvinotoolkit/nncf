@@ -115,8 +115,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(statistic.max_values)
-            min_values.append(statistic.min_values)
+            max_values.append(statistic.max_values.flatten())
+            min_values.append(statistic.min_values.flatten())
         max_values = np.max(max_values, axis=0)
         min_values = np.min(min_values, axis=0)
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
