@@ -291,7 +291,8 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     """
 
     def __init__(
-        self, reduction_axes: ReductionAxes, num_samples: Optional[int] = None, window_size: Optional[int] = None
+        self, reduction_axes: ReductionAxes = None, channel_axis: int = None,
+            num_samples: Optional[int] = None, window_size: Optional[int] = None
     ) -> None:
         """
         :param reduction_axes: The shape for the reduction while statistics collection.
@@ -300,14 +301,26 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
             the number of samples that will be processed.
         :param window_size: Optional maximum length for the statistic collection
         """
+        if reduction_axes is None and channel_axis is None:
+            raise RuntimeError("Either reduction_axes or channel_axis must be specified")
+
+        if reduction_axes is not None and channel_axis is not None:
+            raise RuntimeError("reduction_axes or channel_axis cannot be specified at the same time")
+
         super().__init__(reduction_axes, num_samples)
+        self._channel_axis = channel_axis
         self._all_values: Deque[NNCFTensor] = deque(maxlen=window_size)
         self._all_shapes: Deque[Tuple[int]] = deque(maxlen=window_size)
 
     def _register_input(self, x: NNCFTensor):
         backend = x.backend
-        axis = self._get_axis()
-        self._all_values.append(backend.mean(x, axis=axis, keepdims=True))
+        if self._reduction_axes is not None:
+            axis = self._get_axis()
+        else:  # self._channel_axis is not None
+            shape = x.shape
+            axis = (i for i in range(len(shape)) if i != self._channel_axis)
+        reduced = backend.mean(x, axis=axis, keepdims=True)
+        self._all_values.append(reduced)
         self._all_shapes.append(tuple(x.shape))
 
     def _reset(self):

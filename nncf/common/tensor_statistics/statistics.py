@@ -13,6 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections import Counter
 from typing import Dict, List, TypeVar
+from typing import Tuple
 
 from nncf.common.tensor import NNCFTensor
 
@@ -75,7 +76,7 @@ class MeanTensorStatistic(TensorStatistic):
     Base class for the statistics that collects as mean per-axis
     """
 
-    def __init__(self, mean_values: NNCFTensor, shape: List[int]):
+    def __init__(self, mean_values: NNCFTensor, shape: Tuple[int]):
         """
         :param mean_values: Collected mean per-axis values.
         :param shape: The shape of the collected statistics.

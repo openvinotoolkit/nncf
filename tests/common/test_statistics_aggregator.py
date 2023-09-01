@@ -583,13 +583,8 @@ class TemplateTestStatisticsAggregator:
         }
         algo_backend = name_to_algo_backend_map[params.algo]()
         if params.collector_type == self.BCStatsCollectors.MEAN:
-            if params.channel_axis is None:
-                reduction_axes = (0, )  # batch mean
-            else:
-                ref_observed_shape = params.ref_observed_shape
-                reduction_axes = tuple(i for i, _ in enumerate(ref_observed_shape) if i != params.channel_axis)
             tensor_collector = algo_backend.mean_statistic_collector(
-                reduction_axes, inplace_statistics, len(dataset_samples)
+                params.channel_axis, inplace_statistics, len(dataset_samples)
             )
         elif params.collector_type == self.BCStatsCollectors.RAW:
             tensor_collector = algo_backend.raw_statistic_collector(inplace_statistics, len(dataset_samples))

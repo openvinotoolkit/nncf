@@ -151,7 +151,7 @@ class FastBiasCorrection(Algorithm):
 
             in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, graph)
 
-            input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
+            input_fp, input_shapes = self._get_fp_inputs(statistic_points, in_node_name)
             output_fp = self._get_fp_outputs(statistic_points, out_node_name)
 
             extracted_model = self._extract_submodel(model_transformer, node_name)
@@ -163,7 +163,7 @@ class FastBiasCorrection(Algorithm):
                 # Make index positive
                 channel_axis = range(bias_value.ndim)[channel_axis]
             input_blob = self._backend_entity.create_input_data(
-                input_shape, [t.tensor for t in input_fp], sub_input_name, channel_axis
+                input_shapes[0], [t.tensor for t in input_fp], sub_input_name, channel_axis
             )
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
@@ -221,7 +221,7 @@ class FastBiasCorrection(Algorithm):
 
     def _get_fp_inputs(
         self, statistic_points: StatisticPointsContainer, node_name: str
-    ) -> Tuple[List[NNCFTensor], List[NNCFTensor]]:
+    ) -> Tuple[List[NNCFTensor], List[Tuple[int, ...]]]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 
@@ -243,8 +243,8 @@ class FastBiasCorrection(Algorithm):
         ):
             statistics = tensor_collector.get_statistics()
             assert isinstance(statistics, MeanTensorStatistic)
-            input_fp.extend(statistics.mean_values)
-            input_shape.extend(statistics.observed_shape)
+            input_fp.append(statistics.mean_values)
+            input_shape.append(tuple(statistics.observed_shape))
         return input_fp, input_shape
 
     def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[NNCFTensor]:
@@ -285,16 +285,16 @@ class FastBiasCorrection(Algorithm):
         extracted_model = model_transformer.transform(me_transformation_layout)
         return extracted_model
 
-    def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, axis: int) -> None:
+    def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, channel_axis: int) -> None:
         """
         Adds specific statistic point.
 
         :param container: StatisticPointsContainer instance.
         :param point: TargetPoint for statistic collection.
-        :param axis: Channel axis for the statistics calculation.
+        :param channel_axis: Channel axis for the statistics calculation.
         """
         stat_collector = self._backend_entity.mean_statistic_collector(
-            reduction_axes=axis, num_samples=self.subset_size, inplace=self.inplace_statistics
+            channel_axis=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
         )
         container.add_statistic_point(
             StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=self._algorithm_key)
