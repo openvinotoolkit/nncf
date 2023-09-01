@@ -62,6 +62,7 @@ class PostTrainingQuantization(Algorithm):
         fast_bias_correction: bool = True,
         model_type: Optional[ModelType] = None,
         ignored_scope: Optional[IgnoredScope] = None,
+        dump_intermediate_models: bool = True,
         advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
     ):
         """
@@ -86,75 +87,86 @@ class PostTrainingQuantization(Algorithm):
             fine-tuning the quantization algorithm
         """
         super().__init__()
+        self.preset = preset
+        self.target_device = target_device
+        self.subset_size = subset_size
+        self.fast_bias_correction = fast_bias_correction
+        self.model_type = model_type
+        self.ignored_scope = ignored_scope
+        self.dump_intermediate_models = dump_intermediate_models
+        self.advanced_parameters = advanced_parameters
+        self.reset()
+
+    def reset(self):
         self.algorithms = []
         self.first_stage_algorithms: List[self.FirstStageAlgorithm] = []
 
-        if target_device is TargetDevice.VPU:
+        if self.target_device is TargetDevice.VPU:
             warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
-        if advanced_parameters is None:
-            advanced_parameters = AdvancedQuantizationParameters()
+        if self.advanced_parameters is None:
+            self.advanced_parameters = AdvancedQuantizationParameters()
 
-        if model_type == ModelType.TRANSFORMER:
+        if self.model_type == ModelType.TRANSFORMER:
             smooth_quant_algorithm = SmoothQuant(
-                subset_size=subset_size,
-                inplace_statistics=advanced_parameters.inplace_statistics,
-                alpha=advanced_parameters.smooth_quant_alpha,
+                subset_size=self.subset_size,
+                inplace_statistics=self.advanced_parameters.inplace_statistics,
+                alpha=self.advanced_parameters.smooth_quant_alpha,
             )
             self.first_stage_algorithms.append(self.FirstStageAlgorithm(smooth_quant_algorithm, []))
 
-        if not advanced_parameters.disable_channel_alignment:
+        if not self.advanced_parameters.disable_channel_alignment:
             channel_alignment = ChannelAlignment(
-                subset_size=subset_size,
-                inplace_statistics=advanced_parameters.inplace_statistics,
-                backend_params=advanced_parameters.backend_params,
+                subset_size=self.subset_size,
+                inplace_statistics=self.advanced_parameters.inplace_statistics,
+                backend_params=self.advanced_parameters.backend_params,
             )
             self.first_stage_algorithms.append(self.FirstStageAlgorithm(channel_alignment, [insert_null_biases_pass]))
 
         min_max_quantization = MinMaxQuantization(
-            preset=preset,
-            target_device=target_device,
-            subset_size=subset_size,
-            model_type=model_type,
-            ignored_scope=ignored_scope,
-            overflow_fix=advanced_parameters.overflow_fix,
-            quantize_outputs=advanced_parameters.quantize_outputs,
-            inplace_statistics=advanced_parameters.inplace_statistics,
-            activations_quantization_params=advanced_parameters.activations_quantization_params,
-            weights_quantization_params=advanced_parameters.weights_quantization_params,
-            activations_range_estimator_params=advanced_parameters.activations_range_estimator_params,
-            weights_range_estimator_params=advanced_parameters.weights_range_estimator_params,
-            backend_params=advanced_parameters.backend_params,
+            preset=self.preset,
+            target_device=self.target_device,
+            subset_size=self.subset_size,
+            model_type=self.model_type,
+            ignored_scope=self.ignored_scope,
+            overflow_fix=self.advanced_parameters.overflow_fix,
+            quantize_outputs=self.advanced_parameters.quantize_outputs,
+            inplace_statistics=self.advanced_parameters.inplace_statistics,
+            activations_quantization_params=self.advanced_parameters.activations_quantization_params,
+            weights_quantization_params=self.advanced_parameters.weights_quantization_params,
+            activations_range_estimator_params=self.advanced_parameters.activations_range_estimator_params,
+            weights_range_estimator_params=self.advanced_parameters.weights_range_estimator_params,
+            backend_params=self.advanced_parameters.backend_params,
         )
 
         self.algorithms.append(min_max_quantization)
 
-        if advanced_parameters.disable_bias_correction:
+        if self.advanced_parameters.disable_bias_correction:
             return
 
-        bias_correction_params = advanced_parameters.bias_correction_params
-        if fast_bias_correction:
+        bias_correction_params = self.advanced_parameters.bias_correction_params
+        if self.fast_bias_correction:
             threshold = FAST_BIAS_CORRECTION_THRESHOLD
             if bias_correction_params.threshold is not None:
                 threshold = bias_correction_params.threshold
             bias_correction = FastBiasCorrection(
-                subset_size=subset_size,
+                subset_size=self.subset_size,
                 threshold=threshold,
                 apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
-                inplace_statistics=advanced_parameters.inplace_statistics,
-                backend_params=advanced_parameters.backend_params,
+                inplace_statistics=self.advanced_parameters.inplace_statistics,
+                backend_params=self.advanced_parameters.backend_params,
             )
         else:
             threshold = BIAS_CORRECTION_THRESHOLD
             if bias_correction_params.threshold is not None:
                 threshold = bias_correction_params.threshold
-            bias_correction_subset_size = max(int(subset_size * 0.2), 1)
+            bias_correction_subset_size = max(int(self.subset_size * 0.2), 1)
             bias_correction = BiasCorrection(
                 subset_size=bias_correction_subset_size,
                 threshold=threshold,
                 apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
-                inplace_statistics=advanced_parameters.inplace_statistics,
-                backend_params=advanced_parameters.backend_params,
+                inplace_statistics=self.advanced_parameters.inplace_statistics,
+                backend_params=self.advanced_parameters.backend_params,
             )
 
         self.algorithms.append(bias_correction)
@@ -162,6 +174,30 @@ class PostTrainingQuantization(Algorithm):
     @property
     def available_backends(self) -> Dict[str, BackendType]:
         return
+
+    def _set_backend_entity(self, model: TModel) -> None:
+        """
+        Creates a helper class with a backed-specific logic of the algorithm
+
+        :param model: backend-specific input model
+        """
+        model_backend = get_backend(model)
+        if model_backend == BackendType.ONNX:
+            raise RuntimeError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+            )
+        elif model_backend == BackendType.OPENVINO:
+            from nncf.quantization.algorithms.post_training.openvino_backend import OVPostTrainingBackend
+
+            self._backend_entity = OVPostTrainingBackend()
+        elif model_backend == BackendType.TORCH:
+            raise RuntimeError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+            )
+        else:
+            raise RuntimeError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+            )
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         if self.first_stage_algorithms:
@@ -176,20 +212,16 @@ class PostTrainingQuantization(Algorithm):
                     output.add_statistic_point(statistic_point)
         return output
 
-    def apply(
+    def _apply(
         self,
         model: TModel,
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
-        modified_model = copy_model(model)
-        modified_model_graph = graph
-        backend = get_backend(modified_model)
-
         for first_stage_algorithm in self.first_stage_algorithms:
             algorithm = first_stage_algorithm.algorithm
-
+            backend = get_backend(model)
             if isinstance(algorithm, SmoothQuant) and backend != BackendType.OPENVINO:
                 nncf_logger.debug(f"{backend.name} does not support SmoothQuant algorithm yet.")
                 continue
@@ -199,31 +231,61 @@ class PostTrainingQuantization(Algorithm):
                 continue
 
             for pre_pass in first_stage_algorithm.pre_passes:
-                modified_model = pre_pass(modified_model, modified_model_graph)
-                modified_model_graph = NNCFGraphFactory.create(modified_model)
+                model = pre_pass(model, graph)
+                graph = NNCFGraphFactory.create(model)
 
-            statistics_aggregator = StatisticsAggregatorFactory.create(modified_model, dataset)
-            algo_statistic_points = algorithm.get_statistic_points(modified_model, modified_model_graph)
+            statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+            algo_statistic_points = algorithm.get_statistic_points(model, graph)
             statistics_aggregator.register_statistic_points(algo_statistic_points)
-            statistics_aggregator.collect_statistics(modified_model, modified_model_graph)
-            modified_model = algorithm.apply(
-                modified_model, modified_model_graph, statistics_aggregator.statistic_points
-            )
-            modified_model_graph = NNCFGraphFactory.create(modified_model)
+            statistics_aggregator.collect_statistics(model, graph)
+            model = algorithm.apply(model, graph, statistics_aggregator.statistic_points)
+            model = NNCFGraphFactory.create(model)
 
         if statistic_points is None:
-            statistics_aggregator = StatisticsAggregatorFactory.create(modified_model, dataset)
+            statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
             for algorithm in self.algorithms:
-                algo_statistic_points = algorithm.get_statistic_points(modified_model, modified_model_graph)
+                algo_statistic_points = algorithm.get_statistic_points(model, graph)
                 statistics_aggregator.register_statistic_points(algo_statistic_points)
 
-            statistics_aggregator.collect_statistics(modified_model, modified_model_graph)
+            statistics_aggregator.collect_statistics(model, graph)
             statistic_points = statistics_aggregator.statistic_points
 
         for algorithm in self.algorithms[:-1]:
-            modified_model = algorithm.apply(modified_model, modified_model_graph, statistic_points)
-            modified_model_graph = NNCFGraphFactory.create(modified_model)
+            model = algorithm.apply(model, graph, statistic_points)
+            graph = NNCFGraphFactory.create(model)
         # building the model graph is not required after the last algorithm
-        modified_model = self.algorithms[-1].apply(modified_model, modified_model_graph, statistic_points)
+        model = self.algorithms[-1].apply(model, graph, statistic_points)
 
-        return modified_model
+        return model
+
+    def apply(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+        dataset: Optional[Dataset] = None,
+    ) -> TModel:
+        model_copy = copy_model(model)
+
+        if self._backend_entity.is_single_model(model_copy):
+            return self._apply(model_copy, graph, statistic_points, dataset)
+        nncf_logger.info("The model consists of inner subgraphs. The iteratively each subgraph will be quantized.")
+        self._set_backend_entity(model)
+        quantized_model = self._apply(model_copy, graph, statistic_points, dataset)
+        tasks = self._backend_entity.make_tasks(quantized_model, dataset, self.subset_size)
+        ROOT = "/home/akash/intel/OV_If_op"
+        subgraph_cnt = 0
+        while tasks:
+            subgraph_model, dataset, backend_params = tasks.popleft()
+            self.reset()
+            nncf_logger.info(f"Quantize a subgraph number {subgraph_cnt}")
+            subgraph_model_graph = NNCFGraphFactory.create(subgraph_model)
+            subgraph_model_quantized = self._apply(subgraph_model, subgraph_model_graph, None, dataset)
+            nncf_logger.info(f"Set quantized subgraph number {subgraph_cnt} to the model")
+            self._backend_entity.set_subgraph(subgraph_model_quantized, **backend_params)
+
+            tasks.extend(self._backend_entity.make_tasks(subgraph_model_quantized, dataset, self.subset_size))
+            if self.dump_intermediate_models:
+                self._backend_entity.dump_model(subgraph_model_quantized, ROOT, **backend_params)
+            subgraph_cnt += 1
+        return quantized_model
