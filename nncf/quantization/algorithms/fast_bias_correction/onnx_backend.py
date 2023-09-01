@@ -76,9 +76,9 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     ) -> Dict[str, np.array]:
         blob = np.zeros(shape)
         for j in range(shape[channel_axis]):
-            index = tuple(slice(None) if i != channel_axis else i for i in range(blob.ndim))
-            blob[index] = data[j]
-        blob = blob.astype(data[0].dtype)
+            index = tuple(slice(None) if i != channel_axis else j for i in range(blob.ndim))
+            blob[index] = data[index]
+        blob = blob.astype(data.dtype)
         input_data = {input_name: blob}
         return input_data
 

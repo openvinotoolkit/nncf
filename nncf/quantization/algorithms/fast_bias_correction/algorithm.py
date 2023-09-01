@@ -163,7 +163,7 @@ class FastBiasCorrection(Algorithm):
                 # Make index positive
                 channel_axis = range(bias_value.ndim)[channel_axis]
             input_blob = self._backend_entity.create_input_data(
-                input_shapes[0], [t.tensor for t in input_fp], sub_input_name, channel_axis
+                input_shapes[0], input_fp[0].tensor, sub_input_name, channel_axis
             )
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
