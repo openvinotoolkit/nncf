@@ -22,6 +22,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.os import get_available_cpu_count
 from nncf.common.utils.os import get_available_memory_amount
+from nncf.common.utils.os import is_windows
 from nncf.data.dataset import Dataset
 from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
@@ -161,7 +162,16 @@ class QuantizationAccuracyRestorer:
         self.max_num_iterations = max_num_iterations
         self.max_drop = max_drop
         self.drop_type = drop_type
-        self.num_ranking_processes = num_ranking_processes
+
+        if is_windows():
+            self.num_ranking_processes = 1
+            if num_ranking_processes is not None and num_ranking_processes > 1:
+                nncf_logger.info(
+                    "Number of parallel processes to rank quantized operations > 1 is not supported on Windows OS. "
+                    "num_ranking_processes = 1 will be used."
+                )
+        else:
+            self.num_ranking_processes = num_ranking_processes
 
     def apply(
         self,
