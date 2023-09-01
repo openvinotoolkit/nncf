@@ -81,8 +81,6 @@ class TensorStatisticCollectorBase(ABC):
             return x
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
-        if self._reduction_axes is None:
-            self._reduction_axes = tuple(range(len(x.shape)))
         self._register_input(x)
         self._collected_samples += 1
         return x
@@ -318,7 +316,7 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
             axis = self._get_axis()
         else:  # self._channel_axis is not None
             shape = x.shape
-            axis = (i for i in range(len(shape)) if i != self._channel_axis)
+            axis = tuple(i for i in range(len(shape)) if i != self._channel_axis)
         reduced = backend.mean(x, axis=axis, keepdims=True)
         self._all_values.append(reduced)
         self._all_shapes.append(tuple(x.shape))
