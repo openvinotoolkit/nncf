@@ -41,10 +41,10 @@ class FailForModules:
             return ModuleSpec(fullname, loader=MagicMock(), origin=origin)
         return _REAL_FIND_SPEC(fullname, path, target)
 
-def _mock_import_and_check_availability_messages(ref_available_frameworks: List[str],
-                                                 unavailable_frameworks: List[str],
-                                                 failer_obj: FailForModules,
-                                                 nncf_caplog):
+
+def _mock_import_and_check_availability_messages(
+    ref_available_frameworks: List[str], unavailable_frameworks: List[str], failer_obj: FailForModules, nncf_caplog
+):
     with unittest.mock.patch("importlib.util.find_spec", wraps=failer_obj):
         with nncf_caplog.at_level(logging.INFO):
             importlib.reload(nncf)
