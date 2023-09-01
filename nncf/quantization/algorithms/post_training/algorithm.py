@@ -183,17 +183,17 @@ class PostTrainingQuantization(Algorithm):
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            raise RuntimeError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
-            )
+            from nncf.quantization.algorithms.post_training.onnx_backend import ONNXPostTrainingBackend
+
+            self._backend_entity = ONNXPostTrainingBackend()
         elif model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.post_training.openvino_backend import OVPostTrainingBackend
 
             self._backend_entity = OVPostTrainingBackend()
         elif model_backend == BackendType.TORCH:
-            raise RuntimeError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
-            )
+            from nncf.quantization.algorithms.post_training.torch_backend import PTPostTrainingBackend
+
+            self._backend_entity = PTPostTrainingBackend()
         else:
             raise RuntimeError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
@@ -266,11 +266,10 @@ class PostTrainingQuantization(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         model_copy = copy_model(model)
-
+        self._set_backend_entity(model)
         if self._backend_entity.is_single_model(model_copy):
             return self._apply(model_copy, graph, statistic_points, dataset)
         nncf_logger.info("The model consists of inner subgraphs. The iteratively each subgraph will be quantized.")
-        self._set_backend_entity(model)
         quantized_model = self._apply(model_copy, graph, statistic_points, dataset)
         tasks = self._backend_entity.make_tasks(quantized_model, dataset, self.subset_size)
         ROOT = "/home/akash/intel/OV_If_op"
