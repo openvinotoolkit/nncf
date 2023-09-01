@@ -31,7 +31,7 @@ class ShortTransformer(torch.nn.Module):
 def test_compress_weights():
     model = ShortTransformer(5, 10)
 
-    compressed_model = compress_weights(model, use_fake_quantize=False)
+    compressed_model = compress_weights(model)
 
     n_compressed_weights = 0
     n_target_modules = 0
@@ -43,23 +43,3 @@ def test_compress_weights():
                 n_compressed_weights += 1
 
     assert n_compressed_weights == n_target_modules
-
-
-def test_compress_weights_with_fake_quantize(mocker):
-    model = ShortTransformer(5, 10)
-
-    compressed_model = compress_weights(model, use_fake_quantize=True)
-
-    n_target_modules = 0
-
-    spy = mocker.spy(torch, "fake_quantize_per_channel_affine")
-
-    for _, module in compressed_model.named_children():
-        if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
-            n_target_modules += 1
-
-    model(torch.randint(0, 2, (1, 4)))
-
-    n_fake_quantize = spy.call_count
-
-    assert n_fake_quantize == n_target_modules
