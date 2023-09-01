@@ -41,12 +41,11 @@ class FailForModules:
             return ModuleSpec(fullname, loader=MagicMock(), origin=origin)
         return _REAL_FIND_SPEC(fullname, path, target)
 
-
-@pytest.mark.parametrize("ref_available_frameworks", [["torch"], ["torch", "tensorflow"], ["onnx", "openvino"], []])
-def test_frameworks_detected(ref_available_frameworks: List[str], nncf_caplog, mocker):
-    unavailable_frameworks = [fw for fw in SUPPORTED_FRAMEWORKS if fw not in ref_available_frameworks]
-    failer = FailForModules(ref_available_frameworks, unavailable_frameworks)
-    with unittest.mock.patch("importlib.util.find_spec", wraps=failer):
+def _mock_import_and_check_availability_messages(ref_available_frameworks: List[str],
+                                                 unavailable_frameworks: List[str],
+                                                 failer_obj: FailForModules,
+                                                 nncf_caplog):
+    with unittest.mock.patch("importlib.util.find_spec", wraps=failer_obj):
         with nncf_caplog.at_level(logging.INFO):
             importlib.reload(nncf)
             matches = re.search(r"Supported frameworks detected: (.*)", nncf_caplog.text)
@@ -59,22 +58,17 @@ def test_frameworks_detected(ref_available_frameworks: List[str], nncf_caplog, m
                     assert fw not in match_text
             else:
                 assert matches is None
+
+
+@pytest.mark.parametrize("ref_available_frameworks", [["torch"], ["torch", "tensorflow"], ["onnx", "openvino"], []])
+def test_frameworks_detected(ref_available_frameworks: List[str], nncf_caplog):
+    unavailable_frameworks = [fw for fw in SUPPORTED_FRAMEWORKS if fw not in ref_available_frameworks]
+    failer = FailForModules(ref_available_frameworks, unavailable_frameworks)
+    _mock_import_and_check_availability_messages(ref_available_frameworks, unavailable_frameworks, failer, nncf_caplog)
 
 
 @pytest.mark.parametrize("ref_available_frameworks", [[fw] for fw in SUPPORTED_FRAMEWORKS])
-def test_frameworks_detected_if_origin_in_nncf(ref_available_frameworks, nncf_caplog, mocker):
+def test_frameworks_detected_if_origin_in_nncf(ref_available_frameworks, nncf_caplog):
     unavailable_frameworks = [fw for fw in SUPPORTED_FRAMEWORKS if fw not in ref_available_frameworks]
     failer = FailForModules(ref_available_frameworks, unavailable_frameworks, origin_in_nncf=True)
-    with unittest.mock.patch("importlib.util.find_spec", wraps=failer):
-        with nncf_caplog.at_level(logging.INFO):
-            importlib.reload(nncf)
-            matches = re.search(r"Supported frameworks detected: (.*)", nncf_caplog.text)
-            if ref_available_frameworks:
-                assert matches is not None
-                match_text = matches[0]
-                for fw in ref_available_frameworks:
-                    assert fw in match_text
-                for fw in unavailable_frameworks:
-                    assert fw not in match_text
-            else:
-                assert matches is None
+    _mock_import_and_check_availability_messages(ref_available_frameworks, unavailable_frameworks, failer, nncf_caplog)
