@@ -16,9 +16,6 @@ import onnx
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.onnx.graph.metatypes.groups import CONSTANT_WEIGHT_LAYER_METATYPES
-from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
-from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry("onnx_operator_metatypes")
@@ -636,43 +633,6 @@ def get_metatype(model: onnx.ModelProto, node: onnx.NodeProto) -> ONNXOpMetatype
         if subtype is not None:
             metatype = subtype
     return metatype
-
-
-def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
-    """
-    Returns port ids on which metatype must have a weight based on Operation definition.
-
-    :param metatype: Metatype.
-    :return: Port ids.
-    """
-    if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
-        return metatype.weight_port_ids
-    return []
-
-
-def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
-    """
-    Returns weight port ids on which metatype could have a weight.
-    Example: ONNXMatMulMetatype could have activations or weights on input port ids: 0, 1
-
-    :param metatype: Metatype.
-    :return: Port ids.
-    """
-    if metatype in MATMUL_METATYPES:
-        return metatype.possible_weight_ports
-    return []
-
-
-def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int]:
-    """
-    Returns input port id, where a bias tensor should output.
-
-    :param node: Node, for which input port id is returned,
-    :return: Input port id, where a weight bias should output or None if node can not have bias.
-    """
-    if metatype in OPERATIONS_WITH_BIAS:
-        return metatype.bias_port_id
-    return None
 
 
 def get_tensor_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> Optional[str]:

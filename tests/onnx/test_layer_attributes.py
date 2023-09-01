@@ -13,7 +13,7 @@ import numpy as np
 import onnx
 import pytest
 
-from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_WEIGHTS
+from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from tests.onnx.models import OPSET_VERSION
