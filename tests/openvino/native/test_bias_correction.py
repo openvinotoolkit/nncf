@@ -84,7 +84,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
             node = nncf_graph.get_node_by_name(ref_name)
             ref_value = np.array(ref_value)
             curr_value = get_bias_value(node, nncf_graph, model)
-            curr_value = curr_value.reshape(ref_value.shape)
+            curr_value = curr_value
             assert np.all(np.isclose(curr_value, ref_value, atol=0.0001)), f"{curr_value} != {ref_value}"
 
     @pytest.mark.parametrize(

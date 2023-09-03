@@ -80,7 +80,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)
             curr_value = get_bias_value(node, model)
-            ref_value = np.array(ref_value).reshape(curr_value.shape)
+            ref_value = np.array(ref_value)
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
             assert np.all(np.isclose(curr_value, ref_value, atol=0.01)), f"{curr_value} != {ref_value}"
 

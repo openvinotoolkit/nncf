@@ -188,7 +188,7 @@ class BiasCorrection(Algorithm):
                 axes = [i for i in range(current_bias.ndim) if i != channel_axis]
                 bias_shift = backend.expand_dims(bias_shift, axes)
 
-            updated_bias = current_bias + bias_shift
+            updated_bias = current_bias + bias_shift.reshape(*current_bias.shape)
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
             if magnitude < self.threshold:
@@ -381,11 +381,8 @@ class BiasCorrection(Algorithm):
 
     def _mean_per_channel(self, x: NNCFTensor, channel_axis: int) -> NNCFTensor:
         backend = x.backend
-        if len(x.shape) < 3:
-            return x.mean(axis=0)
-        x = backend.moveaxis(x, channel_axis, 1)
-        t = x.reshape(x.shape[0], x.shape[1], -1)
-        return backend.mean(t, axis=(0, 2))
+        axis = tuple(i for i in range(x.ndim) if i != channel_axis)
+        return backend.mean(x, axis=axis, keepdims=True)
 
     @staticmethod
     def _get_bias_shift_magnitude(current_bias_value: NNCFTensor, updated_bias_value: NNCFTensor) -> float:
