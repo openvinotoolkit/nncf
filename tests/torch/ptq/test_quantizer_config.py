@@ -23,7 +23,7 @@ from tests.torch.ptq.helpers import get_depthwise_conv_nncf_graph
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
 from tests.torch.ptq.helpers import get_sum_aggregation_nncf_graph
 
-ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
+ParamsCls = TemplateTestQuantizerConfig.GetStatisticsCollectorParameters
 
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):

@@ -26,7 +26,7 @@ from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseCo
 from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
 from tests.post_training.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
-ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
+ParamsCls = TemplateTestQuantizerConfig.GetStatisticsCollectorParameters
 
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
