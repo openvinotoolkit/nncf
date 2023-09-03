@@ -49,26 +49,6 @@ class TemplateTestFBCAlgorithm:
         :return FastBiasCorrectionAlgoBackend: Backend specific FastBiasCorrectionAlgoBackend
         """
 
-    @pytest.mark.parametrize(
-        "bias_value, bias_shift, channel_axis, ref_shape",
-        (
-            ([1, 1], [0.1, 0.1], 1, [2]),
-            ([[1, 1]], [0.1, 0.1], -1, [1, 2]),
-            ([[1, 1]], [0.1, 0.1], 1, [1, 2]),
-        ),
-    )
-    def test_reshape_bias_shift(self, bias_value: list, bias_shift: list, channel_axis: int, ref_shape: list):
-        """
-        Checks the result of the FastBiasCorrection.reshape_bias_shift method for backend specific datatype.
-        """
-        bias_value = self.list_to_backend_type(data=bias_value)
-        bias_shift = self.list_to_backend_type(data=bias_shift)
-
-        algo = FastBiasCorrection(subset_size=1, inplace_statistics=False)
-        # pylint: disable=protected-access
-        algo._backend_entity = self.get_backend()
-        new_bias_shift = algo.reshape_bias_shift(bias_shift, bias_value, channel_axis)
-        assert list(new_bias_shift.shape) == ref_shape
 
     @staticmethod
     def fn_to_type(tensor):

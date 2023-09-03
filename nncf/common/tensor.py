@@ -35,6 +35,9 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def backend(self) -> Type["NNCFTensorBackend"]:
         pass
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} of shape {self.shape} at {hex(id(self))}: {repr(self.tensor)}"
+
     @abstractmethod
     def _is_native_bool(self, bool_result: Any) -> bool:
         pass

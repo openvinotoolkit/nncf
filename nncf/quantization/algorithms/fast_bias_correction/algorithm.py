@@ -173,7 +173,7 @@ class FastBiasCorrection(Algorithm):
                 output_name=sub_output_name,
             )
 
-            bias_shift = self.reshape_bias_shift(bias_shift, bias_value, channel_axis)
+            bias_shift = bias_shift.reshape(*bias_value.shape)
             updated_bias: NNCFTensor = bias_value + bias_shift
             magnitude = self._get_bias_shift_magnitude(bias_value, updated_bias)
 
@@ -192,22 +192,6 @@ class FastBiasCorrection(Algorithm):
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
-
-    def reshape_bias_shift(self, bias_shift: NNCFTensor, bias_value: NNCFTensor, channel_axis: int) -> NNCFTensor:
-        """
-        Reshape bias_shift tensor in case of dimensions of bias_value is more then 1.
-
-        :param bias_shift: Bias shift tensor.
-        :param bias_value: Bias value tensor.
-        :param channel_axis: Axis to update bias.
-
-        :return TTensor: Updated bias_shift.
-        """
-        if bias_value.ndim > 1:
-            new_shape = [1] * bias_value.ndim
-            new_shape[channel_axis] = bias_shift.shape[0]
-            bias_shift = bias_shift.reshape(*new_shape)
-        return bias_shift
 
     @staticmethod
     def _get_bias_shift_magnitude(current_bias_value: NNCFTensor, updated_bias_value: NNCFTensor) -> float:
@@ -330,11 +314,8 @@ class FastBiasCorrection(Algorithm):
     @staticmethod
     def _mean_per_channel(x: NNCFTensor, channel_axis: int) -> NNCFTensor:
         backend = x.backend
-        if len(x.shape) < 3:
-            return x.mean(axis=0)
-        x = backend.moveaxis(x, channel_axis, 1)
-        t = x.reshape(x.shape[0], x.shape[1], -1)
-        return backend.mean(t, axis=(0, 2))
+        axis = tuple(i for i in range(x.ndim) if i != channel_axis)
+        return backend.mean(x, axis=axis, keepdims=True)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
