@@ -18,6 +18,7 @@ import openvino.runtime as ov
 import timm
 import torch
 import tqdm
+from openvino.tools.mo import convert_model
 from sklearn.metrics import accuracy_score
 from timm.layers.config import set_fused_attn
 from torchvision import datasets
@@ -33,8 +34,6 @@ from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
-from tests.post_training.pipelines.base import export_to_ir
-from tests.post_training.pipelines.base import export_to_onnx
 
 # Disable using aten::scaled_dot_product_attention
 set_fused_attn(False, False)
@@ -55,19 +54,19 @@ class ImageClassificationTimm(BaseTestPipeline):
 
         if self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model_fp32.onnx"
-
-            export_to_onnx(timm_model, onnx_path, self.dummy_tensor)
+            torch.onnx.export(
+                timm_model,
+                self.dummy_tensor,
+                onnx_path,
+                export_params=True,
+                opset_version=13,
+                do_constant_folding=False,
+            )
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
         if self.backend in OV_BACKENDS:
-            onnx_path = self.output_model_dir / "model_fp32.onnx"
-            export_to_onnx(timm_model, onnx_path, self.dummy_tensor)
-            export_to_ir(onnx_path, self.output_model_dir, model_name="model_fp32")
-            ir_path = self.output_model_dir / "model_fp32.xml"
-
-            core = ov.Core()
-            self.model = core.read_model(ir_path)
+            self.model = convert_model(timm_model, example_input=self.dummy_tensor)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
     def prepare_preprocessor(self) -> None:
