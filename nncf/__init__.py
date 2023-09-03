@@ -33,7 +33,7 @@ _SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
 
 
 from importlib.util import find_spec as _find_spec  # pylint:disable=wrong-import-position
-from pathlib import Path as _Path
+from pathlib import Path as _Path  # pylint:disable=wrong-import-position
 
 _AVAILABLE_FRAMEWORKS = {}
 
