@@ -84,12 +84,12 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, reduction_axes: ReductionAxes, inplace: bool, branch_key: str
     ) -> TensorCollector:
         """
         Returns TensorCollector with MaxAggregator and AbsMaxReducer.
 
-        :param stats_reduction_axes: Calculated reduction shape.
+        :param reduction_axes: Calculated reduction shape.
         :param inplace: Whether to calculate statistic inplace or not.
         :param branch_key: Specific string for branch key.
         :return: TensorCollector instance.

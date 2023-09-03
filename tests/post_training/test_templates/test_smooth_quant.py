@@ -134,7 +134,7 @@ class TemplateTestSQAlgorithm:
         for inplace_type in [False, True]:
             backend_tensor_collector = backend.get_abs_max_channel_collector(
                 num_samples=samples,
-                stats_reduction_axes=reduction_axes,
+                reduction_axes=reduction_axes,
                 inplace=inplace_type,
                 branch_key="test_branch",
             )

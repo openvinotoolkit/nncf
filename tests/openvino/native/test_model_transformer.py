@@ -300,7 +300,7 @@ def test_split_inplace_fn_insertion(test_params: InplaceOpTestCase):
 )
 def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     input_1 = opset.parameter(input_shape, name="Input")
-    fn = get_inplace_min_op("test", reduction_axes=tuple())
+    fn = get_inplace_min_op("test", reduction_axes=REDUCE_TO_SCALAR_REDUCTION_SHAPE)
     if raise_error:
         with pytest.raises(RuntimeError):
             fn(input_1, 0)

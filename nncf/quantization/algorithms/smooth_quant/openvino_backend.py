@@ -67,10 +67,10 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, reduction_axes: ReductionAxes, inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
-        reducer = OVAbsMaxReducer(stats_reduction_axes, inplace)
+        reducer = OVAbsMaxReducer(reduction_axes=reduction_axes, inplace=inplace)
         aggregator = MaxAggregator(num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector

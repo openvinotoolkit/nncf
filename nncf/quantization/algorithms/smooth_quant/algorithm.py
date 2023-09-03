@@ -308,6 +308,7 @@ class SmoothQuant(Algorithm):
         activation_ports_map = {
             node: self._backend_entity.get_input_ports_map(node, nncf_graph)["activation"] for node in nodes
         }
+
         channel_axes = [
             self._backend_entity.get_activation_channel_axis(node, port) for node, port in activation_ports_map.items()
         ]
