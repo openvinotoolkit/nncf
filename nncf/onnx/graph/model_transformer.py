@@ -255,8 +255,16 @@ class ONNXModelTransformer(ModelTransformer):
         tensor_type = transformation.quantizer_parameters.tensor_type
 
         per_channel = scale.ndim > 0
-        onnx_scale = scale.squeeze() if per_channel else np.expand_dims(scale, 0)
-        onnx_zero_point = zero_point.squeeze() if per_channel else np.expand_dims(zero_point, 0)
+
+        onnx_scale = scale.squeeze() if per_channel else scale
+        if onnx_scale.ndim == 0:  # if got per-channel scale of (1, 1, 1, 1)
+            onnx_scale = np.expand_dims(onnx_scale, 0)
+
+        onnx_zero_point = zero_point.squeeze() if per_channel else zero_point
+        if onnx_zero_point.ndim == 0:  # if got per-channel scale of (1, 1, 1, 1)
+            onnx_zero_point = np.expand_dims(onnx_zero_point, 0)
+        np.expand_dims(zero_point, 0)
+
         dims = onnx_scale.shape
         if tensor_type == np.uint8:
             onnx_tensor_type = onnx.TensorProto.UINT8

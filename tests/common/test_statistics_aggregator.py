@@ -478,7 +478,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.POST_LAYER_OPERATION,
                 ref_values=MEAN_ACT_AXIS_0_REF,
                 ref_observed_shape=(1, 3, 3, 3),
-                channel_axis=None,
+                channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
@@ -486,7 +486,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.POST_LAYER_OPERATION,
                 ref_values=MEAN_ACT_AXIS_0_REF,
                 ref_observed_shape=(1, 3, 3, 3),
-                channel_axis=None,
+                channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
@@ -530,7 +530,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.OPERATION_WITH_WEIGHTS,
                 ref_values=MEAN_WEIGHTS_AXIS_0_REF,
                 ref_observed_shape=(3, 3, 3, 3),
-                channel_axis=None,
+                channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
@@ -538,7 +538,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.OPERATION_WITH_WEIGHTS,
                 ref_values=MEAN_WEIGHTS_AXIS_0_REF,
                 ref_observed_shape=(3, 3, 3, 3),
-                channel_axis=None,
+                channel_axis=0,
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
