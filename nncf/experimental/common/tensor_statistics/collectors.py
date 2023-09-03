@@ -108,8 +108,10 @@ class TensorReducerBase(ABC):
                 return None
             return self._reduction_axes
         # self._channel_axis is not None
-        shape = tensor.shape
-        return tuple(i for i in range(len(shape)) if i != self._channel_axis)
+        proto_axis_list = list(range(tensor.ndim))
+        del proto_axis_list[self._channel_axis]
+        axis = tuple(proto_axis_list)
+        return axis
 
 
 class Aggregator(abc.ABC):

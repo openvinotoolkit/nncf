@@ -315,7 +315,9 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
             axis = self._get_axis()
         else:  # self._channel_axis is not None
             shape = x.shape
-            axis = tuple(i for i in range(len(shape)) if i != self._channel_axis)
+            proto_axis_list = list(range(x.ndim))
+            del proto_axis_list[self._channel_axis]
+            axis = tuple(proto_axis_list)
         reduced = backend.mean(x, axis=axis, keepdims=True)
         self._all_values.append(reduced)
         self._all_shapes.append(tuple(x.shape))
