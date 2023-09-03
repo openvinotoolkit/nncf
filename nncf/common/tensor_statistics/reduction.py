@@ -10,8 +10,7 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Deque
-from typing import List, Tuple
+from typing import Deque, List, Tuple
 
 import numpy as np
 
@@ -41,8 +40,9 @@ def split_into_channels(input_: NNCFTensor, scale_shape: Tuple[int]) -> List[NNC
     return ret_list
 
 
-def get_per_channel_history(raw_input_history: Deque[NNCFTensor], reduction_shape: Tuple[int],
-                            discard_zeros: bool = False) -> List[NNCFTensor]:
+def get_per_channel_history(
+    raw_input_history: Deque[NNCFTensor], reduction_shape: Tuple[int], discard_zeros: bool = False
+) -> List[NNCFTensor]:
     channel_count, _ = get_channel_count_and_dim_idx(reduction_shape)
     per_channel_history = [None for _ in range(channel_count)]
     if not raw_input_history:

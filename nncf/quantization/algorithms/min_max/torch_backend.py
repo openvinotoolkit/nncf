@@ -207,8 +207,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             channel_idx = 1  # channel dim for activations
 
         scale_shape = get_scale_shape(
-                input_shape, is_weights=is_weights, per_channel=quantization_config.per_channel, channel_idx=channel_idx
-            )
+            input_shape, is_weights=is_weights, per_channel=quantization_config.per_channel, channel_idx=channel_idx
+        )
 
         return input_shape, scale_shape, channel_idx
 

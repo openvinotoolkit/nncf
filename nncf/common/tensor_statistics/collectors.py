@@ -13,8 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections import deque
 from copy import deepcopy
-from typing import Callable, Deque, List, Optional, Tuple, Union
-from typing import Dict
+from typing import Callable, Deque, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -34,6 +33,7 @@ ReductionShape = Tuple[int]
 
 REDUCE_TO_SCALAR_REDUCTION_SHAPE = (-1,)
 
+
 def get_reduction_axes_from_scale_shape(scale_shape: QuantizerScaleShape) -> ReductionAxes:
     if scale_shape.is_per_tensor():
         return REDUCE_TO_SCALAR_REDUCTION_SHAPE
@@ -46,7 +46,7 @@ def is_reduce_to_scalar(reduction_axes: ReductionAxes) -> bool:
 
 def get_reduction_shape_from_sample_shape(sample_shape: List[int], reduction_axes: ReductionAxes) -> ReductionShape:
     if is_reduce_to_scalar(reduction_axes):
-        return (1, )
+        return (1,)
     reduced_shape = deepcopy(list(sample_shape))
     for ax in reduction_axes:
         reduced_shape[ax] = 1
@@ -119,6 +119,7 @@ class TensorStatisticCollectorBase(ABC):
 
     def _get_axis(self) -> Optional[ReductionAxes]:
         return self._reduction_axes if not is_reduce_to_scalar(self._reduction_axes) else None
+
 
 class StatisticsNotCollectedError(Exception):
     """Raised when the statistics are not collected but requested."""
@@ -289,8 +290,11 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     """
 
     def __init__(
-        self, reduction_axes: ReductionAxes = None, channel_axis: int = None,
-            num_samples: Optional[int] = None, window_size: Optional[int] = None
+        self,
+        reduction_axes: ReductionAxes = None,
+        channel_axis: int = None,
+        num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
     ) -> None:
         """
         :param reduction_axes: The shape for the reduction while statistics collection.

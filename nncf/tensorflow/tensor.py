@@ -8,16 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any
-from typing import Dict
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Type
-from typing import Union
-from typing import Union
-from typing import Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import tensorflow as tf
@@ -196,8 +187,12 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
         return TFNNCFTensor(tf.pow(tensor.tensor, pwr))
 
     @staticmethod
-    def quantile(tensor: TFNNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None,
-                 keepdims: bool = False) -> Union[float, TFNNCFTensor]:
+    def quantile(
+        tensor: TFNNCFTensor,
+        quantile: Union[float, List[float]],
+        axis: Union[int, List[int]] = None,
+        keepdims: bool = False,
+    ) -> Union[float, TFNNCFTensor]:
         np_ndarr: np.ndarray = tensor.tensor.numpy()
         return TFNNCFTensor(tf.convert_to_tensor(np.quantile(np_ndarr, q=quantile, axis=axis, keepdims=keepdims)))
 
@@ -211,10 +206,13 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
             tmp_mask = tf.not_equal(row, mask.tensor)
             filtered = tf.boolean_mask(row, tmp_mask)
             return tf.reduce_mean(filtered)
+
         return TFNNCFTensor(tf.map_fn(mean, tensor.tensor))
 
     @staticmethod
-    def masked_median(tensor: TFNNCFTensor, mask: TFNNCFTensor, axis: int = None, keepdims: bool = False) -> TFNNCFTensor:
+    def masked_median(
+        tensor: TFNNCFTensor, mask: TFNNCFTensor, axis: int = None, keepdims: bool = False
+    ) -> TFNNCFTensor:
         masked_x = np.ma.array(tensor.tensor.numpy(), mask=mask.tensor.numpy())
         result = np.ma.median(masked_x, axis=axis, keepdims=False)
         if isinstance(result, (MaskedConstant, MaskedArray)):
@@ -244,4 +242,3 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
     @staticmethod
     def unstack(tensor: TFNNCFTensor, axis: int = 0) -> List[TFNNCFTensor]:
         return [TFNNCFTensor(t) for t in tf.unstack(tensor.tensor, axis=axis)]
-

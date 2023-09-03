@@ -49,7 +49,6 @@ class TemplateTestFBCAlgorithm:
         :return FastBiasCorrectionAlgoBackend: Backend specific FastBiasCorrectionAlgoBackend
         """
 
-
     @staticmethod
     def fn_to_type(tensor):
         return tensor

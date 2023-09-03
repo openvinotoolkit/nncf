@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Callable, List, Tuple, Any
+from typing import Any, Callable, List, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -19,9 +19,10 @@ from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.openvino.graph.model_transformer import OVModelTransformer
-from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE, is_reduce_to_scalar
+from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.collectors import is_reduce_to_scalar
+from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
@@ -110,7 +111,7 @@ class InplaceOpTestCase:
             if is_reduce_to_scalar(REDUCE_TO_SCALAR_REDUCTION_SHAPE):
                 reduction_str += "-rSCALAR"
             else:
-                reduction_str += "-r" + 'x'.join(str(dim) for dim in self.reduction_axes)
+                reduction_str += "-r" + "x".join(str(dim) for dim in self.reduction_axes)
         if self.channel_axis is not None:
             channel_axis_str = f"-c{self.channel_axis}"
         return f"{self.name}{reduction_str}{channel_axis_str}-f{self.op_builder}-d{self.dims}"
@@ -129,27 +130,54 @@ INPLACE_OPS_TEST_CASES = [
     # Forwarded reduce shape
     InplaceOpTestCase("min", (1, 2), get_inplace_min_op, ["ReduceMin"], [(1, 2)]),
     InplaceOpTestCase("mean", (1, 2), get_inplace_mean_op, ["ReduceMean"], [(1, 2)]),
-    InplaceOpTestCase("max", (1, 2), lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=False), ["ReduceMax"], [(1, 2)]),
     InplaceOpTestCase(
-        "abs_max", (1, 2), lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=True), ["Abs", "ReduceMax"], [None, (1, 2)]
+        "max",
+        (1, 2),
+        lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=False),
+        ["ReduceMax"],
+        [(1, 2)],
+    ),
+    InplaceOpTestCase(
+        "abs_max",
+        (1, 2),
+        lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=True),
+        ["Abs", "ReduceMax"],
+        [None, (1, 2)],
     ),
     # Calculated reduce shape
     InplaceOpTestCase("min", REDUCE_TO_SCALAR_REDUCTION_SHAPE, get_inplace_min_op, ["ReduceMin"], [(0, 1, 2, 3)]),
     InplaceOpTestCase("mean", REDUCE_TO_SCALAR_REDUCTION_SHAPE, get_inplace_mean_op, ["ReduceMean"], [(0, 1, 2, 3)]),
-    InplaceOpTestCase("max", REDUCE_TO_SCALAR_REDUCTION_SHAPE, lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=False), ["ReduceMax"], [(0, 1, 2, 3)]),
     InplaceOpTestCase(
-        "abs_max", REDUCE_TO_SCALAR_REDUCTION_SHAPE, lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=True), ["Abs", "ReduceMax"], [None, (0, 1, 2, 3)]
+        "max",
+        REDUCE_TO_SCALAR_REDUCTION_SHAPE,
+        lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=False),
+        ["ReduceMax"],
+        [(0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "abs_max",
+        REDUCE_TO_SCALAR_REDUCTION_SHAPE,
+        lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=True),
+        ["Abs", "ReduceMax"],
+        [None, (0, 1, 2, 3)],
     ),
     # Batch mean and mean per ch operations
     InplaceOpTestCase("batch_mean", None, lambda o, r, c: get_inplace_batch_mean_op(o), ["ReduceMean"], [0]),
-    InplaceOpTestCase("mean_per_ch", None, lambda o, r, c: get_inplace_mean_per_ch(o, axis=c), ["Reshape", "ReduceMean"], [(1, 3, 16), (0, 2)], channel_axis=1),
+    InplaceOpTestCase(
+        "mean_per_ch",
+        None,
+        lambda o, r, c: get_inplace_mean_per_ch(o, axis=c),
+        ["Reshape", "ReduceMean"],
+        [(1, 3, 16), (0, 2)],
+        channel_axis=1,
+    ),
     InplaceOpTestCase(
         "mean_per_ch",
         None,
         lambda o, r, c: get_inplace_mean_per_ch(o, axis=c),
         ["Transpose", "Reshape", "ReduceMean"],
         [(0, 2, 1, 3), (1, 4, 12), (0, 2)],
-        channel_axis=2
+        channel_axis=2,
     ),
     InplaceOpTestCase(
         "mean_per_ch",
@@ -160,13 +188,21 @@ INPLACE_OPS_TEST_CASES = [
             0,
         ],
         dims="SHORT",
-        channel_axis=0
+        channel_axis=0,
     ),
     # EmptyCase
     InplaceOpTestCase("min", (), get_inplace_min_op, ["ReduceMin"], [()]),
     InplaceOpTestCase("mean", (), get_inplace_mean_op, ["ReduceMean"], [()]),
-    InplaceOpTestCase("max", (), lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=False), ["ReduceMax"], [()]),
-    InplaceOpTestCase("abs_max", (), lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=True), ["Abs", "ReduceMax"], [None, ()]),
+    InplaceOpTestCase(
+        "max", (), lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=False), ["ReduceMax"], [()]
+    ),
+    InplaceOpTestCase(
+        "abs_max",
+        (),
+        lambda o, r, c: get_inplace_max_op(o, reduction_axes=r, use_abs_max=True),
+        ["Abs", "ReduceMax"],
+        [None, ()],
+    ),
 ]
 
 
@@ -223,7 +259,9 @@ def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, targe
         OVInplaceFnInsertionCommand,
         port_id,
         {
-            "inplace_op_fn": test_params.op_builder(test_params.name, test_params.reduction_axes, test_params.channel_axis),
+            "inplace_op_fn": test_params.op_builder(
+                test_params.name, test_params.reduction_axes, test_params.channel_axis
+            ),
             "fn_output_port_id": 0,
         },
     )
@@ -276,7 +314,9 @@ def test_split_inplace_fn_insertion(test_params: InplaceOpTestCase):
         OVInplaceFnInsertionCommand,
         port_id,
         {
-            "inplace_op_fn": test_params.op_builder(test_params.name, test_params.reduction_axes, test_params.channel_axis),
+            "inplace_op_fn": test_params.op_builder(
+                test_params.name, test_params.reduction_axes, test_params.channel_axis
+            ),
             "fn_output_port_id": 0,
         },
     )
@@ -339,9 +379,30 @@ def test_inplace_reduce_fn_zero_rank_output(reduction_axes):
 DYNAMIC_SHAPE_TEST_CASES = [
     InplaceOpTestCase("mean_per_ch", None, get_inplace_mean_per_ch, ["Reshape"], [(-1, 3, 9), (0, 2)], channel_axis=1),
     InplaceOpTestCase("mean_per_ch", None, get_inplace_mean_per_ch, ["Reshape"], [(1, 3, -1), (0, 2)], channel_axis=1),
-    InplaceOpTestCase("mean_per_ch", None, get_inplace_mean_per_ch, ["Transpose", "Reshape"], [(0, 3, 2, 1), (-1, 3, 9)], channel_axis=3),
-    InplaceOpTestCase("mean_per_ch", None, get_inplace_mean_per_ch, ["Transpose", "Reshape"], [(0, 3, 2, 1), (1, -1, 9)], channel_axis=3),
-    InplaceOpTestCase("mean_per_ch", None, get_inplace_mean_per_ch, ["Transpose", "Reshape"], [(0, 3, 2, 1), (1, 3, -1)], channel_axis=3),
+    InplaceOpTestCase(
+        "mean_per_ch",
+        None,
+        get_inplace_mean_per_ch,
+        ["Transpose", "Reshape"],
+        [(0, 3, 2, 1), (-1, 3, 9)],
+        channel_axis=3,
+    ),
+    InplaceOpTestCase(
+        "mean_per_ch",
+        None,
+        get_inplace_mean_per_ch,
+        ["Transpose", "Reshape"],
+        [(0, 3, 2, 1), (1, -1, 9)],
+        channel_axis=3,
+    ),
+    InplaceOpTestCase(
+        "mean_per_ch",
+        None,
+        get_inplace_mean_per_ch,
+        ["Transpose", "Reshape"],
+        [(0, 3, 2, 1), (1, 3, -1)],
+        channel_axis=3,
+    ),
 ]
 
 

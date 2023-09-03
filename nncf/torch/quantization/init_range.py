@@ -149,8 +149,8 @@ class StatCollectorGenerator:
                 reduction_axes = get_reduction_axes_from_scale_shape(ss)
                 reduction_axes_set.add(reduction_axes)
                 collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
-                        init_config, reduction_axes, params, num_samples_to_collect_override=num_batches
-                    )
+                    init_config, reduction_axes, params, num_samples_to_collect_override=num_batches
+                )
                 reduction_axes_vs_collector[reduction_axes] = collector
             obs_p = TensorStatisticObservationPoint(tp, reduction_axes_set=reduction_axes_set)
             retval[obs_p] = {}
@@ -174,9 +174,7 @@ class StatCollectorGenerator:
         if init_config.init_type not in RANGE_INIT_TYPES_VS_DESCRIPTIONS:
             raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
         if init_config.init_type == "min_max":
-            return MinMaxStatisticCollector(
-                collector_params.use_abs_max, reduction_axes, num_samples
-            )
+            return MinMaxStatisticCollector(collector_params.use_abs_max, reduction_axes, num_samples)
         if init_config.init_type == "mixed_min_max":
             return MixedMinMaxStatisticCollector(
                 collector_params.use_per_sample_stats(per_sample_stats=True),
@@ -224,8 +222,8 @@ class StatCollectorGenerator:
         for qconfig in qconfigs:
             is_weights = qp.is_weight_quantization_point()
             scale_shape = get_scale_shape(
-                    input_shape, is_weights=is_weights, per_channel=qconfig.per_channel, channel_idx=channel_idx
-                )
+                input_shape, is_weights=is_weights, per_channel=qconfig.per_channel, channel_idx=channel_idx
+            )
 
             if scale_shape not in retval:
                 retval[scale_shape] = PTRangeInitCollectorParams(
@@ -292,7 +290,8 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
                 init_config,
                 get_reduction_axes_from_scale_shape(QuantizerScaleShape(quantizer_module.scale_shape)),
-                collector_params, num_samples_override
+                collector_params,
+                num_samples_override,
             )
 
             self.collectors_and_modules_to_init[name] = collector, quantizer_module
@@ -309,5 +308,5 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             quantizer_module.apply_minmax_init(
                 minmax_stats.min_values.tensor.reshape(quantizer_module.scale_shape),
                 minmax_stats.max_values.tensor.reshape(quantizer_module.scale_shape),
-                log_module_name=scope_str
+                log_module_name=scope_str,
             )

@@ -13,8 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
 from collections import deque
-from typing import Any, Deque, Dict, List, Optional, Set, Tuple, TypeVar, Union
-from typing import Type
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.common.tensor_statistics.collectors import ReductionAxes
@@ -31,7 +30,9 @@ class TensorReducerBase(ABC):
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, channel_axis: Optional[int] = None, inplace: bool = False):
+    def __init__(
+        self, reduction_axes: Optional[ReductionAxes] = None, channel_axis: Optional[int] = None, inplace: bool = False
+    ):
         """
         :param reduction_axes: Reduction shape for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
@@ -94,9 +95,9 @@ class TensorReducerBase(ABC):
 
     def __eq__(self, __o: object) -> bool:
         return (
-                isinstance(__o, self.__class__)
-                and self._reduction_axes == __o._reduction_axes
-                and self._inplace == __o.inplace
+            isinstance(__o, self.__class__)
+            and self._reduction_axes == __o._reduction_axes
+            and self._inplace == __o.inplace
         )
 
     def __hash__(self) -> int:
@@ -499,9 +500,7 @@ class QuantileReducerBase(TensorReducerBase):
         quantile: Optional[Union[float, Tuple[float]]] = None,
         inplace: bool = False,
     ):
-        super().__init__(reduction_axes=reduction_axes,
-                         channel_axis=channel_axis,
-                         inplace=False)
+        super().__init__(reduction_axes=reduction_axes, channel_axis=channel_axis, inplace=False)
         self._quantile = (0.01, 0.99) if quantile is None else quantile
 
     def __eq__(self, __o: object) -> bool:

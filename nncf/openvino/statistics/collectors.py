@@ -52,7 +52,9 @@ class OVMinReducer(MinReducer):
 
 class OVMaxReducer(MaxReducer):
     def get_inplace_fn(self):
-        return get_inplace_max_op(self.name, reduction_axes=self._reduction_axes, channel_axis=self._channel_axis, use_abs_max=False)
+        return get_inplace_max_op(
+            self.name, reduction_axes=self._reduction_axes, channel_axis=self._channel_axis, use_abs_max=False
+        )
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
@@ -60,7 +62,9 @@ class OVMaxReducer(MaxReducer):
 
 class OVAbsMaxReducer(AbsMaxReducer):
     def get_inplace_fn(self):
-        return get_inplace_max_op(self.name, reduction_axes=self._reduction_axes, channel_axis=self._channel_axis, use_abs_max=True)
+        return get_inplace_max_op(
+            self.name, reduction_axes=self._reduction_axes, channel_axis=self._channel_axis, use_abs_max=True
+        )
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)

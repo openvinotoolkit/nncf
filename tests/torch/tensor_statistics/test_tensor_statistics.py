@@ -45,14 +45,15 @@ class TestCollectedStatistics:
                 MinMaxStatisticCollector,
                 {
                     ((1,), (0, 1)): MinMaxTensorStatistic(
-                        min_values=PTNNCFTensor(torch.tensor([-4.0])), 
-                        max_values=PTNNCFTensor(torch.tensor([6.1]))
+                        min_values=PTNNCFTensor(torch.tensor([-4.0])), max_values=PTNNCFTensor(torch.tensor([6.1]))
                     ),
                     ((3, 1), (1,)): MinMaxTensorStatistic(
-                        min_values=PTNNCFTensor(torch.tensor([[1.0], [-4.0], [4.0]])), max_values=PTNNCFTensor(torch.tensor([[4.5], [4.0], [6.1]]))
+                        min_values=PTNNCFTensor(torch.tensor([[1.0], [-4.0], [4.0]])),
+                        max_values=PTNNCFTensor(torch.tensor([[4.5], [4.0], [6.1]])),
                     ),
                     ((1, 3), (0,)): MinMaxTensorStatistic(
-                        min_values=PTNNCFTensor(torch.tensor([[-1.3, -4.0, -3.5]])), max_values=PTNNCFTensor(torch.tensor([[4.5, 5.8, 6.1]]))
+                        min_values=PTNNCFTensor(torch.tensor([[-1.3, -4.0, -3.5]])),
+                        max_values=PTNNCFTensor(torch.tensor([[4.5, 5.8, 6.1]])),
                     ),
                     # Not supported for now:
                     # ((3, 3), ): MinMaxTensorStatistic(
@@ -80,7 +81,8 @@ class TestCollectedStatistics:
                         max_values=PTNNCFTensor(torch.tensor([[3.75], [3.5], [6.05]])),
                     ),
                     ((1, 3), (0,)): MinMaxTensorStatistic(
-                        min_values=PTNNCFTensor(torch.tensor([[-1.15, -3, -3.25]])), max_values=PTNNCFTensor(torch.tensor([[4.25, 5.4, 6.05]]))
+                        min_values=PTNNCFTensor(torch.tensor([[-1.15, -3, -3.25]])),
+                        max_values=PTNNCFTensor(torch.tensor([[4.25, 5.4, 6.05]])),
                     ),
                 },
             ),
@@ -100,7 +102,8 @@ class TestCollectedStatistics:
                         max_values=PTNNCFTensor(torch.tensor([[3.75], [3.5], [6.05]])),
                     ),
                     ((1, 3), (0,)): MinMaxTensorStatistic(
-                        min_values=PTNNCFTensor(torch.tensor([[-1.3, -4.0, -3.5]])), max_values=PTNNCFTensor(torch.tensor([[4.25, 5.4, 6.05]]))
+                        min_values=PTNNCFTensor(torch.tensor([[-1.3, -4.0, -3.5]])),
+                        max_values=PTNNCFTensor(torch.tensor([[4.25, 5.4, 6.05]])),
                     ),
                 },
             ),
@@ -125,13 +128,16 @@ class TestCollectedStatistics:
             (
                 MedianMADStatisticCollector,
                 {
-                    (1,): MedianMADTensorStatistic(median_values=PTNNCFTensor(torch.tensor([2.8])), mad_values=PTNNCFTensor(torch.tensor([2.6]))),
+                    (1,): MedianMADTensorStatistic(
+                        median_values=PTNNCFTensor(torch.tensor([2.8])), mad_values=PTNNCFTensor(torch.tensor([2.6]))
+                    ),
                     (3, 1): MedianMADTensorStatistic(
                         median_values=PTNNCFTensor(torch.tensor([[2.8], [-2.5], [5.4]])),
                         mad_values=PTNNCFTensor(torch.tensor([[0.85], [1.1], [0.65]])),
                     ),
                     (1, 3): MedianMADTensorStatistic(
-                        median_values=PTNNCFTensor(torch.tensor([[2.5, 2.3, 3.35]])), mad_values=PTNNCFTensor(torch.tensor([[1.9, 3.1, 2.7]]))
+                        median_values=PTNNCFTensor(torch.tensor([[2.5, 2.3, 3.35]])),
+                        mad_values=PTNNCFTensor(torch.tensor([[1.9, 3.1, 2.7]])),
                     ),
                     # Not supported for now:
                     # (3, 3): MedianMADTensorStatistic(
@@ -170,8 +176,12 @@ class TestCollectedStatistics:
                 partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
                 {
                     (1,): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([-2.9]))}),
-                    (3, 1): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[2.0100], [-3.3500], [4.4000]]))}),
-                    (1, 3): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-0.3900, -1.9400, -1.9300]]))}),
+                    (3, 1): PercentileTensorStatistic(
+                        {10.0: PTNNCFTensor(torch.tensor([[2.0100], [-3.3500], [4.4000]]))}
+                    ),
+                    (1, 3): PercentileTensorStatistic(
+                        {10.0: PTNNCFTensor(torch.tensor([[-0.3900, -1.9400, -1.9300]]))}
+                    ),
                     # Not supported for now:
                     # (3, 3): PercentileTensorStatistic(
                     #     {

@@ -65,7 +65,10 @@ from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
@@ -143,9 +146,6 @@ from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
-from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_model_dtype
 from nncf.torch.utils import get_state_dict_names_with_modules
@@ -614,7 +614,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 else:
                     input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
                     channel_idx = 1  # channel dim for activations
-                scale_shape = get_scale_shape(input_shape, qp.is_weight_quantization_point(), qp.qconfig.per_channel, channel_idx)
+                scale_shape = get_scale_shape(
+                    input_shape, qp.is_weight_quantization_point(), qp.qconfig.per_channel, channel_idx
+                )
 
                 if scale_shape not in tensor_statistics[tp]:
                     nncf_logger.debug(f"Did not collect tensor statistics at {tp} for shape {scale_shape}")
@@ -693,7 +695,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         retval = {}
         for ip, rs_vs_collector in stat_ctrl.ip_vs_collector_dict.items():
-            retval[ip] = {QuantizerScaleShape(rs): collector.get_statistics() for rs, collector in rs_vs_collector.items()}
+            retval[ip] = {
+                QuantizerScaleShape(rs): collector.get_statistics() for rs, collector in rs_vs_collector.items()
+            }
         return retval
 
     def _get_statistics_for_final_range_init(
@@ -1189,8 +1193,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             min_values = range_init_minmax_values[0].type(own_type).reshape(quantizer.scale_shape)
             max_values = range_init_minmax_values[1].type(own_type).reshape(quantizer.scale_shape)
 
-            quantizer.apply_minmax_init(min_values=min_values,
-                                        max_values=max_values, log_module_name=str(primary_ip))
+            quantizer.apply_minmax_init(min_values=min_values, max_values=max_values, log_module_name=str(primary_ip))
 
         qids = []  # type: List[QuantizerId]
         for ip in insertion_points:

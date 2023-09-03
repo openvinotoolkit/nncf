@@ -1008,7 +1008,9 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None
     return QuantizerScaleShape(scale_shape)
 
 
-def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool, channel_idx: int = None) -> QuantizerScaleShape:
+def get_scale_shape(
+    input_shape: List[int], is_weights: bool, per_channel: bool, channel_idx: int = None
+) -> QuantizerScaleShape:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
     or derivatives.

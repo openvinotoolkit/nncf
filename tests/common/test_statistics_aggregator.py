@@ -13,8 +13,7 @@ from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, List, Type, Union
-from typing import Tuple
+from typing import Any, List, Tuple, Type, Union
 
 import numpy as np
 import pytest
@@ -25,10 +24,10 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
-from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
@@ -531,7 +530,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.OPERATION_WITH_WEIGHTS,
                 ref_values=MEAN_WEIGHTS_AXIS_0_REF,
                 ref_observed_shape=(3, 3, 3, 3),
-                channel_axis=None, # batch mean requested
+                channel_axis=None,  # batch mean requested
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.BIAS_CORRECTION,
@@ -539,7 +538,7 @@ class TemplateTestStatisticsAggregator:
                 TargetType.OPERATION_WITH_WEIGHTS,
                 ref_values=MEAN_WEIGHTS_AXIS_0_REF,
                 ref_observed_shape=(3, 3, 3, 3),
-                channel_axis=None, # batch mean requested
+                channel_axis=None,  # batch mean requested
             ),
             BCTestParameters(
                 BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
@@ -575,9 +574,7 @@ class TemplateTestStatisticsAggregator:
             ),
         ],
     )
-    def test_statistics_aggregator_bias_correction(
-        self, dataset_samples, params, inplace_statistics
-    ):
+    def test_statistics_aggregator_bias_correction(self, dataset_samples, params, inplace_statistics):
         name_to_algo_backend_map = {
             self.BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
             self.BiasCorrectionAlgos.FAST_BIAS_CORRECTION: self.get_fast_bias_correction_algo_backend_cls,
@@ -637,7 +634,6 @@ class TemplateTestStatisticsAggregator:
                     assert np.allclose(test_stat_value, ref_val)
             else:
                 raise RuntimeError()
-
 
     def create_statistics_point(
         self, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator

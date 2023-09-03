@@ -11,8 +11,7 @@
 import abc
 from abc import abstractmethod
 from enum import IntEnum
-from typing import Any, Callable, Generic, List, Optional, Tuple, Type, TypeVar, Union
-from typing import Iterator
+from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 
@@ -352,7 +351,7 @@ class NNCFTensorBackend(abc.ABC):
         pass
 
 
-T = TypeVar('T', bound=NNCFTensor)
+T = TypeVar("T", bound=NNCFTensor)
 
 
 class WrappingIterator(Generic[T]):

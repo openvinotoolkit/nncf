@@ -10,9 +10,7 @@
 # limitations under the License.
 
 from itertools import islice
-from typing import List
-from typing import Tuple
-from typing import Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -37,7 +35,9 @@ class TFRangeInitParamsV2(TFRangeInitParams):
         return self.get_init_config_for_scope_and_group(node_name, group)
 
 
-def _get_reduction_axes(tensor_shape: List[int], channel_axes: Union[List[int], Tuple[int, ...], int], per_channel: bool) -> ReductionAxes:
+def _get_reduction_axes(
+    tensor_shape: List[int], channel_axes: Union[List[int], Tuple[int, ...], int], per_channel: bool
+) -> ReductionAxes:
     ndims = len(tensor_shape)
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
     reduction_axes = get_axes(ndims, per_channel, channel_axes_)

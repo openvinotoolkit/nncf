@@ -12,8 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import Counter
-from typing import Dict, List, TypeVar
-from typing import Tuple
+from typing import Dict, List, Tuple, TypeVar
 
 from nncf.common.tensor import NNCFTensor
 
@@ -67,6 +66,7 @@ class MinMaxTensorStatistic(TensorStatistic):
                 statistic.percentile_vs_values_dict[min_pct], statistic.percentile_vs_values_dict[max_pct]
             )
         raise ValueError("Unknown TensorStatistic to generate min-max stat from!")
+
 
 class MeanTensorStatistic(TensorStatistic):
     MEAN_STAT = "mean_values"

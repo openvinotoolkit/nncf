@@ -8,8 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable
-from typing import Dict, Set
+from typing import Callable, Dict, Set
 
 import torch
 
@@ -61,7 +60,9 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def __init__(
         self,
         config: NNCFConfig,
-        observation_points_vs_collectors: Dict[TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]],
+        observation_points_vs_collectors: Dict[
+            TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]
+        ],
     ):
         super().__init__(config)
         self._observation_points_vs_collectors = observation_points_vs_collectors
@@ -97,8 +98,9 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
 
 class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(
-        self, target_model: NNCFNetwork, ip_vs_collector_dict: Dict[TensorStatisticObservationPoint,
-            Dict[ReductionShape, TensorStatisticCollectorBase]]
+        self,
+        target_model: NNCFNetwork,
+        ip_vs_collector_dict: Dict[TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]],
     ):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict

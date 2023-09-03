@@ -42,7 +42,6 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
     def size(self) -> int:
         return self._tensor.size
 
-
     def matmul(self, other: "NPNNCFTensor") -> "NPNNCFTensor":
         return self.__class__(np.matmul(self._tensor, other._tensor))
 

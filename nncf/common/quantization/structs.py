@@ -11,9 +11,7 @@
 
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Dict, List, Optional
-from typing import Tuple
-from typing import Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName

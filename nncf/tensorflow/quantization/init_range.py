@@ -155,9 +155,7 @@ class RangeInitializer:
 
         num_batches = int(np.ceil(init_config.num_init_samples / self.dataset.batch_size))
 
-        collector = RangeInitializer.generate_stat_collector(
-            reduction_axes, collector_params, init_config, num_batches
-        )
+        collector = RangeInitializer.generate_stat_collector(reduction_axes, collector_params, init_config, num_batches)
 
         hook = get_collection_hook(collector)
 
@@ -210,8 +208,9 @@ class RangeInitializer:
         for layer, collector in layer_statistics:
             target_stat = collector.get_statistics()
             minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
-            layer.apply_range_initialization(tf.squeeze(minmax_stats.min_values.tensor),
-                                             tf.squeeze(minmax_stats.max_values.tensor))
+            layer.apply_range_initialization(
+                tf.squeeze(minmax_stats.min_values.tensor), tf.squeeze(minmax_stats.max_values.tensor)
+            )
             layer.enabled = True
 
         for layer, op_name, op, collector in op_statistics:

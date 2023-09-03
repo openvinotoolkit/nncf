@@ -17,6 +17,8 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -33,8 +35,6 @@ from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
 from nncf.torch.quantization.quantize_model import _create_nncf_config
-from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype

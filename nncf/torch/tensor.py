@@ -8,13 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Type
-from typing import Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -96,7 +90,7 @@ class PTNNCFTensor(NNCFTensor[torch.Tensor]):
 
 class PTNNCFTensorBackend(NNCFTensorBackend):
     inf = torch.inf
-    
+
     @staticmethod
     def moveaxis(tensor: PTNNCFTensor, src: int, dst: int) -> PTNNCFTensor:
         return PTNNCFTensor(torch.moveaxis(tensor.tensor, source=src, destination=dst))
@@ -186,8 +180,12 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
         return PTNNCFTensor(torch.pow(tensor.tensor, exponent=pwr))
 
     @staticmethod
-    def quantile(tensor: PTNNCFTensor, quantile: Union[float, List[float]], axis: Union[int, List[int]] = None,
-                 keepdims: bool = False) -> Union[float, PTNNCFTensor]:
+    def quantile(
+        tensor: PTNNCFTensor,
+        quantile: Union[float, List[float]],
+        axis: Union[int, List[int]] = None,
+        keepdims: bool = False,
+    ) -> Union[float, PTNNCFTensor]:
         return PTNNCFTensor(torch.quantile(tensor.tensor, q=quantile, dim=axis, keepdim=keepdims))
 
     @staticmethod
@@ -200,7 +198,9 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
         return PTNNCFTensor(torch.masked.mean(masked_tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
-    def masked_median(tensor: PTNNCFTensor, mask: PTNNCFTensor, axis: int = None, keepdims: bool = False) -> PTNNCFTensor:
+    def masked_median(
+        tensor: PTNNCFTensor, mask: PTNNCFTensor, axis: int = None, keepdims: bool = False
+    ) -> PTNNCFTensor:
         masked_tensor = torch.masked.masked_tensor(tensor, mask)
         return PTNNCFTensor(torch.masked.median(masked_tensor, dim=axis, keepdim=keepdims))
 
