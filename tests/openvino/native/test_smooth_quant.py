@@ -16,13 +16,13 @@ import numpy as np
 import openvino.runtime as ov
 import pytest
 import torch
+from openvino.tools.mo import convert_model
 
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
-from tests.shared.command import Command
 
 
 class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
@@ -44,13 +44,10 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
+        # TODO(AlexanderDokuchaev): remove onnx export after fix 119625
         onnx_path = Path(f"{tmp_dir}/model.onnx")
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
-        ov_path = Path(f"{tmp_dir}/model.xml")
-        runner = Command(f"mo -m {onnx_path} -o {tmp_dir} -n model --compress_to_fp16=False")
-        runner.run()
-        core = ov.Core()
-        ov_model = core.read_model(ov_path)
+        ov_model = convert_model(onnx_path, input_shape=model.INPUT_SIZE, compress_to_fp16=False)
         return ov_model
 
     @staticmethod
