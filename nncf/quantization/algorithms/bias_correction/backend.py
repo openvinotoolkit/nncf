@@ -89,7 +89,7 @@ class BiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def mean_statistic_collector(
-        reduction_axes: ReductionAxes,
+        channel_axis: Optional[int],
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
@@ -97,7 +97,7 @@ class BiasCorrectionAlgoBackend(ABC):
         """
         Returns backend-specific mean statistic collector.
 
-        :param reduction_axes: Channel axis for the statistics aggregation.
+        :param channel_axis: Channel axis for the statistics aggregation.
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.

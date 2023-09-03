@@ -110,7 +110,7 @@ def get_mean_stat_collector(num_samples, channel_axis, window_size=None, inplace
     # TODO(dlyakhov): use inplace OVBatchMeanReducer and OVMeanPerChanelReducer
     # after migration on openvino-dev=2023.0
     inplace = False
-    if channel_axis == 0:
+    if channel_axis is None:
         reducer = OVBatchMeanReducer(inplace)
     else:
         reducer = OVMeanPerChanelReducer(channel_axis, inplace)

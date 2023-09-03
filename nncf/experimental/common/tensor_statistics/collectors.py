@@ -536,11 +536,10 @@ class MeanPerChReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
         backend = x.backend
-        if len(x.shape) < 3:
-            return [backend.mean(x, axis=0)]
-        x = backend.moveaxis(x, self._reduction_axes, 1)
-        t = x.reshape(x.shape[0], x.shape[1], -1)
-        retval = backend.mean(t, axis=(0, 2))
+        shape = x.shape
+        channel_axis = 1
+        axis = tuple(i for i in range(len(shape)) if i != channel_axis)
+        retval = backend.mean(x, axis=axis, keepdims=True)
         return [retval]
 
 

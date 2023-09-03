@@ -294,7 +294,6 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     ) -> None:
         """
         :param reduction_axes: The shape for the reduction while statistics collection.
-            For the MeanStatisticCollector this parameter contains the main axis.
         :param num_samples: Optional parameter for statistic collection that regulates
             the number of samples that will be processed.
         :param window_size: Optional maximum length for the statistic collection
