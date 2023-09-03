@@ -183,10 +183,6 @@ class BiasCorrection(Algorithm):
             backend = current_bias.backend
 
             channel_axis = node.metatype.output_channel_axis
-            if current_bias.ndim > 1:
-                channel_axis = range(current_bias.ndim)[channel_axis]
-                axes = [i for i in range(current_bias.ndim) if i != channel_axis]
-                bias_shift = backend.expand_dims(bias_shift, axes)
 
             updated_bias = current_bias + bias_shift.reshape(*current_bias.shape)
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)

@@ -100,7 +100,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def create_input_data(
-        shape: Tuple[int], data: List[TTensor], input_name: str, channel_axis: int
+        shape: Tuple[int], data: TTensor, input_name: str, channel_axis: int
     ) -> Union[Dict[str, TTensor], TTensor]:
         """
         Creates input data for the bias shift calculation.
