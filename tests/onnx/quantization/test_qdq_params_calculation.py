@@ -61,9 +61,8 @@ def test_overflow_fix_scales(overflow_fix):
     ref_stats_name = model.path_ref_graph.split(".")[0] + f"_overflow_fix_{overflow_fix.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
-
     # dump_to_json(ref_stats_path, q_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
@@ -110,9 +109,8 @@ def test_scales(model, preset):
     ref_stats_name = model.path_ref_graph.split(".")[0] + f"_{preset.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
-
     # dump_to_json(ref_stats_path, q_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)

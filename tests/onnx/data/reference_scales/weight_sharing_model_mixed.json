@@ -1,7 +1,11 @@
 {
     "QuantizeLinear_relu_X_1": {
-        "scale": 0.0037303713615983725,
-        "zero_point": 0
+        "scale": [
+            0.0037303713615983725
+        ],
+        "zero_point": [
+            0
+        ]
     },
     "QuantizeLinear_W_1": {
         "scale": [
@@ -20,11 +24,19 @@
         ]
     },
     "QuantizeLinear_conv_1_1": {
-        "scale": 0.011836746707558632,
-        "zero_point": 0
+        "scale": [
+            0.011836746707558632
+        ],
+        "zero_point": [
+            0
+        ]
     },
     "QuantizeLinear_conv_2_1": {
-        "scale": 0.011836746707558632,
-        "zero_point": 0
+        "scale": [
+            0.011836746707558632
+        ],
+        "zero_point": [
+            0
+        ]
     }
 }
