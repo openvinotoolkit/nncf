@@ -233,7 +233,7 @@ def get_inplace_batch_mean_op(node_name: str) -> InplaceInsertionFnType:
     :param node_name: Last node of batch mean subgraph name.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
-    return get_inplace_reduce_op(opset.reduce_mean, node_name, channel_axis=0, use_abs=False)
+    return get_inplace_reduce_op(opset.reduce_mean, node_name, reduction_axes=(0,), use_abs=False)
 
 
 def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
