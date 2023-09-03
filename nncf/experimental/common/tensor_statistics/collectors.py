@@ -31,14 +31,20 @@ class TensorReducerBase(ABC):
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, inplace: bool = False):
+    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, channel_axis: Optional[int] = None, inplace: bool = False):
         """
         :param reduction_axes: Reduction shape for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
         :param inplace: Whether should be calculated inplace or out of place.
 
         """
+        if reduction_axes is None and channel_axis is None:
+            raise RuntimeError("Either reduction_axes or channel_axis must be specified")
+
+        if reduction_axes is not None and channel_axis is not None:
+            raise RuntimeError("reduction_axes or channel_axis cannot be specified at the same time")
         self._reduction_axes = reduction_axes
+        self._channel_axis = channel_axis
         self._inplace = inplace
 
     @property
@@ -97,7 +103,13 @@ class TensorReducerBase(ABC):
         return hash((self.__class__.__name__, self.inplace, self._reduction_axes))
 
     def _get_axis(self, tensor: NNCFTensor) -> Optional[ReductionAxes]:
-        return self._reduction_axes if not is_reduce_to_scalar(self._reduction_axes) else None
+        if self._reduction_axes is not None:
+            if is_reduce_to_scalar(self._reduction_axes):
+                return None
+            return self._reduction_axes
+        # self._channel_axis is not None
+        shape = tensor.shape
+        return tuple(i for i in range(len(shape)) if i != self._channel_axis)
 
 
 class Aggregator(abc.ABC):
@@ -435,7 +447,7 @@ class MergedTensorCollector(TensorCollector):
 
 class NoopReducer(TensorReducerBase):
     def __init__(self):
-        super().__init__(inplace=False)
+        super().__init__(reduction_axes=tuple(), inplace=False)
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
@@ -481,10 +493,13 @@ class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
         reduction_axes: Optional[ReductionAxes] = None,
+        channel_axis: Optional[int] = None,
         quantile: Optional[Union[float, Tuple[float]]] = None,
         inplace: bool = False,
     ):
-        super().__init__(reduction_axes, False)
+        super().__init__(reduction_axes=reduction_axes,
+                         channel_axis=channel_axis,
+                         inplace=False)
         self._quantile = (0.01, 0.99) if quantile is None else quantile
 
     def __eq__(self, __o: object) -> bool:
@@ -503,14 +518,6 @@ class QuantileReducer(QuantileReducerBase):
 
 
 class AbsQuantileReducer(QuantileReducerBase):
-    def __init__(
-        self,
-        reduction_axes: Optional[ReductionAxes] = None,
-        quantile: Union[float, List[float]] = 0.99,
-        inplace: bool = False,
-    ):
-        super().__init__(reduction_axes, quantile, False)
-
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
         backend = x.backend
@@ -521,7 +528,7 @@ class AbsQuantileReducer(QuantileReducerBase):
 
 class BatchMeanReducer(TensorReducerBase):
     def __init__(self, inplace: bool = False):
-        super().__init__(None, inplace)
+        super().__init__(channel_axis=0, inplace=inplace)
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
@@ -531,14 +538,13 @@ class BatchMeanReducer(TensorReducerBase):
 
 class MeanPerChReducer(TensorReducerBase):
     def __init__(self, channel_dim: int = 1, inplace: bool = False):
-        super().__init__(channel_dim, inplace)
+        super().__init__(channel_axis=channel_dim, inplace=inplace)
 
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
         backend = x.backend
         shape = x.shape
-        channel_axis = 1
-        axis = tuple(i for i in range(len(shape)) if i != channel_axis)
+        axis = self._get_axis(x)
         retval = backend.mean(x, axis=axis, keepdims=True)
         return [retval]
 

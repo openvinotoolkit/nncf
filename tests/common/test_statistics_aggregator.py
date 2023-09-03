@@ -28,6 +28,7 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
@@ -829,10 +830,10 @@ class TemplateTestStatisticsAggregator:
         model = params["model"](dataset_samples)
         params = {}
         if statistics_type in [StatisticsType.MIN, StatisticsType.MAX, StatisticsType.ABS_MAX, StatisticsType.MEAN]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [REDUCE_TO_SCALAR_REDUCTION_SHAPE, (0, 1, 3), (1, 2, 3)]
             params["inplace"] = [False, True]
         elif statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [REDUCE_TO_SCALAR_REDUCTION_SHAPE, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif statistics_type == "batch_mean":
             pytest.skip("Inplace statistic woun't work until openvino==2023.0.0 release")
