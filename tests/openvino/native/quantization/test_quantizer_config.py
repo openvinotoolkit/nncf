@@ -16,6 +16,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
@@ -51,8 +52,8 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
                 (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (0, 2), (0, 1, 2)),
                 marks=pytest.mark.skip("Ticket 102414: remove hardcoded axes for activations"),
             ),
-            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), None),
-            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), None),
+            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
+            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
         ]
     )
     def statistic_collector_parameters(self, request) -> ParamsCls:
