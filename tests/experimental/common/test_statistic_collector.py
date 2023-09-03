@@ -26,7 +26,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorReducerB
 # pylint: disable=(protected-access)
 class DummyTensorReducer(TensorReducerBase):
     def __init__(self, output_name: str, inplace: bool = False, inplace_mock=None):
-        super().__init__(inplace=inplace)
+        super().__init__(reduction_axes=tuple(), inplace=inplace)
         self._output_name = output_name
         self._inplace_mock = inplace_mock
 
@@ -284,7 +284,7 @@ class TemplateTestStatisticCollector:
     @pytest.mark.parametrize("any_not_empty", [False, True])
     def test_empty_tensors_register(self, inplace, any_not_empty):
         collector = TensorCollector()
-        reducer = DummyTensorReducer("Dummy", inplace)
+        reducer = DummyTensorReducer("Dummy", inplace=inplace)
         aggregator = DummyTensorAggregator(5)
         collector.register_statistic_branch("A", reducer, aggregator)
         input_name = "input_name"
