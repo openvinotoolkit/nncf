@@ -128,19 +128,19 @@ class TestCollectedStatistics:
             (
                 MedianMADStatisticCollector,
                 {
-                    (1,): MedianMADTensorStatistic(
-                        median_values=PTNNCFTensor(torch.tensor([2.8])), mad_values=PTNNCFTensor(torch.tensor([2.6]))
+                    (0, 1): MedianMADTensorStatistic(
+                        median_values=PTNNCFTensor(torch.tensor([[2.8]])), mad_values=PTNNCFTensor(torch.tensor([[2.6]]))
                     ),
-                    (3, 1): MedianMADTensorStatistic(
+                    (1, ): MedianMADTensorStatistic(
                         median_values=PTNNCFTensor(torch.tensor([[2.8], [-2.5], [5.4]])),
                         mad_values=PTNNCFTensor(torch.tensor([[0.85], [1.1], [0.65]])),
                     ),
-                    (1, 3): MedianMADTensorStatistic(
+                    (0, ): MedianMADTensorStatistic(
                         median_values=PTNNCFTensor(torch.tensor([[2.5, 2.3, 3.35]])),
                         mad_values=PTNNCFTensor(torch.tensor([[1.9, 3.1, 2.7]])),
                     ),
                     # Not supported for now:
-                    # (3, 3): MedianMADTensorStatistic(
+                    # tuple(): MedianMADTensorStatistic(
                     #     median_values=torch.tensor([
                     #         [2.75, 2.3, 3.35],
                     #         [-1.15, -3, -3.25],
@@ -157,11 +157,11 @@ class TestCollectedStatistics:
             (
                 partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
                 {
-                    (1,): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([-3.15]))}),
-                    (3, 1): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[1.5], [-3.75], [4.15]]))}),
-                    (1, 3): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-1.15, -3, -3.25]]))}),
+                    (0, 1): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-3.15]]))}),
+                    (1, ): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[1.5], [-3.75], [4.15]]))}),
+                    (0, ): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-1.15, -3, -3.25]]))}),
                     # Not supported for now:
-                    # (3, 3): PercentileTensorStatistic(
+                    # tuple(): PercentileTensorStatistic(
                     #     {
                     #         10.0: torch.tensor([
                     #             [1.35, 2.06, 3.07],
@@ -175,15 +175,15 @@ class TestCollectedStatistics:
             (
                 partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
                 {
-                    (1,): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([-2.9]))}),
-                    (3, 1): PercentileTensorStatistic(
+                    (0, 1): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-2.9]]))}),
+                    (1, ): PercentileTensorStatistic(
                         {10.0: PTNNCFTensor(torch.tensor([[2.0100], [-3.3500], [4.4000]]))}
                     ),
-                    (1, 3): PercentileTensorStatistic(
+                    (0, ): PercentileTensorStatistic(
                         {10.0: PTNNCFTensor(torch.tensor([[-0.3900, -1.9400, -1.9300]]))}
                     ),
                     # Not supported for now:
-                    # (3, 3): PercentileTensorStatistic(
+                    # tuple(): PercentileTensorStatistic(
                     #     {
                     #         10.0: torch.tensor([
                     #             [ 2.7500,  2.3000,  3.3500],
@@ -201,25 +201,25 @@ class TestCollectedStatistics:
         collector: Type[TensorStatisticCollectorBase],
         reduction_axes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
     ):
-        for shapes in reduction_axes_vs_ref_statistic.keys():
-            reduction_shape = shapes
-            collector_obj = collector(reduction_axes=reduction_shape)
+        for ra in reduction_axes_vs_ref_statistic.keys():
+            reduction_axes = ra
+            collector_obj = collector(reduction_axes=reduction_axes)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(input_)
             test_stats = collector_obj.get_statistics()
-            assert reduction_axes_vs_ref_statistic[shapes] == test_stats
+            ref_stats = reduction_axes_vs_ref_statistic[ra]
+            assert ref_stats == test_stats
 
     COLLECTORS = [
-        partial(MinMaxStatisticCollector, use_abs_max=False, output_shape=(1,)),
+        partial(MinMaxStatisticCollector, use_abs_max=False),
         partial(
             MixedMinMaxStatisticCollector,
             use_per_sample_stats=False,
             use_abs_max=False,
             use_means_of_mins=False,
             use_means_of_maxs=False,
-            output_shape=(1,),
         ),
-        partial(MeanMinMaxStatisticCollector, use_per_sample_stats=False, use_abs_max=False, output_shape=(1,)),
+        partial(MeanMinMaxStatisticCollector, use_per_sample_stats=False, use_abs_max=False),
         MedianMADStatisticCollector,
         partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
         partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
@@ -228,7 +228,7 @@ class TestCollectedStatistics:
     @pytest.fixture(params=COLLECTORS)
     def collector_for_interface_test(self, request):
         collector_type = request.param
-        return collector_type(reduction_shape=(1,))
+        return collector_type(reduction_axes=tuple())
 
     def test_collected_samples(self, collector_for_interface_test: TensorStatisticCollectorBase):
         for input_ in TestCollectedStatistics.REF_INPUTS:
@@ -263,10 +263,9 @@ class TestCollectedStatistics:
             use_per_sample_stats=False,
             use_abs_max=False,
             use_means_of_mins=False,
-            use_means_of_maxs=False,
-            output_shape=(1,),
+            use_means_of_maxs=False
         ),
-        partial(MeanMinMaxStatisticCollector, use_per_sample_stats=False, use_abs_max=False, output_shape=(1,)),
+        partial(MeanMinMaxStatisticCollector, use_per_sample_stats=False, use_abs_max=False),
         MedianMADStatisticCollector,
         partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
         partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
@@ -277,7 +276,7 @@ class TestCollectedStatistics:
     @pytest.fixture(params=OFFLINE_COLLECTORS)
     def collector_for_num_samples_test(self, request):
         collector_type = request.param
-        return collector_type(reduction_shape=(1,), num_samples=TestCollectedStatistics.REF_NUM_SAMPLES)
+        return collector_type(reduction_axes=tuple(), num_samples=TestCollectedStatistics.REF_NUM_SAMPLES)
 
     def test_num_samples(self, collector_for_num_samples_test: OfflineTensorStatisticCollector):
         for input_ in TestCollectedStatistics.REF_INPUTS * 10:
