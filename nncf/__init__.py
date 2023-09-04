@@ -54,7 +54,7 @@ if not any(_AVAILABLE_FRAMEWORKS.values()):
         "Neither PyTorch, TensorFlow, ONNX or OpenVINO Python packages have been found in your Python "
         "environment.\n"
         "Please install one of the supported frameworks above in order to use NNCF on top of it.\n"
-        "See the installation guide at https://github.com/openvinotoolkit/nncf#installation for help."
+        "See the installation guide at https://github.com/openvinotoolkit/nncf#installation-guide for help."
     )
 else:
     nncf_logger.info(
