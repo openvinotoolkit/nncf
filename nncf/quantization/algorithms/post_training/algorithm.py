@@ -271,19 +271,22 @@ class PostTrainingQuantization(Algorithm):
             return self._apply(model_copy, graph, statistic_points, dataset)
         nncf_logger.info("The model consists of inner subgraphs. The iteratively each subgraph will be quantized.")
         quantized_model = self._apply(model_copy, graph, statistic_points, dataset)
-        tasks = self._backend_entity.make_tasks(quantized_model, dataset, self.subset_size)
+        quantization_tasks = self._backend_entity.make_tasks(quantized_model, dataset, self.subset_size)
         ROOT = "/home/akash/intel/OV_If_op"
         subgraph_cnt = 0
-        while tasks:
-            subgraph_model, dataset, backend_params = tasks.popleft()
+        while quantization_tasks:
             self.reset()
+            subgraph_model, dataset, backend_params = quantization_tasks.popleft()
             nncf_logger.info(f"Quantize a subgraph number {subgraph_cnt}")
-            subgraph_model_graph = NNCFGraphFactory.create(subgraph_model)
-            subgraph_model_quantized = self._apply(subgraph_model, subgraph_model_graph, None, dataset)
+            subgraph_model_quantized = self._apply(
+                subgraph_model, NNCFGraphFactory.create(subgraph_model), None, dataset
+            )
             nncf_logger.info(f"Set quantized subgraph number {subgraph_cnt} to the model")
             self._backend_entity.set_subgraph(subgraph_model_quantized, **backend_params)
 
-            tasks.extend(self._backend_entity.make_tasks(subgraph_model_quantized, dataset, self.subset_size))
+            quantization_tasks.extend(
+                self._backend_entity.make_tasks(subgraph_model_quantized, dataset, self.subset_size)
+            )
             if self.dump_intermediate_models:
                 self._backend_entity.dump_model(subgraph_model_quantized, ROOT, **backend_params)
             subgraph_cnt += 1
