@@ -14,10 +14,10 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
-from nncf.onnx.hardware.pattern_operations import ARITHMETIC_OPERATIONS
-from nncf.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
-from nncf.onnx.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
-from nncf.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
+from nncf.onnx.graph.metatypes.groups import ARITHMETIC_OPERATIONS
+from nncf.onnx.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
+from nncf.onnx.graph.metatypes.groups import BATCH_NORMALIZATION_OPERATIONS
+from nncf.onnx.graph.metatypes.groups import LINEAR_OPERATIONS
 
 ONNX_HW_FUSED_PATTERNS = Registry("onnx")
 
@@ -383,19 +383,23 @@ def create_linear_scale_shift() -> GraphPattern:
 
 def linear_operations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**LINEAR_OPERATIONS)
+    pattern.add_node(**{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
     return pattern
 
 
 def batch_normalization_operations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**BATCH_NORMALIZATION_OPERATIONS)
+    pattern.add_node(
+        **{GraphPattern.METATYPE_ATTR: BATCH_NORMALIZATION_OPERATIONS, GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION"}
+    )
     return pattern
 
 
 def atomic_activations_operations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
+    pattern.add_node(
+        **{GraphPattern.METATYPE_ATTR: ATOMIC_ACTIVATIONS_OPERATIONS, GraphPattern.LABEL_ATTR: "ATOMIC_ACTIVATIONS"}
+    )
 
     swish_sigmoid = create_swish_with_sigmoid()
     pattern.add_pattern_alternative(swish_sigmoid)
@@ -413,7 +417,7 @@ def atomic_activations_operations() -> GraphPattern:
 
 def arithmetic_operations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**ARITHMETIC_OPERATIONS)
+    pattern.add_node(**{GraphPattern.METATYPE_ATTR: ARITHMETIC_OPERATIONS, GraphPattern.LABEL_ATTR: "ARITHMETIC"})
     return pattern
 
 
