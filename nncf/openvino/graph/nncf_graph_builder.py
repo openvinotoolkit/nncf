@@ -18,7 +18,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
-from nncf.openvino.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_CONST_PORT_ID
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
@@ -148,7 +148,7 @@ class GraphConverter:
             if node_name not in visited:
                 GraphConverter._add_nncf_node(node, nncf_graph)
             # Set const port id
-            elif metatype in METATYPES_WITH_CONST_PORT_ID:
+            elif metatype in OPERATIONS_WITH_CONST_PORT_ID:
                 const_attrs, act_attrs = {}, {}
                 for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
                     inp_name = inp.get_source_output().get_node().get_friendly_name()

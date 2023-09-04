@@ -18,8 +18,8 @@ import openvino.runtime.opset9 as opset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
-from nncf.openvino.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
@@ -38,7 +38,7 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
-    if node.metatype not in OPERATIONS_WITH_BIAS_METATYPES:
+    if node.metatype not in OPERATIONS_WITH_BIAS:
         return False
 
     add_node = nncf_graph.get_next_nodes(node)[0]
@@ -318,7 +318,7 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
     :param weights_port_id: Weight port id of the target node.
     :return: Axes numbers of the weight tensor which correspond to its channels.
     """
-    if node.metatype not in GENERAL_WEIGHT_LAYER_METATYPES:
+    if node.metatype not in OPERATIONS_WITH_WEIGHTS:
         raise ValueError("Channel axis cannot be defined for operation without weights.")
 
     channel_axes = node.metatype.const_channel_axis
