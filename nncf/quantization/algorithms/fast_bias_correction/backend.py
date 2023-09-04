@@ -21,7 +21,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
 

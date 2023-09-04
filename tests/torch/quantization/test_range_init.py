@@ -35,7 +35,7 @@ from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import get_reduction_axes_from_scale_shape
+from nncf.common.tensor_statistics.reduction import get_reduction_axes_from_scale_shape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.config import NNCFConfig
 from nncf.config.structures import QuantizationRangeInitArgs

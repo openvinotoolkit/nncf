@@ -20,8 +20,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.reduction import REDUCE_TO_SCALAR_REDUCTION_SHAPE
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP

@@ -16,7 +16,7 @@ import pytest
 import nncf.onnx.graph.metatypes.onnx_metatypes as om
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.node_utils import get_quantization_axis
 from nncf.onnx.graph.node_utils import get_reduction_axes

@@ -18,7 +18,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging.logger import nncf_logger
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.onnx_graph import ONNXGraph

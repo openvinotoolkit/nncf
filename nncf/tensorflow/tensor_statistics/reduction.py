@@ -13,7 +13,7 @@ from typing import Tuple, Union
 
 import tensorflow as tf
 
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.tensorflow.layers.data_layout import get_weight_shape
 
 

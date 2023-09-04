@@ -19,7 +19,7 @@ from nncf.common.logging.progress_bar import ProgressBar
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.quantization.quantizers import NNCF_QUANTIZATION_OPERATIONS_V2

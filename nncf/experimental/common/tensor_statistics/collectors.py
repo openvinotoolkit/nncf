@@ -16,8 +16,8 @@ from collections import deque
 from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from nncf.common.tensor_statistics.collectors import NNCFTensor
-from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.collectors import is_reduce_to_scalar
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.reduction import is_reduce_to_scalar
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.quantization.advanced_parameters import AggregatorType
 

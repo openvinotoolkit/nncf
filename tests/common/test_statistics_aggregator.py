@@ -24,7 +24,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE
+from nncf.common.tensor_statistics.reduction import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic

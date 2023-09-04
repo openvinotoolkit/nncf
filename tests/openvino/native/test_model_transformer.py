@@ -19,9 +19,9 @@ from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE
-from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.collectors import is_reduce_to_scalar
+from nncf.common.tensor_statistics.reduction import REDUCE_TO_SCALAR_REDUCTION_SHAPE
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.reduction import is_reduce_to_scalar
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op

@@ -22,7 +22,7 @@ from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.common.tensor_statistics.collectors import StatisticsNotCollectedError
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic

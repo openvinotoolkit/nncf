@@ -10,10 +10,18 @@
 # limitations under the License.
 
 from collections import deque
+from copy import deepcopy
+from typing import Callable
 from typing import Deque, List, Tuple
+from typing import List
+from typing import Tuple
+from typing import Tuple
+from typing import Union
 
-import numpy as np
-
+from nncf.common.quantization.structs import QuantizerScaleShape
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFTensor
 
 
@@ -68,15 +76,36 @@ def get_per_channel_history(
     return per_channel_history
 
 
-def percentile_reduce_like(input_: NNCFTensor, ref_tensor_shape: Tuple[int], pc: float) -> NNCFTensor:
-    numel = input_.size
+ReductionAxes = Tuple[int]
+
+
+def percentile_reduce(input_: NNCFTensor, reduction_axes: ReductionAxes, pc: float) -> NNCFTensor:
     backend = input_.backend
     quantile = pc / 100
-    if numel == 1:
-        return backend.quantile(input_, quantile / 100)
-    tmp = input_
-    for dim_idx, dim in enumerate(ref_tensor_shape):
-        if dim == 1:
-            numpy_tmp = backend.quantile(tmp, quantile, axis=dim_idx, keepdims=True)
-            tmp = numpy_tmp
-    return tmp
+    return backend.quantile(input_, quantile, axis=list(reduction_axes), keepdims=True)
+
+
+ReductionShape = Tuple[int]
+REDUCE_TO_SCALAR_REDUCTION_SHAPE = (-1,)
+
+
+def get_reduction_axes_from_scale_shape(scale_shape: QuantizerScaleShape) -> ReductionAxes:
+    if scale_shape.is_per_tensor():
+        return REDUCE_TO_SCALAR_REDUCTION_SHAPE
+    return tuple(i for i, dim in enumerate(scale_shape.shape) if dim == 1)
+
+
+def is_reduce_to_scalar(reduction_axes: ReductionAxes) -> bool:
+    return reduction_axes == REDUCE_TO_SCALAR_REDUCTION_SHAPE
+
+
+def get_reduction_shape_from_sample_shape(sample_shape: List[int], reduction_axes: ReductionAxes) -> ReductionShape:
+    if is_reduce_to_scalar(reduction_axes):
+        return (1,)
+    reduced_shape = deepcopy(list(sample_shape))
+    for ax in reduction_axes:
+        reduced_shape[ax] = 1
+    return tuple(reduced_shape)
+
+
+MaskedReduceFN = Callable[[NNCFTensor, Union[int, tuple, list], NNCFTensor, bool], NNCFTensor]

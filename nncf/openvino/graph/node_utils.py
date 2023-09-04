@@ -17,8 +17,8 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.collectors import is_reduce_to_scalar
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.reduction import is_reduce_to_scalar
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS

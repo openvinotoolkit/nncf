@@ -15,8 +15,8 @@ import torch
 from nncf.api.compression import CompressionStage
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.common.tensor_statistics.reduction import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.config import NNCFConfig
 from nncf.torch.algo_selector import ZeroCompressionLoss

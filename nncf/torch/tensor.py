@@ -161,7 +161,10 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def median(tensor: PTNNCFTensor) -> PTNNCFTensor:
-        return PTNNCFTensor(torch.median(tensor.tensor))
+        # According to torch docs, in case the tensor has an even number of elements, the torch.median will
+        # return the lowest of the two median values. This differs from np.median, which returns the mean of the two,
+        # so using torch.quantile instead which has the behaviour aligned with np.median.
+        return PTNNCFTensor(torch.quantile(tensor.tensor, 0.5))
 
     @staticmethod
     def clip(tensor: PTNNCFTensor, min_val: float, max_val: Optional[float] = None) -> PTNNCFTensor:
@@ -186,7 +189,26 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
         axis: Union[int, List[int]] = None,
         keepdims: bool = False,
     ) -> Union[float, PTNNCFTensor]:
-        return PTNNCFTensor(torch.quantile(tensor.tensor, q=quantile, dim=axis, keepdim=keepdims))
+        if not isinstance(axis, list):
+            return PTNNCFTensor(torch.quantile(tensor.tensor, q=quantile, dim=axis, keepdim=keepdims))
+        elif len(axis) == 1:
+            return PTNNCFTensor(torch.quantile(tensor.tensor, q=quantile, dim=axis[0], keepdim=keepdims))
+        # As of 2.0.1, torch does not support multidim quantile directly.
+        t = tensor.tensor
+        orig_ndims = len(t.shape)
+        sorted_axes = sorted(axis)
+        for ax in reversed(sorted_axes):
+            t = t.moveaxis(source=ax, destination=-1)
+        t = t.flatten(start_dim=-(len(sorted_axes)), end_dim=-1)
+        t = torch.quantile(t, q=quantile, dim=-1, keepdim=keepdims)
+        if len(sorted_axes) == orig_ndims:
+            # the flattened tensor is 1D, not 0D in this case
+            t = t.reshape([1 for _ in range(orig_ndims)])
+        else:
+            for ax in sorted_axes:
+                t = t.unsqueeze(ax)
+        return PTNNCFTensor(t)
+
 
     @staticmethod
     def logical_or(tensor1: PTNNCFTensor, tensor2: PTNNCFTensor) -> PTNNCFTensor:

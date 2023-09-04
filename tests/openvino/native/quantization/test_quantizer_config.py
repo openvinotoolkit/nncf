@@ -12,7 +12,7 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import REDUCE_TO_SCALAR_REDUCTION_SHAPE
+from nncf.common.tensor_statistics.reduction import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator

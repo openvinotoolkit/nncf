@@ -31,7 +31,7 @@ from nncf.common.quantization.structs import QuantizerScaleShape
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.tensor_statistics.collectors import get_reduction_axes_from_scale_shape
+from nncf.common.tensor_statistics.reduction import get_reduction_axes_from_scale_shape
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
