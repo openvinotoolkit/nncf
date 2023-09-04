@@ -48,7 +48,7 @@ def device(a: TTensor) -> TensorDeviceType:
 
 @functools.singledispatch
 @_tensor_guard
-def squeeze(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:
+def squeeze(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:
     """
     Remove axes of length one from a.
 
@@ -63,7 +63,7 @@ def squeeze(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor
 
 @functools.singledispatch
 @_tensor_guard
-def flatten(a: TTensor) -> Tensor:
+def flatten(a: TTensor) -> TTensor:
     """
     Return a copy of the tensor collapsed into one dimension.
 
@@ -75,7 +75,7 @@ def flatten(a: TTensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def max(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def max(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  # pylint: disable=redefined-builtin
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -88,20 +88,7 @@ def max(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  #
 
 @functools.singledispatch
 @_tensor_guard
-def amax(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
-    """
-    Return the maximum of an array or maximum along an axis.
-
-    :param a: The input tensor.
-    :param axis: Axis or axes along which to operate. By default, flattened input is used.
-    :return: Maximum of a.
-    """
-    return Tensor(amax(a.data, axis))
-
-
-@functools.singledispatch
-@_tensor_guard
-def min(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def min(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  # pylint: disable=redefined-builtin
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -110,19 +97,6 @@ def min(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  #
     :return: Minimum of a.
     """
     return Tensor(min(a.data, axis))
-
-
-@functools.singledispatch
-@_tensor_guard
-def amin(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
-    """
-    Return the minimum of an array or minimum along an axis.
-
-    :param a: The input tensor.
-    :param axis: Axis or axes along which to operate. By default, flattened input is used.
-    :return: Minimum of a.
-    """
-    return Tensor(amin(a.data, axis))
 
 
 @functools.singledispatch
@@ -139,7 +113,7 @@ def abs(a: TTensor) -> Tensor:  # pylint: disable=redefined-builtin
 
 @functools.singledispatch
 @_tensor_guard
-def astype(a: TTensor, data_type: TensorDataType) -> Tensor:
+def astype(a: TTensor, data_type: TensorDataType) -> TTensor:
     """
     Copy of the tensor, cast to a specified type.
 
@@ -165,7 +139,7 @@ def dtype(a: TTensor) -> TensorDataType:
 
 @functools.singledispatch
 @_tensor_guard
-def reshape(a: TTensor, shape: List[int]) -> Tensor:
+def reshape(a: TTensor, shape: List[int]) -> TTensor:
     """
     Gives a new shape to a tensor without changing its data.
 
@@ -178,7 +152,7 @@ def reshape(a: TTensor, shape: List[int]) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def all(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def all(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  # pylint: disable=redefined-builtin
     """
     Test whether all tensor elements along a given axis evaluate to True.
 
@@ -191,7 +165,7 @@ def all(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  #
 
 @functools.singledispatch
 @_tensor_guard
-def allclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> Tensor:
+def allclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> bool:
     """
     Returns True if two arrays are element-wise equal within a tolerance.
 
@@ -204,20 +178,18 @@ def allclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, e
       Defaults to False.
     :return: True if the two arrays are equal within the given tolerance, otherwise False.
     """
-    return Tensor(
-        allclose(
-            a.data,
-            unwrap_tensor_data(b),
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan,
-        )
+    return allclose(
+        a.data,
+        unwrap_tensor_data(b),
+        rtol=rtol,
+        atol=atol,
+        equal_nan=equal_nan,
     )
 
 
 @functools.singledispatch
 @_tensor_guard
-def any(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def any(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  # pylint: disable=redefined-builtin
     """
     Test whether any tensor elements along a given axis evaluate to True.
 
@@ -230,7 +202,7 @@ def any(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  #
 
 @functools.singledispatch
 @_tensor_guard
-def count_nonzero(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:
+def count_nonzero(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:
     """
     Counts the number of non-zero values in the tensor input.
 
@@ -244,19 +216,19 @@ def count_nonzero(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> 
 
 @functools.singledispatch
 @_tensor_guard
-def isempty(a: TTensor) -> Tensor:
+def isempty(a: TTensor) -> bool:
     """
     Return True if input tensor is empty.
 
     :param a: The input tensor.
     :return: True if tensor is empty, otherwise False.
     """
-    return Tensor(isempty(a.data))
+    return isempty(a.data)
 
 
 @functools.singledispatch
 @_tensor_guard
-def isclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> Tensor:
+def isclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> TTensor:
     """
     Returns a boolean array where two arrays are element-wise equal within a tolerance.
 
@@ -282,7 +254,7 @@ def isclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, eq
 
 @functools.singledispatch
 @_tensor_guard
-def maximum(x1: TTensor, x2: TTensor) -> Tensor:
+def maximum(x1: TTensor, x2: TTensor) -> TTensor:
     """
     Element-wise maximum of tensor elements.
 
@@ -295,7 +267,7 @@ def maximum(x1: TTensor, x2: TTensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def minimum(x1: TTensor, x2: TTensor) -> Tensor:
+def minimum(x1: TTensor, x2: TTensor) -> TTensor:
     """
     Element-wise minimum of tensor elements.
 
@@ -308,7 +280,7 @@ def minimum(x1: TTensor, x2: TTensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def ones_like(a: TTensor) -> Tensor:
+def ones_like(a: TTensor) -> TTensor:
     """
     Return a tensor of ones with the same shape and type as a given tensor.
 
@@ -320,7 +292,7 @@ def ones_like(a: TTensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def where(condition: TTensor, x: TTensor, y: TTensor) -> Tensor:
+def where(condition: TTensor, x: TTensor, y: TTensor) -> TTensor:
     """
     Return elements chosen from x or y depending on condition.
 
@@ -340,7 +312,7 @@ def where(condition: TTensor, x: TTensor, y: TTensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def zeros_like(a: TTensor) -> Tensor:
+def zeros_like(a: TTensor) -> TTensor:
     """
     Return an tensor of zeros with the same shape and type as a given tensor.
 
@@ -351,7 +323,7 @@ def zeros_like(a: TTensor) -> Tensor:
 
 
 @functools.singledispatch
-def stack(x: List[TTensor], axis: int = 0) -> Tensor:
+def stack(x: List[TTensor], axis: int = 0) -> TTensor:
     """
     Stacks a list or deque of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
 
@@ -369,7 +341,7 @@ def stack(x: List[TTensor], axis: int = 0) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def unstack(a: Tensor, axis: int = 0) -> List[Tensor]:
+def unstack(a: TTensor, axis: int = 0) -> List[Tensor]:
     """
     Unstack a Tensor into list.
 
@@ -383,7 +355,7 @@ def unstack(a: Tensor, axis: int = 0) -> List[Tensor]:
 
 @functools.singledispatch
 @_tensor_guard
-def moveaxis(a: Tensor, source: Union[int, List[int]], destination: Union[int, List[int]]) -> Tensor:
+def moveaxis(a: TTensor, source: Union[int, List[int]], destination: Union[int, List[int]]) -> TTensor:
     """
     Move axes of an array to new positions.
 
@@ -397,7 +369,7 @@ def moveaxis(a: Tensor, source: Union[int, List[int]], destination: Union[int, L
 
 @functools.singledispatch
 @_tensor_guard
-def mean(a: Tensor, axis: Union[int, List[int]] = None, keepdims: bool = False) -> Tensor:
+def mean(a: TTensor, axis: Union[int, List[int]] = None, keepdims: bool = False) -> TTensor:
     """
     Compute the arithmetic mean along the specified axis.
 
@@ -411,7 +383,7 @@ def mean(a: Tensor, axis: Union[int, List[int]] = None, keepdims: bool = False) 
 
 @functools.singledispatch
 @_tensor_guard
-def round(a: Tensor, decimals=0) -> Tensor:  # pylint: disable=redefined-builtin
+def round(a: TTensor, decimals=0) -> TTensor:  # pylint: disable=redefined-builtin
     """
     Evenly round to the given number of decimals.
 
@@ -423,27 +395,10 @@ def round(a: Tensor, decimals=0) -> Tensor:  # pylint: disable=redefined-builtin
     return Tensor(round(a.data, decimals))
 
 
-def mean_per_channel(x: Tensor, axis: int) -> Tensor:
-    """
-    Computes the mean of elements across given channel dimension of Tensor.
-
-    :param x: Tensor to reduce.
-    :param axis: The channel dimensions to reduce.
-    :return: Reduced Tensor.
-    """
-    if len(x.shape) < 3:
-        return Tensor(mean(x.data, axis=0))
-    x = moveaxis(x.data, axis, 1)
-    t = x.reshape([x.shape[0], x.shape[1], -1])
-    return Tensor(mean(t, axis=(0, 2)))
-
-
 __all__ = [
     "abs",
     "all",
     "allclose",
-    "amax",
-    "amin",
     "any",
     "astype",
     "count_nonzero",
@@ -454,7 +409,6 @@ __all__ = [
     "max",
     "maximum",
     "mean",
-    "mean_per_channel",
     "min",
     "minimum",
     "minimum",

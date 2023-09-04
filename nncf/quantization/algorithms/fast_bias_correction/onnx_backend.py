@@ -55,9 +55,9 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_bias_correction_command(
-        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+        node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
     ) -> ONNXBiasCorrectionCommand:
-        return create_bias_correction_command(node, bias_value)
+        return create_bias_correction_command(node, bias_value.data)
 
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:
@@ -78,7 +78,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_input_data(
-        shape: Tuple[int], data: List[np.ndarray], input_name: str, channel_axis: int
+        shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int
     ) -> Dict[str, np.array]:
         blob = np.zeros(shape, dtype=data[0].data.dtype)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):

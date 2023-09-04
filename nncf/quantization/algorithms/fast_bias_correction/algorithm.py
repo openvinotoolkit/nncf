@@ -28,7 +28,8 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions
+from nncf.experimental.tensor import functions as fns
+from nncf.experimental.tensor import math_functions as mfns
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 
@@ -184,9 +185,7 @@ class FastBiasCorrection(Algorithm):
         # Create commands of bias correction and apply them to the model.
         transformation_layout = TransformationLayout()
         for node, bias_value in node_and_new_bias_value:
-            transformation_layout.register(
-                self._backend_entity.create_bias_correction_command(node, bias_value.data, graph)
-            )
+            transformation_layout.register(self._backend_entity.create_bias_correction_command(node, bias_value, graph))
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
@@ -201,14 +200,12 @@ class FastBiasCorrection(Algorithm):
         :return: Magnitude between original and updated bias values.
         """
         bias_shift_magnitude = inf
-        if functions.count_nonzero(current_bias_value == 0) == 0:
-            bias_shift_magnitude = functions.max(
-                functions.abs((updated_bias_value - current_bias_value) / current_bias_value)
-            )
+        if fns.count_nonzero(current_bias_value == 0) == 0:
+            bias_shift_magnitude = fns.max(fns.abs((updated_bias_value - current_bias_value) / current_bias_value))
         return bias_shift_magnitude
 
     @staticmethod
-    def _reshape_bias_shift(bias_shift: Tensor, bias_value: Tensor, channel_axis: int) -> TTensor:
+    def _reshape_bias_shift(bias_shift: Tensor, bias_value: Tensor, channel_axis: int) -> Tensor:
         """
         Reshape bias_shift tensor in case of dimensions of bias_value is more then 1.
 
@@ -322,8 +319,8 @@ class FastBiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
-        q_outputs = functions.mean_per_channel(q_outputs, channel_axis)
-        bias_shift = functions.stack(output_fp) - q_outputs
+        q_outputs = mfns.mean_per_channel(q_outputs, channel_axis)
+        bias_shift = fns.stack(output_fp) - q_outputs
         return bias_shift
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

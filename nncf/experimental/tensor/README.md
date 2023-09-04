@@ -55,16 +55,16 @@ nncf_tensor.max()  # Tensor(2)
 All available functions you can found in [functions.py](functions.py).
 
 ```python
-from nncf.experimental.tensor import functions
-functions.max(nncf_tensor)  # Tensor(2)
+from nncf.experimental.tensor import functions as fns
+fns.max(nncf_tensor)  # Tensor(2)
 ```
 
 **NOTE** A function requires at least one positional argument, which is used to dispatch the function
 to the appropriate implementation depending on the type of argument.
 
 ```python
-functions.max(nncf_tensor)  # Correct
-functions.max(a=nncf_tensor)  # TypeError: wrapper requires at least 1 positional argument
+fns.max(nncf_tensor)  # Correct
+fns.max(a=nncf_tensor)  # TypeError: wrapper requires at least 1 positional argument
 ```
 
 ### Loop over Tensor
@@ -100,7 +100,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     class Tensor:
         ...
         def foo(self, arg1: Type) -> "Tensor":
-            return functions.foo(self, arg1)
+            return fns.foo(self, arg1)
     ```
 
 2. Add function to [function.py](function.py)
@@ -127,8 +127,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     - [numpy_function.py](numpy_function.py)
 
         ```python
-        @functions.foo.register(np.ndarray)
-        @functions.foo.register(np.number)
+        @registry_numpy_types(fns.foo)
         def _(a: TType, arg1: Type) -> np.ndarray:
             return np.foo(a, arg1)
         ```
@@ -136,7 +135,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     - [torch_function.py](torch_function.py)
 
         ```python
-        @functions.foo.register(torch.Tensor)
+        @fns.foo.register(torch.Tensor)
         def _(a: torch.Tensor, arg1: Type) -> torch.Tensor:
             return torch.foo(a, arg1)
         ```

@@ -23,7 +23,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
-from nncf.experimental.tensor import functions
+from nncf.experimental.tensor import functions as fns
 
 
 @dataclass
@@ -53,9 +53,9 @@ def fix_zero_filters_symmetric(max_values: Tensor, eps: float = 0.01) -> Tensor:
     :param eps: Correction coefficient.
     :return: Fixed the high quant number.
     """
-    max_range = functions.max(max_values)
-    lower_threshold = functions.maximum(max_range * eps, 8e-5)
-    return functions.maximum(lower_threshold, max_values)
+    max_range = fns.max(max_values)
+    lower_threshold = fns.maximum(max_range * eps, 8e-5)
+    return fns.maximum(lower_threshold, max_values)
 
 
 def fix_zero_filters_asymmetric(min_values: Tensor, max_values: Tensor, eps: float = 1e-8) -> Tuple[Tensor, Tensor]:
@@ -71,9 +71,7 @@ def fix_zero_filters_asymmetric(min_values: Tensor, max_values: Tensor, eps: flo
     """
     ranges = max_values - min_values
     min_correction = 8e-4
-    corrections = functions.where(
-        ranges > min_correction, (functions.maximum(eps * ranges, ranges) - ranges) * 0.5, min_correction
-    )
+    corrections = fns.where(ranges > min_correction, (fns.maximum(eps * ranges, ranges) - ranges) * 0.5, min_correction)
 
     level_low = min_values - corrections
     level_high = max_values + corrections
@@ -101,22 +99,22 @@ def tune_range(
     if unify_zp:
         scale = (right_border - left_border) / level_high
         zero_point = -left_border / scale
-        avg_zpts = functions.round(functions.mean(zero_point))
-        qval = functions.ones_like(left_border) * avg_zpts
+        avg_zpts = fns.round(fns.mean(zero_point))
+        qval = fns.ones_like(left_border) * avg_zpts
     else:
         s = level_high / (right_border - left_border)
         fval = -left_border * s
-        qval = functions.round(fval)
+        qval = fns.round(fval)
 
     with np.errstate(invalid="ignore", divide="ignore"):  # TODO: move to Tensor, to sync with numpy and torch???
-        ra = functions.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
-        rb = functions.where(qval > 0.0, (qval - level_high) / qval * left_border, right_border)
+        ra = fns.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
+        rb = fns.where(qval > 0.0, (qval - level_high) / qval * left_border, right_border)
 
     range_a = right_border - ra
     range_b = rb - left_border
 
-    mask = functions.where(range_a > range_b, 1.0, 0.0)
-    inv_mask = functions.abs(1.0 - mask)
+    mask = fns.where(range_a > range_b, 1.0, 0.0)
+    inv_mask = fns.abs(1.0 - mask)
 
     ra = mask * ra + inv_mask * left_border
     rb = inv_mask * rb + mask * right_border
@@ -148,8 +146,8 @@ def symmetric_range(
     else:
         signed = quantizer_config.signedness_to_force is True
         level_low = (
-            functions.zeros_like(level_high)
-            if functions.all(min_values >= 0) and not signed
+            fns.zeros_like(level_high)
+            if fns.all(min_values >= 0) and not signed
             else -level_high * levels / (levels - 2)
         )
 
@@ -178,8 +176,8 @@ def asymmetric_range(
         level_high - the high quant number
     """
     level_low, level_high = fix_zero_filters_asymmetric(min_values, max_values)
-    level_low = functions.where(level_low < 0.0, level_low, 0.0)
-    level_high = functions.where(level_high > 0.0, level_high, 0.0)
+    level_low = fns.where(level_low < 0.0, level_low, 0.0)
+    level_high = fns.where(level_high > 0.0, level_high, 0.0)
 
     if unify_zp and q_group == QuantizerGroup.ACTIVATIONS:
         raise NotImplementedError("Unified zero point is not supported for activations.")
@@ -242,8 +240,8 @@ def calculate_quantizer_parameters(
             input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     if not quantizer_config.per_channel:
-        input_low = functions.squeeze(input_low)
-        input_high = functions.squeeze(input_high)
+        input_low = fns.squeeze(input_low)
+        input_high = fns.squeeze(input_high)
 
     output_low, output_high = input_low, input_high
     return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)

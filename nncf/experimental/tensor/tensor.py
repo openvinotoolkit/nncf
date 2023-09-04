@@ -136,7 +136,7 @@ class Tensor:
     def abs(self) -> "Tensor":
         return _call_function("abs", self)
 
-    def isempty(self) -> "Tensor":
+    def isempty(self) -> bool:
         return _call_function("isempty", self)
 
     def astype(self, dtype: TensorDataType):
