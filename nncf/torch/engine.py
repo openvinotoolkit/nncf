@@ -55,5 +55,9 @@ class PTEngine(Engine):
                     continue
                 output_dict[key] = PTNNCFTensor(value)
             return output_dict
+
+        first_output = next(iter(output))
+        if isinstance(first_output, torch.Tensor):
+            return {None: PTNNCFTensor(first_output)}
         raise RuntimeError(f"PTEngine: model output has unexpected structure: {output},\nexpecting outputs of either "
                            f"single torch.Tensor or a dict of torch.Tensors")

@@ -129,11 +129,11 @@ class TestCollectedStatistics:
                 MedianMADStatisticCollector,
                 {
                     (0, 1): MedianMADTensorStatistic(
-                        median_values=TFNNCFTensor(tf.constant([2.8])), mad_values=TFNNCFTensor(tf.constant([2.6]))
+                        median_values=TFNNCFTensor(tf.constant([[2.8]])), mad_values=TFNNCFTensor(tf.constant([[2.6]]))
                     ),
                     (1,): MedianMADTensorStatistic(
-                        median_values=tf.constant([2.8, -2.5, 5.4]),
-                        mad_values=TFNNCFTensor(tf.constant([0.85, 1.1, 0.65])),
+                        median_values=TFNNCFTensor(tf.constant([[2.8], [-2.5], [5.4]])),
+                        mad_values=TFNNCFTensor(tf.constant([[0.85], [1.1], [0.65]])),
                     ),
                     (0,): MedianMADTensorStatistic(
                         median_values=TFNNCFTensor(tf.constant([[2.5, 2.3, 3.35]])),
@@ -157,8 +157,8 @@ class TestCollectedStatistics:
             (
                 partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
                 {
-                    (0, 1): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([-3.15]))}),
-                    (1,): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([1.5, -3.75, 4.15]))}),
+                    (0, 1): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([[-3.15]]))}),
+                    (1,): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([[1.5], [-3.75], [4.15]]))}),
                     (0,): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([[-1.15, -3, -3.25]]))}),
                     # Not supported for now:
                     # (3, 3): PercentileTensorStatistic(
@@ -175,7 +175,7 @@ class TestCollectedStatistics:
             (
                 partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
                 {
-                    (0, 1): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([-2.9]))}),
+                    (0, 1): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([[-2.9]]))}),
                     (1,): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([[2.0100], [-3.3500], [4.4000]]))}),
                     (0,): PercentileTensorStatistic({10.0: TFNNCFTensor(tf.constant([[-0.3900, -1.9400, -1.9300]]))}),
                     # Not supported for now:
@@ -202,7 +202,8 @@ class TestCollectedStatistics:
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(TFNNCFTensor(input_))
             test_stats = collector_obj.get_statistics()
-            assert reduction_axes_vs_ref_statistic[reduction_axes] == test_stats
+            ref_stats = reduction_axes_vs_ref_statistic[reduction_axes]
+            assert ref_stats == test_stats
 
     COLLECTORS = [
         partial(MinMaxStatisticCollector, use_abs_max=False),

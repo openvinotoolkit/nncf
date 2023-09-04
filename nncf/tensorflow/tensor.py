@@ -33,7 +33,7 @@ class TFNNCFTensor(NNCFTensor[tf.Tensor]):
         return TFNNCFTensorBackend
 
     def _is_native_bool(self, bool_result: Any) -> bool:
-        assert False  # TODO (vshampor): check whether this is relevant for TF
+        return False
 
     @property
     def ndim(self) -> int:
@@ -108,7 +108,7 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def mean_of_list(tensor_list: List[TFNNCFTensor], axis: int) -> TFNNCFTensor:
-        cated = tf.concat([t.tensor for t in tensor_list])
+        cated = tf.concat([t.tensor for t in tensor_list], axis=-1)
         return TFNNCFTensor(tf.reduce_mean(cated, axis=axis))
 
     @staticmethod
@@ -137,12 +137,12 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def min_of_list(tensor_list: List[TFNNCFTensor], axis: int = None) -> TFNNCFTensor:
-        cated = tf.concat([t.tensor for t in tensor_list])
+        cated = tf.concat([t.tensor for t in tensor_list], axis=-1)
         return TFNNCFTensor(tf.reduce_min(cated, axis=axis))
 
     @staticmethod
     def max_of_list(tensor_list: List[TFNNCFTensor], axis: int = None) -> TFNNCFTensor:
-        cated = tf.concat([t.tensor for t in tensor_list])
+        cated = tf.concat([t.tensor for t in tensor_list], axis=-1)
         return TFNNCFTensor(tf.reduce_max(cated, axis=axis))
 
     @staticmethod
@@ -221,7 +221,7 @@ class TFNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def concatenate(tensor_list: List[TFNNCFTensor], axis: int = 0) -> TFNNCFTensor:
-        return tf.concat([t.tensor for t in tensor_list])
+        return TFNNCFTensor(tf.concat([t.tensor for t in tensor_list], axis))
 
     @staticmethod
     def amin(tensor: TFNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> TFNNCFTensor:
