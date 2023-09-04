@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint:disable=too-many-lines
 
 import json
 import multiprocessing
@@ -478,6 +479,14 @@ def map_apply_for_all_nodes(apply_for_all_nodes):
     return {advanced_parameter_name: advanced_parameters}
 
 
+def map_smooth_quant_alpha(smooth_quant_alpha):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(advanced_parameter_name, AdvancedQuantizationParameters())
+    advanced_parameters.smooth_quant_alpha = smooth_quant_alpha
+    return {advanced_parameter_name: advanced_parameters}
+
+
 def map_threshold(threshold):
     ctx = get_algorithm_parameters_context()
     advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
@@ -543,6 +552,7 @@ def get_pot_quantization_parameters_mapping():
         "saturation_fix": map_saturation_fix,
         "apply_for_all_nodes": map_apply_for_all_nodes,
         "threshold": map_threshold,
+        "smooth_quant_alpha": map_smooth_quant_alpha,
     }
 
     default_parameters = {"use_layerwise_tuning": False}
@@ -946,10 +956,36 @@ def quantize_model_with_accuracy_control(
     return quantized_model
 
 
+def filter_configuration(config: Config) -> Config:
+    fields_to_filter = ["smooth_quant_alpha"]
+    algorithms_to_update = defaultdict(dict)
+
+    # Drop params before configure
+    for algorithm_config in config["compression"]["algorithms"]:
+        algo_params = algorithm_config.get("params")
+        algo_name = algorithm_config.get("name")
+        for field_to_filter in fields_to_filter:
+            field_value = algo_params.get(field_to_filter)
+            if field_value:
+                del algo_params[field_to_filter]
+                algorithms_to_update[algo_name][field_to_filter] = field_value
+
+    config.configure_params()
+
+    # Set dropped params
+    for algorithm_config in config["compression"]["algorithms"]:
+        algo_name = algorithm_config.get("name")
+        if algo_name in algorithms_to_update:
+            for field_name, field_value in algorithms_to_update[algo_name].items():
+                algorithm_config["params"][field_name] = field_value
+
+    return config
+
+
 def main():
     args = parse_args()
     config = Config.read_config(args.config)
-    config.configure_params()
+    config = filter_configuration(config)
 
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
