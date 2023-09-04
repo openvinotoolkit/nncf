@@ -11,6 +11,7 @@
 
 from typing import Any, Callable, Dict
 
+import numpy as np
 import torch
 
 from nncf.common.graph import NNCFNodeName
@@ -179,7 +180,7 @@ class PTBiasCorrectionCommand(PTTransformationCommand):
     Corrects bias value in the model based on the input value.
     """
 
-    def __init__(self, target_point: PTTargetPoint, bias_value: torch.Tensor):
+    def __init__(self, target_point: PTTargetPoint, bias_value: np.ndarray):
         """
         :param target_point: The TargetPoint instance for the correction that contains layer's information.
         :param bias_value: The bias shift value that will be added to the original bias value.

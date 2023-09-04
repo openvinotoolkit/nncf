@@ -124,21 +124,35 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
 
     @staticmethod
     def min(tensor: PTNNCFTensor, axis: int = None) -> PTNNCFTensor:
-        return PTNNCFTensor(torch.min(tensor.tensor, dim=axis))
+        if axis is None:
+            return PTNNCFTensor(torch.min(tensor.tensor))
+        return PTNNCFTensor(torch.min(tensor.tensor, dim=axis).values)
 
     @staticmethod
     def max(tensor: PTNNCFTensor, axis: int = None) -> PTNNCFTensor:
-        return PTNNCFTensor(torch.max(tensor.tensor, dim=axis))
+        if axis is None:
+            return PTNNCFTensor(torch.max(tensor.tensor))
+        return PTNNCFTensor(torch.max(tensor.tensor, dim=axis).values)
+
+    @staticmethod
+    def _expand_scalars_in_tensor_list(tensor_list: List[PTNNCFTensor]) -> List[torch.Tensor]:
+        retval = []
+        for t in tensor_list:
+            if len(t.tensor.size()) == 0:
+                retval.append(t.tensor.reshape(1))
+            else:
+                retval.append(t.tensor)
+        return retval
 
     @staticmethod
     def min_of_list(tensor_list: List[PTNNCFTensor], axis: int = None) -> PTNNCFTensor:
-        cated = torch.concat([t.tensor for t in tensor_list])
-        return PTNNCFTensor(torch.min(cated, dim=axis))
+        cated = torch.concat(PTNNCFTensorBackend._expand_scalars_in_tensor_list(tensor_list))
+        return PTNNCFTensor(torch.min(cated, dim=axis).values)
 
     @staticmethod
     def max_of_list(tensor_list: List[PTNNCFTensor], axis: int = None) -> PTNNCFTensor:
-        cated = torch.concat([t.tensor for t in tensor_list])
-        return PTNNCFTensor(torch.max(cated, dim=axis))
+        cated = torch.concat(PTNNCFTensorBackend._expand_scalars_in_tensor_list(tensor_list))
+        return PTNNCFTensor(torch.max(cated, dim=axis).values)
 
     @staticmethod
     def expand_dims(tensor: PTNNCFTensor, axes: List[int]) -> PTNNCFTensor:

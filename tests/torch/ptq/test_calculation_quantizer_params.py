@@ -229,14 +229,21 @@ class LinearTestModel(nn.Module):
             self.conv1.weight.copy_(torch.rand_like(self.conv1.weight) - 0.5)
             self.conv2.weight.copy_(torch.rand_like(self.conv2.weight) - 0.5)
 
+        self.last_relu = None
+        self.last_bn1 = None
+        self.last_avg_pool = None
+
     def forward(self, x):
         # input_shape = [1, 3, 32, 32]
         relu = self.relu(self.conv1(x))
+        self.last_relu = relu
         bn1 = self.bn1(relu)
+        self.last_bn1 = bn1
         avg_pool = self.avg_pool(bn1)
+        self.last_avg_pool = avg_pool
         x2 = self.relu(self.conv2(avg_pool))
         out = self.bn2(x2)
-        return out, relu, bn1, avg_pool
+        return out
 
 
 class SyntheticDataset(torch.utils.data.Dataset):
@@ -281,8 +288,9 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
     return {"input_low": fq_params.input_low, "input_high": fq_params.input_high}
 
 
-def calculate_fq_params(model, input_data):
-    _, relu, bn1, avg_pool = model(input_data)
+def calculate_fq_params(model: LinearTestModel, input_data):
+    _ = model(input_data)
+    relu, bn1, avg_pool = model.last_relu, model.last_bn1, model.last_avg_pool
     conv1_stats = calculate_statistics(input_data, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
     bn1_stats = calculate_statistics(bn1, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
     conv2_stats = calculate_statistics(avg_pool, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
@@ -302,7 +310,7 @@ def calculate_fq_params(model, input_data):
     }
 
 
-def test_quantizer_parameters_export(tmp_path: Path):
+def test_quantizer_parameters_export(_seed, tmp_path: Path):
     model = LinearTestModel()
     model.eval().cpu()
 

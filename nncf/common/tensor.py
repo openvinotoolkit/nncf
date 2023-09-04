@@ -61,6 +61,9 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
         assert not isinstance(tensor, NNCFTensor)
         self._tensor: TensorType = tensor
 
+    def __bool__(self):
+        return bool(self._tensor)
+
     def __eq__(self, other: Any) -> "NNCFTensor":
         # Assuming every backend implements this basic semantic
         return self._bool_operator_resolver(self._tensor.__eq__, other)

@@ -13,6 +13,8 @@ import copy
 from collections import defaultdict
 from typing import Callable, Dict, List, Tuple
 
+import numpy as np
+import torch
 from torch import Tensor
 from torch import nn
 
@@ -131,7 +133,7 @@ class PTModelTransformer(ModelTransformer):
         return model
 
 
-def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwork) -> None:
+def update_fused_bias(target_node_name: str, new_bias: np.ndarray, model: NNCFNetwork) -> None:
     """
     Update bias for target module or potential fused module.
 
@@ -145,7 +147,8 @@ def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwor
         target_node_name = fused_node.node_name
 
     node = model.nncf.get_containing_module(target_node_name)
-    node.bias.data = new_bias
+    device = next(model.parameters()).device
+    node.bias.data = torch.Tensor(new_bias).to(device)
 
 
 def extraction_potential_fused_modules(node_name: str, model: NNCFNetwork) -> nn.Sequential:
