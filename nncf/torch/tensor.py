@@ -225,7 +225,6 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
                 t = t.unsqueeze(ax)
         return PTNNCFTensor(t)
 
-
     @staticmethod
     def logical_or(tensor1: PTNNCFTensor, tensor2: PTNNCFTensor) -> PTNNCFTensor:
         return PTNNCFTensor(torch.logical_or(tensor1.tensor, tensor2.tensor))

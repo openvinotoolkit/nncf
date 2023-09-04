@@ -34,9 +34,9 @@ from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.common.tensor_statistics.reduction import ReductionShape
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.reduction import get_reduction_axes_from_scale_shape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.config.schemata.algo.quantization import RANGE_INIT_TYPES_VS_DESCRIPTIONS

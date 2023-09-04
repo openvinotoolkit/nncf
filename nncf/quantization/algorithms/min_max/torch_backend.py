@@ -212,7 +212,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         return input_shape, scale_shape, channel_idx
 
-
     @staticmethod
     def _statistic_collector_builder(
         collector_name: str,
@@ -226,12 +225,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         )
 
         collector_params = PTRangeInitCollectorParams(
-                is_weights=target_point.is_weight_target_point(),
-                mode=quantizer_config.mode,
-                per_channel=quantizer_config.per_channel,
-                input_shape=input_shape,
-                channel_idx=channel_idx,
-            )
+            is_weights=target_point.is_weight_target_point(),
+            mode=quantizer_config.mode,
+            per_channel=quantizer_config.per_channel,
+            input_shape=input_shape,
+            channel_idx=channel_idx,
+        )
 
         init_config = RangeInitConfig(collector_name, num_samples)
         reduction_axes = get_reduction_axes_from_scale_shape(scale_shape, channel_idx)

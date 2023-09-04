@@ -50,8 +50,10 @@ class PTEngine(Engine):
             output_dict = {}
             for key, value in output.items():
                 if not isinstance(value, torch.Tensor):
-                    nncf_logger.debug(f"PTEngine: model output dict has non-tensor value {value} for key {key}, "
-                                      f"will skip this value when considering tensor outputs")
+                    nncf_logger.debug(
+                        f"PTEngine: model output dict has non-tensor value {value} for key {key}, "
+                        f"will skip this value when considering tensor outputs"
+                    )
                     continue
                 output_dict[key] = PTNNCFTensor(value)
             return output_dict
@@ -59,5 +61,7 @@ class PTEngine(Engine):
         first_output = next(iter(output))
         if isinstance(first_output, torch.Tensor):
             return {None: PTNNCFTensor(first_output)}
-        raise RuntimeError(f"PTEngine: model output has unexpected structure: {output},\nexpecting outputs of either "
-                           f"single torch.Tensor or a dict of torch.Tensors")
+        raise RuntimeError(
+            f"PTEngine: model output has unexpected structure: {output},\nexpecting outputs of either "
+            f"single torch.Tensor or a dict of torch.Tensors"
+        )

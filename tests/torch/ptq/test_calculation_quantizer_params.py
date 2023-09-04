@@ -229,7 +229,6 @@ class LinearTestModel(nn.Module):
             self.conv1.weight.copy_(torch.rand_like(self.conv1.weight) - 0.5)
             self.conv2.weight.copy_(torch.rand_like(self.conv2.weight) - 0.5)
 
-
     def forward(self, x):
         # input_shape = [1, 3, 32, 32]
         relu = self.relu(self.conv1(x))

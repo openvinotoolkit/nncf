@@ -11,17 +11,9 @@
 
 from collections import deque
 from copy import deepcopy
-from typing import Callable
-from typing import Deque, List, Tuple
-from typing import List
-from typing import Tuple
-from typing import Tuple
-from typing import Union
+from typing import Callable, Deque, List, Tuple, Union
 
 from nncf.common.quantization.structs import QuantizerScaleShape
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFTensor
 
 

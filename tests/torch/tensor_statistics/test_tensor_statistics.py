@@ -22,9 +22,9 @@ from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
-from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.common.tensor_statistics.collectors import StatisticsNotCollectedError
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
@@ -129,13 +129,14 @@ class TestCollectedStatistics:
                 MedianMADStatisticCollector,
                 {
                     (0, 1): MedianMADTensorStatistic(
-                        median_values=PTNNCFTensor(torch.tensor([[2.8]])), mad_values=PTNNCFTensor(torch.tensor([[2.6]]))
+                        median_values=PTNNCFTensor(torch.tensor([[2.8]])),
+                        mad_values=PTNNCFTensor(torch.tensor([[2.6]])),
                     ),
-                    (1, ): MedianMADTensorStatistic(
+                    (1,): MedianMADTensorStatistic(
                         median_values=PTNNCFTensor(torch.tensor([[2.8], [-2.5], [5.4]])),
                         mad_values=PTNNCFTensor(torch.tensor([[0.85], [1.1], [0.65]])),
                     ),
-                    (0, ): MedianMADTensorStatistic(
+                    (0,): MedianMADTensorStatistic(
                         median_values=PTNNCFTensor(torch.tensor([[2.5, 2.3, 3.35]])),
                         mad_values=PTNNCFTensor(torch.tensor([[1.9, 3.1, 2.7]])),
                     ),
@@ -158,8 +159,8 @@ class TestCollectedStatistics:
                 partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
                 {
                     (0, 1): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-3.15]]))}),
-                    (1, ): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[1.5], [-3.75], [4.15]]))}),
-                    (0, ): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-1.15, -3, -3.25]]))}),
+                    (1,): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[1.5], [-3.75], [4.15]]))}),
+                    (0,): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-1.15, -3, -3.25]]))}),
                     # Not supported for now:
                     # tuple(): PercentileTensorStatistic(
                     #     {
@@ -176,12 +177,10 @@ class TestCollectedStatistics:
                 partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
                 {
                     (0, 1): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-2.9]]))}),
-                    (1, ): PercentileTensorStatistic(
+                    (1,): PercentileTensorStatistic(
                         {10.0: PTNNCFTensor(torch.tensor([[2.0100], [-3.3500], [4.4000]]))}
                     ),
-                    (0, ): PercentileTensorStatistic(
-                        {10.0: PTNNCFTensor(torch.tensor([[-0.3900, -1.9400, -1.9300]]))}
-                    ),
+                    (0,): PercentileTensorStatistic({10.0: PTNNCFTensor(torch.tensor([[-0.3900, -1.9400, -1.9300]]))}),
                     # Not supported for now:
                     # tuple(): PercentileTensorStatistic(
                     #     {
@@ -263,7 +262,7 @@ class TestCollectedStatistics:
             use_per_sample_stats=False,
             use_abs_max=False,
             use_means_of_mins=False,
-            use_means_of_maxs=False
+            use_means_of_maxs=False,
         ),
         partial(MeanMinMaxStatisticCollector, use_per_sample_stats=False, use_abs_max=False),
         MedianMADStatisticCollector,
