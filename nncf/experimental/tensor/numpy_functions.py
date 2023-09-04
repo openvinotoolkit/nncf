@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -182,3 +182,21 @@ def _(a: Union[np.ndarray, np.number], axis: Union[int, List[int]] = None, keepd
 @registry_numpy_types(fns.round)
 def _(a: Union[np.ndarray, np.number], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
+
+
+@registry_numpy_types(fns.binary_operator)
+def binary_operator(
+    a: Union[np.ndarray, np.number], b: Union[np.ndarray, np.number], operator_fn=Callable
+) -> Union[np.ndarray, np.number]:
+    # Run operator with disabled warning
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return operator_fn(a, b)
+
+
+@registry_numpy_types(fns.binary_reverse_operator)
+def binary_reverse_operator(
+    a: Union[np.ndarray, np.number], b: Union[np.ndarray, np.number], operator_fn=Callable
+) -> Union[np.ndarray, np.number]:
+    # Run operator with disabled warning
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return operator_fn(b, a)

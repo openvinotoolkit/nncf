@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import functools
-from typing import List, Optional, Tuple, TypeVar, Union
+from typing import Callable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import unwrap_tensor_data
@@ -393,6 +393,34 @@ def round(a: TTensor, decimals=0) -> TTensor:  # pylint: disable=redefined-built
     :return: An array of the same type as a, containing the rounded values.
     """
     return Tensor(round(a.data, decimals))
+
+
+@functools.singledispatch
+@_tensor_guard
+def binary_operator(a: TTensor, b: TTensor, operator_fn=Callable) -> TTensor:
+    """
+    Applies a binary operation to two tensors with disable warnings.
+
+    :param a: The first tensor.
+    :param b: The second tensor.
+    :param operator_fn: The binary operation function.
+    :return: The result of the binary operation.
+    """
+    return Tensor(binary_operator(a.data, unwrap_tensor_data(b), operator_fn))
+
+
+@functools.singledispatch
+@_tensor_guard
+def binary_reverse_operator(a: TTensor, b: TTensor, operator_fn=Callable) -> TTensor:
+    """
+    Applies a binary reverse operation to two tensors with disable warnings.
+
+    :param a: The first tensor.
+    :param b: The second tensor.
+    :param operator_fn: The binary operation function.
+    :return: The result of the binary operation.
+    """
+    return Tensor(binary_reverse_operator(a.data, unwrap_tensor_data(b), operator_fn))
 
 
 __all__ = [

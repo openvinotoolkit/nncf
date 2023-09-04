@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import torch
 
@@ -175,3 +175,13 @@ def _(a: torch.Tensor, axis: Union[int, List[int]] = None, keepdims: bool = Fals
 @fns.round.register(torch.Tensor)
 def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
+
+
+@fns.binary_operator.register(torch.Tensor)
+def _(a: torch.Tensor, b: torch.Tensor, operator_fn=Callable) -> torch.Tensor:
+    return operator_fn(a, b)
+
+
+@fns.binary_reverse_operator.register(torch.Tensor)
+def _(a: torch.Tensor, b: torch.Tensor, operator_fn=Callable) -> torch.Tensor:
+    return operator_fn(b, a)

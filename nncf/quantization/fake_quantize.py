@@ -106,9 +106,8 @@ def tune_range(
         fval = -left_border * s
         qval = fns.round(fval)
 
-    with np.errstate(invalid="ignore", divide="ignore"):  # TODO: move to Tensor, to sync with numpy and torch???
-        ra = fns.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
-        rb = fns.where(qval > 0.0, (qval - level_high) / qval * left_border, right_border)
+    ra = fns.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
+    rb = fns.where(qval > 0.0, (qval - level_high) / qval * left_border, right_border)
 
     range_a = right_border - ra
     range_b = rb - left_border
