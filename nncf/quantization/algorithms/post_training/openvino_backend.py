@@ -42,7 +42,7 @@ class OVPostTrainingBackend(PostTrainingBackend):
 
     def _add_results(self, model: ov.Model, node: ov.Node) -> ov.Model:
         extra_model_outputs = []
-        for input in enumerate(node.inputs()):
+        for input in node.inputs():
             output = input.get_source_output()
             output_name = output.get_node().get_friendly_name()
             result_name = f"{output_name}/if_output"
