@@ -212,23 +212,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         return input_shape, scale_shape, channel_idx
 
-    @staticmethod
-    def _default_collector_params_and_scale_shape(
-        nncf_graph: NNCFGraph, target_point: PTTargetPoint, quantizer_config: QuantizerConfig
-    ) -> Tuple[PTRangeInitCollectorParams, QuantizerScaleShape]:
-        input_shape, scale_shape, channel_idx = PTMinMaxAlgoBackend._get_input_scale_shape(
-            nncf_graph, target_point, quantizer_config
-        )
-        return (
-            PTRangeInitCollectorParams(
-                is_weights=target_point.is_weight_target_point(),
-                mode=quantizer_config.mode,
-                per_channel=quantizer_config.per_channel,
-                input_shape=input_shape,
-                channel_idx=channel_idx,
-            ),
-            scale_shape,
-        )
 
     @staticmethod
     def _statistic_collector_builder(
@@ -238,11 +221,20 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         num_samples: int = None,
     ) -> TensorStatisticCollectorBase:
-        collector_params, scale_shape = PTMinMaxAlgoBackend._default_collector_params_and_scale_shape(
+        input_shape, scale_shape, channel_idx = PTMinMaxAlgoBackend._get_input_scale_shape(
             nncf_graph, target_point, quantizer_config
         )
+
+        collector_params = PTRangeInitCollectorParams(
+                is_weights=target_point.is_weight_target_point(),
+                mode=quantizer_config.mode,
+                per_channel=quantizer_config.per_channel,
+                input_shape=input_shape,
+                channel_idx=channel_idx,
+            )
+
         init_config = RangeInitConfig(collector_name, num_samples)
-        reduction_axes = get_reduction_axes_from_scale_shape(scale_shape)
+        reduction_axes = get_reduction_axes_from_scale_shape(scale_shape, channel_idx)
         return StatCollectorGenerator.generate_stat_collector_for_range_init_config(
             init_config, reduction_axes, collector_params, num_samples
         )
@@ -294,7 +286,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         _, scale_shape, _ = PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
 
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
-            quantizer_config, scale_shape, parameters, target_point.target_type
+            quantizer_config, scale_shape.shape, parameters, target_point.target_type
         )
 
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)

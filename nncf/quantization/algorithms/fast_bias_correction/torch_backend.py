@@ -80,8 +80,8 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def create_input_data(shape: Tuple[int], data: torch.Tensor, input_name: str, channel_axis: int) -> torch.Tensor:
         blob = torch.zeros(shape, dtype=data[0].dtype)
         for j in range(shape[channel_axis]):
-            index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
-            blob[index] = data[j]
+            index = tuple(slice(None) if i != channel_axis else j for i in range(blob.ndim))
+            blob[index] = data[index]
         return blob
 
     @staticmethod

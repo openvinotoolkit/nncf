@@ -89,9 +89,11 @@ ReductionShape = Tuple[int]
 REDUCE_TO_SCALAR_REDUCTION_SHAPE = (-1,)
 
 
-def get_reduction_axes_from_scale_shape(scale_shape: QuantizerScaleShape) -> ReductionAxes:
+def get_reduction_axes_from_scale_shape(scale_shape: QuantizerScaleShape, channel_idx: int = None) -> ReductionAxes:
     if scale_shape.is_per_tensor():
         return REDUCE_TO_SCALAR_REDUCTION_SHAPE
+    if channel_idx is not None:
+        return tuple(i for i in range(len(scale_shape.shape)) if i != channel_idx)
     return tuple(i for i, dim in enumerate(scale_shape.shape) if dim == 1)
 
 

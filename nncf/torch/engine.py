@@ -14,9 +14,11 @@ from typing import Any, Dict, Union
 import torch
 from torch import nn
 
+from nncf import nncf_logger
 from nncf.common.engine import Engine
 from nncf.common.tensor import NNCFTensor
 from nncf.openvino.tensor import OVNNCFTensor
+from nncf.torch.tensor import PTNNCFTensor
 
 
 class PTEngine(Engine):
@@ -34,12 +36,24 @@ class PTEngine(Engine):
         self._model = model
         self._model.eval()
 
-    def infer(self, input_data: Union[torch.Tensor, Dict[str, torch.Tensor]]) -> Dict[str, OVNNCFTensor]:
+    def infer(self, input_data: Union[torch.Tensor, Dict[str, torch.Tensor]]) -> Dict[str, PTNNCFTensor]:
         """
         Runs Torch model on the provided input.
 
         :param input_data: inputs for the model
         :return output_data: model outputs
         """
-
-        return self._model(input_data)
+        output = self._model(input_data)
+        if isinstance(output, torch.Tensor):
+            return {None: PTNNCFTensor(output)}
+        elif isinstance(output, dict):
+            output_dict = {}
+            for key, value in output.items():
+                if not isinstance(value, torch.Tensor):
+                    nncf_logger.debug(f"PTEngine: model output dict has non-tensor value {value} for key {key}, "
+                                      f"will skip this value when considering tensor outputs")
+                    continue
+                output_dict[key] = PTNNCFTensor(value)
+            return output_dict
+        raise RuntimeError(f"PTEngine: model output has unexpected structure: {output},\nexpecting outputs of either "
+                           f"single torch.Tensor or a dict of torch.Tensors")

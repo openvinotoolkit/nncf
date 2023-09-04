@@ -51,6 +51,8 @@ class PTNNCFTensor(NNCFTensor[torch.Tensor]):
         return self._tensor.numel() == 0
 
     def mean(self, axis: int, keepdims: bool = None) -> "PTNNCFTensor":
+        if keepdims is None:
+            keepdims = False
         return PTNNCFTensor(self._tensor.mean(dim=axis, keepdim=keepdims))
 
     def median(self, axis: int = None, keepdims: bool = False) -> "PTNNCFTensor":

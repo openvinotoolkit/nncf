@@ -14,6 +14,7 @@ import pytest
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.reduction import REDUCE_TO_SCALAR_REDUCTION_SHAPE
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -38,9 +39,9 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture(
         params=[
-            (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (0, 2), (0, 1, 2)),
-            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), (0, 1, 2, 3)),
-            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), (0, 1, 2, 3)),
+            (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (0, 2), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
+            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
+            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), REDUCE_TO_SCALAR_REDUCTION_SHAPE),
         ]
     )
     def statistic_collector_parameters(self, request) -> ParamsCls:
