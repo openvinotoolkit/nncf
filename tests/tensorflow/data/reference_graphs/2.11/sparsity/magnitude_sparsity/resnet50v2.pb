@@ -1,1 +1,1 @@
-../../../2.5/sparsity/magnitude_sparsity/resnet50v2.pb
+../../../2.8/sparsity/magnitude_sparsity/resnet50v2.pb

@@ -1,1 +1,1 @@
-../../../2.8/quantized/w_sym_t_a_sym_t/retinanet_quantize_outputs.pb
+../../../2.11/quantized/w_sym_t_a_sym_t/retinanet_quantize_outputs.pb

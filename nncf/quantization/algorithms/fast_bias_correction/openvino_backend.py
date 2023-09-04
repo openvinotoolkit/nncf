@@ -21,7 +21,7 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor import Tensor
-from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator

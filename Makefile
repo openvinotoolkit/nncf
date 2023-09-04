@@ -1,5 +1,10 @@
 JUNITXML_PATH ?= nncf-tests.xml
-COVERAGE ?= --cov=./ --cov-report=xml
+
+ifdef NNCF_COVERAGE
+	COVERAGE_ARGS ?= --cov=./ --cov-report=xml
+else
+	COVERAGE_ARGS :=
+endif
 
 ifdef DATA
 	DATA_ARG := --data $(DATA)
@@ -26,7 +31,7 @@ install-onnx-dev: install-onnx-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
 test-onnx:
-	pytest ${COVERAGE} tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest ${COVERAGE_ARGS} tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 pylint-onnx:
 	pylint --rcfile .pylintrc               \
@@ -60,8 +65,7 @@ install-openvino-dev: install-openvino-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
-    # omitting ${COVERAGE} for internal runs since they seem to introduce a major slowdown
-	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest ${COVERAGE_ARGS} tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
@@ -91,8 +95,7 @@ install-tensorflow-dev: install-tensorflow-test install-pre-commit install-pylin
 	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
 
 test-tensorflow:
-    # omitting ${COVERAGE} for internal runs since they seem to introduce a major slowdown
-	pytest tests/common tests/tensorflow    \
+	pytest ${COVERAGE_ARGS} tests/common tests/tensorflow    \
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
 
@@ -121,8 +124,7 @@ install-torch-dev: install-torch-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
 test-torch:
-    # omitting ${COVERAGE} for internal runs since they seem to introduce a major slowdown
-	pytest tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	pytest ${COVERAGE_ARGS} tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 COMMON_PYFILES := $(shell python3 tools/collect_pylint_input_files_for_backend.py common)
 pylint-torch:
@@ -160,7 +162,7 @@ pylint-common:
 		$(COMMON_PYFILES)
 
 test-common:
-	pytest ${COVERAGE} tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest ${COVERAGE_ARGS} tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 test-examples:
 	pytest tests/cross_fw/examples -s --junitxml ${JUNITXML_PATH}

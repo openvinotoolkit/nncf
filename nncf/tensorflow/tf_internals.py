@@ -15,15 +15,7 @@ from tensorflow.python.eager import context as eager_context
 
 from nncf.tensorflow import tensorflow_version
 
-if version.parse(tensorflow_version) < version.parse("2.6"):
-    from tensorflow.python.keras import backend
-    from tensorflow.python.keras import engine as keras_engine
-    from tensorflow.python.keras import layers
-    from tensorflow.python.keras.applications import imagenet_utils
-    from tensorflow.python.keras.engine.keras_tensor import KerasTensor
-    from tensorflow.python.keras.layers import Rescaling
-    from tensorflow.python.keras.utils.control_flow_util import smart_cond
-elif version.parse(tensorflow_version) < version.parse("2.13"):
+if version.parse(tensorflow_version) < version.parse("2.13"):
     from keras import backend
     from keras import engine as keras_engine
     from keras import layers

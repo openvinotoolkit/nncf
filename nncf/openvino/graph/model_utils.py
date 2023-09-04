@@ -15,12 +15,13 @@ import openvino.runtime as ov
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
+from nncf.openvino.graph.node_utils import create_bias_tensor
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 
@@ -45,7 +46,8 @@ def insert_null_biases(model: ov.Model, graph: NNCFGraph) -> ov.Model:
     transformation_layout = TransformationLayout()
     model_transformer = ModelTransformerFactory.create(model)
     for node_without_bias in nodes_without_biases:
-        bias_insertion_command = OVCommandCreator.create_command_to_insert_bias(node_without_bias)
+        const_value = create_bias_tensor(node_without_bias, graph, 0)
+        bias_insertion_command = OVCommandCreator.create_command_to_insert_bias(node_without_bias, const_value)
         transformation_layout.register(bias_insertion_command)
     return model_transformer.transform(transformation_layout)
 

@@ -165,6 +165,14 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             self._add_barrier_after_node(barred_node_key)
         self._branch_nodes_directly_dominating_outputs = None
 
+    def get_input_node_keys(self) -> List[str]:
+        """
+        Returns graph input node keys.
+
+        :return: List of the input node keys.
+        """
+        return self._input_node_keys_vs_nncf_nodes.keys()
+
     def get_node_keys_by_metatype(self, metatype: Type[OperatorMetatype]) -> List[str]:
         """
         Returns a list of node keys, whose metatype is corresponding to the 'metatype'.
@@ -1383,9 +1391,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 all_qp_ids_in_unified_scale_group = {qp_id_for_current_pq}
             for act_qp_id in all_qp_ids_in_unified_scale_group:
                 curr_act_qconfigs = setup.quantization_points[act_qp_id].possible_qconfigs
-                curr_intersection_of_qconfigs = [
-                    qconf for qconf in curr_intersection_of_qconfigs if qconf in curr_act_qconfigs
-                ]
+                curr_intersection_of_qconfigs = self._get_weight_and_activation_qconfig_list_intersection(
+                    curr_intersection_of_qconfigs, curr_act_qconfigs
+                )
 
             # Do further filtering for per-tensor quantizations only.
             # TODO: relax the requirement to allow the scale shape of the weight-as-output quantizer
@@ -1421,6 +1429,27 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             setup.quantization_points[wao_qp_id].directly_quantized_operator_node_names.extend(deepcopy(dir_quant_ops))
             setup.discard(qp_id_for_current_pq, keep_shared_input_qps=True)
         return setup
+
+    @staticmethod
+    def _get_weight_and_activation_qconfig_list_intersection(
+        weight_qconfig_options: List[QuantizerConfig], activation_qconfig_options: List[QuantizerConfig]
+    ) -> List[QuantizerConfig]:
+        """
+        Returns special intersection between weight and activation quantization configurations.
+
+        :param weight_qconfig_options: List of QuantizerConfig associated with weights.
+        :param activation_qconfig_options: List of QuantizerConfig associated with activations.
+        :return: Special intersection between configurations.
+        """
+        act_qconfig_extend_list = []
+        for act_qconfig in activation_qconfig_options:
+            if act_qconfig.signedness_to_force is None:
+                for signedness_to_force_position in [True, False]:
+                    act_qconfig_updated = deepcopy(act_qconfig)
+                    act_qconfig_updated.signedness_to_force = signedness_to_force_position
+                    act_qconfig_extend_list.append(act_qconfig_updated)
+        act_qconfig_extend_list += activation_qconfig_options
+        return [qconf for qconf in weight_qconfig_options if qconf in act_qconfig_extend_list]
 
     def run_consistency_check(self) -> bool:
         all_pqs = self.collect_all_propagating_quantizers()
