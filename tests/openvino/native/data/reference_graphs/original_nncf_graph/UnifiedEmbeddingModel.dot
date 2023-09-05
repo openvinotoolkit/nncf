@@ -1,0 +1,28 @@
+strict digraph  {
+"0 Input" [id=0, type=Parameter];
+"1 Convert_1" [id=1, type=Convert];
+"2 MatMul_1" [id=2, type=MatMul];
+"3 Gather_1" [id=3, type=Gather];
+"4 Reshape_1" [id=4, type=Reshape];
+"5 Concat_12" [id=5, type=Concat];
+"6 MatMul_2" [id=6, type=MatMul];
+"7 Result" [id=7, type=Result];
+"8 matmul_2_data" [id=8, type=Constant];
+"9 Constant_8" [id=9, type=Constant];
+"10 matmul_1_data" [id=10, type=Constant];
+"11 Constant_4" [id=11, type=Constant];
+"12 gather_1_data" [id=12, type=Constant];
+"0 Input" -> "1 Convert_1"  [label="[1, 3]", style=solid];
+"0 Input" -> "2 MatMul_1"  [label="[1, 3]", style=solid];
+"1 Convert_1" -> "3 Gather_1"  [label="[1, 3]", style=dashed];
+"2 MatMul_1" -> "4 Reshape_1"  [label="[3, 1, 5]", style=solid];
+"3 Gather_1" -> "5 Concat_12"  [label="[1, 3, 5]", style=solid];
+"4 Reshape_1" -> "5 Concat_12"  [label="[1, 3, 5]", style=solid];
+"5 Concat_12" -> "6 MatMul_2"  [label="[1, 6, 5]", style=solid];
+"6 MatMul_2" -> "7 Result"  [label="[1, 6, 1]", style=solid];
+"8 matmul_2_data" -> "6 MatMul_2"  [label="[1, 5]", style=solid];
+"9 Constant_8" -> "4 Reshape_1"  [label="[3]", style=dashed];
+"10 matmul_1_data" -> "2 MatMul_1"  [label="[3, 3, 5]", style=solid];
+"11 Constant_4" -> "3 Gather_1"  [label="[]", style=dashed];
+"12 gather_1_data" -> "3 Gather_1"  [label="[4, 5]", style=solid];
+}
