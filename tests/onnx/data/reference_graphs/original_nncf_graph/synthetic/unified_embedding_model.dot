@@ -1,0 +1,17 @@
+strict digraph  {
+"0 Cast" [id=0, type=Cast];
+"1 Embedding" [id=1, type=Gather];
+"2 MatMul_1" [id=2, type=MatMul];
+"3 Reshape" [id=3, type=Reshape];
+"4 Concat" [id=4, type=Concat];
+"5 MatMul_2" [id=5, type=MatMul];
+"6 nncf_model_input_0" [id=6, type=nncf_model_input];
+"7 nncf_model_output_0" [id=7, type=nncf_model_output];
+"0 Cast" -> "1 Embedding"  [label="[1, 3]", style=dashed];
+"1 Embedding" -> "4 Concat"  [label="[1, 3, 5]", style=solid];
+"2 MatMul_1" -> "3 Reshape"  [label="[3, 1, 5]", style=solid];
+"4 Concat" -> "5 MatMul_2"  [label="[]", style=solid];
+"5 MatMul_2" -> "7 nncf_model_output_0"  [label="[1, 6]", style=solid];
+"6 nncf_model_input_0" -> "0 Cast"  [label="[1, 3]", style=solid];
+"6 nncf_model_input_0" -> "2 MatMul_1"  [label="[1, 3]", style=solid];
+}
