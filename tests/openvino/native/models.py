@@ -613,3 +613,27 @@ class ZeroRankEltwiseModel(OVReferenceModel):
         result_1 = opset.result(add, name="Result")
         model = ov.Model([result_1], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class UnifiedEmbeddingModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3], name="Input")
+        convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
+
+        gather_1_data = opset.constant(self._rng.random((4, 5)), dtype=np.float32, name="gather_1_data")
+        gather_1 = opset.gather(gather_1_data, convert_1, axis=0, batch_dims=0)
+        gather_1.set_friendly_name("Gather_1")
+
+        matmul_1_data = opset.constant(self._rng.random((3, 3, 5)), dtype=np.float32, name="matmul_1_data")
+        matmul_1 = opset.matmul(input_1, matmul_1_data, transpose_a=False, transpose_b=False, name="MatMul_1")
+        reshape_1 = opset.reshape(matmul_1, [1, 3, 5], special_zero=False, name="Reshape_1")
+
+        concat_1 = opset.concat([gather_1, reshape_1], axis=1)
+
+        matmul_2_data = opset.constant(self._rng.random((1, 5)), dtype=np.float32, name="matmul_2_data")
+        matmul_2 = opset.matmul(concat_1, matmul_2_data, transpose_a=False, transpose_b=True, name="MatMul_2")
+
+        result = opset.result(matmul_2, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
