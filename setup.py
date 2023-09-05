@@ -120,7 +120,7 @@ INSTALL_REQUIRES = [
     # Ticket: 69520
     "pyparsing<3.0",
     "scikit-learn>=0.24.0",
-    "scipy>=1.3.2, <1.11",
+    "scipy>=1.3.2",
     "texttable>=1.6.3",
     "tqdm>=4.54.1",
 ]
