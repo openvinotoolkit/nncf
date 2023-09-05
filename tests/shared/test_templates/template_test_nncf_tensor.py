@@ -17,11 +17,11 @@ from typing import TypeVar
 
 import pytest
 
+from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import TensorDeviceType
 from nncf.experimental.tensor import functions as fns
-from nncf.experimental.tensor import math_functions as mfns
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -639,6 +639,6 @@ class TemplateTestNNCFTensorOperators:
     def test_fn_mean_per_channel(self, val, axis, ref):
         tensor = Tensor(self.to_tensor(val))
         ref_tensor = self.to_tensor(ref)
-        res = mfns.mean_per_channel(tensor, axis)
+        res = s_fns.mean_per_channel(tensor, axis)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor), f"{res.data}"
