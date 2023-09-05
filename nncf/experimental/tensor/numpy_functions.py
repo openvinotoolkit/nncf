@@ -186,7 +186,7 @@ def _(a: Union[np.ndarray, np.number], decimals: int = 0) -> np.ndarray:
 
 @registry_numpy_types(fns.binary_operator)
 def binary_operator(
-    a: Union[np.ndarray, np.number], b: Union[np.ndarray, np.number], operator_fn=Callable
+    a: Union[np.ndarray, np.number], b: Union[np.ndarray, np.number], operator_fn: Callable
 ) -> Union[np.ndarray, np.number]:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
@@ -195,7 +195,7 @@ def binary_operator(
 
 @registry_numpy_types(fns.binary_reverse_operator)
 def binary_reverse_operator(
-    a: Union[np.ndarray, np.number], b: Union[np.ndarray, np.number], operator_fn=Callable
+    a: Union[np.ndarray, np.number], b: Union[np.ndarray, np.number], operator_fn: Callable
 ) -> Union[np.ndarray, np.number]:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):

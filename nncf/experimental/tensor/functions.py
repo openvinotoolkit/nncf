@@ -397,7 +397,7 @@ def round(a: TTensor, decimals=0) -> TTensor:  # pylint: disable=redefined-built
 
 @functools.singledispatch
 @_tensor_guard
-def binary_operator(a: TTensor, b: TTensor, operator_fn=Callable) -> TTensor:
+def binary_operator(a: TTensor, b: TTensor, operator_fn: Callable) -> TTensor:
     """
     Applies a binary operation to two tensors with disable warnings.
 
@@ -411,7 +411,7 @@ def binary_operator(a: TTensor, b: TTensor, operator_fn=Callable) -> TTensor:
 
 @functools.singledispatch
 @_tensor_guard
-def binary_reverse_operator(a: TTensor, b: TTensor, operator_fn=Callable) -> TTensor:
+def binary_reverse_operator(a: TTensor, b: TTensor, operator_fn: Callable) -> TTensor:
     """
     Applies a binary reverse operation to two tensors with disable warnings.
 

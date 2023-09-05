@@ -178,10 +178,10 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
 
 
 @fns.binary_operator.register(torch.Tensor)
-def _(a: torch.Tensor, b: torch.Tensor, operator_fn=Callable) -> torch.Tensor:
+def _(a: torch.Tensor, b: torch.Tensor, operator_fn: Callable) -> torch.Tensor:
     return operator_fn(a, b)
 
 
 @fns.binary_reverse_operator.register(torch.Tensor)
-def _(a: torch.Tensor, b: torch.Tensor, operator_fn=Callable) -> torch.Tensor:
+def _(a: torch.Tensor, b: torch.Tensor, operator_fn: Callable) -> torch.Tensor:
     return operator_fn(b, a)
