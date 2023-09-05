@@ -66,7 +66,7 @@ class ImageClassificationTimm(BaseTestPipeline):
             self.input_name = self.model.graph.input[0].name
 
         if self.backend in OV_BACKENDS:
-            self.model = convert_model(timm_model, example_input=self.dummy_tensor)
+            self.model = convert_model(timm_model, example_input=self.dummy_tensor, input_shape=input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
     def prepare_preprocessor(self) -> None:
