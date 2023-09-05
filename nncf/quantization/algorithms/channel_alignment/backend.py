@@ -145,12 +145,12 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any):
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
         """
         Creates bias value constant array filled by given value.
 
-        :param node_without_bias: NNCFNode to add bias to.
-        :param graph: Target NNCFgraph.
+        :param node: NNCFNode to add bias to.
+        :param nncf_graph: Target NNCFgraph.
         :param value: Value to fill bias constant array.
         :return: Bias value constant array filled by given value.
         """

@@ -149,5 +149,5 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return node.layer_attributes.layer_attributes[1]
 
     @staticmethod
-    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any):
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
         return create_bias_tensor(node, nncf_graph, value)

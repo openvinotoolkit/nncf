@@ -55,7 +55,6 @@ class CommandCreator(ABC):
 
         :param node_without_bias: The node that corresponds to the operation without bias.
         :param bias_value: Bias value to insert.
-        :param nncf_graph: The NNCF graph.
         :return: The command to insert bias value.
         """
 
