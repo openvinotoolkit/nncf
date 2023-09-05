@@ -15,7 +15,7 @@ import openvino.runtime as ov
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype

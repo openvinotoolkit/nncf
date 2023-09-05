@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import tensorflow as tf
-from packaging import version
 
 from examples.tensorflow.classification.datasets import tfrecords as records_dataset
 from examples.tensorflow.classification.datasets.preprocessing_selector import get_label_preprocessing_fn
@@ -118,8 +117,6 @@ class DatasetBuilder(BaseDatasetBuilder):
             options.experimental_slack = self._use_slack
             options.experimental_optimization.parallel_batch = True
             options.experimental_optimization.map_fusion = True
-            if version.parse(tf.__version__) < version.parse("2.6"):
-                options.experimental_optimization.map_vectorization.enabled = True
             options.experimental_optimization.map_parallelization = True
             dataset = dataset.with_options(options)
 

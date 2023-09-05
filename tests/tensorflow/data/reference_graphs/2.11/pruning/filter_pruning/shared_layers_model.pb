@@ -1,1 +1,1 @@
-../../../2.5/pruning/filter_pruning/shared_layers_model.pb
+../../../2.8/pruning/filter_pruning/shared_layers_model.pb

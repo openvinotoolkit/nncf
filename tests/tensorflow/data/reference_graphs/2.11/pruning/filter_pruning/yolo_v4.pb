@@ -1,1 +1,1 @@
-../../../2.5/pruning/filter_pruning/yolo_v4.pb
+../../../2.8/pruning/filter_pruning/yolo_v4.pb

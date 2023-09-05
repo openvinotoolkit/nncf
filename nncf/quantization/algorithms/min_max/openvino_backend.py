@@ -26,7 +26,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MA
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
-from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
@@ -115,8 +115,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(statistic.max_values)
-            min_values.append(statistic.min_values)
+            max_values.append(np.array(statistic.max_values).flatten())
+            min_values.append(np.array(statistic.min_values).flatten())
         max_values = np.max(max_values, axis=0)
         min_values = np.min(min_values, axis=0)
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
@@ -231,7 +231,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [
             node
             for node in nncf_graph.get_all_nodes()
-            if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
+            if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in OPERATIONS_WITH_WEIGHTS
         ]
 
     @staticmethod

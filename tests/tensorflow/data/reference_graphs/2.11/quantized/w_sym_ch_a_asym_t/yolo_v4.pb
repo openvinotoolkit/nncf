@@ -1,1 +1,1 @@
-../../../2.5/quantized/w_sym_ch_a_asym_t/yolo_v4.pb
+../../../2.8/quantized/w_sym_ch_a_asym_t/yolo_v4.pb

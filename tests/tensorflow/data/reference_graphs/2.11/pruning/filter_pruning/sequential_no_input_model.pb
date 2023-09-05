@@ -1,1 +1,1 @@
-../../../2.5/pruning/filter_pruning/sequential_no_input_model.pb
+../../../2.8/pruning/filter_pruning/sequential_no_input_model.pb
