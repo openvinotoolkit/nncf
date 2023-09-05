@@ -87,86 +87,77 @@ class PostTrainingQuantization(Algorithm):
             fine-tuning the quantization algorithm
         """
         super().__init__()
-        self.preset = preset
-        self.target_device = target_device
-        self.subset_size = subset_size
-        self.fast_bias_correction = fast_bias_correction
-        self.model_type = model_type
-        self.ignored_scope = ignored_scope
-        self.dump_intermediate_models = dump_intermediate_models
-        self.advanced_parameters = advanced_parameters
-        self.reset()
-
-    def reset(self):
         self.algorithms = []
         self.first_stage_algorithms: List[self.FirstStageAlgorithm] = []
+        self.dump_intermediate_models = dump_intermediate_models
+        self.subset_size = subset_size
 
-        if self.target_device is TargetDevice.VPU:
+        if target_device is TargetDevice.VPU:
             warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
-        if self.advanced_parameters is None:
-            self.advanced_parameters = AdvancedQuantizationParameters()
+        if advanced_parameters is None:
+            advanced_parameters = AdvancedQuantizationParameters()
 
-        if self.model_type == ModelType.TRANSFORMER:
+        if model_type == ModelType.TRANSFORMER:
             smooth_quant_algorithm = SmoothQuant(
-                subset_size=self.subset_size,
-                inplace_statistics=self.advanced_parameters.inplace_statistics,
-                alpha=self.advanced_parameters.smooth_quant_alpha,
+                subset_size=subset_size,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                alpha=advanced_parameters.smooth_quant_alpha,
             )
             self.first_stage_algorithms.append(self.FirstStageAlgorithm(smooth_quant_algorithm, []))
 
-        if not self.advanced_parameters.disable_channel_alignment:
+        if not advanced_parameters.disable_channel_alignment:
             channel_alignment = ChannelAlignment(
-                subset_size=self.subset_size,
-                inplace_statistics=self.advanced_parameters.inplace_statistics,
-                backend_params=self.advanced_parameters.backend_params,
+                subset_size=subset_size,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                backend_params=advanced_parameters.backend_params,
             )
             self.first_stage_algorithms.append(self.FirstStageAlgorithm(channel_alignment, [insert_null_biases_pass]))
 
         min_max_quantization = MinMaxQuantization(
-            preset=self.preset,
-            target_device=self.target_device,
-            subset_size=self.subset_size,
-            model_type=self.model_type,
-            ignored_scope=self.ignored_scope,
-            overflow_fix=self.advanced_parameters.overflow_fix,
-            quantize_outputs=self.advanced_parameters.quantize_outputs,
-            inplace_statistics=self.advanced_parameters.inplace_statistics,
-            activations_quantization_params=self.advanced_parameters.activations_quantization_params,
-            weights_quantization_params=self.advanced_parameters.weights_quantization_params,
-            activations_range_estimator_params=self.advanced_parameters.activations_range_estimator_params,
-            weights_range_estimator_params=self.advanced_parameters.weights_range_estimator_params,
-            backend_params=self.advanced_parameters.backend_params,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            overflow_fix=advanced_parameters.overflow_fix,
+            quantize_outputs=advanced_parameters.quantize_outputs,
+            inplace_statistics=advanced_parameters.inplace_statistics,
+            activations_quantization_params=advanced_parameters.activations_quantization_params,
+            weights_quantization_params=advanced_parameters.weights_quantization_params,
+            activations_range_estimator_params=advanced_parameters.activations_range_estimator_params,
+            weights_range_estimator_params=advanced_parameters.weights_range_estimator_params,
+            backend_params=advanced_parameters.backend_params,
         )
 
         self.algorithms.append(min_max_quantization)
 
-        if self.advanced_parameters.disable_bias_correction:
+        if advanced_parameters.disable_bias_correction:
             return
 
-        bias_correction_params = self.advanced_parameters.bias_correction_params
-        if self.fast_bias_correction:
+        bias_correction_params = advanced_parameters.bias_correction_params
+        if fast_bias_correction:
             threshold = FAST_BIAS_CORRECTION_THRESHOLD
             if bias_correction_params.threshold is not None:
                 threshold = bias_correction_params.threshold
             bias_correction = FastBiasCorrection(
-                subset_size=self.subset_size,
+                subset_size=subset_size,
                 threshold=threshold,
                 apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
-                inplace_statistics=self.advanced_parameters.inplace_statistics,
-                backend_params=self.advanced_parameters.backend_params,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                backend_params=advanced_parameters.backend_params,
             )
         else:
             threshold = BIAS_CORRECTION_THRESHOLD
             if bias_correction_params.threshold is not None:
                 threshold = bias_correction_params.threshold
-            bias_correction_subset_size = max(int(self.subset_size * 0.2), 1)
+            bias_correction_subset_size = max(int(subset_size * 0.2), 1)
             bias_correction = BiasCorrection(
                 subset_size=bias_correction_subset_size,
                 threshold=threshold,
                 apply_for_all_nodes=bias_correction_params.apply_for_all_nodes,
-                inplace_statistics=self.advanced_parameters.inplace_statistics,
-                backend_params=self.advanced_parameters.backend_params,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                backend_params=advanced_parameters.backend_params,
             )
 
         self.algorithms.append(bias_correction)
@@ -275,7 +266,6 @@ class PostTrainingQuantization(Algorithm):
         ROOT = "/home/akash/intel/OV_If_op"
         subgraph_cnt = 0
         while quantization_tasks:
-            self.reset()
             subgraph_model, dataset, backend_params = quantization_tasks.popleft()
             nncf_logger.info(f"Quantize a subgraph number {subgraph_cnt}")
             subgraph_model_quantized = self._apply(

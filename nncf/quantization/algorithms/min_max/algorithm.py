@@ -677,7 +677,8 @@ class MinMaxQuantization(Algorithm):
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-
+        self._quantization_target_points_to_qconfig = collections.OrderedDict()
+        self._unified_scale_groups = []
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
