@@ -20,17 +20,17 @@ from nncf.quantization.algorithms.post_training.algorithm import TModel
 
 class PostTrainingBackend(ABC):
     @abstractmethod
-    def make_tasks(
-        self, model: TModel, calibration_dataset: Dataset, subset_size: int
-    ) -> List[Tuple[TModel, Dataset, Dict[str, Any]]]:
-        """
-        Returns model subgraphs and the datasets for calibrations for particular model.
+    # def make_tasks(
+    #     self, model: TModel, calibration_dataset: Dataset, subset_size: int
+    # ) -> List[Tuple[TModel, Dataset, Dict[str, Any]]]:
+    #     """
+    #     Returns model subgraphs and the datasets for calibrations for particular model.
 
-        :param model: Model from which the model subgraphs are obtained.
-        :param calibration_dataset: Calibration dataset for original model.
-        :param subset_size: Number of samples used to get new dataset.
-        :return: All quantization tasks from particular model.
-        """
+    #     :param model: Model from which the model subgraphs are obtained.
+    #     :param calibration_dataset: Calibration dataset for original model.
+    #     :param subset_size: Number of samples used to get new dataset.
+    #     :return: All quantization tasks from particular model.
+    #     """
 
     @abstractmethod
     def is_single_model(self, model: TModel) -> bool:

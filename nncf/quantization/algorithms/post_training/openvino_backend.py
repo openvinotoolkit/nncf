@@ -9,10 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import deque
 from itertools import islice
 from pathlib import Path
-from typing import Any, Deque, Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
@@ -34,6 +33,8 @@ def make_transform_fn(input_descriptions):
 
 
 class OVPostTrainingBackend(PostTrainingBackend):
+    IF_OP_MODEL_INPUT_PORTS = (0, 1)
+
     def _add_results(self, model: ov.Model, node: ov.Node) -> ov.Model:
         extra_model_outputs = []
         for input in node.inputs():
@@ -56,20 +57,30 @@ class OVPostTrainingBackend(PostTrainingBackend):
         )
 
     def _collect_dataset(
-        self, model: ov.Model, if_op: ov.Node, calibration_dataset: Dataset, subset_size: int
+        self, model: ov.Model, calibration_dataset: Dataset, subset_size: int, model_cnt
     ) -> Iterable[DataItem]:
         dataset = []
-        model_with_additional_results = self._add_results(model, if_op)
-        compiled_model = ov.compile_model(model_with_additional_results)
+        compiled_model = ov.compile_model(model)
         for input_data in tqdm(
             islice(calibration_dataset.get_inference_data(), subset_size),
             total=subset_size,
-            desc=f"Collect dataset for If {if_op.get_friendly_name()} operation:",
+            desc=f"Collect dataset for children models of {model_cnt} model:",
         ):
             results = compiled_model(input_data)
             # TODO: Use only inputs which are passed to subgraph infers. E.g. in example 0-index is never used.
             dataset.append(tuple(results.values()))
         return dataset
+
+    def _make_dataset(
+        self,
+        dataset: Iterable[DataItem],
+        if_op: ov.Node,
+        if_op_model_input_port_id: int,
+    ):
+        assert if_op.get_type_name() == "If"
+        input_name = if_op.get_input_descriptions(if_op_model_input_port_id)
+        transform_fn = make_transform_fn(input_name)
+        return Dataset(dataset, transform_fn)
 
     def _make_task(
         self, if_op: ov.Node, port_id: int, dataset: Iterable[DataItem]
@@ -83,14 +94,14 @@ class OVPostTrainingBackend(PostTrainingBackend):
             {"if_op": if_op, "if_op_subgraph_port_id": port_id},
         )
 
-    def set_subgraph(self, subgraph_model: ov.Model, if_op: ov.Node, if_op_subgraph_port_id: int) -> None:
-        if_op.set_function(if_op_subgraph_port_id, subgraph_model)
+    def set_subgraph(self, subgraph_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
+        if_op.set_function(if_op_model_input_port_id, subgraph_model)
 
-    def dump_model(self, model: ov.Model, dir: str, if_op: ov.Node, if_op_subgraph_port_id: int) -> None:
+    def dump_model(self, model: ov.Model, dir: str, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
         name = if_op.get_friendly_name().replace("/", "")
-        if if_op_subgraph_port_id == 0:
+        if if_op_model_input_port_id == 0:
             postfix = "then"
-        if if_op_subgraph_port_id == 1:
+        if if_op_model_input_port_id == 1:
             postfix = "else"
         model_name = f"{name}_{postfix}.xml"
         model_path = Path(dir) / model_name
@@ -102,13 +113,18 @@ class OVPostTrainingBackend(PostTrainingBackend):
                 return False
         return True
 
-    def make_tasks(
-        self, model: ov.Model, calibration_dataset: Dataset, subset_size: int
-    ) -> List[Tuple[ov.Model, Dataset, Dict[str, Any]]]:
-        tasks = []
+    def get_children_models(self, model: ov.Model) -> List[Tuple[ov.Model, Dict[str, Any]]]:
+        children_models = []
         for op in model.get_ops():
             if op.get_type_name() == "If":
-                subgraph_dataset = self._collect_dataset(model, op, calibration_dataset, subset_size)
-                for port_id in (0, 1):
-                    tasks.append(self._make_task(op, port_id, subgraph_dataset))
-        return tasks
+                for port_id in self.IF_OP_MODEL_INPUT_PORTS:
+                    children_models.append(
+                        (op.get_function(port_id), {"if_op": op, "if_op_model_input_port_id": port_id})
+                    )
+        return children_models
+
+    def add_additional_outputs(self, model: ov.Model):
+        for op in model.get_ops():
+            if op.get_type_name() == "If":
+                model_with_additional_results = self._add_results(model, op)
+        return model_with_additional_results
