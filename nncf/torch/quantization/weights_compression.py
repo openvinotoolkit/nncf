@@ -47,7 +47,7 @@ def _insert_pre_compression_operations(
     :param module: The module to insert the weights compression.
     :param allowed_types: list of allowed types for weights compression.
     :param level_high: highest possible value of compressed weights (lower is 0 in assymetric quantization).
-    :param compression_hist: mapping between layer weight and corresponding WeightsDecompressor for finding 
+    :param compression_hist: mapping between layer weight and corresponding WeightsDecompressor for finding
      shared weights.
     :return: The non-trainable module with inserted operations.
     """
