@@ -13,7 +13,7 @@ from abc import abstractmethod
 from itertools import islice
 from typing import Any, Dict, TypeVar
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
