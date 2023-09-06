@@ -113,7 +113,7 @@ def revert_operations_to_floating_point_precision(
         original_bias = node.attributes.get("original_bias", None)
         if original_bias is not None:
             transformation_layout.register(
-                command_creator.create_command_to_update_bias(node, original_bias, quantized_model_graph)
+                command_creator.create_command_to_update_bias(node, original_bias.to_numpy(), quantized_model_graph)
             )
 
         if node.layer_attributes and node.layer_attributes.constant_attributes is not None:

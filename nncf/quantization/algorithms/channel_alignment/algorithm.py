@@ -149,15 +149,15 @@ class ChannelAlignment(Algorithm):
                 if container.stated_weight.is_modified():
                     transformation_layout.register(
                         command_creator.create_command_to_update_weight(
-                            container.op, container.weight, container.weight_port_id
+                            container.op, container.weight.to_numpy(), container.weight_port_id
                         )
                     )
 
                 if container.stated_bias.is_modified():
                     if container.bias_op_exist():
-                        command = command_creator.create_command_to_update_bias(container.op, container.bias, graph)
+                        command = command_creator.create_command_to_update_bias(container.op, container.bias.to_numpy(), graph)
                     else:
-                        command = command_creator.create_command_to_insert_bias(container.op, container.bias)
+                        command = command_creator.create_command_to_insert_bias(container.op, container.bias.to_numpy())
                     transformation_layout.register(command)
 
         transformed_model = model_transformer.transform(transformation_layout)
