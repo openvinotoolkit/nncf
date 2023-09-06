@@ -1,5 +1,57 @@
 # Release Notes
 
+## New in Release 2.6.0
+
+Post-training Quantization:
+
+- Features:
+  - Added `CPU_SPR` device type support.
+  - Added quantizers scales unification.
+  - Added quantization scheme for ReduceSum operation.
+  - Added new types (ReduceL2, ReduceSum, Maximum) to the ignored scope for `ModelType.Transformer`.
+  - (OpenVINO) Added SmoothQuant algorithm.
+  - (OpenVINO) Added ChannelAlignment algorithm.
+  - (OpenVINO) Added HyperparameterTuner algorithm.
+  - (OpenVINO, ONNX) Added embedding weights quantization.
+  - (OpenVINO, PyTorch) Added new `compress_weights` method that provides data-free [INT8 weights compression](docs/compression_algorithms/CompressWeights.md).
+- Fixes:
+  - Fixed detection of decomposed post-processing in models.
+  - Multiple fixes (new patterns, bugfixes, etc.) to solve [#1936](https://github.com/openvinotoolkit/nncf/issues/1936) issue.
+  - Fixed model reshaping while quantization to keep original model shape.
+  - (OpenVINO) Added support for sequential models quanitzation.
+  - (OpenVINO) Fixed in-place statistics cast to support empty dimensions.
+  - (OpenVINO, ONNX) Fixed quantization of the MatMul operation with weights rank > 2.
+  - (OpenVINO, ONNX) Fixed BiasCorrection algorithm to enable [CLIP model quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/228-clip-zero-shot-image-classification).
+- Improvements:
+  - Optimized `quantize(…)` pipeline (up to 4.3x speed up in total).
+  - Optimized `quantize_with_accuracy_control(…)` pipelilne (up to 8x speed up for [122-quantizing-model-with-accuracy-control](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/122-quantizing-model-with-accuracy-control) notebook).
+  - Optimized general statistics collection (up to 1.2x speed up for ONNX backend).
+  - Ignored patterns separated from Fused patterns scheme (with multiple patterns addition).
+
+Compression-aware training:
+
+- Features:
+  - (PyTorch) Added PyTorch 2.0 support.
+  - (PyTorch) Added `.strip()` option to API.
+  - Added shape pruning processor for BootstrapNAS algorithm.
+  - Added KD loss for BootstrapNAS algorithm.
+  - Added `validate_scopes` parameter for NNCF configuration.
+  - (PyTorch) Added redefined `__class__` method for ProxyModule.
+  - (PyTorch) Added dispatching bfloat along with the rest of the types for the kernels.
+  - (PyTorch) Added quantizer nodes tracing via `torch.jit.trace` without `strip` function.
+  - (PyTorch) Added support for override forward function of original model.
+  - (PyTorch) Removed deprecated `NNCFNetwork.__getattr__`, `NNCFNetwork.get_nncf_wrapped_model` methods.
+- Fixes:
+  - (PyTorch) Fixed padding adjustment issue in elastic kernel.
+  - (PyTorch) Fixed the torch graph tracing in parallel edges scenario.
+  - (PyTorch) Fixed recurrent nodes matching (LSTM, GRU cells).
+  - (PyTorch) Fixed `torch.jit.script` wrapper to catch exceptions in the original `torch.jit.script`.
+  - (PyTorch, Tensorflow) Adjust quantizer propagation algorithm to check quantization result.
+  - (PyTorch) Fixed incorrect expanding variadic args in macros on Windows.
+- Requirements:
+  - Updated PyTorch version (2.0.1).
+  - Updated Tensorflow version (2.12.0).
+
 ## New in Release 2.5.0
 
 Post-training Quantization:
