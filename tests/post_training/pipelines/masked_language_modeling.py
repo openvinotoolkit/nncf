@@ -31,6 +31,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
         if self.backend in PT_BACKENDS:
             self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(self.model_id)
             self.model = self.model_hf
+            self.model.config.torchscript = True  # Set to export by convert_model via torch.jit.trace
             self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
         if self.backend in OV_BACKENDS:
             self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
