@@ -107,6 +107,9 @@ for sample_type_ in SAMPLE_TYPES:
         CONFIG_PARAMS.append((sample_type_,) + tpl)
 
 
+RETRIES_ON_SEGFAULT = 3
+
+
 def update_compression_algo_dict_with_reduced_bn_adapt_params(algo_dict):
     if algo_dict["algorithm"] == "rb_sparsity":
         return
@@ -211,7 +214,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed, ca
         args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.run(retries_on_segfault=RETRIES_ON_SEGFAULT)
 
 
 @pytest.mark.dependency()
@@ -249,7 +252,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         )
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.run(retries_on_segfault=RETRIES_ON_SEGFAULT)
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     if "compression" in config["sample_config"]:
@@ -303,7 +306,7 @@ def test_trained_model_eval(request, config, tmp_path, multiprocessing_distribut
         args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.run(retries_on_segfault=RETRIES_ON_SEGFAULT)
 
 
 def get_resuming_checkpoint_path(config_factory, multiprocessing_distributed, checkpoint_save_dir):
@@ -348,7 +351,7 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
         args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.run(retries_on_segfault=RETRIES_ON_SEGFAULT)
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     if "compression" in config["sample_config"]:
@@ -386,7 +389,7 @@ def test_export_with_resume(request, config, tmp_path, multiprocessing_distribut
         args["--cpu-only"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.run(retries_on_segfault=RETRIES_ON_SEGFAULT)
     assert os.path.exists(onnx_path)
 
 
@@ -410,7 +413,7 @@ def test_export_with_pretrained(tmp_path):
         args["--cpu-only"] = True
 
     runner = Command(create_command_line(args, "classification"), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.run(retries_on_segfault=RETRIES_ON_SEGFAULT)
     assert os.path.exists(onnx_path)
 
 
@@ -576,7 +579,7 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
         args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, accuracy_aware_config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-    runner.run()
+    runner.run(retries_on_segfault=RETRIES_ON_SEGFAULT)
 
     checkpoint_save_dir = log_dir / get_run_name(config_factory.config)
     aa_checkpoint_path = get_accuracy_aware_checkpoint_dir_path(checkpoint_save_dir)

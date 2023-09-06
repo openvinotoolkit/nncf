@@ -49,7 +49,7 @@ class Command:
         except OSError as err:
             print(err)
 
-    def run(self, timeout=3600, assert_returncode_zero=True):
+    def run(self, timeout=3600, assert_returncode_zero=True, retries_on_segfault: int = 0):
         print(f"Running command: {self.cmd}")
 
         def target():
@@ -82,26 +82,32 @@ class Command:
             except Exception as e:  # pylint:disable=broad-except
                 self.thread_exc = e
 
-        thread = threading.Thread(target=target)
-        thread.start()
+        for i in range(retries_on_segfault + 1):
+            thread = threading.Thread(target=target)
+            thread.start()
 
-        thread.join(timeout)
+            thread.join(timeout)
 
-        if self.thread_exc is not None:
-            raise self.thread_exc
+            if self.thread_exc is not None:
+                raise self.thread_exc
 
-        if thread.is_alive():
-            try:
-                print("Error: process taking too long to complete--terminating" + ", [ " + self.cmd + " ]")
-                self.kill_process_tree(self.process.pid)
-                self.exec_time = timeout
-                self.timeout = True
-                thread.join()
-            except OSError as e:
-                print(self.process.pid, "Exception when try to kill task by PID, " + e.strerror)
-                raise
-        returncode = self.process.wait()
-        print("Process returncode = " + str(returncode))
+            if thread.is_alive():
+                try:
+                    print("Error: process taking too long to complete--terminating" + ", [ " + self.cmd + " ]")
+                    self.kill_process_tree(self.process.pid)
+                    self.exec_time = timeout
+                    self.timeout = True
+                    thread.join()
+                except OSError as e:
+                    print(self.process.pid, "Exception when try to kill task by PID, " + e.strerror)
+                    raise
+            returncode = self.process.wait()
+            print("Process returncode = " + str(returncode))
+            if returncode not in (-11, 139):  # return codes for SIGSEGV)
+                break
+            if retries_on_segfault > 0:
+                print(f"Process ended with a segfault, retrying - attempt {i + 1} of {retries_on_segfault}")
+
         if assert_returncode_zero:
             assert returncode == 0, "Process exited with a non-zero exit code {}; output:{}".format(
                 returncode, "".join(self.output)

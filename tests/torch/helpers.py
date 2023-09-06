@@ -436,10 +436,10 @@ def resolve_constant_node_inputs_to_values(
 
 
 class Command(BaseCommand):
-    def run(self, timeout=3600, assert_returncode_zero=True):
+    def run(self, timeout=3600, assert_returncode_zero=True, retries_on_segfault: int = 0):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()  # See runs_subprocess_in_precommit for more info on why this is needed
-        return super().run(timeout, assert_returncode_zero)
+        return super().run(timeout, assert_returncode_zero, retries_on_segfault)
 
 
 def module_scope_from_node_name(name):
