@@ -12,25 +12,35 @@
 from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 from nncf import Dataset
+from nncf.data.dataset import DataItem
 from nncf.quantization.algorithms.post_training.algorithm import TModel
 
 
 class PostTrainingBackend(ABC):
     @abstractmethod
-    # def make_tasks(
-    #     self, model: TModel, calibration_dataset: Dataset, subset_size: int
-    # ) -> List[Tuple[TModel, Dataset, Dict[str, Any]]]:
-    #     """
-    #     Returns model subgraphs and the datasets for calibrations for particular model.
+    def collect_dataitems_for_children_models(
+        self, model: TModel, calibration_dataset: Dataset, subset_size: int, model_cnt: int
+    ) -> Iterable[DataItem]:
+        """
+        Returns dataitems for children models of the main model.
 
-    #     :param model: Model from which the model subgraphs are obtained.
-    #     :param calibration_dataset: Calibration dataset for original model.
-    #     :param subset_size: Number of samples used to get new dataset.
-    #     :return: All quantization tasks from particular model.
-    #     """
+        :param model: Model to infer to collect dataitems.
+        :param calibration_dataset: Dataset is used to collect new dataitems.
+        :param subset_size: Size of dataitems to collect
+        :param model_cnt: Global model number.
+        """
+
+    @abstractmethod
+    def make_dataset_for_child_models(self, dataitems: Iterable[DataItem], backend_params: Dict[str, Any]) -> Dataset:
+        """
+        Return dataset for child models.
+
+        :param dataitems: Data items to collect into dataset.
+        :param backend_params: Backend-specific parameters.
+        """
 
     @abstractmethod
     def is_single_model(self, model: TModel) -> bool:
@@ -39,6 +49,24 @@ class PostTrainingBackend(ABC):
 
         :param model: Model to check.
         :return: True if the model has no inner subgraphs, otherwise - False.
+        """
+
+    @abstractmethod
+    def get_child_models(self, model: TModel) -> List[Tuple[TModel, Dict[str, Any]]]:
+        """
+        Returns all child models of passed model.
+
+        :param model: Model to seek for child models.
+        :return: Models with backend specific parameters.
+        """
+
+    @abstractmethod
+    def add_additional_outputs(self, model: TModel) -> TModel:
+        """
+        Returns the model with additional outputs to collect statistics for child models.
+
+        :param model: Model to update.
+        :return: Updated model with extra outputs.
         """
 
     @abstractmethod
@@ -52,7 +80,7 @@ class PostTrainingBackend(ABC):
         """
 
     @abstractmethod
-    def set_subgraph(self, subgraph_model: TModel, backend_params: Dict[str, Any]) -> None:
+    def set_child_model(self, child_model: TModel, backend_params: Dict[str, Any]) -> None:
         """
         Set subgraph model to an original model.
 

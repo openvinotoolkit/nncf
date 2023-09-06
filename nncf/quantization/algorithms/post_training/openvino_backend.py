@@ -56,8 +56,8 @@ class OVPostTrainingBackend(PostTrainingBackend):
             name=model.friendly_name,
         )
 
-    def _collect_dataset(
-        self, model: ov.Model, calibration_dataset: Dataset, subset_size: int, model_cnt
+    def collect_dataitems_for_children_models(
+        self, model: ov.Model, calibration_dataset: Dataset, subset_size: int, model_cnt: int
     ) -> Iterable[DataItem]:
         dataset = []
         compiled_model = ov.compile_model(model)
@@ -67,35 +67,42 @@ class OVPostTrainingBackend(PostTrainingBackend):
             desc=f"Collect dataset for children models of {model_cnt} model:",
         ):
             results = compiled_model(input_data)
-            # TODO: Use only inputs which are passed to subgraph infers. E.g. in example 0-index is never used.
             dataset.append(tuple(results.values()))
         return dataset
 
-    def _make_dataset(
+    def make_dataset_for_child_models(
         self,
-        dataset: Iterable[DataItem],
+        dataitems: Iterable[DataItem],
         if_op: ov.Node,
         if_op_model_input_port_id: int,
-    ):
+    ) -> Dataset:
         assert if_op.get_type_name() == "If"
         input_name = if_op.get_input_descriptions(if_op_model_input_port_id)
         transform_fn = make_transform_fn(input_name)
-        return Dataset(dataset, transform_fn)
+        return Dataset(dataitems, transform_fn)
 
-    def _make_task(
-        self, if_op: ov.Node, port_id: int, dataset: Iterable[DataItem]
-    ) -> Tuple[ov.Model, Dataset, Dict[str, Any]]:
-        assert if_op.get_type_name() == "If"
-        input_name = if_op.get_input_descriptions(port_id)
-        transform_fn = make_transform_fn(input_name)
-        return (
-            if_op.get_function(port_id),
-            Dataset(dataset, transform_fn),
-            {"if_op": if_op, "if_op_subgraph_port_id": port_id},
-        )
+    def is_single_model(self, model: ov.Model) -> bool:
+        for op in model.get_ops():
+            if op.get_type_name() == "If":
+                return False
+        return True
 
-    def set_subgraph(self, subgraph_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
-        if_op.set_function(if_op_model_input_port_id, subgraph_model)
+    def get_child_models(self, model: ov.Model) -> List[Tuple[ov.Model, Dict[str, Any]]]:
+        child_models = []
+        for op in model.get_ops():
+            if op.get_type_name() == "If":
+                for port_id in self.IF_OP_MODEL_INPUT_PORTS:
+                    child_models.append((op.get_function(port_id), {"if_op": op, "if_op_model_input_port_id": port_id}))
+        return child_models
+
+    def add_additional_outputs(self, model: ov.Model) -> ov.Model:
+        for op in model.get_ops():
+            if op.get_type_name() == "If":
+                model_with_additional_results = self._add_results(model, op)
+        return model_with_additional_results
+
+    def set_child_model(self, child_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
+        if_op.set_function(if_op_model_input_port_id, child_model)
 
     def dump_model(self, model: ov.Model, dir: str, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
         name = if_op.get_friendly_name().replace("/", "")
@@ -106,25 +113,3 @@ class OVPostTrainingBackend(PostTrainingBackend):
         model_name = f"{name}_{postfix}.xml"
         model_path = Path(dir) / model_name
         ov.serialize(model, model_path)
-
-    def is_single_model(self, model: ov.Model) -> bool:
-        for op in model.get_ops():
-            if op.get_type_name() == "If":
-                return False
-        return True
-
-    def get_children_models(self, model: ov.Model) -> List[Tuple[ov.Model, Dict[str, Any]]]:
-        children_models = []
-        for op in model.get_ops():
-            if op.get_type_name() == "If":
-                for port_id in self.IF_OP_MODEL_INPUT_PORTS:
-                    children_models.append(
-                        (op.get_function(port_id), {"if_op": op, "if_op_model_input_port_id": port_id})
-                    )
-        return children_models
-
-    def add_additional_outputs(self, model: ov.Model):
-        for op in model.get_ops():
-            if op.get_type_name() == "If":
-                model_with_additional_results = self._add_results(model, op)
-        return model_with_additional_results

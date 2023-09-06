@@ -258,35 +258,38 @@ class PostTrainingQuantization(Algorithm):
     ) -> TModel:
         model_copy = copy_model(model)
         self._set_backend_entity(model)
-        quantized_model = self._apply(model_copy, graph, statistic_points, dataset)
-        parent_tasks = [(model_copy, dataset, 0)]
-        global_model_cnt = 1
-        while parent_tasks:
-            parent_model, parent_dataset, parent_model_cnt = parent_tasks.pop()
-            if not self._backend_entity.is_single_model(parent_model):
-                if parent_model_cnt == 0:
-                    nncf_logger.info(
-                        "The model consists of child submodels. The iteratively each submodel will be quantized."
-                    )
-                parent_model_with_additional_outputs = self._backend_entity.add_additional_outputs(parent_model)
-                dataset = self._backend_entity._collect_dataset(
-                    parent_model_with_additional_outputs, parent_dataset, self.subset_size, parent_model_cnt
-                )
-                for child_model_cnt, child_task in enumerate(self._backend_entity.get_children_models(parent_model)):
-                    child_model, backend_params = child_task
-                    nncf_logger.info(f"Quantize a model number {child_model_cnt + parent_model_cnt + 1}")
-                    child_dataset = self._backend_entity._make_dataset(dataset, **backend_params)
-                    child_model_quantized = self._apply(
-                        child_model, NNCFGraphFactory.create(child_model), None, child_dataset
-                    )
-                    nncf_logger.info(
-                        f"Set quantized model number {child_model_cnt + parent_model_cnt + 1} to the original model"
-                    )
-                    self._backend_entity.set_subgraph(child_model_quantized, **backend_params)
-                    if self.intermediate_model_dir:
-                        self._backend_entity.dump_model(
-                            child_model_quantized, self.intermediate_model_dir, **backend_params
-                        )
-                    parent_tasks.append((child_model, child_dataset, global_model_cnt))
-                    global_model_cnt += 1
+        if self._backend_entity.is_single_model(model_copy):
+            return self._apply(model_copy, graph, statistic_points, dataset)
+        nncf_logger.info("The model consists of child submodels. The iteratively each submodel will be quantized.")
+        quantized_model, _ = self.dfs_model(model_copy, dataset, 0)
         return quantized_model
+
+    def dfs_model(self, parent_model, parent_dataset, parent_model_cnt):
+        if not self._backend_entity.is_single_model(parent_model):
+            parent_model_with_additional_outputs = self._backend_entity.add_additional_outputs(parent_model)
+            dataitems = self._backend_entity.collect_dataitems_for_children_models(
+                parent_model_with_additional_outputs, parent_dataset, self.subset_size, parent_model_cnt
+            )
+            global_model_cnt = parent_model_cnt
+            for child_model, backend_params in self._backend_entity.get_child_models(parent_model):
+                child_dataset = self._backend_entity.make_dataset_for_child_models(dataitems, **backend_params)
+
+                model_cnt = global_model_cnt + 1
+                child_q_model, model_cnt = self.dfs_model(child_model, child_dataset, model_cnt)
+                global_model_cnt = model_cnt
+
+                nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
+                self._backend_entity.set_subgraph(child_q_model, **backend_params)
+                if self.intermediate_model_dir:
+                    nncf_logger.info(f"Save quantized model number {model_cnt} to dir {self.intermediate_model_dir}")
+                    self._backend_entity.dump_model(child_q_model, self.intermediate_model_dir, **backend_params)
+
+            nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
+            quantized_model = self._apply(parent_model, NNCFGraphFactory.create(parent_model), None, parent_dataset)
+            return quantized_model, model_cnt
+        else:
+            nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
+            parent_model_quantized = self._apply(
+                parent_model, NNCFGraphFactory.create(parent_model), None, parent_dataset
+            )
+            return parent_model_quantized, parent_model_cnt
