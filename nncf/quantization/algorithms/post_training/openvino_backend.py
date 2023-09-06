@@ -22,7 +22,7 @@ from nncf.data.dataset import DataItem
 from nncf.quantization.algorithms.post_training.backend import PostTrainingBackend
 
 
-def make_transform_fn(input_descriptions):
+def _make_transform_fn(input_descriptions):
     def transform_fn(data_item):
         inputs = []
         for desc in input_descriptions:
@@ -32,32 +32,34 @@ def make_transform_fn(input_descriptions):
     return transform_fn
 
 
+def _add_results(model: ov.Model, node: ov.Node) -> ov.Model:
+    extra_model_outputs = []
+    for input in node.inputs():
+        output = input.get_source_output()
+        output_name = output.get_node().get_friendly_name()
+        result_name = f"{output_name}/if_output"
+        result = opset.result(output, name=result_name)
+
+        tensor = result.get_output_tensor(0)
+        current_names = tensor.get_names()
+        current_names.add(result_name)
+        tensor.set_names(current_names)
+
+        extra_model_outputs.append(result)
+    return ov.Model(
+        results=extra_model_outputs,
+        sinks=[op for op in model.get_ops() if op.get_type_name() == "Assign"],
+        parameters=model.get_parameters(),
+        name=model.friendly_name,
+    )
+
+
 class OVPostTrainingBackend(PostTrainingBackend):
     IF_OP_MODEL_INPUT_PORTS = (0, 1)
 
-    def _add_results(self, model: ov.Model, node: ov.Node) -> ov.Model:
-        extra_model_outputs = []
-        for input in node.inputs():
-            output = input.get_source_output()
-            output_name = output.get_node().get_friendly_name()
-            result_name = f"{output_name}/if_output"
-            result = opset.result(output, name=result_name)
-
-            tensor = result.get_output_tensor(0)
-            current_names = tensor.get_names()
-            current_names.add(result_name)
-            tensor.set_names(current_names)
-
-            extra_model_outputs.append(result)
-        return ov.Model(
-            results=extra_model_outputs,
-            sinks=[op for op in model.get_ops() if op.get_type_name() == "Assign"],
-            parameters=model.get_parameters(),
-            name=model.friendly_name,
-        )
-
+    @staticmethod
     def collect_dataitems_for_children_models(
-        self, model: ov.Model, calibration_dataset: Dataset, subset_size: int, model_cnt: int
+        model: ov.Model, calibration_dataset: Dataset, subset_size: int, model_cnt: int
     ) -> Iterable[DataItem]:
         dataset = []
         compiled_model = ov.compile_model(model)
@@ -70,15 +72,15 @@ class OVPostTrainingBackend(PostTrainingBackend):
             dataset.append(tuple(results.values()))
         return dataset
 
+    @staticmethod
     def make_dataset_for_child_models(
-        self,
         dataitems: Iterable[DataItem],
         if_op: ov.Node,
         if_op_model_input_port_id: int,
     ) -> Dataset:
         assert if_op.get_type_name() == "If"
         input_name = if_op.get_input_descriptions(if_op_model_input_port_id)
-        transform_fn = make_transform_fn(input_name)
+        transform_fn = _make_transform_fn(input_name)
         return Dataset(dataitems, transform_fn)
 
     @staticmethod
@@ -88,24 +90,28 @@ class OVPostTrainingBackend(PostTrainingBackend):
                 return False
         return True
 
-    def get_child_models(self, model: ov.Model) -> List[Tuple[ov.Model, Dict[str, Any]]]:
+    @staticmethod
+    def get_child_models(model: ov.Model) -> List[Tuple[ov.Model, Dict[str, Any]]]:
         child_models = []
         for op in model.get_ops():
             if op.get_type_name() == "If":
-                for port_id in self.IF_OP_MODEL_INPUT_PORTS:
+                for port_id in OVPostTrainingBackend.IF_OP_MODEL_INPUT_PORTS:
                     child_models.append((op.get_function(port_id), {"if_op": op, "if_op_model_input_port_id": port_id}))
         return child_models
 
-    def add_additional_outputs(self, model: ov.Model) -> ov.Model:
+    @staticmethod
+    def add_additional_outputs(model: ov.Model) -> ov.Model:
         for op in model.get_ops():
             if op.get_type_name() == "If":
-                model_with_additional_results = self._add_results(model, op)
+                model_with_additional_results = _add_results(model, op)
         return model_with_additional_results
 
-    def set_child_model(self, child_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
+    @staticmethod
+    def set_child_model(child_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
         if_op.set_function(if_op_model_input_port_id, child_model)
 
-    def dump_model(self, model: ov.Model, dir: str, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
+    @staticmethod
+    def dump_model(model: ov.Model, dir: str, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
         name = if_op.get_friendly_name().replace("/", "")
         if if_op_model_input_port_id == 0:
             postfix = "then"

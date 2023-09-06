@@ -20,9 +20,10 @@ from nncf.quantization.algorithms.post_training.algorithm import TModel
 
 
 class PostTrainingBackend(ABC):
+    @staticmethod
     @abstractmethod
     def collect_dataitems_for_children_models(
-        self, model: TModel, calibration_dataset: Dataset, subset_size: int, model_cnt: int
+        model: TModel, calibration_dataset: Dataset, subset_size: int, model_cnt: int
     ) -> Iterable[DataItem]:
         """
         Returns dataitems for children models of the main model.
@@ -33,8 +34,9 @@ class PostTrainingBackend(ABC):
         :param model_cnt: Global model number.
         """
 
+    @staticmethod
     @abstractmethod
-    def make_dataset_for_child_models(self, dataitems: Iterable[DataItem], backend_params: Dict[str, Any]) -> Dataset:
+    def make_dataset_for_child_models(dataitems: Iterable[DataItem], backend_params: Dict[str, Any]) -> Dataset:
         """
         Return dataset for child models.
 
@@ -52,8 +54,9 @@ class PostTrainingBackend(ABC):
         :return: True if the model has no inner subgraphs, otherwise - False.
         """
 
+    @staticmethod
     @abstractmethod
-    def get_child_models(self, model: TModel) -> List[Tuple[TModel, Dict[str, Any]]]:
+    def get_child_models(model: TModel) -> List[Tuple[TModel, Dict[str, Any]]]:
         """
         Returns all child models of passed model.
 
@@ -61,8 +64,9 @@ class PostTrainingBackend(ABC):
         :return: Models with backend specific parameters.
         """
 
+    @staticmethod
     @abstractmethod
-    def add_additional_outputs(self, model: TModel) -> TModel:
+    def add_additional_outputs(model: TModel) -> TModel:
         """
         Returns the model with additional outputs to collect statistics for child models.
 
@@ -70,8 +74,9 @@ class PostTrainingBackend(ABC):
         :return: Updated model with extra outputs.
         """
 
+    @staticmethod
     @abstractmethod
-    def dump_model(self, model: TModel, dir: Path, backend_params: Dict[str, Any]) -> None:
+    def dump_model(model: TModel, dir: Path, backend_params: Dict[str, Any]) -> None:
         """
         Save a model to a directory. Backend params are used to determine the model name to dump.
 
@@ -80,8 +85,9 @@ class PostTrainingBackend(ABC):
         :param backend_params: Backend specific parameters.
         """
 
+    @staticmethod
     @abstractmethod
-    def set_child_model(self, child_model: TModel, backend_params: Dict[str, Any]) -> None:
+    def set_child_model(child_model: TModel, backend_params: Dict[str, Any]) -> None:
         """
         Set subgraph model to an original model.
 
