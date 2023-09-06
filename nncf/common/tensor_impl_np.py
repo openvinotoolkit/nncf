@@ -177,7 +177,7 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         keepdims: bool = False,
     ) -> Union[float, NNCFTensor]:
         retval = np.quantile(tensor.tensor, quantile, axis=axis, keepdims=keepdims)
-        if not isinstance(quantile, list):
+        if not isinstance(quantile, (list, tuple)):
             return retval
         else:
             return NPNNCFTensor(retval)

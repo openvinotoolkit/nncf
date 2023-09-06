@@ -601,7 +601,7 @@ class MinAggregator(OnlineTensorAggregator):
 
 class MaxAggregator(OnlineTensorAggregator):
     def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
-        if not self._current_aggregate:
+        if self._current_aggregate is None:
             self._current_aggregate = x
         else:
             backend = x.backend
