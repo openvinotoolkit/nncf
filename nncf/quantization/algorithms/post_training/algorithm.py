@@ -279,7 +279,7 @@ class PostTrainingQuantization(Algorithm):
                 global_model_cnt = model_cnt
 
                 nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
-                self._backend_entity.set_subgraph(child_q_model, **backend_params)
+                self._backend_entity.set_child_model(child_q_model, **backend_params)
                 if self.intermediate_model_dir:
                     nncf_logger.info(f"Save quantized model number {model_cnt} to dir {self.intermediate_model_dir}")
                     self._backend_entity.dump_model(child_q_model, self.intermediate_model_dir, **backend_params)
