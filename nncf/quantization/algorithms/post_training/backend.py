@@ -42,8 +42,9 @@ class PostTrainingBackend(ABC):
         :param backend_params: Backend-specific parameters.
         """
 
+    @staticmethod
     @abstractmethod
-    def is_single_model(self, model: TModel) -> bool:
+    def is_single_model(model: TModel) -> bool:
         """
         Chechks whether a model has inner subgraphs to quantize.
 

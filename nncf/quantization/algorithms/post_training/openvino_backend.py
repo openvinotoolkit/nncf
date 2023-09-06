@@ -81,7 +81,8 @@ class OVPostTrainingBackend(PostTrainingBackend):
         transform_fn = make_transform_fn(input_name)
         return Dataset(dataitems, transform_fn)
 
-    def is_single_model(self, model: ov.Model) -> bool:
+    @staticmethod
+    def is_single_model(model: ov.Model) -> bool:
         for op in model.get_ops():
             if op.get_type_name() == "If":
                 return False

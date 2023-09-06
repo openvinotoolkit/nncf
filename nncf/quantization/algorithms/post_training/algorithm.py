@@ -9,9 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import deque
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, TypeVar
+from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
 from nncf import Dataset
 from nncf.common.deprecation import warning_deprecated
@@ -166,6 +165,21 @@ class PostTrainingQuantization(Algorithm):
     def available_backends(self) -> Dict[str, BackendType]:
         return
 
+    def _is_single_model(self, model: TModel) -> bool:
+        model_backend = get_backend(model)
+        if model_backend == BackendType.ONNX:
+            return True
+        elif model_backend == BackendType.OPENVINO:
+            from nncf.quantization.algorithms.post_training.openvino_backend import OVPostTrainingBackend
+
+            return OVPostTrainingBackend.is_single_model(model)
+        elif model_backend == BackendType.TORCH:
+            return True
+        else:
+            raise RuntimeError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+            )
+
     def _set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm
@@ -174,17 +188,17 @@ class PostTrainingQuantization(Algorithm):
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from nncf.quantization.algorithms.post_training.onnx_backend import ONNXPostTrainingBackend
-
-            self._backend_entity = ONNXPostTrainingBackend()
+            raise RuntimeError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+            )
         elif model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.post_training.openvino_backend import OVPostTrainingBackend
 
             self._backend_entity = OVPostTrainingBackend()
         elif model_backend == BackendType.TORCH:
-            from nncf.quantization.algorithms.post_training.torch_backend import PTPostTrainingBackend
-
-            self._backend_entity = PTPostTrainingBackend()
+            raise RuntimeError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+            )
         else:
             raise RuntimeError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
@@ -257,14 +271,21 @@ class PostTrainingQuantization(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         model_copy = copy_model(model)
-        self._set_backend_entity(model)
-        if self._backend_entity.is_single_model(model_copy):
+        if self._is_single_model(model_copy):
             return self._apply(model_copy, graph, statistic_points, dataset)
+        self._set_backend_entity(model)
         nncf_logger.info("The model consists of child submodels. The iteratively each submodel will be quantized.")
-        quantized_model, _ = self.dfs_model(model_copy, dataset, 0)
+        quantized_model, _ = self._dfs_quantize_models(model_copy, graph, dataset, statistic_points, 0)
         return quantized_model
 
-    def dfs_model(self, parent_model, parent_dataset, parent_model_cnt):
+    def _dfs_quantize_models(
+        self,
+        parent_model: TModel,
+        parent_graph: NNCFGraph,
+        parent_dataset: Dataset,
+        parent_statistic_points: Optional[StatisticPointsContainer],
+        parent_model_cnt: int,
+    ) -> Tuple[TModel, int]:
         if not self._backend_entity.is_single_model(parent_model):
             parent_model_with_additional_outputs = self._backend_entity.add_additional_outputs(parent_model)
             dataitems = self._backend_entity.collect_dataitems_for_children_models(
@@ -274,8 +295,9 @@ class PostTrainingQuantization(Algorithm):
             for child_model, backend_params in self._backend_entity.get_child_models(parent_model):
                 child_dataset = self._backend_entity.make_dataset_for_child_models(dataitems, **backend_params)
 
-                model_cnt = global_model_cnt + 1
-                child_q_model, model_cnt = self.dfs_model(child_model, child_dataset, model_cnt)
+                child_q_model, model_cnt = self._dfs_quantize_models(
+                    child_model, NNCFGraphFactory.create(child_model), child_dataset, None, global_model_cnt + 1
+                )
                 global_model_cnt = model_cnt
 
                 nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
@@ -284,12 +306,6 @@ class PostTrainingQuantization(Algorithm):
                     nncf_logger.info(f"Save quantized model number {model_cnt} to dir {self.intermediate_model_dir}")
                     self._backend_entity.dump_model(child_q_model, self.intermediate_model_dir, **backend_params)
 
-            nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
-            quantized_model = self._apply(parent_model, NNCFGraphFactory.create(parent_model), None, parent_dataset)
-            return quantized_model, model_cnt
-        else:
-            nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
-            parent_model_quantized = self._apply(
-                parent_model, NNCFGraphFactory.create(parent_model), None, parent_dataset
-            )
-            return parent_model_quantized, parent_model_cnt
+        nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
+        quantized_model = self._apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
+        return quantized_model, parent_model_cnt
