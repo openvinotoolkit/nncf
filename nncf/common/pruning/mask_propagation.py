@@ -107,7 +107,7 @@ class MaskPropagationAlgorithm:
             if node.node_id in can_be_closing_convs:
                 # Check input mask producers out channel dimension
                 input_masks = get_input_masks(node, self._graph)
-                if any(input_masks):
+                if any(i is not None for i in input_masks):
                     assert len(input_masks) == 1
                     input_mask = input_masks[0]  # type: SymbolicMask
 
@@ -125,7 +125,7 @@ class MaskPropagationAlgorithm:
         # that were propagated to output node
         for out_node in self._graph.get_output_nodes():
             for input_mask in get_input_masks(out_node, self._graph):
-                if input_mask:
+                if input_mask is not None:
                     for producer in input_mask.mask_producers:
                         can_prune_by_dim[producer.id] = PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)
         # Update decision for nodes which
