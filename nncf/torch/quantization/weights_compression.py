@@ -39,7 +39,7 @@ class WeightsDecompressor(nn.Module):
 
 
 def _insert_pre_compression_operations(
-    module: nn.Module, allowed_types: List, level_high: int = 255, compression_hist: Dict = {}
+    module: nn.Module, allowed_types: List, level_high: int = 255, compression_hist: Dict = None
 ) -> Optional[nn.Module]:
     """
     Inserts weights compression with dequantization for layers in `allowed_types`.
@@ -50,6 +50,8 @@ def _insert_pre_compression_operations(
     :param compression_hist: mapping between layer weight and corresponding WeightsDecompressor for finding shared weights.
     :return: The non-trainable module with inserted operations.
     """
+    if compression_hist is None:
+        compression_hist = {}
     for _, layer in module.named_children():
         if not type(layer) in allowed_types:
             _insert_pre_compression_operations(layer, allowed_types, level_high, compression_hist)
@@ -97,4 +99,4 @@ def insert_pre_compression_operations(module: nn.Module, bits: int = 8) -> Optio
     for user_type in user_types:
         allowed_types.append(user_type)
 
-    _insert_pre_compression_operations(module, allowed_types, level_high, {})
+    _insert_pre_compression_operations(module, allowed_types, level_high)
