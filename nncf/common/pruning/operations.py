@@ -296,13 +296,13 @@ class SplitPruningOp(BasePruningOp):
         :return: Filled input masks.
         """
         input_masks = get_input_masks(node, graph)
-        if not input_masks:
+        if input_masks is None:
             return None
 
         assert len(input_masks) == 1
         input_mask = input_masks[0]
 
-        if not input_mask:
+        if input_mask is None:
             return None
 
         chunk_axis = node.layer_attributes.axis
