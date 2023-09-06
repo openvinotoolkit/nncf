@@ -147,17 +147,24 @@ class ChannelAlignment(Algorithm):
             command_creator = CommandCreatorFactory.create(model)
             for container in [conv_in_cont, conv_out_cont]:
                 if container.stated_weight.is_modified():
+                    updated_value = container.weight
+                    if isinstance(updated_value, NNCFTensor):
+                        updated_value = updated_value.to_numpy()
                     transformation_layout.register(
                         command_creator.create_command_to_update_weight(
-                            container.op, container.weight.to_numpy(), container.weight_port_id
+                            container.op, updated_value, container.weight_port_id
                         )
                     )
 
                 if container.stated_bias.is_modified():
+                    updated_value = container.bias
+                    if isinstance(updated_value, NNCFTensor):
+                        updated_value = updated_value.to_numpy()
                     if container.bias_op_exist():
-                        command = command_creator.create_command_to_update_bias(container.op, container.bias.to_numpy(), graph)
+
+                        command = command_creator.create_command_to_update_bias(container.op, updated_value.to_numpy(), graph)
                     else:
-                        command = command_creator.create_command_to_insert_bias(container.op, container.bias.to_numpy())
+                        command = command_creator.create_command_to_insert_bias(container.op, updated_value.to_numpy())
                     transformation_layout.register(command)
 
         transformed_model = model_transformer.transform(transformation_layout)
