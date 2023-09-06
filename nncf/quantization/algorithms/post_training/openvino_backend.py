@@ -1,5 +1,17 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from collections import deque
 from itertools import islice
+from pathlib import Path
 from typing import Any, Deque, Dict, Iterable, Tuple
 
 import openvino.runtime as ov
@@ -22,24 +34,6 @@ def make_transform_fn(input_descriptions):
 
 
 class OVPostTrainingBackend(PostTrainingBackend):
-    def set_subgraph(self, subgraph_model, if_op, if_op_subgraph_port_id):
-        if_op.set_function(if_op_subgraph_port_id, subgraph_model)
-
-    def dump_model(self, model, dir, if_op, if_op_subgraph_port_id):
-        name = if_op.get_friendly_name()
-        if if_op_subgraph_port_id == 0:
-            postfix = "then"
-        if if_op_subgraph_port_id == 1:
-            postfix = "else"
-        model_path = f"{dir}/{name}_{postfix}.xml"
-        ov.serialize(model, model_path)
-
-    def is_single_model(self, model: ov.Model) -> bool:
-        for op in model.get_ops():
-            if op.get_type_name() == "If":
-                return False
-        return True
-
     def _add_results(self, model: ov.Model, node: ov.Node) -> ov.Model:
         extra_model_outputs = []
         for input in node.inputs():
@@ -89,10 +83,29 @@ class OVPostTrainingBackend(PostTrainingBackend):
             {"if_op": if_op, "if_op_subgraph_port_id": port_id},
         )
 
+    def set_subgraph(self, subgraph_model: ov.Model, if_op: ov.Node, if_op_subgraph_port_id: int) -> None:
+        if_op.set_function(if_op_subgraph_port_id, subgraph_model)
+
+    def dump_model(self, model: ov.Model, dir: str, if_op: ov.Node, if_op_subgraph_port_id: int) -> None:
+        name = if_op.get_friendly_name().replace("/", "")
+        if if_op_subgraph_port_id == 0:
+            postfix = "then"
+        if if_op_subgraph_port_id == 1:
+            postfix = "else"
+        model_name = f"{name}_{postfix}.xml"
+        model_path = Path(dir) / model_name
+        ov.serialize(model, model_path)
+
+    def is_single_model(self, model: ov.Model) -> bool:
+        for op in model.get_ops():
+            if op.get_type_name() == "If":
+                return False
+        return True
+
     def make_tasks(
         self, model: ov.Model, calibration_dataset: Dataset, subset_size: int
-    ) -> Deque[Tuple[ov.Model, Dataset, Dict[str, Any]]]:
-        tasks = deque()
+    ) -> List[Tuple[ov.Model, Dataset, Dict[str, Any]]]:
+        tasks = []
         for op in model.get_ops():
             if op.get_type_name() == "If":
                 subgraph_dataset = self._collect_dataset(model, op, calibration_dataset, subset_size)

@@ -146,6 +146,8 @@ class AdvancedQuantizationParameters:
     :type bias_correction_params: nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters
     :param backend_params: Backend-specific parameters.
     :type backend_params: Dict[str, Any]
+    :param intermediate_model_dir: Dirictory path to dump intermediated models.
+    :type intermediate_model_dir: str
     """
 
     # General parameters
@@ -169,6 +171,8 @@ class AdvancedQuantizationParameters:
 
     # Backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)
+
+    intermediate_model_dir: Optional[str] = None
 
 
 @api()
