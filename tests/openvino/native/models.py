@@ -453,14 +453,14 @@ class LSTMModel(OVReferenceModel):
 @SYNTHETIC_MODELS.register()
 class LSTMSequenceModel(OVReferenceModel):
     def _create_ov_model(self):
-        x = ov.opset9.parameter([1, 2, 16], name="X")
-        initial_hidden_state = ov.opset9.parameter([1, 1, 128], name="initial_hidden_state")
-        initial_cell_state = ov.opset9.parameter([1, 1, 128], name="initial_cell_state")
-        seq_len = ov.opset9.constant(np.array([2]), dtype=np.int32)
+        x = opset.parameter([1, 2, 16], name="X")
+        initial_hidden_state = opset.parameter([1, 1, 128], name="initial_hidden_state")
+        initial_cell_state = opset.parameter([1, 1, 128], name="initial_cell_state")
+        seq_len = opset.constant(np.array([2]), dtype=np.int32)
 
-        W = ov.opset9.constant(np.zeros(([1, 512, 16])), dtype=np.float32)
-        R = ov.opset9.constant(np.zeros(([1, 512, 128])), dtype=np.float32)
-        B = ov.opset9.constant(np.zeros(([1, 512])), dtype=np.float32)
+        W = opset.constant(np.zeros(([1, 512, 16])), dtype=np.float32)
+        R = opset.constant(np.zeros(([1, 512, 128])), dtype=np.float32)
+        B = opset.constant(np.zeros(([1, 512])), dtype=np.float32)
 
         lstm = opset.lstm_sequence(
             x, initial_hidden_state, initial_cell_state, seq_len, W, R, B, 128, "FORWARD", name="LSTMSequence"
@@ -478,14 +478,14 @@ class GRUSequenceModel(OVReferenceModel):
     def _create_ov_model(self, linear_before_reset=True):
         hidden_size = 128
 
-        x = ov.opset9.parameter([3, 2, 16], name="X")
-        initial_hidden_state = ov.opset9.parameter([3, 1, hidden_size], name="initial_hidden_state")
-        seq_len = ov.opset9.constant(np.array([1, 2, 3]), dtype=np.int32)
+        x = opset.parameter([3, 2, 16], name="X")
+        initial_hidden_state = opset.parameter([3, 1, hidden_size], name="initial_hidden_state")
+        seq_len = opset.constant(np.array([1, 2, 3]), dtype=np.int32)
 
         scale_factor = 4 if linear_before_reset else 3
-        W = ov.opset9.constant(np.zeros(([1, 3 * hidden_size, 16])), dtype=np.float32)
-        R = ov.opset9.constant(np.zeros(([1, 3 * hidden_size, hidden_size])), dtype=np.float32)
-        B = ov.opset9.constant(np.zeros(([1, scale_factor * hidden_size])), dtype=np.float32)
+        W = opset.constant(np.zeros(([1, 3 * hidden_size, 16])), dtype=np.float32)
+        R = opset.constant(np.zeros(([1, 3 * hidden_size, hidden_size])), dtype=np.float32)
+        B = opset.constant(np.zeros(([1, scale_factor * hidden_size])), dtype=np.float32)
 
         gru = opset.gru_sequence(
             x,
