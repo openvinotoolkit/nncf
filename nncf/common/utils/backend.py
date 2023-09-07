@@ -131,7 +131,7 @@ def get_backend(model: TModel) -> BackendType:
     raise RuntimeError(
         "Could not infer the backend framework from the model type because "
         "the framework is not available or the model type is unsupported. "
-        "The available frameworks found: {}.".format(", ".join(available_backends))
+        "The available frameworks found: {}.".format(", ".join([b.value for b in available_backends]))
     )
 
 

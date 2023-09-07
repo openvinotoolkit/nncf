@@ -1,1 +1,1 @@
-../../../2.5/quantized/w_sym_t_a_sym_t/mobilenet_v3_large.pb
+../../../2.11/quantized/w_sym_t_a_sym_t/mobilenet_v3_large.pb

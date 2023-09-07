@@ -1,1 +1,1 @@
-../../../2.5/quantized/w_sym_ch_a_asym_t/shared_layers_model_quantize_outputs.pb
+../../../2.11/quantized/w_sym_ch_a_asym_t/shared_layers_model_quantize_outputs.pb

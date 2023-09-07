@@ -23,7 +23,6 @@ from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
-from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -276,7 +275,10 @@ class PostprocessingNodeLocator:
                 ):
                     post_proc_encountered = True
 
-                if self._is_node_has_underlying_weights(node_key):
+                if (
+                    self._is_node_has_underlying_weights(node_key)
+                    or node_key in self._quant_prop_graph.get_input_node_keys()
+                ):
                     if post_proc_encountered:
                         _extend_ignored_operations(path)
                 else:

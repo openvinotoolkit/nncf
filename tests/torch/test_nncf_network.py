@@ -24,7 +24,6 @@ from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.torch import register_module
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
@@ -584,13 +583,6 @@ def test_works_when_wrapped_with_dataparallel(simple_net):
     dp_model(torch.zeros([10, *simple_net.INPUT_SIZE[1:]], device="cuda"))
 
 
-def test_warns_on_old_style_calls(simple_net):
-    with pytest.warns(NNCFDeprecationWarning):
-        simple_net.get_graph()
-    with pytest.warns(NNCFDeprecationWarning):
-        simple_net.get_nncf_wrapped_model()
-
-
 def test_class_has_same_name_and_module_as_original(simple_net):
     assert simple_net.__class__.__name__ == SimplestModel.__name__
     assert simple_net.__class__.__module__ == SimplestModel.__module__
@@ -657,10 +649,10 @@ def test_reset_original_unbound_forward():
     inp = torch.ones((1,))
     assert nncf_network.forward(inp) == inp
 
-    nncf_network.set_original_unbound_forward(model.__class__.other_forward)
+    nncf_network.nncf.set_original_unbound_forward(model.__class__.other_forward)
     assert nncf_network.forward(inp) == inp * 2
 
-    nncf_network.reset_original_unbound_forward()
+    nncf_network.nncf.reset_original_unbound_forward()
     assert nncf_network.forward(inp) == inp
 
 

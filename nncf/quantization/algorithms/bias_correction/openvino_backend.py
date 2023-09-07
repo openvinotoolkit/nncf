@@ -20,7 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.model_utils import insert_null_biases
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.node_utils import get_bias_value
