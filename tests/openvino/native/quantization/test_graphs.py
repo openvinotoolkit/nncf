@@ -29,8 +29,8 @@ from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import DepthwiseConv5DModel
-from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
 from tests.openvino.native.models import GRUSequenceModel
+from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
@@ -143,7 +143,10 @@ def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
         modified_model = quantize_model(modified_model, q_params)
     return modified_model
 
-@pytest.mark.parametrize("linear_before_reset", [True, False], ids=["linear_before_reset_True", "linear_before_reset_False"])
+
+@pytest.mark.parametrize(
+    "linear_before_reset", [True, False], ids=["linear_before_reset_True", "linear_before_reset_False"]
+)
 def test_ignore_nodes_by_attribues(linear_before_reset):
     model = GRUSequenceModel(**{"linear_before_reset": linear_before_reset}).ov_model
     quantized_model = quantize_model(model, {})

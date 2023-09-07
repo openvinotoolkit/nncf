@@ -488,7 +488,16 @@ class GRUSequenceModel(OVReferenceModel):
         B = ov.opset9.constant(np.zeros(([1, scale_factor * hidden_size])), dtype=np.float32)
 
         gru = opset.gru_sequence(
-            x, initial_hidden_state, seq_len, W, R, B, hidden_size, direction="FORWARD", linear_before_reset=linear_before_reset, name="GRUSequence"
+            x,
+            initial_hidden_state,
+            seq_len,
+            W,
+            R,
+            B,
+            hidden_size,
+            direction="FORWARD",
+            linear_before_reset=linear_before_reset,
+            name="GRUSequence",
         )
         data = self._rng.random((3, 1, hidden_size, 3)).astype(np.float32)
         matmul = opset.matmul(gru.output(0), data, transpose_a=False, transpose_b=False, name="MatMul")
