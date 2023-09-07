@@ -673,6 +673,12 @@ class OVAbsMetatype(OVOpMetatype):
     op_names = ["Abs"]
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVGroupNormalizationMetatype(OVOpMetatype):
+    name = "GroupNormalizationOp"
+    op_names = ["GroupNormalization"]
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
