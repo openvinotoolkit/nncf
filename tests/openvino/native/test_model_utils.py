@@ -42,7 +42,7 @@ def get_nncf_graph_for_test(edge_shape, dtype):
     "edge_shape,dtype,ref_shape",
     [((2, 3, 4, 5), np.float32, (1, 3, 1, 1)), ((1, 1, 2, 3), np.float64, (1, 1, 1, 1))],
 )
-def test_create_bias_constant_value(edge_shape, dtype, ref_shape):
+def test_create_bias_tensor(edge_shape, dtype, ref_shape):
     graph = get_nncf_graph_for_test(edge_shape, dtype)
     val = create_bias_tensor(graph.get_node_by_name("/Conv_1_0"), graph, 5)
     assert val.shape == ref_shape
