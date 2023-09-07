@@ -195,12 +195,6 @@ class TensorAggregatorBase(Aggregator, abc.ABC):
             return self._aggregate_impl()
         return None
 
-    def __eq__(self, __o: object) -> bool:
-        return isinstance(__o, self.__class__) and self._num_samples == __o.num_samples
-
-    def __hash__(self) -> int:
-        return hash(self.__class__.__name__)
-
 
 class OnlineTensorAggregator(TensorAggregatorBase, abc.ABC):
     def __init__(self, num_samples: Optional[int] = None):
