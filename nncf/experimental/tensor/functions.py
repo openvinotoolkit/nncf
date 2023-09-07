@@ -423,33 +423,6 @@ def binary_reverse_operator(a: TTensor, b: TTensor, operator_fn: Callable) -> TT
     return Tensor(binary_reverse_operator(a.data, unwrap_tensor_data(b), operator_fn))
 
 
-__all__ = [
-    "abs",
-    "all",
-    "allclose",
-    "any",
-    "astype",
-    "count_nonzero",
-    "device",
-    "flatten",
-    "isclose",
-    "isempty",
-    "max",
-    "maximum",
-    "mean",
-    "min",
-    "minimum",
-    "minimum",
-    "moveaxis",
-    "ones_like",
-    "reshape",
-    "round",
-    "squeeze",
-    "where",
-    "zeros_like",
-]
-
-
 def _initialize_backends():
     # pylint: disable=unused-import
     import nncf.experimental.tensor.numpy_functions
