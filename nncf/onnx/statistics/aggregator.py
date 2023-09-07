@@ -11,7 +11,6 @@
 
 from typing import Dict
 
-import numpy as np
 import onnx
 
 from nncf.common.factory import TModel

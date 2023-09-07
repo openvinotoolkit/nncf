@@ -39,7 +39,6 @@ from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization.layers import FakeQuantize
-from nncf.tensorflow.tensor import TFNNCFTensor
 from nncf.tensorflow.tensor_statistics.algo import get_collection_hook
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_axes_activations
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_axes_weights

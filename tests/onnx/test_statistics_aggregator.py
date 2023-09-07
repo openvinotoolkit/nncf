@@ -93,9 +93,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
         return dataset_samples
 
-    def no_batch_dimension_in_dataset_samples(self) -> bool:
-        return True
-
     @pytest.fixture(params=[False], ids=["out_of_place"])
     def inplace_statistics(self, request) -> bool:
         return request.param
@@ -105,7 +102,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         pass
 
     @pytest.mark.skip("Merging is not implemented yet")
-    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
+    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, params, dataset_samples):
         pass
 
     @pytest.mark.skip("Merging is not implemented yet")

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import tensorflow as tf
@@ -19,7 +19,6 @@ from nncf.common.tensor import DeviceType
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFTensorBackend
 from nncf.common.tensor import TensorDtype
-from nncf.common.tensor import WrappingIterator
 
 _DTYPE_MAP: Dict[TensorDtype, tf.DType] = {TensorDtype.FLOAT32: tf.float32, TensorDtype.INT64: tf.int64}
 
