@@ -134,5 +134,5 @@ def get_nncf_dataset_from_ac_config(model_path, config_path, data_dir, framework
 def test_dataset_length():
     dataset_with_length = Dataset([1, 2, 3])
     dataset_without_length = Dataset(iter([1, 2, 3]))
-    assert dataset_with_length.get_length_or_none() == 3
-    assert dataset_without_length.get_length_or_none() is None
+    assert dataset_with_length.get_length() == 3
+    assert dataset_without_length.get_length() is None
