@@ -174,8 +174,10 @@ class GraphConverter:
                         node_attributes = node.get_attributes()
                         const_transpose_name = attribute_names[const_port_id]
                         const_attrs[const_port_id]["transpose"] = node_attributes[const_transpose_name]
-
                         act_attrs["transpose"] = node_attributes[attribute_names[act_port_id]]
+                    elif metatype == OVGRUSequenceMetatype:
+                        node_attributes = node.get_attributes()
+                        act_attrs["linear_before_reset"] = node_attributes["linear_before_reset"]
 
                     if const_attrs or act_attrs:
                         nncf_node = nncf_graph.get_node_by_name(node_name)

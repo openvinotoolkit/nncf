@@ -474,6 +474,31 @@ class LSTMSequenceModel(OVReferenceModel):
         return model
 
 
+class GRUSequenceModel(OVReferenceModel):
+    def _create_ov_model(self, linear_before_reset=True):
+        hidden_size = 128
+
+        x = ov.opset9.parameter([3, 2, 16], name="X")
+        initial_hidden_state = ov.opset9.parameter([3, 1, hidden_size], name="initial_hidden_state")
+        seq_len = ov.opset9.constant(np.array([1, 2, 3]), dtype=np.int32)
+
+        scale_factor = 4 if linear_before_reset else 3
+        W = ov.opset9.constant(np.zeros(([1, 3 * hidden_size, 16])), dtype=np.float32)
+        R = ov.opset9.constant(np.zeros(([1, 3 * hidden_size, hidden_size])), dtype=np.float32)
+        B = ov.opset9.constant(np.zeros(([1, scale_factor * hidden_size])), dtype=np.float32)
+
+        gru = opset.gru_sequence(
+            x, initial_hidden_state, seq_len, W, R, B, hidden_size, direction="FORWARD", linear_before_reset=linear_before_reset, name="GRUSequence"
+        )
+        data = self._rng.random((3, 1, hidden_size, 3)).astype(np.float32)
+        matmul = opset.matmul(gru.output(0), data, transpose_a=False, transpose_b=False, name="MatMul")
+
+        result = opset.result(matmul, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model(results=[result], parameters=[x, initial_hidden_state])
+        return model
+
+
 class MatmulSoftmaxMatmulBlock(OVReferenceModel):
     def _create_ov_model(self):
         input_1 = opset.parameter([1, 1, 1], name="Input")
