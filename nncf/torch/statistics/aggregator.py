@@ -11,7 +11,6 @@
 
 from typing import Dict
 
-import numpy as np
 import torch
 
 from nncf.common.factory import TModel
@@ -20,7 +19,6 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
-from nncf.torch import no_nncf_trace
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor import PTNNCFTensor

@@ -184,9 +184,6 @@ class TensorAggregatorBase(Aggregator, abc.ABC):
     aggregate them in terms of NNCFTensor and NNCFTensorBackend opset.
     """
 
-    def __init__(self, num_samples: Optional[int] = None):
-        super().__init__(num_samples)
-
     def aggregate(self) -> Optional[NNCFTensor]:
         """
         Aggregates collected tensors and returns aggregated result.
@@ -515,7 +512,7 @@ class QuantileReducer(QuantileReducerBase):
         x = x[0]
         axis = self._get_axis(x)
         backend = x.backend
-        return [t for t in backend.quantile(x, self._quantile, axis=axis, keepdims=True)]
+        return list(backend.quantile(x, self._quantile, axis=axis, keepdims=True))
 
 
 class AbsQuantileReducer(QuantileReducerBase):
@@ -544,7 +541,6 @@ class MeanPerChReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
         x = x[0]
         backend = x.backend
-        shape = x.shape
         axis = self._get_axis(x)
         retval = backend.mean(x, axis=axis, keepdims=True)
         return [retval]
@@ -659,13 +655,13 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         super().__init__(use_per_sample_stats, num_samples, window_size)
         self._quantile = quantile
 
-    def _aggregate_stacked_samples(self, stacked_val: NNCFTensor) -> NNCFTensor:
-        backend = stacked_val.backend
+    def _aggregate_stacked_samples(self, stacked_samples: NNCFTensor) -> NNCFTensor:
+        backend = stacked_samples.backend
         alpha = self._quantile
 
-        low_values, high_values = backend.quantile(stacked_val, [alpha, 1 - alpha], 0)
-        outliers_mask = backend.logical_or(stacked_val < low_values, high_values < stacked_val)
-        return self._aggregate_stacked_samples_with_no_outliers(stacked_val, outliers_mask)
+        low_values, high_values = backend.quantile(stacked_samples, [alpha, 1 - alpha], 0)
+        outliers_mask = backend.logical_or(stacked_samples < low_values, high_values < stacked_samples)
+        return self._aggregate_stacked_samples_with_no_outliers(stacked_samples, outliers_mask)
 
     @abstractmethod
     def _aggregate_stacked_samples_with_no_outliers(

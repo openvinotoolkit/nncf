@@ -290,7 +290,6 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         if self._reduction_axes is not None:
             axis = self._get_axis()
         else:  # self._channel_axis is not None
-            shape = x.shape
             proto_axis_list = list(range(x.ndim))
             del proto_axis_list[self._channel_axis]
             axis = tuple(proto_axis_list)

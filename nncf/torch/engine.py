@@ -9,15 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Union
+from typing import Dict, Union
 
 import torch
 from torch import nn
 
 from nncf import nncf_logger
 from nncf.common.engine import Engine
-from nncf.common.tensor import NNCFTensor
-from nncf.openvino.tensor import OVNNCFTensor
 from nncf.torch.tensor import PTNNCFTensor
 
 
@@ -46,7 +44,7 @@ class PTEngine(Engine):
         output = self._model(input_data)
         if isinstance(output, torch.Tensor):
             return {None: PTNNCFTensor(output)}
-        elif isinstance(output, dict):
+        if isinstance(output, dict):
             output_dict = {}
             for key, value in output.items():
                 if not isinstance(value, torch.Tensor):

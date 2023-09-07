@@ -14,7 +14,6 @@ from typing import Callable, Generator, Optional, Tuple
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 

@@ -25,6 +25,7 @@ class TensorDtype(IntEnum):
 
 
 class NNCFTensor(Generic[TensorType], abc.ABC):
+    #pylint:disable=too-many-public-methods
     """
     An interface of framework specific tensors for common NNCF algorithms.
     """
@@ -44,8 +45,7 @@ class NNCFTensor(Generic[TensorType], abc.ABC):
     def _get_rhs(self, other: Any) -> Any:
         if isinstance(other, NNCFTensor):
             return other.tensor
-        else:
-            return other
+        return other
 
     def _bool_operator_resolver(
         self, bound_predicate: Callable[[TensorType], Union[bool, "NNCFTensor"]], other: Any

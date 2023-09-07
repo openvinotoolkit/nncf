@@ -15,10 +15,9 @@ from typing import List, Optional
 import numpy as np
 import pytest
 
-from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_impl_np import NPNNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import OfflineAggregatorBase
-from nncf.experimental.common.tensor_statistics.collectors import TensorAggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 
@@ -30,7 +29,7 @@ class DummyTensorReducer(TensorReducerBase):
         self._output_name = output_name
         self._inplace_mock = inplace_mock
 
-    def _reduce_out_of_place(self, x: List[NNCFTensor]):
+    def _reduce_out_of_place(self, x: List[NPNNCFTensor]):
         return x
 
     def get_inplace_fn(self):
@@ -48,16 +47,16 @@ class DummyTensorReducerA(DummyTensorReducer):
 
 
 class DummyTensorAggregator(OfflineAggregatorBase):
-    def _aggregate_stacked_samples(self, stacked_samples: NNCFTensor) -> NNCFTensor:
+    def _aggregate_stacked_samples(self, stacked_samples: NPNNCFTensor) -> NPNNCFTensor:
         return stacked_samples
 
     def __init__(self, num_samples: Optional[int]):
         super().__init__(None, num_samples=num_samples)
 
-    def _register_reduced_input_impl(self, x: NNCFTensor):
+    def _register_reduced_input_impl(self, x: NPNNCFTensor):
         return self._samples.append(x)
 
-    def _aggregate_impl(self) -> NNCFTensor:
+    def _aggregate_impl(self) -> NPNNCFTensor:
         return self._samples[0]
 
 
@@ -72,7 +71,7 @@ def test_aggregator_enabled_and_reset():
     collector.register_statistic_branch("A", reducer, aggregator)
     input_name = "input_name"
     inputs = TensorCollector.get_tensor_collector_inputs(
-        {input_name: NNCFTensor(np.array(100))}, [(hash(reducer), [input_name])]
+        {input_name: NPNNCFTensor(np.array(100))}, [(hash(reducer), [input_name])]
     )
 
     for _ in range(3):
@@ -128,7 +127,9 @@ def test_duplicated_statistics_are_merged():
         [(hash(reducer_inplace), ["Dummy_inplace"]), (hash(reducer_a), ["A"]), (hash(reducer), ["Dummy"])]
     )
 
-    outputs = {"Dummy": NNCFTensor(np.array(5)), "A": NNCFTensor(np.array(0)), "Dummy_inplace": NNCFTensor(np.array(6))}
+    outputs = {"Dummy": NPNNCFTensor(np.array(5)),
+               "A": NPNNCFTensor(np.array(0)),
+               "Dummy_inplace": NPNNCFTensor(np.array(6))}
     target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     collector.register_inputs(target_inputs)
 
@@ -145,10 +146,10 @@ def test_duplicated_statistics_are_merged():
     # Check aggregators recieved correct inputs
     assert len(statistics) == 6
     for k in "ABC":
-        assert statistics[k] == NNCFTensor(np.array(5))
-    assert statistics["D"] == NNCFTensor(np.array(5))
-    assert statistics["E"] == NNCFTensor(np.array(0))
-    assert statistics["F"] == NNCFTensor(np.array(6))
+        assert statistics[k] == NPNNCFTensor(np.array(5))
+    assert statistics["D"] == NPNNCFTensor(np.array(5))
+    assert statistics["E"] == NPNNCFTensor(np.array(0))
+    assert statistics["F"] == NPNNCFTensor(np.array(6))
 
 
 def test_inplace_param():
@@ -195,8 +196,8 @@ def test_merged_tensor_collector():
         assert collector.aggregators[common_branch_key] is common_aggregator
 
     output_info = merged_collector.get_output_info(None, None)
-    outputs = {"common_input": NNCFTensor(np.array(0))}
-    outputs.update({f"input_{idx + 1}": NNCFTensor(np.array(idx + 1)) for idx, _ in enumerate(collectors[:-1])})
+    outputs = {"common_input": NPNNCFTensor(np.array(0))}
+    outputs.update({f"input_{idx + 1}": NPNNCFTensor(np.array(idx + 1)) for idx, _ in enumerate(collectors[:-1])})
     target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     merged_collector.register_inputs(target_inputs)
 
@@ -207,8 +208,8 @@ def test_merged_tensor_collector():
 
         statistic = collector.get_statistics()
         assert len(statistic) == 2
-        assert statistic["common"] == NNCFTensor(np.array(0))
-        assert statistic["unique"] == NNCFTensor(np.array(idx + 1))
+        assert statistic["common"] == NPNNCFTensor(np.array(0))
+        assert statistic["unique"] == NPNNCFTensor(np.array(idx + 1))
 
 
 def test_ambigous_container_key():
@@ -233,7 +234,7 @@ class DummyMultipleInpOutTensorReducer(DummyTensorReducer):
     NUM_INPUTS = 3
     NUM_OUTPUTS = 2
 
-    def _reduce_out_of_place(self, x: List[NNCFTensor]):
+    def _reduce_out_of_place(self, x: List[NPNNCFTensor]):
         return x[: self.NUM_OUTPUTS]
 
     def get_output_names(self, target_node_name: str, port_id: int) -> str:
@@ -260,7 +261,7 @@ def test_multiple_branch_reducer():
             ],
         )
     ]
-    inputs = {name: NNCFTensor(np.array(i)) for i, name in enumerate(ref_output_info[0][1])}
+    inputs = {name: NPNNCFTensor(np.array(i)) for i, name in enumerate(ref_output_info[0][1])}
 
     output_info = collector.get_output_info(target_node_name, 0)
     assert output_info == ref_output_info
@@ -268,7 +269,7 @@ def test_multiple_branch_reducer():
     target_inputs = collector.get_tensor_collector_inputs(inputs, output_info)
     collector.register_inputs(target_inputs)
 
-    ref_stats = {"0": NNCFTensor(np.array(0)), "1": NNCFTensor(np.array(1))}
+    ref_stats = {"0": NPNNCFTensor(np.array(0)), "1": NPNNCFTensor(np.array(1))}
     stats = collector.get_statistics()
     assert len(ref_stats) == len(stats)
     for key, value in ref_stats.items():

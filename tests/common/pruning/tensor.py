@@ -9,14 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Type, Union
+from typing import List, Optional, Union
 
 import numpy as np
 
-from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorDtype
 from nncf.common.tensor_impl_np import NPNNCFTensor
 
 

@@ -66,7 +66,6 @@ from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.tensor_statistics.reduction import ReductionAxes
-from nncf.common.tensor_statistics.reduction import ReductionShape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.utils.api_marker import api

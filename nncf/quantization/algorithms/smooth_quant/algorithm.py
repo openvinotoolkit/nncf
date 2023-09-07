@@ -320,7 +320,6 @@ class SmoothQuant(Algorithm):
         activations_size = len(activations_shape)
 
         activation_scale = scale_value ** (-1)
-        backend = activation_scale.backend
         if activations_size > 1:
             reshape_shape = [1 for _ in range(activations_size)]
             reshape_shape[channel_axis] = activation_scale.size
@@ -348,7 +347,6 @@ class SmoothQuant(Algorithm):
         if weights_size > 1:
             channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
             weight_scale = scale_value
-            backend = scale_value.backend
             if weights_size > 1:
                 reshape_shape = [1 for _ in range(weights_size)]
                 reshape_shape[channel_axis] = scale_value.size

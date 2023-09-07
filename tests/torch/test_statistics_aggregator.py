@@ -115,5 +115,5 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         pass
 
     @pytest.mark.skip("Merging is not implemented yet")
-    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, test_params, dataset_samples):
+    def test_same_collectors_different_attrs_dont_merge(self, statistics_type, params, dataset_samples):
         pass

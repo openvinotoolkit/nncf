@@ -12,7 +12,6 @@
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
-import numpy as np
 from tqdm import tqdm
 
 from nncf import Dataset
@@ -27,7 +26,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
@@ -180,9 +178,6 @@ class BiasCorrection(Algorithm):
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
 
             current_bias = self._backend_entity.get_bias_value(node, model_copy, nncf_graph)
-            backend = current_bias.backend
-
-            channel_axis = node.metatype.output_channel_axis
 
             updated_bias = current_bias + bias_shift.reshape(*current_bias.shape)
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)

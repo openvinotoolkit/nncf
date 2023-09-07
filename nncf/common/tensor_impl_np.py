@@ -8,10 +8,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
-from numpy import dtype
+from numpy import dtype as np_dtype
 from numpy.ma import MaskedArray
 from numpy.ma.core import MaskedConstant
 
@@ -23,7 +23,7 @@ from nncf.common.tensor import TensorDtype
 _DTYPE_MAP: Dict[TensorDtype, Any] = {TensorDtype.FLOAT32: np.float32, TensorDtype.INT64: np.int64}
 
 _INV_DTYPE_MAP: Dict[Any, TensorDtype] = {v: k for k, v in _DTYPE_MAP.items()}
-_INV_DTYPE_MAP[dtype("float32")] = TensorDtype.FLOAT32
+_INV_DTYPE_MAP[np_dtype("float32")] = TensorDtype.FLOAT32
 
 
 class NPNNCFTensor(NNCFTensor[np.ndarray]):
@@ -43,7 +43,7 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
         return self._tensor.size
 
     def matmul(self, other: "NPNNCFTensor") -> "NPNNCFTensor":
-        return self.__class__(np.matmul(self._tensor, other._tensor))
+        return self.__class__(np.matmul(self._tensor, other.tensor))
 
     def astype(self, dtype: TensorDtype) -> "NPNNCFTensor":
         return self.__class__(self._tensor.astype(_DTYPE_MAP[dtype]))
@@ -72,7 +72,7 @@ class NPNNCFTensor(NNCFTensor[np.ndarray]):
 
     def mean(self, axis: int, keepdims: bool = None) -> "NPNNCFTensor":
         if keepdims is None:
-            keepdims = np._NoValue
+            keepdims = np._NoValue  # pylint:disable=protected-access
         return self.__class__(np.mean(self.tensor, axis=axis, keepdims=keepdims))
 
     def median(self, axis: int = None, keepdims: bool = False) -> "NNCFTensor":
@@ -179,8 +179,7 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
         retval = np.quantile(tensor.tensor, quantile, axis=axis, keepdims=keepdims)
         if not isinstance(quantile, (list, tuple)):
             return retval
-        else:
-            return NPNNCFTensor(retval)
+        return NPNNCFTensor(retval)
 
     @staticmethod
     def mean_of_list(tensor_list: List[NPNNCFTensor], axis: int) -> NPNNCFTensor:
@@ -223,13 +222,13 @@ class NPNNCFTensorBackend(NNCFTensorBackend):
     @staticmethod
     def amin(tensor: NPNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> NPNNCFTensor:
         if keepdims is None:
-            keepdims = np._NoValue
+            keepdims = np._NoValue  # pylint:disable=protected-access
         return NPNNCFTensor(np.amin(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def amax(tensor: NPNNCFTensor, axis: Optional[List[int]] = None, keepdims: bool = None) -> NPNNCFTensor:
         if keepdims is None:
-            keepdims = np._NoValue
+            keepdims = np._NoValue  # pylint:disable=protected-access
         return NPNNCFTensor(np.amax(tensor.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod

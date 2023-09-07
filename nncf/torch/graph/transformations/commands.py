@@ -12,7 +12,6 @@
 from typing import Any, Callable, Dict
 
 import numpy as np
-import torch
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import Command

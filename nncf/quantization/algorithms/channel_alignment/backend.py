@@ -13,7 +13,6 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple, TypeVar
 
-import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode

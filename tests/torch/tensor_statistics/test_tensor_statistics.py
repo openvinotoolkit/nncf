@@ -115,7 +115,7 @@ class TestCollectedStatistics:
         reduction_axes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
         for shapes in reduction_axes_vs_ref_statistic.keys():
-            output_shape, reduction_shape = shapes
+            _, reduction_shape = shapes
             collector_obj = collector(use_abs_max=True, reduction_axes=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(input_)

@@ -65,7 +65,7 @@ class PTNNCFTensor(NNCFTensor[torch.Tensor]):
         return self._tensor.numpy(force=True)  # force=True to automatically get a CPU copy if the tensor is not on CPU
 
     def matmul(self, other: "PTNNCFTensor") -> "PTNNCFTensor":
-        return PTNNCFTensor(self._tensor.matmul(other._tensor))
+        return PTNNCFTensor(self._tensor.matmul(other.tensor))
 
     def astype(self, dtype: TensorDtype) -> "PTNNCFTensor":
         return PTNNCFTensor(self._tensor.to(dtype=_DTYPE_MAP[dtype]))
@@ -207,7 +207,7 @@ class PTNNCFTensorBackend(NNCFTensorBackend):
     ) -> Union[float, PTNNCFTensor]:
         if not isinstance(axis, list):
             return PTNNCFTensor(torch.quantile(tensor.tensor, q=quantile, dim=axis, keepdim=keepdims))
-        elif len(axis) == 1:
+        if len(axis) == 1:
             return PTNNCFTensor(torch.quantile(tensor.tensor, q=quantile, dim=axis[0], keepdim=keepdims))
         # As of 2.0.1, torch does not support multidim quantile directly.
         t = tensor.tensor
