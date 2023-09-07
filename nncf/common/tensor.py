@@ -25,7 +25,7 @@ class TensorDtype(IntEnum):
 
 
 class NNCFTensor(Generic[TensorType], abc.ABC):
-    #pylint:disable=too-many-public-methods
+    # pylint:disable=too-many-public-methods
     """
     An interface of framework specific tensors for common NNCF algorithms.
     """

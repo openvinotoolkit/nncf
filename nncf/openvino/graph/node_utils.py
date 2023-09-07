@@ -26,6 +26,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.tensor import OVNNCFTensor
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
@@ -393,7 +394,7 @@ def get_channel_agnostic_reduction_axes(channel_axes: List[int], shape: List[int
     return tuple(reduction_axes)
 
 
-def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:
+def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> OVNNCFTensor:
     """
     Creates bias value constant array filled by given value.
 
@@ -406,4 +407,4 @@ def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any
     bias_shape = [1] * len(node_shape)
     channel_axis = node_without_bias.metatype.output_channel_axis
     bias_shape[channel_axis] = node_shape[1]
-    return np.full(bias_shape, value)
+    return OVNNCFTensor(np.full(bias_shape, value))

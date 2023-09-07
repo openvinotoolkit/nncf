@@ -385,7 +385,10 @@ class TemplateTestChannelAlignment:
         for i in range(num_biases):
             args[i] = f"ref_bias_val{i + 1}"
 
-        algorithm._align_means.assert_called_once_with(*args)
+        algorithm._align_means.assert_called_once()
+        last_args = algorithm._align_means.call_args
+        test_call_args = list(i.to_numpy() if isinstance(i, NNCFTensor) else i for i in last_args[0])
+        assert test_call_args == args
 
         assert algorithm._align_scales.call_count == 1
         args = algorithm._align_scales.call_args.args

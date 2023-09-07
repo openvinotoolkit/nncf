@@ -160,10 +160,9 @@ class ChannelAlignment(Algorithm):
                     if isinstance(updated_value, NNCFTensor):
                         updated_value = updated_value.to_numpy()
                     if container.bias_op_exist():
-
-                        command = command_creator.create_command_to_update_bias(container.op, updated_value.to_numpy(), graph)
+                        command = command_creator.create_command_to_update_bias(container.op, updated_value, graph)
                     else:
-                        command = command_creator.create_command_to_insert_bias(container.op, updated_value.to_numpy())
+                        command = command_creator.create_command_to_insert_bias(container.op, updated_value)
                     transformation_layout.register(command)
 
         transformed_model = model_transformer.transform(transformation_layout)
@@ -461,6 +460,8 @@ class ConvParamsContainer:
         if backend_entity.is_node_with_bias(conv_op, nncf_graph):
             bias = backend_entity.get_bias_value(conv_op, model, nncf_graph)
             self._bias_op_exist = True
+        else:
+            bias = backend_entity.create_bias_tensor(conv_op, nncf_graph, 0)
         self.stated_bias = StatefulTensor(bias)
         self._op = conv_op
         self._dims = backend_entity.get_dims_descriptor(conv_op)

@@ -127,9 +127,11 @@ def test_duplicated_statistics_are_merged():
         [(hash(reducer_inplace), ["Dummy_inplace"]), (hash(reducer_a), ["A"]), (hash(reducer), ["Dummy"])]
     )
 
-    outputs = {"Dummy": NPNNCFTensor(np.array(5)),
-               "A": NPNNCFTensor(np.array(0)),
-               "Dummy_inplace": NPNNCFTensor(np.array(6))}
+    outputs = {
+        "Dummy": NPNNCFTensor(np.array(5)),
+        "A": NPNNCFTensor(np.array(0)),
+        "Dummy_inplace": NPNNCFTensor(np.array(6)),
+    }
     target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     collector.register_inputs(target_inputs)
 
