@@ -21,6 +21,8 @@ from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -170,21 +172,6 @@ class PostTrainingQuantization(Algorithm):
     def available_backends(self) -> Dict[str, BackendType]:
         return
 
-    def _is_single_model(self, model: TModel) -> bool:
-        model_backend = get_backend(model)
-        if model_backend == BackendType.ONNX:
-            return True
-        elif model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.post_training.openvino_backend import OVPostTrainingBackend
-
-            return OVPostTrainingBackend.is_single_model(model)
-        elif model_backend == BackendType.TORCH:
-            return True
-        else:
-            raise RuntimeError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
-            )
-
     def _set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm
@@ -276,9 +263,9 @@ class PostTrainingQuantization(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         model_copy = copy_model(model)
-        if self._is_single_model(model_copy):
-            return self._apply(model_copy, graph, statistic_points, dataset)
         self._set_backend_entity(model)
+        if self._is_single_model(graph, self._backend_entity.if_node_metatype):
+            return self._apply(model_copy, graph, statistic_points, dataset)
         nncf_logger.info("The model consists of child submodels. The iteratively each submodel will be quantized.")
         quantized_model, _ = self._dfs_quantize_models(model_copy, graph, dataset, statistic_points, 0)
         return quantized_model
@@ -320,6 +307,11 @@ class PostTrainingQuantization(Algorithm):
         transform_fn = self._make_transform_fn(input_names)
         return Dataset(dataitems, transform_fn)
 
+    def _is_single_model(self, nncf_graph: NNCFGraph, if_node_metatype: OperatorMetatype):
+        if nncf_graph.get_nodes_by_metatypes([if_node_metatype]):
+            return False
+        return True
+
     def _dfs_quantize_models(
         self,
         parent_model: TModel,
@@ -328,26 +320,36 @@ class PostTrainingQuantization(Algorithm):
         parent_statistic_points: Optional[StatisticPointsContainer],
         parent_model_cnt: int,
     ) -> Tuple[TModel, int]:
-        if not self._backend_entity.is_single_model(parent_model):
+        if not self._is_single_model(parent_graph, self._backend_entity.if_node_metatype):
+            model_transformer = factory.ModelTransformerFactory.create(parent_model)
+
             parent_model_with_additional_outputs = self._backend_entity.add_additional_outputs(parent_model)
             engine = factory.EngineFactory.create(parent_model_with_additional_outputs)
+
             dataitems = self.collect_dataitems_for_children_models(
                 engine, parent_dataset, self.subset_size, parent_model_cnt
-            )
+            )  # Could be optimized? dataitems are collected for all inner subgraphs through 1 infer request, while it could be N infer requests for each inner subgraphs.
             global_model_cnt = parent_model_cnt
-            for child_model, input_names, backend_params in self._backend_entity.get_child_models(parent_model):
-                child_dataset = self.make_dataset_for_child_models(dataitems, input_names)
+            for if_node in parent_graph.get_nodes_by_metatypes([self._backend_entity.if_node_metatype]):
+                for child_model_port_id, (child_model, input_names) in enumerate(
+                    self._backend_entity.get_child_models(parent_model, if_node)
+                ):
+                    child_dataset = self.make_dataset_for_child_models(dataitems, input_names)
 
-                child_q_model, model_cnt = self._dfs_quantize_models(
-                    child_model, NNCFGraphFactory.create(child_model), child_dataset, None, global_model_cnt + 1
-                )
-                global_model_cnt = model_cnt
+                    child_q_model, model_cnt = self._dfs_quantize_models(
+                        child_model, NNCFGraphFactory.create(child_model), child_dataset, None, global_model_cnt + 1
+                    )
+                    global_model_cnt = model_cnt
 
-                nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
-                self._backend_entity.set_child_model(child_q_model, **backend_params)
-                if self.intermediate_model_dir:
-                    nncf_logger.info(f"Save quantized model number {model_cnt} to dir {self.intermediate_model_dir}")
-                    self._backend_entity.dump_model(child_q_model, self.intermediate_model_dir, **backend_params)
+                    nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
+                    self._backend_entity.set_child_model(parent_model, child_q_model, if_node, child_model_port_id)
+                    if self.intermediate_model_dir:
+                        nncf_logger.info(
+                            f"Save quantized model number {model_cnt} to dir {self.intermediate_model_dir}"
+                        )
+                        self._backend_entity.dump_model(
+                            child_q_model, self.intermediate_model_dir, if_node, child_model_port_id
+                        )
 
         nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
         quantized_model = self._apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)

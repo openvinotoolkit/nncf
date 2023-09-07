@@ -20,15 +20,10 @@ from nncf.quantization.algorithms.post_training.algorithm import TModel
 
 
 class PostTrainingBackend(ABC):
-    @staticmethod
+    @property
     @abstractmethod
-    def is_single_model(model: TModel) -> bool:
-        """
-        Chechks whether a model has inner subgraphs to quantize.
-
-        :param model: Model to check.
-        :return: True if the model has no inner subgraphs, otherwise - False.
-        """
+    def if_node_metatype(self):
+        """_summary_"""
 
     @staticmethod
     @abstractmethod

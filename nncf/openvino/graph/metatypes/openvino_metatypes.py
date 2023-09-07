@@ -673,6 +673,12 @@ class OVAbsMetatype(OVOpMetatype):
     op_names = ["Abs"]
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVIfMetatype(OVOpMetatype):
+    name = "IfOp"
+    op_names = ["If"]
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.

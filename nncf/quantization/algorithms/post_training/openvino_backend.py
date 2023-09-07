@@ -18,7 +18,10 @@ from openvino.runtime import opset9 as opset
 from tqdm import tqdm
 
 from nncf import Dataset
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.data.dataset import DataItem
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.quantization.algorithms.post_training.backend import PostTrainingBackend
 
 
@@ -52,31 +55,27 @@ def _add_results(model: ov.Model, node: ov.Node) -> Tuple[ov.Model, List[str]]:
 class OVPostTrainingBackend(PostTrainingBackend):
     IF_OP_MODEL_INPUT_PORTS = (0, 1)
 
-    @staticmethod
-    def is_single_model(model: ov.Model) -> bool:
-        for op in model.get_ops():
-            if op.get_type_name() == "If":
-                return False
-        return True
+    @property
+    def if_node_metatype(self):
+        return OVIfMetatype
 
     @staticmethod
-    def get_child_models(model: ov.Model) -> List[Tuple[ov.Model, Dict[str, Any]]]:
+    def get_child_models(model: ov.Model, if_node: NNCFNode) -> List[Tuple[ov.Model, str]]:
         child_models = []
-        for op in model.get_ops():
-            if op.get_type_name() == "If":
-                for port_id in OVPostTrainingBackend.IF_OP_MODEL_INPUT_PORTS:
-                    input_indices = [desc.input_index for desc in op.get_input_descriptions(port_id)]
-                    input_names = [op.input_values()[index].any_name for index in input_indices]
-                    child_models.append(
-                        (
-                            op.get_function(port_id),
-                            input_names,
-                            {
-                                "if_op": op,
-                                "if_op_model_input_port_id": port_id,
-                            },
-                        )
-                    )
+        ov_node = None
+        for node in model.get_ops():
+            if node.get_friendly_name() == if_node.node_name:
+                ov_node = node
+                break
+        for port_id in OVPostTrainingBackend.IF_OP_MODEL_INPUT_PORTS:
+            input_indices = [desc.input_index for desc in ov_node.get_input_descriptions(port_id)]
+            input_names = [ov_node.input_values()[index].any_name for index in input_indices]
+            child_models.append(
+                (
+                    ov_node.get_function(port_id),
+                    input_names,
+                )
+            )
         return child_models
 
     @staticmethod
@@ -88,12 +87,19 @@ class OVPostTrainingBackend(PostTrainingBackend):
         return model_with_additional_results
 
     @staticmethod
-    def set_child_model(child_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
-        if_op.set_function(if_op_model_input_port_id, child_model)
+    def set_child_model(
+        parent_model: ov.Model, child_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int
+    ) -> None:
+        ov_node = None
+        for node in parent_model.get_ops():
+            if node.get_friendly_name() == if_op.node_name:
+                ov_node = node
+                break
+        ov_node.set_function(if_op_model_input_port_id, child_model)
 
     @staticmethod
-    def dump_model(model: ov.Model, dir: str, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
-        name = if_op.get_friendly_name().replace("/", "")
+    def dump_model(model: ov.Model, dir: str, if_op: NNCFNode, if_op_model_input_port_id: int) -> None:
+        name = if_op.node_name.replace("/", "")
         if if_op_model_input_port_id == 0:
             postfix = "then"
         if if_op_model_input_port_id == 1:
