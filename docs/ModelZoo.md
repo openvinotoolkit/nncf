@@ -14,6 +14,7 @@ The applied quantization compression algorithms are divided into two broad categ
   - [Object Detection](#tensorflow-object-detection)
   - [Instance Segmentation](#tensorflow-instance-segmentation)
 - [ONNX](#onnx)
+- [OpenVINO Post Training Quantization](#openvino-post-training-quantization)
 
 ## PyTorch
 
@@ -941,3 +942,287 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
   </tbody>
 </table>
+
+
+## OpenVINO Post Training Quantization
+The results presented below were obtained using NNCF PTQ for OpenVINO backend. 
+
+> Note: Some of the PyTorch models are labeled as ONNX here, because PyTorch models are converted to OpenVINO intermediate representation through ONNX. 
+
+### Classification
+<table>
+  <thead>
+    <tr style="text-align: center;">
+      <th>Model</th>
+      <th>Framework</th>
+      <th>Dataset</th>
+      <th>Metric</th>
+      <th>Metric Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>GoogLeNet</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>77.31 (0.38)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>MobileNetV3 Large</td>
+      <td>TF</td>
+      <td>ImageNet</td>
+      <td>75.18 (0.66)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNet-18</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>69.52 (0.23)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNet-50</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>75.93 (0.20)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNet-50</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>75.97 (0.15)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNet-50</td>
+      <td>TF</td>
+      <td>ImageNet</td>
+      <td>74.96 (0.08)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNext-50</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>77.50 (0.12)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNext-101</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>83.14 (0.20)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>SqueezeNet V1.0</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>57.34 (0.75)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>SqueezeNet V1.1</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>57.69 (0.50)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>DeiT</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>80.90 (0.90)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>SWin Tiny</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>80.59 (0.79)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>LeViT</td>
+      <td>ONNX</td>
+      <td>ImageNet</td>
+      <td>75.81 (0.73)</td>
+      <td>Accuracy</td>
+    </tr>
+  </tbody>
+</table>
+
+### Object Detection
+<table>
+  <thead>
+    <tr style="text-align: center;">
+      <th>Model</th>
+      <th>Framework</th>
+      <th>Dataset</th>
+      <th>Metric</th>
+      <th>Metric Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>SSD ResNet-34</td>
+      <td>ONNX</td>
+      <td>COCO</td>
+      <td>39.26 (0.03)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>SSD ResNet-50</td>
+      <td>TF</td>
+      <td>COCO</td>
+      <td>58.49 (-3.27)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>SSD VGG16</td>
+      <td>ONNX</td>
+      <td>VOC</td>
+      <td>86.99 (-0.07)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>RetinaNet ResNet-34</td>
+      <td>ONNX</td>
+      <td>VOC</td>
+      <td>90.30 (-0.02)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO v3t</td>
+      <td>ONNX</td>
+      <td>COCO</td>
+      <td>16.76 (0.31)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO v5s</td>
+      <td>ONNX</td>
+      <td>COCO</td>
+      <td>49.77 (0.31)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO v5m</td>
+      <td>ONNX</td>
+      <td>COCO</td>
+      <td>56.88 (0.14)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO v5l</td>
+      <td>ONNX</td>
+      <td>COCO</td>
+      <td>59.48 (0.09)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO Xt</td>
+      <td>ONNX</td>
+      <td>COCO</td>
+      <td>47.04 (0.81)</td>
+      <td>MAP</td>
+    </tr>
+  </tbody>
+</table>
+
+### Semantic Segmentation
+<table>
+  <thead>
+    <tr style="text-align: center;">
+      <th>Model</th>
+      <th>Framework</th>
+      <th>Dataset</th>
+      <th>Metric</th>
+      <th>Metric Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DeepLab v3</td>
+      <td>ONNX</td>
+      <td>COCO</td>
+      <td>59.22 (0.51)</td>
+      <td>mIoU</td>
+    </tr>
+    <tr>
+      <td>HRNet v2</td>
+      <td>ONNX</td>
+      <td>ADEC</td>
+      <td>32.09 (0.93)</td>
+      <td>mIoU</td>
+    </tr>
+    <tr>
+      <td>LR-ASPP</td>
+      <td>ONNX</td>
+      <td>COCO</td>
+      <td>57.60 (0.56)</td>
+      <td>mIoU</td>
+    </tr>
+    <tr>
+      <td>FC-DenseNet</td>
+      <td>TF</td>
+      <td>CamVid</td>
+      <td>83.56 (0.43)</td>
+      <td>Accuracy</td>
+    </tr>
+  </tbody>
+</table>
+
+### Natural Language Processing
+<table>
+  <thead>
+    <tr style="text-align: center;">
+      <th>Model</th>
+      <th>Framework</th>
+      <th>Dataset</th>
+      <th>Metric</th>
+      <th>Metric Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>BERT Tiny</td>
+      <td>ONNX</td>
+      <td>CoLA</td>
+      <td>80.42 (0.67)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>BERT Base</td>
+      <td>ONNX</td>
+      <td>CONNL2003</td>
+      <td>99.14 (0.01)</td>
+      <td>NER Accuracy</td>
+    </tr>
+    <tr>
+      <td>BERT Large</td>
+      <td>ONNX</td>
+      <td>STS</td>
+      <td>41.68 (-3.21)</td>
+      <td>Spearman Correlation</td>
+    </tr>
+    <tr>
+      <td>RoBERTa</td>
+      <td>ONNX</td>
+      <td>GLUE</td>
+      <td>81.04 (0.18)</td>
+      <td>F1</td>
+    </tr>
+    <tr>
+      <td>SBERT</td>
+      <td>ONNX</td>
+      <td>STS</td>  
+      <td>84.49 (0.58)</td>
+      <td>Spearman Correlation</td>
+    </tr>
+  </tbody>
+</table>
+
