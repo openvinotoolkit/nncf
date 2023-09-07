@@ -12,10 +12,10 @@
 from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, List, Tuple
 
-from nncf import Dataset
-from nncf.data.dataset import DataItem
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.post_training.algorithm import TModel
 
 
@@ -58,10 +58,21 @@ class PostTrainingBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def set_child_model(child_model: TModel, backend_params: Dict[str, Any]) -> None:
+    def create_update_subgraph_command(target_point, subgraph_model):
         """
-        Set subgraph model to an original model.
 
-        :param subgraph_model: Model to set.
-        :param backend_params: Backend specific parameters.
+        :param target_point:
+        :param subgraph_model:
+        :return:
+        """
+
+    @staticmethod
+    @abstractmethod
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
+        """
+
+        :param target_type:
+        :param target_node_name:
+        :param port_id:
+        :return:
         """

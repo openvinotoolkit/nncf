@@ -31,6 +31,7 @@ from nncf.openvino.graph.transformations.commands import OVModelExtractionComman
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVUpdateIfSubgraphCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
@@ -52,6 +53,7 @@ class OVModelTransformer(ModelTransformer):
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
             (OVBiasInsertionCommand, self._apply_bias_insertion_transformations),
             (OVMultiplyInsertionCommand, self._apply_multiply_insertion_transformations),
+            (OVUpdateIfSubgraphCommand, self._apply_update_if_op_subgraph_transformations),
         ]
 
     @staticmethod
@@ -525,4 +527,17 @@ class OVModelTransformer(ModelTransformer):
             for destination_port in destination_ports:
                 destination_port.replace_source_output(multiply_node.output(0))
 
+        return model
+
+    @staticmethod
+    def _apply_update_if_op_subgraph_transformations(
+        model: ov.Model, transformations: List[OVUpdateIfSubgraphCommand]
+    ) -> ov.Model:
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        for transformation in transformations:
+            subgraph_model = transformation.subgraph_model
+            port_id = transformation.target_point.port_id
+            node_name = transformation.target_point.target_node_name
+            node = name_to_node_mapping[node_name]
+            node.set_function(port_id, subgraph_model)
         return model

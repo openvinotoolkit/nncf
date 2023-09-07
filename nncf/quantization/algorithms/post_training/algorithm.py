@@ -21,8 +21,9 @@ from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -342,7 +343,13 @@ class PostTrainingQuantization(Algorithm):
                     global_model_cnt = model_cnt
 
                     nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
-                    self._backend_entity.set_child_model(parent_model, child_q_model, if_node, child_model_port_id)
+                    transformation_layout = TransformationLayout()
+                    target_point = self._backend_entity.target_point(
+                        TargetType.LAYER, if_node.node_name, child_model_port_id
+                    )
+                    command = self._backend_entity.create_update_subgraph_command(target_point, child_q_model)
+                    transformation_layout.register(command)
+                    parent_model = model_transformer.transform(transformation_layout)
                     if self.intermediate_model_dir:
                         nncf_logger.info(
                             f"Save quantized model number {model_cnt} to dir {self.intermediate_model_dir}"

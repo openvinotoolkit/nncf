@@ -20,8 +20,11 @@ from tqdm import tqdm
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.data.dataset import DataItem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.graph.transformations.commands import OVUpdateIfSubgraphCommand
 from nncf.quantization.algorithms.post_training.backend import PostTrainingBackend
 
 
@@ -87,15 +90,12 @@ class OVPostTrainingBackend(PostTrainingBackend):
         return model_with_additional_results
 
     @staticmethod
-    def set_child_model(
-        parent_model: ov.Model, child_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int
-    ) -> None:
-        ov_node = None
-        for node in parent_model.get_ops():
-            if node.get_friendly_name() == if_op.node_name:
-                ov_node = node
-                break
-        ov_node.set_function(if_op_model_input_port_id, child_model)
+    def create_update_subgraph_command(target_point, subgraph_model):
+        return OVUpdateIfSubgraphCommand(target_point, subgraph_model)
+
+    @staticmethod
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
+        return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
     def dump_model(model: ov.Model, dir: str, if_op: NNCFNode, if_op_model_input_port_id: int) -> None:
