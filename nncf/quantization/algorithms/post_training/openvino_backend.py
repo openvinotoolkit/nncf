@@ -32,45 +32,35 @@ def _make_transform_fn(input_descriptions):
     return transform_fn
 
 
-def _add_results(model: ov.Model, node: ov.Node) -> ov.Model:
+def _add_results(model: ov.Model, node: ov.Node) -> Tuple[ov.Model, List[str]]:
     extra_model_outputs = []
+    result_names = []
     for input in node.inputs():
         output = input.get_source_output()
         output_name = output.get_node().get_friendly_name()
         result_name = f"{output_name}/if_output"
+
         result = opset.result(output, name=result_name)
 
         tensor = result.get_output_tensor(0)
         current_names = tensor.get_names()
         current_names.add(result_name)
         tensor.set_names(current_names)
-
+        result_names.append(result_name)
         extra_model_outputs.append(result)
-    return ov.Model(
-        results=extra_model_outputs,
-        sinks=[op for op in model.get_ops() if op.get_type_name() == "Assign"],
-        parameters=model.get_parameters(),
-        name=model.friendly_name,
+    return (
+        ov.Model(
+            results=extra_model_outputs,
+            sinks=[op for op in model.get_ops() if op.get_type_name() == "Assign"],
+            parameters=model.get_parameters(),
+            name=model.friendly_name,
+        ),
+        result_names,
     )
 
 
 class OVPostTrainingBackend(PostTrainingBackend):
     IF_OP_MODEL_INPUT_PORTS = (0, 1)
-
-    @staticmethod
-    def collect_dataitems_for_children_models(
-        model: ov.Model, calibration_dataset: Dataset, subset_size: int, model_cnt: int
-    ) -> Iterable[DataItem]:
-        dataset = []
-        compiled_model = ov.compile_model(model)
-        for input_data in tqdm(
-            islice(calibration_dataset.get_inference_data(), subset_size),
-            total=subset_size,
-            desc=f"Collect dataset for children models of {model_cnt} model:",
-        ):
-            results = compiled_model(input_data)
-            dataset.append(tuple(results.values()))
-        return dataset
 
     @staticmethod
     def make_dataset_for_child_models(
@@ -100,11 +90,12 @@ class OVPostTrainingBackend(PostTrainingBackend):
         return child_models
 
     @staticmethod
-    def add_additional_outputs(model: ov.Model) -> ov.Model:
+    def add_additional_outputs(model: ov.Model) -> Tuple[ov.Model, List[str]]:
         for op in model.get_ops():
             if op.get_type_name() == "If":
-                model_with_additional_results = _add_results(model, op)
-        return model_with_additional_results
+                # TODO: fix adding multiple IF
+                model_with_additional_results, result_names = _add_results(model, op)
+        return model_with_additional_results, result_names
 
     @staticmethod
     def set_child_model(child_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int) -> None:

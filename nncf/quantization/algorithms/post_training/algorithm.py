@@ -10,9 +10,13 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar
+from itertools import islice
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
+
+from tqdm import tqdm
 
 from nncf import Dataset
+from nncf.common import factory
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
@@ -23,6 +27,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
+from nncf.data.dataset import DataItem
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -278,6 +283,30 @@ class PostTrainingQuantization(Algorithm):
         quantized_model, _ = self._dfs_quantize_models(model_copy, graph, dataset, statistic_points, 0)
         return quantized_model
 
+    def collect_dataitems_for_children_models(
+        self, engine, result_names, calibration_dataset, subset_size, model_cnt
+    ) -> Iterable[DataItem]:
+        """
+        Returns dataitems for children models of the main model.
+
+        :param model: Model to infer to collect dataitems.
+        :param calibration_dataset: Dataset is used to collect new dataitems.
+        :param subset_size: Size of dataitems to collect
+        :param model_cnt: Global model number.
+        """
+        dataset = []
+        for input_data in tqdm(
+            islice(calibration_dataset.get_inference_data(), subset_size),
+            total=subset_size,
+            desc=f"Collect dataset for children models of {model_cnt} model:",
+        ):
+            results = engine.infer(input_data)
+            data_item = []
+            for result_name in result_names:
+                data_item.append(results[result_name])
+            dataset.append(tuple(data_item))
+        return dataset
+
     def _dfs_quantize_models(
         self,
         parent_model: TModel,
@@ -287,9 +316,12 @@ class PostTrainingQuantization(Algorithm):
         parent_model_cnt: int,
     ) -> Tuple[TModel, int]:
         if not self._backend_entity.is_single_model(parent_model):
-            parent_model_with_additional_outputs = self._backend_entity.add_additional_outputs(parent_model)
-            dataitems = self._backend_entity.collect_dataitems_for_children_models(
-                parent_model_with_additional_outputs, parent_dataset, self.subset_size, parent_model_cnt
+            parent_model_with_additional_outputs, result_names = self._backend_entity.add_additional_outputs(
+                parent_model
+            )
+            engine = factory.EngineFactory.create(parent_model_with_additional_outputs)
+            dataitems = self.collect_dataitems_for_children_models(
+                engine, result_names, parent_dataset, self.subset_size, parent_model_cnt
             )
             global_model_cnt = parent_model_cnt
             for child_model, backend_params in self._backend_entity.get_child_models(parent_model):

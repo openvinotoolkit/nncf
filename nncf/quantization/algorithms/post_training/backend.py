@@ -22,20 +22,6 @@ from nncf.quantization.algorithms.post_training.algorithm import TModel
 class PostTrainingBackend(ABC):
     @staticmethod
     @abstractmethod
-    def collect_dataitems_for_children_models(
-        model: TModel, calibration_dataset: Dataset, subset_size: int, model_cnt: int
-    ) -> Iterable[DataItem]:
-        """
-        Returns dataitems for children models of the main model.
-
-        :param model: Model to infer to collect dataitems.
-        :param calibration_dataset: Dataset is used to collect new dataitems.
-        :param subset_size: Size of dataitems to collect
-        :param model_cnt: Global model number.
-        """
-
-    @staticmethod
-    @abstractmethod
     def make_dataset_for_child_models(dataitems: Iterable[DataItem], backend_params: Dict[str, Any]) -> Dataset:
         """
         Return dataset for child models.
