@@ -105,7 +105,7 @@ class Command:
             print("Process returncode = " + str(returncode))
             if returncode not in (-11, 139):  # return codes for SIGSEGV)
                 break
-            if retries_on_segfault > 0:
+            if retries_on_segfault > 0 and i < retries_on_segfault:
                 print(f"Process ended with a segfault, retrying - attempt {i + 1} of {retries_on_segfault}")
 
         if assert_returncode_zero:
