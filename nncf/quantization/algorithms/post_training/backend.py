@@ -22,16 +22,6 @@ from nncf.quantization.algorithms.post_training.algorithm import TModel
 class PostTrainingBackend(ABC):
     @staticmethod
     @abstractmethod
-    def make_dataset_for_child_models(dataitems: Iterable[DataItem], backend_params: Dict[str, Any]) -> Dataset:
-        """
-        Return dataset for child models.
-
-        :param dataitems: Data items to collect into dataset.
-        :param backend_params: Backend-specific parameters.
-        """
-
-    @staticmethod
-    @abstractmethod
     def is_single_model(model: TModel) -> bool:
         """
         Chechks whether a model has inner subgraphs to quantize.

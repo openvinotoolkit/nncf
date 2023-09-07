@@ -27,7 +27,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
-from nncf.data.dataset import DataItem
+from nncf.data.dataset import ModelInput
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -284,8 +284,8 @@ class PostTrainingQuantization(Algorithm):
         return quantized_model
 
     def collect_dataitems_for_children_models(
-        self, engine, result_names, calibration_dataset, subset_size, model_cnt
-    ) -> Iterable[DataItem]:
+        self, engine, calibration_dataset, subset_size, model_cnt
+    ) -> Iterable[Dict[str, ModelInput]]:
         """
         Returns dataitems for children models of the main model.
 
@@ -300,12 +300,25 @@ class PostTrainingQuantization(Algorithm):
             total=subset_size,
             desc=f"Collect dataset for children models of {model_cnt} model:",
         ):
-            results = engine.infer(input_data)
-            data_item = []
-            for result_name in result_names:
-                data_item.append(results[result_name])
-            dataset.append(tuple(data_item))
+            dataset.append(engine.infer(input_data))
         return dataset
+
+    def _make_transform_fn(self, input_names):
+        def transform_fn(data_item):
+            inputs = []
+            for input_name in input_names:
+                inputs.append(data_item[input_name])
+            return tuple(inputs)
+
+        return transform_fn
+
+    def make_dataset_for_child_models(
+        self,
+        dataitems: Iterable[Dict[str, ModelInput]],
+        input_names,
+    ) -> Dataset:
+        transform_fn = self._make_transform_fn(input_names)
+        return Dataset(dataitems, transform_fn)
 
     def _dfs_quantize_models(
         self,
@@ -316,16 +329,14 @@ class PostTrainingQuantization(Algorithm):
         parent_model_cnt: int,
     ) -> Tuple[TModel, int]:
         if not self._backend_entity.is_single_model(parent_model):
-            parent_model_with_additional_outputs, result_names = self._backend_entity.add_additional_outputs(
-                parent_model
-            )
+            parent_model_with_additional_outputs = self._backend_entity.add_additional_outputs(parent_model)
             engine = factory.EngineFactory.create(parent_model_with_additional_outputs)
             dataitems = self.collect_dataitems_for_children_models(
-                engine, result_names, parent_dataset, self.subset_size, parent_model_cnt
+                engine, parent_dataset, self.subset_size, parent_model_cnt
             )
             global_model_cnt = parent_model_cnt
-            for child_model, backend_params in self._backend_entity.get_child_models(parent_model):
-                child_dataset = self._backend_entity.make_dataset_for_child_models(dataitems, **backend_params)
+            for child_model, input_names, backend_params in self._backend_entity.get_child_models(parent_model):
+                child_dataset = self.make_dataset_for_child_models(dataitems, input_names)
 
                 child_q_model, model_cnt = self._dfs_quantize_models(
                     child_model, NNCFGraphFactory.create(child_model), child_dataset, None, global_model_cnt + 1

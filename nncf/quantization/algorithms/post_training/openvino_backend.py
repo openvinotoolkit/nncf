@@ -22,16 +22,6 @@ from nncf.data.dataset import DataItem
 from nncf.quantization.algorithms.post_training.backend import PostTrainingBackend
 
 
-def _make_transform_fn(input_descriptions):
-    def transform_fn(data_item):
-        inputs = []
-        for desc in input_descriptions:
-            inputs.append(data_item[desc.input_index])
-        return tuple(inputs)
-
-    return transform_fn
-
-
 def _add_results(model: ov.Model, node: ov.Node) -> Tuple[ov.Model, List[str]]:
     extra_model_outputs = []
     result_names = []
@@ -63,17 +53,6 @@ class OVPostTrainingBackend(PostTrainingBackend):
     IF_OP_MODEL_INPUT_PORTS = (0, 1)
 
     @staticmethod
-    def make_dataset_for_child_models(
-        dataitems: Iterable[DataItem],
-        if_op: ov.Node,
-        if_op_model_input_port_id: int,
-    ) -> Dataset:
-        assert if_op.get_type_name() == "If"
-        input_name = if_op.get_input_descriptions(if_op_model_input_port_id)
-        transform_fn = _make_transform_fn(input_name)
-        return Dataset(dataitems, transform_fn)
-
-    @staticmethod
     def is_single_model(model: ov.Model) -> bool:
         for op in model.get_ops():
             if op.get_type_name() == "If":
@@ -86,7 +65,18 @@ class OVPostTrainingBackend(PostTrainingBackend):
         for op in model.get_ops():
             if op.get_type_name() == "If":
                 for port_id in OVPostTrainingBackend.IF_OP_MODEL_INPUT_PORTS:
-                    child_models.append((op.get_function(port_id), {"if_op": op, "if_op_model_input_port_id": port_id}))
+                    input_indices = [desc.input_index for desc in op.get_input_descriptions(port_id)]
+                    input_names = [op.input_values()[index].any_name for index in input_indices]
+                    child_models.append(
+                        (
+                            op.get_function(port_id),
+                            input_names,
+                            {
+                                "if_op": op,
+                                "if_op_model_input_port_id": port_id,
+                            },
+                        )
+                    )
         return child_models
 
     @staticmethod
@@ -95,7 +85,7 @@ class OVPostTrainingBackend(PostTrainingBackend):
             if op.get_type_name() == "If":
                 # TODO: fix adding multiple IF
                 model_with_additional_results, result_names = _add_results(model, op)
-        return model_with_additional_results, result_names
+        return model_with_additional_results
 
     @staticmethod
     def set_child_model(child_model: ov.Model, if_op: ov.Node, if_op_model_input_port_id: int) -> None:
