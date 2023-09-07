@@ -12,7 +12,6 @@
 from collections import defaultdict
 from typing import Dict
 
-import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.graph.graph import NNCFGraph

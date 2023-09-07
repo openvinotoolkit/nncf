@@ -11,7 +11,6 @@
 
 from typing import Any, Optional, Tuple
 
-import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph

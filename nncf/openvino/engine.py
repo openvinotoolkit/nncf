@@ -15,7 +15,6 @@ import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.engine import Engine
-from nncf.common.tensor import NNCFTensor
 from nncf.openvino.tensor import OVNNCFTensor
 from nncf.parameters import TargetDevice
 
