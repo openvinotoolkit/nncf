@@ -15,6 +15,7 @@ from abc import abstractmethod
 import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
+from openvino.runtime import opset12
 
 from nncf.common.utils.registry import Registry
 
@@ -635,5 +636,37 @@ class UnifiedEmbeddingModel(OVReferenceModel):
         matmul_2 = opset.matmul(concat_1, matmul_2_data, transpose_a=False, transpose_b=True, name="MatMul_2")
 
         result = opset.result(matmul_2, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+@SYNTHETIC_MODELS.register()
+class GroupNormalizationModel(OVReferenceModel):
+    def _create_ov_model(self):
+        groups_num = 2
+        channels = 4
+        input_1 = opset.parameter([1, groups_num, 3, 4, 4], name="Input_1")
+
+        kernel = self._rng.random((channels, groups_num, 3, 3, 3)).astype(np.float32)
+        strides = [1, 1, 1]
+        pads = [0, 0, 0]
+        dilations = [1, 1, 1]
+        conv = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
+        bias = opset.constant(np.zeros((1, 1, 3, 1, 1)), dtype=np.float32, name="Bias")
+        conv_add = opset.add(conv, bias, name="Conv_Add")
+
+        scale = self._rng.random(channels).astype(np.float32)
+        bias = self._rng.random(channels).astype(np.float32)
+        group_norm = opset12.group_normalization(conv_add, scale, bias, num_groups=channels, epsilon=1e-5)
+
+        relu = opset.relu(group_norm, name="Relu")
+
+        mean = self._rng.random((1, channels, 1, 1, 1)).astype(np.float32)
+        scale = self._rng.random((1, channels, 1, 1, 1)).astype(np.float32)
+        multiply = opset.multiply(relu, 1 / scale, name="Mul")
+        add = opset.add(multiply, (-1) * mean, name="Add")
+
+        result = opset.result(add, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model

@@ -677,6 +677,7 @@ class OVAbsMetatype(OVOpMetatype):
 class OVGroupNormalizationMetatype(OVOpMetatype):
     name = "GroupNormalizationOp"
     op_names = ["GroupNormalization"]
+    hw_config_names = [HWConfigOpName.GROUPNORMALIZATION]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

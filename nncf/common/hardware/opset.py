@@ -57,3 +57,4 @@ class HWConfigOpName:
     GELU = "Gelu"
     LSTMSEQUENCE = "LSTMSequence"
     GRUSEQUENCE = "GRUSequence"
+    GROUPNORMALIZATION = "GroupNormalization"
