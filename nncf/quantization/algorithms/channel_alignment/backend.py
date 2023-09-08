@@ -133,3 +133,14 @@ class ChannelAlignmentAlgoBackend:
         :param value: Value to fill bias constant array.
         :return: Bias value constant array filled by given value.
         """
+
+    @staticmethod
+    @abstractmethod
+    def get_channel_agnostic_reduction_shape(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
+        """
+        Returns filtered reduction shape without axes that corresponds channels.
+
+        :param channel_axes: List of the channel axes.
+        :param shape: Shape that need to be filtered.
+        :return: Reduction shape in tuple format.
+        """

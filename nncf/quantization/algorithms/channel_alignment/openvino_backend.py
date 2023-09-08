@@ -29,6 +29,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.openvino.graph.node_utils import create_bias_tensor
 from nncf.openvino.graph.node_utils import get_bias_value
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -101,3 +102,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     @staticmethod
     def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
         return create_bias_tensor(node, nncf_graph, value)
+
+    @staticmethod
+    def get_channel_agnostic_reduction_shape(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
+        return get_channel_agnostic_reduction_shape(channel_axes=channel_axis, shape=shape)

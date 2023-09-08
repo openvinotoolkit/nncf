@@ -71,7 +71,7 @@ class OVLayerAttributes(BaseLayerAttributes):
 
 
 def get_weighted_layer_attributes(
-    ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: Dict[str, Any]
+    ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: Dict[int, Any]
 ) -> WeightedLayerAttributes:
     """
     Funciton retrieves common layer attributes from the given node.

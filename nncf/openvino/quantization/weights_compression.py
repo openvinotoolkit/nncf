@@ -18,6 +18,7 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph.layer_attributes import LayoutElem
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
@@ -57,7 +58,8 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
                 continue
 
             weight = get_const_value(weight_node)
-            axes = _get_reduction_axes(metatype, node, const_port_id)
+            weight_shape = weight_node.get_output_shape(0)
+            axes = _get_reduction_axes(metatype, node, const_port_id, weight_shape)
             min_values = np.min(weight, axis=axes, keepdims=True)
             max_values = np.max(weight, axis=axes, keepdims=True)
 
@@ -78,18 +80,25 @@ def insert_pre_compression_operations(model: ov.Model, bits: int = 8) -> None:
                 target_input.replace_source_output(mul.output(0))
 
 
-def _get_reduction_axes(metatype: Type[OperatorMetatype], node: ov.Node, weight_port_id: int) -> Union[int, Tuple[int]]:
+def _get_reduction_axes(
+    metatype: Type[OperatorMetatype], node: ov.Node, weight_port_id: int, weight_shape: ov.Shape
+) -> Union[int, Tuple[int]]:
     """
     Determines reduction axes by given metatype and node information.
 
     :param metatype: The metatype of the operator.
     :param node: The OpenVINO node.
     :param weight_port_id: The weight port ID.
+    :param weight_shape: Shape of the target node weight.
 
     :return: The reduction axes as an integer or a tuple of integers.
     """
     if metatype is OVMatMulMetatype:
-        layer_attributes = node.layer_attributes.get_backend_agnostic_attributes()
+        transpose = node.get_attributes()[f"transpose_{'a' if weight_port_id == 0 else 'b'}"]
+        constant_attributes = {weight_port_id: {"shape": weight_shape, "transpose": transpose}}
+        layer_attributes = get_weighted_layer_attributes(
+            ov_node=node, ov_metatype=OVMatMulMetatype, constant_attributes=constant_attributes
+        )
         assert isinstance(layer_attributes, LinearLayerAttributes)
         axes = tuple(idx for idx, elem in enumerate(layer_attributes.weights_layout) if elem == LayoutElem.C_IN)
     elif metatype is OVEmbeddingMetatype:

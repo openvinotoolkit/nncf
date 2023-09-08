@@ -29,7 +29,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
@@ -392,7 +391,9 @@ class ChannelAlignment(Algorithm):
 
             channel_axis = conv_in.metatype.output_channel_axis
             activation_shape = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
-            reduction_shape = get_channel_agnostic_reduction_shape([channel_axis], activation_shape)
+            reduction_shape = self._backend_entity.get_channel_agnostic_reduction_shape(
+                [channel_axis], activation_shape
+            )
 
             statistic_collector = self._backend_entity.get_statistic_collector(
                 tuple(reduction_shape), self._quantile, self.subset_size, self.inplace_statistics
