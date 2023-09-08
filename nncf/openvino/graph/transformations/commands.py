@@ -14,6 +14,7 @@ from typing import List
 import numpy as np
 import openvino.runtime as ov
 
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -195,9 +196,7 @@ class OVMultiplyInsertionCommand(OVInsertionCommand):
 
 
 class OVUpdateIfSubgraphCommand(TransformationCommand):
-    """
-    Inserts bias for the corresponding node.
-    """
+    """ """
 
     def __init__(self, target_point: OVTargetPoint, subgraph_model: ov.Model):
         """
@@ -206,6 +205,23 @@ class OVUpdateIfSubgraphCommand(TransformationCommand):
         """
         super().__init__(TransformationType.CHANGE, target_point)
         self.subgraph_model = subgraph_model
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVExtractIfSubgraphCommand(Command):
+    """ """
+
+    def __init__(self, if_node: NNCFNode, child_model_port_id: int):
+        """
+        :param target_point: The TargetPoint instance for the insertion that contains layer's information.
+        :param bias_value: Constant value for the bias layer.
+        """
+        super().__init__(TransformationType.EXTRACT)
+        self.if_node = if_node
+        self.child_model_port_id = child_model_port_id
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

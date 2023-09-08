@@ -14,6 +14,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.post_training.algorithm import TModel
@@ -27,34 +28,8 @@ class PostTrainingBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_child_models(model: TModel) -> List[Tuple[TModel, Dict[str, Any]]]:
-        """
-        Returns all child models of passed model.
-
-        :param model: Model to seek for child models.
-        :return: Models with backend specific parameters.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def add_additional_outputs(model: TModel) -> TModel:
-        """
-        Returns the model with additional outputs to collect statistics for child models.
-
-        :param model: Model to update.
-        :return: Updated model with extra outputs.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def dump_model(model: TModel, dir: Path, backend_params: Dict[str, Any]) -> None:
-        """
-        Save a model to a directory. Backend params are used to determine the model name to dump.
-
-        :param model: Model to dump.
-        :param dir: Directory path.
-        :param backend_params: Backend specific parameters.
-        """
+    def get_if_node_input_names(model: TModel, if_node: NNCFNode, subgraph_port_id: int) -> str:
+        """ """
 
     @staticmethod
     @abstractmethod
@@ -68,11 +43,21 @@ class PostTrainingBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
-        """
+    def create_extract_if_subgraph_command(if_node, port_id):
+        """ """
 
-        :param target_type:
-        :param target_node_name:
-        :param port_id:
-        :return:
+    @staticmethod
+    @abstractmethod
+    def create_output_insertion_commands(model, if_node):
+        """"""
+
+    @staticmethod
+    @abstractmethod
+    def dump_model(model: TModel, dir: Path, backend_params: Dict[str, Any]) -> None:
+        """
+        Save a model to a directory. Backend params are used to determine the model name to dump.
+
+        :param model: Model to dump.
+        :param dir: Directory path.
+        :param backend_params: Backend specific parameters.
         """

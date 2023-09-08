@@ -319,6 +319,24 @@ class PostTrainingQuantization(Algorithm):
             return False
         return True
 
+    def _extract_if_subgraph(self, model_transformer, if_node, child_model_port_id):
+        transformation_layout = TransformationLayout()
+        command = self._backend_entity.create_extract_if_subgraph_command(if_node, child_model_port_id)
+        transformation_layout.register(command)
+        return model_transformer.transform(transformation_layout)
+
+    def _update_subgraph_model(self, model_transformer, if_node, child_model_port_id, child_q_model):
+        transformation_layout = TransformationLayout()
+        command = self._backend_entity.create_update_subgraph_command(if_node, child_model_port_id, child_q_model)
+        transformation_layout.register(command)
+        return model_transformer.transform(transformation_layout)
+
+    def _add_additional_outputs(self, model_transformer, parent_model, if_node):
+        transformation_layout = TransformationLayout()
+        for command in self._backend_entity.create_output_insertion_commands(parent_model, if_node):
+            transformation_layout.register(command)
+        return model_transformer.transform(transformation_layout)
+
     def _dfs_quantize_models(
         self,
         parent_model: TModel,
@@ -332,18 +350,19 @@ class PostTrainingQuantization(Algorithm):
 
             global_model_cnt = parent_model_cnt
             for if_node in parent_graph.get_nodes_by_metatypes([self._backend_entity.if_node_metatype]):
-                for child_model_port_id, (child_model, child_model_input_names) in enumerate(
-                    self._backend_entity.get_child_models(parent_model, if_node)
-                ):
+                if_subgraphs_ports = (0, 1)
+                for child_model_port_id in if_subgraphs_ports:
                     model_cnt = global_model_cnt + 1
-                    if_input_name = self._backend_entity.get_if_input_name(parent_model, if_node)
-                    parent_model_with_additional_outputs = self._backend_entity.add_additional_outputs(
-                        parent_model, if_node
+                    child_model = self._extract_if_subgraph(model_transformer, if_node, child_model_port_id)
+                    if_input_name, child_model_input_names = self._backend_entity.get_if_node_input_names(
+                        parent_model, if_node, child_model_port_id
                     )
-                    engine = factory.EngineFactory.create(parent_model_with_additional_outputs)
+                    parent_model_with_additional_outputs = self._add_additional_outputs(
+                        model_transformer, parent_model, if_node
+                    )
 
                     child_dataset = self.make_dataset_for_child_model(
-                        engine,
+                        factory.EngineFactory.create(parent_model_with_additional_outputs),
                         parent_dataset,
                         child_model_input_names,
                         if_input_name,
@@ -357,13 +376,9 @@ class PostTrainingQuantization(Algorithm):
                     global_model_cnt = model_cnt
 
                     nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
-                    transformation_layout = TransformationLayout()
-                    target_point = self._backend_entity.target_point(
-                        TargetType.LAYER, if_node.node_name, child_model_port_id
+                    parent_model = self._update_subgraph_model(
+                        model_transformer, if_node, child_model_port_id, child_q_model
                     )
-                    command = self._backend_entity.create_update_subgraph_command(target_point, child_q_model)
-                    transformation_layout.register(command)
-                    parent_model = model_transformer.transform(transformation_layout)
                     if self.intermediate_model_dir:
                         nncf_logger.info(
                             f"Save quantized model number {model_cnt} to dir {self.intermediate_model_dir}"
