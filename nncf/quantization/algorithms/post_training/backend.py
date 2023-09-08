@@ -12,11 +12,10 @@
 from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import Command
 from nncf.quantization.algorithms.post_training.algorithm import TModel
 
 
@@ -28,27 +27,22 @@ class PostTrainingBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_if_node_input_names(model: TModel, if_node: NNCFNode, subgraph_port_id: int) -> str:
+    def get_if_node_input_names(model: TModel, if_node: NNCFNode, subgraph_port_id: int) -> Tuple[str]:
         """ """
 
     @staticmethod
     @abstractmethod
-    def create_update_subgraph_command(target_point, subgraph_model):
-        """
-
-        :param target_point:
-        :param subgraph_model:
-        :return:
-        """
-
-    @staticmethod
-    @abstractmethod
-    def create_extract_if_subgraph_command(if_node, port_id):
+    def create_update_subgraph_command(if_node: NNCFNode, if_submodel_port_id: int, subgraph_model: TModel) -> Command:
         """ """
 
     @staticmethod
     @abstractmethod
-    def create_output_insertion_commands(model, if_node):
+    def create_extract_if_subgraph_command(if_node: NNCFNode, if_submodel_port_id: int) -> Command:
+        """ """
+
+    @staticmethod
+    @abstractmethod
+    def create_output_insertion_commands(model: TModel, if_node: NNCFNode) -> Command:
         """"""
 
     @staticmethod

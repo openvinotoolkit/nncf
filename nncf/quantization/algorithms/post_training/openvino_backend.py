@@ -9,13 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from itertools import islice
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import List, Tuple
 
 import openvino.runtime as ov
-from openvino.runtime import opset9 as opset
-from tqdm import tqdm
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
@@ -35,7 +32,7 @@ class OVPostTrainingBackend(PostTrainingBackend):
         return OVIfMetatype
 
     @staticmethod
-    def get_if_node_input_names(model: ov.Model, if_node: NNCFNode, subgraph_port_id: int) -> str:
+    def get_if_node_input_names(model: ov.Model, if_node: NNCFNode, subgraph_port_id: int) -> Tuple[str]:
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
         input_indices = [desc.input_index for desc in ov_node.get_input_descriptions(subgraph_port_id)]
@@ -43,16 +40,18 @@ class OVPostTrainingBackend(PostTrainingBackend):
         return ov_node.input_values()[0].any_name, input_names
 
     @staticmethod
-    def create_update_subgraph_command(if_node, child_model_port_id, subgraph_model):
-        target_point = OVTargetPoint(TargetType.LAYER, if_node.node_name, child_model_port_id)
+    def create_update_subgraph_command(
+        if_node: NNCFNode, if_submodel_port_id: int, subgraph_model: ov.Model
+    ) -> OVUpdateIfSubgraphCommand:
+        target_point = OVTargetPoint(TargetType.LAYER, if_node.node_name, if_submodel_port_id)
         return OVUpdateIfSubgraphCommand(target_point, subgraph_model)
 
     @staticmethod
-    def create_extract_if_subgraph_command(if_node, child_model_port_id):
-        return OVExtractIfSubgraphCommand(if_node, child_model_port_id)
+    def create_extract_if_subgraph_command(if_node: NNCFNode, if_submodel_port_id: int) -> OVExtractIfSubgraphCommand:
+        return OVExtractIfSubgraphCommand(if_node, if_submodel_port_id)
 
     @staticmethod
-    def create_output_insertion_commands(model, if_node):
+    def create_output_insertion_commands(model: ov.Model, if_node: NNCFNode) -> List[OVOutputInsertionCommand]:
         commands = []
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]

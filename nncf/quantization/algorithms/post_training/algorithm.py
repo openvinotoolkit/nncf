@@ -9,9 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 from itertools import islice
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
+from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
 from tqdm import tqdm
 
@@ -22,8 +21,9 @@ from nncf.common.engine import Engine
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
@@ -31,7 +31,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
-from nncf.data.dataset import ModelInput
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -256,7 +255,7 @@ class PostTrainingQuantization(Algorithm):
         self._set_backend_entity(model)
         if self._is_single_model(graph, self._backend_entity.if_node_metatype):
             return self._apply(model_copy, graph, statistic_points, dataset)
-        nncf_logger.info("The model consists of child submodels. The iteratively each submodel will be quantized.")
+        nncf_logger.info("The model has If operations. The iteratively each body of If operations will be quantized.")
         quantized_model, _ = self._dfs_quantize_models(model_copy, graph, dataset, statistic_points, 0)
         return quantized_model
 
@@ -268,14 +267,9 @@ class PostTrainingQuantization(Algorithm):
         if_input_name: str,
         child_model_port_id: int,
         model_cnt: int,
-    ) -> Iterable[Dict[str, ModelInput]]:
+    ) -> Dataset:
         """
-        Returns dataitems for children models of the main model.
-
-        :param model: Model to infer to collect dataitems.
-        :param calibration_dataset: Dataset is used to collect new dataitems.
-        :param subset_size: Size of dataitems to collect
-        :param model_cnt: Global model number.
+        Returns Dataset for child model.
         """
         dataset = []
         calibration_dataset_size = min(self.subset_size, calibration_dataset.get_length())
@@ -293,7 +287,7 @@ class PostTrainingQuantization(Algorithm):
         transform_fn = self._make_transform_fn(input_names)
         return Dataset(dataset, transform_fn)
 
-    def _make_transform_fn(self, input_names):
+    def _make_transform_fn(self, input_names: List[str]):
         def transform_fn(data_item):
             inputs = []
             for input_name in input_names:
@@ -302,26 +296,30 @@ class PostTrainingQuantization(Algorithm):
 
         return transform_fn
 
-    def _is_single_model(self, nncf_graph: NNCFGraph, if_node_metatype: OperatorMetatype):
+    def _is_single_model(self, nncf_graph: NNCFGraph, if_node_metatype: OperatorMetatype) -> bool:
         if nncf_graph.get_nodes_by_metatypes([if_node_metatype]):
             return False
         return True
 
-    def _extract_if_subgraph(self, model_transformer, if_node, child_model_port_id):
+    def _extract_if_submodel(
+        self, model_transformer: ModelTransformer, if_node: NNCFNode, if_submodel_port_id: int
+    ) -> TModel:
         transformation_layout = TransformationLayout()
-        command = self._backend_entity.create_extract_if_subgraph_command(if_node, child_model_port_id)
+        command = self._backend_entity.create_extract_if_subgraph_command(if_node, if_submodel_port_id)
         transformation_layout.register(command)
         return model_transformer.transform(transformation_layout)
 
-    def _update_subgraph_model(self, model_transformer, if_node, child_model_port_id, child_q_model):
+    def _update_submodel(
+        self, model_transformer: ModelTransformer, if_node: NNCFNode, if_submodel_port_id: int, submodel: TModel
+    ) -> TModel:
         transformation_layout = TransformationLayout()
-        command = self._backend_entity.create_update_subgraph_command(if_node, child_model_port_id, child_q_model)
+        command = self._backend_entity.create_update_subgraph_command(if_node, if_submodel_port_id, submodel)
         transformation_layout.register(command)
         return model_transformer.transform(transformation_layout)
 
-    def _add_additional_outputs(self, model_transformer, parent_model, if_node):
+    def _add_additional_outputs(self, model_transformer: ModelTransformer, model: TModel, if_node: NNCFNode) -> TModel:
         transformation_layout = TransformationLayout()
-        for command in self._backend_entity.create_output_insertion_commands(parent_model, if_node):
+        for command in self._backend_entity.create_output_insertion_commands(model, if_node):
             transformation_layout.register(command)
         return model_transformer.transform(transformation_layout)
 
@@ -338,12 +336,11 @@ class PostTrainingQuantization(Algorithm):
 
             global_model_cnt = parent_model_cnt
             for if_node in parent_graph.get_nodes_by_metatypes([self._backend_entity.if_node_metatype]):
-                if_subgraphs_ports = (0, 1)
-                for child_model_port_id in if_subgraphs_ports:
+                for if_submodel_port_id in (0, 1):
                     model_cnt = global_model_cnt + 1
-                    child_model = self._extract_if_subgraph(model_transformer, if_node, child_model_port_id)
+                    child_model = self._extract_if_submodel(model_transformer, if_node, if_submodel_port_id)
                     if_input_name, child_model_input_names = self._backend_entity.get_if_node_input_names(
-                        parent_model, if_node, child_model_port_id
+                        parent_model, if_node, if_submodel_port_id
                     )
                     parent_model_with_additional_outputs = self._add_additional_outputs(
                         model_transformer, parent_model, if_node
@@ -354,25 +351,25 @@ class PostTrainingQuantization(Algorithm):
                         parent_dataset,
                         child_model_input_names,
                         if_input_name,
-                        child_model_port_id,
+                        if_submodel_port_id,
                         model_cnt,
                     )
 
-                    child_q_model, model_cnt = self._dfs_quantize_models(
+                    child_quantized_model, model_cnt = self._dfs_quantize_models(
                         child_model, NNCFGraphFactory.create(child_model), child_dataset, None, model_cnt
                     )
                     global_model_cnt = model_cnt
 
                     nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
-                    parent_model = self._update_subgraph_model(
-                        model_transformer, if_node, child_model_port_id, child_q_model
+                    parent_model = self._update_submodel(
+                        model_transformer, if_node, if_submodel_port_id, child_quantized_model
                     )
                     if self.intermediate_model_dir:
                         nncf_logger.info(
                             f"Save quantized model number {model_cnt} to dir {self.intermediate_model_dir}"
                         )
                         self._backend_entity.dump_model(
-                            child_q_model, self.intermediate_model_dir, if_node, child_model_port_id
+                            child_quantized_model, self.intermediate_model_dir, if_node, if_submodel_port_id
                         )
 
         nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
