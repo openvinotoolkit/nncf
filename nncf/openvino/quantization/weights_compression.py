@@ -15,13 +15,14 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 
+from nncf.common.graph.layer_attributes import LayoutElem
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const_op
 from nncf.openvino.graph.node_utils import get_const_value
-from nncf.openvino.graph.node_utils import get_matmul_channel_axes
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
 
@@ -88,10 +89,9 @@ def _get_reduction_axes(metatype: Type[OperatorMetatype], node: ov.Node, weight_
     :return: The reduction axes as an integer or a tuple of integers.
     """
     if metatype is OVMatMulMetatype:
-        transpose = node.get_attributes()[f"transpose_{'a' if weight_port_id == 0 else 'b'}"]
-        ndims = node.input(weight_port_id).get_partial_shape().rank.get_max_length()
-        channel_axes = get_matmul_channel_axes(weight_port_id, ndims, transpose)
-        axes = tuple(i for i in range(ndims) if i not in channel_axes)
+        layer_attributes = node.layer_attributes.get_backend_agnostic_attributes()
+        assert isinstance(layer_attributes, LinearLayerAttributes)
+        axes = tuple(idx for idx, elem in enumerate(layer_attributes.weights_layout) if elem == LayoutElem.C_IN)
     elif metatype is OVEmbeddingMetatype:
         axes = (metatype.const_channel_axis[0] + 1) % 2
     else:

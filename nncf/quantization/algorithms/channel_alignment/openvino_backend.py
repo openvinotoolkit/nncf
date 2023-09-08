@@ -9,20 +9,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional, Tuple
+from typing import Any, Tuple
 
 import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
@@ -39,7 +37,6 @@ from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
-from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
@@ -102,5 +99,5 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return bias_constant is not None
 
     @staticmethod
-    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any)-> np.ndarray:
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
         return create_bias_tensor(node, nncf_graph, value)

@@ -17,6 +17,8 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import LayoutElem
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
@@ -310,7 +312,7 @@ def get_reducer_output_node_names(
     return [get_result_node_name(target_node_name, port_id)]
 
 
-def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
+def get_weight_channel_axes(node: NNCFNode) -> List[int]:
     """
     Returns axes numbers of the weight tensor which correspond to its channels.
 
@@ -321,35 +323,27 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
     if node.metatype not in OPERATIONS_WITH_WEIGHTS:
         raise ValueError("Channel axis cannot be defined for operation without weights.")
 
-    channel_axes = node.metatype.const_channel_axis
-    if node.metatype == OVMatMulMetatype:
-        assert isinstance(node.layer_attributes, OVLayerAttributes)
-        assert len(channel_axes) == 1
-        const_attrs = node.layer_attributes.constant_attributes[weights_port_id]
-        transpose = const_attrs["transpose"]
-        ndims = len(const_attrs["shape"])
-        channel_axes = get_matmul_channel_axes(weights_port_id, ndims, transpose)
+    if node.metatype != OVMatMulMetatype:
+        return node.metatype.const_channel_axis
 
-    return channel_axes
+    return get_matmul_channel_axes(node)
 
 
-def get_matmul_channel_axes(weights_port_id: int, ndims: int, transpose: bool) -> List[int]:
+def get_matmul_channel_axes(node: ov.Node) -> List[int]:
     """
     Calculate channel axes for the MatMul operation.
 
-    :param weights_port_id: Weight port id of the target node.
-    :param ndims: The number of MatMul dimensions.
-    :param transpose: Whether the transpose is applied to weights.
+    :param node: The target node.
     :return: List of channel axes for the MatMul operation.
     """
-    matmul_channel_axis = OVMatMulMetatype.const_channel_axis[0]
-    if (weights_port_id == 1) == transpose:
-        matmul_channel_axis -= 1
-    matmul_channel_axis = max(ndims, 2) + matmul_channel_axis
-    channel_axes = list(range(ndims - 2))
-    if matmul_channel_axis < ndims:
-        channel_axes.append(matmul_channel_axis)
-    return channel_axes
+    assert isinstance(node.layer_attributes, OVLayerAttributes)
+    layer_attributes = node.layer_attributes.get_backend_agnostic_attributes()
+    assert isinstance(layer_attributes, LinearLayerAttributes)
+    return [
+        idx
+        for idx, elem in enumerate(layer_attributes.weights_layout)
+        if elem in [LayoutElem.SPATIAL, LayoutElem.C_OUT]
+    ]
 
 
 def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[int]) -> Tuple[int]:
