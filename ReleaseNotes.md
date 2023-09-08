@@ -36,18 +36,18 @@ Compression-aware training:
   - Added shape pruning processor for BootstrapNAS algorithm.
   - Added KD loss for BootstrapNAS algorithm.
   - Added `validate_scopes` parameter for NNCF configuration.
-  - (PyTorch) Added redefined `__class__` method for ProxyModule.
-  - (PyTorch) Added dispatching bfloat along with the rest of the types for the kernels.
-  - (PyTorch) Added quantizer nodes tracing via `torch.jit.trace` without `strip` function.
-  - (PyTorch) Added support for override forward function of original model.
-  - (PyTorch) Removed deprecated `NNCFNetwork.__getattr__`, `NNCFNetwork.get_nncf_wrapped_model` methods.
+  - (PyTorch) Enabled bfloat data type for quantization kernels.
+  - (PyTorch) Quantized models can now be `torch.jit.trace`d without calling `.strip()`.
+  - (PyTorch) Added support for overridden `forward` instance attribute on model objects passed into `create_compressed_model`.
 - Fixes:
-  - (PyTorch) Fixed padding adjustment issue in elastic kernel.
-  - (PyTorch) Fixed the torch graph tracing in parallel edges scenario.
-  - (PyTorch) Fixed recurrent nodes matching (LSTM, GRU cells).
-  - (PyTorch) Fixed `torch.jit.script` wrapper to catch exceptions in the original `torch.jit.script`.
-  - (PyTorch, Tensorflow) Adjust quantizer propagation algorithm to check quantization result.
-  - (PyTorch) Fixed incorrect expanding variadic args in macros on Windows.
+  - (PyTorch) Fixed padding adjustment issue in the elastic kernel to work with the different active kernel sizes.
+  - (PyTorch) Fixed the torch graph tracing in the case the tensors belonging to parallel edges are interleaved in the order of the tensor argument.
+  - (PyTorch) Fixed recurrent nodes matching (LSTM, GRU cells) condition with the strict rule to avoid adding not necessary nodes to the ignored scope.
+  - (PyTorch) Fixed `torch.jit.script` wrapper so that user-side handling exceptions during `torch.jit.script` invocation do not cause NNCF to be permanently disabled.
+  - (PyTorch, Tensorflow) Adjusted quantizer propagation algorithm to check if quantizer propagation will result in output quantization.
+  - (PyTorch) Added redefined `__class__` method for ProxyModule that avoids causing error while calling `.super()` in forward method.
+- Deprecations/Removals:
+  - (PyTorch) Removed deprecated `NNCFNetwork.__getattr__`, `NNCFNetwork.get_nncf_wrapped_model` methods.
 - Requirements:
   - Updated PyTorch version (2.0.1).
   - Updated Tensorflow version (2.12.0).
