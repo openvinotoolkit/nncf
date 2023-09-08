@@ -25,6 +25,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVExtractIfSubgraphCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
@@ -54,6 +55,7 @@ class OVModelTransformer(ModelTransformer):
             (OVBiasInsertionCommand, self._apply_bias_insertion_transformations),
             (OVMultiplyInsertionCommand, self._apply_multiply_insertion_transformations),
             (OVUpdateIfSubgraphCommand, self._apply_update_if_op_subgraph_transformations),
+            (OVExtractIfSubgraphCommand, self._apply_extract_if_subgraph_transformation),
         ]
 
     @staticmethod
@@ -541,3 +543,12 @@ class OVModelTransformer(ModelTransformer):
             node = name_to_node_mapping[node_name]
             node.set_function(port_id, subgraph_model)
         return model
+
+    @staticmethod
+    def _apply_extract_if_subgraph_transformation(
+        model: ov.Model, transformations: List[OVExtractIfSubgraphCommand]
+    ) -> ov.Model:
+        transformation = transformations[-1]
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        ov_node = name_to_node_mapping[transformation.if_node.node_name]
+        return ov_node.get_function(transformation.child_model_port_id)
