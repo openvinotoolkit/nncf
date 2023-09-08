@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -29,6 +29,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolut
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
+from nncf.openvino.graph.node_utils import create_bias_tensor
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
@@ -146,3 +147,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         if node.layer_attributes is None:
             return None
         return node.layer_attributes.layer_attributes[1]
+
+    @staticmethod
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
+        return create_bias_tensor(node, nncf_graph, value)
