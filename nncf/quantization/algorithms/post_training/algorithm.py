@@ -18,6 +18,7 @@ from tqdm import tqdm
 from nncf import Dataset
 from nncf.common import factory
 from nncf.common.deprecation import warning_deprecated
+from nncf.common.engine import Engine
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -271,8 +272,14 @@ class PostTrainingQuantization(Algorithm):
         quantized_model, _ = self._dfs_quantize_models(model_copy, graph, dataset, statistic_points, 0)
         return quantized_model
 
-    def collect_dataitems_for_children_models(
-        self, engine, calibration_dataset, subset_size, model_cnt
+    def make_dataset_for_child_model(
+        self,
+        engine: Engine,
+        calibration_dataset: Dataset,
+        input_names: List[str],
+        if_input_name: str,
+        child_model_port_id: int,
+        model_cnt: int,
     ) -> Iterable[Dict[str, ModelInput]]:
         """
         Returns dataitems for children models of the main model.
@@ -283,13 +290,20 @@ class PostTrainingQuantization(Algorithm):
         :param model_cnt: Global model number.
         """
         dataset = []
+        calibration_dataset_size = min(self.subset_size, calibration_dataset.get_length())
         for input_data in tqdm(
-            islice(calibration_dataset.get_inference_data(), subset_size),
-            total=subset_size,
-            desc=f"Collect dataset for children models of {model_cnt} model:",
+            islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
+            total=calibration_dataset_size,
+            desc=f"Collect dataset for {model_cnt} model:",
         ):
-            dataset.append(engine.infer(input_data))
-        return dataset
+            results = engine.infer(input_data)
+            if (child_model_port_id == 0 and results[if_input_name]) or (
+                child_model_port_id == 1 and not results[if_input_name]
+            ):
+                dataset.append(results)
+        nncf_logger.info(f"The final length of a dataset for {model_cnt} model is {len(dataset)}")
+        transform_fn = self._make_transform_fn(input_names)
+        return Dataset(dataset, transform_fn)
 
     def _make_transform_fn(self, input_names):
         def transform_fn(data_item):
@@ -299,14 +313,6 @@ class PostTrainingQuantization(Algorithm):
             return tuple(inputs)
 
         return transform_fn
-
-    def make_dataset_for_child_models(
-        self,
-        dataitems: Iterable[Dict[str, ModelInput]],
-        input_names,
-    ) -> Dataset:
-        transform_fn = self._make_transform_fn(input_names)
-        return Dataset(dataitems, transform_fn)
 
     def _is_single_model(self, nncf_graph: NNCFGraph, if_node_metatype: OperatorMetatype):
         if nncf_graph.get_nodes_by_metatypes([if_node_metatype]):
@@ -324,21 +330,29 @@ class PostTrainingQuantization(Algorithm):
         if not self._is_single_model(parent_graph, self._backend_entity.if_node_metatype):
             model_transformer = factory.ModelTransformerFactory.create(parent_model)
 
-            parent_model_with_additional_outputs = self._backend_entity.add_additional_outputs(parent_model)
-            engine = factory.EngineFactory.create(parent_model_with_additional_outputs)
-
-            dataitems = self.collect_dataitems_for_children_models(
-                engine, parent_dataset, self.subset_size, parent_model_cnt
-            )  # Could be optimized? dataitems are collected for all inner subgraphs through 1 infer request, while it could be N infer requests for each inner subgraphs.
             global_model_cnt = parent_model_cnt
             for if_node in parent_graph.get_nodes_by_metatypes([self._backend_entity.if_node_metatype]):
-                for child_model_port_id, (child_model, input_names) in enumerate(
+                for child_model_port_id, (child_model, child_model_input_names) in enumerate(
                     self._backend_entity.get_child_models(parent_model, if_node)
                 ):
-                    child_dataset = self.make_dataset_for_child_models(dataitems, input_names)
+                    model_cnt = global_model_cnt + 1
+                    if_input_name = self._backend_entity.get_if_input_name(parent_model, if_node)
+                    parent_model_with_additional_outputs = self._backend_entity.add_additional_outputs(
+                        parent_model, if_node
+                    )
+                    engine = factory.EngineFactory.create(parent_model_with_additional_outputs)
+
+                    child_dataset = self.make_dataset_for_child_model(
+                        engine,
+                        parent_dataset,
+                        child_model_input_names,
+                        if_input_name,
+                        child_model_port_id,
+                        model_cnt,
+                    )
 
                     child_q_model, model_cnt = self._dfs_quantize_models(
-                        child_model, NNCFGraphFactory.create(child_model), child_dataset, None, global_model_cnt + 1
+                        child_model, NNCFGraphFactory.create(child_model), child_dataset, None, model_cnt
                     )
                     global_model_cnt = model_cnt
 

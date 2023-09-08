@@ -28,7 +28,7 @@ from nncf.openvino.graph.transformations.commands import OVUpdateIfSubgraphComma
 from nncf.quantization.algorithms.post_training.backend import PostTrainingBackend
 
 
-def _add_results(model: ov.Model, node: ov.Node) -> Tuple[ov.Model, List[str]]:
+def _add_results(model: ov.Model, node: ov.Node) -> ov.Model:
     extra_model_outputs = []
     result_names = []
     for input in node.inputs():
@@ -44,14 +44,11 @@ def _add_results(model: ov.Model, node: ov.Node) -> Tuple[ov.Model, List[str]]:
         tensor.set_names(current_names)
         result_names.append(result_name)
         extra_model_outputs.append(result)
-    return (
-        ov.Model(
-            results=extra_model_outputs,
-            sinks=[op for op in model.get_ops() if op.get_type_name() == "Assign"],
-            parameters=model.get_parameters(),
-            name=model.friendly_name,
-        ),
-        result_names,
+    return ov.Model(
+        results=extra_model_outputs,
+        sinks=[op for op in model.get_ops() if op.get_type_name() == "Assign"],
+        parameters=model.get_parameters(),
+        name=model.friendly_name,
     )
 
 
@@ -65,29 +62,25 @@ class OVPostTrainingBackend(PostTrainingBackend):
     @staticmethod
     def get_child_models(model: ov.Model, if_node: NNCFNode) -> List[Tuple[ov.Model, str]]:
         child_models = []
-        ov_node = None
-        for node in model.get_ops():
-            if node.get_friendly_name() == if_node.node_name:
-                ov_node = node
-                break
+        name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        ov_node = name_to_node_mapping[if_node.node_name]
         for port_id in OVPostTrainingBackend.IF_OP_MODEL_INPUT_PORTS:
             input_indices = [desc.input_index for desc in ov_node.get_input_descriptions(port_id)]
             input_names = [ov_node.input_values()[index].any_name for index in input_indices]
-            child_models.append(
-                (
-                    ov_node.get_function(port_id),
-                    input_names,
-                )
-            )
+            child_models.append((ov_node.get_function(port_id), input_names))
         return child_models
 
     @staticmethod
-    def add_additional_outputs(model: ov.Model) -> Tuple[ov.Model, List[str]]:
-        for op in model.get_ops():
-            if op.get_type_name() == "If":
-                # TODO: fix adding multiple IF
-                model_with_additional_results, result_names = _add_results(model, op)
-        return model_with_additional_results
+    def get_if_input_name(model: ov.Model, if_node: NNCFNode) -> str:
+        name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        ov_node = name_to_node_mapping[if_node.node_name]
+        return ov_node.input_values()[0].any_name
+
+    @staticmethod
+    def add_additional_outputs(model: ov.Model, if_node: NNCFNode) -> Tuple[ov.Model, List[str]]:
+        name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        ov_node = name_to_node_mapping[if_node.node_name]
+        return _add_results(model, ov_node)
 
     @staticmethod
     def create_update_subgraph_command(target_point, subgraph_model):
