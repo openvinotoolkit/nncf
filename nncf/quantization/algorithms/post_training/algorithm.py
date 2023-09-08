@@ -260,7 +260,7 @@ class PostTrainingQuantization(Algorithm):
         quantized_model, _ = self._dfs_quantize_models(model_copy, graph, dataset, statistic_points, 0)
         return quantized_model
 
-    def make_dataset_for_child_model(
+    def _make_dataset_for_child_model(
         self,
         engine: Engine,
         calibration_dataset: Dataset,
@@ -349,7 +349,7 @@ class PostTrainingQuantization(Algorithm):
                         model_transformer, parent_model, if_node
                     )
 
-                    child_dataset = self.make_dataset_for_child_model(
+                    child_dataset = self._make_dataset_for_child_model(
                         factory.EngineFactory.create(parent_model_with_additional_outputs),
                         parent_dataset,
                         child_model_input_names,
