@@ -264,7 +264,6 @@ class PostTrainingQuantization(Algorithm):
         engine: Engine,
         calibration_dataset: Dataset,
         input_names: List[str],
-        if_input_name: str,
         child_model_port_id: int,
         model_cnt: int,
     ) -> Dataset:
@@ -272,29 +271,23 @@ class PostTrainingQuantization(Algorithm):
         Returns Dataset for child model.
         """
         dataset = []
+        if_cond_input_name = input_names[0]
         calibration_dataset_size = min(self.subset_size, calibration_dataset.get_length())
         for input_data in tqdm(
             islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
             total=calibration_dataset_size,
             desc=f"Collect dataset for {model_cnt} model:",
         ):
+            data_item = []
             results = engine.infer(input_data)
-            if (child_model_port_id == 0 and results[if_input_name]) or (
-                child_model_port_id == 1 and not results[if_input_name]
+            if (child_model_port_id == 0 and results[if_cond_input_name]) or (
+                child_model_port_id == 1 and not results[if_cond_input_name]
             ):
-                dataset.append(results)
+                for input_name in input_names[1:]:
+                    data_item.append(results[input_name])
+                dataset.append(data_item)
         nncf_logger.info(f"The final length of a dataset for {model_cnt} model is {len(dataset)}")
-        transform_fn = self._make_transform_fn(input_names)
-        return Dataset(dataset, transform_fn)
-
-    def _make_transform_fn(self, input_names: List[str]):
-        def transform_fn(data_item):
-            inputs = []
-            for input_name in input_names:
-                inputs.append(data_item[input_name])
-            return tuple(inputs)
-
-        return transform_fn
+        return Dataset(dataset)
 
     def _is_single_model(self, nncf_graph: NNCFGraph, if_node_metatype: OperatorMetatype) -> bool:
         if nncf_graph.get_nodes_by_metatypes([if_node_metatype]):
@@ -317,7 +310,9 @@ class PostTrainingQuantization(Algorithm):
         transformation_layout.register(command)
         return model_transformer.transform(transformation_layout)
 
-    def _add_additional_outputs(self, model_transformer: ModelTransformer, model: TModel, if_node: NNCFNode) -> TModel:
+    def _add_outputs_before_if_node(
+        self, model_transformer: ModelTransformer, model: TModel, if_node: NNCFNode
+    ) -> TModel:
         transformation_layout = TransformationLayout()
         for command in self._backend_entity.create_output_insertion_commands(model, if_node):
             transformation_layout.register(command)
@@ -336,13 +331,13 @@ class PostTrainingQuantization(Algorithm):
 
             global_model_cnt = parent_model_cnt
             for if_node in parent_graph.get_nodes_by_metatypes([self._backend_entity.if_node_metatype]):
-                for if_submodel_port_id in (0, 1):
+                for if_submodel_port_id in (0, 1):  # 0-True(then branch); 1-False(else branch)
                     model_cnt = global_model_cnt + 1
                     child_model = self._extract_if_submodel(model_transformer, if_node, if_submodel_port_id)
-                    if_input_name, child_model_input_names = self._backend_entity.get_if_node_input_names(
+                    child_model_input_names = self._backend_entity.get_subgraph_input_names(
                         parent_model, if_node, if_submodel_port_id
                     )
-                    parent_model_with_additional_outputs = self._add_additional_outputs(
+                    parent_model_with_additional_outputs = self._add_outputs_before_if_node(
                         model_transformer, parent_model, if_node
                     )
 
@@ -350,7 +345,6 @@ class PostTrainingQuantization(Algorithm):
                         factory.EngineFactory.create(parent_model_with_additional_outputs),
                         parent_dataset,
                         child_model_input_names,
-                        if_input_name,
                         if_submodel_port_id,
                         model_cnt,
                     )

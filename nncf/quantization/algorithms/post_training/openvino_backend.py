@@ -32,12 +32,14 @@ class OVPostTrainingBackend(PostTrainingBackend):
         return OVIfMetatype
 
     @staticmethod
-    def get_if_node_input_names(model: ov.Model, if_node: NNCFNode, subgraph_port_id: int) -> Tuple[str]:
+    def get_subgraph_input_names(model: ov.Model, if_node: NNCFNode, subgraph_port_id: int) -> List[str]:
+        input_names = []
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
+        input_names.append(ov_node.input_values()[0].any_name)
         input_indices = [desc.input_index for desc in ov_node.get_input_descriptions(subgraph_port_id)]
-        input_names = [ov_node.input_values()[index].any_name for index in input_indices]
-        return ov_node.input_values()[0].any_name, input_names
+        input_names.extend([ov_node.input_values()[index].any_name for index in input_indices])
+        return input_names
 
     @staticmethod
     def create_update_subgraph_command(

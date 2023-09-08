@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import Command
@@ -27,7 +27,7 @@ class PostTrainingBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_if_node_input_names(model: TModel, if_node: NNCFNode, subgraph_port_id: int) -> Tuple[str]:
+    def get_subgraph_input_names(model: TModel, if_node: NNCFNode, subgraph_port_id: int) -> List[str]:
         """ """
 
     @staticmethod
