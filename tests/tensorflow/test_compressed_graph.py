@@ -194,11 +194,15 @@ SKIP_MAP = {
         "nasnet_mobile": pytest.mark.skip(reason="gitlab issue #18"),
         "mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"),
         "xception": pytest.mark.skip(reason="gitlab issue #28"),
+        "retinanet": pytest.mark.skip(reason="ticket #119664"),
+        "mask_rcnn": pytest.mark.skip(reason="ticket #119664"),
     },
     "magnitude_sparsity": {
         "inception_resnet_v2": pytest.mark.skip(reason="gitlab issue #17"),
         "nasnet_mobile": pytest.mark.skip(reason="gitlab issue #18"),
         "xception": pytest.mark.skip(reason="gitlab issue #28"),
+        "retinanet": pytest.mark.skip(reason="ticket #119664"),
+        "mask_rcnn": pytest.mark.skip(reason="ticket #119664"),
     },
     "filter_pruning": {
         "densenet121": pytest.mark.skip(reason="ticket #50604"),
@@ -208,8 +212,13 @@ SKIP_MAP = {
         "mask_rcnn": pytest.mark.skip(reason="ticket #50605"),
         "resnet50v2": pytest.mark.skip(reason="Several masks on one weight"),
         "mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"),
+        "retinanet": pytest.mark.skip(reason="ticket #119664"),
     },
-    "rb_sparsity": {"mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349")},
+    "rb_sparsity": {
+        "mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"),
+        "retinanet": pytest.mark.skip(reason="ticket #119664"),
+        "mask_rcnn": pytest.mark.skip(reason="ticket #119664"),
+    },
 }
 
 
@@ -471,7 +480,8 @@ class TestModelsGraph:
 
 QUANTIZE_OUTPUTS_MODELS = [
     ModelDesc("mobilenet_v2_quantize_outputs.pb", test_models.MobileNetV2, [1, 96, 96, 3]),
-    ModelDesc("retinanet_quantize_outputs.pb", test_models.RetinaNet, [1, 603, 603, 3]),
+    # Skip this model due to #119664
+    # ModelDesc("retinanet_quantize_outputs.pb", test_models.RetinaNet, [1, 603, 603, 3]),
     ModelDesc("sequential_model_quantize_outputs.pb", test_models.SequentialModel, [1, 224, 224, 3]),
     ModelDesc("shared_layers_model_quantize_outputs.pb", test_models.SharedLayersModel, [1, 30, 30, 3]),
 ]

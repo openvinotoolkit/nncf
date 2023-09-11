@@ -196,6 +196,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return types
 
     @staticmethod
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
+        return []
+
+    @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [node for node in nncf_graph.get_all_nodes() if node.layer_attributes.has_weight()]
 
