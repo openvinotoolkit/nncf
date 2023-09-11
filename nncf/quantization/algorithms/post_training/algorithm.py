@@ -216,7 +216,7 @@ class PostTrainingQuantization(Algorithm):
             statistics_aggregator.register_statistic_points(algo_statistic_points)
             statistics_aggregator.collect_statistics(model, graph)
             model = algorithm.apply(model, graph, statistics_aggregator.statistic_points)
-            model = NNCFGraphFactory.create(model)
+            graph = NNCFGraphFactory.create(model)
 
         if statistic_points is None:
             statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
