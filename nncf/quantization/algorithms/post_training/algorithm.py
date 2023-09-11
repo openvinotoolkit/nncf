@@ -268,7 +268,8 @@ class PostTrainingQuantization(Algorithm):
         :param engine: Engine to infer parent model to obtain dataitems for a child dataset.
         :param calibration_dataset: Dataset to infer parent model.
         :param if_cond_input_name: Input name of If node condition.
-        :param child_model_input_names: - Names of inputs for child model (should be in the order of passing them to a model.)
+        :param child_model_input_names: - Names of inputs for child model
+        (should be in the order of passing them to a model).
         :param if_submodel_condition: If node submodel condition.
         :param model_cnt: Global counter of a child model.
         :return Dataset: Dataset for child model.
