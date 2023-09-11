@@ -12,7 +12,7 @@ def test_dataset():
 
 def test_dataset_with_transform_func():
     raw_data = list(range(50))
-    dataset = Dataset(raw_data, transform_func=lambda it: 2*it)
+    dataset = Dataset(raw_data, transform_func=lambda it: 2 * it)
 
     data_provider = dataset.get_inference_data()
     retrieved_data_items = list(data_provider)
@@ -30,7 +30,7 @@ def test_dataset_with_indices():
 
 def test_dataset_with_transform_func_with_indices():
     raw_data = list(range(50))
-    dataset = Dataset(raw_data, transform_func=lambda it: 2*it)
+    dataset = Dataset(raw_data, transform_func=lambda it: 2 * it)
 
     data_provider = dataset.get_inference_data(indices=list(range(0, 50, 2)))
     retrieved_data_items = list(data_provider)
