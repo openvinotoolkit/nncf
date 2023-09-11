@@ -272,6 +272,7 @@ def fixture_precision_desc(request, dataset_dir):
     return desc.finalize(dataset_dir)
 
 
+@pytest.mark.nightly
 def test_precision_init(precision_desc: PrecisionTestCaseDescriptor, tmp_path, mocker):
     validator = precision_desc.get_validator()
     args = validator.get_default_args(tmp_path)
@@ -351,6 +352,7 @@ def fixture_export_desc(request):
     return desc.finalize()
 
 
+@pytest.mark.nightly
 @pytest.mark.parametrize(
     ("extra_args", "is_export_called"),
     (({}, False), ({"-m": ["export", "train"]}, True)),
