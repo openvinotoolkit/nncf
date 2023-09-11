@@ -32,8 +32,9 @@ class OVPostTrainingBackend(PostTrainingBackend):
         return OVIfMetatype
 
     @staticmethod
-    def get_subgraph_input_names(model: ov.Model, if_node: NNCFNode, subgraph_port_id: int) -> List[str]:
+    def get_if_subgraph_input_names(model: ov.Model, if_node: NNCFNode, if_submodel_condition: bool) -> List[str]:
         input_names = []
+        subgraph_port_id = 0 if if_submodel_condition else 1
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
         input_names.append(ov_node.input_values()[0].any_name)
@@ -43,14 +44,17 @@ class OVPostTrainingBackend(PostTrainingBackend):
 
     @staticmethod
     def create_update_subgraph_command(
-        if_node: NNCFNode, if_submodel_port_id: int, subgraph_model: ov.Model
+        if_node: NNCFNode, if_submodel_condition: bool, subgraph_model: ov.Model
     ) -> OVUpdateIfSubgraphCommand:
+        if_submodel_port_id = 0 if if_submodel_condition else 1
         target_point = OVTargetPoint(TargetType.LAYER, if_node.node_name, if_submodel_port_id)
         return OVUpdateIfSubgraphCommand(target_point, subgraph_model)
 
     @staticmethod
-    def create_extract_if_subgraph_command(if_node: NNCFNode, if_submodel_port_id: int) -> OVExtractIfSubgraphCommand:
-        return OVExtractIfSubgraphCommand(if_node, if_submodel_port_id)
+    def create_extract_if_subgraph_command(
+        if_node: NNCFNode, if_submodel_condition: bool
+    ) -> OVExtractIfSubgraphCommand:
+        return OVExtractIfSubgraphCommand(if_node, if_submodel_condition)
 
     @staticmethod
     def create_output_insertion_commands(model: ov.Model, if_node: NNCFNode) -> List[OVOutputInsertionCommand]:
@@ -64,12 +68,9 @@ class OVPostTrainingBackend(PostTrainingBackend):
         return commands
 
     @staticmethod
-    def dump_model(model: ov.Model, dir: str, if_op: NNCFNode, if_op_model_input_port_id: int) -> None:
+    def dump_submodel(model: ov.Model, dir: str, if_op: NNCFNode, if_submodel_condition: bool) -> None:
         name = if_op.node_name.replace("/", "")
-        if if_op_model_input_port_id == 0:
-            postfix = "then"
-        if if_op_model_input_port_id == 1:
-            postfix = "else"
+        postfix = "then" if if_submodel_condition else "else"
         model_name = f"{name}_{postfix}.xml"
         model_path = Path(dir) / model_name
         ov.serialize(model, model_path)

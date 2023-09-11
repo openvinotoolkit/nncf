@@ -535,6 +535,13 @@ class OVModelTransformer(ModelTransformer):
     def _apply_update_if_op_subgraph_transformations(
         model: ov.Model, transformations: List[OVUpdateIfSubgraphCommand]
     ) -> ov.Model:
+        """
+        Update model subgraph for IF node.
+
+        :param model: Model to update and insert a new subgraph.
+        :param transformations: Transformations with information of If node and an updated subgraph.
+        :return: Original model with an updated subgraph.
+        """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             subgraph_model = transformation.subgraph_model
@@ -548,7 +555,17 @@ class OVModelTransformer(ModelTransformer):
     def _apply_extract_if_subgraph_transformation(
         model: ov.Model, transformations: List[OVExtractIfSubgraphCommand]
     ) -> ov.Model:
+        """
+        Extract a model subgraph from If node.
+
+        :param model: Model from which extracts a subgraph.
+        :param transformations: Transformations with information from which
+        If node and input port extract a model subgraph.
+        :return: Model subgraph.
+        """
         transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         ov_node = name_to_node_mapping[transformation.if_node.node_name]
-        return ov_node.get_function(transformation.child_model_port_id)
+        if transformation.if_submodel_condition:
+            return ov_node.get_function(0)
+        return ov_node.get_function(1)

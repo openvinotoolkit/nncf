@@ -23,35 +23,66 @@ class PostTrainingBackend(ABC):
     @property
     @abstractmethod
     def if_node_metatype(self):
-        """_summary_"""
-
-    @staticmethod
-    @abstractmethod
-    def get_subgraph_input_names(model: TModel, if_node: NNCFNode, subgraph_port_id: int) -> List[str]:
-        """ """
-
-    @staticmethod
-    @abstractmethod
-    def create_update_subgraph_command(if_node: NNCFNode, if_submodel_port_id: int, subgraph_model: TModel) -> Command:
-        """ """
-
-    @staticmethod
-    @abstractmethod
-    def create_extract_if_subgraph_command(if_node: NNCFNode, if_submodel_port_id: int) -> Command:
-        """ """
-
-    @staticmethod
-    @abstractmethod
-    def create_output_insertion_commands(model: TModel, if_node: NNCFNode) -> Command:
-        """"""
-
-    @staticmethod
-    @abstractmethod
-    def dump_model(model: TModel, dir: Path, backend_params: Dict[str, Any]) -> None:
         """
-        Save a model to a directory. Backend params are used to determine the model name to dump.
+        Property for Metatype of If node.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_if_subgraph_input_names(model: TModel, if_node: NNCFNode, if_submodel_condition: bool) -> List[str]:
+        """
+        Returns input names of sibgraph of If node.
+
+        :param model: Main Model.
+        :param if_node: If node.
+        :param if_submodel_condition: If node subgraph condition.
+        :return: Input names of subgraph.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_update_subgraph_command(
+        if_node: NNCFNode, if_submodel_condition: bool, subgraph_model: TModel
+    ) -> Command:
+        """
+        Returns command for updating If node subgraph.
+
+        :param if_node: If node.
+        :param if_submodel_condition: If node subgraph condition.
+        :param subgraph_model: Submodel to insert.
+        :return: Command
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_extract_if_subgraph_command(if_node: NNCFNode, if_submodel_condition: bool) -> Command:
+        """
+        Returns extract if subgraph command.
+
+        :param if_node: If node.
+        :param if_submodel_condition: If node submodel condition.
+        :return: Extract if subgraph command.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_output_insertion_commands(model: TModel, if_node: NNCFNode) -> List[Command]:
+        """
+        Returns output insertion commands for If node.
+
+        :param model: Main model.
+        :param if_node: If node.
+        :return: Output insertion commands.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def dump_submodel(model: TModel, dir: Path, if_op: NNCFNode, if_submodel_condition: bool) -> None:
+        """
+        Save a submodel to a directory.
 
         :param model: Model to dump.
         :param dir: Directory path.
-        :param backend_params: Backend specific parameters.
+        :param if_op: If node.
+        :param if_submodel_condition: If submodel condition.
         """
