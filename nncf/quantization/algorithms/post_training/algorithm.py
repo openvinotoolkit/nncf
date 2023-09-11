@@ -247,7 +247,7 @@ class PostTrainingQuantization(Algorithm):
         if backend in [BackendType.ONNX, BackendType.TORCH]:
             return self._apply(model_copy, graph, statistic_points, dataset)
         self._set_backend_entity(backend)
-        if self._has_if_op(graph, self._backend_entity.if_node_metatype):
+        if not self._has_if_op(graph, self._backend_entity.if_node_metatype):
             return self._apply(model_copy, graph, statistic_points, dataset)
         nncf_logger.info("The model has If operations. The iteratively each body of If operations will be quantized.")
         quantized_model, _ = self._dfs_quantize_models(model_copy, graph, dataset, statistic_points, 0)
@@ -299,8 +299,8 @@ class PostTrainingQuantization(Algorithm):
         :return: True if NNCFGraph has If node, else - otherwise.
         """
         if nncf_graph.get_nodes_by_metatypes([if_node_metatype]):
-            return False
-        return True
+            return True
+        return False
 
     def _extract_if_submodel(
         self, model_transformer: ModelTransformer, if_node: NNCFNode, if_submodel_condition: bool
@@ -368,7 +368,7 @@ class PostTrainingQuantization(Algorithm):
         :param parent_model_cnt:
         :return:
         """
-        if not self._has_if_op(parent_graph, self._backend_entity.if_node_metatype):
+        if self._has_if_op(parent_graph, self._backend_entity.if_node_metatype):
             model_transformer = factory.ModelTransformerFactory.create(parent_model)
 
             global_model_cnt = parent_model_cnt
