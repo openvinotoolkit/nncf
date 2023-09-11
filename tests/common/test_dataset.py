@@ -7,7 +7,7 @@ def test_dataset():
 
     data_provider = dataset.get_data()
     retrieved_data_items = list(data_provider)
-    assert all([raw_data[i] == retrieved_data_items[i] for i in range(len(raw_data))])
+    assert all(raw_data[i] == retrieved_data_items[i] for i in range(len(raw_data)))
 
 
 def test_dataset_with_transform_func():
@@ -16,7 +16,7 @@ def test_dataset_with_transform_func():
 
     data_provider = dataset.get_inference_data()
     retrieved_data_items = list(data_provider)
-    assert all([2 * raw_data[i] == retrieved_data_items[i] for i in range(len(raw_data))])
+    assert all(2 * raw_data[i] == retrieved_data_items[i] for i in range(len(raw_data)))
 
 
 def test_dataset_with_indices():
@@ -25,7 +25,7 @@ def test_dataset_with_indices():
 
     data_provider = dataset.get_data(indices=list(range(0, 50, 2)))
     retrieved_data_items = list(data_provider)
-    assert all([raw_data[2 * i] == retrieved_data_items[i] for i in range(len(raw_data) // 2)])
+    assert all(raw_data[2 * i] == retrieved_data_items[i] for i in range(len(raw_data) // 2))
 
 
 def test_dataset_with_transform_func_with_indices():
@@ -34,7 +34,7 @@ def test_dataset_with_transform_func_with_indices():
 
     data_provider = dataset.get_inference_data(indices=list(range(0, 50, 2)))
     retrieved_data_items = list(data_provider)
-    assert all([2 * raw_data[2 * i] == retrieved_data_items[i] for i in range(len(raw_data) // 2)])
+    assert all(2 * raw_data[2 * i] == retrieved_data_items[i] for i in range(len(raw_data) // 2))
 
 
 def test_dataset_without_length():
@@ -46,8 +46,8 @@ def test_dataset_without_length():
 
     data_provider = dataset_with_length.get_data()
     retrieved_data_items = list(data_provider)
-    assert all([raw_data[i] == retrieved_data_items[i] for i in range(len(raw_data))])
+    assert all(raw_data[i] == retrieved_data_items[i] for i in range(len(raw_data)))
 
     data_provider = dataset_without_length.get_data()
     retrieved_data_items = list(data_provider)
-    assert all([raw_data[i] == retrieved_data_items[i] for i in range(len(raw_data))])
+    assert all(raw_data[i] == retrieved_data_items[i] for i in range(len(raw_data)))
