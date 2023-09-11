@@ -31,12 +31,23 @@ class PostTrainingBackend(ABC):
     @abstractmethod
     def get_if_subgraph_input_names(model: TModel, if_node: NNCFNode, if_submodel_condition: bool) -> List[str]:
         """
-        Returns input names of sibgraph of If node.
+        Returns input names of subgraph of If node.
 
         :param model: Main Model.
         :param if_node: If node.
         :param if_submodel_condition: If node subgraph condition.
         :return: Input names of subgraph.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_if_cond_input_name(model: TModel, if_node: NNCFNode) -> str:
+        """
+        Returns input names of condition of If node.
+
+        :param model: Model.
+        :param if_node: If node.
+        :return: Name of edge.
         """
 
     @staticmethod

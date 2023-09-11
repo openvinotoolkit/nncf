@@ -257,7 +257,8 @@ class PostTrainingQuantization(Algorithm):
         self,
         engine: Engine,
         calibration_dataset: Dataset,
-        input_names: List[str],
+        if_cond_input_name: str,
+        child_model_input_names: List[str],
         if_submodel_condition: bool,
         model_cnt: int,
     ) -> Dataset:
@@ -266,13 +267,13 @@ class PostTrainingQuantization(Algorithm):
 
         :param engine: Engine to infer parent model to obtain dataitems for a child dataset.
         :param calibration_dataset: Dataset to infer parent model.
-        :param input_names: [1:] - Names of inputs for child model. 0-index - name of the If node condition.
+        :param if_cond_input_name: Input name of If node condition.
+        :param child_model_input_names: - Names of inputs for child model (should be in the order of passing them to a model.)
         :param if_submodel_condition: If node submodel condition.
         :param model_cnt: Global counter of a child model.
         :return Dataset: Dataset for child model.
         """
         dataset = []
-        if_cond_input_name = input_names[0]
         calibration_dataset_size = min(self.subset_size, calibration_dataset.get_length())
         for input_data in tqdm(
             islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
@@ -284,7 +285,7 @@ class PostTrainingQuantization(Algorithm):
             if (if_submodel_condition and results[if_cond_input_name]) or (
                 not if_submodel_condition and not results[if_cond_input_name]
             ):
-                for input_name in input_names[1:]:
+                for input_name in child_model_input_names:
                     data_item.append(results[input_name])
                 dataset.append(data_item)
         nncf_logger.info(f"The final length of a dataset for {model_cnt} model is {len(dataset)}")
@@ -379,6 +380,7 @@ class PostTrainingQuantization(Algorithm):
                     child_model_input_names = self._backend_entity.get_if_subgraph_input_names(
                         parent_model, if_node, if_submodel_condition
                     )
+                    if_cond_input_name = self._backend_entity.get_if_cond_input_name(parent_model, if_node)
                     parent_model_with_additional_outputs = self._add_outputs_before_if_node(
                         model_transformer, parent_model, if_node
                     )
@@ -386,6 +388,7 @@ class PostTrainingQuantization(Algorithm):
                     child_dataset = self._make_dataset_for_child_model(
                         factory.EngineFactory.create(parent_model_with_additional_outputs),
                         parent_dataset,
+                        if_cond_input_name,
                         child_model_input_names,
                         if_submodel_condition,
                         model_cnt,

@@ -37,10 +37,15 @@ class OVPostTrainingBackend(PostTrainingBackend):
         subgraph_port_id = 0 if if_submodel_condition else 1
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
-        input_names.append(ov_node.input_values()[0].any_name)
         input_indices = [desc.input_index for desc in ov_node.get_input_descriptions(subgraph_port_id)]
         input_names.extend([ov_node.input_values()[index].any_name for index in input_indices])
         return input_names
+
+    @staticmethod
+    def get_if_cond_input_name(model: ov.Model, if_node: NNCFNode) -> str:
+        name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        ov_node = name_to_node_mapping[if_node.node_name]
+        return ov_node.input_values()[0].any_name
 
     @staticmethod
     def create_update_subgraph_command(
