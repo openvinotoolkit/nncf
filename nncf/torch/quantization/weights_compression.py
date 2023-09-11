@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import torch
 from torch import nn
@@ -39,7 +39,7 @@ class WeightsDecompressor(nn.Module):
 
 
 def _insert_pre_compression_operations(
-    module: nn.Module, allowed_types: List, level_high: int = 255
+    module: nn.Module, allowed_types: List, level_high: int = 255, compression_hist: Dict = None
 ) -> Optional[nn.Module]:
     """
     Inserts weights compression with dequantization for layers in `allowed_types`.
@@ -47,12 +47,22 @@ def _insert_pre_compression_operations(
     :param module: The module to insert the weights compression.
     :param allowed_types: list of allowed types for weights compression.
     :param level_high: highest possible value of compressed weights (lower is 0 in assymetric quantization).
+    :param compression_hist: mapping between layer weight and corresponding WeightsDecompressor for finding
+     shared weights.
     :return: The non-trainable module with inserted operations.
     """
+    if compression_hist is None:
+        compression_hist = {}
     for _, layer in module.named_children():
         if not type(layer) in allowed_types:
-            _insert_pre_compression_operations(layer, allowed_types, level_high)
+            _insert_pre_compression_operations(layer, allowed_types, level_high, compression_hist)
             continue
+
+        if layer.weight.dtype in [torch.uint8, torch.int8]:
+            if layer.weight in compression_hist:
+                layer.register_pre_forward_operation(compression_hist[layer.weight])
+            continue
+
         target_dim = layer.target_weight_dim_for_compression
         stat_dim = (target_dim + 1) % 2
         input_low = torch.min(layer.weight, dim=stat_dim).values.detach()
@@ -61,13 +71,15 @@ def _insert_pre_compression_operations(
 
         scale = scale.unsqueeze(stat_dim)
         zero_point = zero_point.unsqueeze(stat_dim)
-        layer.register_pre_forward_operation(WeightsDecompressor(zero_point, scale))
+        key = layer.register_pre_forward_operation(WeightsDecompressor(zero_point, scale))
 
         compressed_weight = layer.weight.data / scale + zero_point
         compressed_weight = torch.clamp(torch.round(compressed_weight), 0, level_high)
 
         layer.weight.requires_grad = False
         layer.weight.data = compressed_weight.type(dtype=torch.uint8)
+
+        compression_hist[layer.weight] = layer.get_pre_op(key)
 
 
 def insert_pre_compression_operations(module: nn.Module, bits: int = 8) -> Optional[nn.Module]:
