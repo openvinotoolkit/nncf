@@ -12,6 +12,7 @@ Post-training Quantization:
   - (OpenVINO) Added SmoothQuant algorithm.
   - (OpenVINO) Added ChannelAlignment algorithm.
   - (OpenVINO) Added HyperparameterTuner algorithm.
+  - (PyTorch) Added FastBiasCorrection algorithm support. 
   - (OpenVINO, ONNX) Added embedding weights quantization.
   - (OpenVINO, PyTorch) Added new `compress_weights` method that provides data-free [INT8 weights compression](docs/compression_algorithms/CompressWeights.md).
 - Fixes:
@@ -31,14 +32,15 @@ Post-training Quantization:
 Compression-aware training:
 
 - Features:
-  - (PyTorch) Added PyTorch 2.0 support.
-  - (PyTorch) Added `.strip()` option to API.
   - Added shape pruning processor for BootstrapNAS algorithm.
   - Added KD loss for BootstrapNAS algorithm.
   - Added `validate_scopes` parameter for NNCF configuration.
+  - (PyTorch) Added PyTorch 2.0 support.
+  - (PyTorch) Added `.strip()` option to API.
   - (PyTorch) Enabled bfloat data type for quantization kernels.
   - (PyTorch) Quantized models can now be `torch.jit.trace`d without calling `.strip()`.
   - (PyTorch) Added support for overridden `forward` instance attribute on model objects passed into `create_compressed_model`.
+  - (Tensorflow) Added Tensorflow 2.12 support.
 - Fixes:
   - (PyTorch) Fixed padding adjustment issue in the elastic kernel to work with the different active kernel sizes.
   - (PyTorch) Fixed the torch graph tracing in the case the tensors belonging to parallel edges are interleaved in the order of the tensor argument.
