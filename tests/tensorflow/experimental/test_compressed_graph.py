@@ -15,7 +15,7 @@ import pytest
 import tensorflow as tf
 
 from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
-from tests.experimental.tensorflow import test_models
+from tests.tensorflow.experimental import test_models
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.test_compressed_graph import QUANTIZERS
 from tests.tensorflow.test_compressed_graph import ModelDesc

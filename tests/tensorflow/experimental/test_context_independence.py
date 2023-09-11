@@ -14,7 +14,7 @@ import os
 import tensorflow as tf
 
 from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
-from tests.experimental.tensorflow.test_compressed_graph import check_model_graph_v2
+from tests.tensorflow.experimental.test_compressed_graph import check_model_graph_v2
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.test_compressed_graph import QuantizeTestCaseConfiguration
 from tests.tensorflow.test_compressed_graph import create_test_name
