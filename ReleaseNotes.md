@@ -12,7 +12,7 @@ Post-training Quantization:
   - (OpenVINO) Added SmoothQuant algorithm.
   - (OpenVINO) Added ChannelAlignment algorithm.
   - (OpenVINO) Added HyperparameterTuner algorithm.
-  - (PyTorch) Added FastBiasCorrection algorithm support. 
+  - (PyTorch) Added FastBiasCorrection algorithm support.
   - (OpenVINO, ONNX) Added embedding weights quantization.
   - (OpenVINO, PyTorch) Added new `compress_weights` method that provides data-free [INT8 weights compression](docs/compression_algorithms/CompressWeights.md).
 - Fixes:
