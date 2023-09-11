@@ -77,12 +77,12 @@ class PostTrainingBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def dump_submodel(model: TModel, dir: Path, if_op: NNCFNode, if_submodel_condition: bool) -> None:
+    def dump_submodel(model: TModel, directory: Path, if_op: NNCFNode, if_submodel_condition: bool) -> None:
         """
         Save a submodel to a directory.
 
         :param model: Model to dump.
-        :param dir: Directory path.
+        :param directory: Directory path.
         :param if_op: If node.
         :param if_submodel_condition: If submodel condition.
         """

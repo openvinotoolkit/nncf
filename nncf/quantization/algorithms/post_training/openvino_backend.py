@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
 import openvino.runtime as ov
 
@@ -68,9 +68,9 @@ class OVPostTrainingBackend(PostTrainingBackend):
         return commands
 
     @staticmethod
-    def dump_submodel(model: ov.Model, dir: str, if_op: NNCFNode, if_submodel_condition: bool) -> None:
+    def dump_submodel(model: ov.Model, directory: str, if_op: NNCFNode, if_submodel_condition: bool) -> None:
         name = if_op.node_name.replace("/", "")
         postfix = "then" if if_submodel_condition else "else"
         model_name = f"{name}_{postfix}.xml"
-        model_path = Path(dir) / model_name
+        model_path = Path(directory) / model_name
         ov.serialize(model, model_path)
