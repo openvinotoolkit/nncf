@@ -156,7 +156,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return np.array(x)  # Function to initialize tensor from list
     ```
 
-3. Add new backend type to `mock_modules` list in [docs/api/source/conf.py](https://github.com/openvinotoolkit/nncf/blob/develop/docs/api/source/conf.py#L131)
+3. Add new backend type to `mock_modules` list in [docs/api/source/conf.py](https://github.com/openvinotoolkit/nncf/blob/v2.6.0/docs/api/source/conf.py#L131)
 
     ```python
     mock_modules = [

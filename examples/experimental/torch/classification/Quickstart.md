@@ -40,7 +40,7 @@ pip install efficientnet_pytorch tensorboard mlflow returns
 
 ## Example
 
-To run an example of super-network generation and sub-network search, use the ```bootstrap_nas.py``` script located [here](https://github.com/openvinotoolkit/nncf/blob/develop/examples/experimental/torch/classification/bootstrap_nas.py) and the sample ```config.json``` from [here](https://github.com/jpablomch/bootstrapnas/blob/main/bootstrapnas_examples/config.json).
+To run an example of super-network generation and sub-network search, use the ```bootstrap_nas.py``` script located [here](https://github.com/openvinotoolkit/nncf/blob/v2.6.0/examples/experimental/torch/classification/bootstrap_nas.py) and the sample ```config.json``` from [here](https://github.com/jpablomch/bootstrapnas/blob/main/bootstrapnas_examples/config.json).
 
 The file ```config.json``` contains a sample configuration for generating a super-network from a trained model. The sample file is configured to generate a super-network from ResNet-50 trained with CIFAR-10. The file should be modified depending on the model to be used as input for BootstrapNAS.
 

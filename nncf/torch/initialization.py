@@ -94,7 +94,7 @@ def wrap_dataloader_for_init(data_loader) -> PTInitializingDataLoader:
             "of your regular data loader you need to pass a specialized version of "
             "PTInitializingDataLoader that returns a general (args, kwargs) tuple for your "
             "model to be called with at each __next__ call.\n"
-            "See https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#pt_init_dataloader for "
+            "See https://github.com/openvinotoolkit/nncf/blob/v2.6.0/docs/FAQ.md#pt_init_dataloader for "
             "an example of how to do this this in your code."
         )
     return data_loader
