@@ -115,6 +115,7 @@ class GraphConverter:
         metatype = get_node_metatype(node)
         graph.add_nncf_node(node_name=node.get_friendly_name(), node_type=node_type, node_metatype=metatype)
 
+    # pylint: disable=too-many-branches
     @staticmethod
     def create_nncf_graph(model: ov.Model) -> NNCFGraph:
         """
@@ -174,8 +175,10 @@ class GraphConverter:
                         node_attributes = node.get_attributes()
                         const_transpose_name = attribute_names[const_port_id]
                         const_attrs[const_port_id]["transpose"] = node_attributes[const_transpose_name]
-
                         act_attrs["transpose"] = node_attributes[attribute_names[act_port_id]]
+                    elif metatype == OVGRUSequenceMetatype:
+                        node_attributes = node.get_attributes()
+                        act_attrs["linear_before_reset"] = node_attributes["linear_before_reset"]
 
                     if const_attrs or act_attrs:
                         nncf_node = nncf_graph.get_node_by_name(node_name)
