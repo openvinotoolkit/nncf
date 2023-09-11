@@ -217,6 +217,16 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
+        """
+        Returns names of ignored nodes based on layer_attributes.
+
+        :param nncf_graph: NNCFGraph instance.
+        :return: List of ignored names.
+        """
+
+    @staticmethod
+    @abstractmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns nodes that have weights.
