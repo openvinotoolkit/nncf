@@ -55,9 +55,11 @@ class StatisticsAggregator(ABC):
         engine = factory.EngineFactory.create(model_with_outputs)
 
         dataset_length = self.dataset.get_length()
+        total = min(dataset_length or self.stat_subset_size, self.stat_subset_size) \
+            if self.stat_subset_size is not None else None
         for input_data in tqdm(
             islice(self.dataset.get_inference_data(), self.stat_subset_size),
-            total=min(dataset_length or self.stat_subset_size, self.stat_subset_size),
+            total=total,
             desc="Statistics collection",
         ):
             outputs = engine.infer(input_data)
