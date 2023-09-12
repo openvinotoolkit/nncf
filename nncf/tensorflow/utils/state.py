@@ -17,6 +17,7 @@ import tensorflow as tf
 from nncf.common.compression import BaseCompressionAlgorithmController
 
 
+# pylint: disable=abstract-method
 class TFCompressionState(tf.train.experimental.PythonState):
     """
     A wrapper for `BaseCompressionAlgorithmController` that allows saving
