@@ -131,6 +131,10 @@ class TensorAggregatorBase:
     def num_samples(self) -> int:
         return self._num_samples
 
+    @property
+    def collected_num_samples(self) -> int:
+        return self._collected_samples
+
     def register_reduced_input(self, x: TensorType):
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return

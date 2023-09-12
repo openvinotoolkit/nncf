@@ -275,7 +275,10 @@ class PostTrainingQuantization(Algorithm):
         :return Dataset: Dataset for child model.
         """
         dataset = []
-        calibration_dataset_size = min(self.subset_size, calibration_dataset.get_length())
+        if calibration_dataset.get_length() is not None:
+            calibration_dataset_size = min(self.subset_size, calibration_dataset.get_length())
+        else:
+            calibration_dataset_size = self.subset_size
         for input_data in tqdm(
             islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
             total=calibration_dataset_size,
@@ -370,6 +373,9 @@ class PostTrainingQuantization(Algorithm):
         :param parent_model_cnt:
         :return:
         """
+        # Should I quantize the model first?
+        # Should be threshold for statistics collection be added?
+
         if self._has_if_op(parent_graph, self._backend_entity.if_node_metatype):
             model_transformer = factory.ModelTransformerFactory.create(parent_model)
 

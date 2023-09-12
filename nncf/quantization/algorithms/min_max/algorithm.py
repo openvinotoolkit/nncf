@@ -95,6 +95,8 @@ class MinMaxQuantization(Algorithm):
     It is expected that the inference of the obtained model in the int8 mode would be faster than the original model.
     """
 
+    MIN_STATISTICS_SAMPLES = 10
+
     def __init__(
         self,
         preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
@@ -167,6 +169,7 @@ class MinMaxQuantization(Algorithm):
 
         self._reset_cache()
         self._algorithm_key = f"MMQ_{hash(self)}"
+        self.statistics_threshold = self.MIN_STATISTICS_SAMPLES
 
     def _reset_cache(self):
         # It prevents the duplicate weight quantizers from being added.
@@ -693,6 +696,20 @@ class MinMaxQuantization(Algorithm):
                 statistics = tensor_collector.get_statistics()
                 if statistics.min_values is None or statistics.max_values is None:
                     raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
+                min_collected_num_samples = min(
+                    [
+                        tensor_collector.aggregators[aggregator].collected_num_samples
+                        for aggregator in tensor_collector.aggregators
+                    ]
+                )
+                if (
+                    min_collected_num_samples < self.statistics_threshold
+                    and not quantization_target_point.is_weight_target_point()  # Weights will be quantized anyway
+                ):
+                    nncf_logger.warning(
+                        f"Statistics were not collected enough for the node {target_node_name}. The node will not be quantized"
+                    )
+                    continue
                 parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
                 command = self._backend_entity.create_quantizer_insertion_command(
                     graph, quantization_target_point, qconfig, parameters
