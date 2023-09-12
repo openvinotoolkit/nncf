@@ -171,16 +171,16 @@ def skip_if_half_on_cpu(is_fp16, use_cuda):
 def check_quant_moved(test_input, test_val, ref_val, quant_len, input_low, input_range, is_fp16, rtol, atol=1e-10):
     """
     Checks values in `test_val` are inside of closest quant and
-    values in `test_val` and `ref_val` elementwise eather equal with given rtol/atol or
+    values in `test_val` and `ref_val` elementwise either equal with given rtol/atol or
     values differ by correspondent `quant_len` +- rtol.
 
     :param test_input: Input of a quantizer.
     :param test_val: Given test value.
     :param ref_val: Given reference value.
-    :param quant_len: Lenghts of quants in quantizers
+    :param quant_len: Length of quants in quantizers
         (for each channel in case per channel quantization).
-    :param atol: Absolute tollerance.
-    :param rtol: Relative tollerance.
+    :param atol: Absolute tolerance.
+    :param rtol: Relative tolerance.
     """
 
     def to_tensor(a):
@@ -214,15 +214,10 @@ def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np
     PTTensorListComparator.check_equal(test_val, ref_val, rtol, atol)
 
 
-@pytest.mark.parametrize(
-    "input_size",
-    [[1, 48, 112, 112], [1, 96, 28, 28], [1, 288, 14, 14], [16, 96, 112, 112], [16, 192, 28, 28], [16, 576, 14, 14]],
-    ids=idfn,
-)
 @pytest.mark.parametrize("bits", (8, 4), ids=("8bit", "4bit"))
 @pytest.mark.parametrize("scale_mode", ["single_scale", "per_channel_scale"])
 @pytest.mark.parametrize("is_fp16", (True, False), ids=("fp16", "fp32"))
-class TestParametrized:
+class BaseParametrized:
     class TestSymmetric:
         @staticmethod
         def generate_scale(input_size, scale_mode, is_weights, is_fp16, fixed=None):
@@ -523,12 +518,12 @@ class TestParametrized:
             if is_fp16:
                 # This is needed to make scale == 1 to prevent
                 # quant movement on forward pass in FP16 precision.
-                # In case scale != 1., not precice scale multiplication in FP16
+                # In case scale != 1., not precise scale multiplication in FP16
                 # could lead to big deviations, so even if an input point
                 # lies in safe range (far from middles of quants) after a scaling
                 # it could end up in the middle of a quant. It happens mostly
-                # when target quant > 150 because in real life scenarious quantization range
-                # usualy less than 2 ** quantization bits,
+                # when target quant > 150 because in real life scenarios quantization range
+                # usually less than 2 ** quantization bits,
                 # so input is small and scale is big, small FP16 input multiplies big fp16 scale,
                 # deviation is significant.
                 fixed = {}
@@ -587,6 +582,21 @@ class TestParametrized:
             check_outputs_for_quantization_functions(test_value, ref_output, rtol=1e-2 if is_fp16 else 1e-3)
 
             check_outputs_for_quantization_functions(test_grads, ref_grads, rtol=1e-2 if is_fp16 else 1e-3)
+
+
+@pytest.mark.parametrize("input_size", [[1, 16, 64, 64], [4, 16, 16, 16]], ids=idfn)
+class TestParametrizedFast(BaseParametrized):
+    pass
+
+
+@pytest.mark.nightly
+@pytest.mark.parametrize(
+    "input_size",
+    [[1, 48, 112, 112], [1, 96, 28, 28], [1, 288, 14, 14], [16, 96, 112, 112], [16, 192, 28, 28], [16, 576, 14, 14]],
+    ids=idfn,
+)
+class TestParametrizedLong(BaseParametrized):
+    pass
 
 
 @pytest.mark.parametrize("device", ["cuda", "cpu"])

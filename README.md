@@ -288,6 +288,7 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [Optimizing PyTorch models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)
 - [Optimizing TensorFlow models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/305-tensorflow-quantization-aware-training)
 - [Accelerate Inference of Sparse Transformer Models with OpenVINO and 4th Gen Intel Xeon Scalable Processors](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/116-sparsity-optimization)
+- [Quantization with accuracy control using NNCF](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/122-quantizing-model-with-accuracy-control)
 
 ### Post-Training Quantization Samples
 
