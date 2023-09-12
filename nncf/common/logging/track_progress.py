@@ -29,7 +29,7 @@ class IterationsColumn(ProgressColumn):
             return Text(text, style="progress.remaining")
 
 
-def track_with_iterations(
+def track(
     sequence: Union[Sequence[ProgressType], Iterable[ProgressType]],
     description: str = "Working...",
     total: Optional[float] = None,

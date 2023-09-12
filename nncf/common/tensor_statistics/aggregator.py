@@ -16,7 +16,7 @@ from typing import Any, Dict, TypeVar
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.logging.track_progress import track_with_iterations
+from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
@@ -59,7 +59,7 @@ class StatisticsAggregator(ABC):
             if self.stat_subset_size is not None
             else None
         )
-        for input_data in track_with_iterations(
+        for input_data in track(
             islice(self.dataset.get_inference_data(), self.stat_subset_size),
             total=total,
             description="Statistics collection",

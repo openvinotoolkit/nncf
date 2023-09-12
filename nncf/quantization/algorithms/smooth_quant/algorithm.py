@@ -31,7 +31,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
-from nncf.common.logging.track_progress import track_with_iterations
+from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -110,7 +110,7 @@ class SmoothQuant(Algorithm):
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
         best_scale = None
-        for group_id, nodes in track_with_iterations(node_groups.items(), description="Applying Smooth Quant"):
+        for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
             best_ratio = 0.0
             empty_statistic = False
             for node_to_smooth in nodes:
