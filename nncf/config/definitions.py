@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ONLINE_DOCS_ROOT = "https://github.com/openvinotoolkit/nncf/tree/v2.6.0/"
+ONLINE_DOCS_ROOT = "https://github.com/openvinotoolkit/nncf/tree/develop/"
 SCHEMA_VISUALIZATION_URL = "https://openvinotoolkit.github.io/nncf/"
 
 ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG = "adaptive_compression_level"
