@@ -9,11 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Sequence, Iterable, Optional, Callable, List
+from typing import Callable, Iterable, List, Optional, Sequence, Union
 
 from rich.console import Console
-from rich.progress import ProgressType, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn, Progress, \
-    ProgressColumn, Task
+from rich.progress import BarColumn
+from rich.progress import Progress
+from rich.progress import ProgressColumn
+from rich.progress import ProgressType
+from rich.progress import Task
+from rich.progress import TaskProgressColumn
+from rich.progress import TextColumn
+from rich.progress import TimeRemainingColumn
 from rich.style import StyleType
 from rich.text import Text
 
@@ -71,9 +77,7 @@ def track(
 
     """
 
-    columns: List["ProgressColumn"] = (
-        [TextColumn("[progress.description]{task.description}")] if description else []
-    )
+    columns: List["ProgressColumn"] = [TextColumn("[progress.description]{task.description}")] if description else []
     columns.extend(
         (
             BarColumn(
