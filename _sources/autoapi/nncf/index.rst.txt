@@ -164,6 +164,12 @@ Functions
           the transformation function was applied.
 
 
+   .. py:method:: get_length()
+
+      Tries to fetch length of the underlying dataset.
+      :return: The length of the data_source if __len__() is implemented for it, and None otherwise.
+
+
 
 .. py:class:: DropType
 
