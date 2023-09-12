@@ -13,11 +13,10 @@ from abc import abstractmethod
 from itertools import islice
 from typing import Any, Dict, TypeVar
 
-from tqdm.auto import tqdm
-
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging.track_progress import track_with_iterations
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
@@ -60,10 +59,10 @@ class StatisticsAggregator(ABC):
             if self.stat_subset_size is not None
             else None
         )
-        for input_data in tqdm(
+        for input_data in track_with_iterations(
             islice(self.dataset.get_inference_data(), self.stat_subset_size),
             total=total,
-            desc="Statistics collection",
+            description="Statistics collection",
         ):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
