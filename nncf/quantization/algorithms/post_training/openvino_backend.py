@@ -25,7 +25,9 @@ from nncf.quantization.algorithms.post_training.backend import PostTrainingBacke
 
 
 class OVPostTrainingBackend(PostTrainingBackend):
-    IF_OP_MODEL_INPUT_PORTS = (0, 1)
+    @staticmethod
+    def _get_if_submodel_port_id(if_submodel_condition: bool):
+        return int(not if_submodel_condition)
 
     @property
     def if_node_metatype(self):
@@ -34,10 +36,14 @@ class OVPostTrainingBackend(PostTrainingBackend):
     @staticmethod
     def get_if_subgraph_input_names(model: ov.Model, if_node: NNCFNode, if_submodel_condition: bool) -> List[str]:
         input_names = []
-        subgraph_port_id = 0 if if_submodel_condition else 1
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
-        input_indices = [desc.input_index for desc in ov_node.get_input_descriptions(subgraph_port_id)]
+        input_indices = [
+            desc.input_index
+            for desc in ov_node.get_input_descriptions(
+                OVPostTrainingBackend._get_if_submodel_port_id(if_submodel_condition)
+            )
+        ]
         input_names.extend([ov_node.input_values()[index].any_name for index in input_indices])
         return input_names
 
@@ -51,15 +57,16 @@ class OVPostTrainingBackend(PostTrainingBackend):
     def create_update_subgraph_command(
         if_node: NNCFNode, if_submodel_condition: bool, subgraph_model: ov.Model
     ) -> OVUpdateIfSubgraphCommand:
-        if_submodel_port_id = 0 if if_submodel_condition else 1
-        target_point = OVTargetPoint(TargetType.LAYER, if_node.node_name, if_submodel_port_id)
+        target_point = OVTargetPoint(
+            TargetType.LAYER, if_node.node_name, OVPostTrainingBackend._get_subgraph_port_id(if_submodel_condition)
+        )
         return OVUpdateIfSubgraphCommand(target_point, subgraph_model)
 
     @staticmethod
     def create_extract_if_subgraph_command(
         if_node: NNCFNode, if_submodel_condition: bool
     ) -> OVExtractIfSubgraphCommand:
-        return OVExtractIfSubgraphCommand(if_node, if_submodel_condition)
+        return OVExtractIfSubgraphCommand(if_node.node_name, if_submodel_condition)
 
     @staticmethod
     def create_output_insertion_commands(model: ov.Model, if_node: NNCFNode) -> List[OVOutputInsertionCommand]:

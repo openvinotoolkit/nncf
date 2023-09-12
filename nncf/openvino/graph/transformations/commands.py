@@ -14,7 +14,6 @@ from typing import List
 import numpy as np
 import openvino.runtime as ov
 
-from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -218,13 +217,13 @@ class OVExtractIfSubgraphCommand(Command):
     Extracts If node subgraph.
     """
 
-    def __init__(self, if_node: NNCFNode, if_submodel_condition: bool):
+    def __init__(self, if_node_name: str, if_submodel_condition: bool):
         """
         :param target_point: The TargetPoint instance for the insertion that contains layer's information.
         :param bias_value: Constant value for the bias layer.
         """
         super().__init__(TransformationType.EXTRACT)
-        self.if_node = if_node
+        self.if_node_name = if_node_name
         self.if_submodel_condition = if_submodel_condition
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":

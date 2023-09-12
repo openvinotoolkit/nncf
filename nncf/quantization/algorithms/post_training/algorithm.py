@@ -373,8 +373,8 @@ class PostTrainingQuantization(Algorithm):
         :param parent_model_cnt:
         :return:
         """
-        # Should I quantize the model first?
-        # Should be threshold for statistics collection be added?
+        nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
+        quantized_model = self._apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
 
         if self._has_if_op(parent_graph, self._backend_entity.if_node_metatype):
             model_transformer = factory.ModelTransformerFactory.create(parent_model)
@@ -418,6 +418,4 @@ class PostTrainingQuantization(Algorithm):
                             child_quantized_model, self.intermediate_model_dir, if_node, if_submodel_condition
                         )
 
-        nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
-        quantized_model = self._apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
         return quantized_model, parent_model_cnt

@@ -565,7 +565,7 @@ class OVModelTransformer(ModelTransformer):
         """
         transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
-        ov_node = name_to_node_mapping[transformation.if_node.node_name]
+        ov_node = name_to_node_mapping[transformation.if_node_name]
         if transformation.if_submodel_condition:
             return ov_node.get_function(0)
         return ov_node.get_function(1)
