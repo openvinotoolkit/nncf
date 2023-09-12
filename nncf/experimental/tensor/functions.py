@@ -165,7 +165,7 @@ def all(a: TTensor, axis: Optional[Union[int, Tuple[int]]] = None) -> TTensor:  
 
 @functools.singledispatch
 @_tensor_guard
-def allclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> bool:
+def allclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> TTensor:
     """
     Returns True if two arrays are element-wise equal within a tolerance.
 
@@ -178,12 +178,14 @@ def allclose(a: TTensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, e
       Defaults to False.
     :return: True if the two arrays are equal within the given tolerance, otherwise False.
     """
-    return allclose(
-        a.data,
-        unwrap_tensor_data(b),
-        rtol=rtol,
-        atol=atol,
-        equal_nan=equal_nan,
+    return Tensor(
+        allclose(
+            a.data,
+            unwrap_tensor_data(b),
+            rtol=rtol,
+            atol=atol,
+            equal_nan=equal_nan,
+        )
     )
 
 

@@ -126,7 +126,7 @@ def _(
     rtol: float = 1e-05,
     atol: float = 1e-08,
     equal_nan: bool = False,
-):
+) -> Union[np.ndarray, bool]:
     return np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
