@@ -44,7 +44,8 @@ class BackendType(Enum):
     OPTIMUM = "OPTIMUM"
 
 
-ALL_NNCF_PTQ_BACKENDS = [BackendType.OLD_TORCH, BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT]
+NNCF_PTQ_BACKENDS = [BackendType.OLD_TORCH, BackendType.TORCH, BackendType.ONNX, BackendType.OV]
+ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS + [BackendType.POT]
 PT_BACKENDS = [BackendType.TORCH, BackendType.OLD_TORCH]
 OV_BACKENDS = [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]
 
