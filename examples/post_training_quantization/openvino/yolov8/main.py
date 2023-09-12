@@ -17,13 +17,13 @@ import numpy as np
 import openvino.runtime as ov
 import torch
 from tqdm import tqdm
-from ultralytics.models.yolo import YOLO
 from ultralytics.cfg import get_cfg
+from ultralytics.data.converter import coco80_to_coco91_class
 from ultralytics.data.utils import check_det_dataset
 from ultralytics.engine.validator import BaseValidator as Validator
+from ultralytics.models.yolo import YOLO
 from ultralytics.utils import DATASETS_DIR
 from ultralytics.utils import DEFAULT_CFG
-from ultralytics.data.converter import coco80_to_coco91_class
 from ultralytics.utils.metrics import ConfusionMatrix
 
 import nncf
