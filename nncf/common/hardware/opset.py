@@ -58,3 +58,4 @@ class HWConfigOpName:
     LSTMSEQUENCE = "LSTMSequence"
     GRUSEQUENCE = "GRUSequence"
     GROUPNORMALIZATION = "GroupNormalization"
+    IF = "If"

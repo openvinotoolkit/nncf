@@ -677,6 +677,7 @@ class OVAbsMetatype(OVOpMetatype):
 class OVIfMetatype(OVOpMetatype):
     name = "IfOp"
     op_names = ["If"]
+    hw_config_names = [HWConfigOpName.IF]
 
 
 @OV_OPERATOR_METATYPES.register()

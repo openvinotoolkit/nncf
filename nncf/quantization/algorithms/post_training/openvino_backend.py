@@ -58,7 +58,7 @@ class OVPostTrainingBackend(PostTrainingBackend):
         if_node: NNCFNode, if_submodel_condition: bool, subgraph_model: ov.Model
     ) -> OVUpdateIfSubgraphCommand:
         target_point = OVTargetPoint(
-            TargetType.LAYER, if_node.node_name, OVPostTrainingBackend._get_subgraph_port_id(if_submodel_condition)
+            TargetType.LAYER, if_node.node_name, OVPostTrainingBackend._get_if_submodel_port_id(if_submodel_condition)
         )
         return OVUpdateIfSubgraphCommand(target_point, subgraph_model)
 
