@@ -16,7 +16,7 @@ import tensorflow_hub as hub
 from nncf import NNCFConfig
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 
-# TODO(achurkin): enable afte 120296 ticked is fixed
+# TODO(achurkin): enable after 120296 ticked is fixed
 # from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
 # patch_tf_operations()
 

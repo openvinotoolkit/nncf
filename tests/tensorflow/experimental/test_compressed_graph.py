@@ -26,7 +26,7 @@ from tests.tensorflow.test_compressed_graph import get_model_name
 from tests.tensorflow.test_compressed_graph import prepare_and_check_graph_def
 from tests.tensorflow.test_compressed_graph import prepare_and_check_nx_graph
 
-# TODO(achurkin): enable afte 120296 ticked is fixed
+# TODO(achurkin): enable after 120296 ticked is fixed
 # from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
 # patch_tf_operations()
 

@@ -23,7 +23,7 @@ from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVNoopReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.tensor import OVNNCFTensor
-from tests.experimental.common.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
+from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
 class TestReducersAggregators(TemplateTestReducersAggreagtors):
