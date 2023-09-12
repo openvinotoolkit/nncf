@@ -119,6 +119,7 @@ INSTALL_REQUIRES = [
     # Using 2.x versions of pyparsing seems to fix the issue.
     # Ticket: 69520
     "pyparsing<3.0",
+    "rich>=13.5.2",
     "scikit-learn>=0.24.0",
     "scipy>=1.3.2, <1.11",
     "texttable>=1.6.3",
