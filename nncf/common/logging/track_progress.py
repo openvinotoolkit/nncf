@@ -98,6 +98,4 @@ def track(
     )
 
     with progress:
-        yield from progress.track(
-            sequence, total=total, description=description, update_period=update_period
-        )
+        yield from progress.track(sequence, total=total, description=description, update_period=update_period)

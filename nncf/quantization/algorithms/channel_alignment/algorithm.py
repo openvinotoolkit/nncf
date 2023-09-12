@@ -104,9 +104,7 @@ class ChannelAlignment(Algorithm):
         def filter_func(point: StatisticPoint) -> bool:
             return self._algorithm_key in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
-        for conv_in, add_in, conv_out in track(
-            self._get_node_pairs(graph), description="Channel alignment"
-        ):
+        for conv_in, add_in, conv_out in track(self._get_node_pairs(graph), description="Channel alignment"):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, self._algorithm_key)
