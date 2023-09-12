@@ -24,7 +24,7 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, TypeVar
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory

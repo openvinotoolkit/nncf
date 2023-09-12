@@ -12,7 +12,7 @@
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from nncf import Dataset
 from nncf.common.factory import CommandCreatorFactory

@@ -72,6 +72,15 @@ class Dataset(Generic[DataItem, ModelInput]):
         """
         return DataProvider(self._data_source, self._transform_func, indices)
 
+    def get_length(self) -> Optional[int]:
+        """
+        Tries to fetch length of the underlying dataset.
+        :return: The length of the data_source if __len__() is implemented for it, and None otherwise.
+        """
+        if hasattr(self._data_source, "__len__"):
+            return self._data_source.__len__()
+        return None
+
 
 class DataProvider(Generic[DataItem, ModelInput]):
     def __init__(
