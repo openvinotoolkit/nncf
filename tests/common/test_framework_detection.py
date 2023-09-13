@@ -25,23 +25,27 @@ _REAL_FIND_SPEC = importlib._bootstrap._find_spec  # pylint:disable=protected-ac
 
 
 class FailForModules:
-    def __init__(self, mocked_modules: List[str], hidden_modules: List[str]):
+    def __init__(self, mocked_modules: List[str], hidden_modules: List[str], origin_in_nncf: bool = False):
         self._mocked_modules = mocked_modules
         self._hidden_modules = hidden_modules
+        self._origin_in_nncf = origin_in_nncf
 
     def __call__(self, fullname, path=None, target=None):
         if fullname in self._hidden_modules:
             return None
         if fullname in self._mocked_modules:
-            return ModuleSpec(fullname, loader=MagicMock(), origin="foo/bar")
+            if self._origin_in_nncf:
+                origin = _REAL_FIND_SPEC("nncf", path, target).origin + "/foo/bar"
+            else:
+                origin = "foo/bar"
+            return ModuleSpec(fullname, loader=MagicMock(), origin=origin)
         return _REAL_FIND_SPEC(fullname, path, target)
 
 
-@pytest.mark.parametrize("ref_available_frameworks", [["torch"], ["torch", "tensorflow"], ["onnx", "openvino"], []])
-def test_frameworks_detected(ref_available_frameworks: List[str], nncf_caplog, mocker):
-    unavailable_frameworks = [fw for fw in SUPPORTED_FRAMEWORKS if fw not in ref_available_frameworks]
-    failer = FailForModules(ref_available_frameworks, unavailable_frameworks)
-    with unittest.mock.patch("importlib.util.find_spec", wraps=failer):
+def _mock_import_and_check_availability_messages(
+    ref_available_frameworks: List[str], unavailable_frameworks: List[str], failer_obj: FailForModules, nncf_caplog
+):
+    with unittest.mock.patch("importlib.util.find_spec", wraps=failer_obj):
         with nncf_caplog.at_level(logging.INFO):
             importlib.reload(nncf)
             matches = re.search(r"Supported frameworks detected: (.*)", nncf_caplog.text)
@@ -54,3 +58,17 @@ def test_frameworks_detected(ref_available_frameworks: List[str], nncf_caplog, m
                     assert fw not in match_text
             else:
                 assert matches is None
+
+
+@pytest.mark.parametrize("ref_available_frameworks", [["torch"], ["torch", "tensorflow"], ["onnx", "openvino"], []])
+def test_frameworks_detected(ref_available_frameworks: List[str], nncf_caplog):
+    unavailable_frameworks = [fw for fw in SUPPORTED_FRAMEWORKS if fw not in ref_available_frameworks]
+    failer = FailForModules(ref_available_frameworks, unavailable_frameworks)
+    _mock_import_and_check_availability_messages(ref_available_frameworks, unavailable_frameworks, failer, nncf_caplog)
+
+
+@pytest.mark.parametrize("ref_available_frameworks", [[fw] for fw in SUPPORTED_FRAMEWORKS])
+def test_frameworks_detected_if_origin_in_nncf(ref_available_frameworks, nncf_caplog):
+    unavailable_frameworks = [fw for fw in SUPPORTED_FRAMEWORKS if fw not in ref_available_frameworks]
+    failer = FailForModules(ref_available_frameworks, unavailable_frameworks, origin_in_nncf=True)
+    _mock_import_and_check_availability_messages(ref_available_frameworks, unavailable_frameworks, failer, nncf_caplog)

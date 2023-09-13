@@ -11,7 +11,7 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Tuple, TypeVar
+from typing import Any, Optional, Tuple, TypeVar
 
 import numpy as np
 
@@ -141,4 +141,16 @@ class ChannelAlignmentAlgoBackend:
 
         :param node: NNCFNode to take convolutional layer attributes from.
         :return: Convolutional layer attributes of given node if they are present and None otherwise
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
+        """
+        Creates bias value constant array filled by given value.
+
+        :param node: NNCFNode to add bias to.
+        :param nncf_graph: Target NNCFgraph.
+        :param value: Value to fill bias constant array.
+        :return: Bias value constant array filled by given value.
         """

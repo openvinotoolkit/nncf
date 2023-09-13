@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 import onnx
 
@@ -21,11 +21,13 @@ from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.onnx.graph.metatypes.groups import CONSTANT_WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
+from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import get_bias_tensor_port_id
-from nncf.onnx.graph.metatypes.onnx_metatypes import get_constant_weight_port_ids
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_metatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import get_possible_weight_port_ids
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_tensor_edge_name
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 
@@ -62,6 +64,43 @@ class ONNXLayerAttributes(BaseLayerAttributes):
 
     def has_node_attrs(self) -> bool:
         return bool(self.node_attrs)
+
+
+def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
+    """
+    Returns port ids on which metatype must have a weight based on Operation definition.
+
+    :param metatype: Metatype.
+    :return: Port ids.
+    """
+    if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
+        return metatype.weight_port_ids
+    return []
+
+
+def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
+    """
+    Returns weight port ids on which metatype could have a weight.
+    Example: ONNXMatMulMetatype could have activations or weights on input port ids: 0, 1
+
+    :param metatype: Metatype.
+    :return: Port ids.
+    """
+    if metatype in MATMUL_METATYPES:
+        return metatype.possible_weight_ports
+    return []
+
+
+def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int]:
+    """
+    Returns input port id, where a bias tensor should output.
+
+    :param node: Node, for which input port id is returned,
+    :return: Input port id, where a weight bias should output or None if node can not have bias.
+    """
+    if metatype in OPERATIONS_WITH_BIAS:
+        return metatype.bias_port_id
+    return None
 
 
 def _get_weight_port_ids(node: onnx.NodeProto, onnx_graph: ONNXGraph) -> Set[int]:

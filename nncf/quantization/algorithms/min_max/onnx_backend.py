@@ -22,6 +22,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
+from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.node_utils import get_quantization_axis
 from nncf.onnx.graph.node_utils import get_quantized_tensor_shape
@@ -49,7 +50,7 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return om.MATMUL_METATYPES
+        return MATMUL_METATYPES
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -65,7 +66,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
-        return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, *om.MATMUL_METATYPES]
+        return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, *MATMUL_METATYPES]
 
     @property
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
@@ -115,8 +116,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def unify_statistics(statistics: List[ONNXMinMaxTensorStatistic]) -> ONNXMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(statistic.max_values)
-            min_values.append(statistic.min_values)
+            max_values.append(np.array(statistic.max_values).flatten())
+            min_values.append(np.array(statistic.min_values).flatten())
         max_values = np.max(max_values, axis=0)
         min_values = np.min(min_values, axis=0)
         return ONNXMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
@@ -193,6 +194,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             if device != TargetDevice.CPU_SPR:
                 types.append(om.ONNXMulLayerMetatype)
         return types
+
+    @staticmethod
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
+        return []
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
