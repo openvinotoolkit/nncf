@@ -168,7 +168,7 @@ class TemplateTestSQAlgorithm:
         ),
     )
     # pylint:disable=protected-access
-    def test_get_nodes_to_smooth_data(self, model_cls, references, tmpdir):
+    def test__get_nodes_to_smooth_data(self, model_cls, references, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
         nncf_graph = NNCFGraphFactory.create(model)
 
