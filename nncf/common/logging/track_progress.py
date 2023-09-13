@@ -25,14 +25,13 @@ from rich.text import Text
 
 
 class IterationsColumn(ProgressColumn):
-    def render(self, task: "Task") -> Text:
+    def render(self, task: Task) -> Text:
         if task.total is None:
             return Text("")
         text = f"{int(task.completed)}/{int(task.total)}"
         if task.finished:
             return Text(text, style="progress.elapsed")
-        else:
-            return Text(text, style="progress.remaining")
+        return Text(text, style="progress.remaining")
 
 
 def track(
@@ -61,8 +60,11 @@ def track(
         sequence (Iterable[ProgressType]): A sequence (must support "len") you wish to iterate over.
         description (str, optional): Description of task show next to progress bar. Defaults to "Working".
         total: (float, optional): Total number of steps. Default is len(sequence).
-        auto_refresh (bool, optional): Automatic refresh, disable to force a refresh after each iteration. Default is True.
+        auto_refresh (bool, optional): Automatic refresh, disable to force a refresh after each iteration. Default is
+            True.
         transient: (bool, optional): Clear the progress on exit. Defaults to False.
+        get_time: (Callable, optional): A callable that gets the current time, or None to use Console.get_time. Defaults
+            to None.
         console (Console, optional): Console to write to. Default creates internal Console instance.
         refresh_per_second (float): Number of times per second to refresh the progress information. Defaults to 10.
         style (StyleType, optional): Style for the bar background. Defaults to "bar.back".
@@ -77,7 +79,7 @@ def track(
 
     """
 
-    columns: List["ProgressColumn"] = [TextColumn("[progress.description]{task.description}")] if description else []
+    columns: List[ProgressColumn] = [TextColumn("[progress.description]{task.description}")] if description else []
     columns.extend(
         (
             BarColumn(
