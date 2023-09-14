@@ -19,6 +19,7 @@ from rich.progress import ProgressType
 from rich.progress import Task
 from rich.progress import TaskProgressColumn
 from rich.progress import TextColumn
+from rich.progress import TimeElapsedColumn
 from rich.progress import TimeRemainingColumn
 from rich.style import StyleType
 from rich.text import Text
@@ -32,6 +33,11 @@ class IterationsColumn(ProgressColumn):
         if task.finished:
             return Text(text, style="progress.elapsed")
         return Text(text, style="progress.remaining")
+
+
+class SeparatorColumn(ProgressColumn):
+    def render(self, task: Task) -> Text:
+        return Text("•")
 
 
 def track(
@@ -54,29 +60,24 @@ def track(
     """
     Track progress by iterating over a sequence.
 
-    This function is very similar to rich.progress.track(), but with addition of an iteration counter.
+    This function is very similar to rich.progress.track(), but with addition of some columns.
 
-    Args:
-        sequence (Iterable[ProgressType]): A sequence (must support "len") you wish to iterate over.
-        description (str, optional): Description of task show next to progress bar. Defaults to "Working".
-        total: (float, optional): Total number of steps. Default is len(sequence).
-        auto_refresh (bool, optional): Automatic refresh, disable to force a refresh after each iteration. Default is
-            True.
-        transient: (bool, optional): Clear the progress on exit. Defaults to False.
-        get_time: (Callable, optional): A callable that gets the current time, or None to use Console.get_time. Defaults
-            to None.
-        console (Console, optional): Console to write to. Default creates internal Console instance.
-        refresh_per_second (float): Number of times per second to refresh the progress information. Defaults to 10.
-        style (StyleType, optional): Style for the bar background. Defaults to "bar.back".
-        complete_style (StyleType, optional): Style for the completed bar. Defaults to "bar.complete".
-        finished_style (StyleType, optional): Style for a finished bar. Defaults to "bar.finished".
-        pulse_style (StyleType, optional): Style for pulsing bars. Defaults to "bar.pulse".
-        update_period (float, optional): Minimum time (in seconds) between calls to update(). Defaults to 0.1.
-        disable (bool, optional): Disable display of progress.
-        show_speed (bool, optional): Show speed if total isn't known. Defaults to True.
-    Returns:
-        Iterable[ProgressType]: An iterable of the values in the sequence.
-
+    :param sequence: An iterable (must support "len") you wish to iterate over.
+    :param description: Description of the task to show next to the progress bar. Defaults to "Working".
+    :param total: Total number of steps. Default is len(sequence).
+    :param auto_refresh: Automatic refresh. Disable to force a refresh after each iteration. Default is True.
+    :param transient: Clear the progress on exit. Defaults to False.
+    :param get_time: A callable that gets the current time, or None to use Console.get_time. Defaults to None.
+    :param console: Console to write to. Default creates an internal Console instance.
+    :param refresh_per_second: Number of times per second to refresh the progress information. Defaults to 10.
+    :param style: Style for the bar background. Defaults to "bar.back".
+    :param complete_style: Style for the completed bar. Defaults to "bar.complete".
+    :param finished_style: Style for a finished bar. Defaults to "bar.finished".
+    :param pulse_style: Style for pulsing bars. Defaults to "bar.pulse".
+    :param update_period: Minimum time (in seconds) between calls to update(). Defaults to 0.1.
+    :param disable: Disable display of progress.
+    :param show_speed: Show speed if the total isn't known. Defaults to True.
+    :return: An iterable of the values in the sequence.
     """
 
     columns: List[ProgressColumn] = [TextColumn("[progress.description]{task.description}")] if description else []
@@ -90,6 +91,9 @@ def track(
             ),
             TaskProgressColumn(show_speed=show_speed),
             IterationsColumn(),
+            SeparatorColumn(),
+            TimeElapsedColumn(),
+            SeparatorColumn(),
             TimeRemainingColumn(elapsed_when_finished=True),
         )
     )
