@@ -981,6 +981,8 @@ def filter_configuration(config: Config) -> Config:
     # Drop params before configure
     for algorithm_config in config["compression"]["algorithms"]:
         algo_params = algorithm_config.get("params")
+        if algo_params is None:
+            continue
         algo_name = algorithm_config.get("name")
         for field_to_filter in fields_to_filter:
             field_value = algo_params.get(field_to_filter)
