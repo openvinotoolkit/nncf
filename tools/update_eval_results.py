@@ -41,7 +41,7 @@ from tests.shared.paths import TEST_ROOT
 # python tools/update_eval_results.py -f tf -r path/to/metrics.json -i
 
 
-BASE_CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/models/develop/"
+BASE_CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/models/v2.6.0/"
 
 
 @dataclass
