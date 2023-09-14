@@ -20,10 +20,6 @@ import pytest
 import tensorflow as tf
 from packaging import version
 
-physical_devices = tf.config.list_physical_devices('GPU')
-for gpu in physical_devices:
-    tf.config.experimental.set_memory_growth(gpu, True)
-
 from nncf import NNCFConfig
 from nncf.common.hardware.config import HWConfigType
 from tests.shared.nx_graph import compare_nx_graph_with_reference
