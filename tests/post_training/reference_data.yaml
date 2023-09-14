@@ -123,7 +123,7 @@ timm/efficientnet_b0_BC_backend_OV:
     metric_value: 0.76794
     metric_value_fp32: 0.77292
 timm/efficientnet_b0_BC_backend_POT:
-    metric_value: 0.76736
+    metric_value: 0.76872
     metric_value_fp32: 0.77292
 
 timm/efficientnet_lite0_backend_OLD_TORCH:
@@ -204,7 +204,7 @@ timm/mobilenetv2_050_BC_backend_OV:
     metric_value: 0.64412
     metric_value_fp32: 0.64568
 timm/mobilenetv2_050_BC_backend_POT:
-    metric_value: 0.63848
+    metric_value: 0.6431
     metric_value_fp32: 0.64568
 
 timm/mobilenetv3_small_050_backend_OLD_TORCH:
