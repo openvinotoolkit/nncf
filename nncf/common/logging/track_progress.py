@@ -13,6 +13,7 @@ from typing import Callable, Iterable, List, Optional, Sequence, Union
 
 from rich.console import Console
 from rich.progress import BarColumn
+from rich.progress import Column
 from rich.progress import Progress
 from rich.progress import ProgressColumn
 from rich.progress import ProgressType
@@ -36,7 +37,13 @@ class IterationsColumn(ProgressColumn):
 
 
 class SeparatorColumn(ProgressColumn):
+    def __init__(self, table_column: Optional[Column] = None, disable_if_no_total: bool = False) -> None:
+        super().__init__(table_column)
+        self.disable_if_no_total = disable_if_no_total
+
     def render(self, task: Task) -> Text:
+        if self.disable_if_no_total and task.total is None:
+            return Text("")
         return Text("•")
 
 
@@ -103,7 +110,7 @@ class track:
                 IterationsColumn(),
                 SeparatorColumn(),
                 TimeElapsedColumn(),
-                SeparatorColumn(),
+                SeparatorColumn(disable_if_no_total=True),  # disable because time remaining will be empty
                 TimeRemainingColumn(elapsed_when_finished=True),
             )
         )
