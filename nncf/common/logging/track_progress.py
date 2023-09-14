@@ -42,22 +42,22 @@ class SeparatorColumn(ProgressColumn):
 
 class track:
     def __init__(
-            self,
-            sequence: Optional[Union[Sequence[ProgressType], Iterable[ProgressType]]] = None,
-            description: str = "Working...",
-            total: Optional[float] = None,
-            auto_refresh: bool = True,
-            console: Optional[Console] = None,
-            transient: bool = False,
-            get_time: Optional[Callable[[], float]] = None,
-            refresh_per_second: float = 10,
-            style: StyleType = "bar.back",
-            complete_style: StyleType = "bar.complete",
-            finished_style: StyleType = "bar.finished",
-            pulse_style: StyleType = "bar.pulse",
-            update_period: float = 0.1,
-            disable: bool = False,
-            show_speed: bool = True,
+        self,
+        sequence: Optional[Union[Sequence[ProgressType], Iterable[ProgressType]]] = None,
+        description: str = "Working...",
+        total: Optional[float] = None,
+        auto_refresh: bool = True,
+        console: Optional[Console] = None,
+        transient: bool = False,
+        get_time: Optional[Callable[[], float]] = None,
+        refresh_per_second: float = 10,
+        style: StyleType = "bar.back",
+        complete_style: StyleType = "bar.complete",
+        finished_style: StyleType = "bar.finished",
+        pulse_style: StyleType = "bar.pulse",
+        update_period: float = 0.1,
+        disable: bool = False,
+        show_speed: bool = True,
     ):
         """
         Track progress by iterating over a sequence.
@@ -88,7 +88,9 @@ class track:
         self.update_period = update_period
         self.task = None
 
-        self.columns: List[ProgressColumn] = [TextColumn("[progress.description]{task.description}")] if description else []
+        self.columns: List[ProgressColumn] = (
+            [TextColumn("[progress.description]{task.description}")] if description else []
+        )
         self.columns.extend(
             (
                 BarColumn(
@@ -117,8 +119,9 @@ class track:
 
     def __iter__(self) -> Iterable[ProgressType]:
         with self.progress:
-            yield from self.progress.track(self.sequence, total=self.total, description=self.description,
-                                           update_period=self.update_period)
+            yield from self.progress.track(
+                self.sequence, total=self.total, description=self.description, update_period=self.update_period
+            )
 
     def __enter__(self):
         self.progress.start()
