@@ -23,7 +23,7 @@ from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import has_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
-from nncf.openvino.quantization.quantize_model_if_op import dfs_apply_algorithm
+from nncf.openvino.quantization.quantize_model_if_op import apply_algorithm_if_bodies
 from nncf.openvino.quantization.weights_compression import insert_pre_compression_operations
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -120,7 +120,7 @@ def native_quantize_if_op_impl(
 
     graph = GraphConverter.create_nncf_graph(model)
 
-    quantized_model = dfs_apply_algorithm(quantization_algorithm, model, graph, calibration_dataset, subset_size)
+    quantized_model = apply_algorithm_if_bodies(quantization_algorithm, model, graph, calibration_dataset, subset_size)
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)

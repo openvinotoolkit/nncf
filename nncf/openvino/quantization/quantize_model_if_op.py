@@ -120,7 +120,7 @@ def _add_outputs_before_if_node(model_transformer: ModelTransformer, model: ov.M
     return model_transformer.transform(transformation_layout)
 
 
-def dfs_apply_algorithm(
+def apply_algorithm_if_bodies(
     algorithm: Algorithm,
     parent_model: ov.Model,
     parent_graph: NNCFGraph,
@@ -159,10 +159,10 @@ def dfs_apply_algorithm(
         )
         then_model = _extract_if_submodel(model_transformer_fp32, if_node, True)
         else_model = _extract_if_submodel(model_transformer_fp32, if_node, False)
-        then_quantized_model = dfs_apply_algorithm(
+        then_quantized_model = apply_algorithm_if_bodies(
             algorithm, then_model, NNCFGraphFactory.create(then_model), then_dataset, subset_size, None
         )
-        else_quantized_model = dfs_apply_algorithm(
+        else_quantized_model = apply_algorithm_if_bodies(
             algorithm, else_model, NNCFGraphFactory.create(else_model), else_dataset, subset_size, None
         )
         model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
