@@ -31,7 +31,6 @@ def _make_dataset_for_child_model(
     if_cond_input_name: str,
     child_model_input_names: List[str],
     if_submodel_condition: bool,
-    model_cnt: int,
     subset_size: int,
 ) -> Dataset:
     """
@@ -43,7 +42,6 @@ def _make_dataset_for_child_model(
     :param child_model_input_names: - Names of inputs for child model
     (should be in the order of passing them to a model).
     :param if_submodel_condition: If node submodel condition.
-    :param model_cnt: Global counter of a child model.
     :return Dataset: Dataset for child model.
     """
     dataset = []
@@ -51,10 +49,11 @@ def _make_dataset_for_child_model(
         calibration_dataset_size = min(subset_size, calibration_dataset.get_length())
     else:
         calibration_dataset_size = subset_size
+    branch = "then" if if_submodel_condition else "else"
     for input_data in tqdm(
         islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
         total=calibration_dataset_size,
-        desc=f"Collect dataset for {model_cnt} model:",
+        desc=f"Collect dataset for {branch} model:",
     ):
         data_item = []
         results = engine.infer(input_data)
@@ -64,7 +63,7 @@ def _make_dataset_for_child_model(
             for input_name in child_model_input_names:
                 data_item.append(results[input_name])
             dataset.append(data_item)
-    nncf_logger.info(f"The final length of a dataset for {model_cnt} model is {len(dataset)}")
+    nncf_logger.info(f"The final length of a dataset for {branch} model is {len(dataset)}")
     return Dataset(dataset)
 
 
@@ -123,9 +122,8 @@ def dfs_apply_algorithm(
     parent_model: ov.Model,
     parent_graph: NNCFGraph,
     parent_dataset: Dataset,
-    parent_statistic_points: Optional[StatisticPointsContainer],
-    parent_model_cnt: int,
-) -> Tuple[ov.Model, int]:
+    parent_statistic_points: Optional[StatisticPointsContainer] = None,
+) -> ov.Model:
     """
 
     :param parent_model:
@@ -135,53 +133,40 @@ def dfs_apply_algorithm(
     :param parent_model_cnt:
     :return:
     """
-    nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
+    nncf_logger.info(f"Quantize a new submodel")
     quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
+    if not has_if_op(parent_model):
+        return quantized_model
+    model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
+    for if_node in parent_graph.get_nodes_by_metatypes([OVBackend.if_node_metatype()]):
+        for if_submodel_condition in (True, False):
+            child_model = _extract_if_submodel(model_transformer_fp32, if_node, if_submodel_condition)
+            child_model_input_names = OVBackend.get_if_subgraph_input_names(
+                parent_model, if_node, if_submodel_condition
+            )
+            if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model, if_node)
+            parent_model_with_additional_outputs = _add_outputs_before_if_node(
+                model_transformer_fp32, parent_model, if_node
+            )
 
-    if has_if_op(parent_model):
-        global_model_cnt = parent_model_cnt
-        for if_node in parent_graph.get_nodes_by_metatypes([OVBackend.if_node_metatype()]):
-            for if_submodel_condition in (True, False):
-                model_cnt = global_model_cnt + 1
-                model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
-                child_model = _extract_if_submodel(model_transformer_fp32, if_node, if_submodel_condition)
-                child_model_input_names = OVBackend.get_if_subgraph_input_names(
-                    parent_model, if_node, if_submodel_condition
-                )
-                if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model, if_node)
-                parent_model_with_additional_outputs = _add_outputs_before_if_node(
-                    model_transformer_fp32, parent_model, if_node
-                )
+            child_dataset = _make_dataset_for_child_model(
+                factory.EngineFactory.create(parent_model_with_additional_outputs),
+                parent_dataset,
+                if_cond_input_name,
+                child_model_input_names,
+                if_submodel_condition,
+                algorithm.subset_size,
+            )
 
-                child_dataset = _make_dataset_for_child_model(
-                    factory.EngineFactory.create(parent_model_with_additional_outputs),
-                    parent_dataset,
-                    if_cond_input_name,
-                    child_model_input_names,
-                    if_submodel_condition,
-                    model_cnt,
-                    algorithm.subset_size,
-                )
-
-                child_quantized_model, model_cnt = dfs_apply_algorithm(
-                    algorithm, child_model, NNCFGraphFactory.create(child_model), child_dataset, None, model_cnt
-                )
-                global_model_cnt = model_cnt
-
-                nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
-                model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
-                quantized_model = _update_if_submodel(
-                    model_transformer_int8, if_node, if_submodel_condition, child_quantized_model
-                )
-                if algorithm.intermediate_model_dir:  # TODO: has algorithm intermediate_model_dir?
-                    nncf_logger.info(
-                        f"Save quantized model number {model_cnt} to dir {algorithm.intermediate_model_dir}"
-                    )
-                    OVBackend.dump_submodel(
-                        child_quantized_model, algorithm.intermediate_model_dir, if_node, if_submodel_condition
-                    )
-
-    return quantized_model, parent_model_cnt
+            child_quantized_model = dfs_apply_algorithm(
+                algorithm, child_model, NNCFGraphFactory.create(child_model), child_dataset, None
+            )
+            branch = "then" if if_submodel_condition else "else"
+            nncf_logger.info(f"Set quantized model {branch} to the original model")
+            model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
+            quantized_model = _update_if_submodel(
+                model_transformer_int8, if_node, if_submodel_condition, child_quantized_model
+            )
 
 
 class OVBackend:
@@ -236,11 +221,3 @@ class OVBackend:
                 OVOutputInsertionCommand(OVTargetPoint(TargetType.PRE_LAYER_OPERATION, if_node.node_name, port_id))
             )
         return commands
-
-    @staticmethod
-    def dump_submodel(model: ov.Model, directory: str, if_op: NNCFNode, if_submodel_condition: bool) -> None:
-        name = if_op.node_name.replace("/", "")
-        postfix = "then" if if_submodel_condition else "else"
-        model_name = f"{name}_{postfix}.xml"
-        model_path = Path(directory) / model_name
-        ov.serialize(model, model_path)

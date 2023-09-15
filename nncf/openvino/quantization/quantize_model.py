@@ -120,7 +120,7 @@ def native_quantize_if_op_impl(
 
     graph = GraphConverter.create_nncf_graph(model)
 
-    quantized_model, _ = dfs_apply_algorithm(quantization_algorithm, model, graph, calibration_dataset, None, 0)
+    quantized_model = dfs_apply_algorithm(quantization_algorithm, model, graph, calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
@@ -346,9 +346,8 @@ def quantize_impl(
         quantize_fn = pot_quantize_impl
     else:
         quantize_fn = native_quantize_impl
-
-    if has_if_op(model):
-        quantize_fn = native_quantize_if_op_impl
+        if has_if_op(model):
+            quantize_fn = native_quantize_if_op_impl
 
     return quantize_fn(
         model,
