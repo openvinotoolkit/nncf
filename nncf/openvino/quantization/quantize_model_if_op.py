@@ -1,6 +1,6 @@
 from itertools import islice
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Callable, Dict, List, Optional, Set, Tuple, TypeVar
 
 import openvino.runtime as ov
 from tqdm import tqdm
@@ -32,7 +32,8 @@ def _make_dataset_for_child_model(
     child_model_input_names: List[str],
     if_submodel_condition: bool,
     subset_size: int,
-) -> Dataset:
+    used_indices: Set[int],
+) -> Tuple[Dataset, List[int]]:
     """
     Returns dataset for a child model.
 
@@ -45,26 +46,31 @@ def _make_dataset_for_child_model(
     :return Dataset: Dataset for child model.
     """
     dataset = []
-    if calibration_dataset.get_length() is not None:
-        calibration_dataset_size = min(subset_size, calibration_dataset.get_length())
-    else:
-        calibration_dataset_size = subset_size
-    branch = "then" if if_submodel_condition else "else"
-    for input_data in tqdm(
-        islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
-        total=calibration_dataset_size,
-        desc=f"Collect dataset for {branch} model:",
+    calibration_dataset_size = (
+        min(subset_size, calibration_dataset.get_length())
+        if calibration_dataset.get_length() is not None
+        else subset_size
+    )
+    desc = "Collect dataset for {} model:".format("then" if if_submodel_condition else "else")
+    ret_used_indices = set()
+    for i, input_data in enumerate(
+        tqdm(
+            calibration_dataset.get_inference_data(
+                [i for i in range(calibration_dataset_size) if i not in used_indices]
+            ),
+            total=calibration_dataset_size - len(used_indices),
+            desc=desc,
+        )
     ):
         data_item = []
         results = engine.infer(input_data)
-        if (if_submodel_condition and results[if_cond_input_name]) or (
-            not if_submodel_condition and not results[if_cond_input_name]
-        ):
+        if if_submodel_condition == results[if_cond_input_name]:
             for input_name in child_model_input_names:
                 data_item.append(results[input_name])
             dataset.append(data_item)
-    nncf_logger.info(f"The final length of a dataset for {branch} model is {len(dataset)}")
-    return Dataset(dataset)
+            ret_used_indices.add(i)
+    nncf_logger.info(f"The collected length of a dataset is {len(dataset)}")
+    return Dataset(dataset), ret_used_indices
 
 
 def _extract_if_submodel(
@@ -122,6 +128,7 @@ def dfs_apply_algorithm(
     parent_model: ov.Model,
     parent_graph: NNCFGraph,
     parent_dataset: Dataset,
+    subset_size: int,
     parent_statistic_points: Optional[StatisticPointsContainer] = None,
 ) -> ov.Model:
     """
@@ -139,6 +146,7 @@ def dfs_apply_algorithm(
         return quantized_model
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
     for if_node in parent_graph.get_nodes_by_metatypes([OVBackend.if_node_metatype()]):
+        used_indices = set()
         for if_submodel_condition in (True, False):
             child_model = _extract_if_submodel(model_transformer_fp32, if_node, if_submodel_condition)
             child_model_input_names = OVBackend.get_if_subgraph_input_names(
@@ -149,17 +157,18 @@ def dfs_apply_algorithm(
                 model_transformer_fp32, parent_model, if_node
             )
 
-            child_dataset = _make_dataset_for_child_model(
+            child_dataset, used_indices = _make_dataset_for_child_model(
                 factory.EngineFactory.create(parent_model_with_additional_outputs),
                 parent_dataset,
                 if_cond_input_name,
                 child_model_input_names,
                 if_submodel_condition,
-                algorithm.subset_size,
+                subset_size,
+                used_indices,
             )
 
             child_quantized_model = dfs_apply_algorithm(
-                algorithm, child_model, NNCFGraphFactory.create(child_model), child_dataset, None
+                algorithm, child_model, NNCFGraphFactory.create(child_model), child_dataset, subset_size, None
             )
             branch = "then" if if_submodel_condition else "else"
             nncf_logger.info(f"Set quantized model {branch} to the original model")
