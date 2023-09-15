@@ -167,7 +167,6 @@ class MinMaxQuantization(Algorithm):
 
         self._reset_cache()
         self._algorithm_key = f"MMQ_{hash(self)}"
-        self.statistics_threshold = self.MIN_STATISTICS_SAMPLES
 
     def _reset_cache(self):
         # It prevents the duplicate weight quantizers from being added.
