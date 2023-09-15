@@ -167,6 +167,7 @@ def dfs_apply_algorithm(
             quantized_model = _update_if_submodel(
                 model_transformer_int8, if_node, if_submodel_condition, child_quantized_model
             )
+    return quantized_model
 
 
 class OVBackend:
