@@ -9,22 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from itertools import islice
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar
-
-from tqdm import tqdm
+from typing import Callable, Dict, List, Optional, TypeVar
 
 from nncf import Dataset
-from nncf.common import factory
 from nncf.common.deprecation import warning_deprecated
-from nncf.common.engine import Engine
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -166,21 +157,6 @@ class PostTrainingQuantization(Algorithm):
     def available_backends(self) -> Dict[str, BackendType]:
         return
 
-    def _set_backend_entity(self, model_backend: BackendType) -> None:
-        """
-        Creates a helper class with a backed-specific logic of the algorithm.
-
-        :param model_backend: Backend.
-        """
-        if model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.post_training.openvino_backend import OVPostTrainingBackend
-
-            self._backend_entity = OVPostTrainingBackend()
-        else:
-            raise RuntimeError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
-            )
-
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         if self.first_stage_algorithms:
             raise NotImplementedError(
@@ -194,15 +170,18 @@ class PostTrainingQuantization(Algorithm):
                     output.add_statistic_point(statistic_point)
         return output
 
-    def _apply(
+    def apply(
         self,
         model: TModel,
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
+        modified_model = copy_model(model)
+        modified_model_graph = graph
+        backend = get_backend(modified_model)
+
         for algorithm in self.first_stage_algorithms:
-            backend = get_backend(model)
             if isinstance(algorithm, SmoothQuant) and backend != BackendType.OPENVINO:
                 nncf_logger.debug(f"{backend.name} does not support SmoothQuant algorithm yet.")
                 continue
@@ -211,211 +190,28 @@ class PostTrainingQuantization(Algorithm):
                 nncf_logger.debug(f"{backend.name} does not support ChannelAlignment algorithm yet.")
                 continue
 
-            statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-            algo_statistic_points = algorithm.get_statistic_points(model, graph)
+            statistics_aggregator = StatisticsAggregatorFactory.create(modified_model, dataset)
+            algo_statistic_points = algorithm.get_statistic_points(modified_model, modified_model_graph)
             statistics_aggregator.register_statistic_points(algo_statistic_points)
-            statistics_aggregator.collect_statistics(model, graph)
-            model = algorithm.apply(model, graph, statistics_aggregator.statistic_points)
-            graph = NNCFGraphFactory.create(model)
+            statistics_aggregator.collect_statistics(modified_model, modified_model_graph)
+            modified_model = algorithm.apply(
+                modified_model, modified_model_graph, statistics_aggregator.statistic_points
+            )
+            modified_model_graph = NNCFGraphFactory.create(modified_model)
 
         if statistic_points is None:
-            statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+            statistics_aggregator = StatisticsAggregatorFactory.create(modified_model, dataset)
             for algorithm in self.algorithms:
-                algo_statistic_points = algorithm.get_statistic_points(model, graph)
+                algo_statistic_points = algorithm.get_statistic_points(modified_model, modified_model_graph)
                 statistics_aggregator.register_statistic_points(algo_statistic_points)
 
-            statistics_aggregator.collect_statistics(model, graph)
+            statistics_aggregator.collect_statistics(modified_model, modified_model_graph)
             statistic_points = statistics_aggregator.statistic_points
 
         for algorithm in self.algorithms[:-1]:
-            model = algorithm.apply(model, graph, statistic_points)
-            graph = NNCFGraphFactory.create(model)
+            modified_model = algorithm.apply(modified_model, modified_model_graph, statistic_points)
+            modified_model_graph = NNCFGraphFactory.create(modified_model)
         # building the model graph is not required after the last algorithm
-        model = self.algorithms[-1].apply(model, graph, statistic_points)
+        modified_model = self.algorithms[-1].apply(modified_model, modified_model_graph, statistic_points)
 
-        return model
-
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> TModel:
-        model_copy = copy_model(model)
-        backend = get_backend(model)
-        if backend in [BackendType.ONNX, BackendType.TORCH]:
-            return self._apply(model_copy, graph, statistic_points, dataset)
-        self._set_backend_entity(backend)
-        if not self._has_if_op(graph, self._backend_entity.if_node_metatype):
-            return self._apply(model_copy, graph, statistic_points, dataset)
-        nncf_logger.info("The model has If operations. The iteratively each body of If operations will be quantized.")
-        quantized_model, _ = self._dfs_quantize_models(model_copy, graph, dataset, statistic_points, 0)
-        return quantized_model
-
-    def _make_dataset_for_child_model(
-        self,
-        engine: Engine,
-        calibration_dataset: Dataset,
-        if_cond_input_name: str,
-        child_model_input_names: List[str],
-        if_submodel_condition: bool,
-        model_cnt: int,
-    ) -> Dataset:
-        """
-        Returns dataset for a child model.
-
-        :param engine: Engine to infer parent model to obtain dataitems for a child dataset.
-        :param calibration_dataset: Dataset to infer parent model.
-        :param if_cond_input_name: Input name of If node condition.
-        :param child_model_input_names: - Names of inputs for child model
-        (should be in the order of passing them to a model).
-        :param if_submodel_condition: If node submodel condition.
-        :param model_cnt: Global counter of a child model.
-        :return Dataset: Dataset for child model.
-        """
-        dataset = []
-        if calibration_dataset.get_length() is not None:
-            calibration_dataset_size = min(self.subset_size, calibration_dataset.get_length())
-        else:
-            calibration_dataset_size = self.subset_size
-        for input_data in tqdm(
-            islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
-            total=calibration_dataset_size,
-            desc=f"Collect dataset for {model_cnt} model:",
-        ):
-            data_item = []
-            results = engine.infer(input_data)
-            if (if_submodel_condition and results[if_cond_input_name]) or (
-                not if_submodel_condition and not results[if_cond_input_name]
-            ):
-                for input_name in child_model_input_names:
-                    data_item.append(results[input_name])
-                dataset.append(data_item)
-        nncf_logger.info(f"The final length of a dataset for {model_cnt} model is {len(dataset)}")
-        return Dataset(dataset)
-
-    def _has_if_op(self, nncf_graph: NNCFGraph, if_node_metatype: OperatorMetatype) -> bool:
-        """
-        Returns True if NNCGraph has If node.
-
-        :param nncf_graph: NNCFGraph instance.
-        :param if_node_metatype: backend-specific If node metatype.
-        :return: True if NNCFGraph has If node, else - otherwise.
-        """
-        if nncf_graph.get_nodes_by_metatypes([if_node_metatype]):
-            return True
-        return False
-
-    def _extract_if_submodel(
-        self, model_transformer: ModelTransformer, if_node: NNCFNode, if_submodel_condition: bool
-    ) -> TModel:
-        """
-        Returns if submodel of If node laying on an input port if_submodel_port_id of If node.
-
-        :param model_transformer: ModelTransformer instance.
-        :param if_node: If node.
-        :param if_submodel_condition: If True returns True submodel of If node, otherwise - False submodel.
-        :return: If submodel.
-        """
-        transformation_layout = TransformationLayout()
-        command = self._backend_entity.create_extract_if_subgraph_command(if_node, if_submodel_condition)
-        transformation_layout.register(command)
-        return model_transformer.transform(transformation_layout)
-
-    def _update_if_submodel(
-        self, model_transformer: ModelTransformer, if_node: NNCFNode, if_submodel_condition: bool, submodel: TModel
-    ) -> TModel:
-        """
-        Update submodel of If node.
-
-        :param model_transformer: ModelTransformer instance.
-        :param if_node: If node.
-        :param if_submodel_condition: Condition of If node submodel.
-        :param submodel: New submodel.
-        :return: Updated model with a new submodel.
-        """
-        transformation_layout = TransformationLayout()
-        command = self._backend_entity.create_update_subgraph_command(if_node, if_submodel_condition, submodel)
-        transformation_layout.register(command)
-        return model_transformer.transform(transformation_layout)
-
-    def _add_outputs_before_if_node(
-        self, model_transformer: ModelTransformer, model: TModel, if_node: NNCFNode
-    ) -> TModel:
-        """
-        Inserts extra outputs on If node inputs.
-
-        :param model_transformer: ModelTransformer instance.
-        :param model: Model instance.
-        :param if_node: If node.
-        :return: Model with extra outputs before If node.
-        """
-        transformation_layout = TransformationLayout()
-        for command in self._backend_entity.create_output_insertion_commands(model, if_node):
-            transformation_layout.register(command)
-        return model_transformer.transform(transformation_layout)
-
-    def _dfs_quantize_models(
-        self,
-        parent_model: TModel,
-        parent_graph: NNCFGraph,
-        parent_dataset: Dataset,
-        parent_statistic_points: Optional[StatisticPointsContainer],
-        parent_model_cnt: int,
-    ) -> Tuple[TModel, int]:
-        """
-
-        :param parent_model:
-        :param parent_graph:
-        :param parent_dataset:
-        :param parent_statistic_points:
-        :param parent_model_cnt:
-        :return:
-        """
-        nncf_logger.info(f"Quantize a model number {parent_model_cnt}")
-        quantized_model = self._apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
-
-        if self._has_if_op(parent_graph, self._backend_entity.if_node_metatype):
-            model_transformer = factory.ModelTransformerFactory.create(parent_model)
-
-            global_model_cnt = parent_model_cnt
-            for if_node in parent_graph.get_nodes_by_metatypes([self._backend_entity.if_node_metatype]):
-                for if_submodel_condition in (True, False):
-                    model_cnt = global_model_cnt + 1
-                    child_model = self._extract_if_submodel(model_transformer, if_node, if_submodel_condition)
-                    child_model_input_names = self._backend_entity.get_if_subgraph_input_names(
-                        parent_model, if_node, if_submodel_condition
-                    )
-                    if_cond_input_name = self._backend_entity.get_if_cond_input_name(parent_model, if_node)
-                    parent_model_with_additional_outputs = self._add_outputs_before_if_node(
-                        model_transformer, parent_model, if_node
-                    )
-
-                    child_dataset = self._make_dataset_for_child_model(
-                        factory.EngineFactory.create(parent_model_with_additional_outputs),
-                        parent_dataset,
-                        if_cond_input_name,
-                        child_model_input_names,
-                        if_submodel_condition,
-                        model_cnt,
-                    )
-
-                    child_quantized_model, model_cnt = self._dfs_quantize_models(
-                        child_model, NNCFGraphFactory.create(child_model), child_dataset, None, model_cnt
-                    )
-                    global_model_cnt = model_cnt
-
-                    nncf_logger.info(f"Set quantized model number {model_cnt} to the original model")
-                    parent_model = self._update_if_submodel(
-                        model_transformer, if_node, if_submodel_condition, child_quantized_model
-                    )
-                    if self.intermediate_model_dir:
-                        nncf_logger.info(
-                            f"Save quantized model number {model_cnt} to dir {self.intermediate_model_dir}"
-                        )
-                        self._backend_entity.dump_submodel(
-                            child_quantized_model, self.intermediate_model_dir, if_node, if_submodel_condition
-                        )
-
-        return quantized_model, parent_model_cnt
+        return modified_model
