@@ -17,9 +17,9 @@ import operator
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Type, TypeVar, Union
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
@@ -27,7 +27,12 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
-from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.pipelines.pipeline import Pipeline
+from nncf.quantization.pipelines.stepwise_pipeline import StepwisePipeline
+from nncf.quantization.pipelines.stepwise_pipeline import collect_statistics
+from nncf.quantization.pipelines.stepwise_pipeline import get_statistic_points
+from nncf.quantization.pipelines.stepwise_pipeline import run_pipeline_from_step
+from nncf.quantization.pipelines.stepwise_pipeline import run_pipeline_step
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -175,7 +180,7 @@ def find_best_combination(
     return best_combination_key
 
 
-class HyperparameterTuner:
+class HyperparameterTuner(Pipeline):
     """
     This algorithm is used to find a best combination of parameters from `param_grid`.
 
@@ -186,7 +191,7 @@ class HyperparameterTuner:
             "param_name": [0.1, 0.2],
         }
 
-    The parameters names should be same as in `algorithm_cls.__init__()` method.
+    The parameters names should be same as in `pipeline_cls.__init__()` method.
     In case when "param_name" parameter is a dataclass object there is a way to specify settings
     to try for his fields using marker ":"
 
@@ -214,9 +219,9 @@ class HyperparameterTuner:
 
     def __init__(
         self,
-        algorithm_cls: Type[Algorithm],
+        pipeline_cls: Type[StepwisePipeline],
         init_params: Dict[str, Any],
-        param_grid: Dict[str, List[Any]],
+        param_grids: List[Dict[str, List[Any]]],
         calibration_dataset: Dataset,
         validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
         subset_size: int,
@@ -224,7 +229,7 @@ class HyperparameterTuner:
         quantized_metric_results: MetricResults,
     ):
         """
-        :param algorithm_cls: Class of algorithm.
+        :param pipeline_cls: Class of pipeline.
         :param init_params: Initial set of parameters used to create algorithm.
         :param param_grid: Dictionary with parameters names as keys and list of
             parameter settings to try as values.
@@ -235,9 +240,9 @@ class HyperparameterTuner:
         :param initial_metric_results: Metric results for initial model.
         :param quantized_metric_results: Metric results for quantized with `init_params` model.
         """
-        self._algorithm_cls = algorithm_cls
+        self._pipeline_cls = pipeline_cls
         self._init_params = init_params
-        self._param_grid = param_grid
+        self._param_grids = param_grids
         self._calibration_dataset = calibration_dataset
         self._evaluator = Evaluator(validation_fn)
         self._subset_size = subset_size
@@ -246,22 +251,22 @@ class HyperparameterTuner:
 
         self._is_metric_mode = isinstance(self._initial_metric_results.values_for_each_item[0], float)
 
-        # # Will be initialized inside `apply()` method
+        # Will be initialized inside `run()` method
         self._error_fn = None
 
-        # Will be initialized inside `_initialize_algorithms()` method
-        self._algorithms: Dict[CombinationKey, Algorithm] = {}
-        self._statistic_points = None
+        # Will be initialized inside `_prepare_pipeline_step()` method
+        self._pipelines: Dict[CombinationKey, StepwisePipeline] = {}
+        self._step_index_to_statistics: Dict[int, StatisticPointsContainer] = {}
 
         self._calculated_scores: Dict[CombinationKey, float] = {}
 
-    def apply(self, model: TModel, validation_dataset: Dataset) -> TModel:
+    def run(self, model: TModel, dataset: Dataset) -> TModel:
         """
-        Applies algorithm to input model.
+        TODO:
 
-        :param model: Input model.
-        :param validation_dataset: Dataset used to validate resulted model.
-        :return: Resulted model.
+        :param model:
+        :param dataset:
+        :return:
         """
         if self._is_metric_mode:
             self._error_fn = operator.sub
@@ -275,58 +280,93 @@ class HyperparameterTuner:
             self._error_fn,
         )
 
-        combinations = create_combinations(self._param_grid)
+        step_model = model  # The model on which the `step_index`-th pipeline step will be executed
+        best_settings = {}
 
-        initial_graph = NNCFGraphFactory.create(model)
+        for step_index, step_param_grid in enumerate(self._param_grids):
+            step_graph = NNCFGraphFactory.create(step_model)
 
-        nncf_logger.info("Start initialization of algorithms")
-        with timer():
-            self._prepare_algorithms(model, initial_graph, combinations)
+            # If there are no parameters to optimize for the current step, simply execute
+            # this pipeline step on the model.
+            if step_param_grid is None:
+                # TODO(andrey-churkin): Think about how it can be avoided.
+                params = apply_combination(self._init_params, best_settings)
+                pipeline_step = self._pipeline_cls(**params).pipeline_steps[step_index]
+                container = get_statistic_points(pipeline_step, step_model, step_graph)
+                step_statistics = collect_statistics(container, step_model, step_graph, self._calibration_dataset)
+                step_model = run_pipeline_step(pipeline_step, step_statistics, step_model, step_graph)
+                continue
 
-        combination_score_fn = functools.partial(
-            self._calculate_combination_score,
-            initial_model=model,
-            initial_graph=initial_graph,
-            dataset=validation_dataset,
-            subset_indices=subset_indices,
-        )
+            step_combinations = create_combinations(step_param_grid)
 
-        nncf_logger.info("Start search best combination of parameters")
-        with timer():
-            best_combination_key = find_best_combination(combinations, combination_score_fn, self._param_grid)
+            nncf_logger.info(f"Start preparation for {step_index}-th pipeline step")
+            with timer():
+                self._prepare_pipeline_step(step_index, step_model, step_graph, step_combinations, best_settings)
 
-        algorithm = self._algorithms[best_combination_key]
-        result_model = algorithm.apply(model, initial_graph, self._statistic_points)
+            combination_score_fn = functools.partial(
+                self._calculate_combination_score,
+                step_index=step_index,
+                step_model=step_model,
+                step_graph=step_graph,
+                dataset=dataset,
+                subset_indices=subset_indices,
+            )
 
-        return result_model
+            nncf_logger.info("Start search best combination of parameters")
+            with timer():
+                step_best_combination_key = find_best_combination(
+                    step_combinations, combination_score_fn, step_param_grid
+                )
 
-    def _prepare_algorithms(
-        self, initial_model: TModel, initial_graph: NNCFGraph, combinations: Dict[CombinationKey, Combination]
+            best_settings.update(step_combinations[step_best_combination_key])
+            pipeline_step = self._pipelines[step_best_combination_key].pipeline_steps[step_index]
+            step_model = run_pipeline_step(
+                pipeline_step, self._step_index_to_statistics[step_index], step_model, step_graph
+            )
+
+        # TODO(andrey-churkin): Show final best settings
+
+        return step_model
+
+    def _prepare_pipeline_step(
+        self,
+        step_index: int,
+        step_model: TModel,
+        step_graph: NNCFGraph,
+        step_combinations: Dict[CombinationKey, Combination],
     ) -> None:
         """
-        Creates algorithm for each combination of parameters. Collects statistics for
-        created algorithms.
+        TODO:
 
-        :param initial_model: Input model used to collect statistics for algorithms.
-        :param combinations: Combinations of parameters.
+        :param step_index:
+        :param step_model:
+        :param step_graph:
+        :param step_combinations:
         """
-        for combination_key, combination in combinations.items():
-            kwargs = apply_combination(self._init_params, combination)
-            self._algorithms[combination_key] = self._algorithm_cls(**kwargs)
+        # Create a separate pipeline for each combination
 
-        # Collect required statistics for created algorithms
-        stats_aggregator = StatisticsAggregatorFactory.create(initial_model, self._calibration_dataset)
-        for algorithm in self._algorithms.values():
-            statistic_points = algorithm.get_statistic_points(initial_model, initial_graph)
-            stats_aggregator.register_statistic_points(statistic_points)
-        stats_aggregator.collect_statistics(initial_model, initial_graph)
-        self._statistic_points = stats_aggregator.statistic_points
+        # TODO(andrey-churkin): Think about how it can be avoided. In an ideal scenario,
+        # we would have only one pipeline and set parameters directly within it.
+        self._pipelines = {}
+        for combination_key, combination in step_combinations.items():
+            kwargs = apply_combination(self._init_params, combination)
+            self._pipelines[combination_key] = self._pipeline_cls(**kwargs)
+
+        # Collect statistics required to execute `step_index`-th pipeline step
+        containers = [
+            get_statistic_points(pipeline.pipeline_steps[step_index], step_model, step_graph)
+            for pipeline in self._pipelines.values()
+        ]
+        self._step_index_to_statistics[step_index] = collect_statistics(
+            containers, step_model, step_graph, self._calibration_dataset
+        )
 
     def _calculate_combination_score(
         self,
         combination_key: CombinationKey,
-        initial_model: TModel,
-        initial_graph: NNCFGraph,
+        step_index: int,
+        step_model: TModel,
+        step_graph: NNCFGraph,
         dataset: Dataset,
         subset_indices: List[int],
     ) -> float:
@@ -343,8 +383,15 @@ class HyperparameterTuner:
         if combination_key in self._calculated_scores:
             return self._calculated_scores[combination_key]
 
-        algorithm = self._algorithms[combination_key]
-        model = algorithm.apply(initial_model, initial_graph, self._statistic_points)
+        model = run_pipeline_from_step(
+            self._pipelines[combination_key],
+            step_model,
+            self._calibration_dataset,
+            step_graph,
+            step_index,
+            self._step_index_to_statistics,
+        )
+
         score = self._validate_model(model, dataset, subset_indices)
         self._calculated_scores[combination_key] = score
 

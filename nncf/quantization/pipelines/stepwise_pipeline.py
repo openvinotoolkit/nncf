@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, TypeVar
+from typing import Dict, List, Optional, TypeVar, Union
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
@@ -42,7 +42,10 @@ def get_statistic_points(pipeline_step: PipelineStep, model: TModel, graph: NNCF
 
 
 def collect_statistics(
-    statistic_points: StatisticPointsContainer, model: TModel, graph: NNCFGraph, dataset: Dataset
+    containers: Union[StatisticPointsContainer, List[StatisticPointsContainer]],
+    model: TModel,
+    graph: NNCFGraph,
+    dataset: Dataset,
 ) -> StatisticPointsContainer:
     """
     TODO:
@@ -53,8 +56,12 @@ def collect_statistics(
     :param dataset:
     :return:
     """
+    if not isinstance(containers, list):
+        containers = [containers]
+
     statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-    statistics_aggregator.register_statistic_points(statistic_points)
+    for container in containers:
+        statistics_aggregator.register_statistic_points(container)
     statistics_aggregator.collect_statistics(model, graph)
 
     return statistics_aggregator.statistic_points
