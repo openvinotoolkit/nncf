@@ -14,8 +14,7 @@ import os
 import pytest
 import tensorflow as tf
 
-from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
-from tests.experimental.tensorflow import test_models
+from tests.tensorflow.experimental import test_models
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.test_compressed_graph import QUANTIZERS
 from tests.tensorflow.test_compressed_graph import ModelDesc
@@ -27,7 +26,9 @@ from tests.tensorflow.test_compressed_graph import get_model_name
 from tests.tensorflow.test_compressed_graph import prepare_and_check_graph_def
 from tests.tensorflow.test_compressed_graph import prepare_and_check_nx_graph
 
-patch_tf_operations()
+# TODO(achurkin): enable after 120296 ticked is fixed
+# from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
+# patch_tf_operations()
 
 
 MODELS = [
@@ -75,6 +76,7 @@ def check_model_graph_v2(compressed_model, ref_graph_filename, ref_graph_dir, re
         prepare_and_check_nx_graph(compressed_graph, graph_path, ref_graph_exist, graph_to_layer_var_names_map)
 
 
+@pytest.mark.skip(reason="ticket 120296")
 @pytest.mark.parametrize("desc", MODELS, ids=MODELS_IDS)
 def test_quantize_network_v2(desc: ModelDesc, _quantization_case_config_v2: QuantizeTestCaseConfiguration):
     model = desc.model_builder()

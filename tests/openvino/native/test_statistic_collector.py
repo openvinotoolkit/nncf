@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from nncf.openvino.tensor import OVNNCFTensor
-from tests.experimental.common.test_statistic_collector import TemplateTestStatisticCollector
+from tests.common.experimental.test_statistic_collector import TemplateTestStatisticCollector
 
 
 class TestOVStatisticCollector(TemplateTestStatisticCollector):
