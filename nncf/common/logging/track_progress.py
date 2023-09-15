@@ -111,7 +111,7 @@ class track:
                 SeparatorColumn(),
                 TimeElapsedColumn(),
                 SeparatorColumn(disable_if_no_total=True),  # disable because time remaining will be empty
-                TimeRemainingColumn(elapsed_when_finished=True),
+                TimeRemainingColumn(),
             )
         )
         self.progress = Progress(
