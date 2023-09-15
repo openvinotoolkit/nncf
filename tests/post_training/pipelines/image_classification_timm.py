@@ -46,8 +46,8 @@ class ImageClassificationTimm(BaseTestPipeline):
         timm_model = timm.create_model(self.model_id, num_classes=1000, in_chans=3, pretrained=True, checkpoint_path="")
         timm_model = replace_timm_custom_modules_with_torch_native(timm_model)
         self.model_cfg = timm_model.default_cfg
-        input_size = [1] + list(timm_model.default_cfg["input_size"])
-        self.dummy_tensor = torch.rand(input_size)
+        self.input_size = [1] + list(timm_model.default_cfg["input_size"])
+        self.dummy_tensor = torch.rand(self.input_size)
 
         if self.backend in PT_BACKENDS:
             self.model = timm_model
@@ -66,8 +66,24 @@ class ImageClassificationTimm(BaseTestPipeline):
             self.input_name = self.model.graph.input[0].name
 
         if self.backend in OV_BACKENDS:
-            self.model = convert_model(timm_model, example_input=self.dummy_tensor, input_shape=input_size)
+            self.model = convert_model(timm_model, example_input=self.dummy_tensor, input_shape=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
+
+        self._dump_model_fp32()
+
+    def _dump_model_fp32(self) -> None:
+        """Dump IRs of fp32 models, to help debugging."""
+        if self.backend in PT_BACKENDS:
+            ov_model = convert_model(self.model, example_input=self.dummy_tensor, input_shape=self.input_size)
+            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+
+        if self.backend == BackendType.ONNX:
+            onnx_path = self.output_model_dir / "model_fp32.onnx"
+            ov_model = convert_model(onnx_path)
+            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+
+        if self.backend in OV_BACKENDS:
+            ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
         config = self.model_cfg
