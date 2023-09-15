@@ -88,7 +88,6 @@ class PostTrainingQuantization(Algorithm):
 
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
-        self.intermediate_model_dir = advanced_parameters.intermediate_model_dir
 
         if model_type == ModelType.TRANSFORMER and advanced_parameters.smooth_quant_alpha >= 0:
             smooth_quant_algorithm = SmoothQuant(
