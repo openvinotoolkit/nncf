@@ -25,15 +25,14 @@ from nncf.openvino.graph.transformations.commands import OVUpdateIfSubgraphComma
 from nncf.quantization.algorithms.algorithm import Algorithm
 
 
-def _make_dataset_for_child_model(
+def _make_dataset_for_children_model(
     engine: Engine,
     calibration_dataset: Dataset,
     if_cond_input_name: str,
-    child_model_input_names: List[str],
-    if_submodel_condition: bool,
+    then_model_input_names,
+    else_model_input_names,
     subset_size: int,
-    used_indices: Set[int],
-) -> Tuple[Dataset, List[int]]:
+) -> Tuple[Dataset, Dataset]:
     """
     Returns dataset for a child model.
 
@@ -45,32 +44,30 @@ def _make_dataset_for_child_model(
     :param if_submodel_condition: If node submodel condition.
     :return Dataset: Dataset for child model.
     """
-    dataset = []
+    then_dataset, else_dataset = [], []
     calibration_dataset_size = (
         min(subset_size, calibration_dataset.get_length())
         if calibration_dataset.get_length() is not None
         else subset_size
     )
-    desc = "Collect dataset for {} model:".format("then" if if_submodel_condition else "else")
-    ret_used_indices = set()
-    for i, input_data in enumerate(
-        tqdm(
-            calibration_dataset.get_inference_data(
-                [i for i in range(calibration_dataset_size) if i not in used_indices]
-            ),
-            total=calibration_dataset_size - len(used_indices),
-            desc=desc,
-        )
+    for input_data in tqdm(
+        islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
+        total=calibration_dataset_size,
+        desc="Collect dataset for then and else models:",
     ):
         data_item = []
         results = engine.infer(input_data)
-        if if_submodel_condition == results[if_cond_input_name]:
-            for input_name in child_model_input_names:
-                data_item.append(results[input_name])
-            dataset.append(data_item)
-            ret_used_indices.add(i)
-    nncf_logger.info(f"The collected length of a dataset is {len(dataset)}")
-    return Dataset(dataset), ret_used_indices
+        if results[if_cond_input_name]:
+            for name in then_model_input_names:
+                data_item.append(results[name])
+            then_dataset.append(data_item)
+        else:
+            for name in else_model_input_names:
+                data_item.append(results[name])
+            else_dataset.append(data_item)
+    nncf_logger.info(f"The length of dataset for then body is {len(then_dataset)}")
+    nncf_logger.info(f"The length of dataset for else body is {len(else_dataset)}")
+    return Dataset(then_dataset), Dataset(else_dataset)
 
 
 def _extract_if_submodel(
@@ -146,36 +143,32 @@ def dfs_apply_algorithm(
         return quantized_model
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
     for if_node in parent_graph.get_nodes_by_metatypes([OVBackend.if_node_metatype()]):
-        used_indices = set()
-        for if_submodel_condition in (True, False):
-            child_model = _extract_if_submodel(model_transformer_fp32, if_node, if_submodel_condition)
-            child_model_input_names = OVBackend.get_if_subgraph_input_names(
-                parent_model, if_node, if_submodel_condition
-            )
-            if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model, if_node)
-            parent_model_with_additional_outputs = _add_outputs_before_if_node(
-                model_transformer_fp32, parent_model, if_node
-            )
-
-            child_dataset, used_indices = _make_dataset_for_child_model(
-                factory.EngineFactory.create(parent_model_with_additional_outputs),
-                parent_dataset,
-                if_cond_input_name,
-                child_model_input_names,
-                if_submodel_condition,
-                subset_size,
-                used_indices,
-            )
-
-            child_quantized_model = dfs_apply_algorithm(
-                algorithm, child_model, NNCFGraphFactory.create(child_model), child_dataset, subset_size, None
-            )
-            branch = "then" if if_submodel_condition else "else"
-            nncf_logger.info(f"Set quantized model {branch} to the original model")
-            model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
-            quantized_model = _update_if_submodel(
-                model_transformer_int8, if_node, if_submodel_condition, child_quantized_model
-            )
+        then_model_input_names = OVBackend.get_if_subgraph_input_names(parent_model, if_node, True)
+        else_model_input_names = OVBackend.get_if_subgraph_input_names(parent_model, if_node, False)
+        if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model, if_node)
+        parent_model_with_additional_outputs = _add_outputs_before_if_node(
+            model_transformer_fp32, parent_model, if_node
+        )
+        then_dataset, else_dataset = _make_dataset_for_children_model(
+            factory.EngineFactory.create(parent_model_with_additional_outputs),
+            parent_dataset,
+            if_cond_input_name,
+            then_model_input_names,
+            else_model_input_names,
+            subset_size,
+        )
+        then_model = _extract_if_submodel(model_transformer_fp32, if_node, True)
+        else_model = _extract_if_submodel(model_transformer_fp32, if_node, False)
+        then_quantized_model = dfs_apply_algorithm(
+            algorithm, then_model, NNCFGraphFactory.create(then_model), then_dataset, subset_size, None
+        )
+        else_quantized_model = dfs_apply_algorithm(
+            algorithm, else_model, NNCFGraphFactory.create(else_model), else_dataset, subset_size, None
+        )
+        model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
+        quantized_model = _update_if_submodel(model_transformer_int8, if_node, True, then_quantized_model)
+        model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
+        quantized_model = _update_if_submodel(model_transformer_int8, if_node, False, else_quantized_model)
     return quantized_model
 
 
