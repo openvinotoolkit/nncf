@@ -263,7 +263,7 @@ class NormalizedKeys:
         Returns original key if there's no ';' and operation doesn't start with EXTERNAL_QUANTIZERS_STORAGE_NAME
         """
         result = [new_key]
-        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
+        from nncf.torch.quantization.external_quantizer import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 
         if ";" in new_key and new_key.startswith(CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX):
             group_of_keys = new_key.split(";")
@@ -278,8 +278,8 @@ class NormalizedKeys:
     def _replace_legacy_act_quantizer_storage_name(checkpoint_key: str) -> Tuple[str, bool]:
         did_replace = False
         splits = checkpoint_key.split(".")
-        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
-        from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
+        from nncf.torch.quantization.external_quantizer import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+        from nncf.torch.quantization.external_quantizer import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 
         if splits[0] == LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX:
             did_replace = True
@@ -337,13 +337,13 @@ class KeyMatcher:
                 "Legacy NNCF-enabled .pth checkpoint has been loaded! "
                 "The version-agnostic `RELU` operator name entries in the state dict "
                 "have been deprecated. "
-                "The loader will try to match these entries to the correspoindig `relu` and `relu_` op "
+                "The loader will try to match these entries to the corresponding `relu` and `relu_` op "
                 "names. The newly exported checkpoints will be adjusted to the new format."
             )
 
         if normalized_keys_to_load.has_legacy_storage_keys:
-            from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-            from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+            from nncf.torch.quantization.external_quantizer import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+            from nncf.torch.quantization.external_quantizer import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 
             warning_deprecated(
                 f"Legacy NNCF-enabled .pth checkpoint has been loaded! "

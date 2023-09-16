@@ -25,8 +25,8 @@ from nncf.torch.checkpoint_loading import ProcessedKeyStatus
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.layers import NNCF_PADDING_VALUE_ATTR_NAME
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
-from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+from nncf.torch.quantization.external_quantizer import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+from nncf.torch.quantization.external_quantizer import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import PTTensorListComparator
 

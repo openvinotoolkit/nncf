@@ -46,11 +46,13 @@ from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
+from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.module_operations import BaseOp
+from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
@@ -505,3 +507,39 @@ def test_rebuild_graph_after_insert_transformation():
     transformed_model = model_transformer.transform(transformation_layout=transformation_layout)
     new_graph = transformed_model.nncf.get_graph()
     assert len(new_graph.get_all_nodes()) == len(graph.get_all_nodes()) + 1
+
+
+@pytest.mark.parametrize(
+    "target_type, node_name, input_port_id, ref_name",
+    (
+        (TargetType.OPERATOR_POST_HOOK, "/nncf_model_input_0", None, "/nncf_model_input_0|OUTPUT"),
+        (
+            TargetType.OPERATOR_PRE_HOOK,
+            "InsertionPointTestModel/linear_0",
+            0,
+            "InsertionPointTestModel/linear_0|INPUT0",
+        ),
+        (TargetType.OPERATION_WITH_WEIGHTS, "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0", None, None),
+    ),
+)
+def test_quantizer_insertion_transformations(target_type, node_name, input_port_id, ref_name):
+    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+    model_transformer = PTModelTransformer(model)
+
+    target_point = PTTargetPoint(target_type, node_name, input_port_id=input_port_id)
+    command = PTQuantizerInsertionCommand(target_point, BaseOp(lambda x: x))
+
+    transformation_layout = PTTransformationLayout()
+    transformation_layout.register(command)
+    transformed_model = model_transformer.transform(transformation_layout)
+
+    assert hasattr(transformed_model.nncf, "external_quantizers")
+    if target_type == TargetType.OPERATION_WITH_WEIGHTS:
+        # pylint: disable=protected-access
+        op = transformed_model.conv1.pre_ops._modules["0"]
+        assert isinstance(op, UpdateWeight)
+        assert isinstance(op.op, BaseOp)
+    else:
+        assert hasattr(transformed_model.nncf.external_quantizers, ref_name)
+        op = getattr(transformed_model.nncf.external_quantizers, ref_name)
+        assert isinstance(op, BaseOp)

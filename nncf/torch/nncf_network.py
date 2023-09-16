@@ -15,7 +15,6 @@ import types
 from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
-from enum import Enum
 from enum import IntEnum
 from typing import Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
 
@@ -50,6 +49,7 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope_access import get_module_by_scope
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
+from nncf.torch.extra_compression_module_type import ExtraCompressionModuleType
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
@@ -60,16 +60,14 @@ from nncf.torch.knowledge_distillation.knowledge_distillation_handler import Kno
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
+from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import training_mode_switcher
 
 LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME = "nncf_module"
-LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "external_quantizers"
 
-EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
-CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
 
 Module = TypeVar("Module", bound=nn.Module)
 
@@ -117,10 +115,6 @@ class PTInsertionPoint:
 
     def __hash__(self):
         return hash(str(self))
-
-
-class ExtraCompressionModuleType(Enum):
-    EXTERNAL_QUANTIZER = 0
 
 
 class NNCFNetworkInterface(torch.nn.Module):
