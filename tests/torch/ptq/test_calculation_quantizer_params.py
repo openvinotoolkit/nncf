@@ -294,7 +294,9 @@ def calculate_fq_params(model, input_data):
     return {
         "//nncf_model_input_0|OUTPUT/FakeQuantize": conv1_stats,
         "/bn1/LinearTestModel/NNCFBatchNorm2d[bn1]/batch_norm_0|INPUT0/FakeQuantize": bn1_stats,
-        "/avg_pool/LinearTestModel/AdaptiveAvgPool2d[avg_pool]/adaptive_avg_pool2d_0|INPUT0/FakeQuantize": avg_pool_stats,
+        "/avg_pool/LinearTestModel/AdaptiveAvgPool2d[avg_pool]/adaptive_avg_pool2d_0|INPUT0/FakeQuantize": (
+            avg_pool_stats
+        ),
         "/conv2/LinearTestModel/NNCFConv2d[conv2]/conv2d_0|INPUT0/FakeQuantize": conv2_stats,
         "/conv1/pre_ops.0/op/FakeQuantize": conv1_w_stats,
         "/conv2/pre_ops.0/op/FakeQuantize": conv2_w_stats,
