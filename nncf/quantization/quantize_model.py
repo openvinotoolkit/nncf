@@ -23,9 +23,9 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
-from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
-from nncf.quantization.pipelines.hyperparameter_tuner.param_grid import get_quantization_param_grid
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.pipelines.hyperparameter_tuner.pipeline import HyperparameterTuner
+from nncf.quantization.pipelines.hyperparameter_tuner.param_grid import get_quantization_param_grids
+from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
@@ -299,12 +299,12 @@ def quantize_with_tune_hyperparams(
         "advanced_parameters": advanced_quantization_parameters,
     }
 
-    quantization_param_grid = get_quantization_param_grid()
+    param_grids = get_quantization_param_grids(PostTrainingQuantization(**init_quantization_params))
 
     hyperparameter_tuner = HyperparameterTuner(
         PostTrainingQuantization,
         init_quantization_params,
-        quantization_param_grid,
+        param_grids,
         calibration_dataset,
         validation_fn,
         tuner_subset_size,
@@ -312,6 +312,6 @@ def quantize_with_tune_hyperparams(
         quantized_metric_results,
     )
 
-    quantized_model = hyperparameter_tuner.apply(model, validation_dataset)
+    quantized_model = hyperparameter_tuner.run(model, validation_dataset)
 
     return quantized_model

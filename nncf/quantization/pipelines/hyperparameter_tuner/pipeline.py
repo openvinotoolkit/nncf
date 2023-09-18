@@ -288,7 +288,7 @@ class HyperparameterTuner(Pipeline):
 
             # If there are no parameters to optimize for the current step, simply execute
             # this pipeline step on the model.
-            if step_param_grid is None:
+            if not step_param_grid:
                 # TODO(andrey-churkin): Think about how it can be avoided.
                 params = apply_combination(self._init_params, best_settings)
                 pipeline_step = self._pipeline_cls(**params).pipeline_steps[step_index]
@@ -334,6 +334,7 @@ class HyperparameterTuner(Pipeline):
         step_model: TModel,
         step_graph: NNCFGraph,
         step_combinations: Dict[CombinationKey, Combination],
+        best_settings,
     ) -> None:
         """
         TODO:
@@ -349,7 +350,10 @@ class HyperparameterTuner(Pipeline):
         # we would have only one pipeline and set parameters directly within it.
         self._pipelines = {}
         for combination_key, combination in step_combinations.items():
-            kwargs = apply_combination(self._init_params, combination)
+            settings = {}
+            settings.update(combination)
+            settings.update(best_settings)
+            kwargs = apply_combination(self._init_params, settings)
             self._pipelines[combination_key] = self._pipeline_cls(**kwargs)
 
         # Collect statistics required to execute `step_index`-th pipeline step

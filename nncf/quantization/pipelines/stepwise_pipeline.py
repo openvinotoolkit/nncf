@@ -135,7 +135,7 @@ def run_pipeline_from_step(
     pipeline: StepwisePipeline,
     model: TModel,
     dataset: Dataset,
-    graph: Optional[NNCFGraph],
+    graph: Optional[NNCFGraph] = None,
     start_step_index: int = 0,
     step_index_to_statistics: Optional[Dict[int, StatisticPointsContainer]] = None,
 ) -> TModel:
