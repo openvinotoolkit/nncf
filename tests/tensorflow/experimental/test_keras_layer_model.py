@@ -14,12 +14,14 @@ import tensorflow as tf
 import tensorflow_hub as hub
 
 from nncf import NNCFConfig
-from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 
-patch_tf_operations()
+# TODO(achurkin): enable after 120296 ticked is fixed
+# from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
+# patch_tf_operations()
 
 
+@pytest.mark.skip(reason="ticket 120296")
 def test_keras_layer_model():
     nncf_config = NNCFConfig(
         {

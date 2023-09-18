@@ -48,6 +48,16 @@ TModel = TypeVar("TModel")
 ValFnType = Callable[[TModel, DataLoaderType], float]
 
 
+class FixIntegerRandomSampling(IntegerRandomSampling):
+    """
+    Wrapper for the IntegerRandomSampling with the fix for https://github.com/anyoptimization/pymoo/issues/388.
+    """
+
+    def _do(self, problem, n_samples, **kwargs):
+        n, (xl, xu) = problem.n_var, problem.bounds()
+        return np.column_stack([np.random.randint(xl[k], xu[k] + 1, size=(n_samples)) for k in range(n)])
+
+
 class EvolutionaryAlgorithms(Enum):
     NSGA2 = "NSGA2"
 
@@ -207,7 +217,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         if evo_algo == EvolutionaryAlgorithms.NSGA2.value:
             self._algorithm = NSGA2(
                 pop_size=self.search_params.population,
-                sampling=IntegerRandomSampling(),
+                sampling=FixIntegerRandomSampling(),
                 crossover=SBX(
                     prob=self.search_params.crossover_prob,
                     eta=self.search_params.crossover_eta,
