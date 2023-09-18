@@ -53,6 +53,7 @@ from nncf.torch.layers import NNCFConv2d
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.module_operations import BaseOp
 from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
@@ -533,13 +534,16 @@ def test_quantizer_insertion_transformations(target_type, node_name, input_port_
     transformation_layout.register(command)
     transformed_model = model_transformer.transform(transformation_layout)
 
-    assert hasattr(transformed_model.nncf, "external_quantizers")
+    compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
+    assert transformed_model.nncf.is_compression_module_registered(compression_module_type)
+
     if target_type == TargetType.OPERATION_WITH_WEIGHTS:
         # pylint: disable=protected-access
         op = transformed_model.conv1.pre_ops._modules["0"]
         assert isinstance(op, UpdateWeight)
         assert isinstance(op.op, BaseOp)
     else:
-        assert hasattr(transformed_model.nncf.external_quantizers, ref_name)
-        op = getattr(transformed_model.nncf.external_quantizers, ref_name)
+        external_quantizers = transformed_model.nncf.get_compression_modules_by_type(compression_module_type)
+        assert hasattr(external_quantizers, ref_name)
+        op = getattr(external_quantizers, ref_name)
         assert isinstance(op, BaseOp)

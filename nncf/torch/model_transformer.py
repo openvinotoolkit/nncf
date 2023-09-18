@@ -114,8 +114,10 @@ class PTModelTransformer(ModelTransformer):
         :return: Model with inserted FakeQuantize nodes.
         """
         node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
+        compression_model_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
 
-        model.nncf.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
+        if not model.nncf.is_compression_module_registered(compression_model_type):
+            model.nncf.register_compression_module_type(compression_model_type)
 
         for transformation_command in transformations:
             target_point: PTTargetPoint = transformation_command.target_point
@@ -132,7 +134,7 @@ class PTModelTransformer(ModelTransformer):
             else:
                 quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
                 storage_key = str(quantizer_id)
-                model.nncf.add_compression_module(storage_key, quantizer, ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
+                model.nncf.add_compression_module(storage_key, quantizer, compression_model_type)
                 external_hook = ExternalQuantizerCallHook(model.nncf.get_tracing_context(), storage_key)
                 model.nncf.insert_at_point(pt_ip, [external_hook])
 

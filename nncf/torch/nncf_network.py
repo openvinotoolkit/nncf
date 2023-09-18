@@ -542,6 +542,15 @@ class NNCFNetworkInterface(torch.nn.Module):
             raise RuntimeError(f"Module type {compression_module_type} was not registered")
         return self.__getattr__(attr_name)
 
+    def is_compression_module_registered(self, compression_module_type: ExtraCompressionModuleType) -> bool:
+        """
+        Check that extra compression module was registered.
+
+        :param compression_module_type: Type of the extra compression module.
+        :return: True if the extra compression module is registered, otherwise False.
+        """
+        return compression_module_type in self._extra_module_types
+
     @staticmethod
     def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
         """
