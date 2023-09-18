@@ -112,7 +112,7 @@ INSTALL_REQUIRES = [
     "pandas>=1.1.5,<2.1",
     "psutil",
     "pydot>=1.4.1",
-    "pymoo==0.6.0",
+    "pymoo==0.6.0.1",
     # The recent pyparsing major version update seems to break
     # integration with networkx - the graphs parsed from current .dot
     # reference files no longer match against the graphs produced in tests.
