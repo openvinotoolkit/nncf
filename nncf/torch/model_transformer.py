@@ -20,7 +20,6 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.torch.extra_compression_module_type import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
@@ -29,6 +28,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_analyzer import get_potential_fused_node
 from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook

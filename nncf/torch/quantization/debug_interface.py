@@ -25,7 +25,6 @@ from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.os import safe_open
 from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
-from nncf.torch.extra_compression_module_type import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 
 if TYPE_CHECKING:
@@ -59,6 +58,8 @@ class QuantizationDebugInterface(DebugInterface):
         self._strict_forward = False
 
     def init_actual(self, owner_model: NNCFNetwork):
+        from nncf.torch.nncf_network import ExtraCompressionModuleType
+
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
         quantizers_in_nncf_modules = owner_model.nncf.get_modules_in_nncf_modules_by_type(quantization_types)
         nncf_module_quantizations_id_list: List[str] = [str(scope) for scope in quantizers_in_nncf_modules.keys()]

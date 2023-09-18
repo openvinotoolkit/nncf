@@ -15,6 +15,7 @@ import types
 from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
+from enum import Enum
 from enum import IntEnum
 from typing import Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
 
@@ -49,7 +50,6 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope_access import get_module_by_scope
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
-from nncf.torch.extra_compression_module_type import ExtraCompressionModuleType
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
@@ -115,6 +115,10 @@ class PTInsertionPoint:
 
     def __hash__(self):
         return hash(str(self))
+
+
+class ExtraCompressionModuleType(Enum):
+    EXTERNAL_QUANTIZER = 0
 
 
 class NNCFNetworkInterface(torch.nn.Module):

@@ -76,7 +76,6 @@ from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.extra_compression_module_type import ExtraCompressionModuleType
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import UNIFICATION_PRODUCING_METATYPES
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
@@ -89,6 +88,7 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
+from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import LoadStateListener
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import AdjustPaddingArgs
