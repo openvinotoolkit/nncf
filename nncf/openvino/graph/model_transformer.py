@@ -25,14 +25,14 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
-from nncf.openvino.graph.transformations.commands import OVExtractIfSubgraphCommand
+from nncf.openvino.graph.transformations.commands import OVExtractIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
-from nncf.openvino.graph.transformations.commands import OVUpdateIfSubgraphCommand
+from nncf.openvino.graph.transformations.commands import OVUpdateIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
@@ -54,8 +54,8 @@ class OVModelTransformer(ModelTransformer):
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
             (OVBiasInsertionCommand, self._apply_bias_insertion_transformations),
             (OVMultiplyInsertionCommand, self._apply_multiply_insertion_transformations),
-            (OVUpdateIfSubgraphCommand, self._apply_update_if_op_subgraph_transformations),
-            (OVExtractIfSubgraphCommand, self._apply_extract_if_subgraph_transformation),
+            (OVUpdateIfBodyCommand, self._apply_update_if_body_transformations),
+            (OVExtractIfBodyCommand, self._apply_extract_if_body_transformation),
         ]
 
     @staticmethod
@@ -532,11 +532,11 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _apply_update_if_op_subgraph_transformations(
-        model: ov.Model, transformations: List[OVUpdateIfSubgraphCommand]
+    def _apply_update_if_body_transformations(
+        model: ov.Model, transformations: List[OVUpdateIfBodyCommand]
     ) -> ov.Model:
         """
-        Update model subgraph for IF node.
+        Update model body for IF node.
 
         :param model: Model to update and insert a new subgraph.
         :param transformations: Transformations with information of If node and an updated subgraph.
@@ -552,11 +552,11 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _apply_extract_if_subgraph_transformation(
-        model: ov.Model, transformations: List[OVExtractIfSubgraphCommand]
+    def _apply_extract_if_body_transformation(
+        model: ov.Model, transformations: List[OVExtractIfBodyCommand]
     ) -> ov.Model:
         """
-        Extract a model subgraph from If node.
+        Extract a model body from If node.
 
         :param model: Model from which extracts a subgraph.
         :param transformations: Transformations with information from which
@@ -566,6 +566,6 @@ class OVModelTransformer(ModelTransformer):
         transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         ov_node = name_to_node_mapping[transformation.if_node_name]
-        if transformation.if_submodel_condition:
+        if transformation.if_body_condition:
             return ov_node.get_function(0)
         return ov_node.get_function(1)

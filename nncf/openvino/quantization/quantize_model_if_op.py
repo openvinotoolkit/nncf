@@ -1,9 +1,18 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from itertools import islice
-from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, TypeVar
+from typing import List, Optional, Tuple
 
 import openvino.runtime as ov
-from tqdm import tqdm
 
 from nncf import Dataset
 from nncf.common import factory
@@ -12,36 +21,40 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
+from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.openvino.graph.node_utils import has_if_op
-from nncf.openvino.graph.transformations.commands import OVExtractIfSubgraphCommand
+from nncf.openvino.graph.transformations.commands import OVExtractIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.openvino.graph.transformations.commands import OVUpdateIfSubgraphCommand
+from nncf.openvino.graph.transformations.commands import OVUpdateIfBodyCommand
 from nncf.quantization.algorithms.algorithm import Algorithm
 
 
-def _make_dataset_for_children_model(
+def _make_dataset_for_if_bodies(
     engine: Engine,
     calibration_dataset: Dataset,
     if_cond_input_name: str,
-    then_model_input_names,
-    else_model_input_names,
+    then_model_input_names: List[str],
+    else_model_input_names: List[str],
     subset_size: int,
 ) -> Tuple[Dataset, Dataset]:
     """
-    Returns dataset for a child model.
+    Returns dataset for a then and else bodies of If node.
 
     :param engine: Engine to infer parent model to obtain dataitems for a child dataset.
     :param calibration_dataset: Dataset to infer parent model.
     :param if_cond_input_name: Input name of If node condition.
-    :param child_model_input_names: - Names of inputs for child model
+    :param then_model_input_names: Names of inputs for then body
     (should be in the order of passing them to a model).
-    :param if_submodel_condition: If node submodel condition.
+    :param else_model_input_names: Names of inputs for else body
+    (should be in the order of passing them to a model).
+    :param subset_size: The size of calibration_dataset.
     :return Dataset: Dataset for child model.
     """
     then_dataset, else_dataset = [], []
@@ -50,10 +63,10 @@ def _make_dataset_for_children_model(
         if calibration_dataset.get_length() is not None
         else subset_size
     )
-    for input_data in tqdm(
+    for input_data in track(
         islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
         total=calibration_dataset_size,
-        desc="Collect dataset for then and else models:",
+        description="Collect dataset for then and else models:",
     ):
         data_item = []
         results = engine.infer(input_data)
@@ -70,37 +83,35 @@ def _make_dataset_for_children_model(
     return Dataset(then_dataset), Dataset(else_dataset)
 
 
-def _extract_if_submodel(
-    model_transformer: ModelTransformer, if_node: NNCFNode, if_submodel_condition: bool
-) -> ov.Model:
+def _extract_if_body(model_transformer: ModelTransformer, if_node: NNCFNode, if_body_condition: bool) -> ov.Model:
     """
-    Returns if submodel of If node laying on an input port if_submodel_port_id of If node.
+    Returns if body of If node based on a value of if_body_condition.
 
     :param model_transformer: ModelTransformer instance.
     :param if_node: If node.
-    :param if_submodel_condition: If True returns True submodel of If node, otherwise - False submodel.
-    :return: If submodel.
+    :param if_submodel_condition: If True returns then body of If node, otherwise - else body.
+    :return: If body.
     """
     transformation_layout = TransformationLayout()
-    command = OVBackend.create_extract_if_subgraph_command(if_node, if_submodel_condition)
+    command = OVBackend.create_extract_if_body_command(if_node, if_body_condition)
     transformation_layout.register(command)
     return model_transformer.transform(transformation_layout)
 
 
-def _update_if_submodel(
-    model_transformer: ModelTransformer, if_node: NNCFNode, if_submodel_condition: bool, submodel: ov.Model
+def _update_if_body(
+    model_transformer: ModelTransformer, if_node: NNCFNode, if_body_condition: bool, body: ov.Model
 ) -> ov.Model:
     """
-    Update submodel of If node.
+    Update body of If node, based on if_body_condition.
 
     :param model_transformer: ModelTransformer instance.
     :param if_node: If node.
-    :param if_submodel_condition: Condition of If node submodel.
-    :param submodel: New submodel.
-    :return: Updated model with a new submodel.
+    :param if_body_condition: Condition of If node body.
+    :param body: New body.
+    :return: Updated model with a new body of If node.
     """
     transformation_layout = TransformationLayout()
-    command = OVBackend.create_update_subgraph_command(if_node, if_submodel_condition, submodel)
+    command = OVBackend.create_update_body_command(if_node, if_body_condition, body)
     transformation_layout.register(command)
     return model_transformer.transform(transformation_layout)
 
@@ -114,9 +125,15 @@ def _add_outputs_before_if_node(model_transformer: ModelTransformer, model: ov.M
     :param if_node: If node.
     :return: Model with extra outputs before If node.
     """
+    assert if_node.metatype == OVIfMetatype
     transformation_layout = TransformationLayout()
-    for command in OVBackend.create_output_insertion_commands(model, if_node):
-        transformation_layout.register(command)
+    name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+    ov_node = name_to_node_mapping[if_node.node_name]
+    port_ids = range(len(ov_node.inputs()))
+    for port_id in port_ids:
+        transformation_layout.register(
+            OVOutputInsertionCommand(OVTargetPoint(TargetType.PRE_LAYER_OPERATION, if_node.node_name, port_id))
+        )
     return model_transformer.transform(transformation_layout)
 
 
@@ -129,27 +146,28 @@ def apply_algorithm_if_bodies(
     parent_statistic_points: Optional[StatisticPointsContainer] = None,
 ) -> ov.Model:
     """
+    Applies an algorithm recursievley to each bodies of If node.
 
-    :param parent_model:
-    :param parent_graph:
-    :param parent_dataset:
-    :param parent_statistic_points:
-    :param parent_model_cnt:
-    :return:
+    :param parent_model: Model to apply algorithm.
+    :param parent_graph: Graph of a model.
+    :param parent_dataset: Dataset for algorithm.
+    :param subset_size: Size of a dataset to use for calibration.
+    :param parent_statistic_points: Statistics points for algorithm.
+    :return: A model for every bodies of If nodes the algorithm was applied.
     """
     nncf_logger.info(f"Quantize a new submodel")
     quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
     if not has_if_op(parent_model):
         return quantized_model
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
-    for if_node in parent_graph.get_nodes_by_metatypes([OVBackend.if_node_metatype()]):
-        then_model_input_names = OVBackend.get_if_subgraph_input_names(parent_model, if_node, True)
-        else_model_input_names = OVBackend.get_if_subgraph_input_names(parent_model, if_node, False)
+    for if_node in parent_graph.get_nodes_by_metatypes(OVBackend.if_node_metatypes()):
+        then_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, True)
+        else_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, False)
         if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model, if_node)
         parent_model_with_additional_outputs = _add_outputs_before_if_node(
             model_transformer_fp32, parent_model, if_node
         )
-        then_dataset, else_dataset = _make_dataset_for_children_model(
+        then_dataset, else_dataset = _make_dataset_for_if_bodies(
             factory.EngineFactory.create(parent_model_with_additional_outputs),
             parent_dataset,
             if_cond_input_name,
@@ -157,8 +175,8 @@ def apply_algorithm_if_bodies(
             else_model_input_names,
             subset_size,
         )
-        then_model = _extract_if_submodel(model_transformer_fp32, if_node, True)
-        else_model = _extract_if_submodel(model_transformer_fp32, if_node, False)
+        then_model = _extract_if_body(model_transformer_fp32, if_node, True)
+        else_model = _extract_if_body(model_transformer_fp32, if_node, False)
         then_quantized_model = apply_algorithm_if_bodies(
             algorithm, then_model, NNCFGraphFactory.create(then_model), then_dataset, subset_size, None
         )
@@ -166,56 +184,103 @@ def apply_algorithm_if_bodies(
             algorithm, else_model, NNCFGraphFactory.create(else_model), else_dataset, subset_size, None
         )
         model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
-        quantized_model = _update_if_submodel(model_transformer_int8, if_node, True, then_quantized_model)
+        quantized_model = _update_if_body(model_transformer_int8, if_node, True, then_quantized_model)
         model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
-        quantized_model = _update_if_submodel(model_transformer_int8, if_node, False, else_quantized_model)
+        quantized_model = _update_if_body(model_transformer_int8, if_node, False, else_quantized_model)
     return quantized_model
 
 
 class OVBackend:
     @staticmethod
-    def _get_if_submodel_port_id(if_submodel_condition: bool):
-        return int(not if_submodel_condition)
+    def _get_if_body_port_id(if_body_condition: bool):
+        """
+        Returns port id of a If body based on if_body_condition.
+
+        :param if_body_condition: Condition of If node.
+        :return: Port id of body of If node.
+        """
+        return int(not if_body_condition)
 
     @staticmethod
-    def if_node_metatype():
-        return OVIfMetatype
+    def if_node_metatypes() -> List[OperatorMetatype]:
+        """
+        Returns metatypes that map to If node.
+
+        :return: Metatypes mapped to If node.
+        """
+        return [OVIfMetatype]
 
     @staticmethod
-    def get_if_subgraph_input_names(model: ov.Model, if_node: NNCFNode, if_submodel_condition: bool) -> List[str]:
+    def get_if_body_input_names(model: ov.Model, if_node: NNCFNode, if_body_condition: bool) -> List[str]:
+        """
+        Returns input names of If node body based on if_body_condition.
+        The order of inputs are in a way that they are passed to the model during inference.
+
+        :param model: Original model.
+        :param if_node: If node.
+        :param if_body_condition: True for then body, else for else body.
+        :return: Input names of If body.
+        """
         input_names = []
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
         input_indices = [
             desc.input_index
-            for desc in ov_node.get_input_descriptions(OVBackend._get_if_submodel_port_id(if_submodel_condition))
+            for desc in ov_node.get_input_descriptions(OVBackend._get_if_body_port_id(if_body_condition))
         ]
         input_names.extend([ov_node.input_values()[index].any_name for index in input_indices])
         return input_names
 
     @staticmethod
     def get_if_cond_input_name(model: ov.Model, if_node: NNCFNode) -> str:
+        """
+        Returns name of condition input of If node.
+
+        :param model: Model.
+        :param if_node: If node.
+        :return: Name of condition input of If node.
+        """
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
         return ov_node.input_values()[0].any_name
 
     @staticmethod
-    def create_update_subgraph_command(
-        if_node: NNCFNode, if_submodel_condition: bool, subgraph_model: ov.Model
-    ) -> OVUpdateIfSubgraphCommand:
+    def create_update_body_command(if_node: NNCFNode, if_body_condition: bool, body: ov.Model) -> OVUpdateIfBodyCommand:
+        """
+        Returns a command for setting a body of If node by a new one.
+
+        :param if_node: If node.
+        :param if_body_condition: Condition of If node.
+        :param body: A new body to set.
+        :return: Command to update If node body.
+        """
         target_point = OVTargetPoint(
-            TargetType.LAYER, if_node.node_name, OVBackend._get_if_submodel_port_id(if_submodel_condition)
+            TargetType.LAYER, if_node.node_name, OVBackend._get_if_body_port_id(if_body_condition)
         )
-        return OVUpdateIfSubgraphCommand(target_point, subgraph_model)
+        return OVUpdateIfBodyCommand(target_point, body)
 
     @staticmethod
-    def create_extract_if_subgraph_command(
-        if_node: NNCFNode, if_submodel_condition: bool
-    ) -> OVExtractIfSubgraphCommand:
-        return OVExtractIfSubgraphCommand(if_node.node_name, if_submodel_condition)
+    def create_extract_if_body_command(if_node: NNCFNode, if_body_condition: bool) -> OVExtractIfBodyCommand:
+        """
+        Returns a command for extraction body of If node.
+        If if_body_condition is True, extract then body, otherwise - else body.
+
+        :param if_node: If node.
+        :param if_body_condition: Condition of body of If node.
+        :return: Extracted body of If node.
+        """
+        return OVExtractIfBodyCommand(if_node.node_name, if_body_condition)
 
     @staticmethod
     def create_output_insertion_commands(model: ov.Model, if_node: NNCFNode) -> List[OVOutputInsertionCommand]:
+        """
+        Returns output insertion commands on
+
+        :param ov.Model model:
+        :param NNCFNode if_node:
+        :return List[OVOutputInsertionCommand]:
+        """
+        assert if_node.metatype == OVIfMetatype
         commands = []
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]

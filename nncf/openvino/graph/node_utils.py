@@ -52,7 +52,12 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
 
 
 def has_if_op(model: ov.Model) -> bool:
-    """ """
+    """
+    Returns True whether a model has If operation.
+
+    :param model: Model.
+    :return: True if Model has If operation, False - otherwise.
+    """
     for op in model.get_ops():
         metatype = get_node_metatype(op)
         if metatype == OVIfMetatype:

@@ -194,37 +194,37 @@ class OVMultiplyInsertionCommand(OVInsertionCommand):
         raise NotImplementedError()
 
 
-class OVUpdateIfSubgraphCommand(TransformationCommand):
+class OVUpdateIfBodyCommand(TransformationCommand):
     """
-    Updates If node subgraph.
+    Updates If node body.
     """
 
-    def __init__(self, target_point: OVTargetPoint, subgraph_model: ov.Model):
+    def __init__(self, target_point: OVTargetPoint, body_model: ov.Model):
         """
-        :param target_point: The TargetPoint instance for the insertion that contains layer's information.
-        :param bias_value: Constant value for the bias layer.
+        :param target_point: The TargetPoint instance for the change that contains layer's information.
+        :param body_model: A new model to set.
         """
         super().__init__(TransformationType.CHANGE, target_point)
-        self.subgraph_model = subgraph_model
+        self.subgraph_model = body_model
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
 
 
-class OVExtractIfSubgraphCommand(Command):
+class OVExtractIfBodyCommand(Command):
     """
-    Extracts If node subgraph.
+    Extracts If node body.
     """
 
-    def __init__(self, if_node_name: str, if_submodel_condition: bool):
+    def __init__(self, if_node_name: str, if_body_condition: bool):
         """
-        :param target_point: The TargetPoint instance for the insertion that contains layer's information.
-        :param bias_value: Constant value for the bias layer.
+        :param target_point: The TargetPoint instance for the extraction that contains layer's information.
+        :param if_body_condition: If true extracts then body, else - else body.
         """
         super().__init__(TransformationType.EXTRACT)
         self.if_node_name = if_node_name
-        self.if_submodel_condition = if_submodel_condition
+        self.if_body_condition = if_body_condition
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
