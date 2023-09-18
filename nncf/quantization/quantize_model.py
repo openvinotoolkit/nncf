@@ -23,8 +23,8 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
-from nncf.quantization.pipelines.hyperparameter_tuner.pipeline import HyperparameterTuner
 from nncf.quantization.pipelines.hyperparameter_tuner.param_grid import get_quantization_param_grids
+from nncf.quantization.pipelines.hyperparameter_tuner.pipeline import HyperparameterTuner
 from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
 

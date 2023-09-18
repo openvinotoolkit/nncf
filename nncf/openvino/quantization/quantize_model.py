@@ -19,7 +19,6 @@ from openvino._offline_transformations import compress_quantize_weights_transfor
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
-from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.weights_compression import insert_pre_compression_operations

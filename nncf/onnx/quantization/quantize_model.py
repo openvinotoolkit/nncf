@@ -16,11 +16,10 @@ import onnx
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
-from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry import tracked_function
@@ -56,7 +55,7 @@ def quantize_impl(
         advanced_parameters.weights_quantization_params.per_channel = False
         advanced_parameters.activations_quantization_params.per_channel = False
 
-    quantization_algorithm = PostTrainingQuantization(
+    quantization_pipeline = PostTrainingQuantization(
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,
@@ -66,7 +65,6 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    graph = GraphConverter.create_nncf_graph(model)
-    quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
+    quantized_model = quantization_pipeline.run(model, calibration_dataset)
 
     return quantized_model

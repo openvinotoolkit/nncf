@@ -20,7 +20,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import MultipleConvTestModel
 from tests.post_training.test_templates.helpers import SplittedModel
@@ -133,9 +133,8 @@ class TemplateTestBCAlgorithm:
         model = self.backend_specific_model(model_cls(), tmpdir)
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
-        quantization_algorithm = self.get_quantization_algorithm(disable_bias_correction=True)
-        graph = NNCFGraphFactory.create(model)
-        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
+        quantization_pipeline = self.get_quantization_algorithm(disable_bias_correction=True)
+        quantized_model = quantization_pipeline.run(model, dataset)
         modified_model = self.remove_fq_from_inputs(quantized_model)
         return modified_model
 
@@ -160,9 +159,8 @@ class TemplateTestBCAlgorithm:
         model = self.backend_specific_model(model_cls(), tmpdir)
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
-        quantization_algorithm = self.get_quantization_algorithm()
-        graph = NNCFGraphFactory.create(model)
-        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
+        quantization_pipeline = self.get_quantization_algorithm()
+        quantized_model = quantization_pipeline.run(model, dataset)
 
         mapped_ref_biases = self.map_references(ref_biases)
         self.check_bias(quantized_model, mapped_ref_biases)

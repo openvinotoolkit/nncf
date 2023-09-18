@@ -31,8 +31,8 @@ from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -81,8 +81,8 @@ class TemplateTestQuantizerConfig:
         pass
 
     def test_default_quantizer_config(self, single_conv_nncf_graph):
-        algo = PostTrainingQuantization()
-        min_max_algo = algo.algorithms[0]
+        pipeline = PostTrainingQuantization()
+        min_max_algo = pipeline.pipeline_steps[-1][0]
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
@@ -127,7 +127,7 @@ class TemplateTestQuantizerConfig:
         signed_activations,
         single_conv_nncf_graph,
     ):
-        algo = PostTrainingQuantization(
+        pipeline = PostTrainingQuantization(
             preset=preset,
             advanced_parameters=AdvancedQuantizationParameters(
                 activations_quantization_params=QuantizationParameters(
@@ -138,7 +138,7 @@ class TemplateTestQuantizerConfig:
                 ),
             ),
         )
-        min_max_algo = algo.algorithms[0]
+        min_max_algo = pipeline.pipeline_steps[-1][0]
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
@@ -179,8 +179,8 @@ class TemplateTestQuantizerConfig:
                         assert quantization_point.qconfig.signedness_to_force == signed_activations
 
     def test_depthwise_conv_default_quantizer_config(self, depthwise_conv_nncf_graph):
-        algo = PostTrainingQuantization()
-        min_max_algo = algo.algorithms[0]
+        pipeline = PostTrainingQuantization()
+        min_max_algo = pipeline.pipeline_steps[-1][0]
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = depthwise_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
@@ -223,12 +223,12 @@ class TemplateTestQuantizerConfig:
         statistic_collector_parameters: TestGetStatisticsCollectorParameters,
     ):
         params = statistic_collector_parameters
-        algo = PostTrainingQuantization(
+        pipeline = PostTrainingQuantization(
             advanced_parameters=AdvancedQuantizationParameters(
                 activations_range_estimator_params=range_estimator_params
             )
         )
-        min_max_algo = algo.algorithms[0]
+        min_max_algo = pipeline.pipeline_steps[-1][0]
         min_max_algo._backend_entity = self.get_algo_backend()
         q_config = QuantizerConfig(num_bits=8, mode=q_config_mode, per_channel=q_config_per_channel)
 

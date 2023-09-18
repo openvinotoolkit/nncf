@@ -18,7 +18,7 @@ from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
@@ -105,7 +105,7 @@ def quantize_impl(
 
     nncf_network = create_nncf_network(model.eval(), calibration_dataset)
 
-    quantization_algorithm = PostTrainingQuantization(
+    quantization_pipeline = PostTrainingQuantization(
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,
@@ -115,9 +115,7 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    quantized_model = quantization_algorithm.apply(
-        nncf_network, nncf_network.nncf.get_graph(), dataset=calibration_dataset
-    )
+    quantized_model = quantization_pipeline.run(nncf_network, calibration_dataset)
 
     quantized_model.nncf.disable_dynamic_graph_building()
 

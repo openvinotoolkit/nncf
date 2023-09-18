@@ -22,6 +22,7 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -97,6 +98,12 @@ class ChannelAlignment(Algorithm):
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
+        if model is not None:
+            backend = get_backend(model)
+            if backend != BackendType.OPENVINO:
+                nncf_logger.debug(f"{backend.name} does not support ChannelAlignment algorithm yet.")
+                return model
+
         self._set_backend_entity(model)
         model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
@@ -368,9 +375,15 @@ class ChannelAlignment(Algorithm):
         )
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        self._set_backend_entity(model)
-
         statistic_container = StatisticPointsContainer()
+
+        if model is not None:
+            backend = get_backend(model)
+            if backend != BackendType.OPENVINO:
+                nncf_logger.debug(f"{backend.name} does not support ChannelAlignment algorithm yet.")
+                return statistic_container
+
+        self._set_backend_entity(model)
         for conv_in, add_in, _ in self._get_node_pairs(graph):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             channel_axis = conv_in.metatype.output_channel_axis

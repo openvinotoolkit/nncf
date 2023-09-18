@@ -22,9 +22,9 @@ from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
+from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import NonZeroLinearModel
 from tests.post_training.test_templates.helpers import get_static_dataset
@@ -119,9 +119,8 @@ class TemplateTestSQAlgorithm:
         model = self.backend_specific_model(model_cls(), tmpdir)
         dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
-        quantization_algorithm = self.get_quantization_algorithm()
-        graph = NNCFGraphFactory.create(model)
-        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
+        quantization_pipeline = self.get_quantization_algorithm()
+        quantized_model = quantization_pipeline.run(model, dataset)
 
         self.check_scales(quantized_model, reference_values)
 

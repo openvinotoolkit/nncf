@@ -18,8 +18,7 @@ import torch
 import nncf
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -50,16 +49,9 @@ def min_max_quantize_model(
     dataset = nncf.Dataset(dataloader, transform_func=transform_fn)
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
-    # Using PTQ, but apply only MinMax
-    updated_algorithms = []
-    for algo in post_training_quantization.algorithms:
-        if isinstance(algo, MinMaxQuantization):
-            updated_algorithms.append(algo)
-    post_training_quantization.algorithms = updated_algorithms
-
     original_model.eval()
     nncf_network = create_nncf_network(original_model, config)
-    quantized_model = post_training_quantization.apply(nncf_network, nncf_network.nncf.get_graph(), dataset=dataset)
+    quantized_model = post_training_quantization.run(nncf_network, dataset)
     return quantized_model
 
 
@@ -89,7 +81,12 @@ def get_fq_nodes_params(model: NNCFNetwork) -> Dict[str, np.ndarray]:
 def test_overflow_fix_scales(_seed, overflow_fix):
     model = TwoConvTestModel()
     quantized_model = min_max_quantize_model(
-        model, quantization_params={"advanced_parameters": AdvancedQuantizationParameters(overflow_fix=overflow_fix)}
+        model,
+        quantization_params={
+            "advanced_parameters": AdvancedQuantizationParameters(
+                overflow_fix=overflow_fix, disable_bias_correction=True, disable_channel_alignment=True
+            )
+        },
     )
     fq_nodes_params = get_fq_nodes_params(quantized_model)
 

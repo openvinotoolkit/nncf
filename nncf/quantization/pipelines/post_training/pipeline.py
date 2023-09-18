@@ -30,7 +30,14 @@ TModel = TypeVar("TModel")
 
 
 class PostTrainingQuantization(StepwisePipeline):
-    """ """
+    """
+    A class for creating a post-training quantization pipeline.
+    The post-training quantization pipeline includes the following steps:
+        1) SmoothQuant
+        2) ChannelAlignment
+        3) MinMaxQuantization
+        4) FastBiasCorrection or BiasCorrection
+    """
 
     def __init__(
         self,
@@ -42,7 +49,27 @@ class PostTrainingQuantization(StepwisePipeline):
         ignored_scope: Optional[IgnoredScope] = None,
         advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
     ):
-        """ """
+        """
+        :param preset: A preset that controls the quantization mode
+            (symmetric and asymmetric). It can take the following values:
+            - `performance`: Symmetric quantization of weights and activations.
+            - `mixed`: Symmetric quantization of weights and asymmetric
+            quantization of activations.
+        :param target_device: A target device the specificity of which will be taken
+            into account while compressing in order to obtain the best performance
+            for this type of device.
+        :param subset_size: Size of a subset to calculate activations
+            statistics used for quantization.
+        :param fast_bias_correction: Setting this option to `False` enables a different
+            bias correction method which is more accurate, in general, and takes
+            more time but requires less memory.
+        :param model_type: Model type is needed to specify additional patterns
+            in the model. Supported only `transformer` now.
+        :param ignored_scope: An ignored scope that defined the list of model control
+            flow graph nodes to be ignored during quantization.
+        :param advanced_parameters: Advanced quantization parameters for
+            fine-tuning the quantization algorithm
+        """
         if target_device is TargetDevice.VPU:
             warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
@@ -88,33 +115,31 @@ class PostTrainingQuantization(StepwisePipeline):
             ]
         )
 
-        if advanced_parameters.disable_bias_correction:
-            return
+        if not advanced_parameters.disable_bias_correction:
+            # Add the `FastBiasCorrection` or `BiasCorrection` as additional algorithm
+            # inside the third step of the pipeline. It is added after `MinMaxQuantization`
+            # algorithm.
+            bias_correction_params = advanced_parameters.bias_correction_params
+            if fast_bias_correction:
+                threshold = FAST_BIAS_CORRECTION_THRESHOLD
+                bias_correction_subset_size = subset_size
+                bias_correction_cls = FastBiasCorrection
+            else:
+                threshold = BIAS_CORRECTION_THRESHOLD
+                bias_correction_subset_size = max(int(subset_size * 0.2), 1)
+                bias_correction_cls = BiasCorrection
 
-        # Add the `FastBiasCorrection` or `BiasCorrection` as additional algorithm
-        # inside the third step of the pipeline. It is added after `MinMaxQuantization`
-        # algorithm.
-        bias_correction_params = advanced_parameters.bias_correction_params
-        if fast_bias_correction:
-            threshold = FAST_BIAS_CORRECTION_THRESHOLD
-            bias_correction_subset_size = subset_size
-            bias_correction_cls = FastBiasCorrection
-        else:
-            threshold = BIAS_CORRECTION_THRESHOLD
-            bias_correction_subset_size = max(int(subset_size * 0.2), 1)
-            bias_correction_cls = BiasCorrection
+            if bias_correction_params.threshold is not None:
+                threshold = bias_correction_params.threshold
 
-        if bias_correction_params.threshold is not None:
-            threshold = bias_correction_params.threshold
-
-        pipeline_steps[-1].append(
-            bias_correction_cls(
-                bias_correction_subset_size,
-                threshold,
-                bias_correction_params.apply_for_all_nodes,
-                advanced_parameters.inplace_statistics,
-                advanced_parameters.backend_params,
+            pipeline_steps[-1].append(
+                bias_correction_cls(
+                    bias_correction_subset_size,
+                    threshold,
+                    bias_correction_params.apply_for_all_nodes,
+                    advanced_parameters.inplace_statistics,
+                    advanced_parameters.backend_params,
+                )
             )
-        )
 
         super().__init__(pipeline_steps)

@@ -16,9 +16,9 @@ from typing import Any, Dict, List, Tuple
 
 import pytest
 
-from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import apply_combination
-from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import create_combinations
-from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import find_best_combination
+from nncf.quantization.pipelines.hyperparameter_tuner.pipeline import apply_combination
+from nncf.quantization.pipelines.hyperparameter_tuner.pipeline import create_combinations
+from nncf.quantization.pipelines.hyperparameter_tuner.pipeline import find_best_combination
 
 CombinationKey = Tuple[int, ...]
 Combination = Dict[str, Any]
